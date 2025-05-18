@@ -1,13 +1,17 @@
+
 "use client";
 
-import { useEvents } from '@/hooks/use-events';
+import type { AppEvent } from '@/types';
 import EventCard from './event-card';
 import { ListOrdered } from 'lucide-react';
 
-export default function EventList() {
-  const { events } = useEvents();
+interface EventListProps {
+  eventsToDisplay: AppEvent[];
+  isCompact: boolean;
+}
 
-  if (events.length === 0) {
+export default function EventList({ eventsToDisplay, isCompact }: EventListProps) {
+  if (eventsToDisplay.length === 0) {
     return (
       <div className="text-center py-10">
         <ListOrdered className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
@@ -17,12 +21,12 @@ export default function EventList() {
     );
   }
 
-  // Events are pre-sorted in useEvents hook
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {events.map((event) => (
-        <EventCard key={event.id} event={event} />
+    <div className={`grid gap-4 ${isCompact ? 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+      {eventsToDisplay.map((event) => (
+        <EventCard key={event.id} event={event} isCompact={isCompact} />
       ))}
     </div>
   );
 }
+

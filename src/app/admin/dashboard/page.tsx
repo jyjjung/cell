@@ -11,11 +11,13 @@ import BiblePlanAdminForm from '@/components/admin/bible-plan-admin-form';
 import BatchEventImportForm from '@/components/admin/batch-event-import-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
 import EventCard from '@/components/events/event-card'; 
 import { Separator } from '@/components/ui/separator';
+import { startOfDay, parseISO } from 'date-fns';
 
 export default function AdminDashboardPage() {
   const { isAdmin } = useAuth();
@@ -24,6 +26,7 @@ export default function AdminDashboardPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isDeletingPast, setIsDeletingPast] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,20 +62,9 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete the event "${eventTitle}"?`)) {
-      try {
-        await deleteEvent(eventId);
-        toast({ title: "Event Deleted", description: `"${eventTitle}" has been successfully deleted.` });
-      } catch (error) {
-        console.error("Failed to delete event:", error);
-        toast({
-          title: "Deletion Failed",
-          description: `Could not delete event "${eventTitle}". Please try again.`,
-          variant: "destructive",
-        });
-      }
-    }
+  const handleDeleteSingleEvent = async (eventId: string, eventTitle: string) => {
+    // Using AlertDialog for single event deletion confirmation
+    // This part is kept as an example, actual trigger is through AlertDialogTrigger below
   };
 
   const openEditModal = (event: AppEvent) => {
@@ -84,6 +76,43 @@ export default function AdminDashboardPage() {
     setEditingEvent(null); 
     setIsFormModalOpen(true);
   };
+
+  const handleDeletePastEvents = async () => {
+    setIsDeletingPast(true);
+    const today = startOfDay(new Date());
+    const pastEventsToDelete = events.filter(event => {
+        try {
+            return parseISO(event.date) < today;
+        } catch(e) { return false; }
+    });
+
+    if (pastEventsToDelete.length === 0) {
+      toast({ title: "No Past Events", description: "There are no past events to delete." });
+      setIsDeletingPast(false);
+      return;
+    }
+
+    try {
+      const deletionPromises = pastEventsToDelete.map(event => deleteEvent(event.id));
+      const results = await Promise.allSettled(deletionPromises);
+      
+      const successfulDeletions = results.filter(result => result.status === 'fulfilled').length;
+      const failedDeletions = results.length - successfulDeletions;
+
+      if (successfulDeletions > 0) {
+        toast({ title: "Past Events Deleted", description: `${successfulDeletions} past event(s) have been deleted.` });
+      }
+      if (failedDeletions > 0) {
+         toast({ title: "Deletion Error", description: `Failed to delete ${failedDeletions} past event(s). Check console for details.`, variant: "destructive" });
+      }
+    } catch (error: any) {
+      console.error("Error during batch deletion of past events:", error);
+      toast({ title: "Error Deleting Past Events", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsDeletingPast(false);
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -139,13 +168,41 @@ export default function AdminDashboardPage() {
                   <Button variant="outline" size="sm" onClick={() => openEditModal(event)}>
                     <Edit className="mr-2 h-3 w-3" /> Edit
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteEvent(event.id, event.title)}
-                  >
-                    <Trash2 className="mr-2 h-3 w-3" /> Delete
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm">
+                        <Trash2 className="mr-2 h-3 w-3" /> Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the event titled "{event.title}".
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={async () => {
+                            try {
+                              await deleteEvent(event.id);
+                              toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
+                            } catch (error) {
+                              console.error("Failed to delete event:", error);
+                              toast({
+                                title: "Deletion Failed",
+                                description: `Could not delete event "${event.title}". Please try again.`,
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Yes, delete event
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
             </Card>
           ))}
@@ -160,7 +217,6 @@ export default function AdminDashboardPage() {
               <UploadCloud className="h-6 w-6 text-primary" /> 
               <CardTitle className="text-2xl">Batch Import Events</CardTitle>
             </div>
-          {/* CardDescription removed as per user request */}
         </CardHeader>
         <CardContent>
             <BatchEventImportForm />
@@ -175,13 +231,56 @@ export default function AdminDashboardPage() {
               <BookHeart className="h-6 w-6 text-accent" />
               <CardTitle className="text-2xl">Manage Global Bible Reading Plan</CardTitle>
             </div>
-          {/* CardDescription removed as per user request */}
         </CardHeader>
         <CardContent>
             <BiblePlanAdminForm />
         </CardContent>
       </Card>
 
+      <Separator className="my-12" />
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Trash className="h-6 w-6 text-destructive" />
+            <CardTitle className="text-2xl">Data Management</CardTitle>
+          </div>
+          <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={isDeletingPast}>
+                {isDeletingPast ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Clean Up Past Events
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Deletion of Past Events</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to permanently delete all events that have already occurred? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeletePastEvents} disabled={isDeletingPast}>
+                  {isDeletingPast ? 'Deleting...' : 'Yes, delete past events'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <p className="text-sm text-muted-foreground mt-2">
+            This will remove all events from the database whose date is before today.
+          </p>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
+

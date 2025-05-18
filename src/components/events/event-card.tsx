@@ -3,32 +3,61 @@
 
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
-import { CalendarDays, Cake, BookOpen, Utensils, Info } from 'lucide-react'; // Using Utensils for Snacks
+import { CalendarDays, Cake, BookOpen, Utensils, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   event: AppEvent;
+  isCompact?: boolean;
 }
 
-function getCategoryIcon(category: EventCategory) {
+function getCategoryIcon(category: EventCategory, isCompact?: boolean) {
+  const iconSize = isCompact ? "h-4 w-4" : "h-5 w-5";
   switch (category) {
     case EventCategory.QT:
-      return <BookOpen className="h-5 w-5 text-primary" />;
+      return <BookOpen className={cn(iconSize, "text-primary")} />;
     case EventCategory.Event:
-      return <CalendarDays className="h-5 w-5 text-accent" />;
+      return <CalendarDays className={cn(iconSize, "text-accent")} />;
     case EventCategory.Birthday:
-      return <Cake className="h-5 w-5 text-pink-500" />;
+      return <Cake className={cn(iconSize, "text-pink-500")} />;
     case EventCategory.Snack:
-      return <Utensils className="h-5 w-5 text-orange-500" />;
+      return <Utensils className={cn(iconSize, "text-orange-500")} />;
     default:
-      return <Info className="h-5 w-5 text-gray-500" />;
+      return <Info className={cn(iconSize, "text-gray-500")} />;
   }
 }
 
-export default function EventCard({ event }: EventCardProps) {
-  const formattedDate = format(parseISO(event.date), "MMMM d, yyyy");
+export default function EventCard({ event, isCompact = false }: EventCardProps) {
+  const formattedDate = format(parseISO(event.date), isCompact ? "MMM d, yy" : "MMMM d, yyyy");
+
+  if (isCompact) {
+    return (
+      <div className="h-full flex flex-col bg-card rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-grow">
+            <CardTitle className="text-base leading-tight mb-1">{event.title}</CardTitle>
+            <Badge variant={
+                event.category === EventCategory.Event ? "default"
+              : event.category === EventCategory.QT ? "secondary"
+              : "outline"
+            } className="capitalize text-xs px-1.5 py-0.5 h-auto">
+              {event.category}
+            </Badge>
+          </div>
+          <div className="p-1.5 bg-muted rounded-full shrink-0">
+            {getCategoryIcon(event.category, isCompact)}
+          </div>
+        </div>
+        <CardDescription className="text-xs mt-1.5">{formattedDate}</CardDescription>
+        {event.category === EventCategory.Event && event.details && (
+          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2">{event.details}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-card rounded-lg shadow-md overflow-hidden transition-all hover:shadow-xl">
