@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { startOfDay, parseISO } from 'date-fns';
+import { startOfDay, parseISO, addMonths, endOfDay } from 'date-fns';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -31,9 +31,12 @@ export default function HomePage() {
   const upcomingEvents = useMemo(() => {
     if (!isMounted) return []; // Prevent server/client mismatch for date comparisons
     const today = startOfDay(new Date());
+    const oneMonthFromNow = endOfDay(addMonths(today, 1)); // Use endOfDay to include events on the last day of the month range
+
     return allEvents.filter(event => {
       try {
-        return parseISO(event.date) >= today;
+        const eventDate = parseISO(event.date);
+        return eventDate >= today && eventDate <= oneMonthFromNow;
       } catch (e) {
         console.error("Error parsing event date for filtering:", event.date, e);
         return false;
@@ -67,7 +70,7 @@ export default function HomePage() {
         <section>
           <div className="flex items-center space-x-3 mb-6">
             <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates (Next Month)</h2>
           </div>
            <Card><CardContent className="p-6 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p className="text-muted-foreground">Loading events...</p></CardContent></Card>
         </section>
@@ -89,7 +92,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div className="flex items-center space-x-3">
             <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates (Next Month)</h2>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center space-x-2 w-full sm:w-auto">
