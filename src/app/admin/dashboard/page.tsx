@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
               </DialogContent>
             </Dialog>
           </div>
-          <CardDescription>Add, edit, or remove events for Cell Dates. Events are stored in Firestore.</CardDescription>
+          {/* CardDescription removed as per user request */}
         </CardHeader>
       </Card>
 

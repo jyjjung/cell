@@ -6,12 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'; // Removed FormLabel
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/use-events';
 import { AppEvent, EventCategory } from '@/types';
-import { ClipboardPaste } from 'lucide-react';
+// Removed ClipboardPaste as the icon and title are now in the parent CardHeader
 
 const batchImportSchema = z.object({
   batchText: z.string().min(10, { message: "Batch text must be at least 10 characters." })
@@ -127,10 +127,8 @@ export default function BatchEventImportForm() {
       }
     }
 
-
     return { eventsProcessed, parseErrors };
   };
-
 
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
@@ -158,7 +156,7 @@ export default function BatchEventImportForm() {
         description: `${eventsProcessed} event(s) were successfully added.`,
       });
       form.reset(); 
-    } else { // No errors, no events processed (e.g. only category line or empty input after category)
+    } else { 
          toast({
             title: "Batch Import Notice",
             description: "No new events were processed. Please check your input format or content.",
@@ -171,18 +169,15 @@ export default function BatchEventImportForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1 border rounded-lg shadow-md bg-card mt-1">
-        <div className="flex items-center space-x-2 mb-4 p-4">
-            <ClipboardPaste className="h-6 w-6 text-primary" />
-            <h3 className="text-xl font-semibold">Import Multiple Events</h3>
-        </div>
-        <div className="px-4 space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Removed internal header/title div */}
+        <div className="space-y-6"> {/* Simplified wrapping div, CardContent will provide horizontal padding */}
         <FormField
           control={form.control}
           name="batchText"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Batch Event Text</FormLabel>
+              {/* FormLabel removed as context is provided by CardDescription in dashboard */}
               <FormControl>
                 <Textarea
                   placeholder="Example:
@@ -207,7 +202,7 @@ Shep. Claire Lee
           )}
         />
         </div>
-        <div className="p-4 border-t">
+        <div className="pt-4 border-t"> {/* Submit button section with top padding and border */}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? 'Importing Events...' : 'Import Events'}
         </Button>
@@ -216,4 +211,3 @@ Shep. Claire Lee
     </Form>
   );
 }
-

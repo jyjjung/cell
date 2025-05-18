@@ -13,14 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, BookMarked } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react'; // Removed BookMarked
 import { generateBibleReadingPlan, type GenerateBibleReadingPlanOutput } from '@/ai/flows/generate-bible-reading-plan';
-import { useBiblePlan } from '@/hooks/use-bible-plan'; // To save the plan
+import { useBiblePlan } from '@/hooks/use-bible-plan'; 
 import type { BibleReadingPlan } from '@/types';
 
 const adminPlanFormSchema = z.object({
   reference: z.string().min(3, { message: "Bible reference(s) must be at least 3 characters." })
-    .max(2000, { message: "Reference input is too long."}), // Added max length
+    .max(2000, { message: "Reference input is too long."}),
   startDate: z.date({ required_error: "A start date is required." }),
 });
 
@@ -29,7 +29,7 @@ type AdminPlanFormValues = z.infer<typeof adminPlanFormSchema>;
 export default function BiblePlanAdminForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { saveBiblePlan, plan: currentPlan } = useBiblePlan(); // Get current plan for default values
+  const { saveBiblePlan, plan: currentPlan } = useBiblePlan(); 
 
   const form = useForm<AdminPlanFormValues>({
     resolver: zodResolver(adminPlanFormSchema),
@@ -39,7 +39,6 @@ export default function BiblePlanAdminForm() {
     },
   });
   
-  // Effect to reset form if currentPlan changes (e.g., after save)
   useEffect(() => {
     if (currentPlan) {
       form.reset({
@@ -48,7 +47,6 @@ export default function BiblePlanAdminForm() {
       });
     }
   }, [currentPlan, form]);
-
 
   async function onSubmit(data: AdminPlanFormValues) {
     setIsLoading(true);
@@ -89,12 +87,9 @@ export default function BiblePlanAdminForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1 border rounded-lg shadow-md bg-card mt-1">
-        <div className="flex items-center space-x-2 mb-4 p-4">
-          <BookMarked className="h-6 w-6 text-primary" />
-          <h3 className="text-xl font-semibold">Set Global Bible Reading Plan</h3>
-        </div>
-        <div className="px-4 space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Removed internal header/title div */}
+        <div className="space-y-6"> {/* Simplified wrapping div, CardContent will provide horizontal padding */}
         <FormField
           control={form.control}
           name="reference"
@@ -149,7 +144,7 @@ export default function BiblePlanAdminForm() {
           )}
         />
         </div>
-        <div className="p-4 border-t">
+        <div className="pt-4 border-t"> {/* Submit button section with top padding and border */}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? 'Generating & Saving Plan...' : 'Generate & Save Global Plan'}
         </Button>
