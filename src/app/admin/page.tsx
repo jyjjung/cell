@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -16,23 +17,40 @@ export default function AdminLoginPage() {
   const { login, isAdmin } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (isAdmin) {
-    router.push('/admin/dashboard');
-    return null; // Or a loading spinner
-  }
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Only attempt to redirect if isAdmin is true and the component is mounted.
+    // This prevents router.push during the initial render or on the server.
+    if (isAdmin && isMounted) {
+      router.push('/admin/dashboard');
+    }
+  }, [isAdmin, router, isMounted]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError('');
     if (login(password)) {
       toast({ title: "Login Successful", description: "Welcome, Admin!" });
-      router.push('/admin/dashboard');
+      // router.push will be handled by the useEffect above once isAdmin state updates
     } else {
       setError('Incorrect password. Please try again.');
       toast({ title: "Login Failed", description: "Incorrect password.", variant: "destructive" });
     }
   };
+
+  // If redirecting, or not yet mounted, show nothing or a loader to prevent flashing content
+  if (isAdmin && isMounted) {
+    return null; // Or a loading spinner
+  }
+  
+  if (!isMounted) {
+     return <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center"><p>Loading...</p></div>;
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
