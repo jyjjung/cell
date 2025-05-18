@@ -77,14 +77,15 @@ Input Details:
 Planning Rules:
 1.  CRITICAL RULE #1 (REITERATED): Absolutely NO readings on Sundays. If a date calculated for readings falls on a Sunday, skip that Sunday ENTIRELY. The readings that would have been on Sunday should be scheduled for the following Monday (or the next valid non-Sunday day), along with any other readings for that day, still respecting the 4-passage-per-day limit. This is the most important rule.
 2.  Combine all 'passage' units derived from the input 'reference' into a single, ordered list, strictly maintaining the sequence as provided in the input.
-3.  Starting from the 'startDate', assign up to FOUR 'passage' units to each day's reading. If the startDate itself is a Sunday, the first day of reading will be the following Monday.
-4.  Increment the date for each new day of readings, always skipping Sundays.
-5.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
-6.  IMPORTANT FOR OUTPUT: All Bible book names in the generated 'passages' array (e.g., in 'Genesis 1', 'Acts 18:12-28') MUST be the full, unabbreviated book name. For example, use "Genesis" not "Gen", "Exodus" not "Exo", "Galatians" not "Gal".
+3.  Starting from the 'startDate', assign up to FOUR 'passage' units to each day's reading. If the startDate itself is a Sunday, the first day of reading will be the following Monday. Reading days are Monday through Saturday.
+4.  Saturdays are normal reading days and MUST be assigned passages if they fall in the schedule and passages are available, following the same rules as weekdays (up to 4 passages). Only Sundays are to be skipped.
+5.  Increment the date for each new day of readings, always skipping Sundays.
+6.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
+7.  IMPORTANT FOR OUTPUT: All Bible book names in the generated 'passages' array (e.g., in 'Genesis 1', 'Acts 18:12-28') MUST be the full, unabbreviated book name. For example, use "Genesis" not "Gen", "Exodus" not "Exo", "Galatians" not "Gal".
 
 Output Format:
 Produce a JSON object that strictly adheres to the 'GenerateBibleReadingPlanOutputSchema'.
-For very large lists of scriptures that result in a long reading plan, ensure the entire JSON output is complete and correctly formatted according to the schema. Do not truncate or malform the JSON. Each date in the 'dailyReadings' array must NOT be a Sunday.
+For very large lists of scriptures that result in a long reading plan, ensure the ENTIRE JSON output is complete and correctly formatted according to the schema. Do not truncate or malform the JSON. Each date in the 'dailyReadings' array must NOT be a Sunday.
 
 Let's begin with the plan generation:
 Start Date: {{startDate}}
