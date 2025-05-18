@@ -24,10 +24,10 @@ export function useBiblePlan() {
             id: docSnapshot.id,
             startDate: typeof data.startDate === 'string' ? data.startDate : (data.startDate as unknown as Timestamp)?.toDate().toISOString(),
             generatedDate: typeof data.generatedDate === 'string' ? data.generatedDate : (data.generatedDate as unknown as Timestamp)?.toDate().toISOString(),
-            dailyReadings: data.dailyReadings.map(dr => ({
+            dailyReadings: Array.isArray(data.dailyReadings) ? data.dailyReadings.map(dr => ({
                 ...dr,
                 date: typeof dr.date === 'string' ? dr.date : (dr.date as unknown as Timestamp)?.toDate().toISOString().split('T')[0], // ensure YYYY-MM-DD
-            }))
+            })) : [] // Default to empty array if not an array or missing
         };
         setPlan(formattedData);
       } else {

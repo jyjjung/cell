@@ -1,4 +1,6 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export enum EventCategory {
   QT = "QT", // Quiet Time
   Event = "Event",
@@ -12,8 +14,8 @@ export interface AppEvent {
   category: EventCategory;
   title: string;
   details?: string;
-  createdAt?: firebase.firestore.Timestamp; // Optional: for Firestore server timestamp
-  updatedAt?: firebase.firestore.Timestamp; // Optional: for Firestore server timestamp
+  createdAt?: Timestamp; // Optional: for Firestore server timestamp
+  updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
 
 export interface DailyReading {
@@ -27,5 +29,5 @@ export interface BibleReadingPlan {
   startDate: string; // ISO string for plan's start date
   dailyReadings: DailyReading[];
   generatedDate: string; // ISO string of when this plan was generated
-  updatedAt?: firebase.firestore.Timestamp; // Optional: for Firestore server timestamp
+  updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
