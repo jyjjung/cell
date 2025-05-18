@@ -33,7 +33,7 @@ export default function RootLayout({
           <MovingBackground />
           <div className="relative z-10 flex min-h-screen flex-col">
             <Header />
-            <main className="flex-grow container mx-auto px-4 py-8">
+            <main className="flex-grow container mx-auto px-6 py-8">
               {children}
             </main>
             {/* Footer removed */}
