@@ -50,57 +50,70 @@ export default function BatchEventImportForm() {
     } else if (categoryLine.startsWith("QT:")) {
         currentCategory = EventCategory.QT;
     } else {
-        parseErrors.push("Invalid or missing category line. Must start with 'Snacks:' or 'QT:'.");
+        parseErrors.push("Invalid or missing category line on the first line. Must start with 'Snacks:' or 'QT:'.");
         return { eventsProcessed, parseErrors };
     }
 
-    let i = 1; // Start parsing from the line after category
+    let i = 1; 
     while (i < lines.length) {
         const dateStr = lines[i]?.trim();
-        if (!dateStr) { // Skip empty lines between entries
+        
+        if (!dateStr) { 
             i++;
             continue;
         }
+
+        const dateStrPartsTest = dateStr.split('/');
+        if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
+            parseErrors.push(`Invalid date format for entry: "${dateStr}". Expected DD/MM/YYYY. Skipping this line.`);
+            i += 1; 
+            continue;
+        }
+
+        if (i + 1 >= lines.length) { 
+            parseErrors.push(`Missing name for date: "${dateStr}". Reached end of input.`);
+            break; 
+        }
+        
         const title = lines[i+1]?.trim();
 
-        if (!title) {
-            parseErrors.push(`Missing title for date: ${dateStr || 'Unknown date'}`);
-            i += 1; // Move past date line at least
+        if (!title) { 
+            parseErrors.push(`Missing name for date: "${dateStr}". Name line is empty. Skipping entry.`);
+            i += 2; 
             continue;
         }
-        
-        // Validate and parse date DD/MM/YYYY
-        const dateParts = dateStr.split('/');
-        if (dateParts.length !== 3) {
-            parseErrors.push(`Invalid date format: "${dateStr}". Expected DD/MM/YYYY.`);
-            i += 2; // Move past this pair
-            continue;
-        }
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS Date
-        const year = parseInt(dateParts[2], 10);
 
-        if (isNaN(day) || isNaN(month) || isNaN(year) || year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-            parseErrors.push(`Invalid date components in: "${dateStr}".`);
-            i += 2;
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(title)) {
+            parseErrors.push(`Date "${dateStr}" is missing its name. The next line "${title}" appears to be another date. Skipping date "${dateStr}".`);
+            i += 1; 
             continue;
         }
         
-        const date = new Date(year, month, day);
-        if (isNaN(date.getTime())) {
-            parseErrors.push(`Invalid date constructed: "${dateStr}".`);
+        const day = parseInt(dateStrPartsTest[0], 10);
+        const month = parseInt(dateStrPartsTest[1], 10) - 1; 
+        const year = parseInt(dateStrPartsTest[2], 10);
+
+        if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
+            parseErrors.push(`Invalid date components (day, month, or year out of range) in: "${dateStr}". Skipping entry.`);
+            i += 2; 
+            continue;
+        }
+        
+        const date = new Date(Date.UTC(year, month, day)); 
+        if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
+             parseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025). Skipping entry.`);
             i += 2;
             continue;
         }
 
         eventsToCreate.push({
             title,
-            date: date.toISOString(),
-            category: currentCategory as EventCategory, // Category is confirmed not null here
+            date: date.toISOString(), // Store as full ISO string
+            category: currentCategory as EventCategory, 
             details: currentCategory === EventCategory.Snack ? `${title} is bringing snacks.` : `QT with ${title}.`
         });
         
-        i += 2; // Move to the next potential date line
+        i += 2; 
     }
 
     if (eventsToCreate.length > 0) {
@@ -109,11 +122,9 @@ export default function BatchEventImportForm() {
           await addEvent(eventData);
           eventsProcessed++;
         } catch (error: any) {
-          parseErrors.push(`Failed to add event "${eventData.title}": ${error.message}`);
+          parseErrors.push(`Failed to add event "${eventData.title}" on ${eventData.date.substring(0,10)}: ${error.message}`);
         }
       }
-    } else if (parseErrors.length === 0 && lines.length > 1) { // Processed category but no valid events
-        parseErrors.push("No valid event entries found after the category line.");
     }
 
 
@@ -128,29 +139,30 @@ export default function BatchEventImportForm() {
 
     if (parseErrors.length > 0) {
       toast({
-        title: `Batch Import Partially Failed (Processed ${eventsProcessed} events)`,
+        title: eventsProcessed > 0 ? `Batch Import Partially Completed` : `Batch Import Failed`,
         description: (
-          <div className="max-h-40 overflow-y-auto">
-            <p>Please correct the following errors and try again:</p>
-            <ul className="list-disc pl-5">
-              {parseErrors.map((err, idx) => <li key={idx}>{err}</li>)}
+          <div className="max-h-60 overflow-y-auto">
+            {eventsProcessed > 0 && <p className="mb-2">{eventsProcessed} event(s) successfully added.</p>}
+            <p>Please review the following issues:</p>
+            <ul className="list-disc pl-5 mt-1">
+              {parseErrors.map((err, idx) => <li key={idx} className="text-xs">{err}</li>)}
             </ul>
           </div>
         ),
         variant: "destructive",
-        duration: 10000, // Keep error toast longer
+        duration: 15000, 
       });
     } else if (eventsProcessed > 0) {
       toast({
         title: "Batch Import Successful!",
-        description: `${eventsProcessed} events were successfully added.`,
+        description: `${eventsProcessed} event(s) were successfully added.`,
       });
-      form.reset(); // Clear form on success
-    } else {
+      form.reset(); 
+    } else { // No errors, no events processed (e.g. only category line or empty input after category)
          toast({
             title: "Batch Import Notice",
-            description: "No events were processed. Please check your input format.",
-            variant: "default", // Use default or warning, not destructive if no actual errors occurred
+            description: "No new events were processed. Please check your input format or content.",
+            variant: "default", 
         });
     }
 
@@ -204,3 +216,4 @@ Shep. Claire Lee
     </Form>
   );
 }
+
