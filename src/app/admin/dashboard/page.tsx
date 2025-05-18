@@ -38,7 +38,7 @@ export default function AdminDashboardPage() {
   }
 
   const handleAddEvent = async (data: AppEvent) => {
-    const { id, ...eventDataNoId } = data; // id might be empty string if new
+    const { id, ...eventDataNoId } = data; 
     try {
       await addEvent(eventDataNoId);
       toast({ title: "Event Added", description: `"${data.title}" has been successfully added.` });
@@ -116,7 +116,6 @@ export default function AdminDashboardPage() {
               </DialogContent>
             </Dialog>
           </div>
-          {/* CardDescription removed as per user request */}
         </CardHeader>
       </Card>
 
@@ -161,7 +160,7 @@ export default function AdminDashboardPage() {
               <UploadCloud className="h-6 w-6 text-primary" /> 
               <CardTitle className="text-2xl">Batch Import Events</CardTitle>
             </div>
-          <CardDescription>Quickly add multiple "Snacks" or "QT" events by pasting text. Each event entry should be a date (DD/MM/YYYY) on one line, and the person's name on the next. The first line of the text must be "Snacks:" or "QT:".</CardDescription>
+          <CardDescription>Quickly add multiple "Snacks", "QT", "Birthdays", or "Events" by pasting text. Each event entry should be a date (DD/MM/YYYY) on one line, and the person's name or event title on the next. The first line of each section must be the category (e.g., "Snacks:", "QT:", "Birthdays:", "Events:").</CardDescription>
         </CardHeader>
         <CardContent>
             <BatchEventImportForm />

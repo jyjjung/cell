@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { DailyReading } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Card still used for individual readings
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -26,7 +26,6 @@ export default function FullBiblePlanPage() {
         setDisplayedReadings(
           plan.dailyReadings.filter(reading => {
             try {
-                // Ensure reading.date is treated as UTC for comparison, similar to how it's stored
                 const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
                 return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
             } catch (e) {
@@ -61,7 +60,6 @@ export default function FullBiblePlanPage() {
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
-      // Using a Card here for the "No Plan" message is still appropriate
       <Card className="mt-6 shadow-lg max-w-lg mx-auto"> 
         <CardHeader>
           <div className="flex items-center space-x-2">
@@ -127,16 +125,16 @@ export default function FullBiblePlanPage() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-24rem)] rounded-md border shadow-inner">
-          <div className="p-4 space-y-4">
+        <ScrollArea className="h-[calc(100vh-24rem)] rounded-md"> {/* Removed border and shadow-inner */}
+          <div className="p-1 md:p-4 space-y-4"> {/* Added md:p-4 for more spacing on larger screens */}
             {displayedReadings.map((reading, index) => (
-              <Card key={index} className="shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-2 pt-4">
+              <Card key={index} className="w-full shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="p-4 md:p-6 pb-2">
                   <CardTitle className="text-xl">
                     {format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pb-4">
+                <CardContent className="p-4 md:p-6 pt-0">
                   {reading.passages.length > 0 ? (
                     <ul className="space-y-1.5">
                       {reading.passages.map((passage, pIndex) => (
