@@ -97,7 +97,7 @@ Start Date: {{startDate}}
 Scripture References:
 {{{reference}}}
 `,
-  config: { // Moved safetySettings here
+  config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -116,31 +116,70 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
   async input => {
     let modelResponse;
     try {
-      // Call prompt directly, safetySettings are now part of its definition
-      modelResponse = await prompt(input);
-    } catch (e: any) {
-      // Enhanced logging
-      console.error("AI model call failed for generateBibleReadingPlanFlow. Input:", input, "Full Error Object:", e);
-      let errorMessage = "The AI model failed to process your request for the Bible plan. Please check your input, ensure the format is correct, or try again later.";
-      if (e.message) {
-        errorMessage += ` Specific error: ${e.message}`;
+      modelResponse = await prompt(input); // Genkit performs schema validation here if output.schema is defined
+      
+      const output = modelResponse.output;
+
+      if (!output) {
+        // This case implies that schema validation by Genkit failed, and modelResponse.output was null.
+        console.error(
+          "AI response schema validation failed or output was null in generateBibleReadingPlanFlow. Input:",
+          input,
+          "Raw Model Response (if available):",
+          modelResponse // Log the whole modelResponse object to inspect its structure and any error messages it might contain
+        );
+        throw new Error(
+          "The AI model's response did not match the expected format. Please check your input or try again. Raw response has been logged for debugging."
+        );
       }
-      // This error message will be more specific than the generic server component error.
-      throw new Error(errorMessage);
-    }
+      
+      if (!output.dailyReadings || output.dailyReadings.length === 0) {
+        // This case implies the schema was valid, but the plan is logically empty.
+        const errorDetails = !output.dailyReadings 
+          ? "Output structure received, but 'dailyReadings' array is missing." 
+          : "Output structure received, but 'dailyReadings' array is empty (no readings generated).";
+        console.error(
+          "AI response issue in generateBibleReadingPlanFlow (empty/incomplete plan):",
+          errorDetails,
+          "Input was:",
+          input,
+          "Full parsed output:",
+          output,
+          "Raw Model Response (if available):",
+          modelResponse
+        );
+        throw new Error(
+          `The AI model responded, but the generated plan was incomplete or empty. Details: ${errorDetails} Please adjust your input or try again.`
+        );
+      }
+      
+      return output; // Successfully parsed, validated, and non-empty
 
-    const { output } = modelResponse;
+    } catch (e: any) {
+      // This catch block handles:
+      // 1. Errors from the `await prompt(input)` call itself (e.g., network, API key).
+      // 2. Explicit `new Error()` throws from the checks above.
+      console.error(
+        "Error caught in generateBibleReadingPlanFlow. Input:",
+        input,
+        "Raw Model Response (if available at this point):",
+        modelResponse, // Might be undefined if error occurred before/during `prompt` call
+        "Full Error Object:",
+        e
+      );
 
-    if (!output || !output.dailyReadings || output.dailyReadings.length === 0) {
-      const errorDetails = !output 
-        ? "No output structure received from AI." 
-        : !output.dailyReadings 
-        ? "Output received but missing 'dailyReadings' array."
-        : "Output received but 'dailyReadings' array is empty (no readings generated).";
-      console.error("AI response issue in generateBibleReadingPlanFlow:", errorDetails, "Input was:", input, "Full output:", output);
-      // This error message will also be more specific.
-      throw new Error(`The AI model responded, but the generated plan was incomplete or empty. Details: ${errorDetails} Please adjust your input or try again.`);
+      let errorMessage = "Failed to process Bible reading plan. ";
+      if (e.message) {
+        errorMessage += e.message; // Prioritize the message from the thrown error
+      } else {
+        errorMessage += "An unexpected error occurred. Check server logs for details.";
+      }
+      // Note: e.digest is a client-side property added by Next.js if the error originates from a Server Component.
+      // It won't be available here directly unless this flow is called in a way that it bubbles up to the client.
+      // The client-side form submit handler is responsible for adding the digest if it's present on the error it catches.
+      
+      throw new Error(errorMessage); // Re-throw to be caught by the client-side caller
     }
-    return output;
   }
 );
+
