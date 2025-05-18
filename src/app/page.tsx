@@ -70,7 +70,7 @@ export default function HomePage() {
         <section>
           <div className="flex items-center space-x-3 mb-6">
             <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates (Next Month)</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
           </div>
            <Card><CardContent className="p-6 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p className="text-muted-foreground">Loading events...</p></CardContent></Card>
         </section>
@@ -92,7 +92,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div className="flex items-center space-x-3">
             <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates (Next Month)</h2>
+            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center space-x-2 w-full sm:w-auto">
