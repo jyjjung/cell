@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { DailyReading } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Card still used for individual readings
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -61,7 +61,8 @@ export default function FullBiblePlanPage() {
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
-      <Card className="mt-6 shadow-lg">
+      // Using a Card here for the "No Plan" message is still appropriate
+      <Card className="mt-6 shadow-lg max-w-lg mx-auto"> 
         <CardHeader>
           <div className="flex items-center space-x-2">
             <Info className="h-6 w-6 text-destructive" />
@@ -79,87 +80,81 @@ export default function FullBiblePlanPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-xl">
-        <CardHeader>
-          <div className="flex items-center space-x-3">
-            <ListChecks className="h-8 w-8 text-primary" />
-            <CardTitle className="text-3xl tracking-tight">Full Bible Reading Plan</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 p-4 border rounded-lg bg-card/50 shadow">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full sm:w-auto justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date...</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              {isFiltering && (
-                <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto">
-                  <XCircle className="mr-2 h-4 w-4" /> Show All Readings
-                </Button>
-              )}
-            </div>
-          </div>
+      <div className="flex items-center space-x-3 mb-6">
+        <ListChecks className="h-8 w-8 text-primary" />
+        <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+      </div>
 
-          {displayedReadings.length === 0 && isFiltering ? (
-            <Card className="shadow-md">
-              <CardContent className="p-6 text-center">
-                <Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">
-                  No readings scheduled for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : 'the selected date'}.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ScrollArea className="h-[calc(100vh-28rem)] rounded-md border shadow-inner">
-              <div className="p-4 space-y-4">
-                {displayedReadings.map((reading, index) => (
-                  <Card key={index} className="shadow-md hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xl">
-                        {format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {reading.passages.length > 0 ? (
-                        <ul className="space-y-1.5">
-                          {reading.passages.map((passage, pIndex) => (
-                            <li key={pIndex} className="p-2.5 bg-background/60 border rounded-md text-sm">
-                              <BookOpenCheck className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                              {passage}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
+      <div className="mb-6 p-4 border rounded-lg bg-card shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full sm:w-auto justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date...</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          {isFiltering && (
+            <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto">
+              <XCircle className="mr-2 h-4 w-4" /> Show All Readings
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {displayedReadings.length === 0 && isFiltering ? (
+        <Card className="shadow-md">
+          <CardContent className="p-6 text-center">
+            <Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">
+              No readings scheduled for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : 'the selected date'}.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-24rem)] rounded-md border shadow-inner">
+          <div className="p-4 space-y-4">
+            {displayedReadings.map((reading, index) => (
+              <Card key={index} className="shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-xl">
+                    {format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  {reading.passages.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {reading.passages.map((passage, pIndex) => (
+                        <li key={pIndex} className="p-2.5 bg-background/60 border rounded-md text-sm">
+                          <BookOpenCheck className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
+                          {passage}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }
-
