@@ -1,22 +1,15 @@
+
 "use client";
 
-import { useState } from 'react';
 import EventList from '@/components/events/event-list';
-import BiblePlanForm from '@/components/bible-plan/bible-plan-form';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
-import type { BibleReadingPlan as BibleReadingPlanType } from '@/types';
-import useLocalStorage from '@/hooks/use-local-storage';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart } from 'lucide-react';
-
-const BIBLE_PLAN_STORAGE_KEY = 'cell_dates_bible_plan';
+import { CalendarCheck, BookHeart, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function HomePage() {
-  const [biblePlan, setBiblePlan] = useLocalStorage<BibleReadingPlanType | null>(BIBLE_PLAN_STORAGE_KEY, null);
-
-  const handlePlanGenerated = (newPlan: BibleReadingPlanType) => {
-    setBiblePlan(newPlan);
-  };
+  const { plan, loading: planLoading } = useBiblePlan();
 
   return (
     <div className="space-y-12">
@@ -30,17 +23,21 @@ export default function HomePage() {
 
       <Separator className="my-12" />
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div>
-           <div className="flex items-center space-x-3 mb-6">
-             <BookHeart className="h-8 w-8 text-accent" />
-             <h2 className="text-3xl font-bold tracking-tight">Bible Reading Plan</h2>
-           </div>
-          <BiblePlanForm onPlanGenerated={handlePlanGenerated} />
+      <section>
+        <div className="flex items-center space-x-3 mb-6">
+          <BookHeart className="h-8 w-8 text-accent" />
+          <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
         </div>
-        <div className="lg:sticky lg:top-20"> {/* Make plan display sticky on larger screens */}
-          <BiblePlanDisplay plan={biblePlan} />
-        </div>
+        {planLoading ? (
+          <Card>
+            <CardContent className="p-6 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+              <p className="text-muted-foreground">Loading Bible reading plan...</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <BiblePlanDisplay plan={plan} />
+        )}
       </section>
     </div>
   );

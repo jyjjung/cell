@@ -1,42 +1,89 @@
+
 "use client";
 
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { AppEvent } from '@/types';
-import { EventCategory } from '@/types';
-import useLocalStorage from './use-local-storage';
-import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore';
 
-// Ensure uuid is installed if not already: npm install uuid @types/uuid
-// It might be better to use crypto.randomUUID() if environments support it broadly
-// For this scaffold, assuming uuid is fine. If not, will adjust.
-
-const EVENTS_STORAGE_KEY = 'cell_dates_events';
-
-const initialEvents: AppEvent[] = [
-  // Sample data can be added here if needed for initial setup
-  // { id: uuidv4(), date: new Date(2024, 6, 20).toISOString(), category: EventCategory.Event, title: "Summer BBQ", details: "Community gathering at the park." },
-  // { id: uuidv4(), date: new Date(2024, 6, 25).toISOString(), category: EventCategory.Birthday, title: "Alice's Birthday" },
-];
-
+const EVENTS_COLLECTION = 'events';
 
 export function useEvents() {
-  const [events, setEvents] = useLocalStorage<AppEvent[]>(EVENTS_STORAGE_KEY, initialEvents);
+  const [events, setEvents] = useState<AppEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addEvent = useCallback((eventData: Omit<AppEvent, 'id'>) => {
-    const newEvent: AppEvent = { ...eventData, id: uuidv4() };
-    setEvents(prevEvents => [...prevEvents, newEvent].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-  }, [setEvents]);
+  useEffect(() => {
+    const q = query(collection(db, EVENTS_COLLECTION), orderBy("date", "asc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const eventsData: AppEvent[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        eventsData.push({
+          ...data,
+          id: doc.id,
+          // Ensure date is string, Firestore might return Timestamp for date fields if not careful
+          date: typeof data.date === 'string' ? data.date : (data.date as Timestamp)?.toDate().toISOString(),
+        } as AppEvent);
+      });
+      setEvents(eventsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching events:", error);
+      setLoading(false);
+    });
 
-  const updateEvent = useCallback((updatedEvent: AppEvent) => {
-    setEvents(prevEvents =>
-      prevEvents.map(event => (event.id === updatedEvent.id ? updatedEvent : event))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    );
-  }, [setEvents]);
+    return () => unsubscribe();
+  }, []);
 
-  const deleteEvent = useCallback((eventId: string) => {
-    setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
-  }, [setEvents]);
+  const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>) => {
+    try {
+      await addDoc(collection(db, EVENTS_COLLECTION), {
+        ...eventData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error adding event:", error);
+    }
+  }, []);
 
-  return { events, addEvent, updateEvent, deleteEvent };
+  const updateEvent = useCallback(async (updatedEvent: AppEvent) => {
+    if (!updatedEvent.id) {
+      console.error("Event ID is missing for update");
+      return;
+    }
+    const eventDocRef = doc(db, EVENTS_COLLECTION, updatedEvent.id);
+    try {
+      // Exclude id from the data to be written to Firestore
+      const { id, ...dataToUpdate } = updatedEvent;
+      await updateDoc(eventDocRef, {
+        ...dataToUpdate,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error updating event:", error);
+    }
+  }, []);
+
+  const deleteEvent = useCallback(async (eventId: string) => {
+    const eventDocRef = doc(db, EVENTS_COLLECTION, eventId);
+    try {
+      await deleteDoc(eventDocRef);
+    } catch (error) {
+      console.error("Error deleting event:", error);
+    }
+  }, []);
+
+  return { events, addEvent, updateEvent, deleteEvent, loading };
 }
