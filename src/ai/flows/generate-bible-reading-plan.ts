@@ -119,9 +119,14 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
         }
       });
     } catch (e: any) {
-      console.error("AI model call failed for generateBibleReadingPlanFlow. Input:", input, "Error:", e);
+      // Enhanced logging
+      console.error("AI model call failed for generateBibleReadingPlanFlow. Input:", input, "Full Error Object:", e);
+      let errorMessage = "The AI model failed to process your request for the Bible plan. Please check your input, ensure the format is correct, or try again later.";
+      if (e.message) {
+        errorMessage += ` Specific error: ${e.message}`;
+      }
       // This error message will be more specific than the generic server component error.
-      throw new Error("The AI model failed to process your request for the Bible plan. Please check your input, ensure the format is correct, or try again later.");
+      throw new Error(errorMessage);
     }
 
     const { output } = modelResponse;
@@ -139,4 +144,3 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
     return output;
   }
 );
-

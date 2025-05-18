@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react'; // Removed BookMarked
+import { CalendarIcon } from 'lucide-react';
 import { generateBibleReadingPlan, type GenerateBibleReadingPlanOutput } from '@/ai/flows/generate-bible-reading-plan';
 import { useBiblePlan } from '@/hooks/use-bible-plan'; 
 import type { BibleReadingPlan } from '@/types';
@@ -57,7 +57,7 @@ export default function BiblePlanAdminForm() {
         startDate: formattedStartDate,
       });
 
-      if (!aiResult.dailyReadings || aiResult.dailyReadings.length === 0) {
+      if (!aiResult || !aiResult.dailyReadings || aiResult.dailyReadings.length === 0) {
         toast({ title: "Warning", description: "The generated plan has no readings. Please check your input or try again.", variant: "destructive" });
         setIsLoading(false);
         return;
@@ -74,10 +74,23 @@ export default function BiblePlanAdminForm() {
 
       toast({ title: "Success!", description: "New Bible reading plan generated and saved." });
     } catch (error: any) {
-      console.error("Error generating or saving Bible plan:", error);
+      // Enhanced error logging and toast message
+      console.error("Error generating or saving Bible plan. Full Error Object:", error);
+      let description = "Failed to process Bible reading plan. ";
+      if (error.message) {
+        description += error.message;
+      } else {
+        description += "An unexpected error occurred. Check console for details.";
+      }
+      // If Next.js includes a digest for server component errors, it might be on error.digest
+      if (error.digest) {
+        description += ` (Digest: ${error.digest})`;
+        console.error("Server Component Error Digest:", error.digest);
+      }
+
       toast({
         title: "Error",
-        description: `Failed to process Bible reading plan. ${error.message || "Please try again."}`,
+        description: description,
         variant: "destructive",
       });
     } finally {
@@ -88,8 +101,7 @@ export default function BiblePlanAdminForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Removed internal header/title div */}
-        <div className="space-y-6"> {/* Simplified wrapping div, CardContent will provide horizontal padding */}
+        <div className="space-y-6"> 
         <FormField
           control={form.control}
           name="reference"
@@ -144,7 +156,7 @@ export default function BiblePlanAdminForm() {
           )}
         />
         </div>
-        <div className="pt-4 border-t"> {/* Submit button section with top padding and border */}
+        <div className="pt-4 border-t"> 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? 'Generating & Saving Plan...' : 'Generate & Save Global Plan'}
         </Button>
