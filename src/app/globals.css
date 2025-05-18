@@ -8,26 +8,32 @@ body {
 
 @layer base {
   :root {
-    /* These are fallback light theme variables, dark theme is default */
+    /* Fallback light theme variables (dark theme is default via html class) */
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 231 48% 48%; /* #3F51B5 */
-    --primary-foreground: 231 48% 98%;
+    
+    --primary: 221 83% 53%; /* Blue */
+    --primary-foreground: 210 20% 98%; /* White for text on primary */
+    
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
+    
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 289 42% 60%; /* #BA68C8 */
-    --accent-foreground: 289 42% 98%;
+    
+    --accent: 220 13% 91%; /* Light cool grey (greyish-white) */
+    --accent-foreground: 220 14% 10%; /* Dark grey/black for text on accent */
+    
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 231 48% 48%; /* Ring color related to primary */
+    --ring: 221 83% 53%; /* Blue for ring */
     --radius: 0.5rem;
     
     --chart-1: 12 76% 61%;
@@ -38,33 +44,33 @@ body {
   }
 
   .dark {
-    --background: 0 0% 8%; /* Slightly darker than #212121 for more depth */
-    --foreground: 0 0% 98%; /* White-ish text */
+    --background: 0 0% 8%; 
+    --foreground: 0 0% 98%; 
 
-    --card: 0 0% 13%; /* #212121 for cards */
+    --card: 0 0% 13%; 
     --card-foreground: 0 0% 95%;
 
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 231 48% 48%; /* #3F51B5 */
-    --primary-foreground: 231 48% 98%; /* Light text on primary bg */
+    --primary: 221 83% 53%; /* Blue */
+    --primary-foreground: 210 20% 98%; /* White for text on primary */
 
-    --secondary: 0 0% 18%; /* A slightly lighter dark shade for secondary elements */
+    --secondary: 0 0% 18%; 
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%; /* Lighter gray for muted text */
+    --muted-foreground: 0 0% 60%; 
 
-    --accent: 289 42% 60%; /* #BA68C8 */
-    --accent-foreground: 289 42% 98%; /* Light text on accent bg */
+    --accent: 220 13% 25%; /* Darker grey for dark mode accent */
+    --accent-foreground: 220 13% 94%; /* Light grey/white text on dark accent */
 
-    --destructive: 0 62.8% 50.6%; /* Standard destructive red */
+    --destructive: 0 62.8% 50.6%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%; /* Slightly lighter than background for definition */
-    --input: 0 0% 20%; /* Input background */
-    --ring: 231 48% 58%; /* Ring color related to primary */
+    --border: 0 0% 20%; 
+    --input: 0 0% 20%; 
+    --ring: 221 83% 63%; /* Slightly lighter blue for dark mode ring */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -85,7 +91,8 @@ body {
 }
 
 .moving-bg-gradient {
-  background: linear-gradient(-45deg, hsl(231 50% 25% / 0.7), hsl(289 40% 30% / 0.7), hsl(0 0% 10% / 0.7), hsl(231 50% 20% / 0.7));
+  /* Adjusted gradient to lean towards new blue/grey theme */
+  background: linear-gradient(-45deg, hsl(221 83% 25% / 0.7), hsl(220 13% 30% / 0.7), hsl(0 0% 10% / 0.7), hsl(221 83% 20% / 0.7));
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;
 }
