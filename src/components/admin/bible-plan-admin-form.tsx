@@ -19,8 +19,8 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { BibleReadingPlan } from '@/types';
 
 const adminPlanFormSchema = z.object({
-  reference: z.string().min(3, { message: "Bible reference(s) must be at least 3 characters." })
-    .max(2000, { message: "Reference input is too long."}),
+  reference: z.string().min(1, { message: "Bible reference(s) must be at least 1 character." })
+    .max(15000, { message: "Reference input is too long (max 15000 characters)."}), // Increased max length
   startDate: z.date({ required_error: "A start date is required." }),
 });
 
@@ -74,7 +74,6 @@ export default function BiblePlanAdminForm() {
 
       toast({ title: "Success!", description: "New Bible reading plan generated and saved." });
     } catch (error: any) {
-      // Enhanced error logging and toast message
       console.error("Error generating or saving Bible plan. Full Error Object:", error);
       let description = "Failed to process Bible reading plan. ";
       if (error.message) {
@@ -82,7 +81,6 @@ export default function BiblePlanAdminForm() {
       } else {
         description += "An unexpected error occurred. Check console for details.";
       }
-      // If Next.js includes a digest for server component errors, it might be on error.digest
       if (error.digest) {
         description += ` (Digest: ${error.digest})`;
         console.error("Server Component Error Digest:", error.digest);
@@ -92,6 +90,7 @@ export default function BiblePlanAdminForm() {
         title: "Error",
         description: description,
         variant: "destructive",
+        duration: 15000, // Longer duration for potentially complex errors
       });
     } finally {
       setIsLoading(false);
@@ -110,9 +109,9 @@ export default function BiblePlanAdminForm() {
               <FormLabel>Bible Reference(s) (one per line)</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="e.g., Genesis 1-5\nJohn 3\nPsalms"
+                  placeholder="e.g., Genesis 1-5\nJohn 3\nPsalms\nActs 1-2(:10)\nActs 18(:12)"
                   {...field}
-                  rows={5}
+                  rows={10} // Increased rows for larger input
                   className="text-sm"
                 />
               </FormControl>
@@ -165,3 +164,4 @@ export default function BiblePlanAdminForm() {
     </Form>
   );
 }
+

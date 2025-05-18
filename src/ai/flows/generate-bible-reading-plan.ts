@@ -15,6 +15,8 @@ import {z} from 'genkit';
 const GenerateBibleReadingPlanInputSchema = z.object({
   reference: z
     .string()
+    .min(1) // Min 1 character
+    .max(15000) // Increased max length for robustness
     .describe(
       'A multiline string where each line is a Bible reference. Can be a book name (e.g., "Genesis"), a chapter range (e.g., "Exodus 1-10"), a specific verse range (e.g., "Jude 1:1-10"), a partial chapter range (e.g., "Acts 1-18(:11)"), or a chapter continuation (e.g., "Acts 18(:12)").'
     ),
@@ -78,19 +80,8 @@ Planning Rules:
 5.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
 
 Output Format:
-Produce a JSON object that strictly adheres to the 'GenerateBibleReadingPlanOutputSchema'. The main output is the 'dailyReadings' array. Each object in this array must have:
-- 'date': The date of the reading in YYYY-MM-DD format (must not be a Sunday).
-- 'passages': An array of strings, where each string is a scripture passage (e.g., "Genesis 1", "Exodus 5", "Jude 1:1-10", "Acts 18:1-11"). This array should contain 1 to 4 passages.
-
-Example of processing 'reference' input:
-If 'reference' is:
-Genesis 1-2
-Acts 1-2(:10)
-Matthew 5:1-15
-Acts 2(:11)
-Jude
-
-The master list of passages would be: ["Genesis 1", "Genesis 2", "Acts 1", "Acts 2:1-10", "Matthew 5:1-15", "Acts 2:11-end_of_Acts_2", "Jude 1"]. (Note: "end_of_Acts_2" means to the last verse of Acts chapter 2).
+Produce a JSON object that strictly adheres to the 'GenerateBibleReadingPlanOutputSchema'.
+For very large lists of scriptures that result in a long reading plan, ensure the entire JSON output is complete and correctly formatted according to the schema. Do not truncate or malform the JSON.
 
 Let's begin with the plan generation:
 Start Date: {{startDate}}
@@ -116,17 +107,16 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
   async input => {
     let modelResponse;
     try {
-      modelResponse = await prompt(input); // Genkit performs schema validation here if output.schema is defined
+      modelResponse = await prompt(input); 
       
       const output = modelResponse.output;
 
       if (!output) {
-        // This case implies that schema validation by Genkit failed, and modelResponse.output was null.
         console.error(
           "AI response schema validation failed or output was null in generateBibleReadingPlanFlow. Input:",
           input,
-          "Raw Model Response (if available):",
-          modelResponse // Log the whole modelResponse object to inspect its structure and any error messages it might contain
+          "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):",
+          JSON.stringify(modelResponse, null, 2) 
         );
         throw new Error(
           "The AI model's response did not match the expected format. Please check your input or try again. Raw response has been logged for debugging."
@@ -134,7 +124,6 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
       }
       
       if (!output.dailyReadings || output.dailyReadings.length === 0) {
-        // This case implies the schema was valid, but the plan is logically empty.
         const errorDetails = !output.dailyReadings 
           ? "Output structure received, but 'dailyReadings' array is missing." 
           : "Output structure received, but 'dailyReadings' array is empty (no readings generated).";
@@ -146,39 +135,33 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
           "Full parsed output:",
           output,
           "Raw Model Response (if available):",
-          modelResponse
+          JSON.stringify(modelResponse, null, 2)
         );
         throw new Error(
           `The AI model responded, but the generated plan was incomplete or empty. Details: ${errorDetails} Please adjust your input or try again.`
         );
       }
       
-      return output; // Successfully parsed, validated, and non-empty
+      return output; 
 
     } catch (e: any) {
-      // This catch block handles:
-      // 1. Errors from the `await prompt(input)` call itself (e.g., network, API key).
-      // 2. Explicit `new Error()` throws from the checks above.
       console.error(
         "Error caught in generateBibleReadingPlanFlow. Input:",
         input,
         "Raw Model Response (if available at this point):",
-        modelResponse, // Might be undefined if error occurred before/during `prompt` call
+        modelResponse ? JSON.stringify(modelResponse, null, 2) : "Not available (error likely before/during prompt call)",
         "Full Error Object:",
         e
       );
 
       let errorMessage = "Failed to process Bible reading plan. ";
       if (e.message) {
-        errorMessage += e.message; // Prioritize the message from the thrown error
+        errorMessage += e.message; 
       } else {
         errorMessage += "An unexpected error occurred. Check server logs for details.";
       }
-      // Note: e.digest is a client-side property added by Next.js if the error originates from a Server Component.
-      // It won't be available here directly unless this flow is called in a way that it bubbles up to the client.
-      // The client-side form submit handler is responsible for adding the digest if it's present on the error it catches.
       
-      throw new Error(errorMessage); // Re-throw to be caught by the client-side caller
+      throw new Error(errorMessage); 
     }
   }
 );
