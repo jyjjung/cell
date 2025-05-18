@@ -24,6 +24,13 @@ export default function BatchEventImportForm() {
   const { toast } = useToast();
   const { addEvent } = useEvents();
 
+  const form = useForm<BatchImportFormValues>({
+    resolver: zodResolver(batchImportSchema),
+    defaultValues: {
+      batchText: '',
+    },
+  });
+
   const parseAndCreateEvents = async (rawInput: string) => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const lines = rawInput.trim().split('\n');
@@ -43,6 +50,7 @@ export default function BatchEventImportForm() {
         const upperLine = line.toUpperCase();
         let newCategory: EventCategory | null = null;
 
+        // Check for category headers (flexible with or without colon)
         if (upperLine.startsWith("SNACKS")) newCategory = EventCategory.Snack;
         else if (upperLine.startsWith("QT")) newCategory = EventCategory.QT;
         else if (upperLine.startsWith("BIRTHDAY")) newCategory = EventCategory.Birthday;
@@ -55,11 +63,15 @@ export default function BatchEventImportForm() {
             continue;
         }
 
+        // If no category is active, or the line doesn't look like a date, skip it
         if (!currentCategory) {
+            // If not a category and no category active, just skip (e.g. "Important Dates")
             i++;
             continue;
         }
-
+        
+        // At this point, we expect a date or a title if a category is active.
+        // Let's assume 'line' is a date string.
         const dateStr = line;
         const dateStrPartsTest = dateStr.split('/');
         if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
@@ -68,6 +80,7 @@ export default function BatchEventImportForm() {
             continue;
         }
 
+        // Check if there's a next line for the title
         if (i + 1 >= lines.length) {
             parseErrors.push(`Missing name for date: "${dateStr}" under category "${currentCategory}". Reached end of input.`);
             break; 
@@ -75,32 +88,36 @@ export default function BatchEventImportForm() {
         
         const title = lines[i+1]?.trim();
 
+        // Check if the title is empty
         if (!title) {
             parseErrors.push(`Missing name for date: "${dateStr}" under category "${currentCategory}". Name line is empty. Skipping entry.`);
-            i += 2;
+            i += 2; // Move past date and empty title line
             continue;
         }
         
+        // Check if the 'title' line is actually another date (malformed entry)
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(title)) {
             parseErrors.push(`Date "${dateStr}" under category "${currentCategory}" is missing its name. The next line "${title}" appears to be another date. Skipping date "${dateStr}".`);
-            i += 1; 
+            i += 1; // Move past the current date line, next iteration will process 'title' as a new date
             continue;
         }
         
+        // Parse the date components
         const day = parseInt(dateStrPartsTest[0], 10);
-        const month = parseInt(dateStrPartsTest[1], 10) - 1; 
+        const month = parseInt(dateStrPartsTest[1], 10) - 1; // JS months are 0-indexed
         const year = parseInt(dateStrPartsTest[2], 10);
 
         if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
             parseErrors.push(`Invalid date components (day, month, or year out of range) in: "${dateStr}" under category "${currentCategory}". Skipping entry.`);
-            i += 2;
+            i += 2; // Move past date and title
             continue;
         }
         
-        const date = new Date(Date.UTC(year, month, day)); 
+        const date = new Date(Date.UTC(year, month, day)); // Use UTC to avoid timezone issues
+        // Validate if the constructed date is valid (e.g. not 31/02/2025)
         if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
              parseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping entry.`);
-            i += 2;
+            i += 2; // Move past date and title
             continue;
         }
 
@@ -109,18 +126,18 @@ export default function BatchEventImportForm() {
             case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
             case EventCategory.QT: details = `QT with ${title}.`; break;
             case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-            case EventCategory.Event: details = `Event: ${title}`; break;
+            case EventCategory.Event: details = `Event: ${title}`; break; // Default details for Event
         }
         
         eventsParsedCount++;
         eventsToCreate.push({
             title,
-            date: date.toISOString(), 
-            category: currentCategory as EventCategory, 
+            date: date.toISOString(), // Store as ISO string
+            category: currentCategory as EventCategory, // We've ensured currentCategory is not null
             details: details
         });
         
-        i += 2; 
+        i += 2; // Move past successfully parsed date and title
     }
 
     if (eventsToCreate.length > 0) {
