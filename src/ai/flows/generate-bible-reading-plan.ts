@@ -51,8 +51,6 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateBibleReadingPlanOutputSchema},
   prompt: `You are an expert Bible Reading Plan generator. Your task is to create a structured daily reading plan based on the provided scripture references and a start date. You are expected to know the number of chapters in books and verses in chapters.
 
-IMPORTANT: Your primary constraint throughout the entire planning process is to ensure ABSOLUTELY NO Bible readings are scheduled on any Sunday. This rule takes precedence.
-
 Input Details:
 - Scripture References (provided as 'reference'): A multiline string. Each line represents a scripture portion to be included in the plan. These portions must be processed in the order they are given to create a master list of 'passage' units. Each line can be one of the following types:
     1.  **Full Book Name**: (e.g., "Genesis", "Galatians", "Jude").
@@ -75,18 +73,20 @@ Input Details:
 
 - Start Date (provided as 'startDate'): The date to begin the reading plan, in YYYY-MM-DD format.
 
-Planning Rules:
-1.  CRITICAL RULE #1 (REITERATED): Absolutely NO readings on Sundays. If a date calculated for readings falls on a Sunday, skip that Sunday ENTIRELY. The readings that would have been on Sunday should be scheduled for the following Monday (or the next valid non-Sunday day), along with any other readings for that day, still respecting the 4-passage-per-day limit. This is the most important rule.
-2.  Combine all 'passage' units derived from the input 'reference' into a single, ordered list, strictly maintaining the sequence as provided in the input.
-3.  Starting from the 'startDate', assign up to FOUR 'passage' units to each day's reading. If the startDate itself is a Sunday, the first day of reading will be the following Monday. Reading days are Monday through Saturday.
-4.  Saturdays are normal reading days and MUST be assigned passages if they fall in the schedule and passages are available, following the same rules as weekdays (up to 4 passages). Only Sundays are to be skipped.
-5.  Increment the date for each new day of readings, always skipping Sundays.
-6.  IMPORTANT FOR OUTPUT: All Bible book names in the generated 'passages' array (e.g., in 'Genesis 1', 'Acts 18:12-28') MUST be the full, unabbreviated book name. For example, use "Genesis" not "Gen", "Exodus" not "Exo", "Galatians" not "Gal".
-7.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
+Core Scheduling Directives - VERY IMPORTANT:
+1.  **SUNDAYS ARE ALWAYS SKIPPED**: Absolutely NO Bible readings are scheduled on any Sunday. If a calculated date for readings falls on a Sunday, skip that Sunday ENTIRELY. Any readings that would have been on that Sunday must be scheduled for the following Monday (or the next valid non-Sunday day), respecting the 4-passage-per-day limit.
+2.  **SATURDAYS ARE MANDATORY READING DAYS**: Saturdays (and Mondays, Tuesdays, Wednesdays, Thursdays, Fridays) are NORMAL and MANDATORY reading days. Passages MUST be assigned to Saturdays if they fall in the schedule and passages are available, following the same 4-passage-per-day limit as other weekdays. DO NOT SKIP SATURDAYS. The only day to skip is Sunday.
+
+General Planning Rules:
+1.  Combine all 'passage' units derived from the input 'reference' into a single, ordered list, strictly maintaining the sequence as provided in the input.
+2.  Starting from the 'startDate', assign up to FOUR 'passage' units to each day's reading. If the startDate itself is a Sunday, the first day of reading will be the following Monday. Valid reading days are Monday, Tuesday, Wednesday, Thursday, Friday, and Saturday.
+3.  Increment the date for each new day of readings, always adhering to the "SUNDAYS ARE ALWAYS SKIPPED" directive.
+4.  IMPORTANT FOR OUTPUT: All Bible book names in the generated 'passages' array (e.g., in 'Genesis 1', 'Acts 18:12-28') MUST be the full, unabbreviated book name. For example, use "Genesis" not "Gen", "Exodus" not "Exo", "Galatians" not "Gal".
+5.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
 
 Output Format:
 Produce a JSON object that strictly adheres to the 'GenerateBibleReadingPlanOutputSchema'.
-You are capable of generating very long and complete JSON outputs. It is CRITICAL for this task that the entire reading plan, no matter how extensive, is returned as a single, valid, and complete JSON object conforming to the schema. Do not truncate or malform the JSON. Each date in the 'dailyReadings' array must NOT be a Sunday.
+You are capable of generating very long and complete JSON outputs. It is CRITICAL for this task that the entire reading plan, no matter how extensive, is returned as a single, valid, and complete JSON object conforming to the schema. Do not truncate or malform the JSON. Each date in the 'dailyReadings' array must NOT be a Sunday. Dates for Saturdays MUST be included if passages are assigned to them.
 
 Let's begin with the plan generation:
 Start Date: {{startDate}}
@@ -104,6 +104,8 @@ Scripture References:
 });
 
 const MAX_LINES_PER_CHUNK = 40; // Adjust as needed
+type DailyReading = z.infer<typeof DailyReadingSchema>;
+
 
 const generateBibleReadingPlanFlow = ai.defineFlow(
   {
@@ -129,8 +131,8 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
           console.error(
             "AI response schema validation failed or output was null (single chunk). Input:",
             input,
-            "Raw Model Response:",
-            JSON.stringify(modelResponse, null, 2)
+            "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):",
+            modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A"
           );
           throw new Error(
             "The AI model's response did not match the expected format for the provided scriptures. Please check your input or try again."
@@ -140,7 +142,7 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
       } catch (e: any) {
         console.error(
           "Error caught in generateBibleReadingPlanFlow (single chunk). Input:", input,
-          "Raw Model Response (if available):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
+          "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
           "Full Error Object:", e
         );
         throw new Error(`Failed to process Bible reading plan (single chunk): ${e.message}`);
@@ -171,8 +173,8 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
             console.error(
               `AI response schema validation failed or output was null for chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}. Input:`,
               { reference: chunkReference, startDate: currentStartDateForChunk },
-              "Raw Model Response:",
-              JSON.stringify(modelResponse, null, 2)
+              "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):",
+              modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A"
             );
             throw new Error(
               `The AI model's response for a part of the plan (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}) was not in the expected format. Processing halted.`
@@ -198,7 +200,7 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
           console.error(
             `Error caught in generateBibleReadingPlanFlow (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}). Input:`, 
             { reference: chunkReference, startDate: currentStartDateForChunk },
-            "Raw Model Response (if available):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
+            "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
             "Full Error Object:", e
           );
           throw new Error(`Failed to process part of the Bible reading plan (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}): ${e.message}. ${linesProcessedSoFar} lines processed before error.`);
@@ -208,3 +210,4 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
     }
   }
 );
+
