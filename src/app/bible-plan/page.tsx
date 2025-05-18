@@ -26,7 +26,7 @@ export default function FullBiblePlanPage() {
         setDisplayedReadings(
           plan.dailyReadings.filter(reading => {
             try {
-                const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
+                const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure we treat date as UTC
                 return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
             } catch (e) {
                 console.error("Error parsing reading date for filtering:", reading.date, e);
@@ -125,8 +125,8 @@ export default function FullBiblePlanPage() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-24rem)] rounded-md"> {/* Removed border and shadow-inner */}
-          <div className="p-1 md:p-4 space-y-4"> {/* Added md:p-4 for more spacing on larger screens */}
+        <ScrollArea className="h-[calc(100vh-22rem)] rounded-md">
+          <div className="p-1 md:p-4 space-y-4">
             {displayedReadings.map((reading, index) => (
               <Card key={index} className="w-full shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="p-4 md:p-6 pb-2">
@@ -156,3 +156,4 @@ export default function FullBiblePlanPage() {
     </div>
   );
 }
+
