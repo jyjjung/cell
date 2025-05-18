@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +40,7 @@ export default function BiblePlanAdminForm() {
   });
   
   // Effect to reset form if currentPlan changes (e.g., after save)
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentPlan) {
       form.reset({
         reference: currentPlan.originalReferenceInput,
