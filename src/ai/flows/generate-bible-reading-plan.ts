@@ -28,7 +28,7 @@ export type GenerateBibleReadingPlanInput = z.infer<
 
 const DailyReadingSchema = z.object({
   date: z.string().describe("Date for this reading (YYYY-MM-DD). This date MUST NOT be a Sunday."),
-  passages: z.array(z.string()).describe("Array of scripture passages/references for the day. Each item is considered one unit. There should be a maximum of 4 such units per day. Examples of units: 'Genesis 1', 'Exodus 5', 'Jude 1:1-10', 'Acts 18:1-11', 'Acts 18:12-28'.")
+  passages: z.array(z.string()).describe("Array of scripture passages/references for the day. Each item is considered one unit. There should be a maximum of 4 such units per day. Examples of units: 'Genesis 1', 'Exodus 5', 'Jude 1:1-10', 'Acts 18:1-11', 'Acts 18:12-28'. Passages should use full Bible book names.")
 });
 
 const GenerateBibleReadingPlanOutputSchema = z.object({
@@ -80,6 +80,7 @@ Planning Rules:
 3.  Starting from the 'startDate', assign up to FOUR 'passage' units to each day's reading. If the startDate itself is a Sunday, the first day of reading will be the following Monday.
 4.  Increment the date for each new day of readings, always skipping Sundays.
 5.  Continue this process until all 'passage' units from the master list have been assigned to a reading day.
+6.  IMPORTANT FOR OUTPUT: All Bible book names in the generated 'passages' array (e.g., in 'Genesis 1', 'Acts 18:12-28') MUST be the full, unabbreviated book name. For example, use "Genesis" not "Gen", "Exodus" not "Exo", "Galatians" not "Gal".
 
 Output Format:
 Produce a JSON object that strictly adheres to the 'GenerateBibleReadingPlanOutputSchema'.
