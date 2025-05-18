@@ -18,8 +18,8 @@ body {
     --popover: 0 0% 100%; /* White popovers */
     --popover-foreground: 220 30% 15%;
     
-    --primary: 221 83% 53%; /* Existing Blue */
-    --primary-foreground: 210 20% 98%; /* Existing White for text on primary */
+    --primary: 225 75% 48%; /* Darker, richer blue for light mode */
+    --primary-foreground: 210 20% 98%;
     
     --secondary: 220 25% 94%; /* Very light blueish-grey for secondary elements */
     --secondary-foreground: 220 25% 30%; /* Darker text on secondary */
@@ -27,7 +27,7 @@ body {
     --muted: 220 20% 92%; /* Slightly darker muted background */
     --muted-foreground: 220 20% 45%; /* Muted text */
     
-    --accent: 221 83% 53%; /* Use primary blue as accent */
+    --accent: 225 75% 48%; /* Use primary blue as accent */
     --accent-foreground: 210 20% 98%; /* White text on accent */
     
     --destructive: 0 84.2% 60.2%;
@@ -35,7 +35,7 @@ body {
     
     --border: 220 20% 88%; /* Light greyish-blue border */
     --input: 220 20% 90%; /* Light greyish-blue input background */
-    --ring: 221 83% 53%; /* Existing Blue for ring */
+    --ring: 225 75% 48%; /* Darker, richer blue for ring */
     --radius: 0.5rem;
     
     --chart-1: 12 76% 61%;
@@ -46,34 +46,34 @@ body {
   }
 
   .dark {
-    /* Dark Theme: Dark blue/navy blue background */
-    --background: 220 70% 12%; /* Dark Navy Blue */
+    /* Dark Theme: Darker, richer navy blue background */
+    --background: 225 60% 9%; /* Darker, richer Navy Blue */
     --foreground: 220 25% 95%; /* Light greyish-blue/white for text */
 
-    --card: 220 65% 17%; /* Slightly lighter navy for cards */
+    --card: 225 55% 14%; /* Slightly lighter, richer navy for cards */
     --card-foreground: 220 25% 92%;
 
-    --popover: 220 60% 14%; /* Slightly different shade for popovers */
+    --popover: 225 50% 11%; /* Slightly different shade for popovers */
     --popover-foreground: 220 25% 92%;
 
-    --primary: 221 83% 60%; /* Slightly brighter blue for primary in dark mode */
+    --primary: 221 85% 55%; /* Darker, richer blue for primary in dark mode */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 60% 22%; /* A bit lighter navy variation for secondary elements */
+    --secondary: 225 50% 19%; /* A bit lighter, richer navy variation for secondary elements */
     --secondary-foreground: 220 20% 85%;
 
-    --muted: 220 55% 20%; /* Muted background variation */
+    --muted: 225 45% 17%; /* Muted background variation */
     --muted-foreground: 220 20% 65%; /* Greyer for muted text */
 
-    --accent: 210 70% 65%; /* A brighter, distinct blue for accent */
-    --accent-foreground: 220 60% 15%; /* Dark blue text on the brighter accent */
+    --accent: 210 75% 60%; /* A brighter, distinct blue for accent, adjusted richness */
+    --accent-foreground: 225 50% 12%; /* Dark blue text on the brighter accent */
 
     --destructive: 0 62.8% 50.6%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 50% 28%; /* Border color for dark mode */
-    --input: 220 50% 25%; /* Input background for dark mode */
-    --ring: 221 83% 65%; /* Slightly brighter blue for ring in dark mode */
+    --border: 225 40% 25%; /* Border color for dark mode */
+    --input: 225 40% 22%; /* Input background for dark mode */
+    --ring: 221 85% 60%; /* Slightly brighter, richer blue for ring in dark mode */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -94,12 +94,12 @@ body {
 }
 
 .moving-bg-gradient {
-  /* Adjusted gradient for new dark navy blue theme */
+  /* Adjusted gradient for new darker, richer navy blue theme */
   background: linear-gradient(-45deg, 
-    hsl(220 70% 18% / 0.7), /* Slightly lighter navy variation */
-    hsl(220 60% 25% / 0.7), /* Even lighter, a bit more desaturated navy */
-    hsl(220 80% 8% / 0.7),  /* Very dark, near black variation */
-    hsl(220 70% 10% / 0.7)  /* Darker variation of the base navy */
+    hsl(225 60% 15% / 0.7), /* Richer navy variation */
+    hsl(225 50% 22% / 0.7), /* Lighter, richer desaturated navy */
+    hsl(225 70% 7% / 0.7),  /* Very dark, rich near black variation */
+    hsl(225 60% 8% / 0.7)   /* Darker, richer variation of the base navy */
   );
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;
