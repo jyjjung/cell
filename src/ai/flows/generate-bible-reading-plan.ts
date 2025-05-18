@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { parseISO, addDays, format as formatDateFns } from 'date-fns';
 
 const GenerateBibleReadingPlanInputSchema = z.object({
   reference: z
@@ -102,61 +103,108 @@ Scripture References:
   }
 });
 
+const MAX_LINES_PER_CHUNK = 40; // Adjust as needed
+
 const generateBibleReadingPlanFlow = ai.defineFlow(
   {
     name: 'generateBibleReadingPlanFlow',
     inputSchema: GenerateBibleReadingPlanInputSchema,
     outputSchema: GenerateBibleReadingPlanOutputSchema,
   },
-  async input => {
-    let modelResponse;
-    try {
-      modelResponse = await prompt(input); 
-      
-      const output = modelResponse.output;
+  async (input: GenerateBibleReadingPlanInput): Promise<GenerateBibleReadingPlanOutput> => {
+    const allScriptureLines = input.reference.trim().split('\n').filter(line => line.trim() !== '');
+    const totalLines = allScriptureLines.length;
 
-      if (!output) {
+    if (totalLines === 0) {
+      return { dailyReadings: [] };
+    }
+
+    if (totalLines <= MAX_LINES_PER_CHUNK) {
+      // Process as a single chunk if within limit
+      let modelResponse;
+      try {
+        modelResponse = await prompt(input);
+        const output = modelResponse.output;
+        if (!output) {
+          console.error(
+            "AI response schema validation failed or output was null (single chunk). Input:",
+            input,
+            "Raw Model Response:",
+            JSON.stringify(modelResponse, null, 2)
+          );
+          throw new Error(
+            "The AI model's response did not match the expected format for the provided scriptures. Please check your input or try again."
+          );
+        }
+        return output;
+      } catch (e: any) {
         console.error(
-          "AI response schema validation failed or output was null in generateBibleReadingPlanFlow. Input:",
-          input,
-          "Raw Model Response (if available - check candidates[0].message.content.parts[0].text or similar for actual AI string):",
-          JSON.stringify(modelResponse, null, 2) 
+          "Error caught in generateBibleReadingPlanFlow (single chunk). Input:", input,
+          "Raw Model Response (if available):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
+          "Full Error Object:", e
         );
-        throw new Error(
-          "The AI model's response did not match the expected format. Please check your input or try again. Raw response has been logged for debugging."
-        );
+        throw new Error(`Failed to process Bible reading plan (single chunk): ${e.message}`);
       }
-      
-      if (!output.dailyReadings || output.dailyReadings.length === 0) {
-        // This case can be valid if the input reference is empty or results in no readings after processing.
-        // However, if input was provided, it might indicate an issue.
-        // For now, we allow empty dailyReadings if the AI successfully produces the schema.
-        // If the user provides input references that should result in readings, this might need more nuanced handling.
-        // For robust error handling, we might want to check if input.reference was non-empty and still led to empty dailyReadings.
-        // But for now, assume the AI correctly handles empty results if the schema is valid.
-      }
-      
-      return output; 
+    } else {
+      // Process in multiple chunks
+      const finalDailyReadings: DailyReading[] = [];
+      let currentStartDateForChunk = input.startDate;
+      let linesProcessedSoFar = 0;
 
-    } catch (e: any) {
-      console.error(
-        "Error caught in generateBibleReadingPlanFlow. Input:",
-        input,
-        "Raw Model Response (if available at this point):",
-        modelResponse ? JSON.stringify(modelResponse, null, 2) : "Not available (error likely before/during prompt call)",
-        "Full Error Object:",
-        e
-      );
+      for (let i = 0; i < totalLines; i += MAX_LINES_PER_CHUNK) {
+        const chunkLines = allScriptureLines.slice(i, Math.min(i + MAX_LINES_PER_CHUNK, totalLines));
+        const chunkReference = chunkLines.join('\n');
+        linesProcessedSoFar += chunkLines.length;
 
-      let errorMessage = "Failed to process Bible reading plan. ";
-      if (e.message) {
-        errorMessage += e.message; 
-      } else {
-        errorMessage += "An unexpected error occurred. Check server logs for details.";
+        console.log(`Processing chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}: ${chunkLines.length} lines, starting date: ${currentStartDateForChunk}`);
+        
+        let modelResponse;
+        try {
+          modelResponse = await prompt({
+            reference: chunkReference,
+            startDate: currentStartDateForChunk,
+          });
+
+          const chunkOutput = modelResponse.output;
+
+          if (!chunkOutput) {
+            console.error(
+              `AI response schema validation failed or output was null for chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}. Input:`,
+              { reference: chunkReference, startDate: currentStartDateForChunk },
+              "Raw Model Response:",
+              JSON.stringify(modelResponse, null, 2)
+            );
+            throw new Error(
+              `The AI model's response for a part of the plan (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}) was not in the expected format. Processing halted.`
+            );
+          }
+
+          if (chunkOutput.dailyReadings && chunkOutput.dailyReadings.length > 0) {
+            finalDailyReadings.push(...chunkOutput.dailyReadings);
+            const lastReadingInChunk = chunkOutput.dailyReadings[chunkOutput.dailyReadings.length - 1];
+            if (lastReadingInChunk && lastReadingInChunk.date) {
+              // Parse YYYY-MM-DD as UTC to avoid timezone shifts
+              const lastDateObj = parseISO(lastReadingInChunk.date + 'T00:00:00Z'); 
+              const nextStartDateObj = addDays(lastDateObj, 1);
+              currentStartDateForChunk = formatDateFns(nextStartDateObj, 'yyyy-MM-dd');
+            } else {
+              // This case should ideally not happen if AI returns valid readings with dates
+              console.warn(`Chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1} returned readings but last date was missing. Next chunk might start on an incorrect date.`);
+            }
+          } else {
+             console.log(`Chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1} produced no readings. Continuing with the same start date for the next chunk if any.`);
+          }
+        } catch (e: any) {
+          console.error(
+            `Error caught in generateBibleReadingPlanFlow (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}). Input:`, 
+            { reference: chunkReference, startDate: currentStartDateForChunk },
+            "Raw Model Response (if available):", modelResponse ? JSON.stringify(modelResponse, null, 2) : "N/A",
+            "Full Error Object:", e
+          );
+          throw new Error(`Failed to process part of the Bible reading plan (chunk ${Math.floor(i / MAX_LINES_PER_CHUNK) + 1}): ${e.message}. ${linesProcessedSoFar} lines processed before error.`);
+        }
       }
-      
-      throw new Error(errorMessage); 
+      return { dailyReadings: finalDailyReadings };
     }
   }
 );
-
