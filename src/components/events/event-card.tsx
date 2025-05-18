@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { AppEvent } from '@/types';
@@ -20,7 +21,7 @@ function getCategoryIcon(category: EventCategory) {
     case EventCategory.Birthday:
       return <Cake className="h-5 w-5 text-pink-500" />;
     case EventCategory.Snack:
-      return <Utensils className="h-5 w-5 text-orange-500" />; // Utensils as Cookie might not be there
+      return <Utensils className="h-5 w-5 text-orange-500" />;
     default:
       return <Info className="h-5 w-5 text-gray-500" />;
   }
@@ -34,7 +35,7 @@ export default function EventCard({ event }: EventCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <Badge variant={
-              event.category === EventCategory.Event ? "default" 
+              event.category === EventCategory.Event ? "default"
             : event.category === EventCategory.QT ? "secondary"
             : "outline"
           } className="capitalize">
@@ -48,7 +49,9 @@ export default function EventCard({ event }: EventCardProps) {
       </CardHeader>
       <CardContent className="flex-grow pb-4">
         <CardDescription className="text-sm">{formattedDate}</CardDescription>
-        {event.details && <p className="mt-2 text-sm text-foreground/80">{event.details}</p>}
+        {event.category === EventCategory.Event && event.details && (
+          <p className="mt-2 text-sm text-foreground/80">{event.details}</p>
+        )}
       </CardContent>
     </div>
   );

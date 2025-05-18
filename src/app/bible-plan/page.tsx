@@ -32,9 +32,9 @@ export default function FullBiblePlanPage() {
           <p className="text-muted-foreground">
             No Bible reading plan has been set by the admin yet, or the current plan is empty.
           </p>
-          {plan && (
+          {plan && plan.generatedDate && plan.originalReferenceInput && (
             <p className="text-sm text-muted-foreground mt-2">
-              Original reference: "{plan.originalReferenceInput}", Generated: {format(parseISO(plan.generatedDate), "PPP p")}.
+              If you are an admin, you can set a new plan in the dashboard. Current plan generated: {format(parseISO(plan.generatedDate), "PPP p")}, based on input: "{plan.originalReferenceInput}".
             </p>
           )}
         </CardContent>
@@ -51,9 +51,8 @@ export default function FullBiblePlanPage() {
             <CardTitle className="text-3xl tracking-tight">Full Bible Reading Plan</CardTitle>
           </div>
           <CardDescription>
-            Based on references: "{plan.originalReferenceInput}"
-            <br />
             Plan generated on: {format(parseISO(plan.generatedDate), "PPP p")}.
+            <br />
             Plan starts on: {format(parseISO(plan.startDate), "PPP")}.
           </CardDescription>
         </CardHeader>

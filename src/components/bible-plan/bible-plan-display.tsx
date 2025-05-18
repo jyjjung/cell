@@ -14,23 +14,19 @@ interface BiblePlanDisplayProps {
 
 export default function BiblePlanDisplay({ plan }: BiblePlanDisplayProps) {
   const [todaysReading, setTodaysReading] = useState<DailyReading | null>(null);
-  const [currentDateString, setCurrentDateString] = useState('');
+  // const [currentDateString, setCurrentDateString] = useState(''); // No longer needed for the simplified message
 
   useEffect(() => {
     // This effect runs only on the client after hydration
-    const today = startOfDay(new Date()); // Use startOfDay for consistent date comparison
-    setCurrentDateString(format(today, "MMMM d, yyyy"));
+    // const today = startOfDay(new Date()); // No longer needed for the simplified message
+    // setCurrentDateString(format(today, "MMMM d, yyyy")); // No longer needed
 
     if (plan?.dailyReadings) {
       const foundReading = plan.dailyReadings.find(reading => {
-        // Dates in dailyReadings are YYYY-MM-DD strings.
-        // Need to parse them carefully, assuming UTC or local based on how they were created.
-        // For simplicity, parsing as local time.
         try {
-          const readingDate = parseISO(reading.date + 'T00:00:00'); // Assume date string is just YYYY-MM-DD
+          const readingDate = parseISO(reading.date + 'T00:00:00'); 
           return isToday(readingDate);
         } catch (e) {
-          // if date is not parseable, for example plan was just generated and is in YYYY-MM-DD format
            try {
              const readingDate = parseISO(reading.date);
              return isToday(readingDate);
@@ -66,11 +62,7 @@ export default function BiblePlanDisplay({ plan }: BiblePlanDisplayProps) {
             <CalendarX className="h-6 w-6 text-muted-foreground" />
             <CardTitle className="text-2xl">No Reading for Today</CardTitle>
           </div>
-           <CardDescription>
-            Today is {currentDateString}. There are no specific readings scheduled for today in the current plan, or the plan might not cover today.
-            <br/>
-            Plan generated on: {format(parseISO(plan.generatedDate), "PPP p")}. Original references: "{plan.originalReferenceInput}".
-          </CardDescription>
+           {/* CardDescription removed as per request for simplification */}
         </CardHeader>
       </Card>
     );
