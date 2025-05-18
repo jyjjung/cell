@@ -35,9 +35,7 @@ export default function BatchEventImportForm() {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const lines = rawInput.trim().split('\n');
     let currentCategory: EventCategory | null = null;
-    let parseErrors: string[] = [];
-    let eventsParsedCount = 0;
-    let eventsSuccessfullyAddedCount = 0;
+    let localParseErrors: string[] = [];
     let i = 0;
 
     while (i < lines.length) {
@@ -50,7 +48,6 @@ export default function BatchEventImportForm() {
         const upperLine = line.toUpperCase();
         let newCategory: EventCategory | null = null;
 
-        // Check for category headers (flexible with or without colon)
         if (upperLine.startsWith("SNACKS")) newCategory = EventCategory.Snack;
         else if (upperLine.startsWith("QT")) newCategory = EventCategory.QT;
         else if (upperLine.startsWith("BIRTHDAY")) newCategory = EventCategory.Birthday;
@@ -58,66 +55,57 @@ export default function BatchEventImportForm() {
         
         if (newCategory) {
             currentCategory = newCategory;
-            parseErrors.push(`Switched to category: ${currentCategory}`);
+            localParseErrors.push(`Switched to category: ${currentCategory}`);
             i++;
             continue;
         }
 
-        // If no category is active, or the line doesn't look like a date, skip it
         if (!currentCategory) {
-            // If not a category and no category active, just skip (e.g. "Important Dates")
             i++;
             continue;
         }
         
-        // At this point, we expect a date or a title if a category is active.
-        // Let's assume 'line' is a date string.
         const dateStr = line;
         const dateStrPartsTest = dateStr.split('/');
         if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
-            parseErrors.push(`Skipping line under category "${currentCategory}": "${dateStr}". Expected DD/MM/YYYY date format or it's an unrecognised line.`);
+            localParseErrors.push(`Skipping line under category "${currentCategory}": "${dateStr}". Expected DD/MM/YYYY date format or it's an unrecognised line.`);
             i++;
             continue;
         }
 
-        // Check if there's a next line for the title
         if (i + 1 >= lines.length) {
-            parseErrors.push(`Missing name for date: "${dateStr}" under category "${currentCategory}". Reached end of input.`);
+            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Reached end of input.`);
             break; 
         }
         
         const title = lines[i+1]?.trim();
 
-        // Check if the title is empty
         if (!title) {
-            parseErrors.push(`Missing name for date: "${dateStr}" under category "${currentCategory}". Name line is empty. Skipping entry.`);
-            i += 2; // Move past date and empty title line
+            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Name/title line is empty. Skipping entry.`);
+            i += 2; 
             continue;
         }
         
-        // Check if the 'title' line is actually another date (malformed entry)
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(title)) {
-            parseErrors.push(`Date "${dateStr}" under category "${currentCategory}" is missing its name. The next line "${title}" appears to be another date. Skipping date "${dateStr}".`);
-            i += 1; // Move past the current date line, next iteration will process 'title' as a new date
+            localParseErrors.push(`Date "${dateStr}" under category "${currentCategory}" is missing its name/title. The next line "${title}" appears to be another date. Skipping date "${dateStr}".`);
+            i += 1; 
             continue;
         }
         
-        // Parse the date components
         const day = parseInt(dateStrPartsTest[0], 10);
-        const month = parseInt(dateStrPartsTest[1], 10) - 1; // JS months are 0-indexed
+        const month = parseInt(dateStrPartsTest[1], 10) - 1; 
         const year = parseInt(dateStrPartsTest[2], 10);
 
         if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-            parseErrors.push(`Invalid date components (day, month, or year out of range) in: "${dateStr}" under category "${currentCategory}". Skipping entry.`);
-            i += 2; // Move past date and title
+            localParseErrors.push(`Invalid date components (day, month, or year out of range) in: "${dateStr}" under category "${currentCategory}". Skipping entry.`);
+            i += 2; 
             continue;
         }
         
-        const date = new Date(Date.UTC(year, month, day)); // Use UTC to avoid timezone issues
-        // Validate if the constructed date is valid (e.g. not 31/02/2025)
+        const date = new Date(Date.UTC(year, month, day)); 
         if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
-             parseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping entry.`);
-            i += 2; // Move past date and title
+             localParseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping entry.`);
+            i += 2; 
             continue;
         }
 
@@ -126,48 +114,61 @@ export default function BatchEventImportForm() {
             case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
             case EventCategory.QT: details = `QT with ${title}.`; break;
             case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-            case EventCategory.Event: details = `Event: ${title}`; break; // Default details for Event
+            case EventCategory.Event: details = title; break; // For Event, title is often the detail itself.
         }
         
-        eventsParsedCount++;
         eventsToCreate.push({
-            title,
-            date: date.toISOString(), // Store as ISO string
-            category: currentCategory as EventCategory, // We've ensured currentCategory is not null
+            title: (currentCategory === EventCategory.Event || currentCategory === EventCategory.Birthday) ? title : `${currentCategory}: ${title}`, // Use title directly for Event/Birthday, prefix for others
+            date: date.toISOString(), 
+            category: currentCategory as EventCategory,
             details: details
         });
         
-        i += 2; // Move past successfully parsed date and title
+        i += 2; 
     }
+
+    let eventsSuccessfullyAddedCount = 0;
+    const eventAddErrors: string[] = [];
 
     if (eventsToCreate.length > 0) {
-      for (const eventData of eventsToCreate) {
-        try {
-          await addEvent(eventData);
-          eventsSuccessfullyAddedCount++;
-        } catch (error: any) {
-          parseErrors.push(`Failed to add event "${eventData.title}" on ${eventData.date.substring(0,10)}: ${error.message}`);
-        }
-      }
+      const creationPromises = eventsToCreate.map(eventData =>
+        addEvent(eventData)
+          .then(() => {
+            eventsSuccessfullyAddedCount++;
+          })
+          .catch((error: any) => {
+            let dateForError = 'unknown date';
+            try {
+              dateForError = eventData.date ? new Date(eventData.date).toLocaleDateString() : 'unknown date';
+            } catch (_) { /* ignore */ }
+            eventAddErrors.push(`Failed to add event "${eventData.title}" on ${dateForError}: ${error.message}`);
+          })
+      );
+      await Promise.allSettled(creationPromises);
     }
 
-    return { eventsProcessed: eventsSuccessfullyAddedCount, eventsParsed: eventsParsedCount, parseErrors };
+    const combinedErrors = [...localParseErrors, ...eventAddErrors];
+    return { 
+      eventsProcessed: eventsSuccessfullyAddedCount, 
+      eventsParsedCount: eventsToCreate.length,
+      finalErrorMessages: combinedErrors
+    };
   };
 
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
     
-    const { eventsProcessed, eventsParsed, parseErrors } = await parseAndCreateEvents(data.batchText);
+    const { eventsProcessed, eventsParsedCount, finalErrorMessages } = await parseAndCreateEvents(data.batchText);
 
-    const errorMessages = parseErrors.filter(msg => !msg.startsWith("Switched to category:"));
-    const infoMessages = parseErrors.filter(msg => msg.startsWith("Switched to category:"));
+    const infoMessages = finalErrorMessages.filter(msg => msg.startsWith("Switched to category:"));
+    const actualErrors = finalErrorMessages.filter(msg => !msg.startsWith("Switched to category:"));
 
-    if (errorMessages.length > 0) {
+    if (actualErrors.length > 0) {
       toast({
         title: eventsProcessed > 0 ? `Batch Import Partially Completed` : `Batch Import Failed`,
         description: (
           <div className="max-h-60 overflow-y-auto text-xs">
-            <p className="mb-1 font-semibold">{eventsProcessed} of {eventsParsed} potential event(s) successfully added.</p>
+            <p className="mb-1 font-semibold">{eventsProcessed} of {eventsParsedCount} potential event(s) successfully added.</p>
             {infoMessages.length > 0 && (
               <>
                 <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info:</p>
@@ -178,7 +179,7 @@ export default function BatchEventImportForm() {
             )}
             <p className="mt-2 mb-1 font-semibold">Please review the following issues:</p>
             <ul className="list-disc pl-4">
-              {errorMessages.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
+              {actualErrors.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
             </ul>
           </div>
         ),
@@ -209,7 +210,7 @@ export default function BatchEventImportForm() {
             title: "Batch Import Notice",
             description: (
               <div className="max-h-60 overflow-y-auto text-xs">
-                <p>No new events were processed. Please check your input format or content.</p>
+                <p>No new events were added. Processed {eventsParsedCount} potential entries from input.</p>
                 {infoMessages.length > 0 && (
                   <>
                     <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info:</p>
@@ -218,11 +219,11 @@ export default function BatchEventImportForm() {
                     </ul>
                   </>
                 )}
-                {errorMessages.length > 0 && (
+                {actualErrors.length > 0 && (
                   <>
                     <p className="mt-2 mb-1 font-semibold">Issues found:</p>
                     <ul className="list-disc pl-4">
-                      {errorMessages.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
+                      {actualErrors.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
                     </ul>
                   </>
                 )}
@@ -247,17 +248,21 @@ export default function BatchEventImportForm() {
               <FormControl>
                 <Textarea
                   placeholder="Example:
-Snacks
+Snacks:
 25/05/2025
 Isaac (L) Lee
 
-Birthdays
+Birthdays:
 01/01/2025
 Ada Lovelace
 
-QT
+QT:
 19/05/2025
 Shep. Claire Lee
+
+Events:
+04/07/2025
+Community BBQ
 "
                   {...field}
                   rows={10}

@@ -160,7 +160,7 @@ export default function AdminDashboardPage() {
               <UploadCloud className="h-6 w-6 text-primary" /> 
               <CardTitle className="text-2xl">Batch Import Events</CardTitle>
             </div>
-          <CardDescription>Quickly add multiple "Snacks", "QT", "Birthdays", or "Events" by pasting text. Each event entry should be a date (DD/MM/YYYY) on one line, and the person's name or event title on the next. The first line of each section must be the category (e.g., "Snacks:", "QT:", "Birthdays:", "Events:").</CardDescription>
+          {/* CardDescription removed as per user request */}
         </CardHeader>
         <CardContent>
             <BatchEventImportForm />
@@ -175,7 +175,7 @@ export default function AdminDashboardPage() {
               <BookHeart className="h-6 w-6 text-accent" />
               <CardTitle className="text-2xl">Manage Global Bible Reading Plan</CardTitle>
             </div>
-          <CardDescription>Generate and set the Bible reading plan for all users. This plan is stored in Firestore.</CardDescription>
+          {/* CardDescription removed as per user request */}
         </CardHeader>
         <CardContent>
             <BiblePlanAdminForm />
