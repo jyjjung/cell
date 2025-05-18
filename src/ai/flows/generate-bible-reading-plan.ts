@@ -106,32 +106,35 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
     outputSchema: GenerateBibleReadingPlanOutputSchema,
   },
   async input => {
-    // Add a safety setting if needed, e.g., for potentially sensitive scripture content, though unlikely for references.
-    const {output} = await prompt(input, { config: {
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_NONE', 
-        },
-         {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_NONE',
-        },
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_NONE',
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_NONE',
-        },
-      ]
-    }});
-    if (!output || !output.dailyReadings) {
-      // Attempt to provide more context on failure.
-      const errorDetails = output ? "Output received but missing dailyReadings." : "No output received from AI.";
-      console.error("AI response issue:", errorDetails, "Input was:", input, "Full output:", output);
-      throw new Error(`AI did not return the expected dailyReadings structure. Details: ${errorDetails}`);
+    let modelResponse;
+    try {
+      modelResponse = await prompt(input, { 
+        config: {
+          safetySettings: [
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          ]
+        }
+      });
+    } catch (e: any) {
+      console.error("AI model call failed for generateBibleReadingPlanFlow. Input:", input, "Error:", e);
+      // This error message will be more specific than the generic server component error.
+      throw new Error("The AI model failed to process your request for the Bible plan. Please check your input, ensure the format is correct, or try again later.");
+    }
+
+    const { output } = modelResponse;
+
+    if (!output || !output.dailyReadings || output.dailyReadings.length === 0) {
+      const errorDetails = !output 
+        ? "No output structure received from AI." 
+        : !output.dailyReadings 
+        ? "Output received but missing 'dailyReadings' array."
+        : "Output received but 'dailyReadings' array is empty (no readings generated).";
+      console.error("AI response issue in generateBibleReadingPlanFlow:", errorDetails, "Input was:", input, "Full output:", output);
+      // This error message will also be more specific.
+      throw new Error(`The AI model responded, but the generated plan was incomplete or empty. Details: ${errorDetails} Please adjust your input or try again.`);
     }
     return output;
   }
