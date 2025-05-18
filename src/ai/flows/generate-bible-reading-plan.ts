@@ -97,6 +97,14 @@ Start Date: {{startDate}}
 Scripture References:
 {{{reference}}}
 `,
+  config: { // Moved safetySettings here
+    safetySettings: [
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+    ]
+  }
 });
 
 const generateBibleReadingPlanFlow = ai.defineFlow(
@@ -108,16 +116,8 @@ const generateBibleReadingPlanFlow = ai.defineFlow(
   async input => {
     let modelResponse;
     try {
-      modelResponse = await prompt(input, { 
-        config: {
-          safetySettings: [
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-          ]
-        }
-      });
+      // Call prompt directly, safetySettings are now part of its definition
+      modelResponse = await prompt(input);
     } catch (e: any) {
       // Enhanced logging
       console.error("AI model call failed for generateBibleReadingPlanFlow. Input:", input, "Full Error Object:", e);
