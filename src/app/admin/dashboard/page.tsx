@@ -8,7 +8,7 @@ import { useEvents } from '@/hooks/use-events';
 import type { AppEvent } from '@/types';
 import { EventForm } from '@/components/admin/event-form';
 import BiblePlanAdminForm from '@/components/admin/bible-plan-admin-form';
-import BatchEventImportForm from '@/components/admin/batch-event-import-form'; // New Import
+import BatchEventImportForm from '@/components/admin/batch-event-import-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -38,23 +38,40 @@ export default function AdminDashboardPage() {
   }
 
   const handleAddEvent = async (data: AppEvent) => {
-    const { id, ...eventDataNoId } = data;
-    await addEvent(eventDataNoId);
-    toast({ title: "Event Added", description: `"${data.title}" has been successfully added.` });
-    setIsFormModalOpen(false); 
+    const { id, ...eventDataNoId } = data; // id might be empty string if new
+    try {
+      await addEvent(eventDataNoId);
+      toast({ title: "Event Added", description: `"${data.title}" has been successfully added.` });
+      setIsFormModalOpen(false); 
+    } catch (error) {
+       toast({ title: "Error Adding Event", description: `Failed to add "${data.title}". Please try again.`, variant: "destructive" });
+    }
   };
 
   const handleUpdateEvent = async (data: AppEvent) => {
-    await updateEvent(data);
-    toast({ title: "Event Updated", description: `"${data.title}" has been successfully updated.` });
-    setEditingEvent(null);
-    setIsFormModalOpen(false); 
+     try {
+      await updateEvent(data);
+      toast({ title: "Event Updated", description: `"${data.title}" has been successfully updated.` });
+      setEditingEvent(null);
+      setIsFormModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error Updating Event", description: `Failed to update "${data.title}". Please try again.`, variant: "destructive" });
+    }
   };
 
-  const handleDeleteEvent = (eventId: string, eventTitle: string) => {
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
     if (window.confirm(`Are you sure you want to delete the event "${eventTitle}"?`)) {
-      deleteEvent(eventId);
-      toast({ title: "Event Deleted", description: `"${eventTitle}" has been deleted.` });
+      try {
+        await deleteEvent(eventId);
+        toast({ title: "Event Deleted", description: `"${eventTitle}" has been successfully deleted.` });
+      } catch (error) {
+        console.error("Failed to delete event:", error);
+        toast({
+          title: "Deletion Failed",
+          description: `Could not delete event "${eventTitle}". Please try again.`,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -141,10 +158,10 @@ export default function AdminDashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
            <div className="flex items-center space-x-2">
-              <UploadCloud className="h-6 w-6 text-primary" /> {/* Changed Icon */}
+              <UploadCloud className="h-6 w-6 text-primary" /> 
               <CardTitle className="text-2xl">Batch Import Events</CardTitle>
             </div>
-          <CardDescription>Quickly add multiple "Snacks" or "QT" events by pasting text. Each event entry should be a date (DD/MM/YYYY) on one line, and the person's name on the next.</CardDescription>
+          <CardDescription>Quickly add multiple "Snacks" or "QT" events by pasting text. Each event entry should be a date (DD/MM/YYYY) on one line, and the person's name on the next. The first line of the text must be "Snacks:" or "QT:".</CardDescription>
         </CardHeader>
         <CardContent>
             <BatchEventImportForm />

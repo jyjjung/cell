@@ -55,13 +55,14 @@ export function useEvents() {
       });
     } catch (error) {
       console.error("Error adding event:", error);
+      throw error; // Re-throw to be handled by caller
     }
   }, []);
 
   const updateEvent = useCallback(async (updatedEvent: AppEvent) => {
     if (!updatedEvent.id) {
       console.error("Event ID is missing for update");
-      return;
+      throw new Error("Event ID is missing for update");
     }
     const eventDocRef = doc(db, EVENTS_COLLECTION, updatedEvent.id);
     try {
@@ -73,6 +74,7 @@ export function useEvents() {
       });
     } catch (error) {
       console.error("Error updating event:", error);
+      throw error; // Re-throw to be handled by caller
     }
   }, []);
 
@@ -82,6 +84,7 @@ export function useEvents() {
       await deleteDoc(eventDocRef);
     } catch (error) {
       console.error("Error deleting event:", error);
+      throw error; // Re-throw to be handled by caller
     }
   }, []);
 

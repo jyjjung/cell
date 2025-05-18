@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import { Home, LogIn, LogOut, ShieldCheck, ClipboardList } from 'lucide-react';
 
 export default function Header() {
   const { isAdmin, logout } = useAuth();
@@ -30,10 +30,15 @@ export default function Header() {
             Cell Dates
           </span>
         </Link>
-        <nav className="flex flex-1 items-center space-x-4">
+        <nav className="flex flex-1 items-center space-x-2">
           <Link href="/" legacyBehavior passHref>
             <Button variant="ghost" className="text-sm font-medium">
               <Home className="mr-2 h-4 w-4" /> Home
+            </Button>
+          </Link>
+          <Link href="/bible-plan" legacyBehavior passHref>
+            <Button variant="ghost" className="text-sm font-medium">
+              <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
             </Button>
           </Link>
         </nav>
