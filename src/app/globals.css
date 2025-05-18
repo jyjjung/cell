@@ -8,32 +8,34 @@ body {
 
 @layer base {
   :root {
-    /* Fallback light theme variables (dark theme is default via html class) */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    /* Light Theme: Very light blue/off-white background */
+    --background: 220 60% 98%; /* Very pale blue, almost white */
+    --foreground: 220 30% 20%; /* Dark desaturated blue/grey for text */
     
-    --primary: 221 83% 53%; /* Blue */
-    --primary-foreground: 210 20% 98%; /* White for text on primary */
+    --card: 0 0% 100%; /* White cards for crispness */
+    --card-foreground: 220 30% 15%; /* Darker text on cards */
     
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --popover: 0 0% 100%; /* White popovers */
+    --popover-foreground: 220 30% 15%;
     
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --primary: 221 83% 53%; /* Existing Blue */
+    --primary-foreground: 210 20% 98%; /* Existing White for text on primary */
     
-    --accent: 220 13% 91%; /* Light cool grey (greyish-white) */
-    --accent-foreground: 220 14% 10%; /* Dark grey/black for text on accent */
+    --secondary: 220 25% 94%; /* Very light blueish-grey for secondary elements */
+    --secondary-foreground: 220 25% 30%; /* Darker text on secondary */
+    
+    --muted: 220 20% 92%; /* Slightly darker muted background */
+    --muted-foreground: 220 20% 45%; /* Muted text */
+    
+    --accent: 221 83% 53%; /* Use primary blue as accent */
+    --accent-foreground: 210 20% 98%; /* White text on accent */
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 221 83% 53%; /* Blue for ring */
+    --border: 220 20% 88%; /* Light greyish-blue border */
+    --input: 220 20% 90%; /* Light greyish-blue input background */
+    --ring: 221 83% 53%; /* Existing Blue for ring */
     --radius: 0.5rem;
     
     --chart-1: 12 76% 61%;
@@ -44,33 +46,34 @@ body {
   }
 
   .dark {
-    --background: 0 0% 8%; 
-    --foreground: 0 0% 98%; 
+    /* Dark Theme: Dark blue/navy blue background */
+    --background: 220 70% 12%; /* Dark Navy Blue */
+    --foreground: 220 25% 95%; /* Light greyish-blue/white for text */
 
-    --card: 0 0% 13%; 
-    --card-foreground: 0 0% 95%;
+    --card: 220 65% 17%; /* Slightly lighter navy for cards */
+    --card-foreground: 220 25% 92%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 60% 14%; /* Slightly different shade for popovers */
+    --popover-foreground: 220 25% 92%;
 
-    --primary: 221 83% 53%; /* Blue */
-    --primary-foreground: 210 20% 98%; /* White for text on primary */
+    --primary: 221 83% 60%; /* Slightly brighter blue for primary in dark mode */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 0 0% 18%; 
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 220 60% 22%; /* A bit lighter navy variation for secondary elements */
+    --secondary-foreground: 220 20% 85%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%; 
+    --muted: 220 55% 20%; /* Muted background variation */
+    --muted-foreground: 220 20% 65%; /* Greyer for muted text */
 
-    --accent: 220 13% 25%; /* Darker grey for dark mode accent */
-    --accent-foreground: 220 13% 94%; /* Light grey/white text on dark accent */
+    --accent: 210 70% 65%; /* A brighter, distinct blue for accent */
+    --accent-foreground: 220 60% 15%; /* Dark blue text on the brighter accent */
 
     --destructive: 0 62.8% 50.6%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%; 
-    --input: 0 0% 20%; 
-    --ring: 221 83% 63%; /* Slightly lighter blue for dark mode ring */
+    --border: 220 50% 28%; /* Border color for dark mode */
+    --input: 220 50% 25%; /* Input background for dark mode */
+    --ring: 221 83% 65%; /* Slightly brighter blue for ring in dark mode */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -91,8 +94,13 @@ body {
 }
 
 .moving-bg-gradient {
-  /* Adjusted gradient to lean towards new blue/grey theme */
-  background: linear-gradient(-45deg, hsl(221 83% 25% / 0.7), hsl(220 13% 30% / 0.7), hsl(0 0% 10% / 0.7), hsl(221 83% 20% / 0.7));
+  /* Adjusted gradient for new dark navy blue theme */
+  background: linear-gradient(-45deg, 
+    hsl(220 70% 18% / 0.7), /* Slightly lighter navy variation */
+    hsl(220 60% 25% / 0.7), /* Even lighter, a bit more desaturated navy */
+    hsl(220 80% 8% / 0.7),  /* Very dark, near black variation */
+    hsl(220 70% 10% / 0.7)  /* Darker variation of the base navy */
+  );
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;
 }
