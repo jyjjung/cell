@@ -61,6 +61,7 @@ export default function BatchEventImportForm() {
         }
 
         if (!currentCategory) {
+            localParseErrors.push(`Skipping line (no active category): "${line}". Ensure a category (Snacks, QT, Birthday, Event) is defined before entries.`);
             i++;
             continue;
         }
@@ -114,11 +115,11 @@ export default function BatchEventImportForm() {
             case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
             case EventCategory.QT: details = `QT with ${title}.`; break;
             case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-            case EventCategory.Event: details = title; break; // For Event, title is often the detail itself.
+            case EventCategory.Event: details = title; break; 
         }
         
         eventsToCreate.push({
-            title: (currentCategory === EventCategory.Event || currentCategory === EventCategory.Birthday) ? title : `${currentCategory}: ${title}`, // Use title directly for Event/Birthday, prefix for others
+            title: title, // Title is now just the provided name/description
             date: date.toISOString(), 
             category: currentCategory as EventCategory,
             details: details
@@ -149,7 +150,7 @@ export default function BatchEventImportForm() {
 
     const combinedErrors = [...localParseErrors, ...eventAddErrors];
     return { 
-      eventsProcessed: eventsSuccessfullyAddedCount, 
+      eventsSuccessfullyAddedCount, 
       eventsParsedCount: eventsToCreate.length,
       finalErrorMessages: combinedErrors
     };
@@ -158,17 +159,18 @@ export default function BatchEventImportForm() {
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
     
-    const { eventsProcessed, eventsParsedCount, finalErrorMessages } = await parseAndCreateEvents(data.batchText);
+    const { eventsSuccessfullyAddedCount, eventsParsedCount, finalErrorMessages } = await parseAndCreateEvents(data.batchText);
 
-    const infoMessages = finalErrorMessages.filter(msg => msg.startsWith("Switched to category:"));
-    const actualErrors = finalErrorMessages.filter(msg => !msg.startsWith("Switched to category:"));
+    const infoMessages = finalErrorMessages.filter(msg => msg.startsWith("Switched to category:") || msg.startsWith("Skipping line (no active category):"));
+    const actualErrors = finalErrorMessages.filter(msg => !infoMessages.includes(msg));
 
-    if (actualErrors.length > 0) {
+
+    if (actualErrors.length > 0 || eventsSuccessfullyAddedCount < eventsParsedCount) {
       toast({
-        title: eventsProcessed > 0 ? `Batch Import Partially Completed` : `Batch Import Failed`,
+        title: eventsSuccessfullyAddedCount > 0 && eventsSuccessfullyAddedCount < eventsParsedCount ? `Batch Import Partially Completed` : (eventsSuccessfullyAddedCount === 0 && eventsParsedCount > 0 ? `Batch Import Failed` : `Batch Import Notice`),
         description: (
           <div className="max-h-60 overflow-y-auto text-xs">
-            <p className="mb-1 font-semibold">{eventsProcessed} of {eventsParsedCount} potential event(s) successfully added.</p>
+            <p className="mb-1 font-semibold">{eventsSuccessfullyAddedCount} of {eventsParsedCount} potential event(s) successfully added.</p>
             {infoMessages.length > 0 && (
               <>
                 <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info:</p>
@@ -177,21 +179,25 @@ export default function BatchEventImportForm() {
                 </ul>
               </>
             )}
-            <p className="mt-2 mb-1 font-semibold">Please review the following issues:</p>
-            <ul className="list-disc pl-4">
-              {actualErrors.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
-            </ul>
+            {actualErrors.length > 0 && (
+              <>
+                <p className="mt-2 mb-1 font-semibold">Please review the following issues:</p>
+                <ul className="list-disc pl-4">
+                  {actualErrors.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
+                </ul>
+              </>
+            )}
           </div>
         ),
-        variant: "destructive",
+        variant: actualErrors.length > 0 || (eventsParsedCount > 0 && eventsSuccessfullyAddedCount < eventsParsedCount) ? "destructive" : "default",
         duration: 20000, 
       });
-    } else if (eventsProcessed > 0) {
+    } else if (eventsSuccessfullyAddedCount > 0) {
       toast({
         title: "Batch Import Successful!",
         description: (
            <div className="max-h-60 overflow-y-auto text-xs">
-            <p className="mb-1 font-semibold">{eventsProcessed} event(s) successfully added.</p>
+            <p className="mb-1 font-semibold">{eventsSuccessfullyAddedCount} event(s) successfully added.</p>
              {infoMessages.length > 0 && (
               <>
                 <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info:</p>
@@ -210,7 +216,7 @@ export default function BatchEventImportForm() {
             title: "Batch Import Notice",
             description: (
               <div className="max-h-60 overflow-y-auto text-xs">
-                <p>No new events were added. Processed {eventsParsedCount} potential entries from input.</p>
+                <p>No new events were parsed or added from your input.</p>
                 {infoMessages.length > 0 && (
                   <>
                     <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info:</p>
@@ -219,7 +225,7 @@ export default function BatchEventImportForm() {
                     </ul>
                   </>
                 )}
-                {actualErrors.length > 0 && (
+                {actualErrors.length > 0 && ( // Should be rare here, but just in case
                   <>
                     <p className="mt-2 mb-1 font-semibold">Issues found:</p>
                     <ul className="list-disc pl-4">
@@ -248,19 +254,19 @@ export default function BatchEventImportForm() {
               <FormControl>
                 <Textarea
                   placeholder="Example:
-Snacks:
+Snacks
 25/05/2025
 Isaac (L) Lee
 
-Birthdays:
+Birthdays
 01/01/2025
 Ada Lovelace
 
-QT:
+QT
 19/05/2025
 Shep. Claire Lee
 
-Events:
+Events
 04/07/2025
 Community BBQ
 "
@@ -283,3 +289,6 @@ Community BBQ
     </Form>
   );
 }
+
+
+    
