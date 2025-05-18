@@ -52,10 +52,11 @@ export function useBiblePlan() {
       });
       // The onSnapshot listener will update the local state automatically
     } catch (error) {
-      console.error("Error saving Bible reading plan:", error);
+      console.error("Error saving Bible reading plan. Data:", newPlanData, "Error:", error);
       throw error; // Re-throw to be caught by caller
     }
   };
 
   return { plan, loading, saveBiblePlan };
 }
+
