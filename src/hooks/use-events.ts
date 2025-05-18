@@ -32,14 +32,13 @@ export function useEvents() {
         eventsData.push({
           ...data,
           id: doc.id,
-          // Ensure date is string, Firestore might return Timestamp for date fields if not careful
           date: typeof data.date === 'string' ? data.date : (data.date as Timestamp)?.toDate().toISOString(),
         } as AppEvent);
       });
       setEvents(eventsData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching events:", error);
+      console.error("Error fetching events from Firestore:", error);
       setLoading(false);
     });
 
@@ -48,14 +47,21 @@ export function useEvents() {
 
   const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>) => {
     try {
-      await addDoc(collection(db, EVENTS_COLLECTION), {
+      // Ensure optional fields are handled (e.g., convert undefined to null if necessary, though Firestore usually omits undefined fields)
+      const dataToSend = {
         ...eventData,
+        details: eventData.details === undefined ? null : eventData.details, // Explicitly send null if details is undefined
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error adding event. Data:", eventData, "Error:", error);
-      throw error; // Re-throw to be handled by caller
+      };
+      await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
+    } catch (error: any) {
+      console.error("Error adding event to Firestore. Data:", eventData, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
+      // More detailed logging
+      if (error.code === 'permission-denied') {
+        console.error("Firestore permission denied. Check your security rules.");
+      }
+      throw error;
     }
   }, []);
 
@@ -66,15 +72,19 @@ export function useEvents() {
     }
     const eventDocRef = doc(db, EVENTS_COLLECTION, updatedEvent.id);
     try {
-      // Exclude id from the data to be written to Firestore
-      const { id, ...dataToUpdate } = updatedEvent;
-      await updateDoc(eventDocRef, {
-        ...dataToUpdate,
+      const { id, ...eventProps } = updatedEvent;
+      const dataToUpdate = {
+        ...eventProps,
+        details: eventProps.details === undefined ? null : eventProps.details, // Explicitly send null if details is undefined
         updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error("Error updating event. Data:", updatedEvent, "Error:", error);
-      throw error; // Re-throw to be handled by caller
+      };
+      await updateDoc(eventDocRef, dataToUpdate);
+    } catch (error: any) {
+      console.error("Error updating event in Firestore. Data:", updatedEvent, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
+      if (error.code === 'permission-denied') {
+        console.error("Firestore permission denied. Check your security rules.");
+      }
+      throw error;
     }
   }, []);
 
@@ -82,12 +92,14 @@ export function useEvents() {
     const eventDocRef = doc(db, EVENTS_COLLECTION, eventId);
     try {
       await deleteDoc(eventDocRef);
-    } catch (error) {
-      console.error("Error deleting event. Event ID:", eventId, "Error:", error);
-      throw error; // Re-throw to be handled by caller
+    } catch (error: any) {
+      console.error("Error deleting event from Firestore. Event ID:", eventId, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
+      if (error.code === 'permission-denied') {
+        console.error("Firestore permission denied. Check your security rules.");
+      }
+      throw error;
     }
   }, []);
 
   return { events, addEvent, updateEvent, deleteEvent, loading };
 }
-
