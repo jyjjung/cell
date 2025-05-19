@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format, parseISO, startOfDay } from 'date-fns';
 import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -19,10 +20,12 @@ export default function FullBiblePlanPage() {
   const [displayedReadings, setDisplayedReadings] = useState<DailyReading[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
+  }, [setIsPageLoading]);
 
   useEffect(() => {
     if (!isMounted || !plan?.dailyReadings) {
@@ -36,7 +39,7 @@ export default function FullBiblePlanPage() {
       setDisplayedReadings(
         plan.dailyReadings.filter(reading => {
           try {
-              const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure we treat date as UTC
+              const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); 
               return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
           } catch (e) {
               console.error("Error parsing reading date for filtering:", reading.date, e);
@@ -56,6 +59,7 @@ export default function FullBiblePlanPage() {
   };
 
   if (!isMounted) {
+    // This initial loader might be brief if the global loader is active
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

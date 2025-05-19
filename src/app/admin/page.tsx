@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
@@ -18,38 +19,44 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
+  }, [setIsPageLoading]);
 
   useEffect(() => {
-    // Only attempt to redirect if isAdmin is true and the component is mounted.
-    // This prevents router.push during the initial render or on the server.
     if (isAdmin && isMounted) {
+      setIsPageLoading(true); // Show loader for dashboard transition
       router.push('/admin/dashboard');
     }
-  }, [isAdmin, router, isMounted]);
+  }, [isAdmin, router, isMounted, setIsPageLoading]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError('');
     if (login(password)) {
       toast({ title: "Login Successful", description: "Welcome, Admin!" });
-      // router.push will be handled by the useEffect above once isAdmin state updates
+      // router.push will be handled by the useEffect above
     } else {
       setError('Incorrect password. Please try again.');
       toast({ title: "Login Failed", description: "Incorrect password.", variant: "destructive" });
     }
   };
-
-  // If redirecting, or not yet mounted, show nothing or a loader to prevent flashing content
-  if (isAdmin && isMounted) {
-    return null; // Or a loading spinner
-  }
   
   if (!isMounted) {
-     return <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center"><p>Loading...</p></div>;
+    return (
+      <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If redirecting, show nothing or a loader to prevent flashing content
+  if (isAdmin && isMounted) {
+    // The global loader should be active due to setIsPageLoading(true) in useEffect
+    return null; 
   }
 
   return (

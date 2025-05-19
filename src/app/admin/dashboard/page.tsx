@@ -18,9 +18,10 @@ import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadC
 import EventCard from '@/components/events/event-card'; 
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO } from 'date-fns';
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function AdminDashboardPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, logout } = useAuth(); // Added logout for completeness, though not used directly for loading
   const router = useRouter();
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();
   const [isMounted, setIsMounted] = useState(false);
@@ -28,16 +29,25 @@ export default function AdminDashboardPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeletingPast, setIsDeletingPast] = useState(false);
   const { toast } = useToast();
+  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
+    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
     if (!isAdmin && typeof window !== "undefined") { 
+      setIsPageLoading(true); // Show loader for redirect transition
       router.push('/admin');
     }
-  }, [isAdmin, router]);
+  }, [isAdmin, router, setIsPageLoading]);
+
 
   if (!isMounted || !isAdmin) {
-    return <div className="flex justify-center items-center h-64"><p>Loading admin area...</p></div>;
+    // This initial loader might be brief if the global loader is active
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleAddEvent = async (data: AppEvent) => {
@@ -60,11 +70,6 @@ export default function AdminDashboardPage() {
     } catch (error) {
       toast({ title: "Error Updating Event", description: `Failed to update "${data.title}". Please try again.`, variant: "destructive" });
     }
-  };
-
-  const handleDeleteSingleEvent = async (eventId: string, eventTitle: string) => {
-    // Using AlertDialog for single event deletion confirmation
-    // This part is kept as an example, actual trigger is through AlertDialogTrigger below
   };
 
   const openEditModal = (event: AppEvent) => {
@@ -149,7 +154,7 @@ export default function AdminDashboardPage() {
       </Card>
 
       {eventsLoading ? (
-         <Card><CardContent className="p-6 text-center"><p>Loading events...</p></CardContent></Card>
+         <Card><CardContent className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></CardContent></Card>
       ) : events.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center">
@@ -250,7 +255,7 @@ export default function AdminDashboardPage() {
         <CardContent>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={isDeletingPast}>
+              <Button variant="destructive" disabled={isDeletingPast || eventsLoading}>
                 {isDeletingPast ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
@@ -283,4 +288,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
