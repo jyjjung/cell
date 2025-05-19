@@ -74,10 +74,12 @@ export default function BiblePlanDisplay({
         isCompact ? "p-3 pb-2" : "pb-3"
       )}>
         <div className="flex items-start space-x-2">
-           <BookOpenCheck className={cn(
-            "h-6 w-6 mt-1 shrink-0", // Added mt-1 for potential better alignment if title is hidden
-            isCompact ? "text-muted-foreground" : "text-primary"
-          )} />
+           {!hideTitle && (
+             <BookOpenCheck className={cn(
+              "h-6 w-6 mt-1 shrink-0",
+              isCompact ? "text-muted-foreground" : "text-primary"
+            )} />
+           )}
           <div className="flex-grow">
             {!hideTitle && (
               <CardTitle className={cn(
