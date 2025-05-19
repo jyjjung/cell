@@ -23,11 +23,19 @@ export interface DailyReading {
   passages: string[]; // Array of scripture references, e.g., ["Genesis 1", "Genesis 2", "Exodus 1:1-15"]
 }
 
+export type PlanType = 'canonical' | 'custom';
+
 export interface BibleReadingPlan {
   id?: string; // Firestore document ID (e.g., "current")
-  originalReferenceInput: string; // The raw input string from admin
+  planType: PlanType;
+  // For 'canonical', this could be "Canonical order starting from Genesis".
+  // For 'custom', this could be "Preset Custom Chronological Order".
+  planDescription: string; 
   startDate: string; // ISO string for plan's start date
   dailyReadings: DailyReading[];
   generatedDate: string; // ISO string of when this plan was generated
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
+  // originalReferenceInput is no longer directly applicable as AI input is removed.
+  // We use planDescription to store context about the plan.
 }
+
