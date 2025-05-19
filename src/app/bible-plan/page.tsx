@@ -18,36 +18,51 @@ export default function FullBiblePlanPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [displayedReadings, setDisplayedReadings] = useState<DailyReading[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (plan?.dailyReadings) {
-      if (selectedDate) {
-        const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
-        setDisplayedReadings(
-          plan.dailyReadings.filter(reading => {
-            try {
-                const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure we treat date as UTC
-                return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
-            } catch (e) {
-                console.error("Error parsing reading date for filtering:", reading.date, e);
-                return false;
-            }
-          })
-        );
-        setIsFiltering(true);
-      } else {
-        setDisplayedReadings(plan.dailyReadings);
-        setIsFiltering(false);
-      }
-    } else {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !plan?.dailyReadings) {
       setDisplayedReadings([]);
       setIsFiltering(false);
+      return;
     }
-  }, [plan, selectedDate]);
+
+    if (selectedDate) {
+      const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
+      setDisplayedReadings(
+        plan.dailyReadings.filter(reading => {
+          try {
+              const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure we treat date as UTC
+              return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
+          } catch (e) {
+              console.error("Error parsing reading date for filtering:", reading.date, e);
+              return false;
+          }
+        })
+      );
+      setIsFiltering(true);
+    } else {
+      setDisplayedReadings(plan.dailyReadings);
+      setIsFiltering(false);
+    }
+  }, [plan, selectedDate, isMounted]);
 
   const handleShowAll = () => {
     setSelectedDate(undefined);
   };
+
+  if (!isMounted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-muted-foreground">Loading page content...</p>
+      </div>
+    );
+  }
 
   if (planLoading) {
     return (
@@ -60,19 +75,25 @@ export default function FullBiblePlanPage() {
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
-      <Card className="mt-6 shadow-lg max-w-lg mx-auto"> 
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Info className="h-6 w-6 text-destructive" />
-            <CardTitle className="text-2xl">No Plan Available</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            No Bible reading plan has been set by the admin yet, or the current plan is empty.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-8">
+        <div className="flex items-center space-x-3 mb-6">
+          <ListChecks className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+        </div>
+        <Card className="mt-6 shadow-lg max-w-lg mx-auto"> 
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Info className="h-6 w-6 text-destructive" />
+              <CardTitle className="text-2xl">No Plan Available</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              No Bible reading plan has been set by the admin yet, or the current plan is empty.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -156,4 +177,3 @@ export default function FullBiblePlanPage() {
     </div>
   );
 }
-
