@@ -9,9 +9,10 @@ import { useEffect, useState } from 'react';
 
 interface BiblePlanDisplayProps {
   plan: BibleReadingPlan | null;
+  showPlanDetails?: boolean; // New prop
 }
 
-export default function BiblePlanDisplay({ plan }: BiblePlanDisplayProps) {
+export default function BiblePlanDisplay({ plan, showPlanDetails = true }: BiblePlanDisplayProps) {
   const [todaysReading, setTodaysReading] = useState<DailyReading | null>(null);
 
   useEffect(() => {
@@ -64,9 +65,11 @@ export default function BiblePlanDisplay({ plan }: BiblePlanDisplayProps) {
            <BookOpenCheck className="h-6 w-6 text-primary" />
           <CardTitle className="text-2xl">Today's Reading: {format(parseISO(todaysReading.date), "MMMM d, yyyy")}</CardTitle>
         </div>
-        <CardDescription>
-          Plan: "{plan.planDescription}" | Generated: {format(parseISO(plan.generatedDate), "PPP p")}
-        </CardDescription>
+        {showPlanDetails && (
+          <CardDescription>
+            Plan: "{plan.planDescription}" | Generated: {format(parseISO(plan.generatedDate), "PPP p")}
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         {todaysReading.passages.length > 0 ? (

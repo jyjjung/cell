@@ -137,16 +137,14 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
         </div>
         {planLoading ? (
-          // No Card wrapper here, loading state is inline
            <div className="p-6 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
               <p className="text-muted-foreground">Loading Bible reading plan...</p>
             </div>
         ) : (
-          <BiblePlanDisplay plan={plan} />
+          <BiblePlanDisplay plan={plan} showPlanDetails={false} />
         )}
       </section>
     </div>
   );
 }
-
