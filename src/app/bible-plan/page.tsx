@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format, parseISO, startOfDay } from 'date-fns';
 import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePageLoading } from '@/contexts/page-loading-context';
+// Removed: import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -20,12 +20,12 @@ export default function FullBiblePlanPage() {
   const [displayedReadings, setDisplayedReadings] = useState<DailyReading[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { setIsPageLoading } = usePageLoading();
+  // Removed: const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
-    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
-  }, [setIsPageLoading]);
+    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
+  }, []);
 
   useEffect(() => {
     if (!isMounted || !plan?.dailyReadings) {
@@ -39,7 +39,7 @@ export default function FullBiblePlanPage() {
       setDisplayedReadings(
         plan.dailyReadings.filter(reading => {
           try {
-              const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); 
+              const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
               return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
           } catch (e) {
               console.error("Error parsing reading date for filtering:", reading.date, e);
@@ -59,7 +59,6 @@ export default function FullBiblePlanPage() {
   };
 
   if (!isMounted) {
-    // This initial loader might be brief if the global loader is active
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -84,7 +83,7 @@ export default function FullBiblePlanPage() {
           <ListChecks className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
         </div>
-        <Card className="mt-6 shadow-lg max-w-lg mx-auto"> 
+        <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Info className="h-6 w-6 text-destructive" />

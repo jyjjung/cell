@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { startOfDay, parseISO, addMonths, endOfDay } from 'date-fns';
-import { usePageLoading } from '@/contexts/page-loading-context';
+// Removed: import { usePageLoading } from '@/contexts/page-loading-context';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -24,17 +24,17 @@ export default function HomePage() {
   const [sortOption, setSortOption] = useState<SortOption>("date-asc");
   const [isCompactView, setIsCompactView] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { setIsPageLoading } = usePageLoading();
+  // Removed: const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
-    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
-  }, [setIsPageLoading]);
+    // Removed: setIsPageLoading(false); 
+  }, []);
 
   const upcomingEvents = useMemo(() => {
-    if (!isMounted) return []; 
+    if (!isMounted) return [];
     const today = startOfDay(new Date());
-    const oneMonthFromNow = endOfDay(addMonths(today, 1)); 
+    const oneMonthFromNow = endOfDay(addMonths(today, 1));
 
     return allEvents.filter(event => {
       try {
@@ -67,7 +67,6 @@ export default function HomePage() {
   }, [upcomingEvents, sortOption]);
 
   if (!isMounted) {
-    // This initial loader might be brief if the global loader is active
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

@@ -19,16 +19,16 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
-  const { setIsPageLoading } = usePageLoading();
+  const { setIsPageLoading } = usePageLoading(); // Still needed for conditional redirect loading
 
   useEffect(() => {
     setIsMounted(true);
-    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
-  }, [setIsPageLoading]);
+    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
+  }, []);
 
   useEffect(() => {
     if (isAdmin && isMounted) {
-      setIsPageLoading(true); // Show loader for dashboard transition
+      setIsPageLoading(true); // Show global loader for dashboard transition
       router.push('/admin/dashboard');
     }
   }, [isAdmin, router, isMounted, setIsPageLoading]);
@@ -38,13 +38,13 @@ export default function AdminLoginPage() {
     setError('');
     if (login(password)) {
       toast({ title: "Login Successful", description: "Welcome, Admin!" });
-      // router.push will be handled by the useEffect above
+      // router.push will be handled by the useEffect above, which now sets setIsPageLoading(true)
     } else {
       setError('Incorrect password. Please try again.');
       toast({ title: "Login Failed", description: "Incorrect password.", variant: "destructive" });
     }
   };
-  
+
   if (!isMounted) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
@@ -53,10 +53,12 @@ export default function AdminLoginPage() {
     );
   }
 
-  // If redirecting, show nothing or a loader to prevent flashing content
+  // If redirecting (isAdmin && isMounted), global loader should be active.
+  // This component might render briefly before RootLayout's effect hides the global loader
+  // if not redirecting, or before the redirect happens.
+  // So, we avoid rendering the form if a redirect is imminent.
   if (isAdmin && isMounted) {
-    // The global loader should be active due to setIsPageLoading(true) in useEffect
-    return null; 
+    return null; // Or a minimal loader, but global loader should cover it.
   }
 
   return (

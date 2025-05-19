@@ -15,13 +15,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
-import EventCard from '@/components/events/event-card'; 
+import EventCard from '@/components/events/event-card';
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function AdminDashboardPage() {
-  const { isAdmin, logout } = useAuth(); // Added logout for completeness, though not used directly for loading
+  const { isAdmin } = useAuth();
   const router = useRouter();
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();
   const [isMounted, setIsMounted] = useState(false);
@@ -29,33 +29,42 @@ export default function AdminDashboardPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeletingPast, setIsDeletingPast] = useState(false);
   const { toast } = useToast();
-  const { setIsPageLoading } = usePageLoading();
+  const { setIsPageLoading } = usePageLoading(); // Still needed for conditional redirect loading
 
   useEffect(() => {
     setIsMounted(true);
-    setIsPageLoading(false); // Signal that page-specific content/loaders can take over
-    if (!isAdmin && typeof window !== "undefined") { 
-      setIsPageLoading(true); // Show loader for redirect transition
+    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
+    if (!isAdmin && typeof window !== "undefined") {
+      setIsPageLoading(true); // Show global loader for redirect transition
       router.push('/admin');
     }
   }, [isAdmin, router, setIsPageLoading]);
 
 
-  if (!isMounted || !isAdmin) {
-    // This initial loader might be brief if the global loader is active
+  if (!isMounted || (!isAdmin && typeof window !== "undefined")) {
+    // Show a minimal loader if not mounted or if redirecting (global loader should cover redirects)
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
+  
+  // If redirecting due to !isAdmin, the global loader should be active.
+  // This component might render briefly before RootLayout's effect hides the global loader
+  // if not redirecting, or before the redirect happens.
+  // So, we avoid rendering the form if a redirect is imminent.
+   if (!isAdmin && isMounted) { // Check again after mount, as isAdmin might update
+    return null; 
+  }
+
 
   const handleAddEvent = async (data: AppEvent) => {
-    const { id, ...eventDataNoId } = data; 
+    const { id, ...eventDataNoId } = data;
     try {
       await addEvent(eventDataNoId);
       toast({ title: "Event Added", description: `"${data.title}" has been successfully added.` });
-      setIsFormModalOpen(false); 
+      setIsFormModalOpen(false);
     } catch (error) {
        toast({ title: "Error Adding Event", description: `Failed to add "${data.title}". Please try again.`, variant: "destructive" });
     }
@@ -76,9 +85,9 @@ export default function AdminDashboardPage() {
     setEditingEvent(event);
     setIsFormModalOpen(true);
   };
-  
+
   const openAddModal = () => {
-    setEditingEvent(null); 
+    setEditingEvent(null);
     setIsFormModalOpen(true);
   };
 
@@ -100,7 +109,7 @@ export default function AdminDashboardPage() {
     try {
       const deletionPromises = pastEventsToDelete.map(event => deleteEvent(event.id));
       const results = await Promise.allSettled(deletionPromises);
-      
+
       const successfulDeletions = results.filter(result => result.status === 'fulfilled').length;
       const failedDeletions = results.length - successfulDeletions;
 
@@ -219,7 +228,7 @@ export default function AdminDashboardPage() {
       <Card className="shadow-lg">
         <CardHeader>
            <div className="flex items-center space-x-2">
-              <UploadCloud className="h-6 w-6 text-primary" /> 
+              <UploadCloud className="h-6 w-6 text-primary" />
               <CardTitle className="text-2xl">Batch Import Events</CardTitle>
             </div>
         </CardHeader>
