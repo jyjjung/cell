@@ -65,25 +65,9 @@ export default function HomePage() {
 
   if (!isMounted) {
     return (
-      <div className="space-y-12">
-        <section>
-          <div className="flex items-center space-x-3 mb-6">
-            <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
-          </div>
-           <Card><CardContent className="p-6 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p className="text-muted-foreground">Loading events...</p></CardContent></Card>
-        </section>
-        <Separator className="my-12" />
-        <section>
-          <div className="flex items-center space-x-3 mb-6">
-            <BookHeart className="h-8 w-8 text-accent" />
-            <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
-          </div>
-           <div className="p-6 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-              <p className="text-muted-foreground">Loading Bible reading plan...</p>
-            </div>
-        </section>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-muted-foreground">Loading page content...</p>
       </div>
     );
   }
