@@ -29,9 +29,9 @@ export default function HomePage() {
   }, []);
 
   const upcomingEvents = useMemo(() => {
-    if (!isMounted) return []; // Prevent server/client mismatch for date comparisons
+    if (!isMounted) return []; 
     const today = startOfDay(new Date());
-    const oneMonthFromNow = endOfDay(addMonths(today, 1)); // Use endOfDay to include events on the last day of the month range
+    const oneMonthFromNow = endOfDay(addMonths(today, 1)); 
 
     return allEvents.filter(event => {
       try {
@@ -64,7 +64,6 @@ export default function HomePage() {
   }, [upcomingEvents, sortOption]);
 
   if (!isMounted) {
-    // Render a simplified loading state or null during server render and initial client mount
     return (
       <div className="space-y-12">
         <section>
@@ -80,7 +79,10 @@ export default function HomePage() {
             <BookHeart className="h-8 w-8 text-accent" />
             <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
           </div>
-          <Card><CardContent className="p-6 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p className="text-muted-foreground">Loading Bible reading plan...</p></CardContent></Card>
+           <div className="p-6 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+              <p className="text-muted-foreground">Loading Bible reading plan...</p>
+            </div>
         </section>
       </div>
     );
@@ -142,9 +144,15 @@ export default function HomePage() {
               <p className="text-muted-foreground">Loading Bible reading plan...</p>
             </div>
         ) : (
-          <BiblePlanDisplay plan={plan} showPlanDetails={false} />
+          <BiblePlanDisplay
+            plan={plan}
+            showPlanDetails={false}
+            isCompact={isCompactView}
+            hideTitle={true}
+          />
         )}
       </section>
     </div>
   );
 }
+
