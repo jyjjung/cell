@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, type FormEvent } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
@@ -21,13 +21,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, getISOWeek, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 
 const markReadRangeSchema = z.object({
   fromBook: z.string().min(1, "Please select a 'From' book."),
@@ -127,26 +126,6 @@ export default function BibleChecklistPage() {
     }
   };
 
-  const handleToggleMultiplePassages = useCallback(async (passageTexts: string[], markAsComplete: boolean) => {
-    if (!currentUser) return;
-    // Filter out any invalid/empty passage texts before processing
-    const validPassageTexts = passageTexts.filter(text => typeof text === 'string' && text.trim() !== '');
-    if (validPassageTexts.length === 0) {
-      toast({ title: "No Valid Passages", description: "No valid passages selected to update.", variant: "destructive"});
-      return;
-    }
-
-    try {
-      await markMultiplePassages(validPassageTexts, markAsComplete);
-      toast({
-        title: `Passages ${markAsComplete ? 'Marked Complete' : 'Marked Incomplete'}`,
-        description: `${validPassageTexts.length} passage(s) updated.`
-      });
-    } catch (error: any) {
-      toast({ title: "Error Updating Passages", description: error.message || "Could not update passages.", variant: "destructive" });
-    }
-  }, [currentUser, markMultiplePassages, toast]);
-
   const sortedDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
     return [...plan.dailyReadings].sort((a, b) => {
@@ -212,30 +191,15 @@ export default function BibleChecklistPage() {
           }
           const dateKey = dailyReading.originalDateKey || dailyReading.date;
           const allPassagesInDay = dailyReading.passages?.filter(p => p && p.displayText) || [];
-          const allPassagesInDayTexts = allPassagesInDay.map(p => p.displayText);
-          const isDayComplete = allPassagesInDayTexts.length > 0 && allPassagesInDayTexts.every(text => completedPassages.includes(text));
-          const dayCheckboxId = `day-master-${dateKey}`;
-
+          
           return (
             <AccordionItem key={dateKey} value={dateKey} className="border bg-card/80 rounded-md shadow-xs hover:shadow-sm transition-shadow">
-              <AccordionTrigger asChild className="p-2 text-xs hover:no-underline">
+              <AccordionTrigger className="p-2 text-xs hover:no-underline">
+                {/* Removed asChild prop and the div wrapper here to simplify the trigger */}
                 <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={dayCheckboxId}
-                      checked={isDayComplete}
-                      disabled={allPassagesInDayTexts.length === 0}
-                      onCheckedChange={(checked) => {
-                        handleToggleMultiplePassages(allPassagesInDayTexts, !!checked);
-                      }}
-                      onClick={(e) => e.stopPropagation()} 
-                      aria-label={`Mark all passages for ${format(parseISO(dailyReading.date), "MMM d")} as complete`}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor={dayCheckboxId} className="font-medium cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                      {dailyReading.date ? format(parseISO(dailyReading.date), "EEE, MMM d") : "Invalid Date"}
-                    </Label>
-                  </div>
+                  <Label className="font-medium cursor-pointer">
+                    {dailyReading.date ? format(parseISO(dailyReading.date), "EEE, MMM d") : "Invalid Date"}
+                  </Label>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
                 </div>
               </AccordionTrigger>
@@ -294,10 +258,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
-// Add this style for the accordion chevron rotation if not already present globally
-// <style jsx global>{`
-//   .accordion-chevron[data-state='open'] {
-//     transform: rotate(180deg);
-//   }
-// `}</style>
