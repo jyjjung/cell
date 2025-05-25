@@ -38,7 +38,7 @@ export function useBiblePlan() {
             if (dr && dr.date) {
               readingDate = typeof dr.date === 'string' ? dr.date : (dr.date as Timestamp)?.toDate().toISOString().split('T')[0];
             } else {
-              console.warn(`[useBiblePlan] SANITIZE: DailyReading at index ${drIndex} is missing a date. Original data:`, JSON.parse(JSON.stringify(dr)));
+              console.warn(`[useBiblePlan] SANITIZE: DailyReading at index ${drIndex} is missing a date. Original data:`, dr ? JSON.parse(JSON.stringify(dr)) : "null/undefined dailyReading object");
             }
           } catch (e) {
             console.error(`[useBiblePlan] SANITIZE: Error parsing date for DailyReading at index ${drIndex}. Original date:`, dr?.date, e);
@@ -47,67 +47,75 @@ export function useBiblePlan() {
           const passages: StructuredPassage[] = (Array.isArray(dr?.passages) ? dr.passages.map((p, pIndex) => {
             const originalPassageForLog = p ? JSON.parse(JSON.stringify(p)) : { note: "Original passage object was null/undefined" };
 
-            let currentBook = (typeof p?.book === 'string' && p.book.trim() !== '') ? p.book.trim() : '';
+            if (!p || typeof p !== 'object') {
+              console.error(`[useBiblePlan] SANITIZE CRITICAL: Passage data is not an object or is null. Date: ${readingDate}, Index: ${pIndex}. Original:`, originalPassageForLog);
+              return {
+                book: "Error",
+                chapter: 0,
+                startVerse: undefined,
+                endVerse: undefined,
+                displayText: "Error: Corrupted Passage Object",
+              };
+            }
+
+            let currentBook = (typeof p.book === 'string' && p.book.trim() !== '') ? p.book.trim() : '';
             let currentChapterNum = 0;
-            if (typeof p?.chapter === 'number' && p.chapter > 0) {
+            if (typeof p.chapter === 'number' && p.chapter > 0) {
                 currentChapterNum = p.chapter;
-            } else if (typeof p?.chapter === 'string') {
+            } else if (typeof p.chapter === 'string') {
                 const parsedCh = parseInt(p.chapter, 10);
                 if (!isNaN(parsedCh) && parsedCh > 0) {
                     currentChapterNum = parsedCh;
                 }
             }
             
-            let currentStartVerse = (typeof p?.startVerse === 'number' && p.startVerse > 0) ? p.startVerse : undefined;
+            let currentStartVerse = (typeof p.startVerse === 'number' && p.startVerse > 0) ? p.startVerse : undefined;
             let currentEndVerse : number | 'end' | undefined = undefined;
-            if (typeof p?.endVerse === 'number' && p.endVerse > 0) {
+            if (typeof p.endVerse === 'number' && p.endVerse > 0) {
                 currentEndVerse = p.endVerse;
-            } else if (p?.endVerse === 'end') {
+            } else if (p.endVerse === 'end') {
                 currentEndVerse = 'end';
             }
 
-            let currentDisplayText = (typeof p?.displayText === 'string' && p.displayText.trim() !== '') ? p.displayText.trim() : '';
+            let currentDisplayText = (typeof p.displayText === 'string' && p.displayText.trim() !== '') ? p.displayText.trim() : '';
             
             let reconstructionNeeded = false;
             if (!currentBook) {
                 currentBook = "Unknown Book";
                 reconstructionNeeded = true;
-                 console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, missing valid 'book'. Original passage:`, originalPassageForLog);
+                 // console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, missing valid 'book'. Original passage:`, originalPassageForLog);
             }
             if (currentChapterNum <= 0) {
-                currentChapterNum = 0; // This will signal an error in reconstruction
+                // If chapter is 0 or invalid, it's effectively an error for reconstruction purposes
                 reconstructionNeeded = true;
-                console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, book '${currentBook}', missing valid 'chapter'. Original passage:`, originalPassageForLog);
+                // console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, book '${currentBook}', missing valid 'chapter'. Original passage:`, originalPassageForLog);
             }
 
             if (!currentDisplayText || reconstructionNeeded) {
                 let reconstructedText = currentBook;
-                if (currentChapterNum > 0) {
+                if (currentChapterNum > 0) { // Only add chapter if valid
                     reconstructedText += ` ${currentChapterNum}`;
                     if (currentStartVerse) {
                         reconstructedText += `:${currentStartVerse}`;
-                        if (currentEndVerse) {
+                        if (currentEndVerse && currentEndVerse !== currentStartVerse) { // Avoid "X:Y-Y"
                             reconstructedText += `-${currentEndVerse === 'end' ? 'end' : currentEndVerse}`;
-                        } else {
-                            reconstructedText += '-end';
+                        } else if (!currentEndVerse && currentStartVerse) { // If startVerse exists but no endVerse, imply to end
+                           reconstructedText += '-end';
                         }
                     }
                 } else {
                      reconstructedText = `${currentBook} (Chapter Data Error)`;
                 }
                 
-                if (!currentDisplayText) { // Only overwrite if original was missing
-                    console.warn(`[useBiblePlan] SANITIZE: Reconstructing displayText for passage. Date: ${readingDate}, Original:`, originalPassageForLog, `Reconstructed to: "${reconstructedText}"`);
+                if (!currentDisplayText) {
+                    // console.warn(`[useBiblePlan] SANITIZE: Reconstructing displayText for passage. Date: ${readingDate}, Original:`, originalPassageForLog, `Reconstructed to: "${reconstructedText}"`);
                     currentDisplayText = reconstructedText;
                 } else if (reconstructionNeeded && currentDisplayText !== reconstructedText) {
-                    // Original displayText existed, but book/chapter issues forced a different reconstruction.
-                    // This case is less common, usually if displayText was there but book/ch was bad for other logic.
-                    // For now, we'll prefer original displayText if it existed, but log the discrepancy.
-                     console.warn(`[useBiblePlan] SANITIZE: Book/Chapter issues for passage, but original displayText exists. Date: ${readingDate}, Original Display: "${currentDisplayText}", Potential Reconstruction: "${reconstructedText}". Original passage:`, originalPassageForLog);
+                     // console.warn(`[useBiblePlan] SANITIZE: Book/Chapter issues for passage, but original displayText exists. Date: ${readingDate}, Original Display: "${currentDisplayText}", Potential Reconstruction: "${reconstructedText}". Original passage:`, originalPassageForLog);
                 }
             }
             
-            // Final absolute fallback if displayText somehow ended up empty.
+            // Final absolute fallback if displayText somehow ended up empty or just whitespace.
             if (!currentDisplayText || currentDisplayText.trim() === '') {
                 console.error(`[useBiblePlan] SANITIZE CRITICAL: displayText for passage is EMPTY after all checks. Date: ${readingDate}, Book: ${currentBook}, Ch: ${currentChapterNum}. Original passage:`, originalPassageForLog);
                 currentDisplayText = "Error: Corrupted Passage";
@@ -124,11 +132,11 @@ export function useBiblePlan() {
           
           passages.forEach((psg, idx) => {
             if (!psg.displayText || psg.displayText.trim() === "") {
-                console.error(`[useBiblePlan] SANITIZE POST-MAP CHECK: Empty displayText for passage at index ${idx} on date ${readingDate}. Passage:`, JSON.parse(JSON.stringify(psg)));
+                console.error(`[useBiblePlan] SANITIZE POST-MAP CHECK: Empty displayText for passage at index ${idx} on date ${readingDate}. Passage:`, psg ? JSON.parse(JSON.stringify(psg)): "null/undefined passage");
             }
           });
 
-          return { date: readingDate, passages, originalDateKey: readingDate }; // originalDateKey added
+          return { date: readingDate, passages, originalDateKey: readingDate };
         }) : []);
 
         const formattedData: BibleReadingPlan = {
