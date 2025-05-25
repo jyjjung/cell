@@ -238,7 +238,11 @@ export default function BibleChecklistPage() {
             <Edit className="mr-2 h-4 w-4" /> Mark Reading Range
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[90vw] max-w-[550px] max-h-[85vh] overflow-y-auto p-0">
+        <PopoverContent 
+            side="bottom" 
+            align="start" 
+            className="w-[90vw] max-w-[550px] max-h-[85vh] overflow-y-auto p-0"
+        >
            <Card className="shadow-md border-0">
             <CardHeader className="w-full flex flex-row items-center justify-between rounded-t-lg">
               <div className="flex items-center space-x-2">
