@@ -72,15 +72,23 @@ export default function BibleChecklistPage() {
 
   useEffect(() => {
     if (plan) {
+      // console.log("[BibleChecklistPage] Received plan from useBiblePlan:", JSON.parse(JSON.stringify(plan)));
       let problematicPassages = 0;
-      plan.dailyReadings?.forEach(day => {
-        if (!day || !day.passages) return;
-        day.passages.forEach(p => {
+      plan.dailyReadings?.forEach((day, dayIdx) => {
+        if (!day || !day.passages) {
+          // console.warn(`[BibleChecklistPage] Initial Check: Day ${dayIdx} is missing passages. Date: ${day?.date}`);
+          return;
+        }
+        day.passages.forEach((p, pIdx) => {
           if (!p || !p.displayText || p.displayText.trim() === "") {
             problematicPassages++;
+            // console.warn(`[BibleChecklistPage] Initial Check: Passage with problematic displayText at Day Index ${dayIdx} (Date: ${day.date}), Passage Index ${pIdx}. Passage:`, p ? JSON.parse(JSON.stringify(p)) : "null/undefined");
           }
         });
       });
+      // if (problematicPassages > 0) {
+      //   console.warn(`[BibleChecklistPage] Initial plan check found ${problematicPassages} passages with problematic displayText.`);
+      // }
     }
   }, [plan]);
 
@@ -121,11 +129,18 @@ export default function BibleChecklistPage() {
 
   const handleToggleMultiplePassages = useCallback(async (passageTexts: string[], markAsComplete: boolean) => {
     if (!currentUser) return;
+    // Filter out any invalid/empty passage texts before processing
+    const validPassageTexts = passageTexts.filter(text => typeof text === 'string' && text.trim() !== '');
+    if (validPassageTexts.length === 0) {
+      toast({ title: "No Valid Passages", description: "No valid passages selected to update.", variant: "destructive"});
+      return;
+    }
+
     try {
-      await markMultiplePassages(passageTexts, markAsComplete);
+      await markMultiplePassages(validPassageTexts, markAsComplete);
       toast({
         title: `Passages ${markAsComplete ? 'Marked Complete' : 'Marked Incomplete'}`,
-        description: `${passageTexts.length} passage(s) updated.`
+        description: `${validPassageTexts.length} passage(s) updated.`
       });
     } catch (error: any) {
       toast({ title: "Error Updating Passages", description: error.message || "Could not update passages.", variant: "destructive" });
@@ -139,6 +154,7 @@ export default function BibleChecklistPage() {
         if (!a || !b || !a.date || !b.date) return 0;
         return parseISO(a.date).getTime() - parseISO(b.date).getTime();
       } catch (e) {
+        // console.error("[BibleChecklistPage] Error parsing dates for sorting:", a?.date, b?.date, e);
         return 0;
       }
     });
@@ -191,7 +207,7 @@ export default function BibleChecklistPage() {
       <Accordion type="multiple" className="w-full space-y-1.5">
         {sortedDailyReadings.map((dailyReading, dayIndex) => {
           if (!dailyReading || !dailyReading.date) {
-            console.warn(`[BibleChecklistPage] RENDERING: Invalid dailyReading object at index ${dayIndex}:`, dailyReading);
+            // console.warn(`[BibleChecklistPage] RENDERING: Invalid dailyReading object at index ${dayIndex}:`, dailyReading);
             return null;
           }
           const dateKey = dailyReading.originalDateKey || dailyReading.date;
@@ -202,7 +218,7 @@ export default function BibleChecklistPage() {
 
           return (
             <AccordionItem key={dateKey} value={dateKey} className="border bg-card/80 rounded-md shadow-xs hover:shadow-sm transition-shadow">
-              <AccordionTrigger className="p-2 text-xs hover:no-underline">
+              <AccordionTrigger asChild className="p-2 text-xs hover:no-underline">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -227,18 +243,42 @@ export default function BibleChecklistPage() {
                 {(allPassagesInDay.length > 0) ? (
                   <ul className="space-y-1 pl-0.5 mt-1">
                     {allPassagesInDay.map((passage, pIndex) => {
+                      if (!passage) {
+                        // console.warn(`[BibleChecklistPage] RENDERING passage: Passage object is null/undefined for Day ${dateKey}, Passage Index ${pIndex}`);
+                        return ( <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic"> Error: Passage data corrupt. </li>);
+                      }
                       const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
                       const isPassageValid = currentPassageDisplayText !== '';
+                      
                       const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
                       const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
                       const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
+
                       const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
+
+                      if(!isPassageValid){
+                        // console.warn(`[BibleChecklistPage] RENDERING passage: displayText is invalid for passage. Day ${dateKey}, PIndex ${pIndex}. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
+                      }
 
                       return (
                         <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
-                          <Checkbox id={checkboxId} checked={isChecked} onCheckedChange={() => { if (isPassageValid) { togglePassageCompletion(currentPassageDisplayText); } else { toast({title: "Invalid Passage Data", variant: "destructive"});}}} aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} className="h-3.5 w-3.5" disabled={!isPassageValid}/>
-                          <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked ? 'line-through text-muted-foreground' : '', !isPassageValid && 'text-destructive font-semibold italic')}>
-                             {isPassageValid ? currentPassageDisplayText : "Error: Passage Data Invalid"}
+                          <Checkbox 
+                            id={checkboxId} 
+                            checked={isChecked} 
+                            onCheckedChange={() => { if (isPassageValid) { togglePassageCompletion(currentPassageDisplayText); } else { toast({title: "Invalid Passage Data", description: "Cannot toggle completion for invalid passage.", variant: "destructive"});}}} 
+                            aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
+                            className="h-3.5 w-3.5"
+                            disabled={!isPassageValid}
+                          />
+                          <Label 
+                            htmlFor={checkboxId} 
+                            className={cn(
+                              "flex-grow cursor-pointer", 
+                              isChecked && "line-through text-muted-foreground",
+                              !isPassageValid && "text-destructive font-semibold italic"
+                            )}
+                          >
+                             {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
                           </Label>
                         </li>
                       );
@@ -261,4 +301,3 @@ export default function BibleChecklistPage() {
 //     transform: rotate(180deg);
 //   }
 // `}</style>
-
