@@ -71,9 +71,33 @@ export default function BibleChecklistPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
-  const totalPassagesInPlan = useMemo(() => {
-    return plan?.dailyReadings.reduce((acc, day) => acc + (day.passages?.length || 0), 0) || 0;
+  // Log the plan received from the hook for debugging
+  useEffect(() => {
+    if (plan) {
+      // console.log("[BibleChecklistPage] Received plan from useBiblePlan:", JSON.parse(JSON.stringify(plan)));
+      let problematicPassages = 0;
+      plan.dailyReadings?.forEach(day => {
+        day.passages?.forEach(p => {
+          if (!p.displayText || p.displayText.trim() === "") {
+            console.warn(`[BibleChecklistPage] Initial Check: Passage with problematic displayText found in plan for day ${day.date}:`, JSON.parse(JSON.stringify(p)));
+            problematicPassages++;
+          }
+        });
+      });
+      if (problematicPassages > 0) {
+        console.warn(`[BibleChecklistPage] Initial Check: Found ${problematicPassages} passages with problematic displayText in the raw plan.`);
+      }
+    }
   }, [plan]);
+
+  const totalPassagesInPlan = useMemo(() => {
+    if (!plan?.dailyReadings) return 0;
+    return plan.dailyReadings.reduce((acc, day) => {
+        const validDayPassages = Array.isArray(day.passages) ? day.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') : [];
+        return acc + validDayPassages.length;
+    }, 0);
+  }, [plan]);
+  
 
   const overallProgress = totalPassagesInPlan > 0 ? (completedPassages.length / totalPassagesInPlan) * 100 : 0;
 
@@ -143,7 +167,7 @@ export default function BibleChecklistPage() {
     return (
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
-          <LibraryBig className="h-8 w-8 text-primary" />
+          <LibraryBig className="h-7 w-7 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
@@ -156,27 +180,33 @@ export default function BibleChecklistPage() {
   }
   
   // Sort daily readings by date
-  const sortedDailyReadings = [...plan.dailyReadings].sort((a, b) => 
-    parseISO(a.date).getTime() - parseISO(b.date).getTime()
-  );
+  const sortedDailyReadings = [...plan.dailyReadings].sort((a, b) => {
+    try {
+        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+    } catch (e) {
+        console.error("[BibleChecklistPage] Error parsing dates for sorting dailyReadings:", a.date, b.date, e);
+        return 0; // Keep original order if dates are unparsable
+    }
+  });
+
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3"> {/* Reduced main space-y for compactness */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
         <div className="flex items-center space-x-2">
-          <LibraryBig className="h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1>
+          <LibraryBig className="h-6 w-6 text-primary" /> {/* Slightly smaller icon */}
+          <h1 className="text-lg font-bold tracking-tight">My Bible Reading Checklist</h1> {/* Smaller title */}
         </div>
       </div>
 
       {totalPassagesInPlan > 0 && (
-        <Card className="mb-4 shadow-md">
-          <CardHeader className="p-3">
-            <CardTitle className="text-lg">Overall Progress</CardTitle>
+        <Card className="mb-3 shadow-sm"> {/* Reduced margin */}
+          <CardHeader className="p-2.5"> {/* Compact padding */}
+            <CardTitle className="text-base">Overall Progress</CardTitle> {/* Smaller title */}
           </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <Progress value={overallProgress} className="w-full h-3" />
-            <p className="text-muted-foreground mt-1.5 text-center text-xs">
+          <CardContent className="p-2.5 pt-0">
+            <Progress value={overallProgress} className="w-full h-2.5" /> {/* Smaller height */}
+            <p className="text-muted-foreground mt-1 text-center text-xs">
               {completedPassages.length} of {totalPassagesInPlan} passages completed ({overallProgress.toFixed(1)}%)
             </p>
           </CardContent>
@@ -185,8 +215,8 @@ export default function BibleChecklistPage() {
 
       <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" className="w-full md:w-auto text-sm py-2 h-auto mb-4">
-            <Edit className="mr-2 h-3.5 w-3.5" /> Mark Reading Range
+          <Button variant="outline" className="w-full md:w-auto text-xs py-1.5 h-auto mb-3"> {/* Compact button */}
+            <Edit className="mr-1.5 h-3 w-3" /> Mark Reading Range
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -285,42 +315,46 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5"> {/* Reduced space-y for compactness */}
         {sortedDailyReadings.map((dailyReading, dayIndex) => {
           if (!dailyReading || !dailyReading.date) {
             console.warn(`[BibleChecklistPage] RENDERING: Invalid dailyReading object at index ${dayIndex}:`, dailyReading);
             return null;
           }
+          // Ensure originalDateKey exists, fallback to date if needed
+          const dateKey = dailyReading.originalDateKey || dailyReading.date;
 
           return (
-            <Card key={dailyReading.date} className="bg-card/80 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow p-2">
+            <Card key={dateKey} className="bg-card/80 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow p-2"> {/* Compact padding */}
               <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center space-x-2">
-                  <BookOpenText className="mr-1.5 text-muted-foreground h-3.5 w-3.5" />
-                  <h3 className="text-sm font-medium">{format(parseISO(dailyReading.date), "EEEE, MMM d")}</h3>
+                <div className="flex items-center space-x-1.5"> {/* Reduced space */}
+                  <BookOpenText className="text-muted-foreground h-3 w-3" /> {/* Smaller icon */}
+                  <h3 className="text-xs font-medium">{format(parseISO(dailyReading.date), "EEE, MMM d")}</h3> {/* Compact date format */}
                 </div>
               </div>
               
               {(dailyReading.passages && dailyReading.passages.length > 0) ? (
-                <ul className="space-y-1.5 pl-1">
+                <ul className="space-y-1 pl-0.5"> {/* Reduced space-y and padding */}
                   {dailyReading.passages.map((passage, pIndex) => {
+                    // Robust check for passage and its displayText
                     const currentPassageDisplayText = (passage && typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
                     const isPassageValid = currentPassageDisplayText !== '';
                     
                     if (!passage) {
-                       console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined for day ${dailyReading.date}, index ${pIndex}.`);
+                       console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined for day ${dateKey}, index ${pIndex}.`);
                     } else if (!isPassageValid) {
-                      console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid for passage in day ${dailyReading.date}, index ${pIndex}. Passage data:`, JSON.parse(JSON.stringify(passage)));
+                      // This console.warn will now include the context more clearly
+                      console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Day: ${dateKey}, Index: ${pIndex}. Passage data:`, JSON.parse(JSON.stringify(passage)));
                     }
 
                     const bookIdPart = (passage && typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
-                    const chapterIdPart = (passage && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && passage.chapter.trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
-                    const checkboxId = `passage-${dailyReading.date}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
+                    const chapterIdPart = (passage && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
+                    const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
                     
                     const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
 
                     return (
-                      <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                      <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs"> {/* Compact padding & text */}
                         <Checkbox 
                           id={checkboxId} 
                           checked={isChecked} 
@@ -332,7 +366,7 @@ export default function BibleChecklistPage() {
                             }
                           }}
                           aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
-                          className="h-3.5 w-3.5"
+                          className="h-3.5 w-3.5" // Smaller checkbox
                           disabled={!isPassageValid}
                         />
                         <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked ? 'line-through text-muted-foreground' : '', !isPassageValid && 'text-destructive font-semibold')}>
@@ -342,8 +376,8 @@ export default function BibleChecklistPage() {
                     );
                   })}
                 </ul>
-              ) : (<p className="text-muted-foreground text-xs pl-1">No passages assigned for this day.</p>)}
-              {dayIndex < sortedDailyReadings.length - 1 && <Separator className="mt-3" />}
+              ) : (<p className="text-muted-foreground text-xs pl-0.5">No passages assigned for this day.</p>)}
+              {dayIndex < sortedDailyReadings.length - 1 && <Separator className="mt-2" />} {/* Reduced margin */}
             </Card>
           );
         })}
@@ -352,3 +386,4 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
