@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig } from 'lucide-react';
+import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig, BarChart3 } from 'lucide-react';
 import { usePathname } from 'next/navigation'; 
 
 export default function Header() {
@@ -55,11 +55,18 @@ export default function Header() {
         </Button>
       </Link>
       {currentUser && (
-         <Link href="/bible-checklist" legacyBehavior passHref>
-          <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-checklist')}>
-            <LibraryBig className="mr-2 h-4 w-4" /> My Checklist
-          </Button>
-        </Link>
+        <>
+          <Link href="/bible-checklist" legacyBehavior passHref>
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-checklist')}>
+              <LibraryBig className="mr-2 h-4 w-4" /> My Checklist
+            </Button>
+          </Link>
+          <Link href="/progress-overview" legacyBehavior passHref>
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/progress-overview')}>
+              <BarChart3 className="mr-2 h-4 w-4" /> Progress Overview
+            </Button>
+          </Link>
+        </>
       )}
     </>
   );
@@ -77,11 +84,18 @@ export default function Header() {
         </Button>
       </Link>
        {currentUser && (
-         <Link href="/bible-checklist" legacyBehavior passHref>
-          <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
-            <LibraryBig className="mr-3 h-5 w-5" />My Checklist
-          </Button>
-        </Link>
+        <>
+          <Link href="/bible-checklist" legacyBehavior passHref>
+            <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
+              <LibraryBig className="mr-3 h-5 w-5" />My Checklist
+            </Button>
+          </Link>
+          <Link href="/progress-overview" legacyBehavior passHref>
+            <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>
+              <BarChart3 className="mr-3 h-5 w-5" />Progress Overview
+            </Button>
+          </Link>
+        </>
       )}
     </>
   );

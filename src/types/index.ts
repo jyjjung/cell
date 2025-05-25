@@ -44,7 +44,8 @@ export interface BibleReadingPlan {
 }
 
 export interface UserBibleChecklist {
-  userId: string;
+  userId: string; // Matches Firebase Auth UID
   completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
+  // Optional: could add userDisplayName or userEmail if managed separately
 }
