@@ -10,13 +10,13 @@ import { useAuth } from '@/contexts/auth-context';
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
 export function useAllUserChecklists() {
-  const { currentUser, isEffectivelyAdmin } = useAuth(); // Added isEffectivelyAdmin
+  const { currentUser } = useAuth(); // Removed isEffectivelyAdmin
   const [allChecklists, setAllChecklists] = useState<UserBibleChecklist[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Only fetch if the current user is an admin
-    if (!isEffectivelyAdmin) {
+    // Fetch if any user is logged in
+    if (!currentUser) {
       setAllChecklists([]);
       setLoading(false);
       return;
@@ -25,7 +25,7 @@ export function useAllUserChecklists() {
     setLoading(true);
     const checklistsQuery = query(
       collection(db, USER_BIBLE_CHECKLISTS_COLLECTION),
-      orderBy('updatedAt', 'desc') 
+      orderBy('updatedAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(checklistsQuery, (querySnapshot) => {
@@ -34,7 +34,7 @@ export function useAllUserChecklists() {
         const data = doc.data();
         checklistsData.push({
           userId: doc.id,
-          userDisplayName: data.userDisplayName || null, // Read displayName
+          userDisplayName: data.userDisplayName || null,
           completedPassages: data.completedPassages || [],
           updatedAt: data.updatedAt as Timestamp,
         } as UserBibleChecklist);
@@ -43,13 +43,13 @@ export function useAllUserChecklists() {
       setLoading(false);
     }, (error) => {
       console.error("[useAllUserChecklists] Error fetching all user Bible checklists:", error);
-      console.log("[useAllUserChecklists] Current user UID:", currentUser?.uid, "Is Admin:", isEffectivelyAdmin);
+      console.log("[useAllUserChecklists] Current user UID:", currentUser?.uid);
       setAllChecklists([]);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [currentUser, isEffectivelyAdmin]); // Depend on isEffectivelyAdmin
+  }, [currentUser]); // Depend only on currentUser
 
   return { allChecklists, loading };
 }

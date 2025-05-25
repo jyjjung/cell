@@ -21,7 +21,7 @@ interface UserProgressDisplay {
 }
 
 export default function ProgressOverviewPage() {
-  const { currentUser, loadingAuth, isEffectivelyAdmin } = useAuth(); 
+  const { currentUser, loadingAuth } = useAuth(); // Removed isEffectivelyAdmin
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
@@ -38,12 +38,8 @@ export default function ProgressOverviewPage() {
       setIsPageLoading(true);
       router.push('/login');
     }
-    // Redirect non-admins away if they try to access
-    if (isMounted && !loadingAuth && !isEffectivelyAdmin) {
-      setIsPageLoading(true);
-      router.push('/');
-    }
-  }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading, isEffectivelyAdmin]);
+    // Removed the redirect for non-admins
+  }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -62,16 +58,16 @@ export default function ProgressOverviewPage() {
       const completedCount = checklist.completedPassages.length;
       const progressPercentage = totalPassagesInPlan > 0 ? (completedCount / totalPassagesInPlan) * 100 : 0;
       return {
-        userId: checklist.userId, 
-        userDisplayName: checklist.userDisplayName || checklist.userId, // Use display name, fallback to UID
+        userId: checklist.userId,
+        userDisplayName: checklist.userDisplayName || checklist.userId,
         completedCount,
         progressPercentage,
         totalPassagesInPlan,
       };
-    }).sort((a, b) => b.progressPercentage - a.progressPercentage); 
+    }).sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, totalPassagesInPlan]);
 
-  if (!isMounted || loadingAuth || (!currentUser && isMounted) || (!isEffectivelyAdmin && isMounted && !loadingAuth)) {
+  if (!isMounted || loadingAuth || (!currentUser && isMounted)) { // Simplified loading condition
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -79,7 +75,7 @@ export default function ProgressOverviewPage() {
       </div>
     );
   }
-  
+
   if (planLoading || checklistsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -93,26 +89,26 @@ export default function ProgressOverviewPage() {
     return (
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
-          <BarChart3 className="h-7 w-7 text-primary" /> 
+          <BarChart3 className="h-7 w-7 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">Community Progress Overview</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-          <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader> 
+          <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader>
           <CardContent><p className="text-muted-foreground">A Bible reading plan needs to be set by the admin first.</p></CardContent>
         </Card>
       </div>
     );
   }
-  
+
   if (userProgressData.length === 0) {
      return (
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
-          <BarChart3 className="h-7 w-7 text-primary" /> 
+          <BarChart3 className="h-7 w-7 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">Community Progress Overview</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-          <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader> 
+          <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader>
           <CardContent><p className="text-muted-foreground">No users have started tracking their progress on the checklist, or no checklists were found.</p></CardContent>
         </Card>
       </div>
@@ -122,7 +118,7 @@ export default function ProgressOverviewPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center space-x-3 mb-6">
-        <BarChart3 className="h-7 w-7 text-primary" /> 
+        <BarChart3 className="h-7 w-7 text-primary" />
         <h1 className="text-xl font-bold tracking-tight">Community Progress Overview</h1>
       </div>
       <Card className="shadow-lg">
@@ -144,10 +140,10 @@ export default function ProgressOverviewPage() {
             <TableBody>
               {userProgressData.map((progressItem) => (
                 <TableRow key={progressItem.userId}>
-                  <TableCell className="font-medium text-xs truncate max-w-[200px] sm:max-w-xs"> 
+                  <TableCell className="font-medium text-xs truncate max-w-[200px] sm:max-w-xs">
                     {progressItem.userDisplayName}
                     {/* Optionally show UID for admins if display name is different or for clarity */}
-                    {isEffectivelyAdmin && progressItem.userDisplayName !== progressItem.userId && (
+                    {currentUser?.email === 'yejoon7154@gmail.com' && progressItem.userDisplayName !== progressItem.userId && (
                       <span className="block text-muted-foreground/70 text-[10px] overflow-hidden text-ellipsis whitespace-nowrap">
                         UID: {progressItem.userId}
                       </span>
