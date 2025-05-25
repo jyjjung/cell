@@ -243,8 +243,8 @@ export default function BibleChecklistPage() {
                  <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 accordion-chevron" />
               </CardHeader>
             </AccordionTrigger>
-            <AccordionContent className="pt-0"> {/* AccordionContent already has pb-4, remove from CardContent if needed */}
-              <CardContent className="pt-4"> {/* Add pt-4 to CardContent or adjust AccordionContent's pb */}
+            <AccordionContent className="pt-0">
+              <CardContent className="pt-4">
                 <Form {...markRangeForm}>
                   <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -385,5 +385,4 @@ export default function BibleChecklistPage() {
     transform: rotate(180deg);
   }
 `}</style>
-
     
