@@ -14,6 +14,13 @@ import { Progress } from '@/components/ui/progress';
 import { format, parseISO } from 'date-fns';
 import { Loader2, CheckSquare, BookOpenText, Info, LibraryBig } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { cn } from '@/lib/utils';
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -79,6 +86,7 @@ export default function BibleChecklistPage() {
   const totalPassages = plan.dailyReadings.reduce((acc, day) => acc + day.passages.length, 0);
   const totalCompleted = completedPassages.length;
   const overallProgress = totalPassages > 0 ? (totalCompleted / totalPassages) * 100 : 0;
+  const defaultOpenItems = plan.dailyReadings.map((_, index) => `item-${index}`);
 
   return (
     <div className="space-y-8">
@@ -102,44 +110,57 @@ export default function BibleChecklistPage() {
       )}
 
       <ScrollArea className="h-[calc(100vh-25rem)] rounded-md">
-        <div className="p-1 md:p-4 space-y-4">
+        <Accordion type="multiple" defaultValue={defaultOpenItems} className="p-1 md:p-4 space-y-3">
           {plan.dailyReadings.map((dailyReading, index) => (
-            <Card key={index} className="w-full shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="p-4 md:p-6 pb-2">
-                <CardTitle className="text-xl flex items-center">
-                  <BookOpenText className="h-5 w-5 mr-2 text-muted-foreground" />
-                  {format(parseISO(dailyReading.date), "EEEE, MMMM d, yyyy")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 md:p-6 pt-0">
-                {dailyReading.passages.length > 0 ? (
-                  <ul className="space-y-2.5">
-                    {dailyReading.passages.map((passage, pIndex) => {
-                      const isChecked = completedPassages.includes(passage);
-                      const checkboxId = `passage-${index}-${pIndex}`;
-                      return (
-                        <li key={pIndex} className="p-3 bg-background/60 border rounded-md text-sm flex items-center space-x-3 transition-colors hover:bg-accent/10">
-                          <Checkbox
-                            id={checkboxId}
-                            checked={isChecked}
-                            onCheckedChange={() => togglePassageCompletion(passage)}
-                            aria-label={`Mark ${passage} as read`}
-                          />
-                          <Label htmlFor={checkboxId} className={`flex-grow cursor-pointer ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
-                            {passage}
-                          </Label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
-                )}
-              </CardContent>
-            </Card>
+            <AccordionItem 
+              value={`item-${index}`} 
+              key={index} 
+              className="border bg-card text-card-foreground rounded-lg shadow-md hover:shadow-lg transition-shadow data-[state=closed]:shadow-md data-[state=open]:shadow-lg"
+            >
+              <AccordionTrigger className="w-full p-4 md:p-6 pb-3 hover:no-underline text-left rounded-t-lg data-[state=open]:rounded-b-none data-[state=open]:border-b">
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xl font-semibold flex items-center">
+                    <BookOpenText className="h-5 w-5 mr-2 text-muted-foreground" />
+                    {format(parseISO(dailyReading.date), "EEEE, MMMM d, yyyy")}
+                  </span>
+                  {/* AccordionTrigger automatically adds its own chevron icon */}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 rounded-b-lg">
+                <div className="p-4 md:p-6 pt-3">
+                  {dailyReading.passages.length > 0 ? (
+                    <ul className="space-y-2.5">
+                      {dailyReading.passages.map((passage, pIndex) => {
+                        const isChecked = completedPassages.includes(passage);
+                        const checkboxId = `passage-${index}-${pIndex}`;
+                        return (
+                          <li key={pIndex} className="p-3 bg-background/60 border rounded-md text-sm flex items-center space-x-3 transition-colors hover:bg-muted/50">
+                            <Checkbox
+                              id={checkboxId}
+                              checked={isChecked}
+                              onCheckedChange={() => togglePassageCompletion(passage)}
+                              aria-label={`Mark ${passage} as read`}
+                            />
+                            <Label htmlFor={checkboxId} className={cn(
+                              "flex-grow cursor-pointer",
+                              isChecked ? 'line-through text-muted-foreground' : ''
+                            )}>
+                              {passage}
+                            </Label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
       </ScrollArea>
     </div>
   );
 }
+
