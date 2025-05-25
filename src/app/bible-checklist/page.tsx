@@ -240,7 +240,7 @@ export default function BibleChecklistPage() {
         </PopoverTrigger>
         <PopoverContent 
             side="bottom" 
-            align="start" 
+            align="center" 
             className="w-[90vw] max-w-[550px] max-h-[85vh] overflow-y-auto p-0"
         >
            <Card className="shadow-md border-0">
