@@ -21,8 +21,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, getMonth, getYear } from 'date-fns';
-import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown, CalendarDays } from 'lucide-react';
+import { format, parseISO, getMonth, getYear, isValid } from 'date-fns';
+import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown, CalendarDays, CheckCircle2 } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +51,10 @@ function groupReadingsByMonth(dailyReadings: DailyReading[]): GroupedPlanByMonth
   return dailyReadings.reduce((acc, reading) => {
     try {
       const dateObj = parseISO(reading.date);
+      if (!isValid(dateObj)) {
+        console.warn(`[BibleChecklistPage] Invalid date found while grouping: ${reading.date}`);
+        return acc;
+      }
       const monthKey = format(dateObj, 'yyyy-MM');
       const monthLabel = format(dateObj, 'MMMM yyyy');
       if (!acc[monthKey]) {
@@ -100,7 +104,10 @@ export default function BibleChecklistPage() {
     // Sort daily readings by date before grouping
     const sortedReadings = [...plan.dailyReadings].sort((a, b) => {
         try {
-            return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+            const dateA = parseISO(a.date);
+            const dateB = parseISO(b.date);
+            if (!isValid(dateA) || !isValid(dateB)) return 0;
+            return dateA.getTime() - dateB.getTime();
         } catch (e) {
             console.warn(`Error sorting daily readings for grouping: Date A: ${a?.date}, Date B: ${b?.date}`, e);
             return 0;
@@ -114,7 +121,7 @@ export default function BibleChecklistPage() {
     if (!plan?.dailyReadings) return 0;
     return plan.dailyReadings.reduce((acc, day) => {
         if (!day || !Array.isArray(day.passages)) return acc;
-        const validDayPassages = day.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '');
+        const validDayPassages = day.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:"));
         return acc + validDayPassages.length;
     }, 0);
   }, [plan]);
@@ -204,26 +211,39 @@ export default function BibleChecklistPage() {
             <AccordionContent className="pb-2 px-2 pt-1">
               <Accordion type="multiple" className="w-full space-y-1.5">
                 {days.map((dailyReading) => {
-                  if (!dailyReading || !dailyReading.date) {
-                    return null;
+                  if (!dailyReading || !dailyReading.date) return null;
+                  
+                  let parsedDayDate: Date | null = null;
+                  try {
+                    parsedDayDate = parseISO(dailyReading.date);
+                    if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
+                  } catch(e) {
+                    console.error(`[BibleChecklistPage] Invalid date for dailyReading: ${dailyReading.date}`, e);
+                    return <div className="p-2 text-destructive text-xs">Error: Invalid date for reading entry.</div>;
                   }
+
                   const dateKey = dailyReading.originalDateKey || dailyReading.date;
-                  const allPassagesInDay = dailyReading.passages?.filter(p => p && p.displayText) || [];
+                  const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
+                  const allPassagesInDayTexts = allPassagesInDayObjects.map(p => p.displayText);
+                  const isDayComplete = allPassagesInDayTexts.length > 0 && allPassagesInDayTexts.every(text => completedPassages.includes(text));
                   
                   return (
                     <AccordionItem key={dateKey} value={dateKey} className="border bg-background/70 rounded-md shadow-xs hover:shadow-sm transition-shadow">
                       <AccordionTrigger asChild className="p-2 text-xs hover:no-underline">
                         <div className="flex items-center justify-between w-full">
-                          <Label className="font-medium cursor-pointer">
-                            {dailyReading.date ? format(parseISO(dailyReading.date), "EEE, MMM d") : "Invalid Date"}
-                          </Label>
+                          <div className="flex items-center space-x-1.5">
+                            {isDayComplete && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
+                            <Label className="font-medium cursor-pointer">
+                              {format(parsedDayDate, "EEE, MMM d")}
+                            </Label>
+                          </div>
                           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pb-2 px-2 pt-0">
-                        {(allPassagesInDay.length > 0) ? (
+                        {(allPassagesInDayObjects.length > 0) ? (
                           <ul className="space-y-1 pl-0.5 mt-1">
-                            {allPassagesInDay.map((passage, pIndex) => {
+                            {allPassagesInDayObjects.map((passage, pIndex) => {
                               if (!passage) {
                                 return ( <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic"> Error: Passage data corrupt. </li>);
                               }
@@ -274,4 +294,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
