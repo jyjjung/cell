@@ -10,18 +10,18 @@ import type { DailyReading, StructuredPassage } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import BackToTopButton from '@/components/ui/back-to-top-button';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, getISOWeek } from 'date-fns';
-import { Loader2, LibraryBig, Info, BookOpenText, CalendarRange, Minimize2, Maximize2, CheckSquare, Edit } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookOpenText, CalendarRange, CheckSquare, Edit, ChevronDown } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -35,41 +35,66 @@ import { cn } from '@/lib/utils';
 
 interface GroupedDay extends DailyReading {
   originalDateKey: string; // YYYY-MM-DD
+  allPassagesInDay: StructuredPassage[]; // For day-level master checkbox
 }
 interface GroupedWeek {
   weekLabel: string;
   weekKey: string; // RRRR-II (ISO week year and week number)
   days: GroupedDay[];
+  allPassagesInWeek: StructuredPassage[]; // For week-level master checkbox
 }
 
 function groupReadingsByWeek(dailyReadings: DailyReading[]): GroupedWeek[] {
   if (!dailyReadings || dailyReadings.length === 0) {
     return [];
   }
-  const weeksMap = new Map<string, GroupedDay[]>();
+  // console.log('[groupReadingsByWeek] Input dailyReadings:', JSON.parse(JSON.stringify(dailyReadings)));
+
+  const weeksMap = new Map<string, { days: GroupedDay[], allPassagesInWeek: StructuredPassage[] }>();
+
   dailyReadings.forEach((reading) => {
+    // console.log('[groupReadingsByWeek] Processing reading for date:', reading.date, 'Passages:', JSON.parse(JSON.stringify(reading.passages)));
+    if (!reading || !reading.date || !Array.isArray(reading.passages)) {
+      console.warn('[groupReadingsByWeek] Skipping invalid reading object:', reading);
+      return;
+    }
     try {
       const dateObj = parseISO(reading.date);
       const weekKey = format(dateObj, 'RRRR-II');
+
       if (!weeksMap.has(weekKey)) {
-        weeksMap.set(weekKey, []);
+        weeksMap.set(weekKey, { days: [], allPassagesInWeek: [] });
       }
-      weeksMap.get(weekKey)!.push({ ...reading, originalDateKey: reading.date });
+      const currentWeekData = weeksMap.get(weekKey)!;
+      
+      const dayPassages = reading.passages.map(p => ({ ...p })); // Shallow copy
+      currentWeekData.days.push({
+        ...reading,
+        passages: dayPassages, // Use copied passages
+        originalDateKey: reading.date,
+        allPassagesInDay: dayPassages, // Store for day-level checkbox
+      });
+      currentWeekData.allPassagesInWeek.push(...dayPassages);
+
     } catch (e) {
-      console.error("Error parsing date for grouping:", reading.date, e);
+      console.error("[groupReadingsByWeek] Error parsing date for grouping:", reading.date, e);
     }
   });
+
   const groupedWeeks: GroupedWeek[] = [];
   Array.from(weeksMap.keys()).sort().forEach(weekKey => {
-    const days = weeksMap.get(weekKey)!.sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-    if (days.length > 0) {
-        const firstDayOfWeek = parseISO(days[0].date);
+    const weekData = weeksMap.get(weekKey)!;
+    const sortedDays = weekData.days.sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+    if (sortedDays.length > 0) {
+        const firstDayOfWeek = parseISO(sortedDays[0].date);
         const weekLabel = `Week of ${format(firstDayOfWeek, "MMM d, yyyy")} (W${getISOWeek(firstDayOfWeek)})`;
-        groupedWeeks.push({ weekKey, weekLabel, days });
+        groupedWeeks.push({ weekKey, weekLabel, days: sortedDays, allPassagesInWeek: weekData.allPassagesInWeek });
     }
   });
+  // console.log('[groupReadingsByWeek] Output groupedWeeks:', JSON.parse(JSON.stringify(groupedWeeks)));
   return groupedWeeks;
 }
+
 
 const markReadRangeSchema = z.object({
   fromBook: z.string().min(1, "Please select a 'From' book."),
@@ -87,11 +112,10 @@ export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
   const router = useRouter();
   const { plan, loading: planLoading } = useBiblePlan();
-  const { completedPassages, togglePassageCompletion, markReadRange, loadingChecklist } = useUserBibleChecklist();
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, markReadRange, loadingChecklist } = useUserBibleChecklist();
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
-  const [isCompactView, setIsCompactView] = useState(false); // Fixed: Initialize with false
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
 
@@ -113,6 +137,26 @@ export default function BibleChecklistPage() {
       router.push('/login');
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
+  
+  useEffect(() => {
+    if (plan) {
+      // console.log('[BibleChecklistPage] Received plan from useBiblePlan:', JSON.parse(JSON.stringify(plan)));
+      if (plan.dailyReadings && plan.dailyReadings.length > 0) {
+        plan.dailyReadings.forEach(day => {
+          if (!day.passages || day.passages.length === 0) {
+            // console.warn(`[BibleChecklistPage] Day ${day.date} has no passages in the raw plan.`);
+          } else {
+            day.passages.forEach((p, idx) => {
+              if (!p || typeof p.displayText !== 'string' || p.displayText.trim() === '') {
+                // console.warn(`[BibleChecklistPage] Problematic passage in raw plan for day ${day.date}, index ${idx}:`, JSON.parse(JSON.stringify(p)));
+              }
+            });
+          }
+        });
+      }
+    }
+  }, [plan]);
+
 
   const groupedPlanByWeek = useMemo(() => {
     if (plan?.dailyReadings) {
@@ -122,10 +166,21 @@ export default function BibleChecklistPage() {
   }, [plan]);
 
   const totalPassagesInPlan = useMemo(() => {
-    return plan?.dailyReadings.reduce((acc, day) => acc + day.passages.length, 0) || 0;
+    return plan?.dailyReadings.reduce((acc, day) => acc + (day.passages?.length || 0), 0) || 0;
   }, [plan]);
 
   const overallProgress = totalPassagesInPlan > 0 ? (completedPassages.length / totalPassagesInPlan) * 100 : 0;
+
+  const handleToggleMultiplePassages = async (passagesToToggle: StructuredPassage[], markAsComplete: boolean) => {
+    const passageTexts = passagesToToggle.map(p => p.displayText).filter(Boolean);
+    if (passageTexts.length === 0) return;
+    try {
+      await markMultiplePassages(passageTexts, markAsComplete);
+      toast({ title: "Checklist Updated", description: `${passageTexts.length} passage(s) marked as ${markAsComplete ? 'complete' : 'incomplete'}.` });
+    } catch (error: any) {
+      toast({ title: "Error Updating Checklist", description: error.message || "Could not update passages.", variant: "destructive" });
+    }
+  };
 
   const handleMarkReadRange = async (data: MarkReadRangeFormValues) => {
     const fromBookMeta = BIBLE_BOOKS_DATA[data.fromBook];
@@ -156,7 +211,6 @@ export default function BibleChecklistPage() {
         return;
     }
 
-
     setIsMarkingRange(true);
     try {
       const result = await markReadRange(
@@ -164,7 +218,7 @@ export default function BibleChecklistPage() {
         data.toBook, data.toChapter, data.toVerse
       );
       toast({ title: "Checklist Updated", description: `${result?.markedCount || 0} new passage(s) marked as read within the specified range.` });
-      setIsRangeFormOpen(false); // Close dialog on success
+      setIsRangeFormOpen(false); 
     } catch (error: any) {
       toast({ title: "Error Updating Checklist", description: error.message || "Could not mark passages as read.", variant: "destructive" });
     } finally {
@@ -195,39 +249,34 @@ export default function BibleChecklistPage() {
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
           <LibraryBig className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1>
+          <h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-          <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-2xl">No Plan Available</CardTitle></div></CardHeader>
+          <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader>
           <CardContent><p className="text-muted-foreground">No Bible reading plan has been set by the admin yet.</p></CardContent>
         </Card>
+        <BackToTopButton />
       </div>
     );
   }
-
+  
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-        <div className="flex items-center space-x-3">
-          <LibraryBig className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
         <div className="flex items-center space-x-2">
-          <Switch id="compact-view-checklist" checked={isCompactView} onCheckedChange={setIsCompactView} aria-label="Toggle compact view" />
-          <Label htmlFor="compact-view-checklist" className="flex items-center cursor-pointer">
-            {isCompactView ? <Minimize2 className="h-5 w-5 mr-2" /> : <Maximize2 className="h-5 w-5 mr-2" />} Compact View
-          </Label>
+          <LibraryBig className="h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1>
         </div>
       </div>
 
       {totalPassagesInPlan > 0 && (
-        <Card className="mb-8 shadow-md">
-          <CardHeader className={cn(isCompactView ? "p-3" : "p-4")}>
-            <CardTitle className={cn("text-xl", isCompactView ? "text-lg" : "")}>Overall Progress</CardTitle>
+        <Card className="mb-6 shadow-md">
+          <CardHeader className="p-3">
+            <CardTitle className="text-lg">Overall Progress</CardTitle>
           </CardHeader>
-          <CardContent className={cn(isCompactView ? "p-3 pt-0" : "p-4 pt-0")}>
-            <Progress value={overallProgress} className={cn("w-full", isCompactView ? "h-3" : "h-4")} />
-            <p className={cn("text-muted-foreground mt-2 text-center", isCompactView ? "text-xs" : "text-sm")}>
+          <CardContent className="p-3 pt-0">
+            <Progress value={overallProgress} className="w-full h-3" />
+            <p className="text-muted-foreground mt-1.5 text-center text-xs">
               {completedPassages.length} of {totalPassagesInPlan} passages completed ({overallProgress.toFixed(1)}%)
             </p>
           </CardContent>
@@ -236,8 +285,8 @@ export default function BibleChecklistPage() {
 
       <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" className="w-full md:w-auto">
-            <Edit className="mr-2 h-4 w-4" /> Mark Reading Range
+          <Button variant="outline" className="w-full md:w-auto text-sm py-2 h-auto">
+            <Edit className="mr-2 h-3.5 w-3.5" /> Mark Reading Range
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -251,68 +300,68 @@ export default function BibleChecklistPage() {
               <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6 pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                   <fieldset className="space-y-4 border p-4 rounded-md">
-                    <legend className="text-sm font-medium px-1">From</legend>
+                    <legend className="text-xs font-medium px-1">From</legend>
                     <FormField control={markRangeForm.control} name="fromBook"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Book</FormLabel>
+                          <FormLabel className="text-xs">Book</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                            <FormControl><SelectTrigger className="text-xs"><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName} className="text-xs">{bookName}</SelectItem>))}</SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
                     <FormField control={markRangeForm.control} name="fromChapter"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Chapter</FormLabel>
-                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                          <FormMessage />
+                          <FormLabel className="text-xs">Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} className="text-xs" /></FormControl>
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
                     <FormField control={markRangeForm.control} name="fromVerse"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Verse (Optional)</FormLabel>
-                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                          <FormMessage />
+                          <FormLabel className="text-xs">Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} className="text-xs" /></FormControl>
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
                   </fieldset>
 
                   <fieldset className="space-y-4 border p-4 rounded-md">
-                    <legend className="text-sm font-medium px-1">To</legend>
+                    <legend className="text-xs font-medium px-1">To</legend>
                     <FormField control={markRangeForm.control} name="toBook"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Book</FormLabel>
+                          <FormLabel className="text-xs">Book</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                            <FormControl><SelectTrigger className="text-xs"><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName} className="text-xs">{bookName}</SelectItem>))}</SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
                     <FormField control={markRangeForm.control} name="toChapter"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Chapter</FormLabel>
-                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                          <FormMessage />
+                          <FormLabel className="text-xs">Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} className="text-xs" /></FormControl>
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
                     <FormField control={markRangeForm.control} name="toVerse"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Verse (Optional)</FormLabel>
-                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                          <FormMessage />
+                          <FormLabel className="text-xs">Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} className="text-xs" /></FormControl>
+                          <FormMessage className="text-xs"/>
                         </FormItem>
                       )}
                     />
@@ -324,10 +373,10 @@ export default function BibleChecklistPage() {
                 </FormDescription>
                 <DialogFooter className="pt-4">
                   <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
+                    <Button type="button" variant="outline" size="sm">Cancel</Button>
                   </DialogClose>
-                  <Button type="submit" disabled={isMarkingRange}>
-                    {isMarkingRange ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
+                  <Button type="submit" disabled={isMarkingRange} size="sm">
+                    {isMarkingRange ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="mr-2 h-3.5 w-3.5" />}
                     {isMarkingRange ? 'Updating...' : 'Mark Range as Read'}
                   </Button>
                 </DialogFooter>
@@ -336,50 +385,128 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
+      <Accordion type="multiple" className="w-full space-y-1.5">
+        {groupedPlanByWeek.map((week) => {
+          const allPassagesInWeekObjects = week.allPassagesInWeek.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '');
+          const completedInWeekCount = allPassagesInWeekObjects.filter(p => completedPassages.includes(p.displayText)).length;
+          const isWeekComplete = allPassagesInWeekObjects.length > 0 && completedInWeekCount === allPassagesInWeekObjects.length;
+          const isWeekIndeterminate = completedInWeekCount > 0 && completedInWeekCount < allPassagesInWeekObjects.length;
+          const weekCheckboxId = `week-${week.weekKey}-master`;
 
-      <Accordion type="multiple" className="w-full space-y-2">
-        {groupedPlanByWeek.map((week) => (
-          <AccordionItem value={`week-${week.weekKey}`} key={week.weekKey}
-            className="border bg-card text-card-foreground rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <AccordionTrigger className={cn("w-full hover:no-underline text-left rounded-t-lg data-[state=open]:rounded-b-none data-[state=open]:border-b", isCompactView ? "p-3 text-lg" : "p-4 text-xl font-semibold")}>
-              <div className="flex items-center justify-between w-full"><span className="flex items-center"><CalendarRange className={cn("mr-2 text-muted-foreground", isCompactView ? "h-4 w-4" : "h-5 w-5")} />{week.weekLabel}</span></div>
-            </AccordionTrigger>
-            <AccordionContent className="pt-0 rounded-b-lg bg-background/30">
-              <div className={cn("space-y-1.5", isCompactView ? "p-2" : "p-3")}>
-                <Accordion type="multiple" className="space-y-1.5">
-                  {week.days.map((dailyReading) => (
-                    <AccordionItem value={`day-${dailyReading.originalDateKey}`} key={dailyReading.originalDateKey}
-                      className="border bg-card/90 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow">
-                      <AccordionTrigger className={cn("w-full hover:no-underline text-left rounded-t data-[state=open]:rounded-b-none data-[state=open]:border-b", isCompactView ? "p-2 text-sm" : "p-3 text-base font-normal")}>
-                        <div className="flex items-center justify-between w-full"><span className="flex items-center"><BookOpenText className={cn("mr-2 text-muted-foreground", isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")} />{format(parseISO(dailyReading.date), "EEEE, MMM d")}</span></div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-0 rounded-b">
-                        <div className={cn(isCompactView ? "p-2 pt-1.5" : "p-3 pt-2")}>
-                          {dailyReading.passages.length > 0 ? (
-                            <ul className={cn("space-y-2", isCompactView ? "space-y-1.5" : "")}>
-                              {dailyReading.passages.map((passage, pIndex) => {
-                                const isChecked = completedPassages.includes(passage.displayText);
-                                const checkboxId = `passage-${dailyReading.originalDateKey}-${passage.book}-${passage.chapter}-${pIndex}`;
-                                return (
-                                  <li key={checkboxId} className={cn("bg-background/60 border rounded-md flex items-center space-x-2.5 transition-colors hover:bg-muted/50", isCompactView ? "p-1.5 text-xs" : "p-2.5 text-sm")}>
-                                    <Checkbox id={checkboxId} checked={isChecked} onCheckedChange={() => togglePassageCompletion(passage.displayText)} aria-label={`Mark ${passage.displayText} as read`} className={cn(isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                                    <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked ? 'line-through text-muted-foreground' : '')}>{passage.displayText}</Label>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          ) : (<p className={cn("text-muted-foreground", isCompactView ? "text-xs" : "text-sm")}>No passages assigned for this day.</p>)}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+          return (
+            <AccordionItem value={`week-${week.weekKey}`} key={week.weekKey}
+              className="border bg-card text-card-foreground rounded-md shadow-sm hover:shadow transition-shadow">
+              <AccordionTrigger asChild className={cn("w-full hover:no-underline text-left rounded-t-md data-[state=open]:rounded-b-none data-[state=open]:border-b p-3 text-base font-medium")}>
+                 <div className="flex items-center justify-between w-full cursor-pointer">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={weekCheckboxId}
+                        checked={isWeekComplete}
+                        aria-checked={isWeekIndeterminate ? 'mixed' : isWeekComplete}
+                        onCheckedChange={(checked) => handleToggleMultiplePassages(allPassagesInWeekObjects, !!checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Mark all passages in ${week.weekLabel} as ${isWeekComplete ? 'incomplete' : 'complete'}`}
+                        className="h-3.5 w-3.5"
+                        disabled={allPassagesInWeekObjects.length === 0}
+                      />
+                      <Label htmlFor={weekCheckboxId} className="flex items-center cursor-pointer">
+                        <CalendarRange className="mr-2 text-muted-foreground h-4 w-4" />{week.weekLabel}
+                      </Label>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-muted-foreground group-data-[state=open]/trigger:rotate-180" />
+                  </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0 rounded-b-md bg-background/20">
+                <div className="space-y-1 p-2">
+                  <Accordion type="multiple" className="space-y-1">
+                    {week.days.map((dailyReading) => {
+                      const allPassagesInDayObjects = dailyReading.allPassagesInDay.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '');
+                      const completedInDayCount = allPassagesInDayObjects.filter(p => completedPassages.includes(p.displayText)).length;
+                      const isDayComplete = allPassagesInDayObjects.length > 0 && completedInDayCount === allPassagesInDayObjects.length;
+                      const isDayIndeterminate = completedInDayCount > 0 && completedInDayCount < allPassagesInDayObjects.length;
+                      const dayCheckboxId = `day-${dailyReading.originalDateKey}-master`;
+
+                      return (
+                        <AccordionItem value={`day-${dailyReading.originalDateKey}`} key={dailyReading.originalDateKey}
+                          className="border bg-card/80 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow">
+                          <AccordionTrigger asChild className="w-full hover:no-underline text-left rounded-t data-[state=open]:rounded-b-none data-[state=open]:border-b p-2 text-sm font-normal">
+                            <div className="flex items-center justify-between w-full cursor-pointer">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={dayCheckboxId}
+                                  checked={isDayComplete}
+                                  aria-checked={isDayIndeterminate ? 'mixed' : isDayComplete}
+                                  onCheckedChange={(checked) => handleToggleMultiplePassages(allPassagesInDayObjects, !!checked)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label={`Mark all passages for ${format(parseISO(dailyReading.date), "EEEE, MMM d")} as ${isDayComplete ? 'incomplete' : 'complete'}`}
+                                  className="h-3.5 w-3.5"
+                                  disabled={allPassagesInDayObjects.length === 0}
+                                />
+                                <Label htmlFor={dayCheckboxId} className="flex items-center cursor-pointer">
+                                  <BookOpenText className="mr-1.5 text-muted-foreground h-3.5 w-3.5" />{format(parseISO(dailyReading.date), "EEEE, MMM d")}
+                                </Label>
+                              </div>
+                               <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 text-muted-foreground group-data-[state=open]/trigger:rotate-180" />
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-0 rounded-b">
+                            <div className="p-2 pt-1.5">
+                              {(dailyReading.passages && dailyReading.passages.length > 0) ? (
+                                <ul className="space-y-1.5">
+                                  {dailyReading.passages.map((passage, pIndex) => {
+                                    const currentPassageDisplayText = (passage && typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
+                                    const isPassageValid = currentPassageDisplayText !== '';
+                                    
+                                    if (!isPassageValid && passage) {
+                                      console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid for passage in day ${dailyReading.originalDateKey}, index ${pIndex}. Passage data:`, JSON.parse(JSON.stringify(passage)));
+                                    } else if (!passage) {
+                                       console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined for day ${dailyReading.originalDateKey}, index ${pIndex}.`);
+                                    }
+
+
+                                    const bookIdPart = (passage && typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
+                                    const chapterIdPart = (passage && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && passage.chapter.trim() !== ''))) ? passage.chapter.toString() : `unknown-chapter-${pIndex}`;
+                                    const checkboxId = `passage-${dailyReading.originalDateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
+                                    
+                                    const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
+
+                                    return (
+                                      <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                                        <Checkbox 
+                                          id={checkboxId} 
+                                          checked={isChecked} 
+                                          onCheckedChange={() => {
+                                            if (isPassageValid) {
+                                              togglePassageCompletion(currentPassageDisplayText);
+                                            } else {
+                                              toast({title: "Invalid Passage Data", description: "Cannot toggle completion for this passage due to missing text.", variant: "destructive"});
+                                            }
+                                          }}
+                                          aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
+                                          className="h-3.5 w-3.5"
+                                          disabled={!isPassageValid}
+                                        />
+                                        <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked ? 'line-through text-muted-foreground' : '', !isPassageValid && 'text-destructive font-semibold')}>
+                                          {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
+                                        </Label>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              ) : (<p className="text-muted-foreground text-xs">No passages assigned for this day.</p>)}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
       </Accordion>
+      <BackToTopButton />
     </div>
   );
 }
-
