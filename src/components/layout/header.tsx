@@ -23,13 +23,13 @@ export default function Header() {
   };
 
   const handleAdminLogoutClick = () => {
-    setIsPageLoading(true); // adminLogout already handles redirect and page loading
-    adminLogout();
+    setIsPageLoading(true); 
+    adminLogout(); // adminLogout already handles redirect
     closeMobileMenu();
   };
 
   const handleUserSignOutClick = async () => {
-    // signOutUser already handles redirect and page loading
+    setIsPageLoading(true); // signOutUser handles redirect
     await signOutUser();
     closeMobileMenu();
   };
@@ -123,12 +123,16 @@ export default function Header() {
 
           {!loadingAuth && currentUser ? (
             <>
-              {/* Could add a profile link here: e.g., <Link href="/profile"><Button>Profile</Button></Link> */}
+              <Link href="/profile" legacyBehavior passHref>
+                <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/profile')}>
+                  <UserCircle className="mr-2 h-4 w-4" /> Profile
+                </Button>
+              </Link>
               <Button onClick={handleUserSignOutClick} variant="ghost" size="sm">
                 <LogOut className="mr-2 h-4 w-4" /> Logout User
               </Button>
             </>
-          ) : !loadingAuth && !isAdmin && !currentUser ? ( // Show general login/signup if not admin and no user
+          ) : !loadingAuth && !isAdmin && !currentUser ? ( 
             <>
               <Link href="/login" legacyBehavior passHref>
                 <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/login')}>
@@ -143,14 +147,14 @@ export default function Header() {
             </>
           ) : null}
 
-          {!loadingAuth && !currentUser && !isAdmin && ( // If not admin and no user, show admin login
+          {!loadingAuth && !currentUser && !isAdmin && ( 
              <Link href="/admin" legacyBehavior passHref>
                 <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}>
                   <ShieldCheck className="mr-2 h-4 w-4" /> Admin Login
                 </Button>
               </Link>
           )}
-          {isAdmin && ( // Admin logout button (different from user logout)
+          {isAdmin && ( 
              <Button onClick={handleAdminLogoutClick} variant="ghost" size="sm" className="text-destructive hover:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" /> Admin Logout
               </Button>
@@ -189,9 +193,16 @@ export default function Header() {
             )}
 
             {!loadingAuth && currentUser ? (
-              <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={handleUserSignOutClick}>
-                <LogOut className="mr-3 h-5 w-5" />Logout User
-              </Button>
+              <>
+                <Link href="/profile" legacyBehavior passHref>
+                    <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}>
+                    <UserCircle className="mr-3 h-5 w-5" />Profile
+                    </Button>
+                </Link>
+                <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={handleUserSignOutClick}>
+                    <LogOut className="mr-3 h-5 w-5" />Logout User
+                </Button>
+              </>
             ) : !loadingAuth && !isAdmin && !currentUser ? (
               <>
                 <Link href="/login" legacyBehavior passHref>
