@@ -6,26 +6,31 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X } from 'lucide-react';
-import { usePathname } from 'next/navigation'; // Import usePathname
+import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig } from 'lucide-react';
+import { usePathname } from 'next/navigation'; 
 
 export default function Header() {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, adminLogout, currentUser, signOutUser, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname(); 
 
   const handleLinkClick = (targetPath: string) => {
     if (targetPath !== pathname) {
       setIsPageLoading(true);
     }
-    closeMobileMenu(); // Close mobile menu on link click
+    closeMobileMenu(); 
   };
 
-  const handleLogoutClick = () => {
-    // Logout might always involve a redirect or state change, so loading is fine
-    setIsPageLoading(true);
-    logout();
+  const handleAdminLogoutClick = () => {
+    setIsPageLoading(true); // adminLogout already handles redirect and page loading
+    adminLogout();
+    closeMobileMenu();
+  };
+
+  const handleUserSignOutClick = async () => {
+    // signOutUser already handles redirect and page loading
+    await signOutUser();
     closeMobileMenu();
   };
 
@@ -36,6 +41,51 @@ export default function Header() {
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
+
+  const commonNavLinks = (
+    <>
+      <Link href="/" legacyBehavior passHref>
+        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/')}>
+          <Home className="mr-2 h-4 w-4" /> Home
+        </Button>
+      </Link>
+      <Link href="/bible-plan" legacyBehavior passHref>
+        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
+          <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
+        </Button>
+      </Link>
+      {currentUser && (
+         <Link href="/bible-checklist" legacyBehavior passHref>
+          <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-checklist')}>
+            <LibraryBig className="mr-2 h-4 w-4" /> My Checklist
+          </Button>
+        </Link>
+      )}
+    </>
+  );
+  
+  const mobileCommonNavLinks = (
+    <>
+      <Link href="/" legacyBehavior passHref>
+        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
+          <Home className="mr-3 h-5 w-5" />Home
+        </Button>
+      </Link>
+      <Link href="/bible-plan" legacyBehavior passHref>
+        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
+          <ClipboardList className="mr-3 h-5 w-5" />Full Bible Plan
+        </Button>
+      </Link>
+       {currentUser && (
+         <Link href="/bible-checklist" legacyBehavior passHref>
+          <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
+            <LibraryBig className="mr-3 h-5 w-5" />My Checklist
+          </Button>
+        </Link>
+      )}
+    </>
+  );
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,36 +110,52 @@ export default function Header() {
 
         <div className="hidden md:flex flex-grow"></div>
 
-        <nav className="hidden md:flex items-center space-x-2">
-          <Link href="/" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/')}>
-              <Home className="mr-2 h-4 w-4" /> Home
-            </Button>
-          </Link>
-          <Link href="/bible-plan" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
-              <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
-            </Button>
-          </Link>
+        <nav className="hidden md:flex items-center space-x-1">
+          {commonNavLinks}
         
-          {isAdmin ? (
-            <>
-              <Link href="/admin/dashboard" legacyBehavior passHref>
-                <Button variant="outline" size="sm" onClick={() => handleLinkClick('/admin/dashboard')}>
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Admin Dashboard
-                </Button>
-              </Link>
-              <Button onClick={handleLogoutClick} variant="ghost" size="sm">
-                <LogOut className="mr-2 h-4 w-4" /> Logout
-              </Button>
-            </>
-          ) : (
-            <Link href="/admin" legacyBehavior passHref>
-              <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}>
-                <LogIn className="mr-2 h-4 w-4" /> Admin Login
+          {isAdmin && (
+            <Link href="/admin/dashboard" legacyBehavior passHref>
+              <Button variant="outline" size="sm" onClick={() => handleLinkClick('/admin/dashboard')}>
+                <ShieldCheck className="mr-2 h-4 w-4" /> Admin Panel
               </Button>
             </Link>
           )}
+
+          {!loadingAuth && currentUser ? (
+            <>
+              {/* Could add a profile link here: e.g., <Link href="/profile"><Button>Profile</Button></Link> */}
+              <Button onClick={handleUserSignOutClick} variant="ghost" size="sm">
+                <LogOut className="mr-2 h-4 w-4" /> Logout User
+              </Button>
+            </>
+          ) : !loadingAuth && !isAdmin && !currentUser ? ( // Show general login/signup if not admin and no user
+            <>
+              <Link href="/login" legacyBehavior passHref>
+                <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/login')}>
+                  <LogIn className="mr-2 h-4 w-4" /> Login
+                </Button>
+              </Link>
+              <Link href="/signup" legacyBehavior passHref>
+                <Button variant="outline" size="sm" onClick={() => handleLinkClick('/signup')}>
+                  <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+                </Button>
+              </Link>
+            </>
+          ) : null}
+
+          {!loadingAuth && !currentUser && !isAdmin && ( // If not admin and no user, show admin login
+             <Link href="/admin" legacyBehavior passHref>
+                <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}>
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Admin Login
+                </Button>
+              </Link>
+          )}
+          {isAdmin && ( // Admin logout button (different from user logout)
+             <Button onClick={handleAdminLogoutClick} variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" /> Admin Logout
+              </Button>
+          )}
+
         </nav>
 
         <div className="md:hidden ml-auto">
@@ -110,40 +176,48 @@ export default function Header() {
       {isMobileMenuOpen && (
         <div id="mobile-menu" className="md:hidden absolute top-14 inset-x-0 bg-background border-b border-border shadow-lg p-4 z-40">
           <nav className="flex flex-col space-y-2">
-            <Link href="/" legacyBehavior passHref>
-              <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
-                <Home className="mr-3 h-5 w-5" />Home
-              </Button>
-            </Link>
-            <Link href="/bible-plan" legacyBehavior passHref>
-              <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
-                <ClipboardList className="mr-3 h-5 w-5" />Full Bible Plan
-              </Button>
-            </Link>
+            {mobileCommonNavLinks}
             
             <hr className="border-border my-2" />
 
-            {isAdmin ? (
+            {isAdmin && (
+              <Link href="/admin/dashboard" legacyBehavior passHref>
+                <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin/dashboard')}>
+                  <ShieldCheck className="mr-3 h-5 w-5" />Admin Panel
+                </Button>
+              </Link>
+            )}
+
+            {!loadingAuth && currentUser ? (
+              <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={handleUserSignOutClick}>
+                <LogOut className="mr-3 h-5 w-5" />Logout User
+              </Button>
+            ) : !loadingAuth && !isAdmin && !currentUser ? (
               <>
-                <Link href="/admin/dashboard" legacyBehavior passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin/dashboard')}>
-                    <ShieldCheck className="mr-3 h-5 w-5" />Admin Dashboard
+                <Link href="/login" legacyBehavior passHref>
+                  <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/login')}>
+                    <LogIn className="mr-3 h-5 w-5" />Login
                   </Button>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-base py-3" 
-                  onClick={handleLogoutClick}
-                >
-                  <LogOut className="mr-3 h-5 w-5" />Logout
-                </Button>
-              </>
-            ) : (
-              <Link href="/admin" legacyBehavior passHref>
-                 <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin')}>
-                    <LogIn className="mr-3 h-5 w-5" />Admin Login
+                <Link href="/signup" legacyBehavior passHref>
+                  <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/signup')}>
+                    <UserPlus className="mr-3 h-5 w-5" />Sign Up
                   </Button>
-              </Link>
+                </Link>
+              </>
+            ) : null}
+            
+            {!loadingAuth && !currentUser && !isAdmin && (
+                <Link href="/admin" legacyBehavior passHref>
+                    <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin')}>
+                    <ShieldCheck className="mr-3 h-5 w-5" />Admin Login
+                    </Button>
+                </Link>
+            )}
+            {isAdmin && (
+                 <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleAdminLogoutClick}>
+                    <LogOut className="mr-3 h-5 w-5" />Admin Logout
+                </Button>
             )}
           </nav>
         </div>

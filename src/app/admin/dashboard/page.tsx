@@ -29,20 +29,21 @@ export default function AdminDashboardPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeletingPast, setIsDeletingPast] = useState(false);
   const { toast } = useToast();
-  const { setIsPageLoading } = usePageLoading(); // Still needed for conditional redirect loading
+  const { setIsPageLoading } = usePageLoading(); 
 
   useEffect(() => {
     setIsMounted(true);
-    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
-    if (!isAdmin && typeof window !== "undefined") {
-      setIsPageLoading(true); // Show global loader for redirect transition
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin && isMounted) { // Check isMounted before router.push
+      setIsPageLoading(true); 
       router.push('/admin');
     }
-  }, [isAdmin, router, setIsPageLoading]);
+  }, [isAdmin, router, isMounted, setIsPageLoading]);
 
 
-  if (!isMounted || (!isAdmin && typeof window !== "undefined")) {
-    // Show a minimal loader if not mounted or if redirecting (global loader should cover redirects)
+  if (!isMounted) { // Simplified initial loading
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -50,11 +51,7 @@ export default function AdminDashboardPage() {
     );
   }
   
-  // If redirecting due to !isAdmin, the global loader should be active.
-  // This component might render briefly before RootLayout's effect hides the global loader
-  // if not redirecting, or before the redirect happens.
-  // So, we avoid rendering the form if a redirect is imminent.
-   if (!isAdmin && isMounted) { // Check again after mount, as isAdmin might update
+   if (!isAdmin && isMounted) { 
     return null; 
   }
 
@@ -96,8 +93,12 @@ export default function AdminDashboardPage() {
     const today = startOfDay(new Date());
     const pastEventsToDelete = events.filter(event => {
         try {
-            return parseISO(event.date) < today;
-        } catch(e) { return false; }
+            const eventDate = parseISO(event.date); // Ensure date is parsed correctly
+            return eventDate < today;
+        } catch(e) { 
+            console.error("Error parsing event date for deletion:", event.date, e);
+            return false; 
+        }
     });
 
     if (pastEventsToDelete.length === 0) {

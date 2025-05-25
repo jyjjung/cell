@@ -15,20 +15,19 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isAdmin } = useAuth();
+  const { adminPasswordLogin, isAdmin } = useAuth(); // Changed login to adminPasswordLogin
   const router = useRouter();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
-  const { setIsPageLoading } = usePageLoading(); // Still needed for conditional redirect loading
+  const { setIsPageLoading } = usePageLoading(); 
 
   useEffect(() => {
     setIsMounted(true);
-    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
   }, []);
 
   useEffect(() => {
     if (isAdmin && isMounted) {
-      setIsPageLoading(true); // Show global loader for dashboard transition
+      setIsPageLoading(true); 
       router.push('/admin/dashboard');
     }
   }, [isAdmin, router, isMounted, setIsPageLoading]);
@@ -36,7 +35,7 @@ export default function AdminLoginPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    if (login(password)) {
+    if (adminPasswordLogin(password)) { // Changed login to adminPasswordLogin
       toast({ title: "Login Successful", description: "Welcome, Admin!" });
       // router.push will be handled by the useEffect above, which now sets setIsPageLoading(true)
     } else {
@@ -53,12 +52,8 @@ export default function AdminLoginPage() {
     );
   }
 
-  // If redirecting (isAdmin && isMounted), global loader should be active.
-  // This component might render briefly before RootLayout's effect hides the global loader
-  // if not redirecting, or before the redirect happens.
-  // So, we avoid rendering the form if a redirect is imminent.
   if (isAdmin && isMounted) {
-    return null; // Or a minimal loader, but global loader should cover it.
+    return null; 
   }
 
   return (

@@ -1,6 +1,7 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, enableMultiTabIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, enableMultiTabIndexedDbPersistence, Timestamp } from 'firebase/firestore';
+import { getAuth } from "firebase/auth"; // Added getAuth
 
 // Ensuring this matches the user's latest provided configuration
 const firebaseConfig = {
@@ -21,6 +22,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
+const auth = getAuth(app); // Initialize Firebase Auth
 
 // Enable offline persistence
 if (typeof window !== 'undefined') {
@@ -37,5 +39,4 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, db };
-
+export { app, db, auth, Timestamp }; // Export auth
