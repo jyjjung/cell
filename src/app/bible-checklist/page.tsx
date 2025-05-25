@@ -9,7 +9,6 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
@@ -199,114 +198,112 @@ export default function BibleChecklistPage() {
         </Card>
       )}
 
-      <ScrollArea className="h-[calc(100vh-28rem)] rounded-md">
-        <Accordion type="multiple" className="p-1 md:p-2 space-y-2">
-          {groupedPlan.map((month) => (
-            <AccordionItem 
-              value={`month-${month.monthKey}`} 
-              key={month.monthKey}
-              className="border bg-card text-card-foreground rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <AccordionTrigger className={cn(
-                "w-full hover:no-underline text-left rounded-t-lg data-[state=open]:rounded-b-none data-[state=open]:border-b",
-                isCompactView ? "p-3 text-lg" : "p-4 text-xl font-semibold"
-              )}>
-                <div className="flex items-center justify-between w-full">
-                  <span className="flex items-center">
-                    <CalendarDays className={cn("mr-2 text-muted-foreground", isCompactView ? "h-4 w-4" : "h-5 w-5")} />
-                    {month.monthLabel}
-                  </span>
-                  {/* AccordionTrigger adds its own chevron */}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-0 rounded-b-lg bg-background/30">
-                <div className={cn("space-y-1.5", isCompactView ? "p-2" : "p-3")}>
-                  <Accordion type="multiple" className="space-y-1.5">
-                    {month.weeks.map((week) => (
-                      <AccordionItem 
-                        value={`week-${week.weekKey}`} 
-                        key={week.weekKey}
-                        className="border bg-card/80 backdrop-blur-sm text-card-foreground rounded-md shadow-xs hover:shadow-sm transition-shadow"
-                      >
-                        <AccordionTrigger className={cn(
-                          "w-full hover:no-underline text-left rounded-t-md data-[state=open]:rounded-b-none data-[state=open]:border-b",
-                          isCompactView ? "p-2.5 text-base" : "p-3 text-lg font-medium"
-                        )}>
-                           <div className="flex items-center justify-between w-full">
-                            <span className="flex items-center">
-                              <CalendarRange className={cn("mr-2 text-muted-foreground", isCompactView ? "h-4 w-4" : "h-5 w-5")} />
-                              {week.weekLabel}
-                            </span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-0 rounded-b-md bg-background/20">
-                          <div className={cn("space-y-1", isCompactView ? "p-1.5" : "p-2.5")}>
-                            <Accordion type="multiple" className="space-y-1">
-                              {week.days.map((dailyReading) => (
-                                <AccordionItem 
-                                  value={`day-${dailyReading.originalDateKey}`} 
-                                  key={dailyReading.originalDateKey}
-                                  className="border bg-card/90 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow"
-                                >
-                                  <AccordionTrigger className={cn(
-                                      "w-full hover:no-underline text-left rounded-t data-[state=open]:rounded-b-none data-[state=open]:border-b",
-                                      isCompactView ? "p-2 text-sm" : "p-3 text-base font-normal"
-                                    )}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="flex items-center">
-                                        <BookOpenText className={cn("mr-2 text-muted-foreground", isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                                        {format(parseISO(dailyReading.date), "EEEE, MMM d")}
-                                      </span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="pt-0 rounded-b">
-                                    <div className={cn(isCompactView ? "p-2 pt-1.5" : "p-3 pt-2")}>
-                                      {dailyReading.passages.length > 0 ? (
-                                        <ul className={cn("space-y-2", isCompactView ? "space-y-1.5" : "")}>
-                                          {dailyReading.passages.map((passage, pIndex) => {
-                                            const isChecked = completedPassages.includes(passage);
-                                            const checkboxId = `passage-${dailyReading.originalDateKey}-${pIndex}`;
-                                            return (
-                                              <li key={pIndex} className={cn(
-                                                "bg-background/60 border rounded-md flex items-center space-x-2.5 transition-colors hover:bg-muted/50",
-                                                isCompactView ? "p-1.5 text-xs" : "p-2.5 text-sm"
+      {/* Removed ScrollArea component and its fixed height */}
+      <Accordion type="multiple" className="p-1 md:p-2 space-y-2">
+        {groupedPlan.map((month) => (
+          <AccordionItem 
+            value={`month-${month.monthKey}`} 
+            key={month.monthKey}
+            className="border bg-card text-card-foreground rounded-lg shadow-sm hover:shadow-md transition-shadow"
+          >
+            <AccordionTrigger className={cn(
+              "w-full hover:no-underline text-left rounded-t-lg data-[state=open]:rounded-b-none data-[state=open]:border-b",
+              isCompactView ? "p-3 text-lg" : "p-4 text-xl font-semibold"
+            )}>
+              <div className="flex items-center justify-between w-full">
+                <span className="flex items-center">
+                  <CalendarDays className={cn("mr-2 text-muted-foreground", isCompactView ? "h-4 w-4" : "h-5 w-5")} />
+                  {month.monthLabel}
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-0 rounded-b-lg bg-background/30">
+              <div className={cn("space-y-1.5", isCompactView ? "p-2" : "p-3")}>
+                <Accordion type="multiple" className="space-y-1.5">
+                  {month.weeks.map((week) => (
+                    <AccordionItem 
+                      value={`week-${week.weekKey}`} 
+                      key={week.weekKey}
+                      className="border bg-card/80 backdrop-blur-sm text-card-foreground rounded-md shadow-xs hover:shadow-sm transition-shadow"
+                    >
+                      <AccordionTrigger className={cn(
+                        "w-full hover:no-underline text-left rounded-t-md data-[state=open]:rounded-b-none data-[state=open]:border-b",
+                        isCompactView ? "p-2.5 text-base" : "p-3 text-lg font-medium"
+                      )}>
+                         <div className="flex items-center justify-between w-full">
+                          <span className="flex items-center">
+                            <CalendarRange className={cn("mr-2 text-muted-foreground", isCompactView ? "h-4 w-4" : "h-5 w-5")} />
+                            {week.weekLabel}
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-0 rounded-b-md bg-background/20">
+                        <div className={cn("space-y-1", isCompactView ? "p-1.5" : "p-2.5")}>
+                          <Accordion type="multiple" className="space-y-1">
+                            {week.days.map((dailyReading) => (
+                              <AccordionItem 
+                                value={`day-${dailyReading.originalDateKey}`} 
+                                key={dailyReading.originalDateKey}
+                                className="border bg-card/90 text-card-foreground rounded shadow-xs hover:shadow-sm transition-shadow"
+                              >
+                                <AccordionTrigger className={cn(
+                                    "w-full hover:no-underline text-left rounded-t data-[state=open]:rounded-b-none data-[state=open]:border-b",
+                                    isCompactView ? "p-2 text-sm" : "p-3 text-base font-normal"
+                                  )}>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="flex items-center">
+                                      <BookOpenText className={cn("mr-2 text-muted-foreground", isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                                      {format(parseISO(dailyReading.date), "EEEE, MMM d")}
+                                    </span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="pt-0 rounded-b">
+                                  <div className={cn(isCompactView ? "p-2 pt-1.5" : "p-3 pt-2")}>
+                                    {dailyReading.passages.length > 0 ? (
+                                      <ul className={cn("space-y-2", isCompactView ? "space-y-1.5" : "")}>
+                                        {dailyReading.passages.map((passage, pIndex) => {
+                                          const isChecked = completedPassages.includes(passage);
+                                          const checkboxId = `passage-${dailyReading.originalDateKey}-${pIndex}`;
+                                          return (
+                                            <li key={pIndex} className={cn(
+                                              "bg-background/60 border rounded-md flex items-center space-x-2.5 transition-colors hover:bg-muted/50",
+                                              isCompactView ? "p-1.5 text-xs" : "p-2.5 text-sm"
+                                            )}>
+                                              <Checkbox
+                                                id={checkboxId}
+                                                checked={isChecked}
+                                                onCheckedChange={() => togglePassageCompletion(passage)}
+                                                aria-label={`Mark ${passage} as read`}
+                                                className={cn(isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")}
+                                              />
+                                              <Label htmlFor={checkboxId} className={cn(
+                                                "flex-grow cursor-pointer",
+                                                isChecked ? 'line-through text-muted-foreground' : ''
                                               )}>
-                                                <Checkbox
-                                                  id={checkboxId}
-                                                  checked={isChecked}
-                                                  onCheckedChange={() => togglePassageCompletion(passage)}
-                                                  aria-label={`Mark ${passage} as read`}
-                                                  className={cn(isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")}
-                                                />
-                                                <Label htmlFor={checkboxId} className={cn(
-                                                  "flex-grow cursor-pointer",
-                                                  isChecked ? 'line-through text-muted-foreground' : ''
-                                                )}>
-                                                  {passage}
-                                                </Label>
-                                              </li>
-                                            );
-                                          })}
-                                        </ul>
-                                      ) : (
-                                        <p className={cn("text-muted-foreground", isCompactView ? "text-xs" : "text-sm")}>No passages assigned for this day.</p>
-                                      )}
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              ))}
-                            </Accordion>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </ScrollArea>
+                                                {passage}
+                                              </Label>
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    ) : (
+                                      <p className={cn("text-muted-foreground", isCompactView ? "text-xs" : "text-sm")}>No passages assigned for this day.</p>
+                                    )}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }
