@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { AppEvent } from '@/types';
+import { EventCategory } from '@/types'; // Ensure EventCategory is imported
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -13,9 +14,13 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
+  getDocs,
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { format, parseISO, getYear, getMonth, getDate } from 'date-fns';
+
 
 const EVENTS_COLLECTION = 'events';
 
@@ -47,17 +52,15 @@ export function useEvents() {
 
   const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>) => {
     try {
-      // Ensure optional fields are handled (e.g., convert undefined to null if necessary, though Firestore usually omits undefined fields)
       const dataToSend = {
         ...eventData,
-        details: eventData.details === undefined ? null : eventData.details, // Explicitly send null if details is undefined
+        details: eventData.details === undefined ? null : eventData.details,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
       await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
     } catch (error: any) {
       console.error("Error adding event to Firestore. Data:", eventData, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
-      // More detailed logging
       if (error.code === 'permission-denied') {
         console.error("Firestore permission denied. Check your security rules.");
       }
@@ -75,7 +78,7 @@ export function useEvents() {
       const { id, ...eventProps } = updatedEvent;
       const dataToUpdate = {
         ...eventProps,
-        details: eventProps.details === undefined ? null : eventProps.details, // Explicitly send null if details is undefined
+        details: eventProps.details === undefined ? null : eventProps.details,
         updatedAt: serverTimestamp(),
       };
       await updateDoc(eventDocRef, dataToUpdate);
@@ -101,5 +104,53 @@ export function useEvents() {
     }
   }, []);
 
-  return { events, addEvent, updateEvent, deleteEvent, loading };
+  const addOrUpdateBirthdayEvent = useCallback(async (userId: string, displayName: string, birthdayISO: string) => {
+    try {
+      const birthdayDate = parseISO(birthdayISO); // YYYY-MM-DD from profile
+      const currentYear = getYear(new Date());
+      
+      // Create a date object for the birthday in the current year
+      // Note: month for Date constructor is 0-indexed
+      const eventDateForCurrentYear = new Date(Date.UTC(currentYear, getMonth(birthdayDate), getDate(birthdayDate)));
+      const eventDateISO = eventDateForCurrentYear.toISOString().split('T')[0]; // Keep only YYYY-MM-DD
+
+      const q = query(
+        collection(db, EVENTS_COLLECTION),
+        where("userId", "==", userId),
+        where("category", "==", EventCategory.Birthday)
+      );
+      const querySnapshot = await getDocs(q);
+
+      const eventTitle = `${displayName}'s Birthday`;
+      const eventDetails = `Happy Birthday to ${displayName}!`;
+
+      if (!querySnapshot.empty) {
+        // Birthday event exists, update it
+        const existingEventDoc = querySnapshot.docs[0];
+        await updateDoc(existingEventDoc.ref, {
+          title: eventTitle,
+          date: eventDateISO,
+          details: eventDetails,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // No birthday event exists, create a new one
+        await addDoc(collection(db, EVENTS_COLLECTION), {
+          title: eventTitle,
+          date: eventDateISO,
+          category: EventCategory.Birthday,
+          details: eventDetails,
+          userId: userId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.error(`Error adding/updating birthday event for user ${userId}:`, error);
+      // Optionally re-throw or handle with toast
+    }
+  }, []);
+
+
+  return { events, addEvent, updateEvent, deleteEvent, addOrUpdateBirthdayEvent, loading };
 }

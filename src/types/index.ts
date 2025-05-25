@@ -1,5 +1,6 @@
 
 import type { Timestamp } from 'firebase/firestore';
+import type { User as FirebaseUser } from 'firebase/auth'; // Import FirebaseUser
 
 export enum EventCategory {
   QT = "QT", // Quiet Time
@@ -14,6 +15,7 @@ export interface AppEvent {
   category: EventCategory;
   title: string;
   details?: string;
+  userId?: string; // Optional: to link events like birthdays to a user
   createdAt?: Timestamp; // Optional: for Firestore server timestamp
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
@@ -43,9 +45,27 @@ export interface BibleReadingPlan {
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
 
+// Extended user type
+export interface AppUser extends FirebaseUser {
+  displayName: string | null; // Already part of FirebaseUser, but we'll manage it via Firestore
+  birthday?: string | null; // YYYY-MM-DD format
+  // We can add other custom profile fields here later
+}
+
+
+export interface UserProfileData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  birthday?: string | null; // YYYY-MM-DD format
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+
 export interface UserBibleChecklist {
   userId: string; // Matches Firebase Auth UID
   completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
-  // Optional: could add userDisplayName or userEmail if managed separately
 }
+

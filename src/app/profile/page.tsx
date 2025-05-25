@@ -3,36 +3,99 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react'; // Added useState
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Loader2, UserCircle, LogOut } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Edit3 } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+const profileFormSchema = z.object({
+  displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
+  birthday: z.date().optional().nullable(), // Store as Date object in form, convert to string for saving
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
-  const { currentUser, loadingAuth, signOutUser } = useAuth();
+  const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
   const router = useRouter();
-  const { setIsPageLoading } = usePageLoading(); 
-  const [isMounted, setIsMounted] = useState(false); // Added isMounted
+  const { setIsPageLoading } = usePageLoading();
+  const [isMounted, setIsMounted] = useState(false);
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      displayName: currentUser?.displayName || '',
+      birthday: currentUser?.birthday ? parseISO(currentUser.birthday) : null,
+    },
+  });
 
   useEffect(() => {
-    setIsMounted(true); // Set mounted
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isMounted && !loadingAuth && !currentUser) { // Check isMounted
+    if (isMounted && !loadingAuth && !currentUser) {
       setIsPageLoading(true);
-      router.push('/login'); 
+      router.push('/login');
     }
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
+  // Reset form when currentUser data changes (e.g., after successful save)
+  useEffect(() => {
+    if (currentUser) {
+      form.reset({
+        displayName: currentUser.displayName || '',
+        birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
+      });
+    }
+  }, [currentUser, form]);
+
+
   const handleSignOut = async () => {
-    setIsPageLoading(true); // Set loading before calling signOutUser
+    setIsPageLoading(true);
     await signOutUser();
-    // router.push('/') is handled by signOutUser in AuthContext
   };
 
-  if (!isMounted || loadingAuth) { // Check isMounted
+  const onSubmit = async (data: ProfileFormValues) => {
+    if (!currentUser) return;
+    setIsSaving(true);
+    try {
+      const profileUpdateData: { displayName?: string; birthday?: string } = {
+        displayName: data.displayName,
+      };
+      if (data.birthday) {
+        profileUpdateData.birthday = format(data.birthday, 'yyyy-MM-dd');
+      } else {
+        profileUpdateData.birthday = ''; // Send empty string or handle as null in backend if preferred for clearing
+      }
+
+      await updateUserProfile(currentUser.uid, profileUpdateData);
+      toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast({ title: "Update Failed", description: "Could not update your profile. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!isMounted || loadingAuth) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -40,36 +103,122 @@ export default function ProfilePage() {
     );
   }
 
-  if (!currentUser && isMounted) { // Check isMounted
-    return null; 
+  if (!currentUser && isMounted) {
+    return null;
   }
 
-  // Ensure currentUser is available before rendering profile info
   if (!currentUser) return null;
 
 
   return (
     <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center">
           <UserCircle className="mx-auto h-16 w-16 text-primary mb-4" />
           <CardTitle className="text-2xl">Your Profile</CardTitle>
           <CardDescription>Manage your account details and preferences.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">Email</h3>
-            <p className="text-muted-foreground">{currentUser.email}</p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">User ID</h3>
-            <p className="text-muted-foreground text-sm break-all">{currentUser.uid}</p>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <p id="email" className="text-muted-foreground">{currentUser.email}</p>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your Name" {...field} disabled={!isEditing || isSaving} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="birthday"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Birthday</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            disabled={!isEditing || isSaving}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick your birthday</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value || undefined}
+                          onSelect={(date) => field.onChange(date)}
+                          disabled={(date) => date > new Date() || date < new Date("1900-01-01") || !isEditing || isSaving}
+                          initialFocus
+                          captionLayout="dropdown-buttons"
+                          fromYear={1900}
+                          toYear={new Date().getFullYear()}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {isEditing && (
+                <div className="flex justify-end space-x-2 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setIsEditing(false);
+                    // Reset form to original values from currentUser
+                    form.reset({
+                      displayName: currentUser.displayName || '',
+                      birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
+                    });
+                  }} disabled={isSaving}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Changes
+                  </Button>
+                </div>
+              )}
+            </form>
+          </Form>
+
+          {!isEditing && (
+            <div className="pt-4 border-t">
+              <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
+                <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
+              </Button>
+            </div>
+          )}
+
+
           <div className="pt-4 border-t">
-            <Button onClick={handleSignOut} variant="outline" className="w-full">
+            <Button onClick={handleSignOut} variant="destructive" className="w-full">
               <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
           </div>
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground mt-2">User ID</h3>
+            <p className="text-muted-foreground text-xs break-all">{currentUser.uid}</p>
+          </div>
+
         </CardContent>
       </Card>
     </div>
