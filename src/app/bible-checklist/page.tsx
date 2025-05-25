@@ -21,8 +21,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO } from 'date-fns';
-import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown } from 'lucide-react';
+import { format, parseISO, getMonth, getYear } from 'date-fns';
+import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown, CalendarDays } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,32 @@ const markReadRangeSchema = z.object({
 });
 
 type MarkReadRangeFormValues = z.infer<typeof markReadRangeSchema>;
+
+interface GroupedPlanByMonth {
+  [monthKey: string]: {
+    monthLabel: string;
+    days: DailyReading[];
+  };
+}
+
+function groupReadingsByMonth(dailyReadings: DailyReading[]): GroupedPlanByMonth {
+  if (!dailyReadings) return {};
+  return dailyReadings.reduce((acc, reading) => {
+    try {
+      const dateObj = parseISO(reading.date);
+      const monthKey = format(dateObj, 'yyyy-MM');
+      const monthLabel = format(dateObj, 'MMMM yyyy');
+      if (!acc[monthKey]) {
+        acc[monthKey] = { monthLabel, days: [] };
+      }
+      acc[monthKey].days.push({ ...reading });
+    } catch (e) {
+      console.error(`[BibleChecklistPage] Error parsing date for grouping: ${reading?.date}`, e);
+    }
+    return acc;
+  }, {} as GroupedPlanByMonth);
+}
+
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -69,27 +95,20 @@ export default function BibleChecklistPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
-  useEffect(() => {
-    if (plan) {
-      // console.log("[BibleChecklistPage] Received plan from useBiblePlan:", JSON.parse(JSON.stringify(plan)));
-      let problematicPassages = 0;
-      plan.dailyReadings?.forEach((day, dayIdx) => {
-        if (!day || !day.passages) {
-          // console.warn(`[BibleChecklistPage] Initial Check: Day ${dayIdx} is missing passages. Date: ${day?.date}`);
-          return;
+  const groupedPlanByMonth = useMemo(() => {
+    if (!plan?.dailyReadings) return {};
+    // Sort daily readings by date before grouping
+    const sortedReadings = [...plan.dailyReadings].sort((a, b) => {
+        try {
+            return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+        } catch (e) {
+            console.warn(`Error sorting daily readings for grouping: Date A: ${a?.date}, Date B: ${b?.date}`, e);
+            return 0;
         }
-        day.passages.forEach((p, pIdx) => {
-          if (!p || !p.displayText || p.displayText.trim() === "") {
-            problematicPassages++;
-            // console.warn(`[BibleChecklistPage] Initial Check: Passage with problematic displayText at Day Index ${dayIdx} (Date: ${day.date}), Passage Index ${pIdx}. Passage:`, p ? JSON.parse(JSON.stringify(p)) : "null/undefined");
-          }
-        });
-      });
-      // if (problematicPassages > 0) {
-      //   console.warn(`[BibleChecklistPage] Initial plan check found ${problematicPassages} passages with problematic displayText.`);
-      // }
-    }
+    });
+    return groupReadingsByMonth(sortedReadings);
   }, [plan]);
+
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -111,7 +130,7 @@ export default function BibleChecklistPage() {
     if (!toBookMeta || data.toChapter > toBookMeta.chapters) {
         markRangeForm.setError("toChapter", { type: "manual", message: `Max chapter for ${data.toBook} is ${toBookMeta.chapters}.`}); return;
     }
-    if (fromBookMeta.order > toBookMeta.order || (fromBookMeta.order === toBookMeta.order && data.fromChapter > data.toChapter) || (fromBookMeta.order === toBookMeta.order && data.fromChapter === data.toChapter && (data.fromVerse || 1) > (data.toVerse || 0))) {
+    if (fromBookMeta.order > toBookMeta.order || (fromBookMeta.order === toBookMeta.order && data.fromChapter > data.toChapter) || (fromBookMeta.order === toBookMeta.order && data.fromChapter === toBookMeta.chapter && (data.fromVerse || 1) > (data.toVerse || 0))) {
         toast({ title: "Invalid Range", description: "The 'From' point cannot be after the 'To' point.", variant: "destructive"}); return;
     }
     setIsMarkingRange(true);
@@ -125,20 +144,7 @@ export default function BibleChecklistPage() {
       setIsMarkingRange(false);
     }
   };
-
-  const sortedDailyReadings = useMemo(() => {
-    if (!plan?.dailyReadings) return [];
-    return [...plan.dailyReadings].sort((a, b) => {
-      try {
-        if (!a || !b || !a.date || !b.date) return 0;
-        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
-      } catch (e) {
-        // console.error("[BibleChecklistPage] Error parsing dates for sorting:", a?.date, b?.date, e);
-        return 0;
-      }
-    });
-  }, [plan]);
-
+  
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
   }
@@ -183,78 +189,89 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
-      <Accordion type="multiple" className="w-full space-y-1.5">
-        {sortedDailyReadings.map((dailyReading, dayIndex) => {
-          if (!dailyReading || !dailyReading.date) {
-            // console.warn(`[BibleChecklistPage] RENDERING: Invalid dailyReading object at index ${dayIndex}:`, dailyReading);
-            return null;
-          }
-          const dateKey = dailyReading.originalDateKey || dailyReading.date;
-          const allPassagesInDay = dailyReading.passages?.filter(p => p && p.displayText) || [];
-          
-          return (
-            <AccordionItem key={dateKey} value={dateKey} className="border bg-card/80 rounded-md shadow-xs hover:shadow-sm transition-shadow">
-              <AccordionTrigger className="p-2 text-xs hover:no-underline">
-                {/* Removed asChild prop and the div wrapper here to simplify the trigger */}
-                <div className="flex items-center justify-between w-full">
-                  <Label className="font-medium cursor-pointer">
-                    {dailyReading.date ? format(parseISO(dailyReading.date), "EEE, MMM d") : "Invalid Date"}
-                  </Label>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
+      <Accordion type="multiple" className="w-full space-y-2">
+        {Object.entries(groupedPlanByMonth).map(([monthKey, { monthLabel, days }]) => (
+          <AccordionItem key={monthKey} value={monthKey} className="border bg-card/80 rounded-md shadow-sm hover:shadow-md transition-shadow">
+            <AccordionTrigger asChild className="p-2.5 hover:no-underline">
+              <div className="flex items-center justify-between w-full cursor-pointer">
+                <div className="flex items-center space-x-2">
+                   <CalendarDays className="h-4 w-4 text-primary" />
+                   <Label className="text-sm font-semibold cursor-pointer">{monthLabel}</Label>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-2 px-2 pt-0">
-                {(allPassagesInDay.length > 0) ? (
-                  <ul className="space-y-1 pl-0.5 mt-1">
-                    {allPassagesInDay.map((passage, pIndex) => {
-                      if (!passage) {
-                        // console.warn(`[BibleChecklistPage] RENDERING passage: Passage object is null/undefined for Day ${dateKey}, Passage Index ${pIndex}`);
-                        return ( <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic"> Error: Passage data corrupt. </li>);
-                      }
-                      const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
-                      const isPassageValid = currentPassageDisplayText !== '';
-                      
-                      const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
-                      const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
-                      const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
-
-                      const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
-
-                      if(!isPassageValid){
-                        // console.warn(`[BibleChecklistPage] RENDERING passage: displayText is invalid for passage. Day ${dateKey}, PIndex ${pIndex}. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-                      }
-
-                      return (
-                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
-                          <Checkbox 
-                            id={checkboxId} 
-                            checked={isChecked} 
-                            onCheckedChange={() => { if (isPassageValid) { togglePassageCompletion(currentPassageDisplayText); } else { toast({title: "Invalid Passage Data", description: "Cannot toggle completion for invalid passage.", variant: "destructive"});}}} 
-                            aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
-                            className="h-3.5 w-3.5"
-                            disabled={!isPassageValid}
-                          />
-                          <Label 
-                            htmlFor={checkboxId} 
-                            className={cn(
-                              "flex-grow cursor-pointer", 
-                              isChecked && "line-through text-muted-foreground",
-                              !isPassageValid && "text-destructive font-semibold italic"
-                            )}
-                          >
-                             {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-2 px-2 pt-1">
+              <Accordion type="multiple" className="w-full space-y-1.5">
+                {days.map((dailyReading) => {
+                  if (!dailyReading || !dailyReading.date) {
+                    return null;
+                  }
+                  const dateKey = dailyReading.originalDateKey || dailyReading.date;
+                  const allPassagesInDay = dailyReading.passages?.filter(p => p && p.displayText) || [];
+                  
+                  return (
+                    <AccordionItem key={dateKey} value={dateKey} className="border bg-background/70 rounded-md shadow-xs hover:shadow-sm transition-shadow">
+                      <AccordionTrigger asChild className="p-2 text-xs hover:no-underline">
+                        <div className="flex items-center justify-between w-full">
+                          <Label className="font-medium cursor-pointer">
+                            {dailyReading.date ? format(parseISO(dailyReading.date), "EEE, MMM d") : "Invalid Date"}
                           </Label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-2 px-2 pt-0">
+                        {(allPassagesInDay.length > 0) ? (
+                          <ul className="space-y-1 pl-0.5 mt-1">
+                            {allPassagesInDay.map((passage, pIndex) => {
+                              if (!passage) {
+                                return ( <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic"> Error: Passage data corrupt. </li>);
+                              }
+                              const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
+                              const isPassageValid = currentPassageDisplayText !== '';
+                              
+                              const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
+                              const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
+                              const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
+
+                              const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
+
+                              return (
+                                <li key={checkboxId} className="bg-card/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                                  <Checkbox 
+                                    id={checkboxId} 
+                                    checked={isChecked} 
+                                    onCheckedChange={() => { if (isPassageValid) { togglePassageCompletion(currentPassageDisplayText); } else { toast({title: "Invalid Passage Data", description: "Cannot toggle completion for invalid passage.", variant: "destructive"});}}} 
+                                    aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
+                                    className="h-3.5 w-3.5"
+                                    disabled={!isPassageValid}
+                                  />
+                                  <Label 
+                                    htmlFor={checkboxId} 
+                                    className={cn(
+                                      "flex-grow cursor-pointer", 
+                                      isChecked && "line-through text-muted-foreground",
+                                      !isPassageValid && "text-destructive font-semibold italic"
+                                    )}
+                                  >
+                                     {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
+                                  </Label>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
       </Accordion>
       <BackToTopButton />
     </div>
   );
 }
+
