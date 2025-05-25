@@ -19,6 +19,7 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   let remainingSpec = "";
   let resolvedBookFullName: string | null = null;
 
+  // Try to match longest possible book name first
   for (let i = Math.min(entry.length, 30); i > 0; i--) {
       const potentialBook = entry.substring(0, i).trim();
       const foundBook = resolveBookName(potentialBook);
@@ -31,13 +32,13 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   }
   
   if (!resolvedBookFullName) {
-    console.warn(`Could not parse book name from entry: "${originalEntry}"`);
+    console.warn(`[parsePassageString] Could not parse book name from entry: "${originalEntry}"`);
     return units;
   }
 
   const bookData = BIBLE_BOOKS_DATA[resolvedBookFullName];
   if (!bookData) {
-    console.warn(`Book data not found for: "${resolvedBookFullName}"`);
+    console.warn(`[parsePassageString] Book data not found for: "${resolvedBookFullName}" from entry "${originalEntry}"`);
     return units;
   }
 
@@ -65,14 +66,20 @@ export function parsePassageString(entry: string): ReadingUnit[] {
         units.push({ book: resolvedBookFullName, chapter: ch, displayText: `${resolvedBookFullName} ${ch}` });
       }
     }
+    // Ensure endCh is different from startCh if we are adding a new segment for endCh
+    // and that endCh is valid
     if (endCh > startCh && endCh > 0 && endCh <= bookData.chapters) {
          units.push({ book: resolvedBookFullName, chapter: endCh, startVerse: 1, endVerse: endV, displayText: `${resolvedBookFullName} ${endCh}:1-${endV}` });
-    } else if (startCh === endCh && startCh > 0 && startCh <= bookData.chapters && startV <= endV ) { // Case Acts 18(:1)-18(:10)
-        // This was already covered by the first push if startV=1 and endV=X
-        // For specific startV to endV in same chapter, this needs adjustment or a new pattern.
-        // The current logic handles startCh:startV-end, then full chapters, then endCh:1-endV.
-        // If startCh === endCh, the complex range should ideally simplify or use a simpler pattern.
-        // For now, let's assume such a case would be entered as C:Vstart-Vend.
+    } else if (startCh === endCh && startV < endV && startCh > 0 && startCh <= bookData.chapters) { 
+        // If complex range is within the same chapter, e.g. "Book 1(:5)-1(:10)"
+        // The first push already handled "Book 1:5-end". This might need refinement
+        // if such specific same-chapter complex ranges are common.
+        // For now, we assume such cases would use a simpler C:Vstart-Vend format.
+        // The current logic might result in "Book 1:5-end" and then try to add "Book 1:1-10",
+        // which is redundant if the intent was just Book 1:5-10.
+        // This specific case "Book 1(:5)-1(:10)" is not directly handled by this pattern optimally.
+        // It would be better parsed by a "Book C:V1-V2" pattern.
+        // However, given the current parsing, "Acts 18(:12)-19(:20)" is the primary target.
     }
     return units;
   }
@@ -99,19 +106,30 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   if (chapterStartVerseMatch) {
     const ch = parseInt(chapterStartVerseMatch[1], 10);
     const startV = parseInt(chapterStartVerseMatch[2], 10);
-    if (ch > 0 && ch <= bookData.chapters) {
+    if (ch > 0 && ch <= bookData.chapters && startV > 0) {
       units.push({ book: resolvedBookFullName, chapter: ch, startVerse: startV, endVerse: 'end', displayText: `${resolvedBookFullName} ${ch}:${startV}-end` });
     }
     return units;
   }
   
+  // NEW Pattern: C1:Vstart-end e.g., Acts 18:12-end
+  const chapterStartVerseToEndMatch = remainingSpec.match(/^(\d+):(\d+)-end$/i); // Added /i for case-insensitive "end"
+  if (chapterStartVerseToEndMatch) {
+    const ch = parseInt(chapterStartVerseToEndMatch[1], 10);
+    const startV = parseInt(chapterStartVerseToEndMatch[2], 10);
+    if (ch > 0 && ch <= bookData.chapters && startV > 0) {
+      units.push({ book: resolvedBookFullName, chapter: ch, startVerse: startV, endVerse: 'end', displayText: `${resolvedBookFullName} ${ch}:${startV}-end` });
+    }
+    return units;
+  }
+
   // Pattern: C1:Vstart-Vend e.g., Jude 1:1-10
   const chapterVerseRangeMatch = remainingSpec.match(/^(\d+):(\d+)-(\d+)$/);
   if (chapterVerseRangeMatch) {
     const ch = parseInt(chapterVerseRangeMatch[1], 10);
     const startV = parseInt(chapterVerseRangeMatch[2], 10);
     const endV = parseInt(chapterVerseRangeMatch[3], 10);
-     if (ch > 0 && ch <= bookData.chapters) {
+     if (ch > 0 && ch <= bookData.chapters && startV > 0 && endV >= startV) {
       units.push({ book: resolvedBookFullName, chapter: ch, startVerse: startV, endVerse: endV, displayText: `${resolvedBookFullName} ${ch}:${startV}-${endV}` });
     }
     return units;
@@ -123,7 +141,7 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     const startCh = parseInt(chapterRangeMatch[1], 10);
     const endCh = Math.min(parseInt(chapterRangeMatch[2], 10), bookData.chapters);
     for (let ch = startCh; ch <= endCh; ch++) {
-       if (ch > 0) {
+       if (ch > 0) { // Ensure chapter is positive
         units.push({ book: resolvedBookFullName, chapter: ch, displayText: `${resolvedBookFullName} ${ch}` });
       }
     }
@@ -140,8 +158,8 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     return units;
   }
   
-  console.warn(`Unhandled passage format for entry: "${originalEntry}" (Book: ${resolvedBookFullName}, Spec: "${remainingSpec}")`);
-  return units;
+  console.warn(`[parsePassageString] Unhandled passage format for entry: "${originalEntry}" (Book: ${resolvedBookFullName}, Spec: "${remainingSpec}")`);
+  return units; // Return empty if no pattern matches, to be handled by caller
 }
 
 
@@ -149,14 +167,17 @@ export function generateReadingUnitsForCanonical(startBookName: string): Reading
   const units: ReadingUnit[] = [];
   const startIndex = CANONICAL_BIBLE_ORDER.indexOf(startBookName);
   if (startIndex === -1) {
-    console.error(`Invalid starting book for canonical plan: ${startBookName}`);
+    console.error(`[plan-generator] Invalid starting book for canonical plan: ${startBookName}`);
     return units; 
   }
 
   for (let i = startIndex; i < CANONICAL_BIBLE_ORDER.length; i++) {
     const bookFullName = CANONICAL_BIBLE_ORDER[i];
     const bookData = BIBLE_BOOKS_DATA[bookFullName];
-    if (!bookData) continue; // Should not happen if CANONICAL_BIBLE_ORDER is from BIBLE_BOOKS_DATA
+    if (!bookData) {
+        console.error(`[plan-generator] Missing book data for ${bookFullName} in CANONICAL_BIBLE_ORDER`);
+        continue;
+    }
     for (let ch = 1; ch <= bookData.chapters; ch++) {
       units.push({ book: bookFullName, chapter: ch, displayText: `${bookFullName} ${ch}` });
     }
@@ -168,6 +189,9 @@ export function generateReadingUnitsForCustomPreset(): ReadingUnit[] {
   const allUnits: ReadingUnit[] = [];
   PRESET_CUSTOM_ORDER_STRINGS.forEach(entry => {
     const unitsForEntry = parsePassageString(entry);
+    if (unitsForEntry.length === 0) {
+        console.warn(`[plan-generator] No units generated for custom preset entry: "${entry}"`);
+    }
     allUnits.push(...unitsForEntry);
   });
   return allUnits;
@@ -177,25 +201,33 @@ export function scheduleReadings(units: ReadingUnit[], startDateInput: Date, rea
   const plan: DailyReading[] = [];
   if (units.length === 0) return plan;
 
-  let currentDate = startOfDay(startDateInput);
+  let currentDate = startOfDay(startDateInput); // Ensure we start at the beginning of the day
   let unitIndex = 0;
 
   while (unitIndex < units.length) {
-    if (getDay(currentDate) === 0) { // Skip Sundays (0 = Sunday)
+    // Skip Sundays (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    if (getDay(currentDate) === 0) { 
       currentDate = addDays(currentDate, 1);
       continue;
     }
 
     const dailyPassagesUnits: StructuredPassage[] = [];
     for (let i = 0; i < readingsPerDay && unitIndex < units.length; i++) {
-      dailyPassagesUnits.push(units[unitIndex]);
+      // Ensure the unit itself is valid before pushing
+      const currentUnit = units[unitIndex];
+      if (currentUnit && currentUnit.book && currentUnit.chapter > 0 && currentUnit.displayText) {
+        dailyPassagesUnits.push(currentUnit);
+      } else {
+        console.warn(`[plan-generator] Skipping invalid reading unit during scheduling:`, currentUnit);
+      }
       unitIndex++;
     }
 
     if (dailyPassagesUnits.length > 0) {
       plan.push({
-        date: formatDateFns(currentDate, 'yyyy-MM-dd'),
-        passages: dailyPassagesUnits, // Store the structured passage objects
+        // Store date as YYYY-MM-DD string, consistent with Firestore and date-fns usage
+        date: formatDateFns(currentDate, 'yyyy-MM-dd'), 
+        passages: dailyPassagesUnits,
       });
     }
     currentDate = addDays(currentDate, 1);
