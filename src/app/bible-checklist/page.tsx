@@ -20,7 +20,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, getISOWeek } from 'date-fns';
-import { Loader2, LibraryBig, Info, BookOpenText, CalendarRange, Minimize2, Maximize2, CheckSquare, ChevronDown } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookOpenText, CalendarRange, Minimize2, Maximize2, CheckSquare } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -49,7 +49,7 @@ function groupReadingsByWeek(dailyReadings: DailyReading[]): GroupedWeek[] {
   dailyReadings.forEach((reading) => {
     try {
       const dateObj = parseISO(reading.date);
-      const weekKey = format(dateObj, 'RRRR-II'); 
+      const weekKey = format(dateObj, 'RRRR-II');
       if (!weeksMap.has(weekKey)) {
         weeksMap.set(weekKey, []);
       }
@@ -95,11 +95,11 @@ export default function BibleChecklistPage() {
 
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
-    defaultValues: { 
-      fromBook: CANONICAL_BIBLE_ORDER[0], 
-      fromChapter: 1, 
-      toBook: CANONICAL_BIBLE_ORDER[0], 
-      toChapter: 1 
+    defaultValues: {
+      fromBook: CANONICAL_BIBLE_ORDER[0],
+      fromChapter: 1,
+      toBook: CANONICAL_BIBLE_ORDER[0],
+      toChapter: 1
     },
   });
 
@@ -145,8 +145,8 @@ export default function BibleChecklistPage() {
         markRangeForm.setError("toChapter", { type: "manual", message: `Max chapter for ${data.toBook} is ${toBookMeta.chapters}.`});
         return;
     }
-    
-    if (fromBookMeta.order > toBookMeta.order || 
+
+    if (fromBookMeta.order > toBookMeta.order ||
         (fromBookMeta.order === toBookMeta.order && data.fromChapter > data.toChapter) ||
         (fromBookMeta.order === toBookMeta.order && data.fromChapter === data.toChapter && (data.fromVerse || 1) > (data.toVerse || 0))
     ) {
@@ -231,108 +231,99 @@ export default function BibleChecklistPage() {
         </Card>
       )}
 
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="mark-read-range-item" className="border-none">
-           <Card className="shadow-md mb-8">
-            <AccordionTrigger className="hover:no-underline p-0">
-              <CardHeader className="w-full flex flex-row items-center justify-between hover:bg-muted/50 rounded-t-lg transition-colors">
-                <div className="flex items-center space-x-2">
-                  <CheckSquare className="h-6 w-6 text-primary" />
-                  <CardTitle className="text-xl">Mark Reading Range</CardTitle>
-                </div>
-                 <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 accordion-chevron" />
-              </CardHeader>
-            </AccordionTrigger>
-            <AccordionContent className="pt-0">
-              <CardContent className="pt-4">
-                <Form {...markRangeForm}>
-                  <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                      <fieldset className="space-y-4 border p-4 rounded-md">
-                        <legend className="text-sm font-medium px-1">From</legend>
-                        <FormField control={markRangeForm.control} name="fromBook"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Book</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                                <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField control={markRangeForm.control} name="fromChapter"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Chapter</FormLabel>
-                              <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField control={markRangeForm.control} name="fromVerse"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Verse (Optional)</FormLabel>
-                              <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </fieldset>
+       <Card className="shadow-md mb-8">
+          <CardHeader className="w-full flex flex-row items-center justify-between rounded-t-lg">
+            <div className="flex items-center space-x-2">
+              <CheckSquare className="h-6 w-6 text-primary" />
+              <CardTitle className="text-xl">Mark Reading Range</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <Form {...markRangeForm}>
+              <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <fieldset className="space-y-4 border p-4 rounded-md">
+                    <legend className="text-sm font-medium px-1">From</legend>
+                    <FormField control={markRangeForm.control} name="fromBook"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Book</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="fromChapter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="fromVerse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </fieldset>
 
-                      <fieldset className="space-y-4 border p-4 rounded-md">
-                        <legend className="text-sm font-medium px-1">To</legend>
-                        <FormField control={markRangeForm.control} name="toBook"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Book</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                                <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField control={markRangeForm.control} name="toChapter"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Chapter</FormLabel>
-                              <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField control={markRangeForm.control} name="toVerse"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Verse (Optional)</FormLabel>
-                              <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </fieldset>
-                    </div>
-                    <Button type="submit" className="w-full md:w-auto" disabled={isMarkingRange}>
-                      {isMarkingRange ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
-                      {isMarkingRange ? 'Updating...' : 'Mark Range as Read'}
-                    </Button>
-                    <FormDescription>
-                      Marks all passages within the specified range (inclusive) as completed. 
-                      If a verse is not specified for "From", it assumes the beginning of the chapter. 
-                      If a verse is not specified for "To", it assumes the end of the chapter.
-                    </FormDescription>
-                  </form>
-                </Form>
-              </CardContent>
-            </AccordionContent>
-          </Card>
-        </AccordionItem>
-      </Accordion>
-      
+                  <fieldset className="space-y-4 border p-4 rounded-md">
+                    <legend className="text-sm font-medium px-1">To</legend>
+                    <FormField control={markRangeForm.control} name="toBook"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Book</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="toChapter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="toVerse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </fieldset>
+                </div>
+                <Button type="submit" className="w-full md:w-auto" disabled={isMarkingRange}>
+                  {isMarkingRange ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
+                  {isMarkingRange ? 'Updating...' : 'Mark Range as Read'}
+                </Button>
+                <FormDescription>
+                  Marks all passages within the specified range (inclusive) as completed.
+                  If a verse is not specified for "From", it assumes the beginning of the chapter.
+                  If a verse is not specified for "To", it assumes the end of the chapter.
+                </FormDescription>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
 
       <Accordion type="multiple" className="w-full space-y-2">
         {groupedPlanByWeek.map((week) => (
@@ -356,7 +347,7 @@ export default function BibleChecklistPage() {
                             <ul className={cn("space-y-2", isCompactView ? "space-y-1.5" : "")}>
                               {dailyReading.passages.map((passage, pIndex) => {
                                 const isChecked = completedPassages.includes(passage.displayText);
-                                const checkboxId = `passage-${dailyReading.originalDateKey}-${passage.book}-${passage.chapter}-${pIndex}`; 
+                                const checkboxId = `passage-${dailyReading.originalDateKey}-${passage.book}-${passage.chapter}-${pIndex}`;
                                 return (
                                   <li key={checkboxId} className={cn("bg-background/60 border rounded-md flex items-center space-x-2.5 transition-colors hover:bg-muted/50", isCompactView ? "p-1.5 text-xs" : "p-2.5 text-sm")}>
                                     <Checkbox id={checkboxId} checked={isChecked} onCheckedChange={() => togglePassageCompletion(passage.displayText)} aria-label={`Mark ${passage.displayText} as read`} className={cn(isCompactView ? "h-3.5 w-3.5" : "h-4 w-4")} />
@@ -379,14 +370,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
-<style jsx global>{`
-  .accordion-chevron[data-state='open'] {
-    transform: rotate(180deg);
-  }
-`}</style>
-    
-
-    
-
-    
