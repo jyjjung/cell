@@ -91,7 +91,7 @@ export default function BibleChecklistPage() {
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
-  const [isCompactView, setIsCompactView] = useState(isCompactView);
+  const [isCompactView, setIsCompactView] = useState(false); // Fixed: Initialize with false
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
 
