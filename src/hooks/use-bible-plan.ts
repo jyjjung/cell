@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import type { BibleReadingPlan, DailyReading, StructuredPassage, PlanType } from '@/types';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { parsePassageString } from '@/lib/plan-generator'; // Import the parser
+import { BIBLE_BOOKS_DATA } from '@/lib/bible-data'; // For fallback book/chapter validation
 
 const BIBLE_PLAN_COLLECTION = 'config';
 const BIBLE_PLAN_DOC_ID = 'biblePlan';
@@ -26,110 +28,134 @@ export function useBiblePlan() {
         let generatedDate = "Unknown Generation Date";
 
         try {
-          startDate = data.startDate ? (typeof data.startDate === 'string' ? data.startDate : (data.startDate as Timestamp)?.toDate().toISOString()) : "Unknown Start Date";
+          startDate = data.startDate ? (typeof data.startDate === 'string' ? data.startDate : (data.startDate as Timestamp)?.toDate().toISOString().split('T')[0]) : "Unknown Start Date";
         } catch (e) { console.error("[useBiblePlan] Error parsing startDate from Firestore:", data.startDate, e); }
+        
         try {
-          generatedDate = data.generatedDate ? (typeof data.generatedDate === 'string' ? data.generatedDate : (data.generatedDate as Timestamp)?.toDate().toISOString()) : "Unknown Generation Date";
+          generatedDate = data.generatedDate ? (typeof data.generatedDate === 'string' ? data.generatedDate : (data.generatedDate as Timestamp)?.toDate().toISOString().split('T')[0]) : "Unknown Generation Date";
         } catch (e) { console.error("[useBiblePlan] Error parsing generatedDate from Firestore:", data.generatedDate, e); }
 
-        const dailyReadings: DailyReading[] = (Array.isArray(data.dailyReadings) ? data.dailyReadings.map((dr, drIndex) => {
+        const dailyReadings: DailyReading[] = (Array.isArray(data.dailyReadings) ? data.dailyReadings.map((dr_raw, drIndex) => {
           let readingDate = `ErrorDate-${drIndex}`;
           try {
-            if (dr && dr.date) {
-              readingDate = typeof dr.date === 'string' ? dr.date : (dr.date as Timestamp)?.toDate().toISOString().split('T')[0];
+            if (dr_raw && dr_raw.date) {
+              readingDate = typeof dr_raw.date === 'string' ? dr_raw.date : (dr_raw.date as Timestamp)?.toDate().toISOString().split('T')[0];
             } else {
-              console.warn(`[useBiblePlan] SANITIZE: DailyReading at index ${drIndex} is missing a date. Original data:`, dr ? JSON.parse(JSON.stringify(dr)) : "null/undefined dailyReading object");
+              console.warn(`[useBiblePlan] SANITIZE: DailyReading at index ${drIndex} is missing a date. Original data:`, dr_raw ? JSON.parse(JSON.stringify(dr_raw)) : "null/undefined dailyReading object");
             }
           } catch (e) {
-            console.error(`[useBiblePlan] SANITIZE: Error parsing date for DailyReading at index ${drIndex}. Original date:`, dr?.date, e);
+            console.error(`[useBiblePlan] SANITIZE: Error parsing date for DailyReading at index ${drIndex}. Original date:`, dr_raw?.date, e);
           }
 
-          const passages: StructuredPassage[] = (Array.isArray(dr?.passages) ? dr.passages.map((p, pIndex) => {
-            const originalPassageForLog = p ? JSON.parse(JSON.stringify(p)) : { note: "Original passage object was null/undefined" };
+          const passages: StructuredPassage[] = (Array.isArray(dr_raw?.passages) ? dr_raw.passages.flatMap((p_raw_from_firestore, pIndex) => {
+            const originalPassageForLog = p_raw_from_firestore !== undefined && p_raw_from_firestore !== null ? JSON.parse(JSON.stringify(p_raw_from_firestore)) : { note: "Original passage object was null/undefined" };
 
-            if (!p || typeof p !== 'object') {
-              console.error(`[useBiblePlan] SANITIZE CRITICAL: Passage data is not an object or is null. Date: ${readingDate}, Index: ${pIndex}. Original:`, originalPassageForLog);
-              return {
+            if (typeof p_raw_from_firestore === 'string') {
+              // Attempt to parse the string into StructuredPassage objects
+              console.warn(`[useBiblePlan] SANITIZE: Passage at Date ${readingDate}, Index ${pIndex} is a STRING: "${p_raw_from_firestore}". Attempting to parse.`);
+              const parsedUnits = parsePassageString(p_raw_from_firestore);
+              if (parsedUnits.length > 0) {
+                return parsedUnits.map(unit => ({ // Ensure all fields, though parsePassageString should provide them
+                  book: unit.book,
+                  chapter: unit.chapter,
+                  startVerse: unit.startVerse,
+                  endVerse: unit.endVerse,
+                  displayText: unit.displayText || `${unit.book} ${unit.chapter}${unit.startVerse ? `:${unit.startVerse}` : ''}${unit.endVerse && unit.endVerse !== unit.startVerse ? `-${unit.endVerse === 'end' ? 'end' : unit.endVerse}` : ''}`,
+                }));
+              } else {
+                console.error(`[useBiblePlan] SANITIZE CRITICAL: Failed to parse string passage "${p_raw_from_firestore}" for Date ${readingDate}, Index ${pIndex}.`);
+                return [{
+                  book: "Error",
+                  chapter: 0,
+                  startVerse: undefined,
+                  endVerse: undefined,
+                  displayText: `Error: Unparseable String "${p_raw_from_firestore.substring(0,30)}..."`,
+                }];
+              }
+            } else if (typeof p_raw_from_firestore === 'object' && p_raw_from_firestore !== null) {
+              // Existing object sanitization logic
+              let currentBook = (typeof p_raw_from_firestore.book === 'string' && p_raw_from_firestore.book.trim() !== '') ? p_raw_from_firestore.book.trim() : '';
+              let currentChapterNum = 0;
+              if (typeof p_raw_from_firestore.chapter === 'number' && p_raw_from_firestore.chapter > 0) {
+                  currentChapterNum = p_raw_from_firestore.chapter;
+              } else if (typeof p_raw_from_firestore.chapter === 'string') {
+                  const parsedCh = parseInt(p_raw_from_firestore.chapter, 10);
+                  if (!isNaN(parsedCh) && parsedCh > 0) {
+                      currentChapterNum = parsedCh;
+                  }
+              }
+              
+              let currentStartVerse = (typeof p_raw_from_firestore.startVerse === 'number' && p_raw_from_firestore.startVerse > 0) ? p_raw_from_firestore.startVerse : undefined;
+              let currentEndVerse : number | 'end' | undefined = undefined;
+              if (typeof p_raw_from_firestore.endVerse === 'number' && p_raw_from_firestore.endVerse > 0) {
+                  currentEndVerse = p_raw_from_firestore.endVerse;
+              } else if (p_raw_from_firestore.endVerse === 'end') {
+                  currentEndVerse = 'end';
+              }
+
+              let currentDisplayText = (typeof p_raw_from_firestore.displayText === 'string' && p_raw_from_firestore.displayText.trim() !== '') ? p_raw_from_firestore.displayText.trim() : '';
+              
+              let reconstructionNeeded = false;
+              if (!currentBook || !BIBLE_BOOKS_DATA[currentBook]) {
+                  currentBook = "Unknown Book";
+                  reconstructionNeeded = true;
+              }
+              if (currentChapterNum <= 0 || (BIBLE_BOOKS_DATA[currentBook] && currentChapterNum > BIBLE_BOOKS_DATA[currentBook]!.chapters)) {
+                  reconstructionNeeded = true;
+                  currentChapterNum = 0; // Mark as invalid for reconstruction
+              }
+
+              if (!currentDisplayText || reconstructionNeeded) {
+                  let reconstructedText = currentBook;
+                  if (currentChapterNum > 0) {
+                      reconstructedText += ` ${currentChapterNum}`;
+                      if (currentStartVerse) {
+                          reconstructedText += `:${currentStartVerse}`;
+                          if (currentEndVerse && currentEndVerse !== currentStartVerse) {
+                              reconstructedText += `-${currentEndVerse === 'end' ? 'end' : currentEndVerse}`;
+                          } else if (currentEndVerse === undefined && currentStartVerse > 0){ // Only start verse exists
+                             reconstructedText += '-end';
+                          }
+                      } else if (currentEndVerse === undefined) { // No start or end verse, whole chapter
+                        // It's already just Book Chapter
+                      }
+                  } else {
+                       reconstructedText = `${currentBook} (Chapter Data Error)`;
+                  }
+                  
+                  if (!currentDisplayText || currentDisplayText.trim() === '') {
+                      console.warn(`[useBiblePlan] SANITIZE: Reconstructing displayText for passage. Date: ${readingDate}, Original:`, originalPassageForLog, `Reconstructed to: "${reconstructedText}"`);
+                      currentDisplayText = reconstructedText;
+                  } else if (reconstructionNeeded && currentDisplayText !== reconstructedText) {
+                       console.warn(`[useBiblePlan] SANITIZE: Book/Chapter issues for passage, but original displayText exists. Date: ${readingDate}, Original Display: "${currentDisplayText}", Potential Reconstruction: "${reconstructedText}". Original passage:`, originalPassageForLog);
+                  }
+              }
+              
+              if (!currentDisplayText || currentDisplayText.trim() === '') {
+                  console.error(`[useBiblePlan] SANITIZE CRITICAL: displayText for passage is EMPTY after all checks. Date: ${readingDate}, Book: ${currentBook}, Ch: ${currentChapterNum}. Original passage:`, originalPassageForLog);
+                  currentDisplayText = "Error: Corrupted Passage Object";
+              }
+
+              return [{ // Return as an array for flatMap
+                book: currentBook,
+                chapter: currentChapterNum,
+                startVerse: currentStartVerse,
+                endVerse: currentEndVerse,
+                displayText: currentDisplayText,
+              }];
+            } else {
+              console.error(`[useBiblePlan] SANITIZE CRITICAL: Passage data is not an object or string. Date: ${readingDate}, Index: ${pIndex}. Original:`, p_raw_from_firestore);
+              return [{ // Return as an array for flatMap
                 book: "Error",
                 chapter: 0,
                 startVerse: undefined,
                 endVerse: undefined,
-                displayText: "Error: Corrupted Passage Object",
-              };
+                displayText: "Error: Corrupted Passage Data Structure",
+              }];
             }
-
-            let currentBook = (typeof p.book === 'string' && p.book.trim() !== '') ? p.book.trim() : '';
-            let currentChapterNum = 0;
-            if (typeof p.chapter === 'number' && p.chapter > 0) {
-                currentChapterNum = p.chapter;
-            } else if (typeof p.chapter === 'string') {
-                const parsedCh = parseInt(p.chapter, 10);
-                if (!isNaN(parsedCh) && parsedCh > 0) {
-                    currentChapterNum = parsedCh;
-                }
-            }
-            
-            let currentStartVerse = (typeof p.startVerse === 'number' && p.startVerse > 0) ? p.startVerse : undefined;
-            let currentEndVerse : number | 'end' | undefined = undefined;
-            if (typeof p.endVerse === 'number' && p.endVerse > 0) {
-                currentEndVerse = p.endVerse;
-            } else if (p.endVerse === 'end') {
-                currentEndVerse = 'end';
-            }
-
-            let currentDisplayText = (typeof p.displayText === 'string' && p.displayText.trim() !== '') ? p.displayText.trim() : '';
-            
-            let reconstructionNeeded = false;
-            if (!currentBook) {
-                currentBook = "Unknown Book";
-                reconstructionNeeded = true;
-                 // console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, missing valid 'book'. Original passage:`, originalPassageForLog);
-            }
-            if (currentChapterNum <= 0) {
-                // If chapter is 0 or invalid, it's effectively an error for reconstruction purposes
-                reconstructionNeeded = true;
-                // console.warn(`[useBiblePlan] SANITIZE: Passage for date ${readingDate}, index ${pIndex}, book '${currentBook}', missing valid 'chapter'. Original passage:`, originalPassageForLog);
-            }
-
-            if (!currentDisplayText || reconstructionNeeded) {
-                let reconstructedText = currentBook;
-                if (currentChapterNum > 0) { // Only add chapter if valid
-                    reconstructedText += ` ${currentChapterNum}`;
-                    if (currentStartVerse) {
-                        reconstructedText += `:${currentStartVerse}`;
-                        if (currentEndVerse && currentEndVerse !== currentStartVerse) { // Avoid "X:Y-Y"
-                            reconstructedText += `-${currentEndVerse === 'end' ? 'end' : currentEndVerse}`;
-                        } else if (!currentEndVerse && currentStartVerse) { // If startVerse exists but no endVerse, imply to end
-                           reconstructedText += '-end';
-                        }
-                    }
-                } else {
-                     reconstructedText = `${currentBook} (Chapter Data Error)`;
-                }
-                
-                if (!currentDisplayText) {
-                    // console.warn(`[useBiblePlan] SANITIZE: Reconstructing displayText for passage. Date: ${readingDate}, Original:`, originalPassageForLog, `Reconstructed to: "${reconstructedText}"`);
-                    currentDisplayText = reconstructedText;
-                } else if (reconstructionNeeded && currentDisplayText !== reconstructedText) {
-                     // console.warn(`[useBiblePlan] SANITIZE: Book/Chapter issues for passage, but original displayText exists. Date: ${readingDate}, Original Display: "${currentDisplayText}", Potential Reconstruction: "${reconstructedText}". Original passage:`, originalPassageForLog);
-                }
-            }
-            
-            // Final absolute fallback if displayText somehow ended up empty or just whitespace.
-            if (!currentDisplayText || currentDisplayText.trim() === '') {
-                console.error(`[useBiblePlan] SANITIZE CRITICAL: displayText for passage is EMPTY after all checks. Date: ${readingDate}, Book: ${currentBook}, Ch: ${currentChapterNum}. Original passage:`, originalPassageForLog);
-                currentDisplayText = "Error: Corrupted Passage";
-            }
-
-            return {
-              book: currentBook,
-              chapter: currentChapterNum,
-              startVerse: currentStartVerse,
-              endVerse: currentEndVerse,
-              displayText: currentDisplayText,
-            };
           }) : []);
           
+          // Final check on passages for this day
           passages.forEach((psg, idx) => {
             if (!psg.displayText || psg.displayText.trim() === "") {
                 console.error(`[useBiblePlan] SANITIZE POST-MAP CHECK: Empty displayText for passage at index ${idx} on date ${readingDate}. Passage:`, psg ? JSON.parse(JSON.stringify(psg)): "null/undefined passage");
@@ -180,3 +206,5 @@ export function useBiblePlan() {
 
   return { plan, loading, saveBiblePlan };
 }
+
+    
