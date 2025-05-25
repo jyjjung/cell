@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -91,8 +91,9 @@ export default function BibleChecklistPage() {
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
-  const [isCompactView, setIsCompactView] = useState(false);
+  const [isCompactView, setIsCompactView] = useState(isCompactView);
   const [isMarkingRange, setIsMarkingRange] = useState(false);
+  const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
 
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -163,6 +164,7 @@ export default function BibleChecklistPage() {
         data.toBook, data.toChapter, data.toVerse
       );
       toast({ title: "Checklist Updated", description: `${result?.markedCount || 0} new passage(s) marked as read within the specified range.` });
+      setIsRangeFormOpen(false); // Close dialog on success
     } catch (error: any) {
       toast({ title: "Error Updating Checklist", description: error.message || "Could not mark passages as read.", variant: "destructive" });
     } finally {
@@ -232,109 +234,107 @@ export default function BibleChecklistPage() {
         </Card>
       )}
 
-      <Popover>
-        <PopoverTrigger asChild>
+      <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
+        <DialogTrigger asChild>
           <Button variant="outline" className="w-full md:w-auto">
             <Edit className="mr-2 h-4 w-4" /> Mark Reading Range
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-            className="w-[90vw] max-w-[550px] max-h-[85vh] overflow-y-auto p-0"
-        >
-           <Card className="shadow-md border-0">
-            <CardHeader className="w-full flex flex-row items-center justify-between rounded-t-lg">
-              <div className="flex items-center space-x-2">
-                <CheckSquare className="h-6 w-6 text-primary" />
-                <CardTitle className="text-xl">Mark Reading Range</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <Form {...markRangeForm}>
-                <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <fieldset className="space-y-4 border p-4 rounded-md">
-                      <legend className="text-sm font-medium px-1">From</legend>
-                      <FormField control={markRangeForm.control} name="fromBook"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Book</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                              <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField control={markRangeForm.control} name="fromChapter"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Chapter</FormLabel>
-                            <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField control={markRangeForm.control} name="fromVerse"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Verse (Optional)</FormLabel>
-                            <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </fieldset>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+           <DialogHeader>
+              <DialogTitle className="text-xl">Mark Reading Range</DialogTitle>
+              <DialogDescription>
+                Mark all passages within the specified range (inclusive) as completed.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...markRangeForm}>
+              <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRange)} className="space-y-6 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <fieldset className="space-y-4 border p-4 rounded-md">
+                    <legend className="text-sm font-medium px-1">From</legend>
+                    <FormField control={markRangeForm.control} name="fromBook"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Book</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="fromChapter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="fromVerse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </fieldset>
 
-                    <fieldset className="space-y-4 border p-4 rounded-md">
-                      <legend className="text-sm font-medium px-1">To</legend>
-                      <FormField control={markRangeForm.control} name="toBook"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Book</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
-                              <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField control={markRangeForm.control} name="toChapter"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Chapter</FormLabel>
-                            <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField control={markRangeForm.control} name="toVerse"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Verse (Optional)</FormLabel>
-                            <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </fieldset>
-                  </div>
-                  <Button type="submit" className="w-full md:w-auto" disabled={isMarkingRange}>
+                  <fieldset className="space-y-4 border p-4 rounded-md">
+                    <legend className="text-sm font-medium px-1">To</legend>
+                    <FormField control={markRangeForm.control} name="toBook"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Book</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl>
+                            <SelectContent className="max-h-72">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="toChapter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chapter</FormLabel>
+                          <FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField control={markRangeForm.control} name="toVerse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Verse (Optional)</FormLabel>
+                          <FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </fieldset>
+                </div>
+                <FormDescription className="text-xs px-1">
+                  If a verse is not specified for "From", it assumes the beginning of the chapter.
+                  If a verse is not specified for "To", it assumes the end of the chapter.
+                </FormDescription>
+                <DialogFooter className="pt-4">
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button type="submit" disabled={isMarkingRange}>
                     {isMarkingRange ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
                     {isMarkingRange ? 'Updating...' : 'Mark Range as Read'}
                   </Button>
-                  <FormDescription>
-                    Marks all passages within the specified range (inclusive) as completed.
-                    If a verse is not specified for "From", it assumes the beginning of the chapter.
-                    If a verse is not specified for "To", it assumes the end of the chapter.
-                  </FormDescription>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </PopoverContent>
-      </Popover>
+                </DialogFooter>
+              </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
 
 
       <Accordion type="multiple" className="w-full space-y-2">
@@ -383,4 +383,3 @@ export default function BibleChecklistPage() {
   );
 }
 
-    
