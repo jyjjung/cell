@@ -21,7 +21,7 @@ interface UserProgressDisplay {
 }
 
 export default function ProgressOverviewPage() {
-  const { currentUser, loadingAuth } = useAuth(); // Removed isEffectivelyAdmin
+  const { currentUser, loadingAuth } = useAuth();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
@@ -38,7 +38,6 @@ export default function ProgressOverviewPage() {
       setIsPageLoading(true);
       router.push('/login');
     }
-    // Removed the redirect for non-admins
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
   const totalPassagesInPlan = useMemo(() => {
@@ -59,7 +58,7 @@ export default function ProgressOverviewPage() {
       const progressPercentage = totalPassagesInPlan > 0 ? (completedCount / totalPassagesInPlan) * 100 : 0;
       return {
         userId: checklist.userId,
-        userDisplayName: checklist.userDisplayName || checklist.userId,
+        userDisplayName: checklist.userDisplayName || checklist.userId, // Fallback to UID if display name is null
         completedCount,
         progressPercentage,
         totalPassagesInPlan,
@@ -67,7 +66,7 @@ export default function ProgressOverviewPage() {
     }).sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, totalPassagesInPlan]);
 
-  if (!isMounted || loadingAuth || (!currentUser && isMounted)) { // Simplified loading condition
+  if (!isMounted || loadingAuth || (!currentUser && isMounted)) {
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -142,12 +141,6 @@ export default function ProgressOverviewPage() {
                 <TableRow key={progressItem.userId}>
                   <TableCell className="font-medium text-xs truncate max-w-[200px] sm:max-w-xs">
                     {progressItem.userDisplayName}
-                    {/* Optionally show UID for admins if display name is different or for clarity */}
-                    {currentUser?.email === 'yejoon7154@gmail.com' && progressItem.userDisplayName !== progressItem.userId && (
-                      <span className="block text-muted-foreground/70 text-[10px] overflow-hidden text-ellipsis whitespace-nowrap">
-                        UID: {progressItem.userId}
-                      </span>
-                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
