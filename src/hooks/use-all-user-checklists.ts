@@ -10,12 +10,13 @@ import { useAuth } from '@/contexts/auth-context';
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
 export function useAllUserChecklists() {
-  const { currentUser } = useAuth();
+  const { currentUser, isEffectivelyAdmin } = useAuth(); // Added isEffectivelyAdmin
   const [allChecklists, setAllChecklists] = useState<UserBibleChecklist[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) {
+    // Only fetch if the current user is an admin
+    if (!isEffectivelyAdmin) {
       setAllChecklists([]);
       setLoading(false);
       return;
@@ -24,7 +25,7 @@ export function useAllUserChecklists() {
     setLoading(true);
     const checklistsQuery = query(
       collection(db, USER_BIBLE_CHECKLISTS_COLLECTION),
-      orderBy('updatedAt', 'desc') // Optional: order by most recently updated
+      orderBy('updatedAt', 'desc') 
     );
 
     const unsubscribe = onSnapshot(checklistsQuery, (querySnapshot) => {
@@ -32,7 +33,8 @@ export function useAllUserChecklists() {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         checklistsData.push({
-          userId: doc.id, // Assuming doc.id is the userId
+          userId: doc.id,
+          userDisplayName: data.userDisplayName || null, // Read displayName
           completedPassages: data.completedPassages || [],
           updatedAt: data.updatedAt as Timestamp,
         } as UserBibleChecklist);
@@ -40,14 +42,14 @@ export function useAllUserChecklists() {
       setAllChecklists(checklistsData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching all user Bible checklists:", error);
-      // Potentially a permissions error if rules are not set correctly
+      console.error("[useAllUserChecklists] Error fetching all user Bible checklists:", error);
+      console.log("[useAllUserChecklists] Current user UID:", currentUser?.uid, "Is Admin:", isEffectivelyAdmin);
       setAllChecklists([]);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, isEffectivelyAdmin]); // Depend on isEffectivelyAdmin
 
   return { allChecklists, loading };
 }

@@ -31,6 +31,7 @@ export interface StructuredPassage {
 export interface DailyReading {
   date: string; // YYYY-MM-DD, not a Sunday
   passages: StructuredPassage[]; // Array of scripture references
+  originalDateKey?: string; // Added to ensure stable key for UI elements if date string format changes
 }
 
 export type PlanType = 'canonical' | 'custom';
@@ -47,9 +48,9 @@ export interface BibleReadingPlan {
 
 // Extended user type
 export interface AppUser extends FirebaseUser {
-  displayName: string | null; // Already part of FirebaseUser, but we'll manage it via Firestore
+  displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
-  // We can add other custom profile fields here later
+  // photoURL is already part of FirebaseUser
 }
 
 
@@ -58,6 +59,7 @@ export interface UserProfileData {
   email: string | null;
   displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
+  photoURL?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -65,7 +67,7 @@ export interface UserProfileData {
 
 export interface UserBibleChecklist {
   userId: string; // Matches Firebase Auth UID
+  userDisplayName: string | null; // To store the user's display name
   completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
 }
-
