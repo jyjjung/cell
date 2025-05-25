@@ -18,9 +18,17 @@ export interface AppEvent {
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
 
+export interface StructuredPassage {
+  book: string; // Full book name, e.g., "Genesis"
+  chapter: number;
+  startVerse?: number; // Optional, implies from verse 1 if not present
+  endVerse?: number | 'end'; // Optional, implies to end of chapter if not present or 'end'
+  displayText: string; // User-friendly display string, e.g., "Genesis 1", "Exodus 1:1-15"
+}
+
 export interface DailyReading {
   date: string; // YYYY-MM-DD, not a Sunday
-  passages: string[]; // Array of scripture references, e.g., ["Genesis 1", "Genesis 2", "Exodus 1:1-15"]
+  passages: StructuredPassage[]; // Array of scripture references
 }
 
 export type PlanType = 'canonical' | 'custom';
@@ -37,6 +45,6 @@ export interface BibleReadingPlan {
 
 export interface UserBibleChecklist {
   userId: string;
-  completedPassages: string[];
+  completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
 }

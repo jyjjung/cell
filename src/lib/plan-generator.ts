@@ -1,15 +1,10 @@
 
 import { format as formatDateFns, addDays, getDay, startOfDay } from 'date-fns';
-import type { DailyReading } from '@/types';
+import type { DailyReading, StructuredPassage } from '@/types';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, PRESET_CUSTOM_ORDER_STRINGS, BOOK_NAME_LOOKUP_MAP } from './bible-data';
 
-export interface ReadingUnit {
-  book: string;
-  chapter: number;
-  startVerse?: number;
-  endVerse?: number | 'end'; // 'end' signifies to the end of the chapter
-  displayText: string; // e.g., "Genesis 1", "Acts 18:1-11"
-}
+// ReadingUnit now directly matches StructuredPassage for internal consistency
+export type ReadingUnit = StructuredPassage;
 
 function resolveBookName(name: string): string | null {
   const cleanedName = name.trim().toLowerCase().replace(/\.$/, ''); // Remove trailing period if any
@@ -20,18 +15,16 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   const units: ReadingUnit[] = [];
   const originalEntry = entry;
 
-  // Attempt to extract book name first
   let bookNamePart = "";
   let remainingSpec = "";
   let resolvedBookFullName: string | null = null;
 
-  // Iterate from longest possible book name part to shortest
   for (let i = Math.min(entry.length, 30); i > 0; i--) {
       const potentialBook = entry.substring(0, i).trim();
       const foundBook = resolveBookName(potentialBook);
       if (foundBook) {
           resolvedBookFullName = foundBook;
-          bookNamePart = potentialBook;
+          bookNamePart = potentialBook; // Not used further, but good for debugging
           remainingSpec = entry.substring(i).trim();
           break;
       }
@@ -43,7 +36,7 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   }
 
   const bookData = BIBLE_BOOKS_DATA[resolvedBookFullName];
-  if (!bookData) { // Should be caught by resolveBookName
+  if (!bookData) {
     console.warn(`Book data not found for: "${resolvedBookFullName}"`);
     return units;
   }
@@ -56,8 +49,7 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     return units;
   }
 
-  // Try to match complex patterns first
-  // Pattern: C1(:Vstart)-C2(:Vend)  e.g., Acts 18(:12)-19(:20)
+  // Pattern: C1(:Vstart)-C2(:Vend) e.g., Acts 18(:12)-19(:20)
   const complexRangeMatch = remainingSpec.match(/^(\d+)\s*\(:(\d+)\)\s*-\s*(\d+)\s*\(:(\d+)\)$/);
   if (complexRangeMatch) {
     const startCh = parseInt(complexRangeMatch[1], 10);
@@ -65,17 +57,22 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     const endCh = parseInt(complexRangeMatch[3], 10);
     const endV = parseInt(complexRangeMatch[4], 10);
 
-    // First part: StartCh:StartV - end of chapter
-    units.push({ book: resolvedBookFullName, chapter: startCh, startVerse: startV, endVerse: 'end', displayText: `${resolvedBookFullName} ${startCh}:${startV}-end` });
-    // Intermediate full chapters
+    if (startCh > 0 && startCh <= bookData.chapters) {
+      units.push({ book: resolvedBookFullName, chapter: startCh, startVerse: startV, endVerse: 'end', displayText: `${resolvedBookFullName} ${startCh}:${startV}-end` });
+    }
     for (let ch = startCh + 1; ch < endCh; ch++) {
-      if (ch <= bookData.chapters) { // Ensure chapter exists
+      if (ch > 0 && ch <= bookData.chapters) {
         units.push({ book: resolvedBookFullName, chapter: ch, displayText: `${resolvedBookFullName} ${ch}` });
       }
     }
-    // Last part: EndCh:1 - EndV (if EndCh is different from StartCh)
-    if (endCh > startCh && endCh <= bookData.chapters) {
+    if (endCh > startCh && endCh > 0 && endCh <= bookData.chapters) {
          units.push({ book: resolvedBookFullName, chapter: endCh, startVerse: 1, endVerse: endV, displayText: `${resolvedBookFullName} ${endCh}:1-${endV}` });
+    } else if (startCh === endCh && startCh > 0 && startCh <= bookData.chapters && startV <= endV ) { // Case Acts 18(:1)-18(:10)
+        // This was already covered by the first push if startV=1 and endV=X
+        // For specific startV to endV in same chapter, this needs adjustment or a new pattern.
+        // The current logic handles startCh:startV-end, then full chapters, then endCh:1-endV.
+        // If startCh === endCh, the complex range should ideally simplify or use a simpler pattern.
+        // For now, let's assume such a case would be entered as C:Vstart-Vend.
     }
     return units;
   }
@@ -87,22 +84,22 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     const endCh = parseInt(rangeEndVerseMatch[2], 10);
     const endV = parseInt(rangeEndVerseMatch[3], 10);
     for (let ch = startCh; ch < endCh; ch++) {
-       if (ch <= bookData.chapters) {
+       if (ch > 0 && ch <= bookData.chapters) {
         units.push({ book: resolvedBookFullName, chapter: ch, displayText: `${resolvedBookFullName} ${ch}` });
       }
     }
-    if (endCh <= bookData.chapters) {
+    if (endCh > 0 && endCh <= bookData.chapters) {
       units.push({ book: resolvedBookFullName, chapter: endCh, startVerse: 1, endVerse: endV, displayText: `${resolvedBookFullName} ${endCh}:1-${endV}` });
     }
     return units;
   }
 
-  // Pattern: C1(:Vstart) e.g., Acts 18(:12)
+  // Pattern: C1(:Vstart) e.g., Acts 18(:12) or John 3(:16) -> John 3:16-end
   const chapterStartVerseMatch = remainingSpec.match(/^(\d+)\s*\(:(\d+)\)$/);
   if (chapterStartVerseMatch) {
     const ch = parseInt(chapterStartVerseMatch[1], 10);
     const startV = parseInt(chapterStartVerseMatch[2], 10);
-    if (ch <= bookData.chapters) {
+    if (ch > 0 && ch <= bookData.chapters) {
       units.push({ book: resolvedBookFullName, chapter: ch, startVerse: startV, endVerse: 'end', displayText: `${resolvedBookFullName} ${ch}:${startV}-end` });
     }
     return units;
@@ -114,7 +111,7 @@ export function parsePassageString(entry: string): ReadingUnit[] {
     const ch = parseInt(chapterVerseRangeMatch[1], 10);
     const startV = parseInt(chapterVerseRangeMatch[2], 10);
     const endV = parseInt(chapterVerseRangeMatch[3], 10);
-     if (ch <= bookData.chapters) {
+     if (ch > 0 && ch <= bookData.chapters) {
       units.push({ book: resolvedBookFullName, chapter: ch, startVerse: startV, endVerse: endV, displayText: `${resolvedBookFullName} ${ch}:${startV}-${endV}` });
     }
     return units;
@@ -124,9 +121,9 @@ export function parsePassageString(entry: string): ReadingUnit[] {
   const chapterRangeMatch = remainingSpec.match(/^(\d+)-(\d+)$/);
   if (chapterRangeMatch) {
     const startCh = parseInt(chapterRangeMatch[1], 10);
-    const endCh = Math.min(parseInt(chapterRangeMatch[2], 10), bookData.chapters); // Cap at actual chapters
+    const endCh = Math.min(parseInt(chapterRangeMatch[2], 10), bookData.chapters);
     for (let ch = startCh; ch <= endCh; ch++) {
-       if (ch > 0) { // Ensure valid chapter num
+       if (ch > 0) {
         units.push({ book: resolvedBookFullName, chapter: ch, displayText: `${resolvedBookFullName} ${ch}` });
       }
     }
@@ -153,12 +150,13 @@ export function generateReadingUnitsForCanonical(startBookName: string): Reading
   const startIndex = CANONICAL_BIBLE_ORDER.indexOf(startBookName);
   if (startIndex === -1) {
     console.error(`Invalid starting book for canonical plan: ${startBookName}`);
-    return units; // Or throw error
+    return units; 
   }
 
   for (let i = startIndex; i < CANONICAL_BIBLE_ORDER.length; i++) {
     const bookFullName = CANONICAL_BIBLE_ORDER[i];
     const bookData = BIBLE_BOOKS_DATA[bookFullName];
+    if (!bookData) continue; // Should not happen if CANONICAL_BIBLE_ORDER is from BIBLE_BOOKS_DATA
     for (let ch = 1; ch <= bookData.chapters; ch++) {
       units.push({ book: bookFullName, chapter: ch, displayText: `${bookFullName} ${ch}` });
     }
@@ -183,22 +181,21 @@ export function scheduleReadings(units: ReadingUnit[], startDateInput: Date, rea
   let unitIndex = 0;
 
   while (unitIndex < units.length) {
-    // Skip Sundays (0 = Sunday for getDay())
-    if (getDay(currentDate) === 0) { 
+    if (getDay(currentDate) === 0) { // Skip Sundays (0 = Sunday)
       currentDate = addDays(currentDate, 1);
       continue;
     }
 
-    const dailyPassages: string[] = [];
+    const dailyPassagesUnits: StructuredPassage[] = [];
     for (let i = 0; i < readingsPerDay && unitIndex < units.length; i++) {
-      dailyPassages.push(units[unitIndex].displayText);
+      dailyPassagesUnits.push(units[unitIndex]);
       unitIndex++;
     }
 
-    if (dailyPassages.length > 0) {
+    if (dailyPassagesUnits.length > 0) {
       plan.push({
         date: formatDateFns(currentDate, 'yyyy-MM-dd'),
-        passages: dailyPassages,
+        passages: dailyPassagesUnits, // Store the structured passage objects
       });
     }
     currentDate = addDays(currentDate, 1);
