@@ -37,7 +37,7 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}
     >
-      {children} {/* This should be the single <div> passed from BibleChecklistPage */}
+      {children} {/* This should be the single <div> passed from BibleChecklistPage when asChild is true */}
       {/* Render default chevron ONLY if not asChild. 
           If asChild, the child component is responsible for its own chevron. */}
       {!asChild && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />}
