@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format, parseISO, startOfDay } from 'date-fns';
 import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// Removed: import { usePageLoading } from '@/contexts/page-loading-context';
+import BackToTopButton from '@/components/ui/back-to-top-button';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -20,11 +20,9 @@ export default function FullBiblePlanPage() {
   const [displayedReadings, setDisplayedReadings] = useState<DailyReading[]>([]);
   const [isFiltering, setIsFiltering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  // Removed: const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
-    // Removed: setIsPageLoading(false); // Global loader handled by RootLayout
   }, []);
 
   useEffect(() => {
@@ -39,7 +37,7 @@ export default function FullBiblePlanPage() {
       setDisplayedReadings(
         plan.dailyReadings.filter(reading => {
           try {
-              const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
+              const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure UTC interpretation for comparison
               return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
           } catch (e) {
               console.error("Error parsing reading date for filtering:", reading.date, e);
@@ -49,7 +47,16 @@ export default function FullBiblePlanPage() {
       );
       setIsFiltering(true);
     } else {
-      setDisplayedReadings(plan.dailyReadings);
+      // Sort all readings by date when not filtering
+      const sortedReadings = [...plan.dailyReadings].sort((a, b) => {
+        try {
+            return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+        } catch(e) {
+            console.error("[FullBiblePlanPage] Error parsing dates for sorting all readings:", a.date, b.date, e);
+            return 0;
+        }
+      });
+      setDisplayedReadings(sortedReadings);
       setIsFiltering(false);
     }
   }, [plan, selectedDate, isMounted]);
@@ -81,7 +88,7 @@ export default function FullBiblePlanPage() {
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
           <ListChecks className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+          <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader>
@@ -104,7 +111,7 @@ export default function FullBiblePlanPage() {
     <div className="space-y-8">
       <div className="flex items-center space-x-3 mb-6">
         <ListChecks className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+        <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
       </div>
 
       <div className="mb-6 p-4 border rounded-lg bg-card shadow-md">
@@ -149,34 +156,44 @@ export default function FullBiblePlanPage() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-22rem)] rounded-md">
-          <div className="p-1 md:p-4 space-y-4">
-            {displayedReadings.map((reading, index) => (
-              <Card key={index} className="w-full shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="p-4 md:p-6 pb-2">
-                  <CardTitle className="text-xl">
-                    {format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6 pt-0">
-                  {reading.passages.length > 0 ? (
-                    <ul className="space-y-1.5">
-                      {reading.passages.map((passage, pIndex) => (
+        <div className="p-1 md:p-4 space-y-4">
+          {displayedReadings.map((reading, index) => (
+            <Card key={index} className="w-full shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="p-4 md:p-6 pb-2">
+                <CardTitle className="text-xl">
+                  {format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6 pt-0">
+                {reading.passages.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {reading.passages.map((passage, pIndex) => {
+                      // Ensure passage.displayText is used, not the passage object itself.
+                      const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '')
+                        ? passage.displayText
+                        : "Error: Passage text data is missing or invalid. Please regenerate plan.";
+                      
+                      if (passageTextToDisplay.startsWith("Error:") && passage) {
+                        console.warn(`[FullBiblePlanPage] Rendering fallback for passage. Original passage data:`, JSON.parse(JSON.stringify(passage)), `Reading date: ${reading.date}`);
+                      }
+                      
+                      return (
                         <li key={pIndex} className="p-2.5 bg-background/60 border rounded-md text-sm">
                           <BookOpenCheck className="inline-block h-4 w-4 mr-2 text-muted-foreground" />
-                          {passage}
+                          {passageTextToDisplay}
                         </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No passages assigned for this day.</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
+      <BackToTopButton />
     </div>
   );
 }
