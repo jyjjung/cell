@@ -28,7 +28,7 @@ const AccordionTrigger = React.forwardRef<
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       ref={ref}
-      asChild={asChild}
+      asChild={asChild} // Pass asChild to the Radix primitive
       className={cn(
         // Apply default trigger styling only if not using asChild
         !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
@@ -37,7 +37,7 @@ const AccordionTrigger = React.forwardRef<
       )}
       {...props}
     >
-      {children}
+      {children} {/* This should be the single <div> passed from BibleChecklistPage when asChild is true */}
       {/* Render default chevron ONLY if not asChild. 
           If asChild, the child component is responsible for its own chevron. */}
       {!asChild && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />}
@@ -62,4 +62,3 @@ const AccordionContent = React.forwardRef<
 AccordionContent.displayName = AccordionPrimitive.Content.displayName
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
-
