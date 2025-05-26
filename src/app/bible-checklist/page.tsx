@@ -17,11 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2 } from 'lucide-react';
+import { format, parseISO, isValid, startOfDay } from 'date-fns';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -48,6 +50,7 @@ export default function BibleChecklistPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -68,16 +71,29 @@ export default function BibleChecklistPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
-  const sortedDailyReadings = useMemo(() => {
+  const sortedAndFilteredDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
-    return [...plan.dailyReadings].sort((a, b) => {
+    
+    let filteredReadings = [...plan.dailyReadings].sort((a, b) => {
       try {
         return parseISO(a.date).getTime() - parseISO(b.date).getTime();
-      } catch (e) {
-        return 0;
-      }
+      } catch (e) { return 0; }
     });
-  }, [plan]);
+
+    if (selectedDate) {
+      const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
+      filteredReadings = filteredReadings.filter(reading => {
+         try {
+            const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
+            return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
+          } catch (e) { 
+            console.error(`[BibleChecklistPage] Error parsing date for filtering: ${reading.date}`, e);
+            return false; 
+          }
+      });
+    }
+    return filteredReadings;
+  }, [plan, selectedDate]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -107,6 +123,7 @@ export default function BibleChecklistPage() {
       const result = await markReadRange(data.fromBook, data.fromChapter, data.fromVerse, data.toBook, data.toChapter, data.toVerse);
       toast({ title: "Checklist Updated", description: `${result?.markedCount || 0} new passage(s) marked as read.` });
       setIsRangeFormOpen(false); 
+      markRangeForm.reset();
     } catch (error: any) {
       toast({ title: "Error Updating Checklist", description: error.message || "Could not mark range.", variant: "destructive" });
     } finally {
@@ -114,6 +131,10 @@ export default function BibleChecklistPage() {
     }
   };
   
+  const handleShowAll = () => {
+    setSelectedDate(undefined);
+  };
+
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
   }
@@ -158,9 +179,36 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
-      {sortedDailyReadings.length > 0 ? (
+      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30"> {/* Header height + border */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn("w-full sm:w-auto justify-start text-left font-normal text-xs py-1.5 h-auto", !selectedDate && "text-muted-foreground")}
+              > <CalendarIcon className="mr-2 h-3 w-3" /> {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date...</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus/>
+            </PopoverContent>
+          </Popover>
+          {selectedDate && (
+            <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto text-xs py-1.5 h-auto">
+              <XCircle className="mr-2 h-3 w-3" /> Show All Readings
+            </Button>
+          )}
+        </div>
+      </div>
+
+
+      {sortedAndFilteredDailyReadings.length === 0 && selectedDate ? (
+        <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for {format(selectedDate, "MMMM d, yyyy")}.</p></CardContent></Card>
+      ) : sortedAndFilteredDailyReadings.length === 0 && !selectedDate ? (
+         <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found in the current plan.</p></CardContent></Card>
+      ) : (
         <div className="space-y-2">
-          {sortedDailyReadings.map((dailyReading) => {
+          {sortedAndFilteredDailyReadings.map((dailyReading) => {
             if (!dailyReading || !dailyReading.date) return null;
             let parsedDayDate: Date | null = null;
             try {
@@ -200,7 +248,7 @@ export default function BibleChecklistPage() {
                         const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
 
                         if(!isPassageValid && passage){
-                             console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Date: ${dateKey}, Index: ${pIndex}. Passage data:`, JSON.parse(JSON.stringify(passage)));
+                             console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Date: ${dateKey}, Index: ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
                         }
 
                         return (
@@ -233,10 +281,9 @@ export default function BibleChecklistPage() {
             );
           })}
         </div>
-      ) : (
-         <Card className="mt-4 shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No daily readings found in the current plan.</p></CardContent></Card>
       )}
       <BackToTopButton />
     </div>
   );
 }
+
