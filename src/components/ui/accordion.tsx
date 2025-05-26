@@ -23,22 +23,19 @@ AccordionItem.displayName = "AccordionItem"
 
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  // Ensure the props allow for asChild
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { asChild?: boolean }
 >(({ className, children, asChild = false, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       ref={ref}
-      asChild={asChild} // This is the key part for 'asChild' functionality
+      asChild={asChild}
       className={cn(
-        // Default styling is applied ONLY if not using asChild
         !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className // The className from props is always applied (Slot will merge if asChild)
+        className
       )}
       {...props}
     >
-      {children} {/* When asChild is true, children should be a single React element */}
-      {/* Conditionally render the default chevron ONLY if not asChild */}
+      {children}
       {!asChild && (
         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
       )}
