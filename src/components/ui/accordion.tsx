@@ -23,24 +23,25 @@ AccordionItem.displayName = "AccordionItem"
 
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
+  // Ensure the props allow for asChild
   React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { asChild?: boolean }
 >(({ className, children, asChild = false, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       ref={ref}
-      asChild={asChild} // Pass asChild to the Radix primitive
+      asChild={asChild} // This is the key part for 'asChild' functionality
       className={cn(
-        // Apply default trigger styling only if not using asChild
+        // Default styling is applied ONLY if not using asChild
         !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        // Always apply the className passed via props. Slot will merge it if asChild is true.
-        className
+        className // The className from props is always applied (Slot will merge if asChild)
       )}
       {...props}
     >
-      {children} {/* This should be the single <div> passed from BibleChecklistPage when asChild is true */}
-      {/* Render default chevron ONLY if not asChild. 
-          If asChild, the child component is responsible for its own chevron. */}
-      {!asChild && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />}
+      {children} {/* When asChild is true, children should be a single React element */}
+      {/* Conditionally render the default chevron ONLY if not asChild */}
+      {!asChild && (
+        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      )}
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
@@ -58,7 +59,6 @@ const AccordionContent = React.forwardRef<
     <div className={cn("pb-4 pt-0", className)}>{children}</div>
   </AccordionPrimitive.Content>
 ))
-
 AccordionContent.displayName = AccordionPrimitive.Content.displayName
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }
