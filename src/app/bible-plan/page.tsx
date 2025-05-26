@@ -5,116 +5,49 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { DailyReading, StructuredPassage } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, startOfDay, getISOWeek, isValid } from 'date-fns';
-import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, ChevronDown } from 'lucide-react';
+import { format, parseISO, startOfDay, isValid } from 'date-fns';
+import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-
-interface GroupedWeekPlan {
-  weekKey: string;
-  weekLabel: string;
-  days: DailyReading[];
-}
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isMounted, setIsMounted] = useState(false);
-  const [openAccordionValue, setOpenAccordionValue] = useState<string | string[] | undefined>(undefined);
-
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const groupReadingsByWeekForPlan = useCallback((dailyReadings: DailyReading[] | undefined): GroupedWeekPlan[] => {
-    if (!dailyReadings || dailyReadings.length === 0) return [];
-    const weeksMap = new Map<string, { days: DailyReading[] }>();
-
-    dailyReadings.forEach(reading => {
-      if (!reading || !reading.date) return;
-       try {
-        const dateObj = parseISO(reading.date);
-        if (!isValid(dateObj)) throw new Error("Invalid date");
-        const weekNumber = getISOWeek(dateObj);
-        const year = dateObj.getUTCFullYear();
-        const weekKey = `${year}-W${weekNumber}`;
-
-        if (!weeksMap.has(weekKey)) {
-          weeksMap.set(weekKey, { days: [] });
-        }
-        weeksMap.get(weekKey)!.days.push({ ...reading, passages: reading.passages.map(p => ({ ...p })) });
-      } catch (e) {
-        console.error(`[FullBiblePlanPage] Error processing reading for date ${reading.date} in groupReadings:`, e);
-      }
-    });
-    
-    const groupedWeeks: GroupedWeekPlan[] = [];
-    weeksMap.forEach((data, weekKey) => {
-      data.days.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-      if (data.days.length > 0) {
-        const firstDayOfWeek = parseISO(data.days[0].date);
-        const weekLabel = `Week of ${format(firstDayOfWeek, "MMM d, yyyy")} (W${getISOWeek(firstDayOfWeek)})`;
-        groupedWeeks.push({ weekKey, weekLabel, days: data.days });
-      }
-    });
-    return groupedWeeks.sort((a,b) => parseISO(a.days[0].date).getTime() - parseISO(b.days[0].date).getTime());
-  }, []);
-
-  const displayedWeeklyPlan = useMemo(() => {
+  const sortedAndFilteredDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
     
-    let filteredDailyReadings = plan.dailyReadings;
+    let filteredReadings = [...plan.dailyReadings].sort((a, b) => {
+      try {
+        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+      } catch (e) { return 0; }
+    });
+
     if (selectedDate) {
       const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
-      filteredDailyReadings = plan.dailyReadings.filter(reading => {
+      filteredReadings = filteredReadings.filter(reading => {
          try {
-            const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); 
+            const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure time part for accurate comparison with startOfDay
             return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
-          } catch (e) { return false; }
+          } catch (e) { 
+            console.error(`[FullBiblePlanPage] Error parsing date for filtering: ${reading.date}`, e);
+            return false; 
+          }
       });
     }
-    return groupReadingsByWeekForPlan(filteredDailyReadings);
-  }, [plan, selectedDate, groupReadingsByWeekForPlan]);
-
-  useEffect(() => {
-    if (selectedDate && displayedWeeklyPlan.length > 0) {
-      const dateObj = startOfDay(selectedDate);
-      const weekNumber = getISOWeek(dateObj);
-      const year = dateObj.getUTCFullYear();
-      const weekKeyToOpen = `${year}-W${weekNumber}`;
-      
-      // Check if this weekKey exists in the currently displayed (potentially filtered) plan
-      const weekExistsInDisplay = displayedWeeklyPlan.some(week => week.weekKey === weekKeyToOpen);
-      if(weekExistsInDisplay){
-        setOpenAccordionValue(weekKeyToOpen);
-      } else {
-        // If the selected date's week isn't in the display (e.g. no readings for that day),
-        // try to find its week in the full, unfiltered plan to open that.
-        const fullPlanWeeks = groupReadingsByWeekForPlan(plan?.dailyReadings);
-        const actualWeekToOpen = fullPlanWeeks.find(week => week.weekKey === weekKeyToOpen);
-        if (actualWeekToOpen) {
-           // This means the filter is active and hiding the week,
-           // so we should clear the filter to show all and open the correct week.
-           // This is tricky. For now, just try to open if visible.
-           // A better UX might clear filter and open, but that's more state.
-        } else {
-           setOpenAccordionValue(undefined); // Clear if selected date's week doesn't exist
-        }
-      }
-    } else if (!selectedDate) {
-      setOpenAccordionValue(undefined); // Collapse all if filter is cleared
-    }
-  }, [selectedDate, displayedWeeklyPlan, plan?.dailyReadings, groupReadingsByWeekForPlan]);
-
+    return filteredReadings;
+  }, [plan, selectedDate]);
 
   const handleShowAll = () => {
     setSelectedDate(undefined);
-    setOpenAccordionValue(undefined);
   };
 
   if (!isMounted) {
@@ -137,16 +70,16 @@ export default function FullBiblePlanPage() {
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
-      <div className="space-y-8">
-        <div className="flex items-center space-x-3 mb-6">
-          <ListChecks className="h-8 w-8 text-primary" />
+      <div className="space-y-4">
+        <div className="flex items-center space-x-3 mb-4">
+          <ListChecks className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Info className="h-6 w-6 text-destructive" />
-              <CardTitle className="text-2xl">No Plan Available</CardTitle>
+              <CardTitle className="text-xl">No Plan Available</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -155,13 +88,11 @@ export default function FullBiblePlanPage() {
             </p>
           </CardContent>
         </Card>
+        <BackToTopButton />
       </div>
     );
   }
   
-  // Determine which weeks to render based on filter
-  const weeksToRender = selectedDate ? displayedWeeklyPlan : groupReadingsByWeekForPlan(plan.dailyReadings);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-3 mb-4">
@@ -169,8 +100,8 @@ export default function FullBiblePlanPage() {
         <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
       </div>
 
-      <div className="mb-4 p-4 border rounded-lg bg-card shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30"> {/* Header height + border */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -191,54 +122,48 @@ export default function FullBiblePlanPage() {
         </div>
       </div>
 
-      {weeksToRender.length === 0 && selectedDate ? (
+      {sortedAndFilteredDailyReadings.length === 0 && selectedDate ? (
         <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for {format(selectedDate, "MMMM d, yyyy")}.</p></CardContent></Card>
-      ) : weeksToRender.length === 0 && !selectedDate ? (
+      ) : sortedAndFilteredDailyReadings.length === 0 && !selectedDate ? (
          <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found in the current plan.</p></CardContent></Card>
       ) : (
-        <Accordion type="multiple" value={openAccordionValue ? [openAccordionValue].flat() : undefined} onValueChange={setOpenAccordionValue} className="w-full space-y-2">
-          {weeksToRender.map((week) => (
-            <AccordionItem key={week.weekKey} value={week.weekKey} className="border bg-card/80 rounded-md shadow-sm">
-              <AccordionTrigger asChild className="p-2 hover:bg-muted/50 rounded-t-md transition-colors">
-                <div className="flex items-center justify-between w-full cursor-pointer">
-                  <span className="text-sm font-semibold">{week.weekLabel}</span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-0">
-                <div className="divide-y divide-border">
-                  {week.days.map((reading) => {
-                     let parsedDayDate: Date | null = null;
-                      try {
-                        parsedDayDate = parseISO(reading.date);
-                        if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
-                      } catch(e) {
-                        return <div key={`error-date-${reading.date}`} className="p-2 text-destructive text-xs">Error: Invalid date.</div>;
-                      }
-                    return (
-                      <div key={reading.date} className="p-2.5 space-y-1.5 bg-background/30 first:rounded-t-none last:rounded-b-md">
-                        <h4 className="text-xs font-medium">{format(parsedDayDate, "EEE, MMM d")}</h4>
-                        {reading.passages.length > 0 ? (
-                          <ul className="space-y-1.5">
-                            {reading.passages.map((passage, pIndex) => {
-                              const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '') ? passage.displayText : "Error: Passage text data is missing.";
-                              return (
-                                <li key={pIndex} className="p-1.5 bg-card/50 border rounded-md text-xs flex items-center">
-                                  <BookOpenCheck className="inline-block h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                  <span className={cn(passageTextToDisplay.startsWith("Error:") && "text-destructive italic")}>{passageTextToDisplay}</span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : (<p className="text-xs text-muted-foreground">No passages assigned.</p>)}
-                      </div>
-                    );
-                  })}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <div className="space-y-2">
+          {sortedAndFilteredDailyReadings.map((reading) => {
+             let parsedDayDate: Date | null = null;
+              try {
+                parsedDayDate = parseISO(reading.date);
+                if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
+              } catch(e) {
+                console.error(`[FullBiblePlanPage] Error parsing date for display: ${reading.date}`, e);
+                return <Card key={`error-date-${reading.date}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
+              }
+            return (
+              <Card key={reading.date} className="bg-card/80 rounded-md shadow-sm">
+                <CardHeader className="p-2 border-b">
+                  <h3 className="text-sm font-semibold">{format(parsedDayDate, "EEE, MMM d, yyyy")}</h3>
+                </CardHeader>
+                <CardContent className="p-2 space-y-1.5">
+                  {reading.passages.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {reading.passages.map((passage, pIndex) => {
+                        const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '') ? passage.displayText : "Error: Passage text data is missing.";
+                        if (!passage || typeof passage.displayText !== 'string' || passage.displayText.trim() === '') {
+                           console.warn(`[FullBiblePlanPage] RENDERING: Passage displayText is missing or invalid for date ${reading.date}, index ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined");
+                        }
+                        return (
+                          <li key={pIndex} className="p-1.5 bg-background/50 border rounded-md text-xs flex items-center">
+                            <BookOpenCheck className="inline-block h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                            <span className={cn(passageTextToDisplay.startsWith("Error:") && "text-destructive italic")}>{passageTextToDisplay}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (<p className="text-xs text-muted-foreground">No passages assigned.</p>)}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
       <BackToTopButton />
     </div>
