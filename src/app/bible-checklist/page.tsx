@@ -71,18 +71,19 @@ export default function BibleChecklistPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
-  const sortedAndFilteredDailyReadings = useMemo(() => {
+  const sortedDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
-    
-    let filteredReadings = [...plan.dailyReadings].sort((a, b) => {
+    return [...plan.dailyReadings].sort((a, b) => {
       try {
         return parseISO(a.date).getTime() - parseISO(b.date).getTime();
       } catch (e) { return 0; }
     });
-
+  }, [plan]);
+  
+  const sortedAndFilteredDailyReadings = useMemo(() => {
     if (selectedDate) {
       const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
-      filteredReadings = filteredReadings.filter(reading => {
+      return sortedDailyReadings.filter(reading => {
          try {
             const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
             return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
@@ -92,8 +93,8 @@ export default function BibleChecklistPage() {
           }
       });
     }
-    return filteredReadings;
-  }, [plan, selectedDate]);
+    return sortedDailyReadings;
+  }, [sortedDailyReadings, selectedDate]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
