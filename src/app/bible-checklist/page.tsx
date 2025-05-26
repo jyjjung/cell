@@ -17,12 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+// Removed Accordion imports
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid } from 'date-fns';
-import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, ChevronDown, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookOpenText, CheckSquare, Edit, CheckCircle2 } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -71,15 +71,18 @@ export default function BibleChecklistPage() {
   
   const sortedDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
+    // Ensure a stable sort by explicitly handling potential invalid dates within the sort function.
     return [...plan.dailyReadings].sort((a, b) => {
         try {
             const dateA = parseISO(a.date);
             const dateB = parseISO(b.date);
-            if (!isValid(dateA) || !isValid(dateB)) return 0;
+            if (!isValid(dateA) && !isValid(dateB)) return 0; // Both invalid, treat as equal
+            if (!isValid(dateA)) return 1; // A invalid, B valid, B comes first
+            if (!isValid(dateB)) return -1; // B invalid, A valid, A comes first
             return dateA.getTime() - dateB.getTime();
         } catch (e) {
             console.warn(`[BibleChecklistPage] Error sorting daily readings: Date A: ${a?.date}, Date B: ${b?.date}`, e);
-            return 0;
+            return 0; // Treat as equal on error
         }
     });
   }, [plan]);
@@ -104,7 +107,7 @@ export default function BibleChecklistPage() {
     if (!toBookMeta || data.toChapter > toBookMeta.chapters) {
         markRangeForm.setError("toChapter", { type: "manual", message: `Max chapter for ${data.toBook} is ${toBookMeta.chapters}.`}); return;
     }
-    if (fromBookMeta.order > toBookMeta.order || (fromBookMeta.order === toBookMeta.order && data.fromChapter > data.toChapter) || (fromBookMeta.order === toBookMeta.order && data.fromChapter === toBookMeta.chapter && (data.fromVerse || 1) > (data.toVerse || 0))) {
+    if (fromBookMeta.order > toBookMeta.order || (fromBookMeta.order === toBookMeta.order && data.fromChapter > data.toChapter) || (fromBookMeta.order === toBookMeta.order && data.fromChapter === data.toChapter && (data.fromVerse || 1) > (data.toVerse || 0))) {
         toast({ title: "Invalid Range", description: "The 'From' point cannot be after the 'To' point.", variant: "destructive"}); return;
     }
     setIsMarkingRange(true);
@@ -117,27 +120,6 @@ export default function BibleChecklistPage() {
     } finally {
       setIsMarkingRange(false);
     }
-  };
-
-  const handleToggleMultiplePassages = (passageTexts: string[], markAsComplete: boolean) => {
-    if (passageTexts.length === 0) {
-      toast({title: "No Passages", description: "No passages to mark for this selection.", variant: "default"});
-      return;
-    }
-    markMultiplePassages(passageTexts, markAsComplete)
-      .then(() => {
-        toast({
-          title: "Checklist Updated",
-          description: `Marked ${passageTexts.length} passage(s) as ${markAsComplete ? 'complete' : 'incomplete'}.`,
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: "Update Failed",
-          description: `Could not update checklist: ${error.message}`,
-          variant: "destructive",
-        });
-      });
   };
   
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
@@ -184,7 +166,7 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
-      <Accordion type="multiple" className="w-full space-y-2">
+      <div className="space-y-4">
         {sortedDailyReadings.map((dailyReading) => {
           if (!dailyReading || !dailyReading.date) return null;
           
@@ -199,32 +181,17 @@ export default function BibleChecklistPage() {
 
           const dateKey = dailyReading.originalDateKey || dailyReading.date;
           const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
-          const dayPassageTexts = allPassagesInDayObjects.map(p => p.displayText);
-          const isDayComplete = dayPassageTexts.length > 0 && dayPassageTexts.every(text => completedPassages.includes(text));
-          const dayCheckboxId = `day-master-${dateKey}`;
           
           return (
-            <AccordionItem key={dateKey} value={dateKey} className="border bg-card/80 rounded-md shadow-sm hover:shadow-md transition-shadow">
-              <AccordionTrigger asChild className="p-2.5 hover:no-underline">
-                <div className="flex items-center justify-between w-full cursor-pointer">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                        id={dayCheckboxId}
-                        checked={isDayComplete}
-                        onCheckedChange={(checked) => handleToggleMultiplePassages(dayPassageTexts, Boolean(checked))}
-                        onClick={(e) => e.stopPropagation()} 
-                        aria-label={`Mark all passages for ${format(parsedDayDate, "MMM d")} as complete`}
-                        className="h-4 w-4"
-                      />
-                    <Label htmlFor={dayCheckboxId} onClick={(e) => e.stopPropagation()} className="text-sm font-semibold cursor-pointer flex items-center">
-                      {isDayComplete && <CheckCircle2 className="h-4 w-4 text-green-500 mr-1.5" />}
-                      {format(parsedDayDate, "EEE, MMM d, yyyy")}
-                    </Label>
-                  </div>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 accordion-chevron" />
+            <Card key={dateKey} className="bg-card/80 shadow-sm">
+              <CardHeader className="p-2.5 border-b">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-sm font-semibold flex items-center">
+                    {format(parsedDayDate, "EEE, MMM d, yyyy")}
+                  </h3>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-2 px-2.5 pt-1 space-y-2">
+              </CardHeader>
+              <CardContent className="p-2.5 space-y-1.5">
                   {(allPassagesInDayObjects.length > 0) ? (
                     <ul className="space-y-1 pl-0.5">
                       {allPassagesInDayObjects.map((passage, pIndex) => {
@@ -272,14 +239,12 @@ export default function BibleChecklistPage() {
                       })}
                     </ul>
                   ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
-              </AccordionContent>
-            </AccordionItem>
+              </CardContent>
+            </Card>
           );
         })}
-      </Accordion>
+      </div>
       <BackToTopButton />
     </div>
   );
 }
-
-      
