@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { format, parseISO, isToday } from 'date-fns';
-import { BookOpenCheck, CalendarX, CheckSquare, CheckCircle2 } from 'lucide-react'; // Added CheckCircle2
+import { BookOpenCheck, CalendarX, CheckSquare, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,7 @@ interface BiblePlanDisplayProps {
   plan: BibleReadingPlan | null;
   showPlanDetails?: boolean;
   hideTitle?: boolean;
-  currentUser?: any;
+  currentUser?: any; // Consider using AppUser type here
   completedPassages?: string[];
   togglePassageCompletion?: (displayText: string) => void;
   onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void;
@@ -43,7 +43,6 @@ export default function BiblePlanDisplay({
       const foundReading = plan.dailyReadings.find(reading => {
         try {
           if (!reading || !reading.date) return false;
-          // Ensure date is parsed as local time, assuming YYYY-MM-DD is local
           const readingDate = parseISO(reading.date); 
           return isToday(readingDate);
         } catch (e) {
@@ -59,26 +58,43 @@ export default function BiblePlanDisplay({
 
   const showIndividualCheckboxes = !!currentUser && !!togglePassageCompletion;
 
+  const validPassagesForToday = useMemo(() => {
+    return todaysReading?.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
+  }, [todaysReading]);
+
   const isAllTodaysPassagesComplete = useMemo(() => {
     if (!allTodaysPassageTexts || allTodaysPassageTexts.length === 0) return false;
-    if (allTodaysPassageTexts.some(text => !text || text.startsWith("Error:"))) return false; // Don't count error passages
-    return allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:")).every(text => completedPassages.includes(text));
+    // Ensure we only consider valid passages for completion status
+    const validTextsFromProp = allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:"));
+    if (validTextsFromProp.length === 0) return false; // If no valid passages in prop, can't be complete
+    return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allTodaysPassageTexts, completedPassages]);
 
   const handleMasterCheckboxChange = (checked: boolean) => {
     if (onToggleAllToday && allTodaysPassageTexts.length > 0) {
-      const validPassageTexts = allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:"));
-      if (validPassageTexts.length > 0) {
-        onToggleAllToday(validPassageTexts, checked);
+      const validPassageTextsToToggle = allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:"));
+      if (validPassageTextsToToggle.length > 0) {
+        onToggleAllToday(validPassageTextsToToggle, checked);
       }
     }
   };
+  
+  let parsedTodaysDate: Date | null = null;
+  if (todaysReading?.date) {
+    try {
+      parsedTodaysDate = parseISO(todaysReading.date);
+      if(!isValid(parsedTodaysDate)) throw new Error("Invalid date after parsing for today's reading");
+    } catch(e) {
+      console.error(`[BiblePlanDisplay] Invalid date for today's reading display: ${todaysReading.date}`, e);
+      parsedTodaysDate = null; // Ensure it's null if parsing fails
+    }
+  }
 
-  if (!isMounted) { // Show nothing or a minimal placeholder during initial mount
+  if (!isMounted) {
     return null; 
   }
 
-  if (!plan) {
+  if (!plan && !hideTitle) { // Only show this if not used in a context where title is hidden (like homepage)
     return (
       <Card className="mt-0 shadow-lg">
         <CardContent className="p-3 text-center text-xs text-muted-foreground">
@@ -88,8 +104,8 @@ export default function BiblePlanDisplay({
       </Card>
     );
   }
-
-  if (!todaysReading) {
+  
+  if (!todaysReading && !hideTitle) { // Only show this if not used in a context where title is hidden
      return (
       <Card className="mt-0 shadow-lg">
         <CardHeader className="p-2 flex flex-row items-center space-x-2">
@@ -98,21 +114,31 @@ export default function BiblePlanDisplay({
             No Reading for Today
           </p>
         </CardHeader>
+         {showPlanDetails && plan && plan.planDescription && (
+          <CardContent className="p-2 pt-0 border-t mt-2">
+            <CardDescription className="text-xs text-muted-foreground">
+              Plan: "{plan.planDescription}"
+              {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
+            </CardDescription>
+          </CardContent>
+        )}
       </Card>
     );
   }
   
-  let parsedTodaysDate: Date | null = null;
-  try {
-    if (todaysReading.date) {
-      parsedTodaysDate = parseISO(todaysReading.date);
-      if(!isValid(parsedTodaysDate)) throw new Error("Invalid date after parsing");
-    }
-  } catch(e) {
-    console.error(`[BiblePlanDisplay] Invalid date for today's reading: ${todaysReading.date}`, e);
+  // Simplified display for homepage if no reading or plan (title is hidden there)
+  if (!plan || !todaysReading) {
+    return (
+         <Card className="mt-0 shadow-lg bg-card/80">
+            <CardHeader className="p-2 flex flex-row items-center space-x-2">
+                <CalendarX className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <p className="text-sm font-medium text-muted-foreground">
+                    No Reading for Today
+                </p>
+            </CardHeader>
+        </Card>
+    );
   }
-
-  const validPassagesForToday = todaysReading.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:"));
 
 
   return (
@@ -141,10 +167,13 @@ export default function BiblePlanDisplay({
         {validPassagesForToday.length > 0 ? (
           <ul className="space-y-1 text-sm">
             {validPassagesForToday.map((passage, index) => {
-              // This check should ideally be redundant due to filtering, but for safety:
               if (!passage || !passage.displayText || passage.displayText.startsWith("Error:")) {
-                console.warn(`[BiblePlanDisplay] RENDERING: Skipping invalid passage in map. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-                return null; 
+                 console.warn(`[BiblePlanDisplay] RENDERING: Skipping invalid passage in map. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
+                 return (
+                    <li key={`error-passage-${index}`} className="p-1.5 text-xs italic text-destructive font-semibold">
+                        Error: Invalid passage data for display.
+                    </li>
+                 );
               }
               
               const passageIdPart = `homepage-today-passage-${passage.book?.replace(/\s+/g, '-') || `unknown-book`}-${passage.chapter || 'unknown-chapter'}-${index}`;
@@ -179,7 +208,7 @@ export default function BiblePlanDisplay({
            <p className="text-muted-foreground text-xs p-1.5">No specific passages assigned for today.</p>
         )}
          {showPlanDetails && plan.planDescription && (
-          <CardDescription className="text-xs pt-2 border-t mt-2">
+          <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
             Plan: "{plan.planDescription}"
             {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
           </CardDescription>
@@ -192,3 +221,4 @@ export default function BiblePlanDisplay({
 function isValid(date: any) {
   return date instanceof Date && !isNaN(date.getTime());
 }
+
