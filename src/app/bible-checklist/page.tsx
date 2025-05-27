@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
 import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
@@ -325,3 +325,4 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
 import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
@@ -209,3 +209,4 @@ export default function FullBiblePlanPage() {
     </div>
   );
 }
+
