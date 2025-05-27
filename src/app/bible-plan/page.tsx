@@ -8,46 +8,75 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO, startOfDay, isValid } from 'date-fns';
-import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle } from 'lucide-react';
+import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
+
+type FilterMode = 'currentWeek' | 'singleDay' | 'all';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const sortedAndFilteredDailyReadings = useMemo(() => {
+  const sortedDailyReadings = useMemo(() => {
     if (!plan?.dailyReadings) return [];
-    
-    let filteredReadings = [...plan.dailyReadings].sort((a, b) => {
+    return [...plan.dailyReadings].sort((a, b) => {
       try {
         return parseISO(a.date).getTime() - parseISO(b.date).getTime();
       } catch (e) { return 0; }
     });
+  }, [plan]);
 
-    if (selectedDate) {
-      const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
-      filteredReadings = filteredReadings.filter(reading => {
+  const sortedAndFilteredDailyReadings = useMemo(() => {
+    if (filterMode === 'currentWeek') {
+      const today = new Date();
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   // Saturday
+      return sortedDailyReadings.filter(reading => {
+        try {
+          const readingDateObj = parseISO(reading.date); // "YYYY-MM-DD" is parsed as local midnight
+          return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
+        } catch (e) { 
+          console.error(`[FullBiblePlanPage] Error parsing date for current week filtering: ${reading.date}`, e);
+          return false; 
+        }
+      });
+    } else if (filterMode === 'singleDay' && selectedDate) {
+      return sortedDailyReadings.filter(reading => {
          try {
-            const readingDateObj = parseISO(reading.date + 'T00:00:00Z'); // Ensure time part for accurate comparison with startOfDay
-            return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
+            const readingDateObj = parseISO(reading.date);
+            return isSameDay(readingDateObj, selectedDate);
           } catch (e) { 
-            console.error(`[FullBiblePlanPage] Error parsing date for filtering: ${reading.date}`, e);
+            console.error(`[FullBiblePlanPage] Error parsing date for single day filtering: ${reading.date}`, e);
             return false; 
           }
       });
     }
-    return filteredReadings;
-  }, [plan, selectedDate]);
+    // filterMode === 'all'
+    return sortedDailyReadings;
+  }, [sortedDailyReadings, selectedDate, filterMode]);
+
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setFilterMode(date ? 'singleDay' : (filterMode === 'currentWeek' ? 'currentWeek' : 'all'));
+  };
+
+  const handleShowCurrentWeek = () => {
+    setSelectedDate(undefined);
+    setFilterMode('currentWeek');
+  };
 
   const handleShowAll = () => {
     setSelectedDate(undefined);
+    setFilterMode('all');
   };
 
   if (!isMounted) {
@@ -92,6 +121,10 @@ export default function FullBiblePlanPage() {
       </div>
     );
   }
+
+  let filterButtonText = "Filter by date...";
+  if (filterMode === 'currentWeek') filterButtonText = "Showing Current Week";
+  else if (filterMode === 'singleDay' && selectedDate) filterButtonText = format(selectedDate, "PPP");
   
   return (
     <div className="space-y-4">
@@ -104,27 +137,34 @@ export default function FullBiblePlanPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn("w-full sm:w-auto justify-start text-left font-normal text-xs py-1.5 h-auto", !selectedDate && "text-muted-foreground")}
-              > <CalendarIcon className="mr-2 h-3 w-3" /> {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date...</span>}
+              <Button variant={"outline"} className={cn("w-full sm:w-auto justify-start text-left font-normal text-xs py-1.5 h-auto", filterMode === 'all' && !selectedDate && "text-muted-foreground")}>
+                 <CalendarIcon className="mr-2 h-3 w-3" /> {filterButtonText}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus/>
+              <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus/>
             </PopoverContent>
           </Popover>
-          {selectedDate && (
-            <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto text-xs py-1.5 h-auto">
-              <XCircle className="mr-2 h-3 w-3" /> Show All Readings
-            </Button>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {filterMode !== 'currentWeek' && (
+              <Button variant="outline" onClick={handleShowCurrentWeek} className="w-full sm:w-auto text-xs py-1.5 h-auto">
+                <CalendarRange className="mr-2 h-3 w-3" /> Show Current Week
+              </Button>
+            )}
+            {filterMode !== 'all' && (
+              <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto text-xs py-1.5 h-auto">
+                <LayoutList className="mr-2 h-3 w-3" /> Show All Readings
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      {sortedAndFilteredDailyReadings.length === 0 && selectedDate ? (
+      {sortedAndFilteredDailyReadings.length === 0 && (filterMode === 'singleDay' && selectedDate) ? (
         <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for {format(selectedDate, "MMMM d, yyyy")}.</p></CardContent></Card>
-      ) : sortedAndFilteredDailyReadings.length === 0 && !selectedDate ? (
+      ) : sortedAndFilteredDailyReadings.length === 0 && (filterMode === 'currentWeek') ? (
+        <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for the current week.</p></CardContent></Card>
+      ) : sortedAndFilteredDailyReadings.length === 0 && filterMode === 'all' ? (
          <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found in the current plan.</p></CardContent></Card>
       ) : (
         <div className="space-y-2">

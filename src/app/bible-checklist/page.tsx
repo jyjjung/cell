@@ -22,8 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle } from 'lucide-react';
+import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ const markReadRangeSchema = z.object({
 });
 
 type MarkReadRangeFormValues = z.infer<typeof markReadRangeSchema>;
+type FilterMode = 'currentWeek' | 'singleDay' | 'all';
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -50,7 +51,9 @@ export default function BibleChecklistPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
+  
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -81,20 +84,33 @@ export default function BibleChecklistPage() {
   }, [plan]);
   
   const sortedAndFilteredDailyReadings = useMemo(() => {
-    if (selectedDate) {
-      const formattedSelectedDate = format(startOfDay(selectedDate), "yyyy-MM-dd");
+    if (filterMode === 'currentWeek') {
+      const today = new Date();
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
+      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   // Saturday
+      return sortedDailyReadings.filter(reading => {
+        try {
+          const readingDateObj = parseISO(reading.date); // "YYYY-MM-DD" is parsed as local midnight
+          return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
+        } catch (e) { 
+          console.error(`[BibleChecklistPage] Error parsing date for current week filtering: ${reading.date}`, e);
+          return false; 
+        }
+      });
+    } else if (filterMode === 'singleDay' && selectedDate) {
       return sortedDailyReadings.filter(reading => {
          try {
-            const readingDateObj = parseISO(reading.date + 'T00:00:00Z');
-            return format(readingDateObj, "yyyy-MM-dd") === formattedSelectedDate;
+            const readingDateObj = parseISO(reading.date);
+            return isSameDay(readingDateObj, selectedDate);
           } catch (e) { 
-            console.error(`[BibleChecklistPage] Error parsing date for filtering: ${reading.date}`, e);
+            console.error(`[BibleChecklistPage] Error parsing date for single day filtering: ${reading.date}`, e);
             return false; 
           }
       });
     }
+    // filterMode === 'all'
     return sortedDailyReadings;
-  }, [sortedDailyReadings, selectedDate]);
+  }, [sortedDailyReadings, selectedDate, filterMode]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -131,9 +147,20 @@ export default function BibleChecklistPage() {
       setIsMarkingRange(false);
     }
   };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setFilterMode(date ? 'singleDay' : (filterMode === 'currentWeek' ? 'currentWeek' : 'all')); // if date cleared, go back to previous mode or 'all'
+  };
+
+  const handleShowCurrentWeek = () => {
+    setSelectedDate(undefined);
+    setFilterMode('currentWeek');
+  };
   
   const handleShowAll = () => {
     setSelectedDate(undefined);
+    setFilterMode('all');
   };
 
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
@@ -145,6 +172,11 @@ export default function BibleChecklistPage() {
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (<div className="space-y-8"><div className="flex items-center space-x-3 mb-6"><LibraryBig className="h-7 w-7 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div><Card className="mt-6 shadow-lg max-w-lg mx-auto"><CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader><CardContent><p className="text-muted-foreground">No Bible reading plan has been set.</p></CardContent></Card><BackToTopButton /></div>);
   }
+
+  let filterButtonText = "Filter by date...";
+  if (filterMode === 'currentWeek') filterButtonText = "Showing Current Week";
+  else if (filterMode === 'singleDay' && selectedDate) filterButtonText = format(selectedDate, "PPP");
+
 
   return (
     <div className="space-y-3">
@@ -184,28 +216,34 @@ export default function BibleChecklistPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn("w-full sm:w-auto justify-start text-left font-normal text-xs py-1.5 h-auto", !selectedDate && "text-muted-foreground")}
-              > <CalendarIcon className="mr-2 h-3 w-3" /> {selectedDate ? format(selectedDate, "PPP") : <span>Filter by date...</span>}
+              <Button variant={"outline"} className={cn("w-full sm:w-auto justify-start text-left font-normal text-xs py-1.5 h-auto", filterMode === 'all' && !selectedDate && "text-muted-foreground")}>
+                 <CalendarIcon className="mr-2 h-3 w-3" /> {filterButtonText}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus/>
+              <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus/>
             </PopoverContent>
           </Popover>
-          {selectedDate && (
-            <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto text-xs py-1.5 h-auto">
-              <XCircle className="mr-2 h-3 w-3" /> Show All Readings
-            </Button>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {filterMode !== 'currentWeek' && (
+              <Button variant="outline" onClick={handleShowCurrentWeek} className="w-full sm:w-auto text-xs py-1.5 h-auto">
+                <CalendarRange className="mr-2 h-3 w-3" /> Show Current Week
+              </Button>
+            )}
+            {filterMode !== 'all' && (
+              <Button variant="ghost" onClick={handleShowAll} className="w-full sm:w-auto text-xs py-1.5 h-auto">
+                <LayoutList className="mr-2 h-3 w-3" /> Show All Readings
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-
-      {sortedAndFilteredDailyReadings.length === 0 && selectedDate ? (
+      {sortedAndFilteredDailyReadings.length === 0 && (filterMode === 'singleDay' && selectedDate) ? (
         <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for {format(selectedDate, "MMMM d, yyyy")}.</p></CardContent></Card>
-      ) : sortedAndFilteredDailyReadings.length === 0 && !selectedDate ? (
+      ) : sortedAndFilteredDailyReadings.length === 0 && (filterMode === 'currentWeek') ? (
+        <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings scheduled for the current week.</p></CardContent></Card>
+      ) : sortedAndFilteredDailyReadings.length === 0 && filterMode === 'all' ? (
          <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found in the current plan.</p></CardContent></Card>
       ) : (
         <div className="space-y-2">
@@ -287,4 +325,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
