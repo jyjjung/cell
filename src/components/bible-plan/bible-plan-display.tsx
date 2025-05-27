@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { format, parseISO, isToday } from 'date-fns';
-import { BookOpenCheck, CalendarX, CheckSquare } from 'lucide-react';
+import { BookOpenCheck, CalendarX, CheckSquare, CheckCircle2 } from 'lucide-react'; // Added CheckCircle2
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -14,10 +14,9 @@ interface BiblePlanDisplayProps {
   plan: BibleReadingPlan | null;
   showPlanDetails?: boolean;
   hideTitle?: boolean;
-  isCompact?: boolean; // Retained for potential future use if needed, but mostly compact by default now
+  currentUser?: any;
   completedPassages?: string[];
   togglePassageCompletion?: (displayText: string) => void;
-  currentUser?: any;
   onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void;
   allTodaysPassageTexts?: string[];
 }
@@ -26,21 +25,26 @@ export default function BiblePlanDisplay({
   plan,
   showPlanDetails = true,
   hideTitle = false,
-  isCompact = true, // Compact by default
+  currentUser,
   completedPassages = [],
   togglePassageCompletion,
-  currentUser,
   onToggleAllToday,
   allTodaysPassageTexts = [],
 }: BiblePlanDisplayProps) {
   const [todaysReading, setTodaysReading] = useState<DailyReading | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (plan?.dailyReadings) {
       const foundReading = plan.dailyReadings.find(reading => {
         try {
           if (!reading || !reading.date) return false;
-          const readingDate = parseISO(reading.date + 'T00:00:00Z');
+          // Ensure date is parsed as local time, assuming YYYY-MM-DD is local
+          const readingDate = parseISO(reading.date); 
           return isToday(readingDate);
         } catch (e) {
            console.error("[BiblePlanDisplay] Error parsing reading date for today's display:", reading?.date, e);
@@ -57,21 +61,28 @@ export default function BiblePlanDisplay({
 
   const isAllTodaysPassagesComplete = useMemo(() => {
     if (!allTodaysPassageTexts || allTodaysPassageTexts.length === 0) return false;
-    return allTodaysPassageTexts.every(text => completedPassages.includes(text));
+    if (allTodaysPassageTexts.some(text => !text || text.startsWith("Error:"))) return false; // Don't count error passages
+    return allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:")).every(text => completedPassages.includes(text));
   }, [allTodaysPassageTexts, completedPassages]);
 
   const handleMasterCheckboxChange = (checked: boolean) => {
     if (onToggleAllToday && allTodaysPassageTexts.length > 0) {
-      onToggleAllToday(allTodaysPassageTexts, checked);
+      const validPassageTexts = allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:"));
+      if (validPassageTexts.length > 0) {
+        onToggleAllToday(validPassageTexts, checked);
+      }
     }
   };
 
+  if (!isMounted) { // Show nothing or a minimal placeholder during initial mount
+    return null; 
+  }
 
   if (!plan) {
     return (
       <Card className="mt-0 shadow-lg">
-        <CardContent className={cn("text-center text-muted-foreground", isCompact ? "p-3 text-xs" : "p-4 text-sm")}>
-          <BookOpenCheck className={cn("mx-auto mb-2 opacity-50", isCompact ? "h-8 w-8" : "h-10 w-10")} />
+        <CardContent className="p-3 text-center text-xs text-muted-foreground">
+          <BookOpenCheck className="mx-auto mb-2 h-8 w-8 opacity-50" />
           No Bible reading plan has been set by the admin yet.
         </CardContent>
       </Card>
@@ -81,109 +92,103 @@ export default function BiblePlanDisplay({
   if (!todaysReading) {
      return (
       <Card className="mt-0 shadow-lg">
-        <CardHeader className={cn("flex flex-row items-center space-x-2", isCompact ? "p-2.5" : "p-3")}>
-          <CalendarX className={cn("shrink-0", isCompact ? "h-4 w-4 text-muted-foreground" : "h-5 w-5 text-muted-foreground")} />
-          <CardTitle className={cn("font-medium", isCompact ? "text-sm" : "text-base")}>
+        <CardHeader className="p-2 flex flex-row items-center space-x-2">
+          <CalendarX className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <p className="text-sm font-medium text-muted-foreground">
             No Reading for Today
-          </CardTitle>
+          </p>
         </CardHeader>
       </Card>
     );
   }
+  
+  let parsedTodaysDate: Date | null = null;
+  try {
+    if (todaysReading.date) {
+      parsedTodaysDate = parseISO(todaysReading.date);
+      if(!isValid(parsedTodaysDate)) throw new Error("Invalid date after parsing");
+    }
+  } catch(e) {
+    console.error(`[BiblePlanDisplay] Invalid date for today's reading: ${todaysReading.date}`, e);
+  }
+
+  const validPassagesForToday = todaysReading.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:"));
+
 
   return (
-    <Card className="mt-0 shadow-lg">
-      <CardHeader className={cn("pb-2", isCompact ? "p-2.5" : "p-3")}>
-        <div className="flex items-center justify-between space-x-2">
-          <div className="flex items-center space-x-2">
-             {!hideTitle && (
-               <BookOpenCheck className={cn("shrink-0 text-primary", isCompact ? "h-4 w-4 mt-0.5" : "h-5 w-5 mt-0.5")} />
-             )}
-            <div className="flex-grow">
-              {!hideTitle && (
-                <CardTitle className={cn("mb-0.5", isCompact ? "text-base" : "text-lg")}>
-                  Today's Reading: {todaysReading.date ? format(parseISO(todaysReading.date), "MMMM d, yyyy") : "Invalid Date"}
-                </CardTitle>
-              )}
-              {showPlanDetails && plan.planDescription && (
-                <CardDescription className="text-xs">
-                  Plan: "{plan.planDescription}" | Generated: {plan.generatedDate ? format(parseISO(plan.generatedDate), "PPP p") : "Unknown"}
-                </CardDescription>
-              )}
-            </div>
-          </div>
-          {/* Master Checkbox for Today's Reading */}
-          {showIndividualCheckboxes && onToggleAllToday && allTodaysPassageTexts.length > 0 && (
+    <Card className="mt-0 shadow-lg bg-card/80">
+      <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+        <h3 className="text-sm font-semibold flex items-center">
+          {parsedTodaysDate ? format(parsedTodaysDate, "EEE, MMM d, yyyy") : "Today's Reading"}
+          {isAllTodaysPassagesComplete && validPassagesForToday.length > 0 && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
+        </h3>
+        {showIndividualCheckboxes && onToggleAllToday && validPassagesForToday.length > 0 && (
             <div className="flex items-center space-x-1.5 shrink-0">
               <Checkbox
-                id="today-master-checkbox"
+                id="today-master-checkbox-homepage"
                 checked={isAllTodaysPassagesComplete}
                 onCheckedChange={(checked) => handleMasterCheckboxChange(Boolean(checked))}
                 aria-label="Mark all today's passages as complete"
-                className={cn(isCompact ? "h-3.5 w-3.5" : "h-4 w-4")}
+                className="h-3.5 w-3.5"
               />
-              <Label htmlFor="today-master-checkbox" className={cn("text-muted-foreground cursor-pointer", isCompact ? "text-xs" : "text-sm")}>
-                All Today
+              <Label htmlFor="today-master-checkbox-homepage" className="text-xs text-muted-foreground cursor-pointer">
+                All
               </Label>
             </div>
           )}
-        </div>
       </CardHeader>
-      <CardContent className={cn("pt-1", isCompact ? "p-2.5" : "p-3")}>
-        {todaysReading.passages && todaysReading.passages.length > 0 ? (
-          <ul className={cn("space-y-1.5", isCompact ? "text-sm" : "text-sm")}>
-            {todaysReading.passages.map((passage, index) => {
-              if (!passage) {
-                console.warn(`[BiblePlanDisplay] RENDERING: Passage object is null/undefined at index ${index} for today.`);
-                return ( <li key={`error-passage-${index}`} className={cn("text-destructive font-semibold italic bg-destructive/10 rounded-md", isCompact ? "p-1.5 text-xs" : "p-2 text-sm")}> Error: Corrupt passage data. </li>);
+      <CardContent className="p-2 space-y-1.5">
+        {validPassagesForToday.length > 0 ? (
+          <ul className="space-y-1 text-sm">
+            {validPassagesForToday.map((passage, index) => {
+              // This check should ideally be redundant due to filtering, but for safety:
+              if (!passage || !passage.displayText || passage.displayText.startsWith("Error:")) {
+                console.warn(`[BiblePlanDisplay] RENDERING: Skipping invalid passage in map. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
+                return null; 
               }
-              const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
-              const isPassageValid = currentPassageDisplayText !== '' && !currentPassageDisplayText.startsWith("Error:");
-
-              let passageIdPart = `passage-${index}`;
-              if (isPassageValid) {
-                  const bookPart = (typeof passage.book === 'string' && passage.book) ? passage.book.replace(/\s+/g, '-') : `unknown-book`;
-                  const chapterPart = passage.chapter ? String(passage.chapter) : 'unknown-chapter';
-                  passageIdPart = `today-passage-${bookPart}-${chapterPart}-${index}`;
-              } else {
-                  console.warn(`[BiblePlanDisplay] RENDERING: displayText is invalid for passage. Date: ${todaysReading.date}, Index: ${index}. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-              }
-
-              const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
+              
+              const passageIdPart = `homepage-today-passage-${passage.book?.replace(/\s+/g, '-') || `unknown-book`}-${passage.chapter || 'unknown-chapter'}-${index}`;
+              const isChecked = completedPassages.includes(passage.displayText);
 
               return (
-                <li key={passageIdPart} className={cn("bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40", isCompact ? "p-1.5 text-xs" : "p-2 text-sm")}>
-                  {showIndividualCheckboxes && isPassageValid && (
+                <li key={passageIdPart} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                  {showIndividualCheckboxes && (
                     <Checkbox
                       id={passageIdPart}
                       checked={isChecked}
-                      onCheckedChange={() => togglePassageCompletion(currentPassageDisplayText)}
-                      aria-label={`Mark ${currentPassageDisplayText} as read`}
-                      className={cn(isCompact ? "h-3.5 w-3.5" : "h-4 w-4")}
+                      onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
+                      aria-label={`Mark ${passage.displayText} as read`}
+                      className="h-3.5 w-3.5"
                     />
                   )}
-                  {showIndividualCheckboxes && !isPassageValid && (
-                     <Checkbox id={passageIdPart} checked={false} disabled className={cn(isCompact ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                  )}
                   <Label
-                    htmlFor={showIndividualCheckboxes && isPassageValid ? passageIdPart : undefined}
+                    htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
                     className={cn(
                       "flex-grow",
-                      showIndividualCheckboxes && isPassageValid && "cursor-pointer",
-                      isChecked && "line-through text-muted-foreground",
-                      !isPassageValid && "text-destructive font-semibold italic"
+                      showIndividualCheckboxes && "cursor-pointer",
+                      isChecked && "line-through text-muted-foreground"
                     )}
                   >
-                    {isPassageValid ? currentPassageDisplayText : "Error: Passage Data Invalid"}
+                    {passage.displayText}
                   </Label>
                 </li>
               );
             })}
           </ul>
         ) : (
-           <p className={cn("text-muted-foreground border rounded-md bg-background/50", isCompact ? "text-xs p-1.5" : "text-sm p-2")}>No specific passages assigned for today.</p>
+           <p className="text-muted-foreground text-xs p-1.5">No specific passages assigned for today.</p>
+        )}
+         {showPlanDetails && plan.planDescription && (
+          <CardDescription className="text-xs pt-2 border-t mt-2">
+            Plan: "{plan.planDescription}"
+            {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
+          </CardDescription>
         )}
       </CardContent>
     </Card>
   );
+}
+
+function isValid(date: any) {
+  return date instanceof Date && !isNaN(date.getTime());
 }
