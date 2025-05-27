@@ -48,12 +48,14 @@ export default function BibleChecklistPage() {
   const { completedPassages, togglePassageCompletion, markReadRange, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
+
   const [isMounted, setIsMounted] = useState(false);
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
+  const [markingDayId, setMarkingDayId] = useState<string | null>(null);
   
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -90,7 +92,7 @@ export default function BibleChecklistPage() {
       const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   // Saturday
       return sortedDailyReadings.filter(reading => {
         try {
-          const readingDateObj = parseISO(reading.date); // "YYYY-MM-DD" is parsed as local midnight
+          const readingDateObj = parseISO(reading.date); 
           return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
         } catch (e) { 
           console.error(`[BibleChecklistPage] Error parsing date for current week filtering: ${reading.date}`, e);
@@ -108,7 +110,6 @@ export default function BibleChecklistPage() {
           }
       });
     }
-    // filterMode === 'all'
     return sortedDailyReadings;
   }, [sortedDailyReadings, selectedDate, filterMode]);
 
@@ -150,7 +151,7 @@ export default function BibleChecklistPage() {
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
-    setFilterMode(date ? 'singleDay' : (filterMode === 'currentWeek' ? 'currentWeek' : 'all')); // if date cleared, go back to previous mode or 'all'
+    setFilterMode(date ? 'singleDay' : (filterMode === 'currentWeek' ? 'currentWeek' : 'all'));
   };
 
   const handleShowCurrentWeek = () => {
@@ -162,6 +163,34 @@ export default function BibleChecklistPage() {
     setSelectedDate(undefined);
     setFilterMode('all');
   };
+
+  const handleMarkDayComplete = async (day: DailyReading) => {
+    const dateKey = day.originalDateKey || day.date;
+    setMarkingDayId(dateKey);
+    const passageTexts = day.passages
+      .map(p => p.displayText)
+      .filter(Boolean) as string[];
+    
+    if (passageTexts.length === 0) {
+      toast({ title: "No Passages", description: "This day has no passages to mark.", variant: "default" });
+      setMarkingDayId(null);
+      return;
+    }
+
+    try {
+      await markMultiplePassages(passageTexts, true);
+      let dayDateFormatted = "this day";
+      try {
+        dayDateFormatted = format(parseISO(day.date), "MMM d");
+      } catch {}
+      toast({ title: "Day Marked Complete", description: `All passages for ${dayDateFormatted} marked as read.` });
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not mark day complete: ${error.message}`, variant: "destructive" });
+    } finally {
+      setMarkingDayId(null);
+    }
+  };
+
 
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
@@ -212,7 +241,7 @@ export default function BibleChecklistPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30"> {/* Header height + border */}
+      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Popover>
             <PopoverTrigger asChild>
@@ -260,14 +289,31 @@ export default function BibleChecklistPage() {
             const dateKey = dailyReading.originalDateKey || dailyReading.date;
             const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
             const isDayCompleted = allPassagesInDayObjects.length > 0 && allPassagesInDayObjects.every(p => completedPassages.includes(p.displayText));
+            const isLoadingThisDay = markingDayId === dateKey;
 
             return (
               <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
                 <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
                   <h3 className="text-sm font-semibold flex items-center">
                     {format(parsedDayDate, "EEE, MMM d, yyyy")}
-                    {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />}
+                    {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
                   </h3>
+                  {!isDayCompleted && allPassagesInDayObjects.length > 0 && (
+                    <Button
+                      size="xs" 
+                      variant="outline"
+                      onClick={() => handleMarkDayComplete(dailyReading)}
+                      disabled={isLoadingThisDay}
+                      className="h-auto py-1 px-2 text-xs"
+                    >
+                      {isLoadingThisDay ? (
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckSquare className="mr-1.5 h-3 w-3" />
+                      )}
+                      Mark Day Complete
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent className="p-2 space-y-1.5">
                   {(allPassagesInDayObjects.length > 0) ? (
@@ -305,7 +351,7 @@ export default function BibleChecklistPage() {
                               }} 
                               aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
                               className="h-3.5 w-3.5" 
-                              disabled={!isPassageValid}
+                              disabled={!isPassageValid || isLoadingThisDay}
                             />
                             <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked && "line-through text-muted-foreground", !isPassageValid && "text-destructive font-semibold italic")}>
                               {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
@@ -326,3 +372,4 @@ export default function BibleChecklistPage() {
   );
 }
 
+      
