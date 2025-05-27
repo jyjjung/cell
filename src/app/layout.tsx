@@ -1,7 +1,6 @@
 
 "use client"; // Add "use client" directive here
 
-import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -12,6 +11,7 @@ import MovingBackground from '@/components/layout/moving-background';
 import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import { Analytics } from "@vercel/analytics/react"; // Import Vercel Analytics
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -22,12 +22,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 });
-
-// Removed metadata export as this is a client component
-// export const metadata: Metadata = {
-//   title: 'Cell Dates',
-//   description: 'Manage your dates and Bible reading plans.',
-// };
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -51,6 +45,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <Toaster />
+      <Analytics /> {/* Add Vercel Analytics component here */}
     </>
   );
 }
@@ -63,11 +58,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <PageLoadingProvider>
+        <PageLoadingProvider>
+          <AuthProvider>
             <LayoutContent>{children}</LayoutContent>
-          </PageLoadingProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </PageLoadingProvider>
       </body>
     </html>
   );
