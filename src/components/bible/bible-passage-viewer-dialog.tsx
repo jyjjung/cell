@@ -36,8 +36,8 @@ export default function BiblePassageViewerDialog({
             return;
           }
 
-          // Calls the Next.js API route for ESV
-          const response = await fetch(`/api/esv?passage=${encodeURIComponent(passageReference)}`);
+          // Calls the Next.js API route for scripture.api.bible (ESV)
+          const response = await fetch(`/api/bible-text?passage=${encodeURIComponent(passageReference)}`);
           
           if (!response.ok) {
             const errorData = await response.json();
@@ -68,14 +68,14 @@ export default function BiblePassageViewerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <BookOpenText className="mr-2 h-5 w-5 text-primary" />
-            Bible Passage: {passageReference || "No passage selected"} (ESV)
+            Bible Passage: {passageReference || "No passage selected"} (ESV via scripture.api.bible)
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-grow my-4 pr-6">
           {isLoading && (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading passage from ESV API...</p>
+              <p className="ml-2 text-muted-foreground">Loading passage...</p>
             </div>
           )}
           {error && (
@@ -86,10 +86,10 @@ export default function BiblePassageViewerDialog({
             </div>
           )}
           {!isLoading && !error && bibleHtml && (
-            // The content from ESV API is expected to be HTML
+            // HTML content from scripture.api.bible
             <div dangerouslySetInnerHTML={{ __html: bibleHtml }} className="prose prose-sm dark:prose-invert max-w-none leading-relaxed" />
           )}
-           {!isLoading && !error && !bibleHtml && passageReference && !passageReference.toLowerCase().includes("error") && (
+           {!isLoading && !error && !bibleHtml && passageReference && !passageReference.toLowerCase().includes("error:") && (
              <div className="text-muted-foreground flex items-center justify-center h-40">
                 <p>No text to display for this passage currently.</p>
             </div>

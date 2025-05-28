@@ -92,16 +92,17 @@ body {
     @apply bg-background text-foreground;
     min-height: 100vh;
   }
-  /* Basic styling for ESV API HTML content */
-  /* ESV HTML usually has classes like .p (paragraph), .v (verse number), .c (chapter number) */
-  /* Tailwind prose plugin handles most of this, but specific overrides can go here if needed */
-  .prose .p .v, .prose-sm .p .v { @apply text-xs font-bold text-muted-foreground align-super mr-0.5; }
-  .prose .c .v, .prose-sm .c .v { @apply text-xs font-bold text-muted-foreground align-super mr-0.5; } /* verse number inside chapter marker */
+  /* Basic styling for scripture.api.bible HTML content */
+  /* The HTML structure might vary, Tailwind Prose should handle most generic tags */
+  .prose .p .v, .prose-sm .p .v, /* General verse number styling */
+  .prose .verse-num, .prose-sm .verse-num { /* Common class from some Bible APIs */
+     @apply text-xs font-bold text-muted-foreground align-super mr-0.5; 
+  }
   .prose .p, .prose-sm .p { @apply mb-2 leading-relaxed; }
-  .prose h1.esv-passage-chapter, .prose-sm h1.esv-passage-chapter { @apply text-2xl font-bold mt-4 mb-2 text-primary; } /* Chapter titles if present from ESV API */
-  .prose h2.esv-passage-heading, .prose-sm h2.esv-passage-heading { @apply text-lg font-semibold mt-3 mb-1 text-foreground; } /* Section headings */
   .prose .chapter-num, .prose-sm .chapter-num { @apply font-bold text-2xl text-primary mr-1 float-left; } /* Chapter number if distinct */
 
+  /* Additional styling for specific scripture.api.bible classes if identified after testing */
+  /* e.g., .prose .s1 (section heading) */
 }
 
 .moving-bg-gradient {
