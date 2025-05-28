@@ -92,26 +92,33 @@ body {
     @apply bg-background text-foreground;
     min-height: 100vh;
   }
-  /* Basic styling for scripture.api.bible HTML content */
-  /* The HTML structure might vary, Tailwind Prose should handle most generic tags */
+  
+  /* Styles for ESV API HTML content (often uses .esv-text wrapper) */
+  .prose .esv-text p, .prose-sm .esv-text p {
+     @apply mb-2 leading-relaxed;
+  }
+  .prose .esv-text .verse-num, .prose-sm .esv-text .verse-num, /* ESV specific verse number */
   .prose .p .v, .prose-sm .p .v, /* General verse number styling */
   .prose .verse-num, .prose-sm .verse-num { /* Common class from some Bible APIs */
      @apply text-xs font-bold text-muted-foreground align-super mr-0.5; 
   }
-  .prose .p, .prose-sm .p { @apply mb-2 leading-relaxed; }
-  .prose .chapter-num, .prose-sm .chapter-num { @apply font-bold text-2xl text-primary mr-1 float-left; } /* Chapter number if distinct */
-
-  /* Additional styling for specific scripture.api.bible classes if identified after testing */
-  /* e.g., .prose .s1 (section heading) */
+  .prose .esv-text .chapter-num, .prose-sm .esv-text .chapter-num, /* ESV specific chapter number */
+  .prose .chapter-num, .prose-sm .chapter-num { 
+    @apply font-bold text-2xl text-primary mr-1 float-left; 
+  }
+  .prose .esv-text h2, .prose-sm .esv-text h2, /* ESV section headings */
+  .prose .esv-text h3, .prose-sm .esv-text h3,
+  .prose .esv-text h4, .prose-sm .esv-text h4 {
+    @apply text-lg font-semibold mt-4 mb-2 text-foreground;
+  }
 }
 
 .moving-bg-gradient {
-  /* Adjusted gradient for new darker, richer navy blue theme */
   background: linear-gradient(-45deg, 
-    hsl(225 60% 15% / 0.7), /* Richer navy variation */
-    hsl(225 50% 22% / 0.7), /* Lighter, richer desaturated navy */
-    hsl(225 70% 7% / 0.7),  /* Very dark, rich near black variation */
-    hsl(225 60% 8% / 0.7)   /* Darker, richer variation of the base navy */
+    hsl(225 60% 15% / 0.7), 
+    hsl(225 50% 22% / 0.7), 
+    hsl(225 70% 7% / 0.7),  
+    hsl(225 60% 8% / 0.7)   
   );
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;

@@ -39,8 +39,12 @@ export default function BiblePassageViewerDialog({
       if (parsed) {
         setCurrentBook(parsed.book);
         setCurrentChapter(parsed.chapter);
-        // For display and fetching, we always use the whole chapter format
-        setCurrentDisplayRef(`${parsed.book} ${parsed.chapter}`);
+        // For display and fetching, we now use the original ref if it has verses,
+        // or "Book Chapter" if it's just a chapter reference for ESV API compatibility.
+        // The ESV API handles "Book Chapter" well for whole chapters.
+        // If ref includes verses (e.g. "John 3:16-17"), use it as is.
+        // If ref is just "John 3", use "John 3".
+        setCurrentDisplayRef(ref); 
       } else {
         console.warn(`[BiblePassageViewer] Could not parse for navigation: ${ref}`);
         setCurrentDisplayRef(ref); // Fallback to original ref if parsing fails
@@ -72,7 +76,7 @@ export default function BiblePassageViewerDialog({
             return;
           }
 
-          const response = await fetch(`/api/bible-text?passage=${encodeURIComponent(currentDisplayRef)}`);
+          const response = await fetch(`/api/esv?passage=${encodeURIComponent(currentDisplayRef)}`);
           
           if (!response.ok) {
             const errorData = await response.json();
@@ -101,7 +105,7 @@ export default function BiblePassageViewerDialog({
     if (currentBook && currentChapter) {
       const prevRef = getPreviousChapterRef(currentBook, currentChapter);
       if (prevRef) {
-        updateCurrentPassageDetails(prevRef);
+        updateCurrentPassageDetails(prevRef); // This will trigger the useEffect to fetch new passage
       }
     }
   };
@@ -110,30 +114,35 @@ export default function BiblePassageViewerDialog({
     if (currentBook && currentChapter) {
       const nextRef = getNextChapterRef(currentBook, currentChapter);
       if (nextRef) {
-        updateCurrentPassageDetails(nextRef);
+        updateCurrentPassageDetails(nextRef); // This will trigger the useEffect to fetch new passage
       }
     }
   };
 
   const handleMarkComplete = async () => {
     if (markMultiplePassages && currentDisplayRef) {
+      // We mark the chapter reference (e.g., "John 3") as complete,
+      // assuming currentDisplayRef for ESV API is often the whole chapter.
+      // If currentDisplayRef is more specific (e.g. "John 3:16"), that exact ref is marked.
+      const refToMark = (currentBook && currentChapter) ? `${currentBook} ${currentChapter}` : currentDisplayRef;
       try {
-        await markMultiplePassages([currentDisplayRef], true);
-        toast({ title: "Passage Marked", description: `"${currentDisplayRef}" marked as complete.` });
+        await markMultiplePassages([refToMark], true);
+        toast({ title: "Passage Marked", description: `"${refToMark}" marked as complete.` });
       } catch (e: any) {
         toast({ title: "Error", description: `Could not mark passage: ${e.message}`, variant: "destructive" });
       }
     }
   };
-
-  const isCurrentChapterComplete = currentDisplayRef ? completedPassages.includes(currentDisplayRef) : false;
+  
+  const refForCompletionCheck = (currentBook && currentChapter) ? `${currentBook} ${currentChapter}` : currentDisplayRef;
+  const isCurrentChapterComplete = refForCompletionCheck ? completedPassages.includes(refForCompletionCheck) : false;
   const canNavigatePrev = currentBook && currentChapter ? !!getPreviousChapterRef(currentBook, currentChapter) : false;
   const canNavigateNext = currentBook && currentChapter ? !!getNextChapterRef(currentBook, currentChapter) : false;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-4 sm:p-6">
-        <DialogHeader className="pr-10"> {/* Add padding for the close button */}
+        <DialogHeader className="pr-10 shrink-0">
           <DialogTitle className="flex items-center text-base sm:text-lg">
             <BookOpenText className="mr-2 h-5 w-5 text-primary shrink-0" />
             <span className="truncate">{currentDisplayRef || "No passage selected"}</span>
@@ -141,34 +150,36 @@ export default function BiblePassageViewerDialog({
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow my-2 sm:my-4 pr-2 sm:pr-4 -mr-2 sm:-mr-4"> {/* Negative margin to counteract padding for scrollbar */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center h-40">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="mt-2 text-muted-foreground">Loading passage...</p>
-            </div>
-          )}
-          {error && (
-            <div className="text-destructive flex flex-col items-center justify-center h-40 p-4 text-center">
-              <AlertTriangle className="h-8 w-8 mb-2" />
-              <p className="font-semibold">Error loading passage</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-          {!isLoading && !error && bibleHtml && (
-            <div 
-              dangerouslySetInnerHTML={{ __html: bibleHtml }} 
-              className="prose prose-sm dark:prose-invert max-w-none leading-relaxed" 
-            />
-          )}
-           {!isLoading && !error && !bibleHtml && currentDisplayRef && !currentDisplayRef.toLowerCase().includes("error:") && (
-             <div className="text-muted-foreground flex items-center justify-center h-40">
-                <p>No text to display for this passage currently.</p>
-            </div>
-           )}
-        </ScrollArea>
+        <div className="flex-grow min-h-0 overflow-y-auto my-2 sm:my-4 pr-2 sm:pr-4 -mr-2 sm:-mr-4">
+          <ScrollArea className="h-full">
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center h-40">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-2 text-muted-foreground">Loading passage...</p>
+              </div>
+            )}
+            {error && (
+              <div className="text-destructive flex flex-col items-center justify-center h-40 p-4 text-center">
+                <AlertTriangle className="h-8 w-8 mb-2" />
+                <p className="font-semibold">Error loading passage</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+            {!isLoading && !error && bibleHtml && (
+              <div 
+                dangerouslySetInnerHTML={{ __html: bibleHtml }} 
+                className="prose prose-sm dark:prose-invert max-w-none leading-relaxed esv-text" 
+              />
+            )}
+            {!isLoading && !error && !bibleHtml && currentDisplayRef && !currentDisplayRef.toLowerCase().includes("error:") && (
+              <div className="text-muted-foreground flex items-center justify-center h-40">
+                  <p>No text to display for this passage currently.</p>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
 
-        <DialogFooter className="mt-auto pt-4 border-t flex-col sm:flex-row gap-2 justify-between w-full">
+        <DialogFooter className="mt-auto pt-4 border-t flex-col sm:flex-row gap-2 justify-between w-full shrink-0">
           <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
             <Button type="button" variant="outline" onClick={handlePreviousChapter} disabled={!canNavigatePrev || isLoading} size="sm">
               <ChevronLeft className="h-4 w-4 mr-1 sm:mr-2" /> Prev
@@ -184,7 +195,7 @@ export default function BiblePassageViewerDialog({
                 type="button" 
                 variant="default" 
                 onClick={handleMarkComplete} 
-                disabled={isLoading || isCurrentChapterComplete || !currentDisplayRef}
+                disabled={isLoading || isCurrentChapterComplete || !refForCompletionCheck}
                 size="sm"
               >
                 <CheckSquare className="h-4 w-4 mr-1 sm:mr-2" />
