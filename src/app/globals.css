@@ -92,18 +92,14 @@ body {
     @apply bg-background text-foreground;
     min-height: 100vh;
   }
-  /* Basic styling for ESV API HTML content */
-  .esv-passage-content h3 { @apply text-lg font-semibold mt-4 mb-2 text-foreground; }
-  .esv-passage-content .chapter-num { @apply font-bold text-2xl text-primary; }
-  .esv-passage-content .verse-num { @apply text-xs font-bold text-muted-foreground align-super; }
-  .esv-passage-content p { @apply mb-3 leading-relaxed; }
-  /* Ensure prose styles from Tailwind are applied for better readability */
-  .prose .esv-passage-content p, .prose-sm .esv-passage-content p {
-    @apply my-2; /* Or adjust as needed */
-  }
-  .prose .esv-passage-content h3, .prose-sm .esv-passage-content h3 {
-    @apply my-3;
-  }
+  /* Basic styling for scripture.api.bible HTML content (if needed, Tailwind prose should cover most) */
+  /* HTML from scripture.api.bible usually has classes like .p (paragraph), .v (verse number), .c (chapter number) */
+  .prose .p .v, .prose-sm .p .v { @apply text-xs font-bold text-muted-foreground align-super mr-0.5; }
+  .prose .c .v, .prose-sm .c .v { @apply text-xs font-bold text-muted-foreground align-super mr-0.5; } /* verse number inside chapter marker */
+  .prose .p, .prose-sm .p { @apply mb-2 leading-relaxed; }
+  .prose h3.s, .prose-sm h3.s { @apply text-lg font-semibold mt-3 mb-1 text-foreground; } /* section headings */
+  .prose .c-drop, .prose-sm .c-drop { @apply font-bold text-2xl text-primary mr-1 float-left; } /* drop cap chapter number */
+
 }
 
 .moving-bg-gradient {

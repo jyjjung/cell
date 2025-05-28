@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'; // Removed DialogDescription
 import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,7 +36,8 @@ export default function BiblePassageViewerDialog({
             return;
           }
 
-          const response = await fetch(`/api/esv?passage=${encodeURIComponent(passageReference)}`);
+          // Calls the new Next.js API route for scripture.api.bible
+          const response = await fetch(`/api/bible-text?passage=${encodeURIComponent(passageReference)}`);
           
           if (!response.ok) {
             const errorData = await response.json();
@@ -70,11 +71,11 @@ export default function BiblePassageViewerDialog({
             Bible Passage: {passageReference || "No passage selected"}
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-grow my-4 pr-6 esv-passage-content"> {/* Added pr-6 for scrollbar space & class */}
+        <ScrollArea className="flex-grow my-4 pr-6">
           {isLoading && (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading passage from ESV API...</p>
+              <p className="ml-2 text-muted-foreground">Loading passage from API...</p>
             </div>
           )}
           {error && (
@@ -85,8 +86,7 @@ export default function BiblePassageViewerDialog({
             </div>
           )}
           {!isLoading && !error && bibleHtml && (
-            // Using dangerouslySetInnerHTML because ESV API returns HTML
-            // Ensure the source is trusted (ESV API is generally considered safe)
+            // The content from scripture.api.bible is expected to be HTML
             <div dangerouslySetInnerHTML={{ __html: bibleHtml }} className="prose prose-sm dark:prose-invert max-w-none leading-relaxed" />
           )}
            {!isLoading && !error && !bibleHtml && passageReference && !passageReference.toLowerCase().includes("error") && (
@@ -96,11 +96,10 @@ export default function BiblePassageViewerDialog({
            )}
         </ScrollArea>
         <DialogFooter className="mt-auto">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Close
-            </Button>
-          </DialogClose>
+          {/* DialogClose is implicitly handled by onOpenChange or X button */}
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
