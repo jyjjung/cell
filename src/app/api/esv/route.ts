@@ -46,7 +46,22 @@ export async function GET(request: NextRequest) {
     const responseData = await apiResponse.json();
     
     if (responseData.passages && responseData.passages.length > 0) {
-      return NextResponse.json({ html: responseData.passages[0] });
+      let passageHtml = responseData.passages[0];
+      
+      // Remove inline "(Listen)" links. 
+      // This regex targets <a> tags whose link text is exactly "(Listen)" 
+      // (allowing for optional spaces around the text and parentheses).
+      const listenLinkRegex = /<a[^>]*>\s*\(\s*Listen\s*\)\s*<\/a>/gi;
+      passageHtml = passageHtml.replace(listenLinkRegex, '');
+      
+      // Also remove cases where "(Listen)" might appear as plain text directly after a verse number or chapter,
+      // if not caught by the <a> tag removal. This is more aggressive.
+      // Example: "...verse number (Listen)" -> "...verse number "
+      // This regex looks for optional leading space, then "(Listen)" with optional internal spaces.
+      const plainListenTextRegex = /\s*\(\s*Listen\s*\)/gi;
+      passageHtml = passageHtml.replace(plainListenTextRegex, '');
+
+      return NextResponse.json({ html: passageHtml });
     } else {
       console.error('[API Route /api/esv] ESV API Error: Passage content not found in response data.', responseData);
       return NextResponse.json({ error: 'Passage content not found in ESV API response.' }, { status: 500 });
