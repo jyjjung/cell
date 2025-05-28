@@ -28,7 +28,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 
 const markReadRangeSchema = z.object({
   fromBook: z.string().min(1, "Please select a 'From' book."),
@@ -58,8 +58,8 @@ export default function BibleChecklistPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   const [markingDayId, setMarkingDayId] = useState<string | null>(null);
 
-  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
-  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
   
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -84,8 +84,14 @@ export default function BibleChecklistPage() {
     if (!plan?.dailyReadings) return [];
     return [...plan.dailyReadings].sort((a, b) => {
       try {
-        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
-      } catch (e) { return 0; }
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        if (!isValid(dateA) || !isValid(dateB)) return 0;
+        return dateA.getTime() - dateB.getTime();
+      } catch (e) { 
+        console.error("[BibleChecklistPage] Error sorting daily readings by date:", a.date, b.date, e);
+        return 0; 
+      }
     });
   }, [plan]);
   
@@ -97,6 +103,7 @@ export default function BibleChecklistPage() {
       return sortedDailyReadings.filter(reading => {
         try {
           const readingDateObj = parseISO(reading.date); 
+          if (!isValid(readingDateObj)) return false;
           return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
         } catch (e) { 
           console.error(`[BibleChecklistPage] Error parsing date for current week filtering: ${reading.date}`, e);
@@ -107,6 +114,7 @@ export default function BibleChecklistPage() {
       return sortedDailyReadings.filter(reading => {
          try {
             const readingDateObj = parseISO(reading.date);
+            if (!isValid(readingDateObj)) return false;
             return isSameDay(readingDateObj, selectedDate);
           } catch (e) { 
             console.error(`[BibleChecklistPage] Error parsing date for single day filtering: ${reading.date}`, e);
@@ -173,10 +181,10 @@ export default function BibleChecklistPage() {
     setMarkingDayId(dateKey);
     const passageTexts = day.passages
       .map(p => p.displayText)
-      .filter(Boolean) as string[];
+      .filter(text => typeof text === 'string' && text.trim() !== '' && !text.startsWith("Error:")) as string[];
     
     if (passageTexts.length === 0) {
-      toast({ title: "No Passages", description: "This day has no passages to mark.", variant: "default" });
+      toast({ title: "No Passages", description: "This day has no valid passages to mark.", variant: "default" });
       setMarkingDayId(null);
       return;
     }
@@ -185,7 +193,10 @@ export default function BibleChecklistPage() {
       await markMultiplePassages(passageTexts, true);
       let dayDateFormatted = "this day";
       try {
-        dayDateFormatted = format(parseISO(day.date), "MMM d");
+        const parsedDate = parseISO(day.date);
+        if (isValid(parsedDate)) {
+          dayDateFormatted = format(parsedDate, "MMM d");
+        }
       } catch {}
       toast({ title: "Day Marked Complete", description: `All passages for ${dayDateFormatted} marked as read.` });
     } catch (error: any) {
@@ -195,8 +206,8 @@ export default function BibleChecklistPage() {
     }
   };
 
-  const handlePassageClick = (passageDisplayText: string) => { // Added
-    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+  const handlePassageClick = (passageDisplayText: string | undefined) => {
+    if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
       setSelectedPassageRef(passageDisplayText);
       setIsPassageViewerOpen(true);
     } else {
@@ -381,7 +392,7 @@ export default function BibleChecklistPage() {
                                     "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
                                     isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                                   )}
-                                  onClick={() => handlePassageClick(currentPassageDisplayText)}
+                                  onClick={() => handlePassageClick(passage.displayText)}
                                   title={`View ${currentPassageDisplayText}`}
                                   disabled={isLoadingThisDay}
                                 >
@@ -402,10 +413,12 @@ export default function BibleChecklistPage() {
           })}
         </div>
       )}
-      <BiblePassageViewerDialog // Added
+      <BiblePassageViewerDialog
         isOpen={isPassageViewerOpen}
         onOpenChange={setIsPassageViewerOpen}
         passageReference={selectedPassageRef}
+        completedPassages={completedPassages}
+        markMultiplePassages={markMultiplePassages}
       />
       <BackToTopButton />
     </div>

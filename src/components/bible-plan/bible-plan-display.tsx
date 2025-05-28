@@ -5,41 +5,40 @@ import type { BibleReadingPlan, DailyReading, StructuredPassage } from '@/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button'; // Added
+import { Button } from '@/components/ui/button';
 import { format, parseISO, isToday, isValid } from 'date-fns';
 import { CalendarX, CheckSquare, CheckCircle2, BookOpen } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist'; // For markMultiplePassages
 
 interface BiblePlanDisplayProps {
   plan: BibleReadingPlan | null;
-  showPlanDetails?: boolean;
-  hideTitle?: boolean;
+  hideTitle?: boolean; // Remains for structural control
   currentUser?: any; 
-  completedPassages?: string[];
-  togglePassageCompletion?: (displayText: string) => void;
-  onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void;
-  allTodaysPassageTexts?: string[];
+  // completedPassages & togglePassageCompletion are now directly from useUserBibleChecklist below
+  onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void; // Retain for homepage master toggle
+  allTodaysPassageTexts?: string[]; // Retain for homepage master toggle
 }
 
 export default function BiblePlanDisplay({
   plan,
-  showPlanDetails = true,
   hideTitle = false,
   currentUser,
-  completedPassages = [],
-  togglePassageCompletion,
   onToggleAllToday,
   allTodaysPassageTexts = [],
 }: BiblePlanDisplayProps) {
   const [todaysReading, setTodaysReading] = useState<DailyReading | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const { toast } = useToast(); // Added
+  const { toast } = useToast();
 
-  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
-  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
+
+  // Use the hook directly for checklist functionalities relevant to this component
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
 
   useEffect(() => {
     setIsMounted(true);
@@ -51,6 +50,7 @@ export default function BiblePlanDisplay({
         try {
           if (!reading || !reading.date) return false;
           const readingDate = parseISO(reading.date); 
+          if (!isValid(readingDate)) return false;
           return isToday(readingDate);
         } catch (e) {
            console.error("[BiblePlanDisplay] Error parsing reading date for today's display:", reading?.date, e);
@@ -96,8 +96,8 @@ export default function BiblePlanDisplay({
     }
   }
 
-  const handlePassageClick = (passageDisplayText: string) => { // Added
-    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+  const handlePassageClick = (passageDisplayText: string | undefined) => {
+    if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
       setSelectedPassageRef(passageDisplayText);
       setIsPassageViewerOpen(true);
     } else {
@@ -125,20 +125,20 @@ export default function BiblePlanDisplay({
     );
   }
   
-  if (!todaysReading && !hideTitle) { 
+   if (!todaysReading) { 
      return (
-      <Card className="mt-0 shadow-lg">
+      <Card className="mt-0 shadow-lg bg-card/80">
         <CardHeader className="p-2 flex flex-row items-center space-x-2">
-          <CalendarX className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <p className="text-sm font-medium text-muted-foreground">
-            No Reading for Today
-          </p>
+            <CalendarX className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">
+                No Reading for Today
+            </p>
         </CardHeader>
-         {showPlanDetails && plan && plan.planDescription && (
+         {plan && plan.planDescription && !hideTitle && ( // Only show plan details if not hidden
           <CardContent className="p-2 pt-0 border-t mt-2">
             <CardDescription className="text-xs text-muted-foreground">
               Plan: "{plan.planDescription}"
-              {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
+              {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && isValid(parseISO(plan.generatedDate)) && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
             </CardDescription>
           </CardContent>
         )}
@@ -146,20 +146,6 @@ export default function BiblePlanDisplay({
     );
   }
   
-  if (!plan || !todaysReading) {
-    return (
-         <Card className="mt-0 shadow-lg bg-card/80">
-            <CardHeader className="p-2 flex flex-row items-center space-x-2">
-                <CalendarX className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">
-                    No Reading for Today
-                </p>
-            </CardHeader>
-        </Card>
-    );
-  }
-
-
   return (
     <>
     <Card className="mt-0 shadow-lg bg-card/80">
@@ -187,7 +173,7 @@ export default function BiblePlanDisplay({
         {validPassagesForToday.length > 0 ? (
           <ul className="space-y-1 text-sm">
             {validPassagesForToday.map((passage, index) => {
-              if (!passage || !passage.displayText || passage.displayText.startsWith("Error:")) {
+              if (!passage || !passage.displayText || typeof passage.displayText !== 'string' || passage.displayText.trim() === '') {
                  console.warn(`[BiblePlanDisplay] RENDERING: Skipping invalid passage in map. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
                  return (
                     <li key={`error-passage-${index}`} className="p-1.5 text-xs italic text-destructive font-semibold">
@@ -196,9 +182,12 @@ export default function BiblePlanDisplay({
                  );
               }
               
-              const passageIdPart = `homepage-today-passage-${passage.book?.replace(/\s+/g, '-') || `unknown-book`}-${passage.chapter || 'unknown-chapter'}-${index}`;
+              const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${index}`;
+              const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${index}`;
+              const passageIdPart = `homepage-today-passage-${bookIdPart}-${chapterIdPart}-${index}`;
+              
               const isChecked = completedPassages.includes(passage.displayText);
-              const isPassageValid = passage.displayText && !passage.displayText.toLowerCase().includes("error:");
+              const isPassageValid = !passage.displayText.startsWith("Error:");
 
               return (
                 <li key={passageIdPart} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
@@ -233,7 +222,7 @@ export default function BiblePlanDisplay({
                         {passage.displayText}
                       </Button>
                     ) : (
-                      <span className="text-destructive italic">{passage.displayText || "Error: Passage Data Invalid"}</span>
+                      <span className="text-destructive italic font-semibold">{passage.displayText || "Error: Passage Data Invalid"}</span>
                     )}
                   </Label>
                 </li>
@@ -243,18 +232,20 @@ export default function BiblePlanDisplay({
         ) : (
            <p className="text-muted-foreground text-xs p-1.5">No specific passages assigned for today.</p>
         )}
-         {showPlanDetails && plan.planDescription && (
+         {plan && plan.planDescription && !hideTitle && (
           <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
             Plan: "{plan.planDescription}"
-            {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
+            {plan.generatedDate && plan.generatedDate !== "Unknown Generation Date" && isValid(parseISO(plan.generatedDate)) && ` | Generated: ${format(parseISO(plan.generatedDate), "MMM d, yyyy p")}`}
           </CardDescription>
         )}
       </CardContent>
     </Card>
-    <BiblePassageViewerDialog // Added
+    <BiblePassageViewerDialog
         isOpen={isPassageViewerOpen}
         onOpenChange={setIsPassageViewerOpen}
         passageReference={selectedPassageRef}
+        completedPassages={completedPassages}
+        markMultiplePassages={markMultiplePassages}
       />
     </>
   );

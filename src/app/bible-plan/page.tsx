@@ -12,8 +12,9 @@ import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, sta
 import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, CalendarRange, LayoutList, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist'; // For markMultiplePassages
 
 type FilterMode = 'currentWeek' | 'singleDay' | 'all';
 
@@ -22,10 +23,14 @@ export default function FullBiblePlanPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   const [isMounted, setIsMounted] = useState(false);
-  const { toast } = useToast(); // Added
+  const { toast } = useToast();
 
-  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
-  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
+  
+  // Get functions and data from useUserBibleChecklist for the dialog
+  const { completedPassages, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -35,8 +40,14 @@ export default function FullBiblePlanPage() {
     if (!plan?.dailyReadings) return [];
     return [...plan.dailyReadings].sort((a, b) => {
       try {
-        return parseISO(a.date).getTime() - parseISO(b.date).getTime();
-      } catch (e) { return 0; }
+        const dateA = parseISO(a.date);
+        const dateB = parseISO(b.date);
+        if (!isValid(dateA) || !isValid(dateB)) return 0;
+        return dateA.getTime() - dateB.getTime();
+      } catch (e) { 
+         console.error("[FullBiblePlanPage] Error sorting daily readings by date:", a.date, b.date, e);
+        return 0; 
+      }
     });
   }, [plan]);
 
@@ -48,6 +59,7 @@ export default function FullBiblePlanPage() {
       return sortedDailyReadings.filter(reading => {
         try {
           const readingDateObj = parseISO(reading.date); 
+          if (!isValid(readingDateObj)) return false;
           return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
         } catch (e) { 
           console.error(`[FullBiblePlanPage] Error parsing date for current week filtering: ${reading.date}`, e);
@@ -58,6 +70,7 @@ export default function FullBiblePlanPage() {
       return sortedDailyReadings.filter(reading => {
          try {
             const readingDateObj = parseISO(reading.date);
+            if (!isValid(readingDateObj)) return false;
             return isSameDay(readingDateObj, selectedDate);
           } catch (e) { 
             console.error(`[FullBiblePlanPage] Error parsing date for single day filtering: ${reading.date}`, e);
@@ -84,8 +97,8 @@ export default function FullBiblePlanPage() {
     setFilterMode('all');
   };
 
-  const handlePassageClick = (passageDisplayText: string) => { // Added
-    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+  const handlePassageClick = (passageDisplayText: string | undefined) => { 
+    if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
       setSelectedPassageRef(passageDisplayText);
       setIsPassageViewerOpen(true);
     } else {
@@ -106,7 +119,7 @@ export default function FullBiblePlanPage() {
     );
   }
 
-  if (planLoading) {
+  if (planLoading || loadingChecklist) { // Also consider checklist loading for dialog props
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -189,11 +202,12 @@ export default function FullBiblePlanPage() {
           {sortedAndFilteredDailyReadings.map((reading) => {
              let parsedDayDate: Date | null = null;
               try {
+                if (!reading || !reading.date) throw new Error("Missing reading or date");
                 parsedDayDate = parseISO(reading.date);
                 if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
               } catch(e) {
-                console.error(`[FullBiblePlanPage] Error parsing date for display: ${reading.date}`, e);
-                return <Card key={`error-date-${reading.date}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
+                console.error(`[FullBiblePlanPage] Error parsing date for display: ${reading?.date}`, e);
+                return <Card key={`error-date-${reading?.date || Math.random()}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
               }
             return (
               <Card key={reading.date} className="bg-card/80 rounded-md shadow-sm">
@@ -235,10 +249,12 @@ export default function FullBiblePlanPage() {
           })}
         </div>
       )}
-       <BiblePassageViewerDialog // Added
+       <BiblePassageViewerDialog
         isOpen={isPassageViewerOpen}
         onOpenChange={setIsPassageViewerOpen}
         passageReference={selectedPassageRef}
+        completedPassages={completedPassages} // Pass for dialog features
+        markMultiplePassages={markMultiplePassages} // Pass for dialog features
       />
       <BackToTopButton />
     </div>
