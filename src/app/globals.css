@@ -111,11 +111,6 @@ body {
   .prose .esv-text h4, .prose-sm .esv-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
   }
-
-  /* Hide the ESV audio player popup link more broadly */
-  .audio-player-popup {
-    display: none !important;
-  }
 }
 
 .moving-bg-gradient {

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   
   // console.log(`[API Route /api/esv] Calling ESV API for passage: "${passage}"`);
 
-  const apiUrl = `https://api.esv.org/v3/passage/html/?q=${encodeURIComponent(passage)}&include-footnotes=false&include-headings=true&include-short-copyright=false&include-copyright=false`;
+  const apiUrl = `https://api.esv.org/v3/passage/html/?q=${encodeURIComponent(passage)}&include-footnotes=false&include-headings=true&include-short-copyright=false&include-copyright=false&include-audio-link=false`;
 
   try {
     const apiResponse = await fetch(apiUrl, {
@@ -48,16 +48,10 @@ export async function GET(request: NextRequest) {
     if (responseData.passages && responseData.passages.length > 0) {
       let passageHtml = responseData.passages[0];
       
-      // Remove inline "(Listen)" links. 
-      // This regex targets <a> tags whose link text is exactly "(Listen)" 
-      // (allowing for optional spaces around the text and parentheses).
+      // Regex replacements as a fallback, though include-audio-link=false should prevent these.
       const listenLinkRegex = /<a[^>]*>\s*\(\s*Listen\s*\)\s*<\/a>/gi;
       passageHtml = passageHtml.replace(listenLinkRegex, '');
       
-      // Also remove cases where "(Listen)" might appear as plain text directly after a verse number or chapter,
-      // if not caught by the <a> tag removal. This is more aggressive.
-      // Example: "...verse number (Listen)" -> "...verse number "
-      // This regex looks for optional leading space, then "(Listen)" with optional internal spaces.
       const plainListenTextRegex = /\s*\(\s*Listen\s*\)/gi;
       passageHtml = passageHtml.replace(plainListenTextRegex, '');
 
