@@ -20,29 +20,44 @@ export default function BiblePassageViewerDialog({
 }: BiblePassageViewerDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bibleText, setBibleText] = useState<string>('');
+  const [bibleHtml, setBibleHtml] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && passageReference) {
       setIsLoading(true);
       setError(null);
-      setBibleText('');
+      setBibleHtml('');
 
-      // Simulate API call
-      const timer = setTimeout(() => {
-        if (passageReference.toLowerCase().includes("error")) {
+      const fetchPassage = async () => {
+        try {
+          if (passageReference.toLowerCase().includes("error:")) {
             setError(`Cannot fetch text for an invalid reference: "${passageReference}"`);
             setIsLoading(false);
             return;
+          }
+
+          const response = await fetch(`/api/esv?passage=${encodeURIComponent(passageReference)}`);
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Failed to fetch passage (status: ${response.status})`);
+          }
+          
+          const data = await response.json();
+          if (data.html) {
+            setBibleHtml(data.html);
+          } else {
+            setError('Passage content not found in API response.');
+          }
+        } catch (err: any) {
+          console.error("Error fetching Bible passage:", err);
+          setError(err.message || 'An unknown error occurred while fetching the passage.');
+        } finally {
+          setIsLoading(false);
         }
-        // A real API call would parse the passageReference to format it for the API
-        // e.g., for "John 3:16-18", API might need book: "John", chapter: 3, startVerse: 16, endVerse: 18
-        // For now, we'll just use the reference as is in the placeholder.
-        const mockText = `This is the placeholder text for "${passageReference}".\n\nA real implementation would fetch this content from a Bible API. You would typically parse the reference (e.g., 'Genesis 1:1-5') to make a structured API request. The API would return the formatted text, which you would then display here. This often involves signing up for an API key from services like the ESV API, Bible API (various providers), etc. The text would then be displayed with verse numbers and paragraph breaks as provided by the API.`;
-        setBibleText(mockText);
-        setIsLoading(false);
-      }, 1000);
-      return () => clearTimeout(timer);
+      };
+
+      fetchPassage();
     }
   }, [isOpen, passageReference]);
 
@@ -55,26 +70,26 @@ export default function BiblePassageViewerDialog({
             Bible Passage: {passageReference || "No passage selected"}
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-grow my-4 pr-6"> {/* Added pr-6 for scrollbar space */}
+        <ScrollArea className="flex-grow my-4 pr-6 esv-passage-content"> {/* Added pr-6 for scrollbar space & class */}
           {isLoading && (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading passage...</p>
+              <p className="ml-2 text-muted-foreground">Loading passage from ESV API...</p>
             </div>
           )}
           {error && (
-            <div className="text-destructive flex flex-col items-center justify-center h-40">
+            <div className="text-destructive flex flex-col items-center justify-center h-40 p-4">
               <AlertTriangle className="h-8 w-8 mb-2" />
-              <p className="font-semibold">Error loading passage</p>
+              <p className="font-semibold text-center">Error loading passage</p>
               <p className="text-sm text-center">{error}</p>
             </div>
           )}
-          {!isLoading && !error && bibleText && (
-            <DialogDescription className="whitespace-pre-wrap text-sm leading-relaxed">
-              {bibleText}
-            </DialogDescription>
+          {!isLoading && !error && bibleHtml && (
+            // Using dangerouslySetInnerHTML because ESV API returns HTML
+            // Ensure the source is trusted (ESV API is generally considered safe)
+            <div dangerouslySetInnerHTML={{ __html: bibleHtml }} className="prose prose-sm dark:prose-invert max-w-none leading-relaxed" />
           )}
-           {!isLoading && !error && !bibleText && passageReference && !passageReference.toLowerCase().includes("error") && (
+           {!isLoading && !error && !bibleHtml && passageReference && !passageReference.toLowerCase().includes("error") && (
              <div className="text-muted-foreground flex items-center justify-center h-40">
                 <p>No text to display for this passage currently.</p>
             </div>
