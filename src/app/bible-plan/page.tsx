@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
+import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, XCircle, CalendarRange, LayoutList, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added
 
 type FilterMode = 'currentWeek' | 'singleDay' | 'all';
 
@@ -20,6 +22,10 @@ export default function FullBiblePlanPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   const [isMounted, setIsMounted] = useState(false);
+  const { toast } = useToast(); // Added
+
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
 
   useEffect(() => {
     setIsMounted(true);
@@ -37,11 +43,11 @@ export default function FullBiblePlanPage() {
   const sortedAndFilteredDailyReadings = useMemo(() => {
     if (filterMode === 'currentWeek') {
       const today = new Date();
-      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
-      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   // Saturday
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); 
+      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   
       return sortedDailyReadings.filter(reading => {
         try {
-          const readingDateObj = parseISO(reading.date); // "YYYY-MM-DD" is parsed as local midnight
+          const readingDateObj = parseISO(reading.date); 
           return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
         } catch (e) { 
           console.error(`[FullBiblePlanPage] Error parsing date for current week filtering: ${reading.date}`, e);
@@ -59,7 +65,6 @@ export default function FullBiblePlanPage() {
           }
       });
     }
-    // filterMode === 'all'
     return sortedDailyReadings;
   }, [sortedDailyReadings, selectedDate, filterMode]);
 
@@ -77,6 +82,19 @@ export default function FullBiblePlanPage() {
   const handleShowAll = () => {
     setSelectedDate(undefined);
     setFilterMode('all');
+  };
+
+  const handlePassageClick = (passageDisplayText: string) => { // Added
+    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+      setSelectedPassageRef(passageDisplayText);
+      setIsPassageViewerOpen(true);
+    } else {
+      toast({
+        title: "Invalid Passage",
+        description: "Cannot view details for an invalid or error passage.",
+        variant: "default"
+      });
+    }
   };
 
   if (!isMounted) {
@@ -133,7 +151,7 @@ export default function FullBiblePlanPage() {
         <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
       </div>
 
-      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30"> {/* Header height + border */}
+      <div className="mb-4 p-3 border rounded-lg bg-card shadow-sm sticky top-[calc(theme(spacing.14)+1px)] z-30"> 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Popover>
             <PopoverTrigger asChild>
@@ -187,13 +205,25 @@ export default function FullBiblePlanPage() {
                     <ul className="space-y-1.5">
                       {reading.passages.map((passage, pIndex) => {
                         const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '') ? passage.displayText : "Error: Passage text data is missing.";
+                        const isPassageValid = passageTextToDisplay && !passageTextToDisplay.toLowerCase().includes("error:");
                         if (!passage || typeof passage.displayText !== 'string' || passage.displayText.trim() === '') {
                            console.warn(`[FullBiblePlanPage] RENDERING: Passage displayText is missing or invalid for date ${reading.date}, index ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined");
                         }
                         return (
                           <li key={pIndex} className="p-1.5 bg-background/50 border rounded-md text-xs flex items-center">
-                            <BookOpenCheck className="inline-block h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
-                            <span className={cn(passageTextToDisplay.startsWith("Error:") && "text-destructive italic")}>{passageTextToDisplay}</span>
+                            <BookOpen className="inline-block h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                             {isPassageValid ? (
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto text-xs font-normal text-left justify-start text-foreground hover:text-primary hover:no-underline"
+                                  onClick={() => handlePassageClick(passageTextToDisplay)}
+                                  title={`View ${passageTextToDisplay}`}
+                                >
+                                  {passageTextToDisplay}
+                                </Button>
+                              ) : (
+                                <span className="text-destructive italic">{passageTextToDisplay}</span>
+                              )}
                           </li>
                         );
                       })}
@@ -205,8 +235,12 @@ export default function FullBiblePlanPage() {
           })}
         </div>
       )}
+       <BiblePassageViewerDialog // Added
+        isOpen={isPassageViewerOpen}
+        onOpenChange={setIsPassageViewerOpen}
+        passageReference={selectedPassageRef}
+      />
       <BackToTopButton />
     </div>
   );
 }
-

@@ -23,11 +23,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle, CalendarRange, LayoutList } from 'lucide-react';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle, CalendarRange, LayoutList, BookOpen } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
 
 const markReadRangeSchema = z.object({
   fromBook: z.string().min(1, "Please select a 'From' book."),
@@ -56,6 +57,9 @@ export default function BibleChecklistPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [filterMode, setFilterMode] = useState<FilterMode>('currentWeek');
   const [markingDayId, setMarkingDayId] = useState<string | null>(null);
+
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
   
   const markRangeForm = useForm<MarkReadRangeFormValues>({
     resolver: zodResolver(markReadRangeSchema),
@@ -88,8 +92,8 @@ export default function BibleChecklistPage() {
   const sortedAndFilteredDailyReadings = useMemo(() => {
     if (filterMode === 'currentWeek') {
       const today = new Date();
-      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); // Sunday
-      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   // Saturday
+      const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); 
+      const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   
       return sortedDailyReadings.filter(reading => {
         try {
           const readingDateObj = parseISO(reading.date); 
@@ -188,6 +192,19 @@ export default function BibleChecklistPage() {
       toast({ title: "Error", description: `Could not mark day complete: ${error.message}`, variant: "destructive" });
     } finally {
       setMarkingDayId(null);
+    }
+  };
+
+  const handlePassageClick = (passageDisplayText: string) => { // Added
+    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+      setSelectedPassageRef(passageDisplayText);
+      setIsPassageViewerOpen(true);
+    } else {
+      toast({
+        title: "Invalid Passage",
+        description: "Cannot view details for an invalid or error passage.",
+        variant: "default"
+      });
     }
   };
 
@@ -353,8 +370,26 @@ export default function BibleChecklistPage() {
                               className="h-3.5 w-3.5" 
                               disabled={!isPassageValid || isLoadingThisDay}
                             />
-                            <Label htmlFor={checkboxId} className={cn("flex-grow cursor-pointer", isChecked && "line-through text-muted-foreground", !isPassageValid && "text-destructive font-semibold italic")}>
-                              {isPassageValid ? currentPassageDisplayText : "Error: Passage text missing"}
+                            <Label
+                              htmlFor={checkboxId}
+                              className={cn("flex-grow cursor-pointer", isChecked && "line-through text-muted-foreground")}
+                            >
+                              {isPassageValid ? (
+                                <Button
+                                  variant="link"
+                                  className={cn(
+                                    "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
+                                    isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
+                                  )}
+                                  onClick={() => handlePassageClick(currentPassageDisplayText)}
+                                  title={`View ${currentPassageDisplayText}`}
+                                  disabled={isLoadingThisDay}
+                                >
+                                  {currentPassageDisplayText}
+                                </Button>
+                              ) : (
+                                <span className="text-destructive font-semibold italic">Error: Passage text missing</span>
+                              )}
                             </Label>
                           </li>
                         );
@@ -367,9 +402,12 @@ export default function BibleChecklistPage() {
           })}
         </div>
       )}
+      <BiblePassageViewerDialog // Added
+        isOpen={isPassageViewerOpen}
+        onOpenChange={setIsPassageViewerOpen}
+        passageReference={selectedPassageRef}
+      />
       <BackToTopButton />
     </div>
   );
 }
-
-      

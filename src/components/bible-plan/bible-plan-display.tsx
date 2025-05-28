@@ -5,16 +5,19 @@ import type { BibleReadingPlan, DailyReading, StructuredPassage } from '@/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { format, parseISO, isToday } from 'date-fns';
-import { BookOpenCheck, CalendarX, CheckSquare, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button'; // Added
+import { format, parseISO, isToday, isValid } from 'date-fns';
+import { CalendarX, CheckSquare, CheckCircle2, BookOpen } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added
 
 interface BiblePlanDisplayProps {
   plan: BibleReadingPlan | null;
   showPlanDetails?: boolean;
   hideTitle?: boolean;
-  currentUser?: any; // Consider using AppUser type here
+  currentUser?: any; 
   completedPassages?: string[];
   togglePassageCompletion?: (displayText: string) => void;
   onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void;
@@ -33,6 +36,10 @@ export default function BiblePlanDisplay({
 }: BiblePlanDisplayProps) {
   const [todaysReading, setTodaysReading] = useState<DailyReading | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const { toast } = useToast(); // Added
+
+  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false); // Added
+  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null); // Added
 
   useEffect(() => {
     setIsMounted(true);
@@ -64,9 +71,8 @@ export default function BiblePlanDisplay({
 
   const isAllTodaysPassagesComplete = useMemo(() => {
     if (!allTodaysPassageTexts || allTodaysPassageTexts.length === 0) return false;
-    // Ensure we only consider valid passages for completion status
     const validTextsFromProp = allTodaysPassageTexts.filter(text => text && !text.startsWith("Error:"));
-    if (validTextsFromProp.length === 0) return false; // If no valid passages in prop, can't be complete
+    if (validTextsFromProp.length === 0) return false; 
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allTodaysPassageTexts, completedPassages]);
 
@@ -86,26 +92,40 @@ export default function BiblePlanDisplay({
       if(!isValid(parsedTodaysDate)) throw new Error("Invalid date after parsing for today's reading");
     } catch(e) {
       console.error(`[BiblePlanDisplay] Invalid date for today's reading display: ${todaysReading.date}`, e);
-      parsedTodaysDate = null; // Ensure it's null if parsing fails
+      parsedTodaysDate = null; 
     }
   }
+
+  const handlePassageClick = (passageDisplayText: string) => { // Added
+    if (passageDisplayText && !passageDisplayText.toLowerCase().includes("error:")) {
+      setSelectedPassageRef(passageDisplayText);
+      setIsPassageViewerOpen(true);
+    } else {
+       toast({
+        title: "Invalid Passage",
+        description: "Cannot view details for an invalid or error passage.",
+        variant: "default"
+      });
+    }
+  };
+
 
   if (!isMounted) {
     return null; 
   }
-
-  if (!plan && !hideTitle) { // Only show this if not used in a context where title is hidden (like homepage)
+  
+  if (!plan && !hideTitle) { 
     return (
       <Card className="mt-0 shadow-lg">
         <CardContent className="p-3 text-center text-xs text-muted-foreground">
-          <BookOpenCheck className="mx-auto mb-2 h-8 w-8 opacity-50" />
+          <BookOpen className="mx-auto mb-2 h-8 w-8 opacity-50" />
           No Bible reading plan has been set by the admin yet.
         </CardContent>
       </Card>
     );
   }
   
-  if (!todaysReading && !hideTitle) { // Only show this if not used in a context where title is hidden
+  if (!todaysReading && !hideTitle) { 
      return (
       <Card className="mt-0 shadow-lg">
         <CardHeader className="p-2 flex flex-row items-center space-x-2">
@@ -126,7 +146,6 @@ export default function BiblePlanDisplay({
     );
   }
   
-  // Simplified display for homepage if no reading or plan (title is hidden there)
   if (!plan || !todaysReading) {
     return (
          <Card className="mt-0 shadow-lg bg-card/80">
@@ -142,6 +161,7 @@ export default function BiblePlanDisplay({
 
 
   return (
+    <>
     <Card className="mt-0 shadow-lg bg-card/80">
       <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
         <h3 className="text-sm font-semibold flex items-center">
@@ -178,6 +198,7 @@ export default function BiblePlanDisplay({
               
               const passageIdPart = `homepage-today-passage-${passage.book?.replace(/\s+/g, '-') || `unknown-book`}-${passage.chapter || 'unknown-chapter'}-${index}`;
               const isChecked = completedPassages.includes(passage.displayText);
+              const isPassageValid = passage.displayText && !passage.displayText.toLowerCase().includes("error:");
 
               return (
                 <li key={passageIdPart} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
@@ -188,6 +209,7 @@ export default function BiblePlanDisplay({
                       onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
                       aria-label={`Mark ${passage.displayText} as read`}
                       className="h-3.5 w-3.5"
+                      disabled={!isPassageValid}
                     />
                   )}
                   <Label
@@ -198,7 +220,21 @@ export default function BiblePlanDisplay({
                       isChecked && "line-through text-muted-foreground"
                     )}
                   >
-                    {passage.displayText}
+                    {isPassageValid ? (
+                      <Button
+                        variant="link"
+                        className={cn(
+                          "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
+                           isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
+                        )}
+                        onClick={() => handlePassageClick(passage.displayText)}
+                        title={`View ${passage.displayText}`}
+                      >
+                        {passage.displayText}
+                      </Button>
+                    ) : (
+                      <span className="text-destructive italic">{passage.displayText || "Error: Passage Data Invalid"}</span>
+                    )}
                   </Label>
                 </li>
               );
@@ -215,10 +251,11 @@ export default function BiblePlanDisplay({
         )}
       </CardContent>
     </Card>
+    <BiblePassageViewerDialog // Added
+        isOpen={isPassageViewerOpen}
+        onOpenChange={setIsPassageViewerOpen}
+        passageReference={selectedPassageRef}
+      />
+    </>
   );
 }
-
-function isValid(date: any) {
-  return date instanceof Date && !isNaN(date.getTime());
-}
-
