@@ -15,8 +15,12 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.BIBLE_API_KEY;
 
   if (!apiKey) {
-    console.error('BIBLE_API_KEY is not defined in environment variables.');
+    console.error('[API Route /api/bible-text] BIBLE_API_KEY is not defined in environment variables.');
     return NextResponse.json({ error: 'Bible API key not configured. Please contact the administrator.' }, { status: 500 });
+  } else {
+    // Log a portion of the key to help verify it's being loaded, but not the whole thing for security in logs.
+    // This log will appear in your Next.js development server console.
+    console.log(`[API Route /api/bible-text] Attempting to use BIBLE_API_KEY starting with: ${apiKey.substring(0, 4)}... and ending with: ...${apiKey.substring(apiKey.length - 4)}`);
   }
 
   // Construct the URL for scripture.api.bible
@@ -51,7 +55,7 @@ export async function GET(request: NextRequest) {
       } catch (e) {
         // Ignore if error response is not JSON or string
       }
-      console.error('Bible API Error:', errorMessage, '(URL:', apiUrl, ')');
+      console.error('[API Route /api/bible-text] Bible API Error:', errorMessage, '(URL:', apiUrl, ')');
       return NextResponse.json({ error: errorMessage }, { status: apiResponse.status });
     }
 
@@ -60,12 +64,12 @@ export async function GET(request: NextRequest) {
     if (responseData.data && responseData.data.content) {
       return NextResponse.json({ html: responseData.data.content });
     } else {
-      console.error('Bible API Error: Passage content not found in response data.', responseData);
+      console.error('[API Route /api/bible-text] Bible API Error: Passage content not found in response data.', responseData);
       return NextResponse.json({ error: 'Passage content not found in Bible API response.' }, { status: 500 });
     }
 
   } catch (error: any) {
-    console.error('Error calling Bible API:', error);
+    console.error('[API Route /api/bible-text] Error calling Bible API:', error);
     return NextResponse.json({ error: `An unexpected error occurred: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
