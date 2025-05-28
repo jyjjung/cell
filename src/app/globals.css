@@ -112,10 +112,9 @@ body {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
   }
 
-  /* Hide the ESV audio player popup link */
-  .prose .esv-text .audio-player-popup, 
-  .prose-sm .esv-text .audio-player-popup {
-    display: none !important; /* Changed from @apply hidden !important; */
+  /* Hide the ESV audio player popup link more broadly */
+  .audio-player-popup {
+    display: none !important;
   }
 }
 
