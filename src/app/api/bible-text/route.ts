@@ -4,25 +4,35 @@ import { type NextRequest, NextResponse } from 'next/server';
 // Bible ID for ESV on scripture.api.bible
 const ESV_BIBLE_ID = '06125adad2d5898a-01';
 
+// Regex to capture "Book Chapter" from a passage string.
+// Handles "Genesis 1", "1 Samuel 2", "Song of Solomon 3:15-20", "John 3:16"
+// It will capture the book name (group 1) and the chapter number (group 2).
+const BOOK_CHAPTER_REGEX = /^([1-3]?\s?[A-Za-z\s]+?)\s*(\d+)([:.\s(].*)?$/;
+
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  let passage = searchParams.get('passage');
+  let originalPassage = searchParams.get('passage');
 
-  if (!passage) {
+  if (!originalPassage) {
     return NextResponse.json({ error: 'Passage parameter is required' }, { status: 400 });
   }
 
-  console.log(`[API Route /api/bible-text] Received passage request: "${passage}"`);
+  console.log(`[API Route /api/bible-text] Received original passage request: "${originalPassage}"`);
 
-  // If passage format is "Book Chapter:StartVerse-end", modify to request the whole chapter
-  // as scripture.api.bible might not understand "-end".
-  const endSuffixMatch = /:\d+-end$/i; // Matches :SomeNumbers-end case-insensitively
-  if (endSuffixMatch.test(passage)) {
-    const originalPassage = passage;
-    passage = passage.substring(0, passage.search(endSuffixMatch));
-    console.log(`[API Route /api/bible-text] Modified passage from "${originalPassage}" to "${passage}" (requesting whole chapter)`);
+  let simplifiedPassage = originalPassage;
+  const match = originalPassage.match(BOOK_CHAPTER_REGEX);
+
+  if (match && match[1] && match[2]) {
+    const bookName = match[1].trim();
+    const chapterNumber = match[2];
+    simplifiedPassage = `${bookName} ${chapterNumber}`;
+    console.log(`[API Route /api/bible-text] Simplified to request whole chapter: "${simplifiedPassage}"`);
+  } else {
+    // If regex doesn't match, it might be a simple book name or something unexpected.
+    // We'll try to use it as is, but scripture.api.bible might reject it if it's not a valid reference.
+    console.warn(`[API Route /api/bible-text] Could not simplify passage "${originalPassage}" to Book Chapter format. Using as is.`);
   }
-
 
   const apiKey = process.env.BIBLE_API_KEY;
 
@@ -30,10 +40,12 @@ export async function GET(request: NextRequest) {
     console.error('[API Route /api/bible-text] BIBLE_API_KEY is not defined in environment variables.');
     return NextResponse.json({ error: 'Bible API key not configured. Please contact the administrator.' }, { status: 500 });
   } else {
-    console.log(`[API Route /api/bible-text] Attempting to use BIBLE_API_KEY starting with: ${apiKey.substring(0, 4)}... and ending with: ...${apiKey.substring(apiKey.length - 4)}`);
+     // Avoid logging the full key for security, just parts of it.
+    const displayKey = apiKey.length > 8 ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` : 'key_too_short_to_display_parts';
+    console.log(`[API Route /api/bible-text] Attempting to use BIBLE_API_KEY starting/ending with: ${displayKey}`);
   }
 
-  const apiUrl = `https://api.scripture.api.bible/v1/bibles/${ESV_BIBLE_ID}/passages/${encodeURIComponent(passage)}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true&include-verse-spans=false`;
+  const apiUrl = `https://api.scripture.api.bible/v1/bibles/${ESV_BIBLE_ID}/passages/${encodeURIComponent(simplifiedPassage)}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true&include-verse-spans=false`;
 
   try {
     const apiResponse = await fetch(apiUrl, {
