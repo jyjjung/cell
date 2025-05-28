@@ -6,11 +6,23 @@ const ESV_BIBLE_ID = '06125adad2d5898a-01';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const passage = searchParams.get('passage');
+  let passage = searchParams.get('passage');
 
   if (!passage) {
     return NextResponse.json({ error: 'Passage parameter is required' }, { status: 400 });
   }
+
+  console.log(`[API Route /api/bible-text] Received passage request: "${passage}"`);
+
+  // If passage format is "Book Chapter:StartVerse-end", modify to request the whole chapter
+  // as scripture.api.bible might not understand "-end".
+  const endSuffixMatch = /:\d+-end$/i; // Matches :SomeNumbers-end case-insensitively
+  if (endSuffixMatch.test(passage)) {
+    const originalPassage = passage;
+    passage = passage.substring(0, passage.search(endSuffixMatch));
+    console.log(`[API Route /api/bible-text] Modified passage from "${originalPassage}" to "${passage}" (requesting whole chapter)`);
+  }
+
 
   const apiKey = process.env.BIBLE_API_KEY;
 
@@ -18,21 +30,9 @@ export async function GET(request: NextRequest) {
     console.error('[API Route /api/bible-text] BIBLE_API_KEY is not defined in environment variables.');
     return NextResponse.json({ error: 'Bible API key not configured. Please contact the administrator.' }, { status: 500 });
   } else {
-    // Log a portion of the key to help verify it's being loaded, but not the whole thing for security in logs.
-    // This log will appear in your Next.js development server console.
     console.log(`[API Route /api/bible-text] Attempting to use BIBLE_API_KEY starting with: ${apiKey.substring(0, 4)}... and ending with: ...${apiKey.substring(apiKey.length - 4)}`);
   }
 
-  // Construct the URL for scripture.api.bible
-  // Documentation for passage query: https://scripture.api.bible/livedocs#/Passages/GetPassage
-  // It's generally good with common references like "John 3.16" or "Gen 1"
-  // Parameters for HTML content:
-  // - content-type=html
-  // - include-notes=false
-  // - include-titles=true
-  // - include-chapter-numbers=true
-  // - include-verse-numbers=true
-  // - include-verse-spans=false (to avoid extra <span> tags around verses if not needed)
   const apiUrl = `https://api.scripture.api.bible/v1/bibles/${ESV_BIBLE_ID}/passages/${encodeURIComponent(passage)}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=true&include-verse-numbers=true&include-verse-spans=false`;
 
   try {
@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
       let errorMessage = `Failed to fetch passage from Bible API. Status: ${apiResponse.status} ${apiResponse.statusText}`;
       try {
         const errorData = await apiResponse.json();
-        // scripture.api.bible errors are usually in a simple message format or an object with `statusCode` and `message`
         if (errorData && errorData.message) {
           errorMessage = `Bible API Error: ${errorData.message} (Status: ${errorData.statusCode || apiResponse.status})`;
         } else if (errorData && typeof errorData === 'string') {
