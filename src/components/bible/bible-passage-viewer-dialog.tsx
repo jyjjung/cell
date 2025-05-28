@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'; // Removed DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -36,8 +36,8 @@ export default function BiblePassageViewerDialog({
             return;
           }
 
-          // Calls the new Next.js API route for scripture.api.bible
-          const response = await fetch(`/api/bible-text?passage=${encodeURIComponent(passageReference)}`);
+          // Calls the Next.js API route for ESV
+          const response = await fetch(`/api/esv?passage=${encodeURIComponent(passageReference)}`);
           
           if (!response.ok) {
             const errorData = await response.json();
@@ -68,14 +68,14 @@ export default function BiblePassageViewerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <BookOpenText className="mr-2 h-5 w-5 text-primary" />
-            Bible Passage: {passageReference || "No passage selected"}
+            Bible Passage: {passageReference || "No passage selected"} (ESV)
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-grow my-4 pr-6">
           {isLoading && (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading passage from API...</p>
+              <p className="ml-2 text-muted-foreground">Loading passage from ESV API...</p>
             </div>
           )}
           {error && (
@@ -86,7 +86,7 @@ export default function BiblePassageViewerDialog({
             </div>
           )}
           {!isLoading && !error && bibleHtml && (
-            // The content from scripture.api.bible is expected to be HTML
+            // The content from ESV API is expected to be HTML
             <div dangerouslySetInnerHTML={{ __html: bibleHtml }} className="prose prose-sm dark:prose-invert max-w-none leading-relaxed" />
           )}
            {!isLoading && !error && !bibleHtml && passageReference && !passageReference.toLowerCase().includes("error") && (
@@ -96,7 +96,6 @@ export default function BiblePassageViewerDialog({
            )}
         </ScrollArea>
         <DialogFooter className="mt-auto">
-          {/* DialogClose is implicitly handled by onOpenChange or X button */}
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
