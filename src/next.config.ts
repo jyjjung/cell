@@ -19,16 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Fix for "Module not found: Can't resolve 'encoding'" error with firebase an d genkit
-    if (!isServer) {
-        config.resolve.fallback = {
-            ...config.resolve.fallback,
-            encoding: false,
-        };
-    }
-    return config;
-  },
+  // Removed webpack customization to test with Turbopack
 };
 
 export default nextConfig;
