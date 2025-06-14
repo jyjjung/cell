@@ -13,7 +13,7 @@ import { useMemoryVerses } from '@/hooks/use-memory-verses'; // Added
 import type { AppEvent, DailyReading } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info, BookOpenCheck } from 'lucide-react'; // Added icons
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Added CardHeader
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startOfDay, parseISO, addMonths, endOfDay, isToday, getDay, isSameDay } from 'date-fns';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
