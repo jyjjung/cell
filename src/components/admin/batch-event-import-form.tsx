@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input'; // Added Input
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useEvents } from '@/hooks/use-events';
@@ -15,6 +16,7 @@ import { AppEvent, EventCategory } from '@/types';
 const batchImportSchema = z.object({
   batchText: z.string().min(10, { message: "Batch text must be at least 10 characters." })
     .max(10000, { message: "Batch text input is too long (max 10000 characters)." }),
+  snackRota: z.string().optional(), // Comma-separated list of names for snack rota
 });
 
 type BatchImportFormValues = z.infer<typeof batchImportSchema>;
@@ -28,16 +30,20 @@ export default function BatchEventImportForm() {
     resolver: zodResolver(batchImportSchema),
     defaultValues: {
       batchText: '',
+      snackRota: '',
     },
   });
 
-  const parseAndCreateEvents = async (rawInput: string) => {
+  const parseAndCreateEvents = async (rawInput: string, snackRotaStr?: string) => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const lines = rawInput.trim().split('\n');
     let currentCategory: EventCategory | null = null;
     let localParseErrors: string[] = [];
+    
+    const rotaNames = snackRotaStr ? snackRotaStr.split(',').map(name => name.trim()).filter(name => name) : [];
+    let rotaIndex = 0;
+    
     let i = 0;
-
     while (i < lines.length) {
         let line = lines[i]?.trim();
         if (!line) { 
@@ -61,35 +67,51 @@ export default function BatchEventImportForm() {
         }
 
         if (!currentCategory) {
-            localParseErrors.push(`Skipping line (no active category): "${line}". Ensure a category (Snacks, QT, Birthday, Event) is defined before entries.`);
+            localParseErrors.push(`Skipping line (no active category): "${line}". Ensure a category is defined.`);
             i++;
             continue;
         }
         
+        // Check if the current line is a date
         const dateStr = line;
         const dateStrPartsTest = dateStr.split('/');
         if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
-            localParseErrors.push(`Skipping line under category "${currentCategory}": "${dateStr}". Expected DD/MM/YYYY date format or it's an unrecognised line.`);
+            localParseErrors.push(`Skipping line under category "${currentCategory}": "${dateStr}". Not a DD/MM/YYYY date or unrecognised line.`);
             i++;
             continue;
         }
 
-        if (i + 1 >= lines.length) {
-            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Reached end of input.`);
-            break; 
-        }
-        
-        const title = lines[i+1]?.trim();
+        // Date line confirmed
+        let title: string | null = null;
+        let details: string = "";
+        let advanceLines = 0;
 
-        if (!title) {
-            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Name/title line is empty. Skipping entry.`);
-            i += 2; 
-            continue;
-        }
-        
-        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(title)) {
-            localParseErrors.push(`Date "${dateStr}" under category "${currentCategory}" is missing its name/title. The next line "${title}" appears to be another date. Skipping date "${dateStr}".`);
-            i += 1; 
+        const nameLineCandidate = lines[i+1]?.trim();
+        const nextLineIsNewCategoryOrDate = nameLineCandidate && 
+                                           (/^(SNACKS|QT|BIRTHDAY|EVENT)/i.test(nameLineCandidate) || 
+                                            /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(nameLineCandidate));
+
+        if (currentCategory === EventCategory.Snack && rotaNames.length > 0 && (!nameLineCandidate || nextLineIsNewCategoryOrDate)) {
+            // Snack Rota case: Name is missing or next line is not a name. Use rota.
+            title = rotaNames[rotaIndex % rotaNames.length];
+            details = `${title} is bringing snacks.`;
+            rotaIndex++;
+            advanceLines = 1; // Consumed only the date line from input
+        } else if (nameLineCandidate && !nextLineIsNewCategoryOrDate) {
+            // Normal case: Name is provided on the next line
+            title = nameLineCandidate;
+            advanceLines = 2; // Consumed date and name lines
+            // Generate details based on category and title
+            switch(currentCategory) {
+                case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
+                case EventCategory.QT: details = `QT with ${title}.`; break;
+                case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
+                case EventCategory.Event: details = ""; break; // Event details are typically longer, start empty
+            }
+        } else {
+            // Date line, but no name line available and not a snack rota case.
+            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}".`);
+            i++; // Skip this problematic date line
             continue;
         }
         
@@ -98,37 +120,27 @@ export default function BatchEventImportForm() {
         const year = parseInt(dateStrPartsTest[2], 10);
 
         if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-            localParseErrors.push(`Invalid date components (day, month, or year out of range) in: "${dateStr}" under category "${currentCategory}". Skipping entry.`);
-            i += 2; 
+            localParseErrors.push(`Invalid date components in: "${dateStr}" under category "${currentCategory}". Skipping.`);
+            i += advanceLines; // Advance past consumed lines before continuing
             continue;
         }
         
         const date = new Date(Date.UTC(year, month, day)); 
         if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
-             localParseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping entry.`);
-            i += 2; 
+             localParseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping.`);
+            i += advanceLines;
             continue;
-        }
-
-        let details = "";
-        switch(currentCategory) {
-            case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
-            case EventCategory.QT: details = `QT with ${title}.`; break;
-            case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-            case EventCategory.Event: 
-                details = ""; // Event category details start empty
-                break; 
         }
         
         eventsToCreate.push({
-            title: title,
+            title: title!, // title will be set by logic above
             date: date.toISOString(), 
-            category: currentCategory as EventCategory,
+            category: currentCategory as EventCategory, // currentCategory is guaranteed non-null here
             details: details,
             summary: '', // Batch imported events start with no summary
         });
         
-        i += 2; 
+        i += advanceLines;
     }
 
     let eventsSuccessfullyAddedCount = 0;
@@ -162,7 +174,7 @@ export default function BatchEventImportForm() {
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
     
-    const { eventsSuccessfullyAddedCount, eventsParsedCount, finalErrorMessages } = await parseAndCreateEvents(data.batchText);
+    const { eventsSuccessfullyAddedCount, eventsParsedCount, finalErrorMessages } = await parseAndCreateEvents(data.batchText, data.snackRota);
 
     const infoMessages = finalErrorMessages.filter(msg => msg.startsWith("Switched to category:") || msg.startsWith("Skipping line (no active category):"));
     const actualErrors = finalErrorMessages.filter(msg => !infoMessages.includes(msg));
@@ -248,30 +260,29 @@ export default function BatchEventImportForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="space-y-6">
         <FormField
           control={form.control}
           name="batchText"
           render={({ field }) => (
             <FormItem>
+              <FormLabel>Event Data</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Example:
 Snacks
 25/05/2025
 Isaac (L) Lee
+(Or leave name blank for rota if Snack Rota is filled below)
+01/06/2025 
 
 Birthdays
 01/01/2025
 Ada Lovelace
 
-QT
-19/05/2025
-Shep. Claire Lee
-
 Events
 04/07/2025
 Community BBQ
+(Details for 'Event' type are added via Edit Event form)
 "
                   {...field}
                   rows={10}
@@ -282,7 +293,26 @@ Community BBQ
             </FormItem>
           )}
         />
-        </div>
+        <FormField
+          control={form.control}
+          name="snackRota"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Snack Rota Names (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="e.g., Alice,Bob,Charlie,David" 
+                  {...field} 
+                  className="text-sm"
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Comma-separated. If provided, and a snack date has no name, one will be assigned from this list.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className="pt-4 border-t"> 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? 'Importing Events...' : 'Import Events'}
@@ -292,3 +322,4 @@ Community BBQ
     </Form>
   );
 }
+
