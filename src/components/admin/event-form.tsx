@@ -25,6 +25,7 @@ const eventFormSchema = z.object({
   date: z.date({ required_error: "A date is required." }),
   category: z.nativeEnum(EventCategory),
   details: z.string().optional(),
+  summary: z.string().optional(), // Added summary field
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -43,31 +44,37 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: event
-      ? { ...event, date: parseISO(event.date), details: event.details || '' }
-      : { title: '', details: '', category: EventCategory.Event, date: new Date() },
+      ? { ...event, date: parseISO(event.date), details: event.details || '', summary: event.summary || '' }
+      : { title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() },
   });
 
   async function handleSubmit(data: EventFormValues) {
-    setIsSummarizing(false); // Reset at start
-    let summaryToSave: string | undefined = undefined;
+    setIsSummarizing(false); 
+    let summaryToSave: string | undefined = data.summary;
 
-    if (data.details && data.details.trim() !== '') {
-      setIsSummarizing(true);
-      try {
-        const summaryResult = await summarizeDateDetails({ notes: data.details });
-        summaryToSave = summaryResult.summary;
-      } catch (error: any) {
-        console.error("Error generating summary:", error);
-        toast({
-          title: "Summary Generation Failed",
-          description: "Could not generate AI summary. Event will be saved without it. Error: " + error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsSummarizing(false);
-      }
+    if (!data.details || data.details.trim() === '') {
+      summaryToSave = ''; // If no details, no summary
     } else {
-      summaryToSave = ''; // Clear summary if details are empty
+      // Details are present.
+      if (!summaryToSave || summaryToSave.trim() === '') {
+        // If summary field is empty, generate it.
+        setIsSummarizing(true);
+        try {
+          const summaryResult = await summarizeDateDetails({ notes: data.details });
+          summaryToSave = summaryResult.summary;
+        } catch (error: any) {
+          console.error("Error generating summary:", error);
+          toast({
+            title: "Summary Generation Failed",
+            description: "Could not generate AI summary. Event will be saved with the current summary content. Error: " + error.message,
+            variant: "destructive",
+          });
+          // Keep summaryToSave as it was (empty or manually entered then cleared) if AI fails
+        } finally {
+          setIsSummarizing(false);
+        }
+      }
+      // If summaryToSave has content (either from form directly, or AI-generated), it will be used.
     }
 
     const processedData: AppEvent = {
@@ -76,10 +83,10 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
       date: data.date.toISOString(),
       category: data.category,
       details: data.details || '',
-      summary: summaryToSave,
+      summary: summaryToSave || '', // Ensure summary is always a string
     };
     onSubmit(processedData);
-    if (!event) form.reset({ title: '', details: '', category: EventCategory.Event, date: new Date() });
+    if (!event) form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() });
   }
 
   return (
@@ -173,6 +180,26 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="summary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>AI Summary (Editable)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="A short summary will be generated if details are provided and this field is left empty. You can also write your own." 
+                  className="resize-y" 
+                  {...field} 
+                  value={field.value ?? ''} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isSummarizing}>Cancel</Button>}
           <Button type="submit" disabled={isSummarizing}>
