@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from "@/components/ui/toast";
 import { useEvents } from '@/hooks/use-events';
 import { AppEvent, EventCategory } from '@/types';
 import { addDays, format } from 'date-fns';
@@ -26,12 +27,12 @@ const batchImportSchema = z.object({
   const namesProvided = data.snackRotaNames && data.snackRotaNames.trim() !== '';
   const dateProvided = !!data.snackRotaStartDate;
 
-  if (namesProvided && !dateProvided) return false; // Names given, but no date
-  if (dateProvided && !namesProvided) return false; // Date given, but no names
-  return true; // Either both provided (and names not just whitespace) or neither provided
+  if (namesProvided && !dateProvided) return false; 
+  if (dateProvided && !namesProvided) return false; 
+  return true; 
 }, {
   message: "Snack Rota Start Date and Names must be provided together, or neither should be filled.",
-  path: ["snackRotaStartDate"], // Apply error message to one of the fields
+  path: ["snackRotaStartDate"], 
 });
 
 
@@ -40,7 +41,7 @@ type BatchImportFormValues = z.infer<typeof batchImportSchema>;
 export default function BatchEventImportForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { addEvent } = useEvents();
+  const { addEvent, deleteEvent } = useEvents(); // Added deleteEvent
 
   const form = useForm<BatchImportFormValues>({
     resolver: zodResolver(batchImportSchema),
@@ -51,11 +52,17 @@ export default function BatchEventImportForm() {
     },
   });
 
-  const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean) => {
+  const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{
+    eventsAddedFromTextCount: number;
+    eventsParsedFromTextCount: number;
+    finalTextErrorMessages: string[];
+    addedTextEventIds: string[];
+  }> => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const lines = rawInput.trim().split('\n');
     let currentCategory: EventCategory | null = null;
     let localParseErrors: string[] = [];
+    const addedTextEventIds: string[] = [];
     
     let i = 0;
     while (i < lines.length) {
@@ -91,7 +98,7 @@ export default function BatchEventImportForm() {
         }
 
         if (currentCategory === EventCategory.Snack && ignoreSnackCategoryFromText) {
-            i++; // Skip lines under an ignored Snack category in the text
+            i++; 
             continue;
         }
         
@@ -116,10 +123,10 @@ export default function BatchEventImportForm() {
             title = nameLineCandidate;
             advanceLines = 2; 
             switch(currentCategory) {
-                case EventCategory.Snack: details = title; break; // Title is the name, details is also the name
+                case EventCategory.Snack: details = title; break; 
                 case EventCategory.QT: details = `QT with ${title}.`; break;
                 case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-                case EventCategory.Event: details = ""; break; // For 'Event', details can be added manually
+                case EventCategory.Event: details = ""; break; 
             }
         } else {
             localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Each date needs a name/title on the next line.`);
@@ -149,7 +156,7 @@ export default function BatchEventImportForm() {
             date: date.toISOString(), 
             category: currentCategory as EventCategory, 
             details: details,
-            summary: '', // Summaries are generated on edit for Event type
+            summary: '', 
         });
         
         i += advanceLines;
@@ -159,26 +166,44 @@ export default function BatchEventImportForm() {
     const textEventAddErrors: string[] = [];
 
     if (eventsToCreate.length > 0) {
-      const creationPromises = eventsToCreate.map(eventData =>
-        addEvent(eventData)
-          .then(() => {
-            eventsAddedFromTextCount++;
-          })
-          .catch((error: any) => {
-            let dateForError = 'unknown date';
-            try { dateForError = eventData.date ? new Date(eventData.date).toLocaleDateString() : 'unknown date'; } catch (_) {}
-            textEventAddErrors.push(`Text Import: Failed to add event "${eventData.title}" on ${dateForError}: ${error.message}`);
-          })
-      );
+      const creationPromises = eventsToCreate.map(async eventData => {
+        try {
+          const newEventId = await addEvent(eventData);
+          addedTextEventIds.push(newEventId);
+          eventsAddedFromTextCount++;
+        } catch (error: any) {
+          let dateForError = 'unknown date';
+          try { dateForError = eventData.date ? new Date(eventData.date).toLocaleDateString() : 'unknown date'; } catch (_) {}
+          textEventAddErrors.push(`Text Import: Failed to add event "${eventData.title}" on ${dateForError}: ${error.message}`);
+        }
+      });
       await Promise.allSettled(creationPromises);
     }
     const combinedTextErrors = [...localParseErrors, ...textEventAddErrors];
     return { 
       eventsAddedFromTextCount, 
       eventsParsedFromTextCount: eventsToCreate.length,
-      finalTextErrorMessages: combinedTextErrors
+      finalTextErrorMessages: combinedTextErrors,
+      addedTextEventIds
     };
   };
+  
+  const handleUndoBatchImport = async (eventIdsToUndo: string[]) => {
+    if (eventIdsToUndo.length === 0) return;
+    setIsLoading(true); // Consider a specific undo loading state if needed
+
+    const deletionPromises = eventIdsToUndo.map(id => deleteEvent(id));
+    const results = await Promise.allSettled(deletionPromises);
+
+    const successfulDeletions = results.filter(r => r.status === 'fulfilled').length;
+    
+    toast({
+      title: "Batch Undo Successful",
+      description: `${successfulDeletions} event(s) from the batch import have been removed.`,
+    });
+    setIsLoading(false);
+  };
+
 
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
@@ -187,6 +212,8 @@ export default function BatchEventImportForm() {
     let batchTextAdded = 0;
     let batchTextParsed = 0;
     let batchTextErrorMessages: string[] = [];
+    const allAddedEventIds: string[] = [];
+
 
     const rotaFieldsAreUsed = !!(data.snackRotaNames && data.snackRotaNames.trim() !== '' && data.snackRotaStartDate);
 
@@ -196,14 +223,15 @@ export default function BatchEventImportForm() {
 
       for (const name of names) {
         const snackEvent: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'> = {
-          title: name, // Title is just the name
+          title: name, 
           date: currentDate.toISOString(),
           category: EventCategory.Snack,
-          details: name, // Details is also just the name
-          summary: '', // No summary for snacks
+          details: name, 
+          summary: '', 
         };
         try {
-          await addEvent(snackEvent);
+          const newEventId = await addEvent(snackEvent);
+          allAddedEventIds.push(newEventId);
           rotaSnacksAdded++;
         } catch (error: any) {
           rotaSnackErrors.push(`Rota: Failed to add snack event for ${name} on ${format(currentDate, "PP")}: ${error.message}`);
@@ -213,10 +241,11 @@ export default function BatchEventImportForm() {
     }
 
     if (data.batchText && data.batchText.trim() !== '') {
-      const { eventsAddedFromTextCount, eventsParsedFromTextCount, finalTextErrorMessages } = await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
+      const { eventsAddedFromTextCount, eventsParsedFromTextCount, finalTextErrorMessages, addedTextEventIds } = await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
       batchTextAdded = eventsAddedFromTextCount;
       batchTextParsed = eventsParsedFromTextCount;
       batchTextErrorMessages = finalTextErrorMessages;
+      allAddedEventIds.push(...addedTextEventIds);
     }
     
     const totalAdded = rotaSnacksAdded + batchTextAdded;
@@ -253,6 +282,11 @@ export default function BatchEventImportForm() {
             )}
           </div>
         ),
+        action: allAddedEventIds.length > 0 ? (
+          <ToastAction altText="Undo batch import" onClick={() => handleUndoBatchImport(allAddedEventIds)}>
+            Undo {allAddedEventIds.length} Added
+          </ToastAction>
+        ) : undefined,
         variant: actualParseAndAddErrors.length > 0 || (totalRotaProcessed > 0 && rotaSnacksAdded < totalRotaProcessed) || (batchTextParsed > 0 && batchTextAdded < batchTextParsed) ? "destructive" : "default",
         duration: 20000, 
       });
@@ -273,6 +307,11 @@ export default function BatchEventImportForm() {
             )}
            </div>
         ),
+        action: allAddedEventIds.length > 0 ? (
+          <ToastAction altText="Undo batch import" onClick={() => handleUndoBatchImport(allAddedEventIds)}>
+            Undo {allAddedEventIds.length} Added
+          </ToastAction>
+        ) : undefined,
         duration: 10000,
       });
       form.reset(); 
@@ -372,7 +411,7 @@ Bob
 `
                   }
                   {...field}
-                  value={field.value ?? ''} // Ensure value is never null/undefined for Textarea
+                  value={field.value ?? ''} 
                   rows={10}
                   className="text-sm font-mono"
                 />
@@ -396,3 +435,4 @@ Bob
     </Form>
   );
 }
+

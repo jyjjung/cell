@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from "@/components/ui/toast";
 import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
 import EventCard from '@/components/events/event-card';
 import { Separator } from '@/components/ui/separator';
@@ -36,14 +37,14 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin && isMounted) { // Check isMounted before router.push
+    if (!isAdmin && isMounted) { 
       setIsPageLoading(true); 
       router.push('/admin');
     }
   }, [isAdmin, router, isMounted, setIsPageLoading]);
 
 
-  if (!isMounted) { // Simplified initial loading
+  if (!isMounted) { 
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -55,12 +56,36 @@ export default function AdminDashboardPage() {
     return null; 
   }
 
+  const handleUndoAddSingleEvent = async (eventId: string, eventTitle: string) => {
+    try {
+      await deleteEvent(eventId);
+      toast({
+        title: "Undo Successful",
+        description: `Event "${eventTitle}" has been removed.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Undo Failed",
+        description: `Could not remove event "${eventTitle}". Please try again.`,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleAddEvent = async (data: AppEvent) => {
     const { id, ...eventDataNoId } = data;
     try {
-      await addEvent(eventDataNoId);
-      toast({ title: "Event Added", description: `"${data.title}" has been successfully added.` });
+      const newEventId = await addEvent(eventDataNoId);
+      toast({ 
+        title: "Event Added", 
+        description: `"${data.title}" has been successfully added.`,
+        action: (
+            <ToastAction altText="Undo add event" onClick={() => handleUndoAddSingleEvent(newEventId, data.title)}>
+              Undo
+            </ToastAction>
+        ),
+        duration: 7000, 
+      });
       setIsFormModalOpen(false);
     } catch (error) {
        toast({ title: "Error Adding Event", description: `Failed to add "${data.title}". Please try again.`, variant: "destructive" });
@@ -93,7 +118,7 @@ export default function AdminDashboardPage() {
     const today = startOfDay(new Date());
     const pastEventsToDelete = events.filter(event => {
         try {
-            const eventDate = parseISO(event.date); // Ensure date is parsed correctly
+            const eventDate = parseISO(event.date); 
             return eventDate < today;
         } catch(e) { 
             console.error("Error parsing event date for deletion:", event.date, e);
@@ -298,3 +323,4 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+

@@ -52,7 +52,7 @@ export function useEvents() {
     return () => unsubscribe();
   }, []);
 
-  const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>) => {
+  const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>): Promise<string> => {
     try {
       const dataToSend = {
         ...eventData,
@@ -61,13 +61,14 @@ export function useEvents() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
+      const docRef = await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
+      return docRef.id; // Return the new document ID
     } catch (error: any) {
       console.error("Error adding event to Firestore. Data:", eventData, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
       if (error.code === 'permission-denied') {
         console.error("Firestore permission denied. Check your security rules.");
       }
-      throw error;
+      throw error; // Re-throw error
     }
   }, []);
 
@@ -124,15 +125,15 @@ export function useEvents() {
       const querySnapshot = await getDocs(q);
 
       const eventTitle = `${displayName}'s Birthday`;
-      const eventDetails = `Happy Birthday to ${displayName}!`; // Birthday details are concise
+      const eventDetails = `Happy Birthday to ${displayName}!`; 
 
       if (!querySnapshot.empty) {
         const existingEventDoc = querySnapshot.docs[0];
         await updateDoc(existingEventDoc.ref, {
           title: eventTitle,
           date: eventDateISO,
-          details: eventDetails, // No summary for birthdays
-          summary: '', // Explicitly set summary to empty for birthdays
+          details: eventDetails, 
+          summary: '', 
           updatedAt: serverTimestamp(),
         });
       } else {
@@ -140,8 +141,8 @@ export function useEvents() {
           title: eventTitle,
           date: eventDateISO,
           category: EventCategory.Birthday,
-          details: eventDetails, // No summary for birthdays
-          summary: '', // Explicitly set summary to empty for birthdays
+          details: eventDetails, 
+          summary: '', 
           userId: userId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -155,3 +156,4 @@ export function useEvents() {
 
   return { events, addEvent, updateEvent, deleteEvent, addOrUpdateBirthdayEvent, loading };
 }
+
