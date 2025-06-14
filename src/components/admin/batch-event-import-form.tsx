@@ -116,10 +116,10 @@ export default function BatchEventImportForm() {
             title = nameLineCandidate;
             advanceLines = 2; 
             switch(currentCategory) {
-                case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
+                case EventCategory.Snack: details = title; break; // Title is the name, details is also the name
                 case EventCategory.QT: details = `QT with ${title}.`; break;
                 case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-                case EventCategory.Event: details = ""; break;
+                case EventCategory.Event: details = ""; break; // For 'Event', details can be added manually
             }
         } else {
             localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Each date needs a name/title on the next line.`);
@@ -149,7 +149,7 @@ export default function BatchEventImportForm() {
             date: date.toISOString(), 
             category: currentCategory as EventCategory, 
             details: details,
-            summary: '', 
+            summary: '', // Summaries are generated on edit for Event type
         });
         
         i += advanceLines;
@@ -196,11 +196,11 @@ export default function BatchEventImportForm() {
 
       for (const name of names) {
         const snackEvent: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'> = {
-          title: `${name} is bringing snacks.`,
+          title: name, // Title is just the name
           date: currentDate.toISOString(),
           category: EventCategory.Snack,
-          details: `${name} is bringing snacks.`,
-          summary: '',
+          details: name, // Details is also just the name
+          summary: '', // No summary for snacks
         };
         try {
           await addEvent(snackEvent);
@@ -396,5 +396,3 @@ Bob
     </Form>
   );
 }
-
-    
