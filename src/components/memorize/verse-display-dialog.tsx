@@ -22,22 +22,25 @@ export default function VerseDisplayDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verseHtml, setVerseHtml] = useState<string>('');
-  const [verseTextOverride, setVerseTextOverride] = useState<string | null>(null);
+  const [currentVerseTextOverride, setCurrentVerseTextOverride] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && verse) {
+      setIsLoading(true); // Assume loading until we determine the path
       setError(null);
       setVerseHtml('');
-      setVerseTextOverride(null);
+      setCurrentVerseTextOverride(null);
 
-      if (verse.textOverride) {
-        setVerseTextOverride(verse.textOverride);
-        setIsLoading(false);
-      } else if (verse.reference) {
-        setIsLoading(true);
+      // Case 1: Verse has a textOverride (e.g., The Lord's Prayer)
+      if (verse.textOverride && verse.textOverride.trim() !== '') {
+        setCurrentVerseTextOverride(verse.textOverride);
+        setIsLoading(false); // Data is ready, no API call needed
+      }
+      // Case 2: No textOverride, but has a reference to fetch from API
+      else if (verse.reference && verse.reference.trim() !== '') {
         const fetchVerse = async () => {
           try {
-            const response = await fetch(`/api/esv?passage=${encodeURIComponent(verse.reference)}`);
+            const response = await fetch(`/api/esv?passage=${encodeURIComponent(verse.reference!)}`);
             if (!response.ok) {
               const errorData = await response.json();
               throw new Error(errorData.error || `Failed to fetch verse (status: ${response.status})`);
@@ -52,14 +55,22 @@ export default function VerseDisplayDialog({
             console.error("Error fetching Bible verse:", err);
             setError(err.message || 'An unknown error occurred while fetching the verse.');
           } finally {
-            setIsLoading(false);
+            setIsLoading(false); // API call finished (success or fail)
           }
         };
         fetchVerse();
-      } else {
-        setError("No verse reference or text override provided.");
-        setIsLoading(false);
       }
+      // Case 3: Neither textOverride nor a valid reference
+      else {
+        setError("No verse reference or text override provided to display.");
+        setIsLoading(false); // No action to take
+      }
+    } else if (!isOpen) {
+      // Clear states when dialog closes to prevent stale data flash
+      setCurrentVerseTextOverride(null);
+      setVerseHtml('');
+      setError(null);
+      setIsLoading(false);
     }
   }, [isOpen, verse]);
 
@@ -92,18 +103,18 @@ export default function VerseDisplayDialog({
                 <p className="text-sm">{error}</p>
               </div>
             )}
-            {!isLoading && !error && verseTextOverride && (
+            {!isLoading && !error && currentVerseTextOverride && (
               <div className="whitespace-pre-wrap p-1 text-sm sm:text-base leading-relaxed dark:text-gray-200 text-gray-800">
-                {verseTextOverride}
+                {currentVerseTextOverride}
               </div>
             )}
-            {!isLoading && !error && !verseTextOverride && verseHtml && (
+            {!isLoading && !error && !currentVerseTextOverride && verseHtml && (
               <div 
                 dangerouslySetInnerHTML={{ __html: verseHtml }} 
                 className="prose prose-sm dark:prose-invert max-w-none leading-relaxed esv-text"
               />
             )}
-             {!isLoading && !error && !verseHtml && !verseTextOverride && verse?.reference && (
+             {!isLoading && !error && !verseHtml && !currentVerseTextOverride && verse?.reference && (
                 <div className="text-muted-foreground flex items-center justify-center h-32">
                     <p>No text to display.</p>
                 </div>
@@ -120,3 +131,4 @@ export default function VerseDisplayDialog({
     </Dialog>
   );
 }
+
