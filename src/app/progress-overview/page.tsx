@@ -11,13 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Users, Info, BarChart3 } from 'lucide-react';
+import { startOfDay, parseISO, isBefore, isSameDay, isValid as isDateValid } from 'date-fns';
 
 interface UserProgressDisplay {
   userId: string;
   userDisplayName: string | null;
   completedCount: number;
   progressPercentage: number;
-  totalPassagesInPlan: number;
+  totalPassagesToDate: number; // Renamed from totalPassagesInPlan
 }
 
 export default function ProgressOverviewPage() {
@@ -40,31 +41,44 @@ export default function ProgressOverviewPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
 
-  const totalPassagesInPlan = useMemo(() => {
-    if (!plan?.dailyReadings) return 0;
-    return plan.dailyReadings.reduce((acc, day) => {
+  const totalPassagesUpToToday = useMemo(() => {
+    if (!isMounted || !plan?.dailyReadings) return 0;
+    const today = startOfDay(new Date());
+    
+    const relevantReadings = plan.dailyReadings.filter(reading => {
+      try {
+        const readingDate = parseISO(reading.date);
+        return isDateValid(readingDate) && (isBefore(readingDate, today) || isSameDay(readingDate, today));
+      } catch (e) {
+        console.error("Error parsing reading date for progress calculation:", reading.date, e);
+        return false;
+      }
+    });
+
+    return relevantReadings.reduce((acc, day) => {
         if (!day || !Array.isArray(day.passages)) return acc;
         const validDayPassages = day.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:"));
         return acc + validDayPassages.length;
     }, 0);
-  }, [plan]);
+  }, [plan, isMounted]);
 
   const userProgressData = useMemo(() => {
-    if (!allChecklists || totalPassagesInPlan === 0) {
+    if (!allChecklists || totalPassagesUpToToday === 0) { // Use new total
       return [];
     }
     return allChecklists.map(checklist => {
       const completedCount = checklist.completedPassages.length;
-      const progressPercentage = totalPassagesInPlan > 0 ? (completedCount / totalPassagesInPlan) * 100 : 0;
+      // Calculate progress against passages *up to today*
+      const progressPercentage = totalPassagesUpToToday > 0 ? (completedCount / totalPassagesUpToToday) * 100 : 0;
       return {
         userId: checklist.userId,
-        userDisplayName: checklist.userDisplayName || checklist.userId, // Fallback to UID if display name is null
+        userDisplayName: checklist.userDisplayName || checklist.userId,
         completedCount,
         progressPercentage,
-        totalPassagesInPlan,
+        totalPassagesToDate: totalPassagesUpToToday, // Use new total
       };
     }).sort((a, b) => b.progressPercentage - a.progressPercentage);
-  }, [allChecklists, totalPassagesInPlan]);
+  }, [allChecklists, totalPassagesUpToToday]);
 
   if (!isMounted || loadingAuth || (!currentUser && isMounted)) {
      return (
@@ -98,8 +112,24 @@ export default function ProgressOverviewPage() {
       </div>
     );
   }
+  
+  if (totalPassagesUpToToday === 0 && isMounted) { // Check if no readings up to today
+     return (
+      <div className="space-y-8">
+        <div className="flex items-center space-x-3 mb-6">
+          <BarChart3 className="h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold tracking-tight">Community Progress Overview</h1>
+        </div>
+        <Card className="mt-6 shadow-lg max-w-lg mx-auto">
+          <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Readings Scheduled Yet</CardTitle></div></CardHeader>
+          <CardContent><p className="text-muted-foreground">There are no Bible readings scheduled up to today in the current plan, or the plan has not started.</p></CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  if (userProgressData.length === 0) {
+
+  if (userProgressData.length === 0 && isMounted) {
      return (
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
@@ -108,7 +138,7 @@ export default function ProgressOverviewPage() {
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader>
-          <CardContent><p className="text-muted-foreground">No users have started tracking their progress on the checklist, or no checklists were found.</p></CardContent>
+          <CardContent><p className="text-muted-foreground">No users have started tracking their progress, or no checklists were found for readings scheduled to date.</p></CardContent>
         </Card>
       </div>
     );
@@ -124,7 +154,7 @@ export default function ProgressOverviewPage() {
         <CardHeader>
           <CardTitle>User Reading Progress</CardTitle>
           <CardDescription>
-            Overview of how many passages each user has completed in the current plan.
+            Overview of passages each user has completed out of those scheduled up to today.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -132,8 +162,8 @@ export default function ProgressOverviewPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">User</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead className="text-right">Completed / Total</TableHead>
+                <TableHead>Progress (% of readings due)</TableHead>
+                <TableHead className="text-right">Completed / Expected by Today</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -149,7 +179,7 @@ export default function ProgressOverviewPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right text-sm">
-                    {progressItem.completedCount} / {progressItem.totalPassagesInPlan}
+                    {progressItem.completedCount} / {progressItem.totalPassagesToDate}
                   </TableCell>
                 </TableRow>
               ))}
@@ -160,3 +190,4 @@ export default function ProgressOverviewPage() {
     </div>
   );
 }
+

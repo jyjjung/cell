@@ -13,12 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
 import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
-import EventCard from '@/components/events/event-card';
+// EventCard import is no longer needed for the list view
 import { Separator } from '@/components/ui/separator';
-import { startOfDay, parseISO } from 'date-fns';
+import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function AdminDashboardPage() {
@@ -186,68 +187,77 @@ export default function AdminDashboardPage() {
             </Dialog>
           </div>
         </CardHeader>
-      </Card>
-
-      {eventsLoading ? (
-         <Card><CardContent className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></CardContent></Card>
-      ) : events.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <Card key={event.id} className="flex flex-col">
-              <CardContent className="p-0 flex-grow">
-                <EventCard event={event} />
-              </CardContent>
-              <div className="p-4 border-t flex justify-end space-x-2 bg-background/50">
-                  <Button variant="outline" size="sm" onClick={() => openEditModal(event)}>
-                    <Edit className="mr-2 h-3 w-3" /> Edit
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <Trash2 className="mr-2 h-3 w-3" /> Delete
+        <CardContent className="p-0"> {/* Adjusted padding for table */}
+          {eventsLoading ? (
+            <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
+          ) : events.length === 0 ? (
+            <div className="p-6 text-center">
+              <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Title</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="font-medium">{event.title}</TableCell>
+                    <TableCell>{format(parseISO(event.date), "PPP")}</TableCell>
+                    <TableCell>{event.category}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => openEditModal(event)}>
+                        <Edit className="mr-1 h-3 w-3" /> Edit
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the event titled "{event.title}".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={async () => {
-                            try {
-                              await deleteEvent(event.id);
-                              toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
-                            } catch (error) {
-                              console.error("Failed to delete event:", error);
-                              toast({
-                                title: "Deletion Failed",
-                                description: `Could not delete event "${event.title}". Please try again.`,
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          Yes, delete event
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 className="mr-1 h-3 w-3" /> Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the event titled "{event.title}".
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={async () => {
+                                try {
+                                  await deleteEvent(event.id);
+                                  toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
+                                } catch (error) {
+                                  console.error("Failed to delete event:", error);
+                                  toast({
+                                    title: "Deletion Failed",
+                                    description: `Could not delete event "${event.title}". Please try again.`,
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              Yes, delete event
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Separator className="my-12" />
 
