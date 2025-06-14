@@ -21,16 +21,11 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 
 const MEMORY_VERSES_COLLECTION = 'memoryVerses';
-const LORDS_PRAYER_REFS = [
-  "Matthew 6:9",
-  "Matthew 6:10",
-  "Matthew 6:11",
-  "Matthew 6:12",
-  "Matthew 6:13"
-];
+const LORDS_PRAYER_TEXT = "Our Father in heaven,\nhallowed be your name.\nYour kingdom come,\nyour will be done,\non earth as it is in heaven.\nGive us this day our daily bread,\nand forgive us our debts,\nas we also have forgiven our debtors.\nAnd lead us not into temptation,\nbut deliver us from evil.\nFor yours is the kingdom,\nand the power, and the glory,\nforever. Amen.";
+const LORDS_PRAYER_REFERENCE_TITLE = "The Lord's Prayer";
 
 export function useMemoryVerses() {
-  const { isAdmin } = useAuth(); // Ensure only admin can modify
+  const { isAdmin } = useAuth();
   const [memoryVerses, setMemoryVerses] = useState<MemoryVerse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +39,7 @@ export function useMemoryVerses() {
         versesData.push({
           id: doc.id,
           reference: data.reference,
+          textOverride: data.textOverride,
           addedAt: data.addedAt as Timestamp,
           order: data.order,
           isLordsPrayerChunk: data.isLordsPrayerChunk || false,
@@ -60,20 +56,20 @@ export function useMemoryVerses() {
     return () => unsubscribe();
   }, []);
 
-  const addMemoryVerse = useCallback(async (reference: string, isLordsPrayerChunk = false): Promise<string> => {
+  const addMemoryVerse = useCallback(async (reference: string): Promise<string> => {
     if (!isAdmin) throw new Error("User is not authorized to add memory verses.");
     try {
-      // Check if verse already exists to prevent duplicates
       const q = query(collection(db, MEMORY_VERSES_COLLECTION), where("reference", "==", reference));
       const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty && !isLordsPrayerChunk) { // Allow Lord's Prayer to be re-added if deleted, simpler logic
+      if (!querySnapshot.empty) {
          throw new Error(`Verse "${reference}" already exists.`);
       }
 
       const docRef = await addDoc(collection(db, MEMORY_VERSES_COLLECTION), {
         reference,
         addedAt: serverTimestamp(),
-        isLordsPrayerChunk,
+        isLordsPrayerChunk: false, // Standard verses are not LP chunks
+        textOverride: null, // Standard verses use API
       });
       return docRef.id;
     } catch (error) {
@@ -84,34 +80,26 @@ export function useMemoryVerses() {
 
   const addLordsPrayer = useCallback(async () => {
     if (!isAdmin) throw new Error("User is not authorized to add memory verses.");
-    const batch = writeBatch(db);
-    const existingRefs = new Set(memoryVerses.map(v => v.reference));
-    let addedCount = 0;
-
-    LORDS_PRAYER_REFS.forEach(ref => {
-      if (!existingRefs.has(ref)) {
-        const docRef = doc(collection(db, MEMORY_VERSES_COLLECTION));
-        batch.set(docRef, {
-          reference: ref,
-          addedAt: serverTimestamp(),
-          isLordsPrayerChunk: true,
-        });
-        addedCount++;
-      }
-    });
-
-    if (addedCount === 0) {
-        throw new Error("The Lord's Prayer verses already exist or no new verses to add.");
+    
+    const q = query(collection(db, MEMORY_VERSES_COLLECTION), where("reference", "==", LORDS_PRAYER_REFERENCE_TITLE));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      throw new Error(`"${LORDS_PRAYER_REFERENCE_TITLE}" already exists.`);
     }
 
     try {
-      await batch.commit();
-      return { addedCount };
+      await addDoc(collection(db, MEMORY_VERSES_COLLECTION), {
+        reference: LORDS_PRAYER_REFERENCE_TITLE,
+        textOverride: LORDS_PRAYER_TEXT,
+        addedAt: serverTimestamp(),
+        isLordsPrayerChunk: true, 
+      });
+      return { addedCount: 1 }; // Signifies one entry added
     } catch (error) {
       console.error("Error adding The Lord's Prayer:", error);
       throw error;
     }
-  }, [isAdmin, memoryVerses]);
+  }, [isAdmin]);
 
   const deleteMemoryVerse = useCallback(async (verseId: string) => {
     if (!isAdmin) throw new Error("User is not authorized to delete memory verses.");

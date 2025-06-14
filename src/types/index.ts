@@ -74,8 +74,10 @@ export interface UserBibleChecklist {
 
 export interface MemoryVerse {
   id: string; // Firestore document ID
-  reference: string; // e.g., "John 3:16", "Psalm 23:1-3"
+  reference: string; // e.g., "John 3:16", "Psalm 23:1-3", or "The Lord's Prayer"
+  textOverride?: string; // Full text for special entries like The Lord's Prayer
   order?: number; // Optional, for custom ordering if needed
   addedAt: Timestamp;
-  isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer
+  isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer or the single entry
 }
+

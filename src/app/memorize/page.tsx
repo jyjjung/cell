@@ -15,13 +15,13 @@ import { format } from 'date-fns';
 export default function MemorizePage() {
   const { memoryVerses, loading: versesLoading } = useMemoryVerses();
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedVerseRef, setSelectedVerseRef] = useState<string | null>(null);
+  const [selectedVerseObj, setSelectedVerseObj] = useState<MemoryVerse | null>(null);
   const [isVerseDisplayOpen, setIsVerseDisplayOpen] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  const handleVerseClick = (reference: string) => {
-    setSelectedVerseRef(reference);
+  const handleVerseClick = (verse: MemoryVerse) => {
+    setSelectedVerseObj(verse);
     setIsVerseDisplayOpen(true);
   };
 
@@ -72,7 +72,7 @@ export default function MemorizePage() {
                 <Button
                   variant="link"
                   className="p-0 h-auto text-lg font-semibold text-left justify-start text-primary hover:underline"
-                  onClick={() => handleVerseClick(verse.reference)}
+                  onClick={() => handleVerseClick(verse)}
                   title={`View ${verse.reference}`}
                 >
                   {verse.reference}
@@ -90,7 +90,7 @@ export default function MemorizePage() {
       <VerseDisplayDialog
         isOpen={isVerseDisplayOpen}
         onOpenChange={setIsVerseDisplayOpen}
-        verseReference={selectedVerseRef}
+        verse={selectedVerseObj}
       />
       <BackToTopButton />
     </div>

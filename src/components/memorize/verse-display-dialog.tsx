@@ -6,51 +6,65 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { MemoryVerse } from '@/types';
 
 interface VerseDisplayDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  verseReference: string | null;
+  verse: MemoryVerse | null;
 }
 
 export default function VerseDisplayDialog({
   isOpen,
   onOpenChange,
-  verseReference,
+  verse,
 }: VerseDisplayDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verseHtml, setVerseHtml] = useState<string>('');
+  const [verseTextOverride, setVerseTextOverride] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && verseReference) {
-      setIsLoading(true);
+    if (isOpen && verse) {
       setError(null);
       setVerseHtml('');
+      setVerseTextOverride(null);
 
-      const fetchVerse = async () => {
-        try {
-          const response = await fetch(`/api/esv?passage=${encodeURIComponent(verseReference)}`);
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to fetch verse (status: ${response.status})`);
+      if (verse.textOverride) {
+        setVerseTextOverride(verse.textOverride);
+        setIsLoading(false);
+      } else if (verse.reference) {
+        setIsLoading(true);
+        const fetchVerse = async () => {
+          try {
+            const response = await fetch(`/api/esv?passage=${encodeURIComponent(verse.reference)}`);
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `Failed to fetch verse (status: ${response.status})`);
+            }
+            const data = await response.json();
+            if (data.html) {
+              setVerseHtml(data.html);
+            } else {
+              setError('Verse content not found in API response.');
+            }
+          } catch (err: any) {
+            console.error("Error fetching Bible verse:", err);
+            setError(err.message || 'An unknown error occurred while fetching the verse.');
+          } finally {
+            setIsLoading(false);
           }
-          const data = await response.json();
-          if (data.html) {
-            setVerseHtml(data.html);
-          } else {
-            setError('Verse content not found in API response.');
-          }
-        } catch (err: any) {
-          console.error("Error fetching Bible verse:", err);
-          setError(err.message || 'An unknown error occurred while fetching the verse.');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchVerse();
+        };
+        fetchVerse();
+      } else {
+        setError("No verse reference or text override provided.");
+        setIsLoading(false);
+      }
     }
-  }, [isOpen, verseReference]);
+  }, [isOpen, verse]);
+
+  const displayReference = verse?.reference || "Memory Verse";
+  const showEsvSource = !verse?.textOverride && !isLoading && !error && verseHtml;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -58,8 +72,8 @@ export default function VerseDisplayDialog({
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center text-base sm:text-lg">
             <BookOpenText className="mr-2 h-5 w-5 text-primary shrink-0" />
-            <span className="truncate">{verseReference || "Memory Verse"}</span>
-             {!isLoading && !error && verseHtml && <span className="ml-1 text-muted-foreground text-sm">(ESV)</span>}
+            <span className="truncate">{displayReference}</span>
+            {showEsvSource && <span className="ml-1 text-muted-foreground text-sm">(ESV)</span>}
           </DialogTitle>
         </DialogHeader>
         
@@ -78,13 +92,18 @@ export default function VerseDisplayDialog({
                 <p className="text-sm">{error}</p>
               </div>
             )}
-            {!isLoading && !error && verseHtml && (
+            {!isLoading && !error && verseTextOverride && (
+              <div className="whitespace-pre-wrap p-1 text-sm sm:text-base leading-relaxed dark:text-gray-200 text-gray-800">
+                {verseTextOverride}
+              </div>
+            )}
+            {!isLoading && !error && !verseTextOverride && verseHtml && (
               <div 
                 dangerouslySetInnerHTML={{ __html: verseHtml }} 
                 className="prose prose-sm dark:prose-invert max-w-none leading-relaxed esv-text"
               />
             )}
-             {!isLoading && !error && !verseHtml && verseReference && (
+             {!isLoading && !error && !verseHtml && !verseTextOverride && verse?.reference && (
                 <div className="text-muted-foreground flex items-center justify-center h-32">
                     <p>No text to display.</p>
                 </div>
