@@ -47,7 +47,7 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
       <div className="h-full flex flex-col bg-card rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-grow min-w-0">
-            <CardTitle className="text-base leading-tight mb-1 truncate">{event.title}</CardTitle>
+            <CardTitle className="text-base leading-tight mb-1">{event.title}</CardTitle>
             <Badge variant={
                 event.category === EventCategory.Event ? "default"
               : event.category === EventCategory.QT ? "secondary"
@@ -61,7 +61,6 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
           </div>
         </div>
         <CardDescription className="text-xs mt-1.5">{formattedDate}</CardDescription>
-        {/* Only show description for EventCategory.Event and if text exists, no line clamp */}
         {event.category === EventCategory.Event && descriptionTextForEvent && (
           <p className="mt-1.5 text-xs text-foreground/70 break-words flex-shrink min-h-0">
             {descriptionTextForEvent}
@@ -91,13 +90,11 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
       </CardHeader>
       <CardContent className="flex-grow pb-4">
         <CardDescription className="text-sm">{formattedDate}</CardDescription>
-        {/* Only show description for EventCategory.Event and if text exists */}
         {event.category === EventCategory.Event && descriptionTextForEvent && (
           <p className="mt-2 text-sm text-foreground/80 break-words"> 
             {descriptionTextForEvent}
           </p>
         )}
-        {/* No other event types will show details/summary here */}
       </CardContent>
     </div>
   );
