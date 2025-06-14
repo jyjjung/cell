@@ -33,16 +33,12 @@ function getCategoryIcon(category: EventCategory, isCompact?: boolean) {
 export default function EventCard({ event, isCompact = false }: EventCardProps) {
   const formattedDate = format(parseISO(event.date), isCompact ? "MMM d, yy" : "MMMM d, yyyy");
 
-  let showEventSpecificDescription = false;
-  let eventSpecificDescription = "";
-
+  let descriptionTextForEvent: string | null = null;
   if (event.category === EventCategory.Event) {
     if (event.summary && event.summary.trim() !== '') {
-      eventSpecificDescription = event.summary;
-      showEventSpecificDescription = true;
+      descriptionTextForEvent = event.summary;
     } else if (event.details && event.details.trim() !== '') {
-      eventSpecificDescription = event.details;
-      showEventSpecificDescription = true;
+      descriptionTextForEvent = event.details;
     }
   }
 
@@ -50,7 +46,7 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
     return (
       <div className="h-full flex flex-col bg-card rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md p-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-grow min-w-0"> {/* Added min-w-0 for better flex truncation */}
+          <div className="flex-grow min-w-0">
             <CardTitle className="text-base leading-tight mb-1 truncate">{event.title}</CardTitle>
             <Badge variant={
                 event.category === EventCategory.Event ? "default"
@@ -65,9 +61,10 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
           </div>
         </div>
         <CardDescription className="text-xs mt-1.5">{formattedDate}</CardDescription>
-        {showEventSpecificDescription && (
-          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2 break-words flex-shrink min-h-0">
-            {eventSpecificDescription}
+        {/* Only show description for EventCategory.Event and if text exists */}
+        {event.category === EventCategory.Event && descriptionTextForEvent && (
+          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-3 break-words flex-shrink min-h-0">
+            {descriptionTextForEvent}
           </p>
         )}
       </div>
@@ -94,15 +91,13 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
       </CardHeader>
       <CardContent className="flex-grow pb-4">
         <CardDescription className="text-sm">{formattedDate}</CardDescription>
-        {showEventSpecificDescription && (
+        {/* Only show description for EventCategory.Event and if text exists */}
+        {event.category === EventCategory.Event && descriptionTextForEvent && (
           <p className="mt-2 text-sm text-foreground/80 break-words"> 
-            {eventSpecificDescription}
+            {descriptionTextForEvent}
           </p>
         )}
-        {/* For non-Event types, if details were initially set (e.g. "X is bringing snacks"), show them if no summary exists */}
-        {event.category !== EventCategory.Event && event.details && event.details.trim() !== '' && (
-           <p className="mt-2 text-sm text-foreground/80 break-words">{event.details}</p>
-        )}
+        {/* No other event types will show details/summary here */}
       </CardContent>
     </div>
   );

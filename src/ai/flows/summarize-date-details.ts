@@ -19,7 +19,7 @@ const SummarizeDateDetailsInputSchema = z.object({
 export type SummarizeDateDetailsInput = z.infer<typeof SummarizeDateDetailsInputSchema>;
 
 const SummarizeDateDetailsOutputSchema = z.object({
-  summary: z.string().describe('The summary of the event.'),
+  summary: z.string().describe('The very short summary of the event (1-2 concise sentences, ideally under 30 words).'),
 });
 export type SummarizeDateDetailsOutput = z.infer<typeof SummarizeDateDetailsOutputSchema>;
 
@@ -31,7 +31,7 @@ const prompt = ai.definePrompt({
   name: 'summarizeDateDetailsPrompt',
   input: {schema: SummarizeDateDetailsInputSchema},
   output: {schema: SummarizeDateDetailsOutputSchema},
-  prompt: `You are an expert summarizer. Please summarize the following notes from an event:
+  prompt: `You are an expert summarizer. Please provide a very short summary (1-2 concise sentences, ideally under 30 words) for the following event notes:
 
 {{{notes}}}`,
 });
