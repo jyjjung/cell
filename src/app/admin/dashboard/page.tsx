@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent className="p-0"> {/* Adjusted padding for table */}
+        <CardContent className="p-0"> 
           {eventsLoading ? (
             <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
           ) : events.length === 0 ? (
@@ -198,25 +198,25 @@ export default function AdminDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Title</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[40%] px-3 py-2 text-xs">Title</TableHead>
+                  <TableHead className="px-3 py-2 text-xs">Date</TableHead>
+                  <TableHead className="px-3 py-2 text-xs">Category</TableHead>
+                  <TableHead className="text-right px-3 py-2 text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {events.map((event) => (
                   <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.title}</TableCell>
-                    <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
-                    <TableCell>{event.category}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditModal(event)} aria-label="Edit event">
+                    <TableCell className="font-medium px-3 py-1.5">{event.title}</TableCell>
+                    <TableCell className="px-3 py-1.5">{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
+                    <TableCell className="px-3 py-1.5">{event.category}</TableCell>
+                    <TableCell className="text-right space-x-1 px-3 py-1.5">
+                      <Button variant="outline" size="xs" onClick={() => openEditModal(event)} aria-label="Edit event">
                         <Edit className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm" aria-label="Delete event">
+                          <Button variant="destructive" size="xs" aria-label="Delete event">
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
