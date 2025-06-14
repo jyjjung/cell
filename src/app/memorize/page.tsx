@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import type { MemoryVerse } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,38 +10,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import VerseDisplayDialog from '@/components/memorize/verse-display-dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Loader2, Brain, BookOpen, Info, ListChecks } from 'lucide-react';
-import { usePageLoading } from '@/contexts/page-loading-context';
 import { format } from 'date-fns';
 
 export default function MemorizePage() {
-  const { currentUser, loadingAuth } = useAuth();
-  const router = useRouter();
   const { memoryVerses, loading: versesLoading } = useMemoryVerses();
-  const { setIsPageLoading } = usePageLoading();
-
   const [isMounted, setIsMounted] = useState(false);
   const [selectedVerseRef, setSelectedVerseRef] = useState<string | null>(null);
   const [isVerseDisplayOpen, setIsVerseDisplayOpen] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  useEffect(() => {
-    if (isMounted && !loadingAuth && !currentUser) {
-      setIsPageLoading(true);
-      router.push('/login');
-    }
-  }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
-
   const handleVerseClick = (reference: string) => {
     setSelectedVerseRef(reference);
     setIsVerseDisplayOpen(true);
   };
 
-  if (!isMounted || loadingAuth || (!currentUser && isMounted)) {
+  if (!isMounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-xl text-muted-foreground">Loading authentication...</p>
+        <p className="text-xl text-muted-foreground">Loading page content...</p>
       </div>
     );
   }
