@@ -38,6 +38,8 @@ export function useEvents() {
           ...data,
           id: doc.id,
           date: typeof data.date === 'string' ? data.date : (data.date as Timestamp)?.toDate().toISOString(),
+          details: data.details ?? '', // Default to empty string
+          summary: data.summary ?? '', // Default to empty string
         } as AppEvent);
       });
       setEvents(eventsData);
@@ -54,7 +56,8 @@ export function useEvents() {
     try {
       const dataToSend = {
         ...eventData,
-        details: eventData.details === undefined ? null : eventData.details,
+        details: eventData.details ?? '',
+        summary: eventData.summary ?? '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -78,7 +81,8 @@ export function useEvents() {
       const { id, ...eventProps } = updatedEvent;
       const dataToUpdate = {
         ...eventProps,
-        details: eventProps.details === undefined ? null : eventProps.details,
+        details: eventProps.details ?? '',
+        summary: eventProps.summary ?? '',
         updatedAt: serverTimestamp(),
       };
       await updateDoc(eventDocRef, dataToUpdate);
@@ -106,13 +110,11 @@ export function useEvents() {
 
   const addOrUpdateBirthdayEvent = useCallback(async (userId: string, displayName: string, birthdayISO: string) => {
     try {
-      const birthdayDate = parseISO(birthdayISO); // YYYY-MM-DD from profile
+      const birthdayDate = parseISO(birthdayISO); 
       const currentYear = getYear(new Date());
       
-      // Create a date object for the birthday in the current year
-      // Note: month for Date constructor is 0-indexed
       const eventDateForCurrentYear = new Date(Date.UTC(currentYear, getMonth(birthdayDate), getDate(birthdayDate)));
-      const eventDateISO = eventDateForCurrentYear.toISOString().split('T')[0]; // Keep only YYYY-MM-DD
+      const eventDateISO = eventDateForCurrentYear.toISOString().split('T')[0]; 
 
       const q = query(
         collection(db, EVENTS_COLLECTION),
@@ -122,24 +124,24 @@ export function useEvents() {
       const querySnapshot = await getDocs(q);
 
       const eventTitle = `${displayName}'s Birthday`;
-      const eventDetails = `Happy Birthday to ${displayName}!`;
+      const eventDetails = `Happy Birthday to ${displayName}!`; // Birthday details are concise
 
       if (!querySnapshot.empty) {
-        // Birthday event exists, update it
         const existingEventDoc = querySnapshot.docs[0];
         await updateDoc(existingEventDoc.ref, {
           title: eventTitle,
           date: eventDateISO,
-          details: eventDetails,
+          details: eventDetails, // No summary for birthdays
+          summary: '', // Explicitly set summary to empty for birthdays
           updatedAt: serverTimestamp(),
         });
       } else {
-        // No birthday event exists, create a new one
         await addDoc(collection(db, EVENTS_COLLECTION), {
           title: eventTitle,
           date: eventDateISO,
           category: EventCategory.Birthday,
-          details: eventDetails,
+          details: eventDetails, // No summary for birthdays
+          summary: '', // Explicitly set summary to empty for birthdays
           userId: userId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -147,7 +149,6 @@ export function useEvents() {
       }
     } catch (error) {
       console.error(`Error adding/updating birthday event for user ${userId}:`, error);
-      // Optionally re-throw or handle with toast
     }
   }, []);
 

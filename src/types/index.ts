@@ -15,6 +15,7 @@ export interface AppEvent {
   category: EventCategory;
   title: string;
   details?: string;
+  summary?: string; // New field for AI summary
   userId?: string; // Optional: to link events like birthdays to a user
   createdAt?: Timestamp; // Optional: for Firestore server timestamp
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
@@ -50,7 +51,6 @@ export interface BibleReadingPlan {
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
-  // photoURL is already part of FirebaseUser
 }
 
 
@@ -71,3 +71,4 @@ export interface UserBibleChecklist {
   completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
 }
+

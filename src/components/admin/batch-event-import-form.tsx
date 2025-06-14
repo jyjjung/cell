@@ -115,14 +115,17 @@ export default function BatchEventImportForm() {
             case EventCategory.Snack: details = `${title} is bringing snacks.`; break;
             case EventCategory.QT: details = `QT with ${title}.`; break;
             case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-            case EventCategory.Event: details = title; break; 
+            case EventCategory.Event: 
+                details = ""; // Event category details start empty
+                break; 
         }
         
         eventsToCreate.push({
-            title: title, // Title is now just the provided name/description
+            title: title,
             date: date.toISOString(), 
             category: currentCategory as EventCategory,
-            details: details
+            details: details,
+            summary: '', // Batch imported events start with no summary
         });
         
         i += 2; 
@@ -289,6 +292,3 @@ Community BBQ
     </Form>
   );
 }
-
-
-    

@@ -32,6 +32,8 @@ function getCategoryIcon(category: EventCategory, isCompact?: boolean) {
 
 export default function EventCard({ event, isCompact = false }: EventCardProps) {
   const formattedDate = format(parseISO(event.date), isCompact ? "MMM d, yy" : "MMMM d, yyyy");
+  // Prioritize summary, fallback to details. Ensure it's not undefined for display.
+  const displayDescription = (event.summary && event.summary.trim() !== '') ? event.summary : (event.details || '');
 
   if (isCompact) {
     return (
@@ -52,13 +54,14 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
           </div>
         </div>
         <CardDescription className="text-xs mt-1.5">{formattedDate}</CardDescription>
-        {event.category === EventCategory.Event && event.details && (
-          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2">{event.details}</p>
+        {displayDescription && displayDescription.trim() !== '' && (
+          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-2">{displayDescription}</p>
         )}
       </div>
     );
   }
 
+  // Non-compact view
   return (
     <div className="h-full flex flex-col bg-card rounded-lg shadow-md overflow-hidden transition-all hover:shadow-xl">
       <CardHeader className="pb-3">
@@ -78,8 +81,16 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
       </CardHeader>
       <CardContent className="flex-grow pb-4">
         <CardDescription className="text-sm">{formattedDate}</CardDescription>
-        {event.category === EventCategory.Event && event.details && (
+        {/* In non-compact view, show full details */}
+        {event.details && event.details.trim() !== '' && (
           <p className="mt-2 text-sm text-foreground/80">{event.details}</p>
+        )}
+         {/* Optionally display summary here too if it exists and differs from details */}
+        {event.summary && event.summary.trim() !== '' && event.summary !== event.details && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <p className="text-xs font-semibold text-muted-foreground">Summary:</p>
+            <p className="text-xs text-muted-foreground">{event.summary}</p>
+          </div>
         )}
       </CardContent>
     </div>
