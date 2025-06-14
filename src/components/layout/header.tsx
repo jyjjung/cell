@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig, BarChart3 } from 'lucide-react';
+import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig, BarChart3, Brain } from 'lucide-react'; // Added Brain
 import { usePathname } from 'next/navigation'; 
 
 export default function Header() {
@@ -66,6 +66,11 @@ export default function Header() {
               <BarChart3 className="mr-2 h-4 w-4" /> Progress Overview
             </Button>
           </Link>
+           <Link href="/memorize" legacyBehavior passHref>
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/memorize')}>
+              <Brain className="mr-2 h-4 w-4" /> Memorize
+            </Button>
+          </Link>
         </>
       )}
     </>
@@ -93,6 +98,11 @@ export default function Header() {
           <Link href="/progress-overview" legacyBehavior passHref>
             <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>
               <BarChart3 className="mr-3 h-5 w-5" />Progress Overview
+            </Button>
+          </Link>
+          <Link href="/memorize" legacyBehavior passHref>
+            <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
+              <Brain className="mr-3 h-5 w-5" />Memorize
             </Button>
           </Link>
         </>

@@ -72,3 +72,10 @@ export interface UserBibleChecklist {
   updatedAt?: Timestamp;
 }
 
+export interface MemoryVerse {
+  id: string; // Firestore document ID
+  reference: string; // e.g., "John 3:16", "Psalm 23:1-3"
+  order?: number; // Optional, for custom ordering if needed
+  addedAt: Timestamp;
+  isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer
+}

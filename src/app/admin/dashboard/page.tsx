@@ -9,6 +9,7 @@ import type { AppEvent } from '@/types';
 import { EventForm } from '@/components/admin/event-form';
 import BiblePlanAdminForm from '@/components/admin/bible-plan-admin-form';
 import BatchEventImportForm from '@/components/admin/batch-event-import-form';
+import MemoryVerseAdmin from '@/components/admin/memory-verse-admin'; // Import new component
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -16,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
-import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2, Brain } from 'lucide-react'; // Added Brain icon
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -290,6 +291,20 @@ export default function AdminDashboardPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
+           <div className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 text-green-500" /> {/* Updated Icon */}
+              <CardTitle className="text-2xl">Manage Memory Verses</CardTitle>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <MemoryVerseAdmin />
+        </CardContent>
+      </Card>
+      
+      <Separator className="my-12" />
+
+      <Card className="shadow-lg">
+        <CardHeader>
           <div className="flex items-center space-x-2">
             <Trash className="h-6 w-6 text-destructive" />
             <CardTitle className="text-2xl">Data Management</CardTitle>
@@ -332,4 +347,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
