@@ -61,9 +61,9 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
           </div>
         </div>
         <CardDescription className="text-xs mt-1.5">{formattedDate}</CardDescription>
-        {/* Only show description for EventCategory.Event and if text exists */}
+        {/* Only show description for EventCategory.Event and if text exists, no line clamp */}
         {event.category === EventCategory.Event && descriptionTextForEvent && (
-          <p className="mt-1.5 text-xs text-foreground/70 line-clamp-3 break-words flex-shrink min-h-0">
+          <p className="mt-1.5 text-xs text-foreground/70 break-words flex-shrink min-h-0">
             {descriptionTextForEvent}
           </p>
         )}
