@@ -17,7 +17,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
 import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2 } from 'lucide-react';
-// EventCard import is no longer needed for the list view
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -209,16 +208,16 @@ export default function AdminDashboardPage() {
                 {events.map((event) => (
                   <TableRow key={event.id}>
                     <TableCell className="font-medium">{event.title}</TableCell>
-                    <TableCell>{format(parseISO(event.date), "PPP")}</TableCell>
+                    <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{event.category}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditModal(event)}>
-                        <Edit className="mr-1 h-3 w-3" /> Edit
+                      <Button variant="outline" size="sm" onClick={() => openEditModal(event)} aria-label="Edit event">
+                        <Edit className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="sm">
-                            <Trash2 className="mr-1 h-3 w-3" /> Delete
+                          <Button variant="destructive" size="sm" aria-label="Delete event">
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
