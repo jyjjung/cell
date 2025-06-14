@@ -4,18 +4,18 @@
 import { useState, useMemo, useEffect } from 'react';
 import EventList from '@/components/events/event-list';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
-import StatCard from '@/components/homepage/stat-card'; // Added
+import StatCard from '@/components/homepage/stat-card';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
-import { useMemoryVerses } from '@/hooks/use-memory-verses'; // Added
+import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import type { AppEvent, DailyReading } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info, BookOpenCheck } from 'lucide-react'; // Added icons
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Added CardHeader
+import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info, BookOpenCheck } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { startOfDay, parseISO, addMonths, endOfDay, isToday, getDay, isSameDay } from 'date-fns';
+import { startOfDay, parseISO, addMonths, endOfDay, isToday, getDay, isSameDay, isBefore, isValid as isDateValid } from 'date-fns';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
@@ -27,7 +27,7 @@ export default function HomePage() {
   const [isMounted, setIsMounted] = useState(false);
   const { currentUser } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
-  const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses(); // Added
+  const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
 
   useEffect(() => {
     setIsMounted(true);
@@ -77,13 +77,38 @@ export default function HomePage() {
     return todaysReadingForDisplay?.passages.map(p => p.displayText).filter(Boolean) as string[] || [];
   }, [todaysReadingForDisplay]);
 
-
   const nextUnreadReadingForDisplay = useMemo(() => {
     if (!isMounted || !currentUser || !plan?.dailyReadings || completedPassages.length === undefined || planLoading || loadingChecklist) {
       return null; 
     }
     return findNextUnreadReading(plan.dailyReadings, completedPassages);
   }, [plan, completedPassages, currentUser, isMounted, planLoading, loadingChecklist]);
+
+  const totalPassagesUpToToday = useMemo(() => {
+    if (!isMounted || !plan?.dailyReadings) return 0;
+    const today = startOfDay(new Date());
+    
+    const relevantReadings = plan.dailyReadings.filter(reading => {
+      try {
+        const readingDate = parseISO(reading.date);
+        return isDateValid(readingDate) && (isBefore(readingDate, today) || isSameDay(readingDate, today));
+      } catch (e) {
+        console.error("Error parsing reading date for progress calculation:", reading.date, e);
+        return false;
+      }
+    });
+
+    return relevantReadings.reduce((acc, day) => {
+        if (!day || !Array.isArray(day.passages)) return acc;
+        const validDayPassages = day.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:"));
+        return acc + validDayPassages.length;
+    }, 0);
+  }, [plan, isMounted]);
+
+  const readingsLoggedStatValue = useMemo(() => {
+    if (loadingChecklist || planLoading) return null; // isLoading state for StatCard
+    return `${completedPassages.length} of ${totalPassagesUpToToday}`;
+  }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
 
 
   if (!isMounted) {
@@ -114,11 +139,12 @@ export default function HomePage() {
           {currentUser && (
             <StatCard
               title="Readings Logged"
-              value={loadingChecklist ? null : completedPassages.length}
-              isLoading={loadingChecklist}
+              value={readingsLoggedStatValue}
+              isLoading={loadingChecklist || planLoading}
               buttonText="My Checklist"
               buttonLink="/bible-checklist"
               IconComponent={CheckCircle2}
+              buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
             />
           )}
           <StatCard
@@ -177,8 +203,7 @@ export default function HomePage() {
           allPassageTextsForDay={allTodaysPassageTexts}
           loading={planLoading || loadingChecklist}
           planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-          planDescription={plan?.planDescription}
-          generatedDate={plan?.generatedDate}
+          hidePlanMeta={true}
         />
       </section>
       
@@ -208,10 +233,9 @@ export default function HomePage() {
               togglePassageCompletion={togglePassageCompletion}
               onToggleAllToday={markMultiplePassages}
               allPassageTextsForDay={nextUnreadReadingForDisplay.passages.map(p => p.displayText).filter(Boolean) as string[]}
-              loading={false} // Data is already determined
-              planAvailable={true} // If we have a next unread, plan is available
-              planDescription={plan?.planDescription}
-              generatedDate={plan?.generatedDate}
+              loading={false}
+              planAvailable={true}
+              hidePlanMeta={true}
             />
           ) : plan && plan.dailyReadings && plan.dailyReadings.length > 0 ? (
             <Card className="mt-0 shadow-lg bg-card/80">

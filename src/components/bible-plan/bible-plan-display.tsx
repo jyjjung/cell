@@ -17,16 +17,17 @@ import type { AppUser } from '@/types';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
-  displayTitle: string; // e.g., "Today's Reading" or "Your Next Reading"
+  displayTitle: string; 
   currentUser?: AppUser | null;
   completedPassages: string[];
   togglePassageCompletion: (passageDisplayText: string) => Promise<void>;
-  onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void; // For the master toggle
-  allPassageTextsForDay?: string[]; // All texts for the currently displayed day
+  onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void; 
+  allPassageTextsForDay?: string[]; 
   loading?: boolean;
-  planAvailable?: boolean; // Is any plan set in the system?
-  planDescription?: string;
-  generatedDate?: string;
+  planAvailable?: boolean; 
+  planDescription?: string; // Keep for non-homepage uses
+  generatedDate?: string; // Keep for non-homepage uses
+  hidePlanMeta?: boolean; // New prop
 }
 
 export default function BiblePlanDisplay({
@@ -41,6 +42,7 @@ export default function BiblePlanDisplay({
   planAvailable = false,
   planDescription,
   generatedDate,
+  hidePlanMeta = false, // Default to false
 }: BiblePlanDisplayProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
@@ -48,7 +50,6 @@ export default function BiblePlanDisplay({
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
   const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
   
-  // Use the hook directly for checklist functionalities relevant to this component for dialog
   const { markMultiplePassages } = useUserBibleChecklist();
 
 
@@ -124,7 +125,7 @@ export default function BiblePlanDisplay({
     );
   }
   
-  if (!planAvailable && displayTitle.includes("Today")) { // Specific message for "Today's Reading" if no plan at all
+  if (!planAvailable && displayTitle.includes("Today")) { 
      return (
       <Card className="mt-0 shadow-lg bg-card/80">
         <CardHeader className="p-2">
@@ -155,7 +156,7 @@ export default function BiblePlanDisplay({
             <CalendarX className="h-4 w-4 shrink-0" />
             <p>No reading scheduled for this time.</p>
           </div>
-          {planDescription && (
+          {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs text-muted-foreground mt-2 pt-2 border-t">
               Current Plan: "{planDescription}"
               {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
@@ -258,7 +259,7 @@ export default function BiblePlanDisplay({
           ) : (
              <p className="text-muted-foreground text-xs p-1.5">No specific passages assigned for this reading.</p>
           )}
-           {planDescription && (
+           {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
               Plan: "{planDescription}"
               {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
