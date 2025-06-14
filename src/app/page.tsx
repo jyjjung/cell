@@ -4,18 +4,19 @@
 import { useState, useMemo, useEffect } from 'react';
 import EventList from '@/components/events/event-list';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import StatCard from '@/components/homepage/stat-card'; // Added
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useEvents } from '@/hooks/use-events';
-import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist'; // Added
-import { useAuth } from '@/contexts/auth-context'; // Added
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { useAuth } from '@/contexts/auth-context';
+import { useMemoryVerses } from '@/hooks/use-memory-verses'; // Added
 import type { AppEvent, DailyReading } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart, Loader2, ListFilter, Minimize2, Maximize2 } from 'lucide-react';
+import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info, BookOpenCheck } from 'lucide-react'; // Added icons
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { startOfDay, parseISO, addMonths, endOfDay, isToday } from 'date-fns';
+import { startOfDay, parseISO, addMonths, endOfDay, isToday, getDay, isSameDay } from 'date-fns';
+import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -24,8 +25,9 @@ export default function HomePage() {
   const { events: allEvents, loading: eventsLoading } = useEvents();
   const [sortOption, setSortOption] = useState<SortOption>("date-asc");
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuth(); // Added
-  const { completedPassages, togglePassageCompletion, markMultiplePassages } = useUserBibleChecklist(); // Added
+  const { currentUser } = useAuth();
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
+  const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses(); // Added
 
   useEffect(() => {
     setIsMounted(true);
@@ -67,19 +69,22 @@ export default function HomePage() {
   }, [upcomingEvents, sortOption]);
 
   const todaysReadingForDisplay = useMemo(() => {
-    if (!plan?.dailyReadings) return null;
-    return plan.dailyReadings.find(reading => {
-      try {
-        return isToday(parseISO(reading.date + 'T00:00:00Z'));
-      } catch {
-        return false;
-      }
-    });
-  }, [plan]);
+    if (!isMounted || !plan?.dailyReadings) return null;
+    return findTodaysReading(plan.dailyReadings);
+  }, [plan, isMounted]);
 
   const allTodaysPassageTexts = useMemo(() => {
     return todaysReadingForDisplay?.passages.map(p => p.displayText).filter(Boolean) as string[] || [];
   }, [todaysReadingForDisplay]);
+
+
+  const nextUnreadReadingForDisplay = useMemo(() => {
+    if (!isMounted || !currentUser || !plan?.dailyReadings || completedPassages.length === undefined || planLoading || loadingChecklist) {
+      return null; 
+    }
+    return findNextUnreadReading(plan.dailyReadings, completedPassages);
+  }, [plan, completedPassages, currentUser, isMounted, planLoading, loadingChecklist]);
+
 
   if (!isMounted) {
     return (
@@ -92,11 +97,48 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section>
+      <section id="stats-section">
+        <h2 className="text-2xl font-bold tracking-tight mb-4 flex items-center">
+          <BarChart2 className="mr-3 h-7 w-7 text-primary" />
+          App Snapshot
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <StatCard
+            title="Events Next 30 Days"
+            value={eventsLoading ? null : upcomingEvents.length}
+            isLoading={eventsLoading}
+            buttonText="View Details"
+            buttonLink="#upcoming-events-section"
+            IconComponent={CalendarDays}
+          />
+          {currentUser && (
+            <StatCard
+              title="Readings Logged"
+              value={loadingChecklist ? null : completedPassages.length}
+              isLoading={loadingChecklist}
+              buttonText="My Checklist"
+              buttonLink="/bible-checklist"
+              IconComponent={CheckCircle2}
+            />
+          )}
+          <StatCard
+            title="Memory Verses"
+            value={memoryVersesLoading ? null : memoryVerses.length}
+            isLoading={memoryVersesLoading}
+            buttonText="Practice Now"
+            buttonLink="/memorize"
+            IconComponent={Brain}
+          />
+        </div>
+      </section>
+
+      <Separator />
+
+      <section id="upcoming-events-section">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
           <div className="flex items-center space-x-3">
             <CalendarCheck className="h-7 w-7 text-primary" />
-            <h2 className="text-2xl font-bold tracking-tight">Upcoming Dates</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Upcoming Dates (Next 30 Days)</h2>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center space-x-2 w-full sm:w-auto">
@@ -125,29 +167,79 @@ export default function HomePage() {
       <Separator className="my-8" />
 
       <section>
-        <div className="flex items-center space-x-3 mb-4">
-          <BookHeart className="h-7 w-7 text-accent" />
-          <h2 className="text-2xl font-bold tracking-tight">Today's Bible Reading</h2>
-        </div>
-        {planLoading ? (
-           <div className="p-6 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-              <p className="text-muted-foreground">Loading Bible reading plan...</p>
-            </div>
-        ) : (
-          <BiblePlanDisplay
-            plan={plan}
-            showPlanDetails={false}
-            isCompact={true}
-            hideTitle={true}
-            currentUser={currentUser} // Pass current user
-            completedPassages={completedPassages} // Pass completed passages
-            togglePassageCompletion={togglePassageCompletion} // Pass toggle function
-            onToggleAllToday={markMultiplePassages} // Pass batch update function
-            allTodaysPassageTexts={allTodaysPassageTexts} // Pass today's passage texts
-          />
-        )}
+        <BiblePlanDisplay
+          readingToDisplay={todaysReadingForDisplay}
+          displayTitle="Today's Bible Reading"
+          currentUser={currentUser}
+          completedPassages={completedPassages}
+          togglePassageCompletion={togglePassageCompletion}
+          onToggleAllToday={markMultiplePassages}
+          allPassageTextsForDay={allTodaysPassageTexts}
+          loading={planLoading || loadingChecklist}
+          planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+          planDescription={plan?.planDescription}
+          generatedDate={plan?.generatedDate}
+        />
       </section>
+      
+      <Separator className="my-8" />
+
+      {currentUser && (planLoading || loadingChecklist || (plan && plan.dailyReadings && plan.dailyReadings.length > 0)) && (
+        <section>
+          {planLoading || loadingChecklist ? (
+             <Card className="mt-0 shadow-lg bg-card/80">
+                <CardHeader className="p-2">
+                  <div className="flex items-center space-x-3">
+                    <BookHeart className="h-7 w-7 text-accent" />
+                    <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                  <p className="text-muted-foreground">Loading next reading...</p>
+                </CardContent>
+              </Card>
+          ) : nextUnreadReadingForDisplay ? (
+            <BiblePlanDisplay
+              readingToDisplay={nextUnreadReadingForDisplay}
+              displayTitle="Your Next Reading"
+              currentUser={currentUser}
+              completedPassages={completedPassages}
+              togglePassageCompletion={togglePassageCompletion}
+              onToggleAllToday={markMultiplePassages}
+              allPassageTextsForDay={nextUnreadReadingForDisplay.passages.map(p => p.displayText).filter(Boolean) as string[]}
+              loading={false} // Data is already determined
+              planAvailable={true} // If we have a next unread, plan is available
+              planDescription={plan?.planDescription}
+              generatedDate={plan?.generatedDate}
+            />
+          ) : plan && plan.dailyReadings && plan.dailyReadings.length > 0 ? (
+            <Card className="mt-0 shadow-lg bg-card/80">
+              <CardHeader className="p-2">
+                <div className="flex items-center space-x-3">
+                  <BookOpenCheck className="h-7 w-7 text-green-500" />
+                  <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 text-center">
+                <p className="text-muted-foreground">You're all caught up with the current plan!</p>
+              </CardContent>
+            </Card>
+          ) : (
+             <Card className="mt-0 shadow-lg bg-card/80">
+              <CardHeader className="p-2">
+                <div className="flex items-center space-x-3">
+                  <Info className="h-7 w-7 text-muted-foreground" />
+                  <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 text-center">
+                 <p className="text-muted-foreground">No Bible reading plan is currently active.</p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      )}
     </div>
   );
 }
