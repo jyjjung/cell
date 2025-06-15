@@ -49,11 +49,13 @@ export default function Header() {
           <Home className="mr-2 h-4 w-4" /> Home
         </Button>
       </Link>
-      <Link href="/bible-plan" legacyBehavior passHref>
-        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
-          <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
-        </Button>
-      </Link>
+      {!currentUser && (
+        <Link href="/bible-plan" legacyBehavior passHref>
+          <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
+            <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
+          </Button>
+        </Link>
+      )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/memorize')}>
           <Brain className="mr-2 h-4 w-4" /> Memorize
@@ -83,11 +85,13 @@ export default function Header() {
           <Home className="mr-3 h-5 w-5" />Home
         </Button>
       </Link>
-      <Link href="/bible-plan" legacyBehavior passHref>
-        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
-          <ClipboardList className="mr-3 h-5 w-5" />Full Bible Plan
-        </Button>
-      </Link>
+      {!currentUser && (
+        <Link href="/bible-plan" legacyBehavior passHref>
+          <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
+            <ClipboardList className="mr-3 h-5 w-5" />Full Bible Plan
+          </Button>
+        </Link>
+      )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
           <Brain className="mr-3 h-5 w-5" />Memorize
@@ -260,3 +264,4 @@ export default function Header() {
     </header>
   );
 }
+

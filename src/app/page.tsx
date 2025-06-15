@@ -77,13 +77,6 @@ export default function HomePage() {
     return todaysReadingForDisplay?.passages.map(p => p.displayText).filter(Boolean) as string[] || [];
   }, [todaysReadingForDisplay]);
 
-  const nextUnreadReadingForDisplay = useMemo(() => {
-    if (!isMounted || !currentUser || !plan?.dailyReadings || completedPassages.length === undefined || planLoading || loadingChecklist) {
-      return null; 
-    }
-    return findNextUnreadReading(plan.dailyReadings, completedPassages);
-  }, [plan, completedPassages, currentUser, isMounted, planLoading, loadingChecklist]);
-
   const totalPassagesUpToToday = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return 0;
     const today = startOfDay(new Date());
@@ -206,64 +199,7 @@ export default function HomePage() {
           hidePlanMeta={true}
         />
       </section>
-      
-      <Separator className="my-8" />
-
-      {currentUser && (planLoading || loadingChecklist || (plan && plan.dailyReadings && plan.dailyReadings.length > 0)) && (
-        <section>
-          {planLoading || loadingChecklist ? (
-             <Card className="mt-0 shadow-lg bg-card/80">
-                <CardHeader className="p-2">
-                  <div className="flex items-center space-x-3">
-                    <BookHeart className="h-7 w-7 text-accent" />
-                    <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-                  <p className="text-muted-foreground">Loading next reading...</p>
-                </CardContent>
-              </Card>
-          ) : nextUnreadReadingForDisplay ? (
-            <BiblePlanDisplay
-              readingToDisplay={nextUnreadReadingForDisplay}
-              displayTitle="Your Next Reading"
-              currentUser={currentUser}
-              completedPassages={completedPassages}
-              togglePassageCompletion={togglePassageCompletion}
-              onToggleAllToday={markMultiplePassages}
-              allPassageTextsForDay={nextUnreadReadingForDisplay.passages.map(p => p.displayText).filter(Boolean) as string[]}
-              loading={false}
-              planAvailable={true}
-              hidePlanMeta={true}
-            />
-          ) : plan && plan.dailyReadings && plan.dailyReadings.length > 0 ? (
-            <Card className="mt-0 shadow-lg bg-card/80">
-              <CardHeader className="p-2">
-                <div className="flex items-center space-x-3">
-                  <BookOpenCheck className="h-7 w-7 text-green-500" />
-                  <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">You're all caught up with the current plan!</p>
-              </CardContent>
-            </Card>
-          ) : (
-             <Card className="mt-0 shadow-lg bg-card/80">
-              <CardHeader className="p-2">
-                <div className="flex items-center space-x-3">
-                  <Info className="h-7 w-7 text-muted-foreground" />
-                  <h2 className="text-xl font-bold tracking-tight">Your Next Reading</h2>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 text-center">
-                 <p className="text-muted-foreground">No Bible reading plan is currently active.</p>
-              </CardContent>
-            </Card>
-          )}
-        </section>
-      )}
     </div>
   );
 }
+
