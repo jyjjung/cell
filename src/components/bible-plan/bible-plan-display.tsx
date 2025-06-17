@@ -17,7 +17,7 @@ import type { AppUser } from '@/types';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
-  displayTitle?: string; // Made optional, as title can be handled externally
+  displayTitle?: string; // Kept for flexibility, but not rendered in card header if empty
   currentUser?: AppUser | null;
   completedPassages: string[];
   togglePassageCompletion: (passageDisplayText: string) => Promise<void>;
@@ -32,7 +32,7 @@ interface BiblePlanDisplayProps {
 
 export default function BiblePlanDisplay({
   readingToDisplay,
-  displayTitle, // Kept for flexibility, but not rendered in card header if empty
+  displayTitle, 
   currentUser,
   completedPassages,
   togglePassageCompletion,
@@ -121,18 +121,12 @@ export default function BiblePlanDisplay({
 
   if (loading) {
     return (
-      <Card className="mt-0 shadow-lg bg-card/80">
-        <CardHeader className="p-4"> 
-          {displayTitle && (
-            <div className="flex items-center space-x-3 mb-2">
-              <BookHeart className="h-6 w-6 text-accent" />
-              <h2 className="text-lg font-semibold tracking-tight">{displayTitle}</h2>
-            </div>
-          )}
-           <div className="h-6 bg-muted rounded w-3/4 animate-pulse"></div> {/* Date Skeleton */}
+      <Card className="bg-card/80 rounded-md shadow-sm">
+        <CardHeader className="p-2"> 
+           <div className="h-5 bg-muted rounded w-3/4 animate-pulse mb-1"></div> {/* Date Skeleton */}
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="space-y-2">
+        <CardContent className="p-2">
+          <div className="space-y-1.5">
             <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
             <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
             <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
@@ -144,9 +138,9 @@ export default function BiblePlanDisplay({
   
   if (!planAvailable && displayTitle?.includes("Today")) { 
      return (
-      <Card className="mt-0 shadow-lg bg-card/80">
+      <Card className="bg-card/80 rounded-md shadow-sm">
         <CardHeader className="p-4">
-           {displayTitle && (
+           {displayTitle && ( // This title is the section title from homepage, not rendered *inside* card header
             <div className="flex items-center space-x-3 mb-2">
               <Info className="h-6 w-6 text-muted-foreground" />
               <h2 className="text-lg font-semibold tracking-tight">{displayTitle}</h2>
@@ -163,21 +157,15 @@ export default function BiblePlanDisplay({
 
   if (!readingToDisplay) {
     return (
-      <Card className="mt-0 shadow-lg bg-card/80">
-        <CardHeader className="p-4">
-             {displayTitle && (
-                <div className="flex items-center space-x-3 mb-2">
-                    <BookHeart className="h-6 w-6 text-accent" />
-                    <h2 className="text-lg font-semibold tracking-tight">{displayTitle}</h2>
-                </div>
-             )}
+      <Card className="bg-card/80 rounded-md shadow-sm">
+        <CardHeader className="p-2">
              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <CalendarX className="h-4 w-4 shrink-0" />
                 <p>No reading scheduled for this time.</p>
             </div>
         </CardHeader>
         {!hidePlanMeta && planDescription && (
-            <CardContent className="p-4 pt-0 border-t mt-4">
+            <CardContent className="p-2 pt-0 border-t mt-2">
                 <CardDescription className="text-xs text-muted-foreground mt-2">
                 Current Plan: "{planDescription}"
                 {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
@@ -190,9 +178,9 @@ export default function BiblePlanDisplay({
 
   return (
     <>
-      <Card className="mt-0 shadow-lg bg-card/80">
-        <CardHeader className="p-3 flex flex-row items-center justify-between space-x-2 border-b">
-          <h3 className="text-base font-semibold flex items-center">
+      <Card className="bg-card/80 rounded-md shadow-sm">
+        <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+          <h3 className="text-sm font-semibold flex items-center">
             {parsedDayDate ? format(parsedDayDate, "EEE, MMM d, yyyy") : "Reading Date"}
             {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
           </h3>
@@ -213,7 +201,7 @@ export default function BiblePlanDisplay({
               </Button>
           )}
         </CardHeader>
-        <CardContent className="p-3 space-y-1.5">
+        <CardContent className="p-2 space-y-1.5">
           {validPassagesForThisReading.length > 0 ? (
             <ul className="space-y-1 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
