@@ -12,11 +12,11 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import type { AppEvent, DailyReading } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info, BookOpenCheck } from 'lucide-react';
+import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { startOfDay, parseISO, addMonths, endOfDay, isToday, getDay, isSameDay, isBefore, isValid as isDateValid } from 'date-fns';
-import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { startOfDay, parseISO, addMonths, endOfDay, isValid as isDateValid, isBefore, isSameDay } from 'date-fns';
+import { findTodaysReading } from '@/lib/reading-utils';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -74,7 +74,7 @@ export default function HomePage() {
   }, [plan, isMounted]);
 
   const allTodaysPassageTexts = useMemo(() => {
-    return todaysReadingForDisplay?.passages.map(p => p.displayText).filter(Boolean) as string[] || [];
+    return todaysReadingForDisplay?.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && text.trim() !== '' && !text.startsWith("Error:")) as string[] || [];
   }, [todaysReadingForDisplay]);
 
   const totalPassagesUpToToday = useMemo(() => {
@@ -99,7 +99,7 @@ export default function HomePage() {
   }, [plan, isMounted]);
 
   const readingsLoggedStatValue = useMemo(() => {
-    if (loadingChecklist || planLoading) return null; // isLoading state for StatCard
+    if (loadingChecklist || planLoading || totalPassagesUpToToday === 0) return null; 
     return `${completedPassages.length} of ${totalPassagesUpToToday}`;
   }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
 
@@ -186,9 +186,13 @@ export default function HomePage() {
       <Separator className="my-8" />
 
       <section>
+        <div className="flex items-center space-x-3 mb-4">
+          <BookHeart className="h-7 w-7 text-accent" />
+          <h2 className="text-2xl font-bold tracking-tight">Today's Bible Reading</h2>
+        </div>
         <BiblePlanDisplay
           readingToDisplay={todaysReadingForDisplay}
-          displayTitle="Today's Bible Reading"
+          displayTitle="" // Title is handled externally now
           currentUser={currentUser}
           completedPassages={completedPassages}
           togglePassageCompletion={togglePassageCompletion}
@@ -202,4 +206,3 @@ export default function HomePage() {
     </div>
   );
 }
-
