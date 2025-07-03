@@ -3,29 +3,27 @@
 
 import type { AppEvent } from '@/types';
 import EventCard from './event-card';
-import { ListOrdered } from 'lucide-react';
 
 interface EventListProps {
   eventsToDisplay: AppEvent[];
-  isCompact: boolean;
 }
 
-export default function EventList({ eventsToDisplay, isCompact }: EventListProps) {
+export default function EventList({ eventsToDisplay }: EventListProps) {
   if (eventsToDisplay.length === 0) {
     return (
-      <div className="text-center py-10">
-        <ListOrdered className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground text-lg">No upcoming events.</p>
-        <p className="text-sm text-muted-foreground">Admin can add events in the dashboard.</p>
+      <div className="text-center py-6 px-4 border border-dashed rounded-lg mt-2">
+        <p className="text-muted-foreground text-sm">No upcoming dates for this category.</p>
       </div>
     );
   }
 
   return (
-    <div className={`grid gap-4 ${isCompact ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-      {eventsToDisplay.map((event) => (
-        <EventCard key={event.id} event={event} isCompact={isCompact} />
-      ))}
+    <div className="overflow-x-auto -mx-4">
+        <div className="flex gap-4 px-4 pb-4">
+            {eventsToDisplay.map((event) => (
+            <EventCard key={event.id} event={event} />
+            ))}
+        </div>
     </div>
   );
 }

@@ -11,27 +11,19 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { startOfDay, parseISO, addMonths, endOfDay, isValid as isDateValid, isBefore, isSameDay } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { usePageLoading } from '@/contexts/page-loading-context';
-
-
-type SortOption = "date-asc" | "date-desc" | "category" | "title";
+import { EventCategory } from '@/types';
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
   const { events: allEvents, loading: eventsLoading } = useEvents();
-  const [sortOption, setSortOption] = useState<SortOption>("date-asc");
   const [isMounted, setIsMounted] = useState(false);
-  const { currentUser } = useAuth();
+  const { currentUser, loadingAuth } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
-  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
@@ -40,37 +32,26 @@ export default function HomePage() {
   const upcomingEvents = useMemo(() => {
     if (!isMounted) return [];
     const today = startOfDay(new Date());
-    const oneMonthFromNow = endOfDay(addMonths(today, 1));
-
-    return allEvents.filter(event => {
-      try {
-        const eventDate = parseISO(event.date);
-        return eventDate >= today && eventDate <= oneMonthFromNow;
-      } catch (e) {
-        console.error("Error parsing event date for filtering:", event.date, e);
-        return false;
-      }
-    });
+    return allEvents
+      .filter(event => {
+        try {
+          const eventDate = parseISO(event.date);
+          // Show events from today onwards
+          return isValid(eventDate) && !isBefore(eventDate, today);
+        } catch (e) {
+          console.error("Error parsing event date for filtering:", event.date, e);
+          return false;
+        }
+      })
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
   }, [allEvents, isMounted]);
 
-  const sortedEvents = useMemo(() => {
-    let sorted = [...upcomingEvents];
-    switch (sortOption) {
-      case "date-asc":
-        sorted.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-        break;
-      case "date-desc":
-        sorted.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-        break;
-      case "category":
-        sorted.sort((a, b) => a.category.localeCompare(b.category) || (parseISO(a.date).getTime() - parseISO(b.date).getTime()));
-        break;
-      case "title":
-        sorted.sort((a, b) => a.title.localeCompare(b.title) || (parseISO(a.date).getTime() - parseISO(b.date).getTime()));
-        break;
-    }
-    return sorted;
-  }, [upcomingEvents, sortOption]);
+  const categorizedEvents = useMemo(() => {
+    const events = upcomingEvents.filter(e => e.category === EventCategory.Event || e.category === EventCategory.Birthday);
+    const qts = upcomingEvents.filter(e => e.category === EventCategory.QT);
+    const snacks = upcomingEvents.filter(e => e.category === EventCategory.Snack);
+    return { events, qts, snacks };
+  }, [upcomingEvents]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -88,7 +69,7 @@ export default function HomePage() {
     const relevantReadings = plan.dailyReadings.filter(reading => {
       try {
         const readingDate = parseISO(reading.date);
-        return isDateValid(readingDate) && (isBefore(readingDate, today) || isSameDay(readingDate, today));
+        return isValid(readingDate) && (isBefore(readingDate, today) || isSameDay(readingDate, today));
       } catch (e) {
         console.error("Error parsing reading date for progress calculation:", reading.date, e);
         return false;
@@ -107,6 +88,13 @@ export default function HomePage() {
     return `${completedPassages.length} of ${totalPassagesUpToToday}`;
   }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
 
+  const EventsSectionSkeleton = () => (
+    <div className="flex gap-4 overflow-x-hidden py-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Skeleton key={index} className="h-40 w-64 shrink-0 rounded-lg" />
+      ))}
+    </div>
+  );
 
   if (!isMounted) {
     return (
@@ -125,7 +113,7 @@ export default function HomePage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
-            title="Events Next 30 Days"
+            title="Upcoming Events"
             value={eventsLoading ? null : upcomingEvents.length}
             isLoading={eventsLoading}
             buttonText="View Details"
@@ -136,7 +124,7 @@ export default function HomePage() {
             <StatCard
               title="Readings Logged"
               value={readingsLoggedStatValue}
-              isLoading={loadingChecklist || planLoading}
+              isLoading={loadingAuth || loadingChecklist || planLoading}
               buttonText="My Checklist"
               buttonLink="/bible-checklist"
               IconComponent={CheckCircle2}
@@ -156,42 +144,26 @@ export default function HomePage() {
 
       <Separator />
 
-      <section id="upcoming-events-section">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-          <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="flex items-center space-x-2 w-full sm:w-auto">
-              <ListFilter className="h-4 w-4 text-muted-foreground" />
-              <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-                <SelectTrigger className="w-full sm:w-[180px] text-xs py-1.5 h-auto">
-                  <SelectValue placeholder="Sort by..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date-asc" className="text-xs">Date (Oldest First)</SelectItem>
-                  <SelectItem value="date-desc" className="text-xs">Date (Newest First)</SelectItem>
-                  <SelectItem value="category" className="text-xs">Category</SelectItem>
-                  <SelectItem value="title" className="text-xs">Title</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <section id="upcoming-events-section" className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Events & Birthdays</h2>
+          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.events} />}
         </div>
-        {eventsLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-36 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : (
-          <EventList eventsToDisplay={sortedEvents} isCompact={true} />
-        )}
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">QT Schedule</h2>
+          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.qts} />}
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Snack Rota</h2>
+          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.snacks} />}
+        </div>
       </section>
 
       <Separator />
 
       <section>
-        <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
         <div className="max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
             <BiblePlanDisplay
                 readingToDisplay={todaysReadingForDisplay}
                 currentUser={currentUser}

@@ -8,6 +8,7 @@ import Header from '@/components/layout/header';
 import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from '@/components/theme-provider';
+import PageLoaderManager from '@/components/layout/page-loader-manager';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -35,6 +36,7 @@ export default function RootLayout({
         >
           <PageLoadingProvider>
             <AuthProvider>
+              <PageLoaderManager />
               <div className="relative z-10 flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">

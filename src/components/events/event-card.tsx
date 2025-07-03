@@ -3,15 +3,13 @@
 
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { CalendarDays, Cake, BookOpen, Utensils, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   event: AppEvent;
-  isCompact?: boolean;
 }
 
 const categoryStyles: { [key in EventCategory]: { icon: React.ElementType, colorClass: string } } = {
@@ -25,8 +23,8 @@ function getCategoryStyle(category: EventCategory) {
   return categoryStyles[category] || { icon: Info, colorClass: "text-gray-500" };
 }
 
-export default function EventCard({ event, isCompact = false }: EventCardProps) {
-  const formattedDate = format(parseISO(event.date), isCompact ? "MMM d" : "EEEE, MMMM d, yyyy");
+export default function EventCard({ event }: EventCardProps) {
+  const formattedDate = format(parseISO(event.date), "EEEE, MMM d");
   const { icon: Icon, colorClass } = getCategoryStyle(event.category);
 
   let descriptionTextForEvent: string | null = null;
@@ -38,59 +36,25 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
     }
   }
 
-  if (isCompact) {
-    return (
-      <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
-        <CardContent className="p-4 flex flex-col flex-grow">
-          <div className="flex justify-between items-start mb-2">
-             <div className="flex items-center gap-2">
-                <div className={cn("p-1.5 bg-muted rounded-md", colorClass, 'bg-opacity-10')}>
-                    <Icon className="h-4 w-4" />
-                </div>
-                <Badge variant="outline" className="capitalize text-xs px-1.5 py-0.5 h-auto border-dashed">
-                    {event.category}
-                </Badge>
-             </div>
-          </div>
-          <div className="flex-grow min-w-0">
-            <p className="font-semibold leading-tight">{event.title}</p>
-          </div>
-          <div className="text-xs text-muted-foreground mt-2">
-            <p>{formattedDate}</p>
-             {event.category === EventCategory.Event && descriptionTextForEvent && (
-              <p className="mt-1.5 text-xs text-foreground/70 break-words flex-shrink min-h-0 line-clamp-2">
-                {descriptionTextForEvent}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Non-compact view
   return (
-    <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-           <div className="flex items-center gap-2">
-              <div className={cn("p-1.5 bg-muted rounded-md", colorClass, 'bg-opacity-20')}>
-                  <Icon className="h-5 w-5" />
-              </div>
-              <Badge variant="outline" className="capitalize">
-                  {event.category}
-              </Badge>
-           </div>
+    <Card className="w-64 shrink-0 h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
+      <CardContent className="p-4 flex flex-col flex-grow">
+        <div className="flex items-start gap-3 mb-3">
+            <div className={cn("p-1.5 bg-muted rounded-md", colorClass, 'bg-opacity-10')}>
+                <Icon className="h-5 w-5" />
+            </div>
+            <div className="flex-grow">
+                <p className="font-semibold leading-tight">{event.title}</p>
+                <p className="text-xs text-muted-foreground">{formattedDate}</p>
+            </div>
         </div>
-        <CardTitle className="text-xl pt-2">{event.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow pb-4">
-        <CardDescription className="text-sm">{formattedDate}</CardDescription>
-        {event.category === EventCategory.Event && descriptionTextForEvent && (
-          <p className="mt-2 text-sm text-foreground/80 break-words"> 
-            {descriptionTextForEvent}
-          </p>
-        )}
+        
+        <div className="text-sm text-foreground/80 break-words flex-grow min-h-[2.5rem]">
+            {event.category === EventCategory.Birthday && <p>Wishing you a wonderful day!</p>}
+            {event.category === EventCategory.Snack && <p>Reminder to bring snacks.</p>}
+            {event.category === EventCategory.QT && <p>QT session with the group.</p>}
+            {event.category === EventCategory.Event && descriptionTextForEvent && <p>{descriptionTextForEvent}</p>}
+        </div>
       </CardContent>
     </Card>
   );
