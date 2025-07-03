@@ -195,31 +195,18 @@ export default function HomePage() {
           <BookHeart className="h-8 w-8 text-primary" />
           <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-                <BiblePlanDisplay
-                    readingToDisplay={todaysReadingForDisplay}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    onToggleAllToday={markMultiplePassages}
-                    allPassageTextsForDay={allTodaysPassageTexts}
-                    loading={planLoading || loadingChecklist}
-                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                    hidePlanMeta={true}
-                />
-            </div>
-            <div className="flex flex-col justify-center items-start bg-card p-6 rounded-lg shadow-sm">
-                <h3 className="text-xl font-semibold mb-2">Track Your Progress</h3>
-                <p className="text-muted-foreground mb-4">
-                    Log in to mark your daily readings as complete, see your progress over time, and stay motivated on your journey through the Bible.
-                </p>
-                <Link href="/bible-checklist" passHref legacyBehavior>
-                    <Button>
-                        Go to My Checklist
-                    </Button>
-                </Link>
-            </div>
+        <div className="max-w-2xl mx-auto">
+            <BiblePlanDisplay
+                readingToDisplay={todaysReadingForDisplay}
+                currentUser={currentUser}
+                completedPassages={completedPassages}
+                togglePassageCompletion={togglePassageCompletion}
+                onToggleAllToday={markMultiplePassages}
+                allPassageTextsForDay={allTodaysPassageTexts}
+                loading={planLoading || loadingChecklist}
+                planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                hidePlanMeta={true}
+            />
         </div>
       </section>
     </div>
