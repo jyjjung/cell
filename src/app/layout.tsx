@@ -1,4 +1,5 @@
 
+import { Suspense } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -36,7 +37,9 @@ export default function RootLayout({
         >
           <PageLoadingProvider>
             <AuthProvider>
-              <PageLoaderManager />
+              <Suspense fallback={null}>
+                <PageLoaderManager />
+              </Suspense>
               <div className="relative z-10 flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
