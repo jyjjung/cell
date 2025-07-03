@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
                   <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
                 </DialogHeader>
