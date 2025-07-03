@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { BookOpenCheck, Loader2, ListChecks, Info, CalendarIcon, Clock, List } from 'lucide-react';
+import { BookOpen, Loader2, ListChecks, Info, CalendarIcon, Clock, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
