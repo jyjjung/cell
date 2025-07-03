@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import type { DailyReading, StructuredPassage } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import type { DailyReading } from '@/types';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -23,8 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay, lastDayOfDecade } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, XCircle, CalendarRange, LayoutList, BookOpen, Clock, Target, List } from 'lucide-react';
+import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, Clock, Target, List } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -126,7 +126,6 @@ export default function BibleChecklistPage() {
         if (nextUnreadReadingDay) {
           readings = [nextUnreadReadingDay];
         } else if (sortedDailyReadings.length > 0) {
-          // If all readings are done, show the last reading of the plan as a "completed" state.
           readings = [sortedDailyReadings[sortedDailyReadings.length - 1]];
         }
         break;
@@ -241,23 +240,19 @@ export default function BibleChecklistPage() {
   };
   
   const DailyReadingSkeleton = () => (
-    <Card className="bg-card/80 rounded-md shadow-sm">
-      <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
+    <Card>
+      <CardHeader className="p-3 flex flex-row items-center justify-between space-x-2 border-b min-h-[52px]">
         <Skeleton className="h-5 w-40" />
       </CardHeader>
-      <CardContent className="p-2 space-y-1.5">
+      <CardContent className="p-3 space-y-2">
         <div className="space-y-2">
           <div className="flex items-center space-x-2 p-1.5">
-            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
-            <Skeleton className="h-3.5 w-full" />
+            <Skeleton className="h-4 w-4 rounded-sm" />
+            <Skeleton className="h-4 w-full" />
           </div>
           <div className="flex items-center space-x-2 p-1.5">
-            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
-            <Skeleton className="h-3.5 w-5/6" />
-          </div>
-          <div className="flex items-center space-x-2 p-1.5">
-            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
-            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-4 w-4 rounded-sm" />
+            <Skeleton className="h-4 w-5/6" />
           </div>
         </div>
       </CardContent>
@@ -267,16 +262,16 @@ export default function BibleChecklistPage() {
   const renderReadings = (readingsToRender: DailyReading[]) => {
     if (readingsToRender.length === 0) {
       return (
-        <Card className="shadow-sm mt-4">
-          <CardContent className="p-6 text-center">
-            <Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+        <Card className="mt-4">
+          <CardContent className="p-8 text-center">
+            <Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No readings found for this filter.</p>
           </CardContent>
         </Card>
       );
     }
     return (
-      <div className="space-y-2 mt-4">
+      <div className="space-y-3 mt-4">
         {readingsToRender.map((dailyReading) => {
           if (!dailyReading || !dailyReading.date) return null;
           let parsedDayDate: Date | null = null;
@@ -285,7 +280,7 @@ export default function BibleChecklistPage() {
             if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
           } catch(e) {
             console.error(`[BibleChecklistPage] Invalid date for dailyReading: ${dailyReading.date}`, e);
-            return <Card key={`error-date-${dailyReading.originalDateKey || dailyReading.date}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
+            return <Card key={`error-date-${dailyReading.originalDateKey || dailyReading.date}`} className="p-4 my-2"><CardContent className="text-destructive font-semibold">Error: Invalid date for reading entry.</CardContent></Card>;
           }
           const dateKey = dailyReading.originalDateKey || dailyReading.date;
           const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
@@ -293,36 +288,34 @@ export default function BibleChecklistPage() {
           const isLoadingThisDay = markingDayId === dateKey;
 
           return (
-            <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
-              <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
-                <h3 className="text-sm font-semibold flex items-center">
+            <Card key={dateKey}>
+              <CardHeader className="p-3 flex flex-row items-center justify-between space-x-2 border-b min-h-[52px]">
+                <h3 className="font-semibold flex items-center">
                   {format(parsedDayDate, "EEE, MMM d, yyyy")}
-                  {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
+                  {isDayCompleted && <CheckCircle2 className="ml-2 h-5 w-5 text-green-500 shrink-0" />}
                 </h3>
                 {!isDayCompleted && allPassagesInDayObjects.length > 0 && (
                   <Button
-                    size="xs" 
+                    size="sm" 
                     variant="outline"
                     onClick={() => handleMarkDayComplete(dailyReading)}
                     disabled={isLoadingThisDay}
-                    className="h-auto py-1 px-2 text-xs"
                   >
                     {isLoadingThisDay ? (
-                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <CheckSquare className="mr-1.5 h-3 w-3" />
+                      <CheckSquare className="mr-2 h-4 w-4" />
                     )}
                     Mark Day Complete
                   </Button>
                 )}
               </CardHeader>
-              <CardContent className="p-2 space-y-1.5">
+              <CardContent className="p-3 space-y-2">
                 {(allPassagesInDayObjects.length > 0) ? (
-                  <ul className="space-y-1">
+                  <ul className="space-y-2">
                     {allPassagesInDayObjects.map((passage, pIndex) => {
                       if (!passage) {
-                        console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined. Date: ${dateKey}, Index: ${pIndex}.`);
-                        return <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic">Error: Passage data corrupt.</li>;
+                        return <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-2 text-sm italic">Error: Passage data corrupt.</li>;
                       }
                       const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
                       const isPassageValid = currentPassageDisplayText !== '' && !currentPassageDisplayText.startsWith("Error:");
@@ -333,12 +326,8 @@ export default function BibleChecklistPage() {
                       
                       const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
 
-                      if(!isPassageValid && passage){
-                            console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Date: ${dateKey}, Index: ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-                      }
-
                       return (
-                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-3 transition-colors hover:bg-muted/40 p-2 text-sm">
                           <Checkbox 
                             id={checkboxId} 
                             checked={isChecked} 
@@ -347,11 +336,9 @@ export default function BibleChecklistPage() {
                                 togglePassageCompletion(currentPassageDisplayText); 
                               } else {
                                 toast({title: "Invalid Passage Data", description: "Cannot toggle completion for this passage as its text data is missing or invalid.", variant: "destructive"});
-                                console.error("Attempted to toggle invalid passage:", passage);
                               }
                             }} 
                             aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
-                            className="h-3.5 w-3.5" 
                             disabled={!isPassageValid || isLoadingThisDay}
                           />
                           <Label
@@ -362,7 +349,7 @@ export default function BibleChecklistPage() {
                               <Button
                                 variant="link"
                                 className={cn(
-                                  "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
+                                  "p-0 h-auto text-sm font-normal text-left justify-start hover:no-underline",
                                   isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                                 )}
                                 onClick={() => handlePassageClick(passage.displayText)}
@@ -379,7 +366,7 @@ export default function BibleChecklistPage() {
                       );
                     })}
                   </ul>
-                ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
+                ) : (<p className="text-muted-foreground text-sm pl-1 pt-1">No passages for this day.</p>)}
               </CardContent>
             </Card>
           );
@@ -394,18 +381,17 @@ export default function BibleChecklistPage() {
   }
   if (planLoading || loadingChecklist) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-          <div className="flex items-center space-x-2"><LibraryBig className="h-6 w-6 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
-          <Skeleton className="h-9 w-32 rounded-md" />
+          <div className="flex items-center space-x-3"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
+          <Skeleton className="h-10 w-40 rounded-md" />
         </div>
-        <Skeleton className="h-24 w-full mb-3 rounded-lg" />
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-          <Skeleton className="h-10 w-full sm:w-[350px] rounded-md" />
-          <Skeleton className="h-10 w-full sm:w-[180px] rounded-md" />
+        <Skeleton className="h-28 w-full mb-4 rounded-lg" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <Skeleton className="h-10 w-full sm:w-[380px] rounded-md" />
+          <Skeleton className="h-10 w-full sm:w-[200px] rounded-md" />
         </div>
-        <div className="space-y-2 mt-4">
-          <DailyReadingSkeleton />
+        <div className="space-y-3 mt-4">
           <DailyReadingSkeleton />
           <DailyReadingSkeleton />
         </div>
@@ -413,33 +399,33 @@ export default function BibleChecklistPage() {
     );
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (<div className="space-y-8"><div className="flex items-center space-x-3 mb-6"><LibraryBig className="h-7 w-7 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div><Card className="mt-6 shadow-lg max-w-lg mx-auto"><CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader><CardContent><p className="text-muted-foreground">No Bible reading plan has been set.</p></CardContent></Card><BackToTopButton /></div>);
+    return (<div className="space-y-8"><div className="flex items-center space-x-3 mb-6"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-        <div className="flex items-center space-x-2"><LibraryBig className="h-6 w-6 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
+        <div className="flex items-center space-x-3"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
         <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
-            <DialogTrigger asChild><Button variant="outline" size="sm"><Edit className="mr-1.5 h-3 w-3" /> Mark Range</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2" /> Mark Range</Button></DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-xl">Mark Reading Range</DialogTitle><DialogDescription>Mark all passages within the specified range as completed.</DialogDescription></DialogHeader>
             <Form {...markRangeForm}>
                 <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRangeSubmit)} className="space-y-6 pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <fieldset className="space-y-4 border p-4 rounded-md"><legend className="text-xs font-medium px-1">From</legend>
-                    <FormField control={markRangeForm.control} name="fromBook" render={({ field }) => (<FormItem><FormLabel className="text-xs">Book</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="text-xs"><SelectValue placeholder="Select book" /></SelectTrigger></FormControl><SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName} className="text-xs">{bookName}</SelectItem>))}</SelectContent></Select><FormMessage className="text-xs"/></FormItem>)}/>
-                    <FormField control={markRangeForm.control} name="fromChapter" render={({ field }) => (<FormItem><FormLabel className="text-xs">Chapter</FormLabel><FormControl><Input type="number" placeholder="Ch." {...field} className="text-xs" /></FormControl><FormMessage className="text-xs"/></FormItem>)}/>
-                    <FormField control={markRangeForm.control} name="fromVerse" render={({ field }) => (<FormItem><FormLabel className="text-xs">Verse (Opt.)</FormLabel><FormControl><Input type="number" placeholder="Verse" {...field} className="text-xs" /></FormControl><FormMessage className="text-xs"/></FormItem>)}/>
+                    <fieldset className="space-y-4 border p-4 rounded-lg"><legend className="text-sm font-medium px-1">From</legend>
+                    <FormField control={markRangeForm.control} name="fromBook" render={({ field }) => (<FormItem><FormLabel>Book</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl><SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`from-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent></Select><FormMessage/></FormItem>)}/>
+                    <FormField control={markRangeForm.control} name="fromChapter" render={({ field }) => (<FormItem><FormLabel>Chapter</FormLabel><FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={markRangeForm.control} name="fromVerse" render={({ field }) => (<FormItem><FormLabel>Verse (Optional)</FormLabel><FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                     </fieldset>
-                    <fieldset className="space-y-4 border p-4 rounded-md"><legend className="text-xs font-medium px-1">To</legend>
-                    <FormField control={markRangeForm.control} name="toBook" render={({ field }) => (<FormItem><FormLabel className="text-xs">Book</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="text-xs"><SelectValue placeholder="Select book" /></SelectTrigger></FormControl><SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName} className="text-xs">{bookName}</SelectItem>))}</SelectContent></Select><FormMessage className="text-xs"/></FormItem>)}/>
-                    <FormField control={markRangeForm.control} name="toChapter" render={({ field }) => (<FormItem><FormLabel className="text-xs">Chapter</FormLabel><FormControl><Input type="number" placeholder="Ch." {...field} className="text-xs" /></FormControl><FormMessage className="text-xs"/></FormItem>)}/>
-                    <FormField control={markRangeForm.control} name="toVerse" render={({ field }) => (<FormItem><FormLabel className="text-xs">Verse (Opt.)</FormLabel><FormControl><Input type="number" placeholder="Verse" {...field} className="text-xs" /></FormControl><FormMessage className="text-xs"/></FormItem>)}/>
+                    <fieldset className="space-y-4 border p-4 rounded-lg"><legend className="text-sm font-medium px-1">To</legend>
+                    <FormField control={markRangeForm.control} name="toBook" render={({ field }) => (<FormItem><FormLabel>Book</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select book" /></SelectTrigger></FormControl><SelectContent className="max-h-60">{CANONICAL_BIBLE_ORDER.map(bookName => (<SelectItem key={`to-${bookName}`} value={bookName}>{bookName}</SelectItem>))}</SelectContent></Select><FormMessage/></FormItem>)}/>
+                    <FormField control={markRangeForm.control} name="toChapter" render={({ field }) => (<FormItem><FormLabel>Chapter</FormLabel><FormControl><Input type="number" placeholder="Ch." {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={markRangeForm.control} name="toVerse" render={({ field }) => (<FormItem><FormLabel>Verse (Optional)</FormLabel><FormControl><Input type="number" placeholder="Verse" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                     </fieldset>
                 </div>
-                <FormDescription className="text-xs px-1">Verse defaults: From=start of chapter, To=end of chapter.</FormDescription>
-                <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline" size="sm">Cancel</Button></DialogClose><Button type="submit" disabled={isMarkingRange} size="sm">{isMarkingRange ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckSquare className="mr-2 h-3.5 w-3.5" />}{isMarkingRange ? 'Updating...' : 'Mark Range as Read'}</Button></DialogFooter>
+                <FormDescription className="text-sm px-1">Verse defaults: From=start of chapter, To=end of chapter.</FormDescription>
+                <DialogFooter className="pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" disabled={isMarkingRange}>{isMarkingRange ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}{isMarkingRange ? 'Updating...' : 'Mark Range as Read'}</Button></DialogFooter>
                 </form>
             </Form>
             </DialogContent>
@@ -447,15 +433,15 @@ export default function BibleChecklistPage() {
       </div>
 
       {totalPassagesInPlan > 0 && (
-        <Card className="mb-3 shadow-sm"><CardHeader className="p-2.5"><CardTitle className="text-base">Overall Progress</CardTitle></CardHeader><CardContent className="p-2.5 pt-0"><Progress value={overallProgress} className="w-full h-2.5" /><p className="text-muted-foreground mt-1 text-center text-xs">{completedPassages.length} of {totalPassagesInPlan} passages completed ({overallProgress.toFixed(1)}%)</p></CardContent></Card>
+        <Card className="mb-4"><CardHeader className="p-4"><h3 className="text-lg font-semibold">Overall Progress</h3></CardHeader><CardContent className="p-4 pt-0"><Progress value={overallProgress} className="w-full h-3" /><p className="text-muted-foreground mt-2 text-center text-sm">{completedPassages.length} of {totalPassagesInPlan} passages completed ({overallProgress.toFixed(1)}%)</p></CardContent></Card>
       )}
 
       <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-            <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock className="h-4 w-4"/>Current Week</TabsTrigger>
-            <TabsTrigger value="myNextReading" className="flex items-center gap-2"><Target className="h-4 w-4"/>My Next Reading</TabsTrigger>
-            <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List className="h-4 w-4"/>Full Plan</TabsTrigger>
+            <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock/>Current Week</TabsTrigger>
+            <TabsTrigger value="myNextReading" className="flex items-center gap-2"><Target/>Next Reading</TabsTrigger>
+            <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List/>Full Plan</TabsTrigger>
             </TabsList>
             <Popover>
             <PopoverTrigger asChild>

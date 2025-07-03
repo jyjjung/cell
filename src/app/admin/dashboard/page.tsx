@@ -9,15 +9,15 @@ import type { AppEvent } from '@/types';
 import { EventForm } from '@/components/admin/event-form';
 import BiblePlanAdminForm from '@/components/admin/bible-plan-admin-form';
 import BatchEventImportForm from '@/components/admin/batch-event-import-form';
-import MemoryVerseAdmin from '@/components/admin/memory-verse-admin'; // Import new component
+import MemoryVerseAdmin from '@/components/admin/memory-verse-admin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
-import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2, Brain } from 'lucide-react'; // Added Brain icon
+import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2, Brain } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -157,10 +157,10 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <CalendarPlus className="h-6 w-6 text-primary" />
               <CardTitle className="text-2xl">Manage Events</CardTitle>
             </div>
@@ -187,162 +187,164 @@ export default function AdminDashboardPage() {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent className="p-0"> 
+        <CardContent> 
           {eventsLoading ? (
             <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
           ) : events.length === 0 ? (
-            <div className="p-6 text-center">
+            <div className="p-10 text-center bg-muted/50 rounded-lg">
               <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-3 py-2 text-xs min-w-[200px]">Title</TableHead>
-                  <TableHead className="px-3 py-2 text-xs">Date</TableHead>
-                  <TableHead className="px-3 py-2 text-xs">Category</TableHead>
-                  <TableHead className="text-right px-3 py-2 text-xs">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium px-3 py-1.5">{event.title}</TableCell>
-                    <TableCell className="px-3 py-1.5">{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
-                    <TableCell className="px-3 py-1.5">{event.category}</TableCell>
-                    <TableCell className="text-right space-x-1 px-3 py-1.5">
-                      <Button variant="outline" size="xs" onClick={() => openEditModal(event)} aria-label="Edit event">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="xs" aria-label="Delete event">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the event titled "{event.title}".
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={async () => {
-                                try {
-                                  await deleteEvent(event.id);
-                                  toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
-                                } catch (error) {
-                                  console.error("Failed to delete event:", error);
-                                  toast({
-                                    title: "Deletion Failed",
-                                    description: `Could not delete event "${event.title}". Please try again.`,
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              Yes, delete event
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead className="min-w-[250px]">Title</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {events.map((event) => (
+                    <TableRow key={event.id}>
+                        <TableCell className="font-medium">{event.title}</TableCell>
+                        <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{event.category}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon" aria-label="Delete event">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the event titled "{event.title}".
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                onClick={async () => {
+                                    try {
+                                    await deleteEvent(event.id);
+                                    toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
+                                    } catch (error) {
+                                    console.error("Failed to delete event:", error);
+                                    toast({
+                                        title: "Deletion Failed",
+                                        description: `Could not delete event "${event.title}". Please try again.`,
+                                        variant: "destructive",
+                                    });
+                                    }
+                                }}
+                                >
+                                Yes, delete event
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <Separator className="my-12" />
+      <Separator />
 
-      <Card className="shadow-lg">
-        <CardHeader>
-           <div className="flex items-center space-x-2">
-              <UploadCloud className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Batch Import Events</CardTitle>
+      <div className="grid md:grid-cols-2 gap-8">
+        <Card>
+            <CardHeader>
+            <div className="flex items-center space-x-3">
+                <UploadCloud className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl">Batch Import Events</CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <BatchEventImportForm />
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+            <div className="flex items-center space-x-3">
+                <BookHeart className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl">Manage Bible Plan</CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <BiblePlanAdminForm />
+            </CardContent>
+        </Card>
+      </div>
+
+      <Separator />
+
+       <div className="grid md:grid-cols-2 gap-8">
+         <Card>
+            <CardHeader>
+            <div className="flex items-center space-x-3">
+                <Brain className="h-6 w-6 text-primary" />
+                <CardTitle className="text-2xl">Manage Memory Verses</CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <MemoryVerseAdmin />
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+            <div className="flex items-center space-x-3">
+                <Trash className="h-6 w-6 text-destructive" />
+                <CardTitle className="text-2xl">Data Management</CardTitle>
             </div>
-        </CardHeader>
-        <CardContent>
-            <BatchEventImportForm />
-        </CardContent>
-      </Card>
-
-      <Separator className="my-12" />
-
-      <Card className="shadow-lg">
-        <CardHeader>
-           <div className="flex items-center space-x-2">
-              <BookHeart className="h-6 w-6 text-accent" />
-              <CardTitle className="text-2xl">Manage Global Bible Reading Plan</CardTitle>
-            </div>
-        </CardHeader>
-        <CardContent>
-            <BiblePlanAdminForm />
-        </CardContent>
-      </Card>
-
-      <Separator className="my-12" />
-
-      <Card className="shadow-lg">
-        <CardHeader>
-           <div className="flex items-center space-x-2">
-              <Brain className="h-6 w-6 text-green-500" /> {/* Updated Icon */}
-              <CardTitle className="text-2xl">Manage Memory Verses</CardTitle>
-            </div>
-        </CardHeader>
-        <CardContent>
-            <MemoryVerseAdmin />
-        </CardContent>
-      </Card>
-      
-      <Separator className="my-12" />
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Trash className="h-6 w-6 text-destructive" />
-            <CardTitle className="text-2xl">Data Management</CardTitle>
-          </div>
-          <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={isDeletingPast || eventsLoading}>
-                {isDeletingPast ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Clean Up Past Events
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Deletion of Past Events</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to permanently delete all events that have already occurred? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeletePastEvents} disabled={isDeletingPast}>
-                  {isDeletingPast ? 'Deleting...' : 'Yes, delete past events'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <p className="text-sm text-muted-foreground mt-2">
-            This will remove all events from the database whose date is before today.
-          </p>
-        </CardContent>
-      </Card>
+            <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isDeletingPast || eventsLoading}>
+                    {isDeletingPast ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    Clean Up Past Events
+                </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Deletion of Past Events</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    Are you sure you want to permanently delete all events that have already occurred? This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeletePastEvents} disabled={isDeletingPast}>
+                    {isDeletingPast ? 'Deleting...' : 'Yes, delete past events'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <p className="text-sm text-muted-foreground mt-2">
+                This will remove all events from the database whose date is before today.
+            </p>
+            </CardContent>
+        </Card>
+      </div>
 
     </div>
   );

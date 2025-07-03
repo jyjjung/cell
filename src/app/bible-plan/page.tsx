@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
-import type { DailyReading, StructuredPassage } from '@/types';
+import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist'; // For dialog props
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 
 type FilterMode = 'currentWeek' | 'fullPlan' | 'singleDay';
 
@@ -29,8 +29,6 @@ export default function FullBiblePlanPage() {
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
   const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
   
-  // Get functions and data from useUserBibleChecklist for the dialog.
-  // These are not used for filtering on this public page but are needed for the dialog's "Mark as Done" feature if a logged-in user views this page.
   const { completedPassages, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
 
 
@@ -117,7 +115,7 @@ export default function FullBiblePlanPage() {
     );
   }
 
-  if (planLoading || loadingChecklist) { // Also consider checklist loading for dialog props
+  if (planLoading || loadingChecklist) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -128,23 +126,19 @@ export default function FullBiblePlanPage() {
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center space-x-3 mb-4">
-          <ListChecks className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+          <ListChecks className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
         </div>
-        <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Info className="h-6 w-6 text-destructive" />
-              <CardTitle className="text-xl">No Plan Available</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              No Bible reading plan has been set by the admin yet, or the current plan is empty.
-            </p>
-          </CardContent>
+        <Card className="mt-6 max-w-lg mx-auto">
+            <CardContent className="p-8 text-center">
+              <Info className="mx-auto h-12 w-12 text-destructive mb-4" />
+              <h3 className="text-xl font-semibold">No Plan Available</h3>
+              <p className="text-muted-foreground mt-2">
+                No Bible reading plan has been set by the admin yet.
+              </p>
+            </CardContent>
         </Card>
         <BackToTopButton />
       </div>
@@ -152,17 +146,17 @@ export default function FullBiblePlanPage() {
   }
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center space-x-3 mb-4">
-        <ListChecks className="h-6 w-6 text-primary" />
-        <h1 className="text-xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+        <ListChecks className="h-8 w-8 text-primary" />
+        <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
       </div>
 
        <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-              <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock className="h-4 w-4"/>Current Week</TabsTrigger>
-              <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List className="h-4 w-4"/>Full Plan</TabsTrigger>
+              <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock/>Current Week</TabsTrigger>
+              <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List/>Full Plan</TabsTrigger>
             </TabsList>
             <Popover>
               <PopoverTrigger asChild>
@@ -177,9 +171,9 @@ export default function FullBiblePlanPage() {
             </Popover>
         </div>
 
-        <div className="space-y-2 mt-4">
+        <div className="space-y-3 mt-4">
           {sortedAndFilteredDailyReadings.length === 0 ? (
-            <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found for this filter.</p></CardContent></Card>
+            <Card><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No readings found for this filter.</p></CardContent></Card>
           ) : (
             sortedAndFilteredDailyReadings.map((reading) => {
               let parsedDayDate: Date | null = null;
@@ -188,30 +182,26 @@ export default function FullBiblePlanPage() {
                   parsedDayDate = parseISO(reading.date);
                   if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
                 } catch(e) {
-                  console.error(`[FullBiblePlanPage] Error parsing date for display: ${reading?.date}`, e);
-                  return <Card key={`error-date-${reading?.date || Math.random()}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
+                  return <Card key={`error-date-${reading?.date || Math.random()}`} className="p-4 my-2"><CardContent className="text-destructive font-semibold">Error: Invalid date for reading entry.</CardContent></Card>;
                 }
               return (
-                <Card key={reading.date} className="bg-card/80 rounded-md shadow-sm">
-                  <CardHeader className="p-2 border-b">
-                    <h3 className="text-sm font-semibold">{format(parsedDayDate, "EEE, MMM d, yyyy")}</h3>
+                <Card key={reading.date}>
+                  <CardHeader className="p-3 border-b">
+                    <h3 className="font-semibold">{format(parsedDayDate, "EEE, MMM d, yyyy")}</h3>
                   </CardHeader>
-                  <CardContent className="p-2 space-y-1.5">
+                  <CardContent className="p-3 space-y-2">
                     {reading.passages.length > 0 ? (
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-2">
                         {reading.passages.map((passage, pIndex) => {
                           const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '') ? passage.displayText : "Error: Passage text data is missing.";
                           const isPassageValid = passageTextToDisplay && !passageTextToDisplay.toLowerCase().includes("error:");
-                          if (!passage || typeof passage.displayText !== 'string' || passage.displayText.trim() === '') {
-                             console.warn(`[FullBiblePlanPage] RENDERING: Passage displayText is missing or invalid for date ${reading.date}, index ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined");
-                          }
                           return (
-                            <li key={pIndex} className="p-1.5 bg-background/50 border rounded-md text-xs flex items-center">
-                              <BookOpen className="inline-block h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                            <li key={pIndex} className="p-2 bg-background/50 border rounded-md text-sm flex items-center">
+                              <BookOpen className="inline-block h-4 w-4 mr-2 text-muted-foreground shrink-0" />
                                {isPassageValid ? (
                                   <Button
                                     variant="link"
-                                    className="p-0 h-auto text-xs font-normal text-left justify-start text-foreground hover:text-primary hover:no-underline"
+                                    className="p-0 h-auto text-sm font-normal text-left justify-start text-foreground hover:text-primary hover:no-underline"
                                     onClick={() => handlePassageClick(passageTextToDisplay)}
                                     title={`View ${passageTextToDisplay}`}
                                   >
@@ -224,7 +214,7 @@ export default function FullBiblePlanPage() {
                           );
                         })}
                       </ul>
-                    ) : (<p className="text-xs text-muted-foreground">No passages assigned.</p>)}
+                    ) : (<p className="text-sm text-muted-foreground">No passages assigned.</p>)}
                   </CardContent>
                 </Card>
               );
@@ -236,8 +226,8 @@ export default function FullBiblePlanPage() {
         isOpen={isPassageViewerOpen}
         onOpenChange={setIsPassageViewerOpen}
         passageReference={selectedPassageRef}
-        completedPassages={completedPassages} // Pass for dialog features
-        markMultiplePassages={markMultiplePassages} // Pass for dialog features
+        completedPassages={completedPassages}
+        markMultiplePassages={markMultiplePassages}
       />
       <BackToTopButton />
     </div>

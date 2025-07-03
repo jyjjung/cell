@@ -7,33 +7,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { UserPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react'; // Added useState
+import { useEffect, useState } from 'react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function SignupPage() {
   const { currentUser, loadingAuth } = useAuth();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
-  const [isMounted, setIsMounted] = useState(false); // Added isMounted
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true); // Set mounted
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isMounted && !loadingAuth && currentUser) { // Check isMounted
+    if (isMounted && !loadingAuth && currentUser) {
       setIsPageLoading(true);
       router.push('/'); 
     }
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
-  if (!isMounted || loadingAuth || (!loadingAuth && currentUser && isMounted)) { // Check isMounted
+  if (!isMounted || loadingAuth || (!loadingAuth && currentUser && isMounted)) {
     return null; 
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full inline-block">
             <UserPlus className="h-8 w-8 text-primary" />

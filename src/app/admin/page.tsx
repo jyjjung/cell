@@ -15,7 +15,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { adminPasswordLogin, isAdmin } = useAuth(); // Changed login to adminPasswordLogin
+  const { adminPasswordLogin, isAdmin } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
@@ -35,9 +35,8 @@ export default function AdminLoginPage() {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    if (adminPasswordLogin(password)) { // Changed login to adminPasswordLogin
+    if (adminPasswordLogin(password)) {
       toast({ title: "Login Successful", description: "Welcome, Admin!" });
-      // router.push will be handled by the useEffect above, which now sets setIsPageLoading(true)
     } else {
       setError('Incorrect password. Please try again.');
       toast({ title: "Login Failed", description: "Incorrect password.", variant: "destructive" });
@@ -57,8 +56,8 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
-      <Card className="w-full max-w-sm shadow-2xl">
+    <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center">
+      <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full inline-block">
             <Lock className="h-8 w-8 text-primary" />
@@ -80,7 +79,7 @@ export default function AdminLoginPage() {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full text-base py-3">
+            <Button type="submit" className="w-full text-lg py-6">
               Unlock Admin Controls
             </Button>
           </form>

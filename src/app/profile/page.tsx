@@ -15,14 +15,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Edit3 } from 'lucide-react';
+import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Edit3, Pencil } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
-  birthday: z.date().optional().nullable(), // Store as Date object in form, convert to string for saving
+  birthday: z.date().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -55,7 +55,6 @@ export default function ProfilePage() {
     }
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
-  // Reset form when currentUser data changes (e.g., after successful save)
   useEffect(() => {
     if (currentUser) {
       form.reset({
@@ -81,7 +80,7 @@ export default function ProfilePage() {
       if (data.birthday) {
         profileUpdateData.birthday = format(data.birthday, 'yyyy-MM-dd');
       } else {
-        profileUpdateData.birthday = ''; // Send empty string or handle as null in backend if preferred for clearing
+        profileUpdateData.birthday = '';
       }
 
       await updateUserProfile(currentUser.uid, profileUpdateData);
@@ -112,20 +111,21 @@ export default function ProfilePage() {
 
   return (
     <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center">
-      <Card className="w-full max-w-lg shadow-xl">
-        <CardHeader className="text-center">
-          <UserCircle className="mx-auto h-16 w-16 text-primary mb-4" />
-          <CardTitle className="text-2xl">Your Profile</CardTitle>
-          <CardDescription>Manage your account details and preferences.</CardDescription>
+      <Card className="w-full max-w-lg">
+        <CardHeader className="text-center items-center relative">
+            <Button onClick={() => setIsEditing(!isEditing)} variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Edit Profile</span>
+            </Button>
+            <div className="p-4 bg-primary/10 rounded-full inline-block">
+                <UserCircle className="h-16 w-16 text-primary" />
+            </div>
+            <CardTitle className="text-2xl pt-2">{isEditing ? 'Edit Profile' : currentUser.displayName}</CardTitle>
+            <CardDescription>{currentUser.email}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <p id="email" className="text-muted-foreground">{currentUser.email}</p>
-              </div>
-
               <FormField
                 control={form.control}
                 name="displayName"
@@ -180,10 +180,9 @@ export default function ProfilePage() {
                 )}
               />
               {isEditing && (
-                <div className="flex justify-end space-x-2 pt-4 border-t">
+                <div className="flex justify-end space-x-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => {
                     setIsEditing(false);
-                    // Reset form to original values from currentUser
                     form.reset({
                       displayName: currentUser.displayName || '',
                       birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
@@ -199,27 +198,16 @@ export default function ProfilePage() {
               )}
             </form>
           </Form>
-
-          {!isEditing && (
-            <div className="pt-4 border-t">
-              <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full">
-                <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
-              </Button>
-            </div>
-          )}
-
-
-          <div className="pt-4 border-t">
-            <Button onClick={handleSignOut} variant="destructive" className="w-full">
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground mt-2">User ID</h3>
-            <p className="text-muted-foreground text-xs break-all">{currentUser.uid}</p>
-          </div>
-
         </CardContent>
+        <CardFooter className="flex flex-col gap-4 pt-6 border-t">
+          <Button onClick={handleSignOut} variant="destructive" className="w-full">
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+          </Button>
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground mt-2 text-center">User ID</h3>
+            <p className="text-muted-foreground text-xs break-all text-center">{currentUser.uid}</p>
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );

@@ -10,10 +10,10 @@ body {
 @layer base {
   :root {
     /* Light Theme */
-    --background: 0 0% 100%; /* White */
+    --background: 240 5% 96%; /* Soft Gray */
     --foreground: 240 10% 3.9%; /* Near Black */
     
-    --card: 0 0% 100%;
+    --card: 0 0% 100%; /* White */
     --card-foreground: 240 10% 3.9%;
     
     --popover: 0 0% 100%;
@@ -22,7 +22,7 @@ body {
     --primary: 221.2 83.2% 53.3%; /* Vibrant Blue */
     --primary-foreground: 210 40% 98%;
     
-    --secondary: 240 4.8% 95.9%; /* Light Gray */
+    --secondary: 240 4.8% 92.9%; /* Light Gray */
     --secondary-foreground: 240 5.9% 10%;
     
     --muted: 240 4.8% 95.9%;
@@ -51,7 +51,7 @@ body {
     --background: 240 10% 3.9%; /* Near Black */
     --foreground: 210 40% 98%; /* Off-white */
 
-    --card: 240 10% 3.9%;
+    --card: 240 5% 10%;
     --card-foreground: 210 40% 98%;
 
     --popover: 240 10% 3.9%;
@@ -110,28 +110,5 @@ body {
   .prose .esv-text h3, .prose-sm .esv-text h3,
   .prose .esv-text h4, .prose-sm .esv-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
-  }
-}
-
-.moving-bg-gradient {
-  background: linear-gradient(-45deg, 
-    hsl(var(--background) / 0.7), 
-    hsl(var(--secondary) / 0.7), 
-    hsl(var(--background) / 0.7),  
-    hsl(var(--muted) / 0.7)   
-  );
-  background-size: 400% 400%;
-  animation: gradientAnimation 30s ease infinite;
-}
-
-@keyframes gradientAnimation {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
   }
 }

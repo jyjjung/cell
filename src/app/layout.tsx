@@ -1,17 +1,13 @@
 
-"use client"; // Add "use client" directive here
-
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/auth-context';
-import { PageLoadingProvider, usePageLoading } from '@/contexts/page-loading-context';
+import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import Header from '@/components/layout/header';
-import MovingBackground from '@/components/layout/moving-background';
 import GlobalPageLoader from '@/components/layout/global-page-loader';
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { Analytics } from "@vercel/analytics/react"; // Import Vercel Analytics
+import { Analytics } from "@vercel/analytics/react";
+import { ThemeProvider } from '@/components/theme-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -23,46 +19,34 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-function LayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { isPageLoading, setIsPageLoading } = usePageLoading();
-
-  useEffect(() => {
-    if (isPageLoading) {
-      setIsPageLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]); // isPageLoading removed from deps to avoid loop if a page sets it true
-
-  return (
-    <>
-      <MovingBackground />
-      <GlobalPageLoader />
-      <div className="relative z-10 flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-grow container mx-auto px-6 py-8">
-          {children}
-        </main>
-      </div>
-      <Toaster />
-      <Analytics /> {/* Add Vercel Analytics component here */}
-    </>
-  );
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PageLoadingProvider>
-          <AuthProvider>
-            <LayoutContent>{children}</LayoutContent>
-          </AuthProvider>
-        </PageLoadingProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <PageLoadingProvider>
+            <AuthProvider>
+              <div className="relative z-10 flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                  {children}
+                </main>
+              </div>
+              <Toaster />
+              <GlobalPageLoader />
+              <Analytics />
+            </AuthProvider>
+          </PageLoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -10,14 +10,14 @@ import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import type { AppEvent, DailyReading } from '@/types';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookHeart, Loader2, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Info } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { CalendarCheck, BookHeart, ListFilter, BarChart2, CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startOfDay, parseISO, addMonths, endOfDay, isValid as isDateValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -115,13 +115,13 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <section id="stats-section">
-        <h2 className="text-2xl font-bold tracking-tight mb-4 flex items-center">
-          <BarChart2 className="mr-3 h-7 w-7 text-primary" />
+        <h2 className="text-3xl font-bold tracking-tight mb-6 flex items-center">
+          <BarChart2 className="mr-3 h-8 w-8 text-primary" />
           App Snapshot
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
             title="Events Next 30 Days"
             value={eventsLoading ? null : upcomingEvents.length}
@@ -155,10 +155,10 @@ export default function HomePage() {
       <Separator />
 
       <section id="upcoming-events-section">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div className="flex items-center space-x-3">
-            <CalendarCheck className="h-7 w-7 text-primary" />
-            <h2 className="text-2xl font-bold tracking-tight">Upcoming Dates (Next 30 Days)</h2>
+            <CalendarCheck className="h-8 w-8 text-primary" />
+            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center space-x-2 w-full sm:w-auto">
@@ -180,16 +180,7 @@ export default function HomePage() {
         {eventsLoading ? (
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
-              <Card key={index} className="p-3 border-l-4 border-l-muted">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="flex-grow space-y-2">
-                        <Skeleton className="h-5 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </div>
-                    <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-                </div>
-                <Skeleton className="h-4 w-1/3 mt-2" />
-              </Card>
+              <Skeleton key={index} className="h-36 w-full rounded-lg" />
             ))}
           </div>
         ) : (
@@ -197,24 +188,39 @@ export default function HomePage() {
         )}
       </section>
 
-      <Separator className="my-8" />
+      <Separator />
 
       <section>
-        <div className="flex items-center space-x-3 mb-4">
-          <BookHeart className="h-7 w-7 text-accent" />
-          <h2 className="text-2xl font-bold tracking-tight">Today's Bible Reading</h2>
+        <div className="flex items-center space-x-3 mb-6">
+          <BookHeart className="h-8 w-8 text-primary" />
+          <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
         </div>
-        <BiblePlanDisplay
-          readingToDisplay={todaysReadingForDisplay}
-          currentUser={currentUser}
-          completedPassages={completedPassages}
-          togglePassageCompletion={togglePassageCompletion}
-          onToggleAllToday={markMultiplePassages}
-          allPassageTextsForDay={allTodaysPassageTexts}
-          loading={planLoading || loadingChecklist}
-          planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-          hidePlanMeta={true}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+                <BiblePlanDisplay
+                    readingToDisplay={todaysReadingForDisplay}
+                    currentUser={currentUser}
+                    completedPassages={completedPassages}
+                    togglePassageCompletion={togglePassageCompletion}
+                    onToggleAllToday={markMultiplePassages}
+                    allPassageTextsForDay={allTodaysPassageTexts}
+                    loading={planLoading || loadingChecklist}
+                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                    hidePlanMeta={true}
+                />
+            </div>
+            <div className="flex flex-col justify-center items-start bg-card p-6 rounded-lg shadow-sm">
+                <h3 className="text-xl font-semibold mb-2">Track Your Progress</h3>
+                <p className="text-muted-foreground mb-4">
+                    Log in to mark your daily readings as complete, see your progress over time, and stay motivated on your journey through the Bible.
+                </p>
+                <Link href="/bible-checklist" passHref legacyBehavior>
+                    <Button>
+                        Go to My Checklist
+                    </Button>
+                </Link>
+            </div>
+        </div>
       </section>
     </div>
   );
