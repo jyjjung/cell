@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import EventList from '@/components/events/event-list';
+import UpcomingEventsDisplay from '@/components/events/upcoming-events-display';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import StatCard from '@/components/homepage/stat-card';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
@@ -12,10 +12,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
 import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { EventCategory } from '@/types';
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -36,7 +34,6 @@ export default function HomePage() {
       .filter(event => {
         try {
           const eventDate = parseISO(event.date);
-          // Show events from today onwards
           return isValid(eventDate) && !isBefore(eventDate, today);
         } catch (e) {
           console.error("Error parsing event date for filtering:", event.date, e);
@@ -45,13 +42,6 @@ export default function HomePage() {
       })
       .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
   }, [allEvents, isMounted]);
-
-  const categorizedEvents = useMemo(() => {
-    const events = upcomingEvents.filter(e => e.category === EventCategory.Event || e.category === EventCategory.Birthday);
-    const qts = upcomingEvents.filter(e => e.category === EventCategory.QT);
-    const snacks = upcomingEvents.filter(e => e.category === EventCategory.Snack);
-    return { events, qts, snacks };
-  }, [upcomingEvents]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -88,14 +78,6 @@ export default function HomePage() {
     return `${completedPassages.length} of ${totalPassagesUpToToday}`;
   }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
 
-  const EventsSectionSkeleton = () => (
-    <div className="flex gap-4 overflow-x-hidden py-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <Skeleton key={index} className="h-40 w-64 shrink-0 rounded-lg" />
-      ))}
-    </div>
-  );
-
   if (!isMounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
@@ -106,7 +88,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <section id="stats-section">
         <h2 className="text-3xl font-bold tracking-tight mb-6">
           App Snapshot
@@ -145,18 +127,8 @@ export default function HomePage() {
       <Separator />
 
       <section id="upcoming-events-section" className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Events & Birthdays</h2>
-          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.events} />}
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">QT Schedule</h2>
-          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.qts} />}
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Snacks</h2>
-          {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.snacks} />}
-        </div>
+        <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
+        <UpcomingEventsDisplay events={upcomingEvents} loading={eventsLoading} />
       </section>
 
       <Separator />
