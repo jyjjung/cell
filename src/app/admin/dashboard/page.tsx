@@ -199,7 +199,7 @@ export default function AdminDashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%] px-3 py-2 text-xs">Title</TableHead>
+                  <TableHead className="px-3 py-2 text-xs min-w-[200px]">Title</TableHead>
                   <TableHead className="px-3 py-2 text-xs">Date</TableHead>
                   <TableHead className="px-3 py-2 text-xs">Category</TableHead>
                   <TableHead className="text-right px-3 py-2 text-xs">Actions</TableHead>

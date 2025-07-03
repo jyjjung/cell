@@ -242,9 +242,8 @@ export default function BibleChecklistPage() {
   
   const DailyReadingSkeleton = () => (
     <Card className="bg-card/80 rounded-md shadow-sm">
-      <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+      <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
         <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-6 w-32" />
       </CardHeader>
       <CardContent className="p-2 space-y-1.5">
         <div className="space-y-2">
@@ -295,7 +294,7 @@ export default function BibleChecklistPage() {
 
           return (
             <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
-              <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+              <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
                 <h3 className="text-sm font-semibold flex items-center">
                   {format(parsedDayDate, "EEE, MMM d, yyyy")}
                   {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}

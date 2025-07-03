@@ -161,7 +161,7 @@ export default function ProgressOverviewPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">User</TableHead>
+                <TableHead className="min-w-[200px]">User</TableHead>
                 <TableHead>Progress (% of readings due)</TableHead>
                 <TableHead className="text-right">Completed / Expected by Today</TableHead>
               </TableRow>
@@ -190,4 +190,3 @@ export default function ProgressOverviewPage() {
     </div>
   );
 }
-

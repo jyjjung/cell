@@ -122,7 +122,7 @@ export default function BiblePlanDisplay({
   if (loading) {
     return (
       <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2"> 
+        <CardHeader className="p-2 min-h-[44px]"> 
            <div className="h-5 bg-muted rounded w-3/4 animate-pulse mb-1"></div> {/* Date Skeleton */}
         </CardHeader>
         <CardContent className="p-2">
@@ -158,7 +158,7 @@ export default function BiblePlanDisplay({
   if (!readingToDisplay) {
     return (
       <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2">
+        <CardHeader className="p-2 min-h-[44px]">
              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <CalendarX className="h-4 w-4 shrink-0" />
                 <p>No reading scheduled for this time.</p>
@@ -179,7 +179,7 @@ export default function BiblePlanDisplay({
   return (
     <>
       <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+        <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
           <h3 className="text-sm font-semibold flex items-center">
             {parsedDayDate ? format(parsedDayDate, "EEE, MMM d, yyyy") : "Reading Date"}
             {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}

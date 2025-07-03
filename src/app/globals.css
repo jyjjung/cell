@@ -9,34 +9,34 @@ body {
 
 @layer base {
   :root {
-    /* Light Theme: Very light blue/off-white background */
-    --background: 220 60% 98%; /* Very pale blue, almost white */
-    --foreground: 220 30% 20%; /* Dark desaturated blue/grey for text */
+    /* Light Theme */
+    --background: 0 0% 100%; /* White */
+    --foreground: 240 10% 3.9%; /* Near Black */
     
-    --card: 0 0% 100%; /* White cards for crispness */
-    --card-foreground: 220 30% 15%; /* Darker text on cards */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
     
-    --popover: 0 0% 100%; /* White popovers */
-    --popover-foreground: 220 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
     
-    --primary: 225 75% 48%; /* Darker, richer blue for light mode */
-    --primary-foreground: 210 20% 98%;
+    --primary: 221.2 83.2% 53.3%; /* Vibrant Blue */
+    --primary-foreground: 210 40% 98%;
     
-    --secondary: 220 25% 94%; /* Very light blueish-grey for secondary elements */
-    --secondary-foreground: 220 25% 30%; /* Darker text on secondary */
+    --secondary: 240 4.8% 95.9%; /* Light Gray */
+    --secondary-foreground: 240 5.9% 10%;
     
-    --muted: 220 20% 92%; /* Slightly darker muted background */
-    --muted-foreground: 220 20% 45%; /* Muted text */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
     
-    --accent: 225 75% 48%; /* Use primary blue as accent */
-    --accent-foreground: 210 20% 98%; /* White text on accent */
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
     
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 210 40% 98%;
     
-    --border: 220 20% 88%; /* Light greyish-blue border */
-    --input: 220 20% 90%; /* Light greyish-blue input background */
-    --ring: 225 75% 48%; /* Darker, richer blue for ring */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     
     --chart-1: 12 76% 61%;
@@ -47,34 +47,34 @@ body {
   }
 
   .dark {
-    /* Dark Theme: Darker, richer navy blue background */
-    --background: 225 60% 9%; /* Darker, richer Navy Blue */
-    --foreground: 220 25% 95%; /* Light greyish-blue/white for text */
+    /* Dark Theme */
+    --background: 240 10% 3.9%; /* Near Black */
+    --foreground: 210 40% 98%; /* Off-white */
 
-    --card: 225 55% 14%; /* Slightly lighter, richer navy for cards */
-    --card-foreground: 220 25% 92%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 225 50% 11%; /* Slightly different shade for popovers */
-    --popover-foreground: 220 25% 92%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 221 85% 55%; /* Darker, richer blue for primary in dark mode */
+    --primary: 217.2 91.2% 59.8%; /* Brighter Blue for Dark Mode */
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 225 50% 19%; /* A bit lighter, richer navy variation for secondary elements */
-    --secondary-foreground: 220 20% 85%;
+    --secondary: 240 3.7% 15.9%; /* Dark Gray */
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 225 45% 17%; /* Muted background variation */
-    --muted-foreground: 220 20% 65%; /* Greyer for muted text */
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 210 75% 60%; /* A brighter, distinct blue for accent, adjusted richness */
-    --accent-foreground: 225 50% 12%; /* Dark blue text on the brighter accent */
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 50.6%; 
     --destructive-foreground: 0 0% 98%;
 
-    --border: 225 40% 25%; /* Border color for dark mode */
-    --input: 225 40% 22%; /* Input background for dark mode */
-    --ring: 221 85% 60%; /* Slightly brighter, richer blue for ring in dark mode */
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217.2 91.2% 59.8%;
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -93,20 +93,20 @@ body {
     min-height: 100vh;
   }
   
-  /* Styles for ESV API HTML content (often uses .esv-text wrapper) */
+  /* Styles for ESV API HTML content */
   .prose .esv-text p, .prose-sm .esv-text p {
      @apply mb-2 leading-relaxed;
   }
-  .prose .esv-text .verse-num, .prose-sm .esv-text .verse-num, /* ESV specific verse number */
-  .prose .p .v, .prose-sm .p .v, /* General verse number styling */
-  .prose .verse-num, .prose-sm .verse-num { /* Common class from some Bible APIs */
+  .prose .esv-text .verse-num, .prose-sm .esv-text .verse-num,
+  .prose .p .v, .prose-sm .p .v,
+  .prose .verse-num, .prose-sm .verse-num {
      @apply text-xs font-bold text-muted-foreground align-super mr-0.5; 
   }
-  .prose .esv-text .chapter-num, .prose-sm .esv-text .chapter-num, /* ESV specific chapter number */
+  .prose .esv-text .chapter-num, .prose-sm .esv-text .chapter-num,
   .prose .chapter-num, .prose-sm .chapter-num { 
     @apply font-bold text-2xl text-primary mr-1 float-left; 
   }
-  .prose .esv-text h2, .prose-sm .esv-text h2, /* ESV section headings */
+  .prose .esv-text h2, .prose-sm .esv-text h2,
   .prose .esv-text h3, .prose-sm .esv-text h3,
   .prose .esv-text h4, .prose-sm .esv-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
@@ -115,10 +115,10 @@ body {
 
 .moving-bg-gradient {
   background: linear-gradient(-45deg, 
-    hsl(225 60% 15% / 0.7), 
-    hsl(225 50% 22% / 0.7), 
-    hsl(225 70% 7% / 0.7),  
-    hsl(225 60% 8% / 0.7)   
+    hsl(var(--background) / 0.7), 
+    hsl(var(--secondary) / 0.7), 
+    hsl(var(--background) / 0.7),  
+    hsl(var(--muted) / 0.7)   
   );
   background-size: 400% 400%;
   animation: gradientAnimation 30s ease infinite;
