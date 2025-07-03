@@ -104,7 +104,7 @@ export default function VerseDisplayDialog({
               </div>
             )}
             {!isLoading && !error && currentVerseTextOverride && (
-              <div className="whitespace-pre-wrap p-1 text-sm sm:text-base leading-relaxed dark:text-gray-200 text-gray-800">
+              <div className="whitespace-pre-wrap p-1 text-sm sm:text-base leading-relaxed">
                 {currentVerseTextOverride}
               </div>
             )}
@@ -131,4 +131,3 @@ export default function VerseDisplayDialog({
     </Dialog>
   );
 }
-
