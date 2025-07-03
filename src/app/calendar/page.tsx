@@ -88,7 +88,7 @@ export default function CalendarPage() {
         </time>
         {isCurrentMonth && dayEvents.length > 0 && (
           <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1">
-            {dayEvents.slice(0, 3).map((event) => (
+            {dayEvents.slice(0, 2).map((event) => (
               <div
                 key={event.id}
                 className={cn(
@@ -100,8 +100,8 @@ export default function CalendarPage() {
                 {event.title}
               </div>
             ))}
-             {dayEvents.length > 3 && (
-              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 3} more</div>
+             {dayEvents.length > 2 && (
+              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 2} more</div>
             )}
           </div>
         )}
@@ -131,36 +131,54 @@ export default function CalendarPage() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-8">
           {loading ? <CalendarSkeleton /> : (
-            <Card>
-              <CardContent className="p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  month={month}
-                  onMonthChange={setMonth}
-                  className="p-0"
-                  classNames={{
-                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                      month: "space-y-4 w-full border-x border-b border-border",
-                      table: "w-full border-collapse",
-                      caption_label: "text-base font-medium",
-                      head_row: "flex border-b border-border",
-                      head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
-                      row: "flex w-full",
-                      cell: "h-32 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
-                      day: "h-full w-full p-0 font-normal",
-                      day_selected: "", // We handle selection styling in CustomDay
-                      day_today: "", // We handle today styling in CustomDay
-                      day_outside: "", // We handle outside day styling in CustomDay
-                      day_disabled: "text-muted-foreground opacity-50",
-                  }}
-                  components={{ Day: CustomDay }}
-                />
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardContent className="p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    month={month}
+                    onMonthChange={setMonth}
+                    className="p-0"
+                    classNames={{
+                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                        month: "space-y-4 w-full border-x border-b border-border",
+                        table: "w-full border-collapse",
+                        caption_label: "text-base font-medium",
+                        head_row: "flex border-b border-border",
+                        head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
+                        row: "flex w-full",
+                        cell: "h-28 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+                        day: "h-full w-full p-0 font-normal",
+                        day_selected: "", // We handle selection styling in CustomDay
+                        day_today: "", // We handle today styling in CustomDay
+                        day_outside: "", // We handle outside day styling in CustomDay
+                        day_disabled: "text-muted-foreground opacity-50",
+                    }}
+                    components={{ Day: CustomDay }}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="text-lg">Legend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+                          {Object.values(EventCategory).map(category => (
+                              <div key={category} className="flex items-center">
+                                  <span className={cn("w-3 h-3 mr-2 rounded-sm", categoryBackgroundColors[category])} />
+                                  <span className="text-sm text-muted-foreground">{category}</span>
+                              </div>
+                          ))}
+                      </div>
+                  </CardContent>
+              </Card>
+            </>
           )}
         </div>
         
@@ -196,23 +214,6 @@ export default function CalendarPage() {
                 <p className="text-muted-foreground text-center py-8">No events scheduled.</p>
               )}
             </CardContent>
-            
-            <Separator className="mx-6" />
-
-            <CardHeader>
-                <CardTitle className="text-lg">Legend</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-2">
-                    {Object.values(EventCategory).map(category => (
-                        <div key={category} className="flex items-center">
-                            <span className={cn("w-3 h-3 mr-3 rounded-sm", categoryBackgroundColors[category])} />
-                            <span className="text-sm text-muted-foreground">{category}</span>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-
           </Card>
         </div>
       </div>
