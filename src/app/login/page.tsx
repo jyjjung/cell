@@ -45,7 +45,7 @@ export default function LoginPage() {
           <LoginForm />
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-semibold text-primary hover:underline">
+            <Link href="/signup" onClick={() => setIsPageLoading(true)} className="font-semibold text-primary hover:underline">
               Sign up
             </Link>
           </p>

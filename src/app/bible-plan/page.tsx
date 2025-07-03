@@ -127,10 +127,7 @@ export default function FullBiblePlanPage() {
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <ListChecks className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
         <Card className="mt-6 max-w-lg mx-auto">
             <CardContent className="p-8 text-center">
               <Info className="mx-auto h-12 w-12 text-destructive mb-4" />
@@ -147,10 +144,7 @@ export default function FullBiblePlanPage() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3 mb-4">
-        <ListChecks className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
-      </div>
+      <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
 
        <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -185,23 +179,22 @@ export default function FullBiblePlanPage() {
                   return <Card key={`error-date-${reading?.date || Math.random()}`} className="p-4 my-2"><CardContent className="text-destructive font-semibold">Error: Invalid date for reading entry.</CardContent></Card>;
                 }
               return (
-                <Card key={reading.date}>
-                  <CardHeader className="p-3 border-b">
-                    <h3 className="font-semibold">{format(parsedDayDate, "EEE, MMM d, yyyy")}</h3>
+                <Card key={reading.date} className="bg-card/80 rounded-md shadow-sm">
+                  <CardHeader className="p-2 border-b min-h-[44px]">
+                    <h3 className="font-semibold text-sm">{format(parsedDayDate, "EEE, MMM d, yyyy")}</h3>
                   </CardHeader>
-                  <CardContent className="p-3 space-y-2">
+                  <CardContent className="p-2 space-y-1.5">
                     {reading.passages.length > 0 ? (
-                      <ul className="space-y-2">
+                      <ul className="space-y-1 text-sm">
                         {reading.passages.map((passage, pIndex) => {
                           const passageTextToDisplay = (passage && typeof passage.displayText === 'string' && passage.displayText.trim() !== '') ? passage.displayText : "Error: Passage text data is missing.";
                           const isPassageValid = passageTextToDisplay && !passageTextToDisplay.toLowerCase().includes("error:");
                           return (
-                            <li key={pIndex} className="p-2 bg-background/50 border rounded-md text-sm flex items-center">
-                              <BookOpen className="inline-block h-4 w-4 mr-2 text-muted-foreground shrink-0" />
+                             <li key={pIndex} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
                                {isPassageValid ? (
                                   <Button
                                     variant="link"
-                                    className="p-0 h-auto text-sm font-normal text-left justify-start text-foreground hover:text-primary hover:no-underline"
+                                    className="p-0 h-auto text-xs font-normal text-left justify-start text-foreground hover:text-primary hover:no-underline"
                                     onClick={() => handlePassageClick(passageTextToDisplay)}
                                     title={`View ${passageTextToDisplay}`}
                                   >

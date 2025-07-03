@@ -22,7 +22,7 @@ export default function EventList({ eventsToDisplay, isCompact }: EventListProps
   }
 
   return (
-    <div className={`grid gap-4 ${isCompact ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+    <div className={`grid gap-4 ${isCompact ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
       {eventsToDisplay.map((event) => (
         <EventCard key={event.id} event={event} isCompact={isCompact} />
       ))}

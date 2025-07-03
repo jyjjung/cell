@@ -15,7 +15,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Edit3, Pencil } from 'lucide-react';
+import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -201,7 +201,7 @@ export default function ProfilePage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4 pt-6 border-t">
           <Button onClick={handleSignOut} variant="destructive" className="w-full">
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+             Sign Out
           </Button>
           <div>
             <h3 className="text-xs font-semibold text-muted-foreground mt-2 text-center">User ID</h3>

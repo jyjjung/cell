@@ -240,18 +240,18 @@ export default function BibleChecklistPage() {
   };
   
   const DailyReadingSkeleton = () => (
-    <Card>
-      <CardHeader className="p-3 flex flex-row items-center justify-between space-x-2 border-b min-h-[52px]">
+    <Card className="bg-card/80 rounded-md shadow-sm">
+      <CardHeader className="p-2 min-h-[44px]">
         <Skeleton className="h-5 w-40" />
       </CardHeader>
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-2 space-y-1.5">
         <div className="space-y-2">
           <div className="flex items-center space-x-2 p-1.5">
-            <Skeleton className="h-4 w-4 rounded-sm" />
+            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
             <Skeleton className="h-4 w-full" />
           </div>
           <div className="flex items-center space-x-2 p-1.5">
-            <Skeleton className="h-4 w-4 rounded-sm" />
+            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
             <Skeleton className="h-4 w-5/6" />
           </div>
         </div>
@@ -288,31 +288,32 @@ export default function BibleChecklistPage() {
           const isLoadingThisDay = markingDayId === dateKey;
 
           return (
-            <Card key={dateKey}>
-              <CardHeader className="p-3 flex flex-row items-center justify-between space-x-2 border-b min-h-[52px]">
-                <h3 className="font-semibold flex items-center">
+            <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
+              <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
+                <h3 className="text-sm font-semibold flex items-center">
                   {format(parsedDayDate, "EEE, MMM d, yyyy")}
-                  {isDayCompleted && <CheckCircle2 className="ml-2 h-5 w-5 text-green-500 shrink-0" />}
+                  {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
                 </h3>
                 {!isDayCompleted && allPassagesInDayObjects.length > 0 && (
                   <Button
-                    size="sm" 
+                    size="xs" 
                     variant="outline"
                     onClick={() => handleMarkDayComplete(dailyReading)}
                     disabled={isLoadingThisDay}
+                    className="h-auto py-1 px-2 text-xs"
                   >
                     {isLoadingThisDay ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                     ) : (
-                      <CheckSquare className="mr-2 h-4 w-4" />
+                      <CheckSquare className="mr-1.5 h-3 w-3" />
                     )}
                     Mark Day Complete
                   </Button>
                 )}
               </CardHeader>
-              <CardContent className="p-3 space-y-2">
+              <CardContent className="p-2 space-y-1.5">
                 {(allPassagesInDayObjects.length > 0) ? (
-                  <ul className="space-y-2">
+                  <ul className="space-y-1 text-sm">
                     {allPassagesInDayObjects.map((passage, pIndex) => {
                       if (!passage) {
                         return <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-2 text-sm italic">Error: Passage data corrupt.</li>;
@@ -327,7 +328,7 @@ export default function BibleChecklistPage() {
                       const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
 
                       return (
-                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-3 transition-colors hover:bg-muted/40 p-2 text-sm">
+                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
                           <Checkbox 
                             id={checkboxId} 
                             checked={isChecked} 
@@ -340,6 +341,7 @@ export default function BibleChecklistPage() {
                             }} 
                             aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
                             disabled={!isPassageValid || isLoadingThisDay}
+                            className="h-3.5 w-3.5"
                           />
                           <Label
                             htmlFor={checkboxId}
@@ -349,7 +351,7 @@ export default function BibleChecklistPage() {
                               <Button
                                 variant="link"
                                 className={cn(
-                                  "p-0 h-auto text-sm font-normal text-left justify-start hover:no-underline",
+                                  "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
                                   isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                                 )}
                                 onClick={() => handlePassageClick(passage.displayText)}
@@ -383,7 +385,7 @@ export default function BibleChecklistPage() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-          <div className="flex items-center space-x-3"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
+          <Skeleton className="h-8 w-80 rounded-md" />
           <Skeleton className="h-10 w-40 rounded-md" />
         </div>
         <Skeleton className="h-28 w-full mb-4 rounded-lg" />
@@ -399,16 +401,16 @@ export default function BibleChecklistPage() {
     );
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (<div className="space-y-8"><div className="flex items-center space-x-3 mb-6"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
+    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-        <div className="flex items-center space-x-3"><LibraryBig className="h-8 w-8 text-primary" /><h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
+        <h1 className="text-3xl font-bold tracking-tight">My Bible Reading Checklist</h1>
         <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
-            <DialogTrigger asChild><Button variant="outline"><Edit className="mr-2" /> Mark Range</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="outline">Mark Range</Button></DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-xl">Mark Reading Range</DialogTitle><DialogDescription>Mark all passages within the specified range as completed.</DialogDescription></DialogHeader>
             <Form {...markRangeForm}>
                 <form onSubmit={markRangeForm.handleSubmit(handleMarkReadRangeSubmit)} className="space-y-6 pt-2">

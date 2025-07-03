@@ -40,7 +40,7 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
 
   if (isCompact) {
     return (
-      <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-primary/40">
+      <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
         <CardContent className="p-4 flex flex-col flex-grow">
           <div className="flex justify-between items-start mb-2">
              <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
 
   // Non-compact view
   return (
-    <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-primary/40">
+    <Card className="h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
            <div className="flex items-center gap-2">

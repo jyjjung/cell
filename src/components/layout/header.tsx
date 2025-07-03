@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
-import { Home, LogIn, LogOut, ShieldCheck, ClipboardList, Menu, X, UserPlus, UserCircle, LibraryBig, BarChart3, Brain, FileText } from 'lucide-react';
+import { Menu, X, ShieldCheck, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation'; 
 import { ThemeToggle } from './theme-toggle';
 
@@ -47,36 +47,36 @@ export default function Header() {
     <>
       <Link href="/" legacyBehavior passHref>
         <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/')}>
-          <Home className="mr-2 h-4 w-4" /> Home
+          Home
         </Button>
       </Link>
       <Link href="/introduction" legacyBehavior passHref>
         <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/introduction')}>
-          <FileText className="mr-2 h-4 w-4" /> Intro
+          Introduction
         </Button>
       </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
           <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
-            <ClipboardList className="mr-2 h-4 w-4" /> Full Bible Plan
+            Full Bible Plan
           </Button>
         </Link>
       )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/memorize')}>
-          <Brain className="mr-2 h-4 w-4" /> Memorize
+          Memorize
         </Button>
       </Link>
       {currentUser && (
         <>
           <Link href="/bible-checklist" legacyBehavior passHref>
             <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-checklist')}>
-              <LibraryBig className="mr-2 h-4 w-4" /> My Checklist
+              My Checklist
             </Button>
           </Link>
           <Link href="/progress-overview" legacyBehavior passHref>
             <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/progress-overview')}>
-              <BarChart3 className="mr-2 h-4 w-4" /> Progress Overview
+              Progress Overview
             </Button>
           </Link>
         </>
@@ -88,36 +88,36 @@ export default function Header() {
     <>
       <Link href="/" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
-          <Home className="mr-3 h-5 w-5" />Home
+          Home
         </Button>
       </Link>
       <Link href="/introduction" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/introduction')}>
-            <FileText className="mr-3 h-5 w-5" />Introduction
+            Introduction
         </Button>
       </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
           <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
-            <ClipboardList className="mr-3 h-5 w-5" />Full Bible Plan
+            Full Bible Plan
           </Button>
         </Link>
       )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
-          <Brain className="mr-3 h-5 w-5" />Memorize
+          Memorize
         </Button>
       </Link>
        {currentUser && (
         <>
           <Link href="/bible-checklist" legacyBehavior passHref>
             <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
-              <LibraryBig className="mr-3 h-5 w-5" />My Checklist
+              My Checklist
             </Button>
           </Link>
           <Link href="/progress-overview" legacyBehavior passHref>
             <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>
-              <BarChart3 className="mr-3 h-5 w-5" />Progress Overview
+              Progress Overview
             </Button>
           </Link>
         </>
@@ -156,7 +156,7 @@ export default function Header() {
                 {isAdmin && (
                 <Link href="/admin/dashboard" legacyBehavior passHref>
                     <Button variant="outline" size="sm" onClick={() => handleLinkClick('/admin/dashboard')}>
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Admin Panel
+                    <ShieldCheck className="mr-2 h-4 w-4" /> Admin
                     </Button>
                 </Link>
                 )}
@@ -165,23 +165,23 @@ export default function Header() {
                 <>
                     <Link href="/profile" legacyBehavior passHref>
                     <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/profile')}>
-                        <UserCircle className="mr-2 h-4 w-4" /> Profile
+                        Profile
                     </Button>
                     </Link>
                     <Button onClick={handleUserSignOutClick} variant="ghost" size="sm">
-                    <LogOut className="mr-2 h-4 w-4" /> Logout User
+                     Logout
                     </Button>
                 </>
                 ) : !loadingAuth && !isAdmin && !currentUser ? ( 
                 <>
                     <Link href="/login" legacyBehavior passHref>
                     <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/login')}>
-                        <LogIn className="mr-2 h-4 w-4" /> Login
+                        Login
                     </Button>
                     </Link>
                     <Link href="/signup" legacyBehavior passHref>
                     <Button variant="default" size="sm" onClick={() => handleLinkClick('/signup')}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+                        Sign Up
                     </Button>
                     </Link>
                 </>
@@ -190,7 +190,7 @@ export default function Header() {
                 {!loadingAuth && !currentUser && !isAdmin && ( 
                 <Link href="/admin" legacyBehavior passHref>
                     <Button variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}>
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Admin Login
+                     Admin
                     </Button>
                 </Link>
                 )}
@@ -229,7 +229,7 @@ export default function Header() {
             {isAdmin && (
               <Link href="/admin/dashboard" legacyBehavior passHref>
                 <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin/dashboard')}>
-                  <ShieldCheck className="mr-3 h-5 w-5" />Admin Panel
+                  Admin Panel
                 </Button>
               </Link>
             )}
@@ -238,23 +238,23 @@ export default function Header() {
               <>
                 <Link href="/profile" legacyBehavior passHref>
                     <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}>
-                    <UserCircle className="mr-3 h-5 w-5" />Profile
+                    Profile
                     </Button>
                 </Link>
                 <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={handleUserSignOutClick}>
-                    <LogOut className="mr-3 h-5 w-5" />Logout User
+                    Logout User
                 </Button>
               </>
             ) : !loadingAuth && !isAdmin && !currentUser ? (
               <>
                 <Link href="/login" legacyBehavior passHref>
                   <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/login')}>
-                    <LogIn className="mr-3 h-5 w-5" />Login
+                    Login
                   </Button>
                 </Link>
                 <Link href="/signup" legacyBehavior passHref>
                   <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/signup')}>
-                    <UserPlus className="mr-3 h-5 w-5" />Sign Up
+                    Sign Up
                   </Button>
                 </Link>
               </>
@@ -263,13 +263,13 @@ export default function Header() {
             {!loadingAuth && !currentUser && !isAdmin && (
                 <Link href="/admin" legacyBehavior passHref>
                     <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin')}>
-                    <ShieldCheck className="mr-3 h-5 w-5" />Admin Login
+                    Admin Login
                     </Button>
                 </Link>
             )}
             {isAdmin && (
                  <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleAdminLogoutClick}>
-                    <LogOut className="mr-3 h-5 w-5" />Admin Logout
+                    Admin Logout
                 </Button>
             )}
           </nav>

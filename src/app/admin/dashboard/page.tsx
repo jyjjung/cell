@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
-import { PlusCircle, Edit, Trash2, CalendarPlus, ListOrdered, BookHeart, UploadCloud, Trash, Loader2, Brain } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Trash } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -160,10 +160,7 @@ export default function AdminDashboardPage() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <CalendarPlus className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Manage Events</CardTitle>
-            </div>
+             <CardTitle className="text-xl">Manage Events</CardTitle>
             <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
               <DialogTrigger asChild>
                 <Button onClick={openAddModal}>
@@ -266,10 +263,7 @@ export default function AdminDashboardPage() {
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
             <CardHeader>
-            <div className="flex items-center space-x-3">
-                <UploadCloud className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Batch Import Events</CardTitle>
-                </div>
+                <CardTitle className="text-xl">Batch Import Events</CardTitle>
             </CardHeader>
             <CardContent>
                 <BatchEventImportForm />
@@ -278,10 +272,7 @@ export default function AdminDashboardPage() {
 
         <Card>
             <CardHeader>
-            <div className="flex items-center space-x-3">
-                <BookHeart className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Manage Bible Plan</CardTitle>
-                </div>
+                <CardTitle className="text-xl">Manage Bible Plan</CardTitle>
             </CardHeader>
             <CardContent>
                 <BiblePlanAdminForm />
@@ -294,10 +285,7 @@ export default function AdminDashboardPage() {
        <div className="grid md:grid-cols-2 gap-8">
          <Card>
             <CardHeader>
-            <div className="flex items-center space-x-3">
-                <Brain className="h-6 w-6 text-primary" />
-                <CardTitle className="text-2xl">Manage Memory Verses</CardTitle>
-                </div>
+                <CardTitle className="text-xl">Manage Memory Verses</CardTitle>
             </CardHeader>
             <CardContent>
                 <MemoryVerseAdmin />
@@ -306,11 +294,8 @@ export default function AdminDashboardPage() {
 
         <Card>
             <CardHeader>
-            <div className="flex items-center space-x-3">
-                <Trash className="h-6 w-6 text-destructive" />
-                <CardTitle className="text-2xl">Data Management</CardTitle>
-            </div>
-            <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
+                <CardTitle className="text-xl">Data Management</CardTitle>
+                <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
             </CardHeader>
             <CardContent>
             <AlertDialog>

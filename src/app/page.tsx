@@ -18,6 +18,8 @@ import { startOfDay, parseISO, addMonths, endOfDay, isValid as isDateValid, isBe
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { usePageLoading } from '@/contexts/page-loading-context';
+
 
 type SortOption = "date-asc" | "date-desc" | "category" | "title";
 
@@ -29,6 +31,7 @@ export default function HomePage() {
   const { currentUser } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
+  const { setIsPageLoading } = usePageLoading();
 
   useEffect(() => {
     setIsMounted(true);
@@ -117,8 +120,7 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <section id="stats-section">
-        <h2 className="text-3xl font-bold tracking-tight mb-6 flex items-center">
-          <BarChart2 className="mr-3 h-8 w-8 text-primary" />
+        <h2 className="text-3xl font-bold tracking-tight mb-6">
           App Snapshot
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -156,10 +158,7 @@ export default function HomePage() {
 
       <section id="upcoming-events-section">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-          <div className="flex items-center space-x-3">
-            <CalendarCheck className="h-8 w-8 text-primary" />
-            <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
-          </div>
+          <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="flex items-center space-x-2 w-full sm:w-auto">
               <ListFilter className="h-4 w-4 text-muted-foreground" />
@@ -178,7 +177,7 @@ export default function HomePage() {
           </div>
         </div>
         {eventsLoading ? (
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} className="h-36 w-full rounded-lg" />
             ))}
@@ -191,10 +190,7 @@ export default function HomePage() {
       <Separator />
 
       <section>
-        <div className="flex items-center space-x-3 mb-6">
-          <BookHeart className="h-8 w-8 text-primary" />
-          <h2 className="text-3xl font-bold tracking-tight">Today's Bible Reading</h2>
-        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
         <div className="max-w-2xl mx-auto">
             <BiblePlanDisplay
                 readingToDisplay={todaysReadingForDisplay}

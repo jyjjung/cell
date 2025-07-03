@@ -16,7 +16,7 @@ interface FeatureCardProps {
 
 function FeatureCard({ title, icon, description, userScope }: FeatureCardProps) {
   return (
-    <Card className="shadow-lg h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <Card className="h-full flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
       <CardHeader className="flex flex-row items-center space-x-4 pb-4">
         <div className="p-3 bg-primary/10 rounded-lg text-primary">{icon}</div>
         <CardTitle className="text-lg font-semibold">{title}</CardTitle>
@@ -42,9 +42,8 @@ export default function IntroductionPage() {
 
   return (
     <div className="space-y-16">
-      <section className="text-center py-12 md:py-16 bg-card/50 rounded-xl shadow-inner">
+      <section className="text-center py-12 md:py-16 bg-card/50 rounded-xl">
         <div className="max-w-3xl mx-auto">
-            <Rocket className="mx-auto h-16 w-16 text-primary mb-6 animate-bounce" />
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Welcome to Cell Dates!</h1>
             <p className="mt-4 text-lg text-muted-foreground">
             Your central hub for staying connected with your cell group, tracking spiritual growth, and managing important dates.
