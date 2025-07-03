@@ -88,7 +88,7 @@ export default function CalendarPage() {
         </time>
         {isCurrentMonth && dayEvents.length > 0 && (
           <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1">
-            {dayEvents.slice(0, 2).map((event) => (
+            {dayEvents.slice(0, 1).map((event) => (
               <div
                 key={event.id}
                 className={cn(
@@ -100,8 +100,8 @@ export default function CalendarPage() {
                 {event.title}
               </div>
             ))}
-             {dayEvents.length > 2 && (
-              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 2} more</div>
+             {dayEvents.length > 1 && (
+              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 1} more</div>
             )}
           </div>
         )}
@@ -151,7 +151,7 @@ export default function CalendarPage() {
                         head_row: "flex border-b border-border",
                         head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
                         row: "flex w-full",
-                        cell: "h-28 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+                        cell: "h-20 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
                         day: "h-full w-full p-0 font-normal",
                         day_selected: "", // We handle selection styling in CustomDay
                         day_today: "", // We handle today styling in CustomDay
