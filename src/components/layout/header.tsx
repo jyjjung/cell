@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -9,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X, ShieldCheck, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation'; 
 import { ThemeToggle } from './theme-toggle';
+import PageLoaderManager from './page-loader-manager';
 
 export default function Header() {
   const { isAdmin, adminLogout, currentUser, signOutUser, loadingAuth } = useAuth();
@@ -50,11 +50,6 @@ export default function Header() {
           Home
         </Button>
       </Link>
-      <Link href="/introduction" legacyBehavior passHref>
-        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/introduction')}>
-          Introduction
-        </Button>
-      </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
           <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
@@ -91,11 +86,6 @@ export default function Header() {
           Home
         </Button>
       </Link>
-      <Link href="/introduction" legacyBehavior passHref>
-        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/introduction')}>
-            Introduction
-        </Button>
-      </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
           <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
@@ -127,6 +117,8 @@ export default function Header() {
 
 
   return (
+    <>
+    <PageLoaderManager />
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center space-x-2 mr-6" onClick={() => handleLinkClick('/')}>
@@ -276,5 +268,6 @@ export default function Header() {
         </div>
       )}
     </header>
+    </>
   );
 }

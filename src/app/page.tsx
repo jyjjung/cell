@@ -154,7 +154,7 @@ export default function HomePage() {
           {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.qts} />}
         </div>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Snack Rota</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Snacks</h2>
           {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.snacks} />}
         </div>
       </section>

@@ -51,8 +51,6 @@ export default function EventCard({ event }: EventCardProps) {
         
         <div className="text-sm text-foreground/80 break-words flex-grow min-h-[2.5rem]">
             {event.category === EventCategory.Birthday && <p>Wishing you a wonderful day!</p>}
-            {event.category === EventCategory.Snack && <p>Reminder to bring snacks.</p>}
-            {event.category === EventCategory.QT && <p>QT session with the group.</p>}
             {event.category === EventCategory.Event && descriptionTextForEvent && <p>{descriptionTextForEvent}</p>}
         </div>
       </CardContent>
