@@ -37,22 +37,25 @@ export default function EventCard({ event }: EventCardProps) {
   }
 
   return (
-    <Card className="w-64 shrink-0 h-full flex flex-col group overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-primary/30">
+    <Card className="w-64 shrink-0 flex flex-col group overflow-hidden transition-shadow duration-300 hover:shadow-xl border">
       <CardContent className="p-4 flex flex-col flex-grow">
-        <div className="flex items-start gap-3 mb-3">
-            <div className={cn("p-1.5 bg-muted rounded-md", colorClass, 'bg-opacity-10')}>
-                <Icon className="h-5 w-5" />
-            </div>
-            <div className="flex-grow">
-                <p className="font-semibold leading-tight">{event.title}</p>
-                <p className="text-xs text-muted-foreground">{formattedDate}</p>
-            </div>
+        <div className="flex items-start gap-4">
+          <div className={cn("flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-lg", colorClass, 'bg-opacity-10')}>
+              <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex-grow">
+              <p className="font-semibold leading-tight text-card-foreground">{event.title}</p>
+              <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          </div>
         </div>
         
-        <div className="text-sm text-foreground/80 break-words flex-grow min-h-[2.5rem]">
-            {event.category === EventCategory.Birthday && <p>Wishing you a wonderful day!</p>}
-            {event.category === EventCategory.Event && descriptionTextForEvent && <p>{descriptionTextForEvent}</p>}
-        </div>
+        {(event.category === EventCategory.Birthday || descriptionTextForEvent) && (
+             <div className="mt-3 pt-3 border-t border-dashed">
+                <p className="text-sm text-muted-foreground break-words">
+                    {event.category === EventCategory.Birthday ? 'Wishing you a wonderful day!' : descriptionTextForEvent}
+                </p>
+            </div>
+        )}
       </CardContent>
     </Card>
   );

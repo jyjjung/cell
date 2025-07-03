@@ -24,7 +24,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon, Clock, Target, List } from 'lucide-react';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -440,10 +440,10 @@ export default function BibleChecklistPage() {
 
       <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-            <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock/>Current Week</TabsTrigger>
-            <TabsTrigger value="myNextReading" className="flex items-center gap-2"><Target/>Next Reading</TabsTrigger>
-            <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List/>Full Plan</TabsTrigger>
+            <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
+                <TabsTrigger value="myNextReading">Next Reading</TabsTrigger>
+                <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
             </TabsList>
             <Popover>
             <PopoverTrigger asChild>

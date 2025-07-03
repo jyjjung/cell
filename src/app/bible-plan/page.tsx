@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { BookOpen, Loader2, ListChecks, Info, CalendarIcon, Clock, List } from 'lucide-react';
+import { BookOpen, Loader2, ListChecks, Info, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
@@ -148,9 +148,9 @@ export default function FullBiblePlanPage() {
 
        <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-              <TabsTrigger value="currentWeek" className="flex items-center gap-2"><Clock/>Current Week</TabsTrigger>
-              <TabsTrigger value="fullPlan" className="flex items-center gap-2"><List/>Full Plan</TabsTrigger>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
+              <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
             </TabsList>
             <Popover>
               <PopoverTrigger asChild>

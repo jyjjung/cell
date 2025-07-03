@@ -71,7 +71,7 @@ export default function EventList({ eventsToDisplay }: EventListProps) {
         aria-hidden="true"
       >
         <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background to-transparent" />
-        <div className="relative mr-2 w-8 h-8 rounded-full bg-background/50 backdrop-blur-sm border flex items-center justify-center">
+        <div className="relative mr-2 w-8 h-8 rounded-full bg-background/50 backdrop-blur-sm flex items-center justify-center">
             <ChevronRight className="h-5 w-5 text-foreground" />
         </div>
       </div>

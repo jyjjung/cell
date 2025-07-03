@@ -106,7 +106,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       <section id="stats-section">
         <h2 className="text-3xl font-bold tracking-tight mb-6">
           App Snapshot
@@ -144,7 +144,7 @@ export default function HomePage() {
 
       <Separator />
 
-      <section id="upcoming-events-section" className="space-y-8">
+      <section id="upcoming-events-section" className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Events & Birthdays</h2>
           {eventsLoading ? <EventsSectionSkeleton /> : <EventList eventsToDisplay={categorizedEvents.events} />}
