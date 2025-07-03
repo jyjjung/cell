@@ -7,7 +7,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
 import { Menu, X, ShieldCheck, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation'; 
-import { ThemeToggle } from './theme-toggle';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 import PageLoaderManager from './page-loader-manager';
 
 export default function Header() {
@@ -46,31 +46,36 @@ export default function Header() {
   const commonNavLinks = (
     <>
       <Link href="/" legacyBehavior passHref>
-        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/')}>
+        <Button variant="ghost" onClick={() => handleLinkClick('/')}>
           Home
+        </Button>
+      </Link>
+      <Link href="/calendar" legacyBehavior passHref>
+        <Button variant="ghost" onClick={() => handleLinkClick('/calendar')}>
+          Calendar
         </Button>
       </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
-          <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-plan')}>
+          <Button variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
             Full Bible Plan
           </Button>
         </Link>
       )}
       <Link href="/memorize" legacyBehavior passHref>
-        <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/memorize')}>
+        <Button variant="ghost" onClick={() => handleLinkClick('/memorize')}>
           Memorize
         </Button>
       </Link>
       {currentUser && (
         <>
           <Link href="/bible-checklist" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/bible-checklist')}>
+            <Button variant="ghost" onClick={() => handleLinkClick('/bible-checklist')}>
               My Checklist
             </Button>
           </Link>
           <Link href="/progress-overview" legacyBehavior passHref>
-            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleLinkClick('/progress-overview')}>
+            <Button variant="ghost" onClick={() => handleLinkClick('/progress-overview')}>
               Progress Overview
             </Button>
           </Link>
@@ -84,6 +89,11 @@ export default function Header() {
       <Link href="/" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
           Home
+        </Button>
+      </Link>
+      <Link href="/calendar" legacyBehavior passHref>
+        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/calendar')}>
+          Calendar
         </Button>
       </Link>
       {!currentUser && (
