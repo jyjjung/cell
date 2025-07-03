@@ -12,6 +12,7 @@ import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
+import { Separator } from '@/components/ui/separator';
 
 
 const categoryBackgroundColors: { [key in EventCategory]: string } = {
@@ -173,14 +174,14 @@ export default function CalendarPage() {
                 {selectedDayEvents.length} event(s)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-4">
               {loading ? (
                 <div className="space-y-4">
                   <Skeleton className="h-20 w-full" />
                   <Skeleton className="h-20 w-full" />
                 </div>
               ) : selectedDayEvents.length > 0 ? (
-                <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                   {selectedDayEvents.map(event => (
                     <div key={event.id} className={cn("p-3 rounded-lg border-l-4", categoryBorderColors[event.category])}>
                        <div className="flex items-start justify-between">
@@ -195,10 +196,26 @@ export default function CalendarPage() {
                 <p className="text-muted-foreground text-center py-8">No events scheduled.</p>
               )}
             </CardContent>
+            
+            <Separator className="mx-6" />
+
+            <CardHeader>
+                <CardTitle className="text-lg">Legend</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    {Object.values(EventCategory).map(category => (
+                        <div key={category} className="flex items-center">
+                            <span className={cn("w-3 h-3 mr-3 rounded-sm", categoryBackgroundColors[category])} />
+                            <span className="text-sm text-muted-foreground">{category}</span>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+
           </Card>
         </div>
       </div>
     </div>
   );
 }
-
