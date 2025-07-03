@@ -42,17 +42,24 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
     }
   }
 
+  const cardBorderColors = {
+    [EventCategory.Event]: "border-l-accent",
+    [EventCategory.QT]: "border-l-primary",
+    [EventCategory.Birthday]: "border-l-pink-500",
+    [EventCategory.Snack]: "border-l-orange-500"
+  };
+
   if (isCompact) {
     return (
-      <div className="h-full flex flex-col bg-card rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md p-3">
+      <div className={cn(
+        "h-full flex flex-col bg-card rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md p-3",
+        "border-l-4",
+        cardBorderColors[event.category] || "border-l-muted"
+      )}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-grow min-w-0">
             <CardTitle className="text-base leading-tight mb-1">{event.title}</CardTitle>
-            <Badge variant={
-                event.category === EventCategory.Event ? "default"
-              : event.category === EventCategory.QT ? "secondary"
-              : "outline"
-            } className="capitalize text-xs px-1.5 py-0.5 h-auto">
+            <Badge variant="outline" className="capitalize text-xs px-1.5 py-0.5 h-auto">
               {event.category}
             </Badge>
           </div>
@@ -72,14 +79,14 @@ export default function EventCard({ event, isCompact = false }: EventCardProps) 
 
   // Non-compact view
   return (
-    <div className="h-full flex flex-col bg-card rounded-lg shadow-md overflow-hidden transition-all hover:shadow-xl">
+    <div className={cn(
+      "h-full flex flex-col bg-card rounded-lg shadow-md overflow-hidden transition-all hover:shadow-xl",
+      "border-l-4",
+      cardBorderColors[event.category] || "border-l-muted"
+    )}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <Badge variant={
-              event.category === EventCategory.Event ? "default"
-            : event.category === EventCategory.QT ? "secondary"
-            : "outline"
-          } className="capitalize">
+          <Badge variant="outline" className="capitalize">
             {event.category}
           </Badge>
           <div className="p-2 bg-muted rounded-full">

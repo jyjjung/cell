@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { summarizeDateDetails } from '@/ai/flows/summarize-date-details';
 import { useToast } from '@/hooks/use-toast';
@@ -49,44 +49,46 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
   });
 
   async function handleSubmit(data: EventFormValues) {
-    setIsSummarizing(false); 
-    let summaryToSave: string | undefined = data.summary;
+    let finalSummary = data.summary || '';
 
-    if (!data.details || data.details.trim() === '') {
-      summaryToSave = ''; // If no details, no summary
-    } else {
-      // Details are present.
-      if (!summaryToSave || summaryToSave.trim() === '') {
-        // If summary field is empty, generate it.
-        setIsSummarizing(true);
-        try {
-          const summaryResult = await summarizeDateDetails({ notes: data.details });
-          summaryToSave = summaryResult.summary;
-        } catch (error: any) {
-          console.error("Error generating summary:", error);
-          toast({
-            title: "Summary Generation Failed",
-            description: "Could not generate AI summary. Event will be saved with the current summary content. Error: " + error.message,
-            variant: "destructive",
-          });
-          // Keep summaryToSave as it was (empty or manually entered then cleared) if AI fails
-        } finally {
-          setIsSummarizing(false);
-        }
+    // Condition to generate summary: details exist, and the summary field is empty.
+    const shouldGenerateSummary = data.details && data.details.trim() !== '' && (!data.summary || data.summary.trim() === '');
+    
+    if (shouldGenerateSummary) {
+      setIsSummarizing(true);
+      try {
+        const summaryResult = await summarizeDateDetails({ notes: data.details! });
+        finalSummary = summaryResult.summary;
+        toast({
+            title: "AI Summary Generated",
+            description: "A short summary has been created from your event details."
+        });
+      } catch (error: any) {
+        console.error("Error generating summary:", error);
+        toast({
+          title: "AI Summary Failed",
+          description: `Could not generate AI summary. Saving event without it. Error: ${error.message}`,
+          variant: "destructive",
+        });
+        // Let finalSummary remain as it was (empty string)
+      } finally {
+        setIsSummarizing(false);
       }
-      // If summaryToSave has content (either from form directly, or AI-generated), it will be used.
     }
 
     const processedData: AppEvent = {
-      id: event?.id || '', 
+      id: event?.id || '',
       title: data.title,
       date: data.date.toISOString(),
       category: data.category,
       details: data.details || '',
-      summary: summaryToSave || '', // Ensure summary is always a string
+      summary: finalSummary,
     };
+    
     onSubmit(processedData);
-    if (!event) form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() });
+    if (!event) {
+      form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() });
+    }
   }
 
   return (
@@ -203,7 +205,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
         <div className="flex justify-end space-x-2 pt-4">
           {onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isSummarizing}>Cancel</Button>}
           <Button type="submit" disabled={isSummarizing}>
-            {isSummarizing ? "Saving & Summarizing..." : submitButtonText}
+            {isSummarizing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Summarizing...</> : submitButtonText}
           </Button>
         </div>
       </form>
