@@ -37,7 +37,7 @@ export default function EventCard({ event }: EventCardProps) {
   }
 
   return (
-    <Card className="w-64 shrink-0 flex flex-col group overflow-hidden transition-shadow duration-300 hover:shadow-xl border">
+    <Card className="w-64 shrink-0 flex flex-col group transition-shadow duration-300 hover:shadow-xl border">
       <CardContent className="p-4 flex flex-col flex-grow">
         <div className="flex items-start gap-4">
           <div className={cn("flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-lg", colorClass, 'bg-opacity-10')}>

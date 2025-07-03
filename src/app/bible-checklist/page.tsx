@@ -17,14 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO, isValid, startOfDay, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, CalendarIcon } from 'lucide-react';
+import { format, parseISO, isValid, startOfDay, isWithinInterval, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2 } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +41,7 @@ const markReadRangeSchema = z.object({
 });
 
 type MarkReadRangeFormValues = z.infer<typeof markReadRangeSchema>;
-type FilterMode = 'currentWeek' | 'myNextReading' | 'fullPlan' | 'singleDay';
+type FilterMode = 'currentWeek' | 'myNextReading' | 'fullPlan';
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -57,7 +55,6 @@ export default function BibleChecklistPage() {
   const [isMarkingRange, setIsMarkingRange] = useState(false);
   const [isRangeFormOpen, setIsRangeFormOpen] = useState(false);
   
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [activeTab, setActiveTab] = useState<FilterMode>('currentWeek');
   const [markingDayId, setMarkingDayId] = useState<string | null>(null);
 
@@ -130,30 +127,13 @@ export default function BibleChecklistPage() {
         }
         break;
       }
-      case 'singleDay': {
-        if (!selectedDate) {
-          readings = [];
-        } else {
-          readings = sortedDailyReadings.filter(reading => {
-            try {
-                const readingDateObj = parseISO(reading.date);
-                if (!isValid(readingDateObj)) return false;
-                return isSameDay(readingDateObj, selectedDate);
-              } catch (e) { 
-                console.error(`[BibleChecklistPage] Error parsing date for single day filtering: ${reading.date}`, e);
-                return false; 
-              }
-          });
-        }
-        break;
-      }
       case 'fullPlan':
       default:
         readings = sortedDailyReadings;
         break;
     }
     return readings;
-  }, [sortedDailyReadings, activeTab, selectedDate, nextUnreadReadingDay]);
+  }, [sortedDailyReadings, activeTab, nextUnreadReadingDay]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -189,11 +169,6 @@ export default function BibleChecklistPage() {
     } finally {
       setIsMarkingRange(false);
     }
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-    setActiveTab(date ? 'singleDay' : 'currentWeek');
   };
 
   const handleMarkDayComplete = async (day: DailyReading) => {
@@ -391,7 +366,6 @@ export default function BibleChecklistPage() {
         <Skeleton className="h-28 w-full mb-4 rounded-lg" />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <Skeleton className="h-10 w-full sm:w-[380px] rounded-md" />
-          <Skeleton className="h-10 w-full sm:w-[200px] rounded-md" />
         </div>
         <div className="space-y-3 mt-4">
           <DailyReadingSkeleton />
@@ -438,29 +412,15 @@ export default function BibleChecklistPage() {
         <Card className="mb-4"><CardHeader className="p-4"><h3 className="text-lg font-semibold">Overall Progress</h3></CardHeader><CardContent className="p-4 pt-0"><Progress value={overallProgress} className="w-full h-3" /><p className="text-muted-foreground mt-2 text-center text-sm">{completedPassages.length} of {totalPassagesInPlan} passages completed ({overallProgress.toFixed(1)}%)</p></CardContent></Card>
       )}
 
-      <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <TabsList className="w-full sm:w-auto">
-                <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
-                <TabsTrigger value="myNextReading">Next Reading</TabsTrigger>
-                <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
-            </TabsList>
-            <Popover>
-            <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full sm:w-auto justify-start text-left font-normal", activeTab === 'singleDay' && "ring-2 ring-ring")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {activeTab === 'singleDay' && selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus/>
-            </PopoverContent>
-            </Popover>
-        </div>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as FilterMode)} className="w-full">
+        <TabsList className="w-full sm:w-auto grid grid-cols-3">
+          <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
+          <TabsTrigger value="myNextReading">Next Reading</TabsTrigger>
+          <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
+        </TabsList>
         <TabsContent value="currentWeek">{renderReadings(filteredReadings)}</TabsContent>
         <TabsContent value="myNextReading">{renderReadings(filteredReadings)}</TabsContent>
         <TabsContent value="fullPlan">{renderReadings(filteredReadings)}</TabsContent>
-        <TabsContent value="singleDay">{renderReadings(filteredReadings)}</TabsContent>
       </Tabs>
 
       <BiblePassageViewerDialog

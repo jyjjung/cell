@@ -6,22 +6,18 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, parseISO, startOfDay, isValid, isWithinInterval, isSameDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { BookOpen, Loader2, ListChecks, Info, CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { format, parseISO, startOfDay, isValid, isWithinInterval, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { Loader2, Info } from 'lucide-react';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 
-type FilterMode = 'currentWeek' | 'fullPlan' | 'singleDay';
+type FilterMode = 'currentWeek' | 'fullPlan';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [activeTab, setActiveTab] = useState<FilterMode>('currentWeek');
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
@@ -68,30 +64,12 @@ export default function FullBiblePlanPage() {
           }
         });
       }
-      case 'singleDay': {
-        if (!selectedDate) return [];
-        return sortedDailyReadings.filter(reading => {
-           try {
-              const readingDateObj = parseISO(reading.date);
-              if (!isValid(readingDateObj)) return false;
-              return isSameDay(readingDateObj, selectedDate);
-            } catch (e) { 
-              console.error(`[FullBiblePlanPage] Error parsing date for single day filtering: ${reading.date}`, e);
-              return false; 
-            }
-        });
-      }
       case 'fullPlan':
       default:
         return sortedDailyReadings;
     }
-  }, [sortedDailyReadings, activeTab, selectedDate]);
+  }, [sortedDailyReadings, activeTab]);
 
-
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-    setActiveTab(date ? 'singleDay' : 'currentWeek');
-  };
 
   const handlePassageClick = (passageDisplayText: string | undefined) => { 
     if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
@@ -146,25 +124,11 @@ export default function FullBiblePlanPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
 
-       <Tabs value={activeTab} onValueChange={(value) => { setSelectedDate(undefined); setActiveTab(value as FilterMode); }} className="w-full">
-         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
-              <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
-            </TabsList>
-            <Popover>
-              <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-full sm:w-auto justify-start text-left font-normal", activeTab === 'singleDay' && "ring-2 ring-ring")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {activeTab === 'singleDay' && selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                  </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus/>
-              </PopoverContent>
-            </Popover>
-        </div>
-
+       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as FilterMode)} className="w-full">
+         <TabsList className="w-full sm:w-auto grid grid-cols-2">
+           <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
+           <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
+         </TabsList>
         <div className="space-y-3 mt-4">
           {sortedAndFilteredDailyReadings.length === 0 ? (
             <Card><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No readings found for this filter.</p></CardContent></Card>
