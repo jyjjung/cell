@@ -1,7 +1,8 @@
+
 "use client";
 
-import { useState, useMemo, type ComponentProps } from 'react';
-import { format, parseISO, startOfDay, isSameDay } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, parseISO, isSameDay } from 'date-fns';
 import { useEvents } from '@/hooks/use-events';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,11 +13,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 
-const categoryColors: { [key in EventCategory]: string } = {
-  [EventCategory.Event]: 'bg-purple-500',
-  [EventCategory.Birthday]: 'bg-pink-500',
-  [EventCategory.QT]: 'bg-blue-500',
-  [EventCategory.Snack]: 'bg-orange-500',
+
+const categoryBackgroundColors: { [key in EventCategory]: string } = {
+  [EventCategory.Event]: 'bg-purple-100 dark:bg-purple-500/20',
+  [EventCategory.Birthday]: 'bg-pink-100 dark:bg-pink-500/20',
+  [EventCategory.QT]: 'bg-blue-100 dark:bg-blue-500/20',
+  [EventCategory.Snack]: 'bg-orange-100 dark:bg-orange-500/20',
+};
+
+const categoryTextColors: { [key in EventCategory]: string } = {
+  [EventCategory.Event]: 'text-purple-800 dark:text-purple-200',
+  [EventCategory.Birthday]: 'text-pink-800 dark:text-pink-200',
+  [EventCategory.QT]: 'text-blue-800 dark:text-blue-200',
+  [EventCategory.Snack]: 'text-orange-800 dark:text-orange-200',
 };
 
 const categoryBorderColors: { [key in EventCategory]: string } = {
@@ -46,29 +55,55 @@ export default function CalendarPage() {
         console.error("Error parsing event date for calendar:", event.date, e);
       }
     });
+    // Sort events within each day
+    map.forEach((dayEvents) => {
+        dayEvents.sort((a,b) => a.category.localeCompare(b.category));
+    });
     return map;
   }, [events]);
 
-  function CustomDay(props: DayProps) {
-    const { date, displayMonth } = props;
+  function CustomDay({ date, displayMonth }: DayProps) {
+    const isCurrentMonth = displayMonth.getMonth() === date.getMonth();
     const dateStr = format(date, 'yyyy-MM-dd');
-    const dayEvents = eventsByDate.get(dateStr);
-    
+    const dayEvents = eventsByDate.get(dateStr) || [];
+    const isToday = isSameDay(date, new Date());
+
     return (
-      <div className={cn(
-        "relative h-full w-full p-0 transition-colors rounded-md",
-        isSameDay(date, selectedDate || new Date(0)) ? "bg-accent" : "hover:bg-accent/50"
-      )}>
-        <div className="relative w-full h-full flex flex-col items-center justify-center">
-            <span>{format(date, 'd')}</span>
-            {dayEvents && dayEvents.length > 0 && displayMonth.getMonth() === date.getMonth() && (
-                <div className="absolute bottom-1.5 flex space-x-1">
-                    {[...new Set(dayEvents.map(e => e.category))].slice(0, 4).map(category => (
-                        <div key={category} className={cn("h-1.5 w-1.5 rounded-full", categoryColors[category])}></div>
-                    ))}
-                </div>
+      <div
+        className={cn(
+          "relative flex h-full flex-col p-1.5 transition-colors border-t border-border",
+          !isCurrentMonth && "bg-muted/30 text-muted-foreground/50",
+          isSameDay(date, selectedDate || new Date(0)) && isCurrentMonth && "bg-accent"
+        )}
+      >
+        <time
+          dateTime={format(date, 'yyyy-MM-dd')}
+          className={cn(
+            "self-start text-xs font-semibold p-1 rounded-full",
+            isToday && "flex h-6 w-6 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground"
+          )}
+        >
+          {format(date, 'd')}
+        </time>
+        {isCurrentMonth && dayEvents.length > 0 && (
+          <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1">
+            {dayEvents.slice(0, 3).map((event) => (
+              <div
+                key={event.id}
+                className={cn(
+                  "text-[11px] p-1 rounded-md leading-tight truncate font-medium",
+                  categoryBackgroundColors[event.category],
+                  categoryTextColors[event.category],
+                )}
+              >
+                {event.title}
+              </div>
+            ))}
+             {dayEvents.length > 3 && (
+              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 3} more</div>
             )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -76,7 +111,7 @@ export default function CalendarPage() {
   const selectedDayEvents = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return (eventsByDate.get(dateStr) || []).sort((a,b) => a.category.localeCompare(b.category));
+    return eventsByDate.get(dateStr) || [];
   }, [selectedDate, eventsByDate]);
 
   const CalendarSkeleton = () => (
@@ -94,8 +129,8 @@ export default function CalendarPage() {
         <h1 className="text-2xl font-bold tracking-tight">Event Calendar</h1>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-        <div className="md:col-span-2 lg:col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="lg:col-span-3">
           {loading ? <CalendarSkeleton /> : (
             <Card>
               <CardContent className="p-0">
@@ -105,28 +140,30 @@ export default function CalendarPage() {
                   onSelect={setSelectedDate}
                   month={month}
                   onMonthChange={setMonth}
-                  className="p-3"
+                  className="p-0"
                   classNames={{
-                      cell: "h-16 w-16 text-center text-sm p-0 relative first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
-                      day: "h-16 w-16 p-0 font-normal",
+                      months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                      month: "space-y-4 w-full border-x border-b border-border",
+                      table: "w-full border-collapse",
+                      caption_label: "text-base font-medium",
+                      head_row: "flex border-b border-border",
+                      head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
+                      row: "flex w-full",
+                      cell: "h-32 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+                      day: "h-full w-full p-0 font-normal",
+                      day_selected: "", // We handle selection styling in CustomDay
+                      day_today: "", // We handle today styling in CustomDay
+                      day_outside: "", // We handle outside day styling in CustomDay
+                      day_disabled: "text-muted-foreground opacity-50",
                   }}
                   components={{ Day: CustomDay }}
                 />
               </CardContent>
             </Card>
           )}
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground items-center">
-            <span className="font-semibold">Legend:</span>
-            {Object.entries(EventCategory).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2">
-                <div className={cn("h-2.5 w-2.5 rounded-full", categoryColors[value])}></div>
-                <span>{value}</span>
-              </div>
-            ))}
-          </div>
         </div>
         
-        <div className="md:col-span-1 lg:col-span-2">
+        <div className="lg:col-span-1">
           <Card className="sticky top-20">
             <CardHeader>
               <CardTitle className="text-lg">
@@ -143,12 +180,12 @@ export default function CalendarPage() {
                   <Skeleton className="h-20 w-full" />
                 </div>
               ) : selectedDayEvents.length > 0 ? (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2">
                   {selectedDayEvents.map(event => (
                     <div key={event.id} className={cn("p-3 rounded-lg border-l-4", categoryBorderColors[event.category])}>
                        <div className="flex items-start justify-between">
                          <p className="font-semibold">{event.title}</p>
-                         <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full text-white", categoryColors[event.category])}>{event.category}</div>
+                         <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
                        </div>
                        {event.details && <p className="text-sm text-muted-foreground mt-1">{event.details}</p>}
                     </div>
@@ -164,3 +201,4 @@ export default function CalendarPage() {
     </div>
   );
 }
+
