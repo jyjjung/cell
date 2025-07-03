@@ -192,7 +192,6 @@ export default function HomePage() {
         </div>
         <BiblePlanDisplay
           readingToDisplay={todaysReadingForDisplay}
-          displayTitle="" // Title is handled externally now
           currentUser={currentUser}
           completedPassages={completedPassages}
           togglePassageCompletion={togglePassageCompletion}
