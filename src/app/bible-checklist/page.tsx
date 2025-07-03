@@ -97,38 +97,10 @@ export default function BibleChecklistPage() {
     });
   }, [plan]);
 
-  const nextUnreadReadingWeek = useMemo(() => {
-    if (activeTab !== 'myNextReading' || planLoading || loadingChecklist) return null;
-    
-    const nextUnread = findNextUnreadReading(sortedDailyReadings, completedPassages);
-    
-    if (nextUnread) {
-      try {
-        const nextUnreadDate = parseISO(nextUnread.date);
-        if (!isValid(nextUnreadDate)) return null;
-        const weekStart = startOfWeek(nextUnreadDate, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(nextUnreadDate, { weekStartsOn: 0 });
-        return { start: weekStart, end: weekEnd };
-      } catch (e) {
-        console.error("[BibleChecklistPage] Error parsing date for next unread reading week:", nextUnread.date, e);
-        return null;
-      }
-    } else if (sortedDailyReadings.length > 0) {
-      // All readings complete, show the last week of the plan
-      const lastReading = sortedDailyReadings[sortedDailyReadings.length - 1];
-       try {
-        const lastReadingDate = parseISO(lastReading.date);
-        if (!isValid(lastReadingDate)) return null;
-        const weekStart = startOfWeek(lastReadingDate, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(lastReadingDate, { weekStartsOn: 0 });
-        return { start: weekStart, end: weekEnd };
-      } catch (e) {
-         console.error("[BibleChecklistPage] Error parsing date for last reading week:", lastReading.date, e);
-         return null;
-      }
-    }
-    return null;
-  }, [activeTab, sortedDailyReadings, completedPassages, planLoading, loadingChecklist]);
+  const nextUnreadReadingDay = useMemo(() => {
+    if (planLoading || loadingChecklist) return null;
+    return findNextUnreadReading(sortedDailyReadings, completedPassages);
+  }, [sortedDailyReadings, completedPassages, planLoading, loadingChecklist]);
   
   const sortedAndFilteredDailyReadings = useMemo(() => {
     switch (activeTab) {
@@ -148,17 +120,14 @@ export default function BibleChecklistPage() {
         });
       }
       case 'myNextReading': {
-        if (!nextUnreadReadingWeek) return [];
-        return sortedDailyReadings.filter(reading => {
-          try {
-            const readingDateObj = parseISO(reading.date);
-            if (!isValid(readingDateObj)) return false;
-            return isWithinInterval(readingDateObj, { start: startOfDay(nextUnreadReadingWeek.start), end: endOfDay(nextUnreadReadingWeek.end) });
-          } catch (e) {
-            console.error(`[BibleChecklistPage] Error parsing date for 'myNextReading' filtering: ${reading.date}`, e);
-            return false;
-          }
-        });
+        if (nextUnreadReadingDay) {
+          return [nextUnreadReadingDay];
+        }
+        // If all readings are done, show the last reading of the plan as a "completed" state.
+        if (sortedDailyReadings.length > 0) {
+          return [sortedDailyReadings[sortedDailyReadings.length - 1]];
+        }
+        return [];
       }
       case 'singleDay': {
         if (!selectedDate) return [];
@@ -177,7 +146,7 @@ export default function BibleChecklistPage() {
       default:
         return sortedDailyReadings;
     }
-  }, [sortedDailyReadings, activeTab, selectedDate, nextUnreadReadingWeek]);
+  }, [sortedDailyReadings, activeTab, selectedDate, nextUnreadReadingDay]);
 
   const totalPassagesInPlan = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -457,3 +426,5 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    
