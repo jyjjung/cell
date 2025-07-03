@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -102,13 +103,14 @@ export default function BibleChecklistPage() {
     return findNextUnreadReading(sortedDailyReadings, completedPassages);
   }, [sortedDailyReadings, completedPassages, planLoading, loadingChecklist]);
   
-  const sortedAndFilteredDailyReadings = useMemo(() => {
+  const filteredReadings = useMemo(() => {
+    let readings: DailyReading[] = [];
     switch (activeTab) {
       case 'currentWeek': {
         const today = new Date();
         const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); 
         const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   
-        return sortedDailyReadings.filter(reading => {
+        readings = sortedDailyReadings.filter(reading => {
           try {
             const readingDateObj = parseISO(reading.date); 
             if (!isValid(readingDateObj)) return false;
@@ -118,34 +120,40 @@ export default function BibleChecklistPage() {
             return false; 
           }
         });
+        break;
       }
       case 'myNextReading': {
         if (nextUnreadReadingDay) {
-          return [nextUnreadReadingDay];
+          readings = [nextUnreadReadingDay];
+        } else if (sortedDailyReadings.length > 0) {
+          // If all readings are done, show the last reading of the plan as a "completed" state.
+          readings = [sortedDailyReadings[sortedDailyReadings.length - 1]];
         }
-        // If all readings are done, show the last reading of the plan as a "completed" state.
-        if (sortedDailyReadings.length > 0) {
-          return [sortedDailyReadings[sortedDailyReadings.length - 1]];
-        }
-        return [];
+        break;
       }
       case 'singleDay': {
-        if (!selectedDate) return [];
-        return sortedDailyReadings.filter(reading => {
-           try {
-              const readingDateObj = parseISO(reading.date);
-              if (!isValid(readingDateObj)) return false;
-              return isSameDay(readingDateObj, selectedDate);
-            } catch (e) { 
-              console.error(`[BibleChecklistPage] Error parsing date for single day filtering: ${reading.date}`, e);
-              return false; 
-            }
-        });
+        if (!selectedDate) {
+          readings = [];
+        } else {
+          readings = sortedDailyReadings.filter(reading => {
+            try {
+                const readingDateObj = parseISO(reading.date);
+                if (!isValid(readingDateObj)) return false;
+                return isSameDay(readingDateObj, selectedDate);
+              } catch (e) { 
+                console.error(`[BibleChecklistPage] Error parsing date for single day filtering: ${reading.date}`, e);
+                return false; 
+              }
+          });
+        }
+        break;
       }
       case 'fullPlan':
       default:
-        return sortedDailyReadings;
+        readings = sortedDailyReadings;
+        break;
     }
+    return readings;
   }, [sortedDailyReadings, activeTab, selectedDate, nextUnreadReadingDay]);
 
   const totalPassagesInPlan = useMemo(() => {
@@ -231,20 +239,183 @@ export default function BibleChecklistPage() {
       });
     }
   };
+  
+  const DailyReadingSkeleton = () => (
+    <Card className="bg-card/80 rounded-md shadow-sm">
+      <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-6 w-32" />
+      </CardHeader>
+      <CardContent className="p-2 space-y-1.5">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 p-1.5">
+            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
+            <Skeleton className="h-3.5 w-full" />
+          </div>
+          <div className="flex items-center space-x-2 p-1.5">
+            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
+            <Skeleton className="h-3.5 w-5/6" />
+          </div>
+          <div className="flex items-center space-x-2 p-1.5">
+            <Skeleton className="h-3.5 w-3.5 rounded-sm" />
+            <Skeleton className="h-3.5 w-3/4" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderReadings = (readingsToRender: DailyReading[]) => {
+    if (readingsToRender.length === 0) {
+      return (
+        <Card className="shadow-sm mt-4">
+          <CardContent className="p-6 text-center">
+            <Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">No readings found for this filter.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    return (
+      <div className="space-y-2 mt-4">
+        {readingsToRender.map((dailyReading) => {
+          if (!dailyReading || !dailyReading.date) return null;
+          let parsedDayDate: Date | null = null;
+          try {
+            parsedDayDate = parseISO(dailyReading.date);
+            if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
+          } catch(e) {
+            console.error(`[BibleChecklistPage] Invalid date for dailyReading: ${dailyReading.date}`, e);
+            return <Card key={`error-date-${dailyReading.originalDateKey || dailyReading.date}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
+          }
+          const dateKey = dailyReading.originalDateKey || dailyReading.date;
+          const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
+          const isDayCompleted = allPassagesInDayObjects.length > 0 && allPassagesInDayObjects.every(p => completedPassages.includes(p.displayText));
+          const isLoadingThisDay = markingDayId === dateKey;
+
+          return (
+            <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
+              <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
+                <h3 className="text-sm font-semibold flex items-center">
+                  {format(parsedDayDate, "EEE, MMM d, yyyy")}
+                  {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
+                </h3>
+                {!isDayCompleted && allPassagesInDayObjects.length > 0 && (
+                  <Button
+                    size="xs" 
+                    variant="outline"
+                    onClick={() => handleMarkDayComplete(dailyReading)}
+                    disabled={isLoadingThisDay}
+                    className="h-auto py-1 px-2 text-xs"
+                  >
+                    {isLoadingThisDay ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : (
+                      <CheckSquare className="mr-1.5 h-3 w-3" />
+                    )}
+                    Mark Day Complete
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="p-2 space-y-1.5">
+                {(allPassagesInDayObjects.length > 0) ? (
+                  <ul className="space-y-1">
+                    {allPassagesInDayObjects.map((passage, pIndex) => {
+                      if (!passage) {
+                        console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined. Date: ${dateKey}, Index: ${pIndex}.`);
+                        return <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic">Error: Passage data corrupt.</li>;
+                      }
+                      const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
+                      const isPassageValid = currentPassageDisplayText !== '' && !currentPassageDisplayText.startsWith("Error:");
+                      
+                      const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
+                      const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
+                      const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
+                      
+                      const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
+
+                      if(!isPassageValid && passage){
+                            console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Date: ${dateKey}, Index: ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
+                      }
+
+                      return (
+                        <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                          <Checkbox 
+                            id={checkboxId} 
+                            checked={isChecked} 
+                            onCheckedChange={() => { 
+                              if (isPassageValid) { 
+                                togglePassageCompletion(currentPassageDisplayText); 
+                              } else {
+                                toast({title: "Invalid Passage Data", description: "Cannot toggle completion for this passage as its text data is missing or invalid.", variant: "destructive"});
+                                console.error("Attempted to toggle invalid passage:", passage);
+                              }
+                            }} 
+                            aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
+                            className="h-3.5 w-3.5" 
+                            disabled={!isPassageValid || isLoadingThisDay}
+                          />
+                          <Label
+                            htmlFor={checkboxId}
+                            className={cn("flex-grow cursor-pointer", isChecked && "line-through text-muted-foreground")}
+                          >
+                            {isPassageValid ? (
+                              <Button
+                                variant="link"
+                                className={cn(
+                                  "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
+                                  isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
+                                )}
+                                onClick={() => handlePassageClick(passage.displayText)}
+                                title={`View ${currentPassageDisplayText}`}
+                                disabled={isLoadingThisDay}
+                              >
+                                {currentPassageDisplayText}
+                              </Button>
+                            ) : (
+                              <span className="text-destructive font-semibold italic">Error: Passage text missing</span>
+                            )}
+                          </Label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
 
 
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
   }
   if (planLoading || loadingChecklist) {
-    return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground">Loading Bible plan and checklist...</p></div>);
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+          <div className="flex items-center space-x-2"><LibraryBig className="h-6 w-6 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div>
+          <Skeleton className="h-9 w-32 rounded-md" />
+        </div>
+        <Skeleton className="h-24 w-full mb-3 rounded-lg" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+          <Skeleton className="h-10 w-full sm:w-[350px] rounded-md" />
+          <Skeleton className="h-10 w-full sm:w-[180px] rounded-md" />
+        </div>
+        <div className="space-y-2 mt-4">
+          <DailyReadingSkeleton />
+          <DailyReadingSkeleton />
+          <DailyReadingSkeleton />
+        </div>
+      </div>
+    );
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (<div className="space-y-8"><div className="flex items-center space-x-3 mb-6"><LibraryBig className="h-7 w-7 text-primary" /><h1 className="text-xl font-bold tracking-tight">My Bible Reading Checklist</h1></div><Card className="mt-6 shadow-lg max-w-lg mx-auto"><CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader><CardContent><p className="text-muted-foreground">No Bible reading plan has been set.</p></CardContent></Card><BackToTopButton /></div>);
   }
-
-  let filterButtonText = "Filter by date...";
-  if (activeTab === 'singleDay' && selectedDate) filterButtonText = format(selectedDate, "PPP");
 
 
   return (
@@ -299,120 +470,10 @@ export default function BibleChecklistPage() {
             </PopoverContent>
             </Popover>
         </div>
-
-        <div className="space-y-2 mt-4">
-          {sortedAndFilteredDailyReadings.length === 0 ? (
-            <Card className="shadow-sm"><CardContent className="p-6 text-center"><Info className="mx-auto h-10 w-10 text-muted-foreground mb-3" /><p className="text-muted-foreground">No readings found for this filter.</p></CardContent></Card>
-          ) : (
-            sortedAndFilteredDailyReadings.map((dailyReading) => {
-              if (!dailyReading || !dailyReading.date) return null;
-              let parsedDayDate: Date | null = null;
-              try {
-                parsedDayDate = parseISO(dailyReading.date);
-                if(!isValid(parsedDayDate)) throw new Error("Invalid date after parsing");
-              } catch(e) {
-                console.error(`[BibleChecklistPage] Invalid date for dailyReading: ${dailyReading.date}`, e);
-                return <Card key={`error-date-${dailyReading.originalDateKey || dailyReading.date}`} className="p-3 my-2 shadow-sm"><CardContent className="text-destructive text-xs">Error: Invalid date for reading entry.</CardContent></Card>;
-              }
-              const dateKey = dailyReading.originalDateKey || dailyReading.date;
-              const allPassagesInDayObjects = dailyReading.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '') || [];
-              const isDayCompleted = allPassagesInDayObjects.length > 0 && allPassagesInDayObjects.every(p => completedPassages.includes(p.displayText));
-              const isLoadingThisDay = markingDayId === dateKey;
-
-              return (
-                <Card key={dateKey} className="bg-card/80 rounded-md shadow-sm">
-                  <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b">
-                    <h3 className="text-sm font-semibold flex items-center">
-                      {format(parsedDayDate, "EEE, MMM d, yyyy")}
-                      {isDayCompleted && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
-                    </h3>
-                    {!isDayCompleted && allPassagesInDayObjects.length > 0 && (
-                      <Button
-                        size="xs" 
-                        variant="outline"
-                        onClick={() => handleMarkDayComplete(dailyReading)}
-                        disabled={isLoadingThisDay}
-                        className="h-auto py-1 px-2 text-xs"
-                      >
-                        {isLoadingThisDay ? (
-                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                        ) : (
-                          <CheckSquare className="mr-1.5 h-3 w-3" />
-                        )}
-                        Mark Day Complete
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="p-2 space-y-1.5">
-                    {(allPassagesInDayObjects.length > 0) ? (
-                      <ul className="space-y-1">
-                        {allPassagesInDayObjects.map((passage, pIndex) => {
-                          if (!passage) {
-                             console.warn(`[BibleChecklistPage] RENDERING: Passage object is null/undefined. Date: ${dateKey}, Index: ${pIndex}.`);
-                             return <li key={`error-passage-${dateKey}-${pIndex}`} className="text-destructive font-semibold p-1.5 text-xs italic">Error: Passage data corrupt.</li>;
-                          }
-                          const currentPassageDisplayText = (typeof passage.displayText === 'string') ? passage.displayText.trim() : '';
-                          const isPassageValid = currentPassageDisplayText !== '' && !currentPassageDisplayText.startsWith("Error:");
-                          
-                          const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${pIndex}`;
-                          const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${pIndex}`;
-                          const checkboxId = `passage-${dateKey}-${bookIdPart}-${chapterIdPart}-${pIndex}`;
-                          
-                          const isChecked = isPassageValid && completedPassages.includes(currentPassageDisplayText);
-
-                          if(!isPassageValid && passage){
-                               console.warn(`[BibleChecklistPage] RENDERING: Passage displayText is missing or invalid. Date: ${dateKey}, Index: ${pIndex}. Passage data:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-                          }
-
-                          return (
-                            <li key={checkboxId} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
-                              <Checkbox 
-                                id={checkboxId} 
-                                checked={isChecked} 
-                                onCheckedChange={() => { 
-                                  if (isPassageValid) { 
-                                    togglePassageCompletion(currentPassageDisplayText); 
-                                  } else {
-                                    toast({title: "Invalid Passage Data", description: "Cannot toggle completion for this passage as its text data is missing or invalid.", variant: "destructive"});
-                                    console.error("Attempted to toggle invalid passage:", passage);
-                                  }
-                                }} 
-                                aria-label={`Mark ${isPassageValid ? currentPassageDisplayText : 'invalid passage'} as read`} 
-                                className="h-3.5 w-3.5" 
-                                disabled={!isPassageValid || isLoadingThisDay}
-                              />
-                              <Label
-                                htmlFor={checkboxId}
-                                className={cn("flex-grow cursor-pointer", isChecked && "line-through text-muted-foreground")}
-                              >
-                                {isPassageValid ? (
-                                  <Button
-                                    variant="link"
-                                    className={cn(
-                                      "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
-                                      isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
-                                    )}
-                                    onClick={() => handlePassageClick(passage.displayText)}
-                                    title={`View ${currentPassageDisplayText}`}
-                                    disabled={isLoadingThisDay}
-                                  >
-                                    {currentPassageDisplayText}
-                                  </Button>
-                                ) : (
-                                  <span className="text-destructive font-semibold italic">Error: Passage text missing</span>
-                                )}
-                              </Label>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (<p className="text-muted-foreground text-xs pl-0.5 pt-1">No passages for this day.</p>)}
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </div>
+        <TabsContent value="currentWeek">{renderReadings(filteredReadings)}</TabsContent>
+        <TabsContent value="myNextReading">{renderReadings(filteredReadings)}</TabsContent>
+        <TabsContent value="fullPlan">{renderReadings(filteredReadings)}</TabsContent>
+        <TabsContent value="singleDay">{renderReadings(filteredReadings)}</TabsContent>
       </Tabs>
 
       <BiblePassageViewerDialog
@@ -426,5 +487,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
-    

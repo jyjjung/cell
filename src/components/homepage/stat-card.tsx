@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Button } from '@/components/ui/button';
 import type { LucideProps } from 'lucide-react'; // For proper icon typing
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
 
 interface StatCardProps {
@@ -53,9 +53,7 @@ export default function StatCard({
       </CardHeader>
       <CardContent className="flex-grow">
         {isLoading ? (
-          <div className="h-10 flex items-center">
-            <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          </div>
+          <Skeleton className="h-8 w-24 rounded-md" />
         ) : (
           <div className="text-3xl font-bold">{value ?? 'N/A'}</div>
         )}
