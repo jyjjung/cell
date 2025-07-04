@@ -13,7 +13,6 @@ import { Separator } from '@/components/ui/separator';
 import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import MusicPlayer from '@/components/homepage/music-player';
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -129,12 +128,6 @@ export default function HomePage() {
       <section id="upcoming-events-section" className="space-y-6">
         <h2 className="text-3xl font-bold tracking-tight text-center">Upcoming Dates</h2>
         <UpcomingEventsDisplay events={upcomingEvents} loading={eventsLoading} />
-      </section>
-
-      <Separator />
-
-      <section id="music-player-section">
-        <MusicPlayer />
       </section>
 
       <Separator />
