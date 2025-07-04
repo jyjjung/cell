@@ -11,7 +11,7 @@ export default function MusicPlayer() {
           <div className="w-full overflow-hidden rounded-lg">
             <iframe
               style={{ borderRadius: "12px" }}
-              src="https://open.spotify.com/embed/playlist/37i9dQZF1DXaod7h2l5iA6?utm_source=generator&theme=0"
+              src="https://open.spotify.com/embed/playlist/37i9dQZF1DX4itD2csI4k2?utm_source=generator&theme=0"
               width="100%"
               height="352"
               frameBorder="0"

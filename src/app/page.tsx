@@ -90,7 +90,7 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <section id="stats-section">
-        <h2 className="text-3xl font-bold tracking-tight mb-6">
+        <h2 className="text-3xl font-bold tracking-tight mb-6 text-center">
           App Snapshot
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -127,7 +127,7 @@ export default function HomePage() {
       <Separator />
 
       <section id="upcoming-events-section" className="space-y-6">
-        <h2 className="text-3xl font-bold tracking-tight">Upcoming Dates</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-center">Upcoming Dates</h2>
         <UpcomingEventsDisplay events={upcomingEvents} loading={eventsLoading} />
       </section>
 
