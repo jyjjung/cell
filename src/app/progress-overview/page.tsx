@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -83,7 +84,7 @@ export default function ProgressOverviewPage() {
         userDisplayName: checklist.userDisplayName || checklist.userId.substring(0, 8),
         completedCount,
         progressPercentage,
-        totalPassagesToDate,
+        totalPassagesToDate: totalPassagesUpToToday,
       };
     }).sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, totalPassagesUpToToday]);
