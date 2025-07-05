@@ -32,7 +32,6 @@ export default function Header() {
   };
 
   const handleUserSignOutClick = async () => {
-    setIsPageLoading(true); 
     await signOutUser();
     closeMobileMenu();
   };

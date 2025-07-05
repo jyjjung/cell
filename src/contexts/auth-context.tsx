@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { auth, db } from '@/lib/firebase'; // Import Firebase auth instance and db
 import {
   onAuthStateChanged,
@@ -16,6 +16,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { AppUser, UserProfileData } from '@/types';
 import { useEvents } from '@/hooks/use-events'; // For birthday event management
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 interface AuthContextType {
   isAdmin: boolean;
@@ -41,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const { setIsPageLoading } = usePageLoading();
   const { addOrUpdateBirthdayEvent } = useEvents();
 
 
@@ -145,11 +148,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOutUser = async (): Promise<void> => {
+    setIsPageLoading(true);
     try {
       await signOut(auth);
-      router.push('/');
+      // After sign out, the onAuthStateChanged listener will update the currentUser state.
+      // Components will re-render with the new auth state.
+      // We want to ensure the user is on the homepage.
+      
+      // If we are not on the homepage, navigate there. The PageLoaderManager will turn off the spinner.
+      if (pathname !== '/') {
+        router.push('/');
+      } else {
+        // If we are already on the homepage, the route won't change, so we manually turn off the spinner.
+        setIsPageLoading(false);
+      }
     } catch (error) {
       console.error("Error signing out user:", error);
+      setIsPageLoading(false); // Always turn off on error.
       throw error;
     }
   };

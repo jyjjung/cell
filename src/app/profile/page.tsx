@@ -66,7 +66,6 @@ export default function ProfilePage() {
 
 
   const handleSignOut = async () => {
-    setIsPageLoading(true);
     await signOutUser();
   };
 
