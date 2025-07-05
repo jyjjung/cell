@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -12,14 +11,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Users, Info, BarChart3 } from 'lucide-react';
 import { startOfDay, parseISO, isBefore, isSameDay, isValid as isDateValid } from 'date-fns';
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 interface UserProgressDisplay {
   userId: string;
   userDisplayName: string | null;
   completedCount: number;
   progressPercentage: number;
-  totalPassagesToDate: number; // Renamed from totalPassagesInPlan
+  totalPassagesToDate: number;
 }
+
+const chartConfig = {
+  progressPercentage: {
+    label: "Progress",
+    color: "hsl(var(--primary))",
+  },
+} satisfies ChartConfig;
+
 
 export default function ProgressOverviewPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -63,19 +72,18 @@ export default function ProgressOverviewPage() {
   }, [plan, isMounted]);
 
   const userProgressData = useMemo(() => {
-    if (!allChecklists || totalPassagesUpToToday === 0) { // Use new total
+    if (!allChecklists || totalPassagesUpToToday === 0) {
       return [];
     }
     return allChecklists.map(checklist => {
       const completedCount = checklist.completedPassages.length;
-      // Calculate progress against passages *up to today*
-      const progressPercentage = totalPassagesUpToToday > 0 ? (completedCount / totalPassagesUpToToday) * 100 : 0;
+      const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
       return {
         userId: checklist.userId,
-        userDisplayName: checklist.userDisplayName || checklist.userId,
+        userDisplayName: checklist.userDisplayName || checklist.userId.substring(0, 8),
         completedCount,
         progressPercentage,
-        totalPassagesToDate: totalPassagesUpToToday, // Use new total
+        totalPassagesToDate,
       };
     }).sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, totalPassagesUpToToday]);
@@ -113,7 +121,7 @@ export default function ProgressOverviewPage() {
     );
   }
   
-  if (totalPassagesUpToToday === 0 && isMounted) { // Check if no readings up to today
+  if (totalPassagesUpToToday === 0 && isMounted) {
      return (
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
@@ -150,9 +158,46 @@ export default function ProgressOverviewPage() {
         <BarChart3 className="h-7 w-7 text-primary" />
         <h1 className="text-xl font-bold tracking-tight">Community Progress Overview</h1>
       </div>
+
+       <Card>
+        <CardHeader>
+            <CardTitle>Progress Chart</CardTitle>
+            <CardDescription>A visual overview of each user's completion percentage to date.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+            <BarChart accessibilityLayer data={userProgressData}>
+                <XAxis
+                    dataKey="userDisplayName"
+                    tickLine={false}
+                    tickMargin={10}
+                    axisLine={false}
+                    tickFormatter={(value) => typeof value === 'string' ? value.slice(0, 8) : ''}
+                />
+                <YAxis
+                    stroke="#888888"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}%`}
+                    domain={[0, 100]}
+                />
+                <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                        formatter={(value) => `${value}%`}
+                        indicator="dot"
+                    />}
+                />
+                <Bar dataKey="progressPercentage" fill="var(--color-progressPercentage)" radius={4} />
+            </BarChart>
+            </ChartContainer>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>User Reading Progress</CardTitle>
+          <CardTitle>Detailed Progress</CardTitle>
           <CardDescription>
             Overview of passages each user has completed out of those scheduled up to today.
           </CardDescription>
