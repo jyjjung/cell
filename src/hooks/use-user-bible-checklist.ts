@@ -94,10 +94,9 @@ export function useUserBibleChecklist() {
     if (!currentUser?.uid) throw new Error("User not logged in.");
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
     
-    const dataToSet: Partial<UserBibleChecklist> & { updatedAt: Timestamp; userDisplayName: string | null } = {
+    const dataToSet: Partial<UserBibleChecklist> & { updatedAt: Timestamp } = {
       ...updatePayload,
       updatedAt: serverTimestamp() as Timestamp,
-      userDisplayName: currentUser.displayName || null, // Ensure display name is saved/updated
     };
 
     if (!checklistDocExists && updatePayload.completedPassages) { // Specifically for initial creation with items

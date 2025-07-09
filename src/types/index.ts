@@ -67,7 +67,6 @@ export interface UserProfileData {
 
 export interface UserBibleChecklist {
   userId: string; // Matches Firebase Auth UID
-  userDisplayName: string | null; // To store the user's display name
   completedPassages: string[]; // Stores displayText of completed passages
   updatedAt?: Timestamp;
 }
@@ -80,4 +79,3 @@ export interface MemoryVerse {
   addedAt: Timestamp;
   isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer or the single entry
 }
-

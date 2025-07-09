@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Users, Info } from 'lucide-react';
 import { startOfDay, parseISO, isBefore, isSameDay, isValid as isDateValid } from 'date-fns';
+import { useAllUsers } from '@/hooks/use-all-users';
 
 interface UserProgressDisplay {
   userId: string;
@@ -29,6 +30,7 @@ export default function ProgressOverviewPage() {
 
   const { plan, loading: planLoading } = useBiblePlan();
   const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
+  const { allUsers, loading: usersLoading } = useAllUsers();
 
   useEffect(() => {
     setIsMounted(true);
@@ -63,21 +65,33 @@ export default function ProgressOverviewPage() {
   }, [plan, isMounted]);
 
   const userProgressData = useMemo(() => {
-    if (!allChecklists || totalPassagesUpToToday === 0) {
+    if (checklistsLoading || usersLoading || totalPassagesUpToToday === 0 || !allChecklists || !allUsers) {
       return [];
     }
-    return allChecklists.map(checklist => {
-      const completedCount = checklist.completedPassages.length;
-      const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
-      return {
-        userId: checklist.userId,
-        userDisplayName: checklist.userDisplayName || checklist.userId.substring(0, 8),
-        completedCount,
-        progressPercentage,
-        totalPassagesToDate: totalPassagesUpToToday,
-      };
-    }).sort((a, b) => b.progressPercentage - a.progressPercentage);
-  }, [allChecklists, totalPassagesUpToToday]);
+
+    const usersMap = new Map(allUsers.map(user => [user.uid, user]));
+
+    return allChecklists
+      .map(checklist => {
+        const user = usersMap.get(checklist.userId);
+        if (!user) {
+          return null;
+        }
+
+        const completedCount = checklist.completedPassages.length;
+        const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
+        
+        return {
+          userId: checklist.userId,
+          userDisplayName: user.displayName || user.email?.split('@')[0] || checklist.userId.substring(0, 8),
+          completedCount,
+          progressPercentage,
+          totalPassagesToDate: totalPassagesUpToToday,
+        };
+      })
+      .filter((item): item is UserProgressDisplay => item !== null)
+      .sort((a, b) => b.progressPercentage - a.progressPercentage);
+  }, [allChecklists, allUsers, totalPassagesUpToToday, checklistsLoading, usersLoading]);
 
   if (!isMounted || loadingAuth || (!currentUser && isMounted)) {
      return (
@@ -88,7 +102,7 @@ export default function ProgressOverviewPage() {
     );
   }
 
-  if (planLoading || checklistsLoading) {
+  if (planLoading || checklistsLoading || usersLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

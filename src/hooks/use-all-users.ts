@@ -1,10 +1,39 @@
 
 "use client";
 
-// This hook is no longer used as the admin user role management feature
-// that listed all users has been simplified.
-// This file can be deleted.
+import { useState, useEffect } from 'react';
+import type { UserProfileData } from '@/types';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 
-export function useAllUsers_DEPRECATED() {
-  return { allUsers: [], loading: false, error: null };
+const USERS_COLLECTION = 'users';
+
+export function useAllUsers() {
+  const [allUsers, setAllUsers] = useState<UserProfileData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const usersQuery = query(collection(db, USERS_COLLECTION));
+
+    const unsubscribe = onSnapshot(usersQuery, (querySnapshot) => {
+      const usersData: UserProfileData[] = [];
+      querySnapshot.forEach((doc) => {
+        // We can safely cast here as we assume documents in this collection
+        // conform to UserProfileData
+        usersData.push(doc.data() as UserProfileData);
+      });
+      setAllUsers(usersData);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error fetching all users:", err);
+      setError(err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return { allUsers, loading, error };
 }

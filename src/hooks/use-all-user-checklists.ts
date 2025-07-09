@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
 export function useAllUserChecklists() {
-  const { currentUser } = useAuth(); // Removed isEffectivelyAdmin
+  const { currentUser } = useAuth();
   const [allChecklists, setAllChecklists] = useState<UserBibleChecklist[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,6 @@ export function useAllUserChecklists() {
         const data = doc.data();
         checklistsData.push({
           userId: doc.id,
-          userDisplayName: data.userDisplayName || null,
           completedPassages: data.completedPassages || [],
           updatedAt: data.updatedAt as Timestamp,
         } as UserBibleChecklist);
@@ -49,7 +48,7 @@ export function useAllUserChecklists() {
     });
 
     return () => unsubscribe();
-  }, [currentUser]); // Depend only on currentUser
+  }, [currentUser]);
 
   return { allChecklists, loading };
 }
