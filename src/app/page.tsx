@@ -11,8 +11,10 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
 import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -21,6 +23,7 @@ export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
+  const [filterNextMonth, setFilterNextMonth] = useState(true);
 
   useEffect(() => {
     setIsMounted(true);
@@ -29,18 +32,26 @@ export default function HomePage() {
   const upcomingEvents = useMemo(() => {
     if (!isMounted) return [];
     const today = startOfDay(new Date());
+    const oneMonthFromNow = addMonths(today, 1);
+
     return allEvents
       .filter(event => {
         try {
           const eventDate = parseISO(event.date);
-          return isValid(eventDate) && !isBefore(eventDate, today);
+          if (!isValid(eventDate) || isBefore(eventDate, today)) {
+            return false;
+          }
+          if (filterNextMonth) {
+            return isBefore(eventDate, oneMonthFromNow);
+          }
+          return true; // If filter is off, show all future events
         } catch (e) {
           console.error("Error parsing event date for filtering:", event.date, e);
           return false;
         }
       })
       .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-  }, [allEvents, isMounted]);
+  }, [allEvents, isMounted, filterNextMonth]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -95,7 +106,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
             title="Upcoming Events"
-            value={eventsLoading ? null : upcomingEvents.length}
+            value={eventsLoading ? null : allEvents.filter(e => isAfter(parseISO(e.date), new Date())).length}
             isLoading={eventsLoading}
             buttonText="View Details"
             buttonLink="#upcoming-events-section"
@@ -126,7 +137,19 @@ export default function HomePage() {
       <Separator />
 
       <section id="upcoming-events-section" className="space-y-6">
-        <h2 className="text-3xl font-bold tracking-tight text-center">Upcoming Dates</h2>
+        <div className="flex justify-center items-center gap-4 mb-4">
+            <h2 className="text-3xl font-bold tracking-tight text-center">Upcoming Dates</h2>
+            <div className="flex items-center space-x-2">
+                <Switch 
+                    id="month-filter-switch" 
+                    checked={filterNextMonth}
+                    onCheckedChange={setFilterNextMonth}
+                />
+                <Label htmlFor="month-filter-switch" className="text-sm text-muted-foreground">
+                    Next month only
+                </Label>
+            </div>
+        </div>
         <UpcomingEventsDisplay events={upcomingEvents} loading={eventsLoading} />
       </section>
 
