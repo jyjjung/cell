@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -11,7 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
 import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, isAfter } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
