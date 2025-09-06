@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 import type { DailyReading, StructuredPassage } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -20,21 +19,25 @@ import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-di
 import ChapterUnit from '@/components/bible/chapter-unit';
 import { isBefore, parseISO, startOfDay } from 'date-fns';
 
-
 interface ChapterWithStatus {
   chapter: number;
   isCompleted: boolean;
   passages: StructuredPassage[];
-  date: string; // Add date to determine if overdue
+  date: string; 
+}
+
+interface DailyReadingSection {
+    sectionTitle: string; // e.g., "Genesis - Day 1"
+    chapters: ChapterWithStatus[];
+    completedChapters: number;
+    totalChapters: number;
 }
 
 interface BookSection {
-  sectionTitle: string; // e.g., "Genesis" or "1 Kings I"
-  bookName: string; // The canonical book name, e.g. "Genesis"
-  chapters: ChapterWithStatus[];
-  completedChapters: number;
-  totalChapters: number;
+  bookName: string;
+  dailyReadings: DailyReadingSection[];
 }
+
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -60,69 +63,70 @@ export default function BibleChecklistPage() {
   const bookSections = useMemo((): BookSection[] => {
     if (!plan?.dailyReadings) return [];
 
-    const sections: BookSection[] = [];
-    let currentBookName: string | null = null;
-    let currentChaptersMap = new Map<number, { passages: StructuredPassage[], date: string }>();
+    const sectionsByBook = new Map<string, DailyReadingSection[]>();
     
-    const toRoman = (num: number): string => {
-      const romanMap: { [key: number]: string } = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' };
-      return romanMap[num] || num.toString();
-    };
+    // Group daily readings by book first
+    for (const dailyReading of plan.dailyReadings) {
+        if (!dailyReading.passages || dailyReading.passages.length === 0) continue;
 
-    const processCurrentSection = () => {
-        if (currentBookName && currentChaptersMap.size > 0) {
-            const chaptersWithStatus: ChapterWithStatus[] = Array.from(currentChaptersMap.entries())
+        // All passages in a daily reading should ideally be from the same book
+        // for this model to work perfectly, but we'll group by the first passage's book.
+        const firstPassage = dailyReading.passages[0];
+        if (!firstPassage || !firstPassage.book) continue;
+        const bookName = firstPassage.book;
+
+        if (!sectionsByBook.has(bookName)) {
+            sectionsByBook.set(bookName, []);
+        }
+
+        const chaptersInReading = new Map<number, { passages: StructuredPassage[], date: string }>();
+        for (const passage of dailyReading.passages) {
+            if (!passage || !passage.book || !passage.chapter) continue;
+             if (!chaptersInReading.has(passage.chapter)) {
+                chaptersInReading.set(passage.chapter, { passages: [], date: dailyReading.date });
+            }
+            chaptersInReading.get(passage.chapter)!.passages.push(passage);
+        }
+
+        const chaptersWithStatus: ChapterWithStatus[] = Array.from(chaptersInReading.entries())
                 .sort(([a], [b]) => a - b)
                 .map(([chapter, data]) => {
                     const validPassagesInChapter = data.passages.filter(p => p.displayText && !p.displayText.startsWith("Error:"));
                     const isCompleted = validPassagesInChapter.length > 0 && validPassagesInChapter.every(p => completedPassages.includes(p.displayText));
                     return { chapter, isCompleted, passages: data.passages, date: data.date };
                 });
-            
-            const completedChapterCount = chaptersWithStatus.filter(c => c.isCompleted).length;
 
-            sections.push({
-                sectionTitle: currentBookName,
-                bookName: currentBookName,
-                chapters: chaptersWithStatus,
-                completedChapters: completedChapterCount,
-                totalChapters: chaptersWithStatus.length,
+        const completedChapterCount = chaptersWithStatus.filter(c => c.isCompleted).length;
+        
+        const currentBookSections = sectionsByBook.get(bookName)!;
+        currentBookSections.push({
+            sectionTitle: `${bookName} - Day ${currentBookSections.length + 1}`,
+            chapters: chaptersWithStatus,
+            completedChapters: completedChapterCount,
+            totalChapters: chaptersWithStatus.length,
+        });
+    }
+
+    // Convert map to final array structure, maintaining plan order
+    const finalStructure: BookSection[] = [];
+    const seenBooks = new Set<string>();
+
+    for(const dailyReading of plan.dailyReadings) {
+        if (!dailyReading.passages || dailyReading.passages.length === 0) continue;
+        const bookName = dailyReading.passages[0].book;
+        if (!bookName || seenBooks.has(bookName)) continue;
+
+        const dailySectionsForBook = sectionsByBook.get(bookName);
+        if (dailySectionsForBook) {
+            finalStructure.push({
+                bookName,
+                dailyReadings: dailySectionsForBook
             });
-        }
-    };
-
-    for (const dailyReading of plan.dailyReadings) {
-        for (const passage of dailyReading.passages) {
-            if (!passage || !passage.book || !passage.chapter) continue;
-            
-            if (passage.book !== currentBookName) {
-                processCurrentSection();
-                currentBookName = passage.book;
-                currentChaptersMap = new Map();
-            }
-
-            if (!currentChaptersMap.has(passage.chapter)) {
-                currentChaptersMap.set(passage.chapter, { passages: [], date: dailyReading.date });
-            }
-            currentChaptersMap.get(passage.chapter)!.passages.push(passage);
+            seenBooks.add(bookName);
         }
     }
-    processCurrentSection();
-
-    const bookAppearanceCounts = sections.reduce((acc, section) => {
-        acc.set(section.bookName, (acc.get(section.bookName) || 0) + 1);
-        return acc;
-    }, new Map<string, number>());
-
-    const bookPartTracker = new Map<string, number>();
-    return sections.map(section => {
-        if ((bookAppearanceCounts.get(section.bookName) || 0) > 1) {
-            const partNumber = (bookPartTracker.get(section.bookName) || 0) + 1;
-            bookPartTracker.set(section.bookName, partNumber);
-            return { ...section, sectionTitle: `${section.bookName} ${toRoman(partNumber)}` };
-        }
-        return section;
-    });
+    
+    return finalStructure;
 
   }, [plan, completedPassages]);
   
@@ -170,48 +174,54 @@ export default function BibleChecklistPage() {
         </div>
 
         {bookSections.length > 0 ? (
-            <Accordion type="multiple" className="w-full space-y-3">
-                {bookSections.map((section, index) => (
-                    <AccordionItem value={`item-${index}`} key={section.sectionTitle} className="border-b-0">
-                        <Card className="shadow-sm bg-card/80">
-                           <CardHeader className="p-0">
-                             <AccordionTrigger className="p-4 hover:no-underline">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
-                                    <div className="text-left">
-                                        <p className="text-xs font-semibold uppercase text-primary tracking-wider">Section {index + 1}</p>
-                                        <h2 className="text-xl font-bold text-card-foreground">{section.sectionTitle}</h2>
-                                    </div>
-                                    <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto max-w-xs">
-                                        <Progress value={(section.completedChapters / section.totalChapters) * 100} className="w-full" />
-                                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                                            {section.completedChapters} / {section.totalChapters}
-                                        </span>
-                                    </div>
-                                </div>
-                             </AccordionTrigger>
-                           </CardHeader>
-                            <AccordionContent>
-                                <div className="p-4 border-t">
-                                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-x-4 gap-y-6">
-                                        {section.chapters.map((chapter) => {
-                                            const isOverdue = !chapter.isCompleted && isBefore(parseISO(chapter.date), today);
-                                            return (
-                                              <ChapterUnit
-                                                  key={`${section.bookName}-${chapter.chapter}`}
-                                                  chapterNumber={chapter.chapter}
-                                                  isCompleted={chapter.isCompleted}
-                                                  isOverdue={isOverdue}
-                                                  onClick={() => handleChapterClick(chapter)}
-                                              />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
+            <div className="space-y-4">
+                {bookSections.map((bookSection) => (
+                    <div key={bookSection.bookName}>
+                        <h2 className="text-2xl font-bold tracking-tight mb-3">{bookSection.bookName}</h2>
+                        <Accordion type="multiple" className="w-full space-y-3">
+                            {bookSection.dailyReadings.map((readingSection) => (
+                                <AccordionItem value={readingSection.sectionTitle} key={readingSection.sectionTitle} className="border-b-0">
+                                    <Card className="shadow-sm bg-card/80">
+                                        <CardHeader className="p-0">
+                                            <AccordionTrigger className="p-4 hover:no-underline">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
+                                                    <div className="text-left">
+                                                        <h3 className="text-lg font-semibold text-card-foreground">{readingSection.sectionTitle.split(" - ")[1]}</h3>
+                                                    </div>
+                                                    <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto max-w-xs">
+                                                        <Progress value={(readingSection.completedChapters / readingSection.totalChapters) * 100} className="w-full" />
+                                                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                                                            {readingSection.completedChapters} / {readingSection.totalChapters}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </AccordionTrigger>
+                                        </CardHeader>
+                                        <AccordionContent>
+                                            <div className="p-4 border-t">
+                                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-x-4 gap-y-6">
+                                                    {readingSection.chapters.map((chapter) => {
+                                                        const isOverdue = !chapter.isCompleted && isBefore(parseISO(chapter.date), today);
+                                                        return (
+                                                            <ChapterUnit
+                                                                key={`${bookSection.bookName}-${chapter.chapter}`}
+                                                                chapterNumber={chapter.chapter}
+                                                                isCompleted={chapter.isCompleted}
+                                                                isOverdue={isOverdue}
+                                                                onClick={() => handleChapterClick(chapter)}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </AccordionContent>
+                                    </Card>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
                 ))}
-            </Accordion>
+            </div>
         ) : (
              <Card className="mt-4">
                 <CardContent className="p-8 text-center">
@@ -231,3 +241,4 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
