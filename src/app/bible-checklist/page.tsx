@@ -20,7 +20,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { Accordion } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 interface WeeklyProgress {
