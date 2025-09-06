@@ -178,55 +178,55 @@ export default function BiblePlanDisplay({
   return (
     <>
       <Card className="bg-card/90 rounded-lg shadow-sm">
-        <CardHeader className="p-4">
+        <CardHeader className="p-3">
           <div className="flex justify-between items-center">
               <div>
-                 <p className="text-sm font-semibold text-primary">{parsedDayDate ? format(parsedDayDate, "EEEE").toUpperCase() : "DATE"}</p>
-                 <CardTitle className="text-xl">{parsedDayDate ? format(parsedDayDate, "MMMM d, yyyy") : "Reading Date"}</CardTitle>
+                 <p className="text-xs font-semibold text-primary">{parsedDayDate ? format(parsedDayDate, "EEEE").toUpperCase() : "DATE"}</p>
+                 <CardTitle className="text-lg">{parsedDayDate ? format(parsedDayDate, "MMMM d, yyyy") : "Reading Date"}</CardTitle>
               </div>
-              {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />}
+              {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />}
               {currentUser && onToggleAllToday && validPassagesForThisReading.length > 0 && !isAllPassagesForThisReadingComplete && (
                 <Button
                     size="sm" 
                     variant="outline"
                     onClick={handleMarkDayComplete}
                     disabled={isTogglingDay}
-                    className="h-auto py-1 px-3"
+                    className="h-auto py-1 px-2 text-xs"
                 >
                     {isTogglingDay ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                     ) : (
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <CheckSquare className="mr-2 h-3 w-3" />
                     )}
-                    Mark Day Complete
+                    Mark as Read
                 </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-4 pt-2 space-y-2">
+        <CardContent className="p-3 pt-0 space-y-1">
           {validPassagesForThisReading.length > 0 ? (
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
                 const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
                 const isChecked = completedPassages.includes(passage.displayText);
                 const isPassageValid = !passage.displayText.startsWith("Error:");
 
                 return (
-                  <li key={passageIdPart} className="bg-background/70 border rounded-md flex items-center space-x-3 p-3 transition-colors hover:bg-muted/40">
+                  <li key={passageIdPart} className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40">
                     {showIndividualCheckboxes && (
                       <Checkbox
                         id={passageIdPart}
                         checked={isChecked}
                         onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
                         aria-label={`Mark ${passage.displayText} as read`}
-                        className="h-5 w-5"
+                        className="h-4 w-4"
                         disabled={!isPassageValid || isTogglingDay}
                       />
                     )}
                     <Label
                       htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
                       className={cn(
-                        "flex-grow font-medium text-base",
+                        "flex-grow font-medium text-sm",
                         showIndividualCheckboxes && "cursor-pointer",
                         isChecked && "line-through text-muted-foreground"
                       )}
@@ -235,7 +235,7 @@ export default function BiblePlanDisplay({
                         <Button
                           variant="link"
                           className={cn(
-                            "p-0 h-auto text-base font-medium text-left justify-start hover:no-underline",
+                            "p-0 h-auto text-sm font-medium text-left justify-start hover:no-underline",
                              isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}
                           onClick={() => handlePassageClick(passage.displayText)}
@@ -245,7 +245,7 @@ export default function BiblePlanDisplay({
                           {passage.displayText}
                         </Button>
                       ) : (
-                        <span className="text-destructive italic font-semibold">{passage.displayText || "Error: Passage Data Invalid"}</span>
+                        <span className="text-destructive italic font-semibold text-sm">{passage.displayText || "Error: Passage Data Invalid"}</span>
                       )}
                     </Label>
                   </li>
@@ -253,7 +253,7 @@ export default function BiblePlanDisplay({
               })}
             </ul>
           ) : (
-             <p className="text-muted-foreground text-sm p-2">No specific passages assigned for this reading.</p>
+             <p className="text-muted-foreground text-xs p-2">No specific passages assigned for this reading.</p>
           )}
            {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
