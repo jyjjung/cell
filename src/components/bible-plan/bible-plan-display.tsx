@@ -188,7 +188,6 @@ export default function BiblePlanDisplay({
                       {parsedDayDate && (
                           <p className="text-sm font-semibold text-primary">{format(parsedDayDate, "EEEE").toUpperCase()}</p>
                       )}
-                      <p className="text-sm text-muted-foreground font-normal truncate max-w-[200px] sm:max-w-xs">{passageSummary}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />}
