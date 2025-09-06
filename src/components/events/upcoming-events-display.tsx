@@ -25,11 +25,8 @@ const EventListSkeleton = () => (
                     <Skeleton className="h-8 w-14 mx-auto" />
                 </div>
                 <div className="flex-grow pt-1 space-y-2">
-                    <div className="flex items-center space-x-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <Skeleton className="h-6 w-32" />
-                    </div>
-                    <Skeleton className="h-4 w-20 ml-11" />
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-20" />
                 </div>
             </div>
         ))}
@@ -102,3 +99,5 @@ export default function UpcomingEventsDisplay({ events, loading }: UpcomingEvent
     </div>
   );
 }
+
+    

@@ -22,7 +22,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format, parseISO, isValid, startOfDay, isWithinInterval, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, Target } from 'lucide-react';
+import { Loader2, LibraryBig, Info, CheckSquare, Edit, CheckCircle2, BookCheck } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { CANONICAL_BIBLE_ORDER, BIBLE_BOOKS_DATA } from '@/lib/bible-data';
 import { useToast } from '@/hooks/use-toast';
@@ -375,14 +375,14 @@ export default function BibleChecklistPage() {
     );
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Quest</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
+    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center"><Target className="mr-3 h-8 w-8 text-primary"/> My Quest</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center"><BookCheck className="mr-3 h-8 w-8 text-primary"/> My Reading Checklist</h1>
         <Dialog open={isRangeFormOpen} onOpenChange={setIsRangeFormOpen}>
             <DialogTrigger asChild><Button variant="outline">Mark Range</Button></DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-xl">Mark Reading Range</DialogTitle><DialogDescription>Mark all passages within the specified range as completed.</DialogDescription></DialogHeader>
@@ -434,3 +434,5 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    

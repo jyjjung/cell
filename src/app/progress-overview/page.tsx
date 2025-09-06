@@ -116,7 +116,7 @@ export default function ProgressOverviewPage() {
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
           <Users className="h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold tracking-tight">Team Progress</h1>
+          <h1 className="text-xl font-bold tracking-tight">Community Progress</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader>
@@ -131,7 +131,7 @@ export default function ProgressOverviewPage() {
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
           <Users className="h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold tracking-tight">Team Progress</h1>
+          <h1 className="text-xl font-bold tracking-tight">Community Progress</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Readings Scheduled Yet</CardTitle></div></CardHeader>
@@ -147,11 +147,11 @@ export default function ProgressOverviewPage() {
       <div className="space-y-8">
         <div className="flex items-center space-x-3 mb-6">
           <Users className="h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold tracking-tight">Team Progress</h1>
+          <h1 className="text-xl font-bold tracking-tight">Community Progress</h1>
         </div>
         <Card className="mt-6 shadow-lg max-w-lg mx-auto">
           <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader>
-          <CardContent><p className="text-muted-foreground">No team-mates have started tracking their progress, or no checklists were found for readings scheduled to date.</p></CardContent>
+          <CardContent><p className="text-muted-foreground">No one has started tracking their progress, or no checklists were found for readings scheduled to date.</p></CardContent>
         </Card>
       </div>
     );
@@ -161,22 +161,22 @@ export default function ProgressOverviewPage() {
     <div className="space-y-8">
       <div className="flex items-center space-x-3 mb-6">
         <Users className="h-7 w-7 text-primary" />
-        <h1 className="text-xl font-bold tracking-tight">Team Progress</h1>
+        <h1 className="text-xl font-bold tracking-tight">Community Progress</h1>
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Team Leaderboard</CardTitle>
+          <CardTitle>Leaderboard</CardTitle>
           <CardDescription>
-            Overview of quests each team-mate has completed out of those scheduled up to today.
+            Overview of readings each person has completed out of those scheduled up to today.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px]">Team-mate</TableHead>
-                <TableHead>Progress (% of quests due)</TableHead>
+                <TableHead className="min-w-[200px]">Person</TableHead>
+                <TableHead>Progress (% of readings due)</TableHead>
                 <TableHead className="text-right">Completed / Expected by Today</TableHead>
               </TableRow>
             </TableHeader>
@@ -204,3 +204,5 @@ export default function ProgressOverviewPage() {
     </div>
   );
 }
+
+    
