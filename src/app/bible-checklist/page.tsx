@@ -324,6 +324,10 @@ export default function BibleChecklistPage() {
                                 )}>WEEK {week.weekNumber}</p>
                                 <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
                             </div>
+                             <div className="text-right">
+                                <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
+                                <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
+                            </div>
                        </div>
                     </CardHeader>
                 </Card>
