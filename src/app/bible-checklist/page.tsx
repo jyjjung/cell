@@ -26,7 +26,7 @@ interface ChapterWithStatus {
 }
 
 interface BookSection {
-  sectionTitle: string; // e.g., "Genesis" or "1 Kings (Part 1)"
+  sectionTitle: string; // e.g., "Genesis" or "1 Kings I"
   bookName: string; // The canonical book name, e.g. "Genesis"
   chapters: ChapterWithStatus[];
   completedChapters: number;
@@ -60,13 +60,17 @@ export default function BibleChecklistPage() {
     const sections: BookSection[] = [];
     let currentBookName: string | null = null;
     let currentChaptersMap = new Map<number, { passages: StructuredPassage[] }>();
-    const bookPartCounters = new Map<string, number>();
+    
+    // Helper function to convert a number to a Roman numeral.
+    const toRoman = (num: number): string => {
+      const romanMap: { [key: number]: string } = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' };
+      if (romanMap[num]) return romanMap[num];
+      // Fallback for numbers greater than 10, though unlikely for book parts.
+      return num.toString();
+    };
 
     const processCurrentSection = () => {
         if (currentBookName && currentChaptersMap.size > 0) {
-            const partCount = (bookPartCounters.get(currentBookName) || 0) + 1;
-            bookPartCounters.set(currentBookName, partCount);
-
             const chaptersWithStatus: ChapterWithStatus[] = Array.from(currentChaptersMap.entries())
                 .sort(([a], [b]) => a - b)
                 .map(([chapter, data]) => {
@@ -116,7 +120,7 @@ export default function BibleChecklistPage() {
         if ((bookAppearanceCounts.get(section.bookName) || 0) > 1) {
             const partNumber = (bookPartTracker.get(section.bookName) || 0) + 1;
             bookPartTracker.set(section.bookName, partNumber);
-            return { ...section, sectionTitle: `${section.bookName} (Part ${partNumber})` };
+            return { ...section, sectionTitle: `${section.bookName} ${toRoman(partNumber)}` };
         }
         return section;
     });
@@ -225,5 +229,7 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    
 
     
