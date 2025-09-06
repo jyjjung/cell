@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, parseISO, isSameDay } from 'date-fns';
 import { useEvents } from '@/hooks/use-events';
 import { Calendar } from '@/components/ui/calendar';
@@ -40,7 +40,13 @@ const categoryBorderColors: { [key in EventCategory]: string } = {
 export default function CalendarPage() {
   const { events, loading } = useEvents();
   const [month, setMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setSelectedDate(new Date());
+  }, []);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, AppEvent[]>();
@@ -122,6 +128,36 @@ export default function CalendarPage() {
       </CardContent>
     </Card>
   );
+
+  if (!isMounted) {
+      return (
+        <div className="space-y-6">
+            <div className="flex items-center space-x-3">
+                <CalendarIcon className="h-7 w-7 text-primary" />
+                <h1 className="text-2xl font-bold tracking-tight">Event Calendar</h1>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 space-y-8">
+                    <CalendarSkeleton />
+                </div>
+                <div className="lg:col-span-1">
+                    <Card className="sticky top-20">
+                        <CardHeader>
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-1/4" />
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                           <div className="space-y-4">
+                                <Skeleton className="h-20 w-full" />
+                                <Skeleton className="h-20 w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
+      )
+  }
 
   return (
     <div className="space-y-6">
