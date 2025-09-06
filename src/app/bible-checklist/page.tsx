@@ -192,7 +192,7 @@ export default function BibleChecklistPage() {
         </Button>
         <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
         
-        <Accordion type="multiple" className="w-full space-y-2">
+        <Accordion type="single" collapsible className="w-full space-y-2">
             {viewState.week.readings
                 .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                 .map(reading => (

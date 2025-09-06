@@ -162,7 +162,7 @@ export default function BiblePlanDisplay({
 
   return (
     <>
-      <AccordionItem value={readingToDisplay.date} className="border-b-0">
+      <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
          <Card className={cn(
              "bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200",
              isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
