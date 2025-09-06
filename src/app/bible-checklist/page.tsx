@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
@@ -126,6 +126,22 @@ export default function BibleChecklistPage() {
   }, [plan, completedPassages, loadingChecklist]);
 
 
+  const currentWeek = useMemo(() => {
+    return weeklyProgressData.find(week => week.isCurrent) || null;
+  }, [weeklyProgressData]);
+
+  const handleJumpToCurrentWeek = () => {
+    if (currentWeek) {
+      setSelectedWeek(currentWeek);
+    } else {
+      toast({
+        title: "No Current Week",
+        description: "The plan might not cover the current date.",
+      });
+    }
+  };
+
+
   const PageSkeleton = () => (
     <div className="space-y-4">
       <Skeleton className="h-10 w-2/3 rounded-md" />
@@ -185,17 +201,20 @@ export default function BibleChecklistPage() {
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <h1 className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</h1>
-            <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
-                <BookUp className="mr-2 h-4 w-4" /> Mark Range as Read
-            </Button>
+            <div className="flex gap-2">
+              {currentWeek && (
+                  <Button onClick={handleJumpToCurrentWeek} variant="outline">
+                      <LocateFixed className="mr-2 h-4 w-4" /> Jump to Current Week
+                  </Button>
+              )}
+              <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
+                  <BookUp className="mr-2 h-4 w-4" /> Mark Range as Read
+              </Button>
+            </div>
         </div>
 
         <Card>
-            <CardHeader>
-                <CardTitle>Overall Progress</CardTitle>
-                <CardDescription>Your total progress through the entire reading plan.</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                     <Progress value={overallProgress.percentage} className="flex-grow" />
                     <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
