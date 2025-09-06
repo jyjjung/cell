@@ -1,21 +1,25 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookUp } from 'lucide-react';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 
 const markRangeSchema = z.object({
-  startRef: z.string().min(3, { message: "Starting reference is required." }),
-  endRef: z.string().optional(),
+  startBook: z.string().min(1, { message: "Please select a starting book." }),
+  startChapterVerse: z.string().optional(),
+  endBook: z.string().optional(),
+  endChapterVerse: z.string().optional(),
 });
 
 type MarkRangeFormValues = z.infer<typeof markRangeSchema>;
@@ -25,14 +29,19 @@ interface MarkRangeReadDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-// Simple parser for "Book Chapter" or "Book Chapter:Verse"
-const parseRef = (ref: string) => {
-  const match = ref.trim().match(/^([1-3]?\s?[A-Za-z\s]+?)\s*(\d+)(?::(\d+))?$/);
+const bibleBookOptions: ComboboxOption[] = CANONICAL_BIBLE_ORDER.map(book => ({
+  value: book,
+  label: book,
+}));
+
+// Simple parser for "Chapter:Verse" or "Chapter"
+const parseChapterVerse = (cv: string) => {
+  if (!cv || cv.trim() === '') return { chapter: 1, verse: undefined }; // Default to chapter 1 if empty
+  const match = cv.trim().match(/^(\d+)(?::(\d+))?$/);
   if (!match) return null;
   return {
-    book: match[1].trim(),
-    chapter: parseInt(match[2], 10),
-    verse: match[3] ? parseInt(match[3], 10) : undefined
+    chapter: parseInt(match[1], 10),
+    verse: match[2] ? parseInt(match[2], 10) : undefined
   };
 };
 
@@ -44,35 +53,55 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
   const form = useForm<MarkRangeFormValues>({
     resolver: zodResolver(markRangeSchema),
     defaultValues: {
-      startRef: '',
-      endRef: '',
+      startBook: '',
+      startChapterVerse: '',
+      endBook: '',
+      endChapterVerse: '',
     },
   });
+
+  const startBookValue = form.watch('startBook');
+
+  useEffect(() => {
+    // When the dialog is closed, reset the form
+    if (!isOpen) {
+      form.reset({
+          startBook: '',
+          startChapterVerse: '',
+          endBook: '',
+          endChapterVerse: '',
+      });
+    }
+  }, [isOpen, form]);
+
 
   async function onSubmit(data: MarkRangeFormValues) {
     setIsLoading(true);
     try {
-      const startParsed = parseRef(data.startRef);
-      const endParsed = data.endRef ? parseRef(data.endRef) : null;
-
-      if (!startParsed) {
-        toast({ title: "Invalid Format", description: "Could not parse the starting reference. Use format 'Book Chapter' or 'Book Chapter:Verse'.", variant: "destructive" });
+      const startCV = parseChapterVerse(data.startChapterVerse || '1');
+      if (!startCV) {
+        toast({ title: "Invalid Format", description: "Could not parse the starting chapter/verse. Use 'Chapter' or 'Chapter:Verse'.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
-      if (data.endRef && !endParsed) {
-          toast({ title: "Invalid Format", description: "Could not parse the ending reference. Leave it blank or use format 'Book Chapter' or 'Book Chapter:Verse'.", variant: "destructive" });
-          setIsLoading(false);
-          return;
-      }
       
+      let endCV = null;
+      if (data.endChapterVerse) {
+        endCV = parseChapterVerse(data.endChapterVerse);
+        if (!endCV) {
+            toast({ title: "Invalid Format", description: "Could not parse the ending chapter/verse. Use 'Chapter' or 'Chapter:Verse'.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+      }
+
       const { markedCount } = await markReadRange(
-          startParsed.book,
-          startParsed.chapter,
-          startParsed.verse,
-          endParsed?.book,
-          endParsed?.chapter,
-          endParsed?.verse
+          data.startBook,
+          startCV.chapter,
+          startCV.verse,
+          data.endBook || undefined,
+          endCV?.chapter,
+          endCV?.verse
       );
       
       toast({
@@ -80,7 +109,6 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
         description: `${markedCount} new passage(s) within your specified range have been marked as complete.`,
       });
 
-      form.reset();
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error marking range as read:", error);
@@ -96,7 +124,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center"><BookUp className="mr-2 h-5 w-5"/> Mark Range as Read</DialogTitle>
           <DialogDescription>
@@ -105,34 +133,71 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-            <FormField
-              control={form.control}
-              name="startRef"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Starting From</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Genesis 1" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs">e.g., Genesis 1 or Exodus 12:20</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="endRef"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Up To (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Genesis 5" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs">Leave blank to mark only the starting chapter/passage.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
+                <FormField
+                control={form.control}
+                name="startBook"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Starting Book</FormLabel>
+                    <Combobox
+                        options={bibleBookOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select a book..."
+                        searchPlaceholder="Search books..."
+                        emptyPlaceholder="No book found."
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="startChapterVerse"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Chapter & Verse</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., 1 or 1:15" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
+                <FormField
+                control={form.control}
+                name="endBook"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Ending Book (Optional)</FormLabel>
+                     <Combobox
+                        options={bibleBookOptions}
+                        value={field.value || ''}
+                        onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
+                        placeholder="Same as start book"
+                        searchPlaceholder="Search books..."
+                        emptyPlaceholder="No book found."
+                    />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="endChapterVerse"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Chapter & Verse (Optional)</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., 5 or 5:10" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
                 Cancel
@@ -148,4 +213,3 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
     </Dialog>
   );
 }
-    
