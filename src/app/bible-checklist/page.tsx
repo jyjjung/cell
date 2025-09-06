@@ -57,14 +57,16 @@ export default function BibleChecklistPage() {
     if (!plan?.dailyReadings) return [];
 
     const chaptersByBook = new Map<string, Map<number, { passages: StructuredPassage[] }>>();
+    const bookOrderInPlan: string[] = [];
 
-    // 1. Group all passages by Book -> Chapter
+    // 1. Group all passages by Book -> Chapter and establish plan order
     for (const dailyReading of plan.dailyReadings) {
         for (const passage of dailyReading.passages) {
             if (!passage || !passage.book || !passage.chapter) continue;
             
             if (!chaptersByBook.has(passage.book)) {
                 chaptersByBook.set(passage.book, new Map());
+                bookOrderInPlan.push(passage.book); // Add book to order only when first seen
             }
             const bookMap = chaptersByBook.get(passage.book)!;
 
@@ -75,9 +77,8 @@ export default function BibleChecklistPage() {
         }
     }
 
-    // 2. Build the BookSection array based on canonical order
-    return CANONICAL_BIBLE_ORDER
-        .filter(bookName => chaptersByBook.has(bookName)) // Only include books present in the plan
+    // 2. Build the BookSection array based on the discovered plan order
+    return bookOrderInPlan
         .map(bookName => {
             const bookMeta = BIBLE_BOOKS_DATA[bookName];
             const chaptersMap = chaptersByBook.get(bookName)!;
