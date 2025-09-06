@@ -16,6 +16,7 @@ import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths } from 'd
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Accordion } from '@/components/ui/accordion';
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -171,17 +172,19 @@ export default function HomePage() {
       <section>
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
-            <BiblePlanDisplay
-                readingToDisplay={todaysReadingForDisplay}
-                currentUser={currentUser}
-                completedPassages={completedPassages}
-                togglePassageCompletion={togglePassageCompletion}
-                onToggleAllToday={markMultiplePassages}
-                allPassageTextsForDay={allTodaysPassageTexts}
-                loading={planLoading || loadingChecklist}
-                planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                hidePlanMeta={true}
-            />
+             <Accordion type="single" collapsible className="w-full">
+                <BiblePlanDisplay
+                    readingToDisplay={todaysReadingForDisplay}
+                    currentUser={currentUser}
+                    completedPassages={completedPassages}
+                    togglePassageCompletion={togglePassageCompletion}
+                    onToggleAllToday={markMultiplePassages}
+                    allPassageTextsForDay={allTodaysPassageTexts}
+                    loading={planLoading || loadingChecklist}
+                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                    hidePlanMeta={true}
+                />
+            </Accordion>
         </div>
       </section>
     </div>
