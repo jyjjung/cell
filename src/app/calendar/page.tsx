@@ -79,11 +79,9 @@ export default function CalendarPage() {
     const isToday = isSameDay(date, new Date());
 
     return (
-      <button
-        type="button"
-        {...props.buttonProps}
+      <div
         className={cn(
-          "relative flex h-full flex-col p-1.5 transition-colors border-t border-border focus:z-10 focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring",
+          "relative flex h-full flex-col p-1.5 border-t border-border",
           !isCurrentMonth && "bg-muted/30 text-muted-foreground/50",
           isSameDay(date, selectedDate || new Date(0)) && isCurrentMonth && "bg-accent"
         )}
@@ -116,7 +114,7 @@ export default function CalendarPage() {
             )}
           </div>
         )}
-      </button>
+      </div>
     );
   }
 
@@ -180,7 +178,6 @@ export default function CalendarPage() {
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
                     month={month}
                     onMonthChange={setMonth}
                     className="p-0"
