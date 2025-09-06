@@ -159,7 +159,7 @@ export default function BibleChecklistPage() {
             
             <Accordion type="multiple" className="w-full space-y-2">
                 {selectedWeek.readings
-                    .sort((a,b) => parseISO(a.date).getTime() - b.date.getTime())
+                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                     .map(reading => (
                         <BiblePlanDisplay
                             key={reading.date}
@@ -249,5 +249,3 @@ export default function BibleChecklistPage() {
     </>
   );
 }
-
-    
