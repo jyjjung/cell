@@ -1,13 +1,14 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,8 +21,6 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { Accordion } from '@/components/ui/accordion';
-
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -36,14 +35,10 @@ interface WeeklyProgress {
   isOverdue: boolean;
 }
 
-// Define a type for the selected week to handle the completed weeks summary case
-type SelectedWeekType = WeeklyProgress | { 
-  type: 'completed-summary';
-  title: string;
-  weeks: WeeklyProgress[]; 
-  startDate: Date; 
-  endDate: Date; 
-};
+type ViewState = 
+  | { view: 'all-weeks' }
+  | { view: 'completed-weeks-list'; weeks: WeeklyProgress[] }
+  | { view: 'single-week-details'; week: WeeklyProgress };
 
 
 export default function BibleChecklistPage() {
@@ -55,7 +50,7 @@ export default function BibleChecklistPage() {
   const { toast } = useToast();
 
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState<SelectedWeekType | null>(null);
+  const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
   const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -157,7 +152,7 @@ export default function BibleChecklistPage() {
 
   const handleJumpToCurrentWeek = () => {
     if (currentWeek) {
-      setSelectedWeek(currentWeek);
+       setViewState({ view: 'single-week-details', week: currentWeek });
     } else {
       toast({
         title: "No Current Week",
@@ -188,34 +183,30 @@ export default function BibleChecklistPage() {
     return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
-  // View for selected week or completed weeks
-  if (selectedWeek) {
-    const isCompletedSummary = 'type' in selectedWeek && selectedWeek.type === 'completed-summary';
-    const title = isCompletedSummary ? selectedWeek.title : `Week ${selectedWeek.weekNumber}`;
-    const readingsToMap = isCompletedSummary ? selectedWeek.weeks.flatMap(w => w.readings) : selectedWeek.readings;
-    
+  // View for a single week's daily readings
+  if (viewState.view === 'single-week-details') {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
+        <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
         
         <Accordion type="multiple" className="w-full space-y-2">
-            {readingsToMap
+            {viewState.week.readings
                 .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                 .map(reading => (
-                    <BiblePlanDisplay
-                        key={reading.date}
-                        readingToDisplay={reading}
-                        currentUser={currentUser}
-                        completedPassages={completedPassages}
-                        togglePassageCompletion={togglePassageCompletion}
-                        allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
-                        loading={loadingChecklist}
-                        planAvailable={true}
-                        hidePlanMeta={true}
-                    />
+                  <BiblePlanDisplay
+                    key={reading.date}
+                    readingToDisplay={reading}
+                    currentUser={currentUser}
+                    completedPassages={completedPassages}
+                    togglePassageCompletion={togglePassageCompletion}
+                    allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                    loading={loadingChecklist}
+                    planAvailable={true}
+                    hidePlanMeta={true}
+                  />
             ))}
         </Accordion>
          <BackToTopButton />
@@ -223,7 +214,41 @@ export default function BibleChecklistPage() {
     );
   }
 
-  // Main view listing all weeks
+  // View for listing only the completed weeks
+  if (viewState.view === 'completed-weeks-list') {
+     return (
+       <div className="space-y-6">
+          <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
+          </Button>
+          <h1 className="text-3xl font-bold tracking-tight">Completed Weeks</h1>
+          <div className="space-y-3">
+             {viewState.weeks.map((week) => (
+                <Card 
+                    key={week.weekNumber}
+                    className={cn(
+                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                        "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
+                    )}
+                    onClick={() => setViewState({ view: 'single-week-details', week: week })}
+                >
+                    <CardHeader className="p-4">
+                       <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                                <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                            </div>
+                            <CheckCircle className="h-6 w-6 text-green-500" />
+                       </div>
+                    </CardHeader>
+                </Card>
+             ))}
+          </div>
+       </div>
+     )
+  }
+
+  // Main view listing all weeks (upcoming and the completed summary card)
   return (
     <>
     <div className="space-y-6">
@@ -262,21 +287,16 @@ export default function BibleChecklistPage() {
                         "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
                     )}
                     onClick={() => {
-                        setSelectedWeek({
-                            type: 'completed-summary',
-                            title: 'Completed Weeks',
-                            weeks: completedWeeks,
-                            startDate: completedWeeks[0].startDate,
-                            endDate: completedWeeks[completedWeeks.length - 1].endDate
-                        });
+                        setViewState({ view: 'completed-weeks-list', weeks: completedWeeks });
                     }}
                 >
                     <CardHeader className="p-4">
                        <div className="flex justify-between items-center">
                             <div>
-                                <CardTitle className="text-xl text-green-600 dark:text-green-400">COMPLETED WEEKS</CardTitle>
-                                <p className="text-sm font-semibold text-muted-foreground">{`WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</p>
+                                <CardTitle className="text-xl">{`WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
+                                <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED</p>
                             </div>
+                             <CheckCircle className="h-8 w-8 text-green-500" />
                        </div>
                     </CardHeader>
                 </Card>
@@ -291,7 +311,7 @@ export default function BibleChecklistPage() {
                         week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
                         "hover:border-primary/50"
                     )}
-                    onClick={() => setSelectedWeek(week)}
+                    onClick={() => setViewState({ view: 'single-week-details', week: week })}
                 >
                     <CardHeader className="p-4">
                        <div className="flex justify-between items-center">
@@ -315,6 +335,3 @@ export default function BibleChecklistPage() {
     </>
   );
 }
-
-
-    
