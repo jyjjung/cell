@@ -27,7 +27,7 @@ interface ChapterWithStatus {
 }
 
 interface DailyReadingSection {
-    sectionTitle: string; // e.g., "Genesis - Day 1"
+    sectionTitle: string; // e.g., "Day 1"
     chapters: ChapterWithStatus[];
     completedChapters: number;
     totalChapters: number;
@@ -100,7 +100,7 @@ export default function BibleChecklistPage() {
         
         const currentBookSections = sectionsByBook.get(bookName)!;
         currentBookSections.push({
-            sectionTitle: `${bookName} - Day ${currentBookSections.length + 1}`,
+            sectionTitle: `Day ${currentBookSections.length + 1}`,
             chapters: chaptersWithStatus,
             completedChapters: completedChapterCount,
             totalChapters: chaptersWithStatus.length,
@@ -179,14 +179,14 @@ export default function BibleChecklistPage() {
                     <div key={bookSection.bookName}>
                         <h2 className="text-2xl font-bold tracking-tight mb-3">{bookSection.bookName}</h2>
                         <Accordion type="multiple" className="w-full space-y-3">
-                            {bookSection.dailyReadings.map((readingSection) => (
-                                <AccordionItem value={readingSection.sectionTitle} key={readingSection.sectionTitle} className="border-b-0">
+                            {bookSection.dailyReadings.map((readingSection, index) => (
+                                <AccordionItem value={`${bookSection.bookName}-day-${index}`} key={`${bookSection.bookName}-day-${index}`} className="border-b-0">
                                     <Card className="shadow-sm bg-card/80">
                                         <CardHeader className="p-0">
                                             <AccordionTrigger className="p-4 hover:no-underline">
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
                                                     <div className="text-left">
-                                                        <h3 className="text-lg font-semibold text-card-foreground">{readingSection.sectionTitle.split(" - ")[1]}</h3>
+                                                        <h3 className="text-lg font-semibold text-card-foreground">{readingSection.sectionTitle}</h3>
                                                     </div>
                                                     <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto max-w-xs">
                                                         <Progress value={(readingSection.completedChapters / readingSection.totalChapters) * 100} className="w-full" />
@@ -241,4 +241,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
