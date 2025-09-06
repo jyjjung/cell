@@ -294,7 +294,7 @@ export default function BibleChecklistPage() {
                        <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED</p>
-                                <CardTitle className="text-xl">{`WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
+                                <CardTitle className="text-xl">{`Weeks ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
                             </div>
                              <CheckCircle className="h-8 w-8 text-green-500" />
                        </div>
@@ -335,5 +335,7 @@ export default function BibleChecklistPage() {
     </>
   );
 }
+
+    
 
     
