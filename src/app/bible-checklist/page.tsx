@@ -6,36 +6,27 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import type { DailyReading, StructuredPassage } from '@/types';
+import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, LibraryBig, Info, BookCheck } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import ChapterUnit from '@/components/bible/chapter-unit';
-import { isBefore, parseISO, startOfDay } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid } from 'date-fns';
+import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 
-interface ChapterWithStatus {
-  chapter: number;
-  isCompleted: boolean;
-  passages: StructuredPassage[];
-  date: string; 
-}
 
-interface DailyReadingSection {
-    sectionTitle: string; // e.g., "Day 1"
-    chapters: ChapterWithStatus[];
-    completedChapters: number;
-    totalChapters: number;
-}
-
-interface BookSection {
-  bookName: string;
-  dailyReadings: DailyReadingSection[];
+interface WeeklyProgress {
+  weekNumber: number;
+  startDate: Date;
+  endDate: Date;
+  readings: DailyReading[];
+  completedCount: number;
+  totalCount: number;
+  progressPercentage: number;
 }
 
 
@@ -43,13 +34,12 @@ export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
   const router = useRouter();
   const { plan, loading: planLoading } = useBiblePlan();
-  const { completedPassages, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
-  const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<WeeklyProgress | null>(null);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -60,89 +50,53 @@ export default function BibleChecklistPage() {
     }
   }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
   
-  const bookSections = useMemo((): BookSection[] => {
+  const weeklyProgressData = useMemo((): WeeklyProgress[] => {
     if (!plan?.dailyReadings) return [];
 
-    const sectionsByBook = new Map<string, DailyReadingSection[]>();
+    const weeksMap = new Map<string, DailyReading[]>();
+
+    for (const reading of plan.dailyReadings) {
+      try {
+        const date = parseISO(reading.date);
+        if (!isValid(date)) continue;
+        const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
+        const weekKey = format(weekStart, 'yyyy-MM-dd');
+
+        if (!weeksMap.has(weekKey)) {
+          weeksMap.set(weekKey, []);
+        }
+        weeksMap.get(weekKey)!.push(reading);
+      } catch (e) {
+        console.error("Error processing reading for week grouping:", reading, e);
+      }
+    }
     
-    // Group daily readings by book first
-    for (const dailyReading of plan.dailyReadings) {
-        if (!dailyReading.passages || dailyReading.passages.length === 0) continue;
+    return Array.from(weeksMap.entries())
+      .map(([weekKey, readings], index) => {
+        const weekStartDate = parseISO(weekKey);
+        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
 
-        // All passages in a daily reading should ideally be from the same book
-        // for this model to work perfectly, but we'll group by the first passage's book.
-        const firstPassage = dailyReading.passages[0];
-        if (!firstPassage || !firstPassage.book) continue;
-        const bookName = firstPassage.book;
+        let totalCount = 0;
+        let completedCount = 0;
 
-        if (!sectionsByBook.has(bookName)) {
-            sectionsByBook.set(bookName, []);
-        }
-
-        const chaptersInReading = new Map<number, { passages: StructuredPassage[], date: string }>();
-        for (const passage of dailyReading.passages) {
-            if (!passage || !passage.book || !passage.chapter) continue;
-             if (!chaptersInReading.has(passage.chapter)) {
-                chaptersInReading.set(passage.chapter, { passages: [], date: dailyReading.date });
-            }
-            chaptersInReading.get(passage.chapter)!.passages.push(passage);
-        }
-
-        const chaptersWithStatus: ChapterWithStatus[] = Array.from(chaptersInReading.entries())
-                .sort(([a], [b]) => a - b)
-                .map(([chapter, data]) => {
-                    const validPassagesInChapter = data.passages.filter(p => p.displayText && !p.displayText.startsWith("Error:"));
-                    const isCompleted = validPassagesInChapter.length > 0 && validPassagesInChapter.every(p => completedPassages.includes(p.displayText));
-                    return { chapter, isCompleted, passages: data.passages, date: data.date };
-                });
-
-        const completedChapterCount = chaptersWithStatus.filter(c => c.isCompleted).length;
-        
-        const currentBookSections = sectionsByBook.get(bookName)!;
-        currentBookSections.push({
-            sectionTitle: `Day ${currentBookSections.length + 1}`,
-            chapters: chaptersWithStatus,
-            completedChapters: completedChapterCount,
-            totalChapters: chaptersWithStatus.length,
+        readings.forEach(reading => {
+            const validPassages = reading.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")) || [];
+            totalCount += validPassages.length;
+            completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
         });
-    }
 
-    // Convert map to final array structure, maintaining plan order
-    const finalStructure: BookSection[] = [];
-    const seenBooks = new Set<string>();
-
-    for(const dailyReading of plan.dailyReadings) {
-        if (!dailyReading.passages || dailyReading.passages.length === 0) continue;
-        const bookName = dailyReading.passages[0].book;
-        if (!bookName || seenBooks.has(bookName)) continue;
-
-        const dailySectionsForBook = sectionsByBook.get(bookName);
-        if (dailySectionsForBook) {
-            finalStructure.push({
-                bookName,
-                dailyReadings: dailySectionsForBook
-            });
-            seenBooks.add(bookName);
-        }
-    }
-    
-    return finalStructure;
-
+        return {
+          weekNumber: index + 1,
+          startDate: weekStartDate,
+          endDate: weekEndDate,
+          readings,
+          completedCount,
+          totalCount,
+          progressPercentage: totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+        };
+      })
+      .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
   }, [plan, completedPassages]);
-  
-  const handleChapterClick = (chapterData: ChapterWithStatus) => {
-    const firstPassage = chapterData.passages?.[0];
-    if (firstPassage?.displayText) {
-      setSelectedPassageRef(firstPassage.displayText);
-      setIsPassageViewerOpen(true);
-    } else {
-        toast({
-            title: "No Passage Data",
-            description: "Could not find a valid passage reference for this chapter.",
-            variant: "destructive"
-        });
-    }
-  };
 
   const PageSkeleton = () => (
     <div className="space-y-4">
@@ -165,79 +119,73 @@ export default function BibleChecklistPage() {
     return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
-  const today = startOfDay(new Date());
+  // View for selected week
+  if (selectedWeek) {
+     const allPassageTextsForWeek = selectedWeek.readings.flatMap(day => 
+        day.passages.map(p => p.displayText).filter(text => text && !text.startsWith("Error:"))
+      );
 
+    return (
+        <div className="space-y-6">
+            <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Week {selectedWeek.weekNumber}</h1>
+            <h2 className="text-lg text-muted-foreground -mt-4">{`${format(selectedWeek.startDate, 'MMM d')} - ${format(selectedWeek.endDate, 'MMM d, yyyy')}`}</h2>
+            
+            <div className="space-y-4">
+                {selectedWeek.readings
+                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                    .map(reading => (
+                        <BiblePlanDisplay
+                            key={reading.date}
+                            readingToDisplay={reading}
+                            currentUser={currentUser}
+                            completedPassages={completedPassages}
+                            togglePassageCompletion={togglePassageCompletion}
+                            onToggleAllToday={markMultiplePassages}
+                            allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                            loading={loadingChecklist}
+                            planAvailable={true}
+                            hidePlanMeta={true}
+                        />
+                ))}
+            </div>
+        </div>
+    )
+  }
+
+  // Main view listing all weeks
   return (
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-            <h1 className="text-3xl font-bold tracking-tight flex items-center"><BookCheck className="mr-3 h-8 w-8 text-primary"/> My Reading Checklist</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</h1>
         </div>
-
-        {bookSections.length > 0 ? (
-            <div className="space-y-4">
-                {bookSections.map((bookSection) => (
-                    <div key={bookSection.bookName}>
-                        <h2 className="text-2xl font-bold tracking-tight mb-3">{bookSection.bookName}</h2>
-                        <Accordion type="multiple" className="w-full space-y-3">
-                            {bookSection.dailyReadings.map((readingSection, index) => (
-                                <AccordionItem value={`${bookSection.bookName}-day-${index}`} key={`${bookSection.bookName}-day-${index}`} className="border-b-0">
-                                    <Card className="shadow-sm bg-card/80">
-                                        <CardHeader className="p-0">
-                                            <AccordionTrigger className="p-4 hover:no-underline">
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
-                                                    <div className="text-left">
-                                                        <h3 className="text-lg font-semibold text-card-foreground">{readingSection.sectionTitle}</h3>
-                                                    </div>
-                                                    <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto max-w-xs">
-                                                        <Progress value={(readingSection.completedChapters / readingSection.totalChapters) * 100} className="w-full" />
-                                                        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                                                            {readingSection.completedChapters} / {readingSection.totalChapters}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </AccordionTrigger>
-                                        </CardHeader>
-                                        <AccordionContent>
-                                            <div className="p-4 border-t">
-                                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-x-4 gap-y-6">
-                                                    {readingSection.chapters.map((chapter) => {
-                                                        const isOverdue = !chapter.isCompleted && isBefore(parseISO(chapter.date), today);
-                                                        return (
-                                                            <ChapterUnit
-                                                                key={`${bookSection.bookName}-${chapter.chapter}`}
-                                                                chapterNumber={chapter.chapter}
-                                                                isCompleted={chapter.isCompleted}
-                                                                isOverdue={isOverdue}
-                                                                onClick={() => handleChapterClick(chapter)}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </AccordionContent>
-                                    </Card>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    </div>
-                ))}
-            </div>
-        ) : (
-             <Card className="mt-4">
-                <CardContent className="p-8 text-center">
-                    <Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No readings found in the current plan.</p>
-                </CardContent>
-            </Card>
-        )}
-
-      <BiblePassageViewerDialog
-        isOpen={isPassageViewerOpen}
-        onOpenChange={setIsPassageViewerOpen}
-        passageReference={selectedPassageRef}
-        completedPassages={completedPassages}
-        markMultiplePassages={markMultiplePassages}
-      />
+        
+        <div className="space-y-3">
+            {weeklyProgressData.map((week) => (
+                <Card 
+                    key={week.weekNumber}
+                    className="shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                    onClick={() => setSelectedWeek(week)}
+                >
+                    <CardHeader className="p-4">
+                       <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                                <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                            </div>
+                             <div className="flex items-center gap-4 w-full sm:w-auto max-w-[200px]">
+                                <Progress value={week.progressPercentage} className="w-full" />
+                                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                                    {Math.round(week.progressPercentage)}%
+                                </span>
+                            </div>
+                       </div>
+                    </CardHeader>
+                </Card>
+            ))}
+        </div>
     </div>
   );
 }

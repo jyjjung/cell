@@ -122,15 +122,14 @@ export default function BiblePlanDisplay({
   if (loading) {
     return (
       <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2 min-h-[44px]"> 
+        <CardHeader className="p-4"> 
            <div className="h-5 bg-muted rounded w-3/4 animate-pulse mb-1"></div> {/* Date Skeleton */}
+           <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
         </CardHeader>
-        <CardContent className="p-2">
-          <div className="space-y-1.5">
-            <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
-            <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
-            <div className="h-4 bg-muted rounded w-full animate-pulse"></div>
-          </div>
+        <CardContent className="p-4 space-y-2">
+            <div className="h-6 bg-muted rounded w-full animate-pulse"></div>
+            <div className="h-6 bg-muted rounded w-5/6 animate-pulse"></div>
+            <div className="h-6 bg-muted rounded w-full animate-pulse"></div>
         </CardContent>
       </Card>
     );
@@ -138,9 +137,9 @@ export default function BiblePlanDisplay({
   
   if (!planAvailable && displayTitle?.includes("Today")) { 
      return (
-      <Card className="bg-card/80 rounded-md shadow-sm">
+      <Card>
         <CardHeader className="p-4">
-           {displayTitle && ( // This title is the section title from homepage, not rendered *inside* card header
+           {displayTitle && (
             <div className="flex items-center space-x-3 mb-2">
               <Info className="h-6 w-6 text-muted-foreground" />
               <h2 className="text-lg font-semibold tracking-tight">{displayTitle}</h2>
@@ -157,16 +156,16 @@ export default function BiblePlanDisplay({
 
   if (!readingToDisplay) {
     return (
-      <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2 min-h-[44px]">
+      <Card>
+        <CardHeader className="p-4">
              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <CalendarX className="h-4 w-4 shrink-0" />
-                <p>No reading scheduled for this time.</p>
+                <p>No reading scheduled for today.</p>
             </div>
         </CardHeader>
         {!hidePlanMeta && planDescription && (
-            <CardContent className="p-2 pt-0 border-t mt-2">
-                <CardDescription className="text-xs text-muted-foreground mt-2">
+            <CardContent className="p-4 pt-0">
+                <CardDescription className="text-xs text-muted-foreground">
                 Current Plan: "{planDescription}"
                 {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
                 </CardDescription>
@@ -178,66 +177,56 @@ export default function BiblePlanDisplay({
 
   return (
     <>
-      <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-2 flex flex-row items-center justify-between space-x-2 border-b min-h-[44px]">
-          <h3 className="text-sm font-semibold flex items-center">
-            {parsedDayDate ? format(parsedDayDate, "EEE, MMM d, yyyy") : "Reading Date"}
-            {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="ml-2 h-4 w-4 text-green-500 shrink-0" />}
-          </h3>
-          {currentUser && onToggleAllToday && validPassagesForThisReading.length > 0 && !isAllPassagesForThisReadingComplete && (
-             <Button
-                size="xs" 
-                variant="outline"
-                onClick={handleMarkDayComplete}
-                disabled={isTogglingDay}
-                className="h-auto py-1 px-2 text-xs"
-              >
-                {isTogglingDay ? (
-                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                ) : (
-                  <CheckSquare className="mr-1.5 h-3 w-3" />
-                )}
-                Mark Day Complete
-              </Button>
-          )}
+      <Card className="bg-card/90 rounded-lg shadow-sm">
+        <CardHeader className="p-4">
+          <div className="flex justify-between items-center">
+              <div>
+                 <p className="text-sm font-semibold text-primary">{parsedDayDate ? format(parsedDayDate, "EEEE").toUpperCase() : "DATE"}</p>
+                 <CardTitle className="text-xl">{parsedDayDate ? format(parsedDayDate, "MMMM d, yyyy") : "Reading Date"}</CardTitle>
+              </div>
+              {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />}
+              {currentUser && onToggleAllToday && validPassagesForThisReading.length > 0 && !isAllPassagesForThisReadingComplete && (
+                <Button
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleMarkDayComplete}
+                    disabled={isTogglingDay}
+                    className="h-auto py-1 px-3"
+                >
+                    {isTogglingDay ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    )}
+                    Mark Day Complete
+                </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="p-2 space-y-1.5">
+        <CardContent className="p-4 pt-2 space-y-2">
           {validPassagesForThisReading.length > 0 ? (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-2 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
-                if (!passage || !passage.displayText || typeof passage.displayText !== 'string' || passage.displayText.trim() === '') {
-                   console.warn(`[BiblePlanDisplay] RENDERING: Skipping invalid passage in map. Passage:`, passage ? JSON.parse(JSON.stringify(passage)) : "null/undefined passage");
-                   return (
-                      <li key={`error-passage-${index}`} className="p-1.5 text-xs italic text-destructive font-semibold">
-                          Error: Invalid passage data for display.
-                      </li>
-                   );
-                }
-
-                const bookIdPart = (typeof passage.book === 'string' && passage.book.trim() !== '') ? passage.book.trim().replace(/\s+/g, '-') : `unknown-book-${index}`;
-                const chapterIdPart = (passage.chapter !== undefined && (typeof passage.chapter === 'number' || (typeof passage.chapter === 'string' && String(passage.chapter).trim() !== ''))) ? String(passage.chapter) : `unknown-chapter-${index}`;
-                const passageIdPart = `passage-${displayTitle ? displayTitle.replace(/\s+/g, '-') : (parsedDayDate ? format(parsedDayDate, "yyyy-MM-dd") : 'unknown-date')}-${bookIdPart}-${chapterIdPart}-${index}`;
-
-
+                const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
                 const isChecked = completedPassages.includes(passage.displayText);
                 const isPassageValid = !passage.displayText.startsWith("Error:");
 
                 return (
-                  <li key={passageIdPart} className="bg-background/50 border rounded-md flex items-center space-x-2 transition-colors hover:bg-muted/40 p-1.5 text-xs">
+                  <li key={passageIdPart} className="bg-background/70 border rounded-md flex items-center space-x-3 p-3 transition-colors hover:bg-muted/40">
                     {showIndividualCheckboxes && (
                       <Checkbox
                         id={passageIdPart}
                         checked={isChecked}
                         onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
                         aria-label={`Mark ${passage.displayText} as read`}
-                        className="h-3.5 w-3.5"
+                        className="h-5 w-5"
                         disabled={!isPassageValid || isTogglingDay}
                       />
                     )}
                     <Label
                       htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
                       className={cn(
-                        "flex-grow",
+                        "flex-grow font-medium text-base",
                         showIndividualCheckboxes && "cursor-pointer",
                         isChecked && "line-through text-muted-foreground"
                       )}
@@ -246,7 +235,7 @@ export default function BiblePlanDisplay({
                         <Button
                           variant="link"
                           className={cn(
-                            "p-0 h-auto text-xs font-normal text-left justify-start hover:no-underline",
+                            "p-0 h-auto text-base font-medium text-left justify-start hover:no-underline",
                              isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}
                           onClick={() => handlePassageClick(passage.displayText)}
@@ -264,7 +253,7 @@ export default function BiblePlanDisplay({
               })}
             </ul>
           ) : (
-             <p className="text-muted-foreground text-xs p-1.5">No specific passages assigned for this reading.</p>
+             <p className="text-muted-foreground text-sm p-2">No specific passages assigned for this reading.</p>
           )}
            {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">

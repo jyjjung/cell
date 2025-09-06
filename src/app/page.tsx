@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2 } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, isAfter } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -88,6 +88,18 @@ export default function HomePage() {
     if (loadingChecklist || planLoading || totalPassagesUpToToday === 0) return null; 
     return `${completedPassages.length} of ${totalPassagesUpToToday}`;
   }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
+  
+  const upcomingEventsCount = useMemo(() => {
+    if (!isMounted) return 0;
+    const today = startOfDay(new Date());
+    return allEvents.filter(event => {
+        try {
+          const eventDate = parseISO(event.date);
+          return isValid(eventDate) && !isBefore(eventDate, today);
+        } catch(e) { return false; }
+    }).length;
+  }, [allEvents, isMounted]);
+
 
   if (!isMounted) {
     return (
@@ -107,7 +119,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
             title="Upcoming Events"
-            value={eventsLoading ? null : allEvents.filter(e => isAfter(parseISO(e.date), new Date())).length}
+            value={eventsLoading ? null : upcomingEventsCount}
             isLoading={eventsLoading}
             buttonText="View Calendar"
             buttonLink="/calendar"
@@ -175,5 +187,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
