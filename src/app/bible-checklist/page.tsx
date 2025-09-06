@@ -20,7 +20,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion } from '@/components/ui/accordion';
 
 
 interface WeeklyProgress {
@@ -193,8 +193,7 @@ export default function BibleChecklistPage() {
     const isCompletedSummary = 'type' in selectedWeek && selectedWeek.type === 'completed-summary';
     const title = isCompletedSummary ? selectedWeek.title : `Week ${selectedWeek.weekNumber}`;
     const readingsToMap = isCompletedSummary ? selectedWeek.weeks.flatMap(w => w.readings) : selectedWeek.readings;
-    const weeklyGroupings = isCompletedSummary ? selectedWeek.weeks : null;
-
+    
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
@@ -203,38 +202,7 @@ export default function BibleChecklistPage() {
         <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
         
         <Accordion type="multiple" className="w-full space-y-2">
-            {weeklyGroupings ? (
-                weeklyGroupings.map(week => (
-                    <AccordionItem key={`summary-week-${week.weekNumber}`} value={`summary-week-${week.weekNumber}`} className="border-b-0">
-                         <Card>
-                            <AccordionTrigger className="p-3 hover:no-underline w-full">
-                                <div className="w-full text-left">
-                                    <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
-                                    <CardTitle className="text-lg">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pt-0">
-                                {week.readings
-                                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-                                    .map(reading => (
-                                        <BiblePlanDisplay
-                                            key={reading.date}
-                                            readingToDisplay={reading}
-                                            currentUser={currentUser}
-                                            completedPassages={completedPassages}
-                                            togglePassageCompletion={togglePassageCompletion}
-                                            allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
-                                            loading={loadingChecklist}
-                                            planAvailable={true}
-                                            hidePlanMeta={true}
-                                        />
-                                ))}
-                            </AccordionContent>
-                        </Card>
-                    </AccordionItem>
-                ))
-            ) : (
-                readingsToMap
+            {readingsToMap
                 .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                 .map(reading => (
                     <BiblePlanDisplay
@@ -248,8 +216,7 @@ export default function BibleChecklistPage() {
                         planAvailable={true}
                         hidePlanMeta={true}
                     />
-                ))
-            )}
+            ))}
         </Accordion>
          <BackToTopButton />
       </div>
