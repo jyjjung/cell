@@ -36,6 +36,15 @@ interface WeeklyProgress {
   isOverdue: boolean;
 }
 
+// Define a type for the selected week to handle the completed weeks summary case
+type SelectedWeekType = WeeklyProgress | { 
+  type: 'completed-summary';
+  title: string;
+  weeks: WeeklyProgress[]; 
+  startDate: Date; 
+  endDate: Date; 
+};
+
 
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -46,7 +55,7 @@ export default function BibleChecklistPage() {
   const { toast } = useToast();
 
   const [isMounted, setIsMounted] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState<WeeklyProgress | { weekNumber: string, readings: DailyReading[], startDate: Date, endDate: Date } | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<SelectedWeekType | null>(null);
   const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -179,41 +188,72 @@ export default function BibleChecklistPage() {
     return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
-  // View for selected week
+  // View for selected week or completed weeks
   if (selectedWeek) {
-    const title = typeof selectedWeek.weekNumber === 'string' 
-      ? selectedWeek.weekNumber
-      : `Week ${selectedWeek.weekNumber}`;
-    
+    const isCompletedSummary = 'type' in selectedWeek && selectedWeek.type === 'completed-summary';
+    const title = isCompletedSummary ? selectedWeek.title : `Week ${selectedWeek.weekNumber}`;
+    const readingsToMap = isCompletedSummary ? selectedWeek.weeks.flatMap(w => w.readings) : selectedWeek.readings;
+    const weeklyGroupings = isCompletedSummary ? selectedWeek.weeks : null;
+
     return (
-        <div className="space-y-6">
-            <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-            <h2 className="text-muted-foreground -mt-4">{`${format(selectedWeek.startDate, 'MMM d')} - ${format(selectedWeek.endDate, 'MMM d, yyyy')}`}</h2>
-            
-            <Accordion type="multiple" className="w-full space-y-2">
-                {selectedWeek.readings
-                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-                    .map(reading => (
-                        <BiblePlanDisplay
-                            key={reading.date}
-                            readingToDisplay={reading}
-                            currentUser={currentUser}
-                            completedPassages={completedPassages}
-                            togglePassageCompletion={togglePassageCompletion}
-                            onToggleAllToday={markMultiplePassages}
-                            allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
-                            loading={loadingChecklist}
-                            planAvailable={true}
-                            hidePlanMeta={true}
-                        />
-                ))}
-            </Accordion>
-             <BackToTopButton />
-        </div>
-    )
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+        
+        <Accordion type="multiple" className="w-full space-y-2">
+            {weeklyGroupings ? (
+                weeklyGroupings.map(week => (
+                    <AccordionItem key={`summary-week-${week.weekNumber}`} value={`summary-week-${week.weekNumber}`} className="border-b-0">
+                         <Card>
+                            <AccordionTrigger className="p-3 hover:no-underline w-full">
+                                <div className="w-full text-left">
+                                    <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                                    <CardTitle className="text-lg">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-0">
+                                {week.readings
+                                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                                    .map(reading => (
+                                        <BiblePlanDisplay
+                                            key={reading.date}
+                                            readingToDisplay={reading}
+                                            currentUser={currentUser}
+                                            completedPassages={completedPassages}
+                                            togglePassageCompletion={togglePassageCompletion}
+                                            allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                                            loading={loadingChecklist}
+                                            planAvailable={true}
+                                            hidePlanMeta={true}
+                                        />
+                                ))}
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
+                ))
+            ) : (
+                readingsToMap
+                .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                .map(reading => (
+                    <BiblePlanDisplay
+                        key={reading.date}
+                        readingToDisplay={reading}
+                        currentUser={currentUser}
+                        completedPassages={completedPassages}
+                        togglePassageCompletion={togglePassageCompletion}
+                        allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                        loading={loadingChecklist}
+                        planAvailable={true}
+                        hidePlanMeta={true}
+                    />
+                ))
+            )}
+        </Accordion>
+         <BackToTopButton />
+      </div>
+    );
   }
 
   // Main view listing all weeks
@@ -255,22 +295,20 @@ export default function BibleChecklistPage() {
                         "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
                     )}
                     onClick={() => {
-                        const allReadings = completedWeeks.flatMap(w => w.readings);
-                        const startDate = completedWeeks[0].startDate;
-                        const endDate = completedWeeks[completedWeeks.length - 1].endDate;
                         setSelectedWeek({
-                            weekNumber: `WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`,
-                            readings: allReadings,
-                            startDate,
-                            endDate
+                            type: 'completed-summary',
+                            title: 'Completed Weeks',
+                            weeks: completedWeeks,
+                            startDate: completedWeeks[0].startDate,
+                            endDate: completedWeeks[completedWeeks.length - 1].endDate
                         });
                     }}
                 >
                     <CardHeader className="p-4">
                        <div className="flex justify-between items-center">
                             <div>
-                                <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED WEEKS</p>
-                                <CardTitle className="text-xl">{`WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
+                                <CardTitle className="text-xl text-green-600 dark:text-green-400">COMPLETED WEEKS</CardTitle>
+                                <p className="text-sm font-semibold text-muted-foreground">{`WEEKS ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</p>
                             </div>
                        </div>
                     </CardHeader>
@@ -310,3 +348,6 @@ export default function BibleChecklistPage() {
     </>
   );
 }
+
+
+    
