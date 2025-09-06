@@ -25,7 +25,6 @@ export default function EventListItem({ event }: EventListItemProps) {
   const day = format(parsedDate, "d");
 
   const styleInfo = categoryStyles[event.category];
-  const Icon = styleInfo.icon;
   
   let descriptionText = '';
   if (event.category === EventCategory.Event && event.summary) {
@@ -41,17 +40,12 @@ export default function EventListItem({ event }: EventListItemProps) {
         <div className={cn("text-3xl font-bold transition-colors", styleInfo.text)}>{day}</div>
       </div>
       <div className="flex-grow pt-1">
-        <div className="flex items-center space-x-3">
-          <Icon className={cn("h-5 w-5", styleInfo.text)} />
-          <p className="font-semibold text-card-foreground">{event.title}</p>
-        </div>
-        <p className="text-sm text-muted-foreground ml-8">{format(parsedDate, "EEEE")}</p>
+        <p className="font-semibold text-card-foreground">{event.title}</p>
+        <p className="text-sm text-muted-foreground">{format(parsedDate, "EEEE")}</p>
         {descriptionText && (
-          <p className="text-sm text-muted-foreground mt-2 ml-8">{descriptionText}</p>
+          <p className="text-sm text-muted-foreground mt-2">{descriptionText}</p>
         )}
       </div>
     </div>
   );
 }
-
-    

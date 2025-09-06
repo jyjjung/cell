@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 
 const categoryBackgroundColors: { [key in EventCategory]: string } = {
@@ -69,16 +70,19 @@ export default function CalendarPage() {
     return map;
   }, [events]);
 
-  function CustomDay({ date, displayMonth }: DayProps) {
+  function CustomDay(props: DayProps) {
+    const { date, displayMonth } = props;
     const isCurrentMonth = displayMonth.getMonth() === date.getMonth();
     const dateStr = format(date, 'yyyy-MM-dd');
     const dayEvents = eventsByDate.get(dateStr) || [];
     const isToday = isSameDay(date, new Date());
 
     return (
-      <div
+      <button
+        type="button"
+        {...props.buttonProps}
         className={cn(
-          "relative flex h-full flex-col p-1.5 transition-colors border-t border-border",
+          "relative flex h-full flex-col p-1.5 transition-colors border-t border-border focus:z-10 focus:outline-none focus:bg-accent focus:ring-2 focus:ring-ring",
           !isCurrentMonth && "bg-muted/30 text-muted-foreground/50",
           isSameDay(date, selectedDate || new Date(0)) && isCurrentMonth && "bg-accent"
         )}
@@ -93,7 +97,7 @@ export default function CalendarPage() {
           {format(date, 'd')}
         </time>
         {isCurrentMonth && dayEvents.length > 0 && (
-          <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1">
+          <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1 text-left">
             {dayEvents.slice(0, 2).map((event) => (
               <div
                 key={event.id}
@@ -111,7 +115,7 @@ export default function CalendarPage() {
             )}
           </div>
         )}
-      </div>
+      </button>
     );
   }
 
@@ -187,8 +191,8 @@ export default function CalendarPage() {
                         head_row: "flex border-b border-border",
                         head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
                         row: "flex w-full",
-                        cell: "h-28 w-[14.28%] text-sm p-0 relative focus-within:relative focus-within:z-20 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
-                        day: "h-full w-full p-0 font-normal",
+                        cell: "h-28 w-[14.28%] p-0 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+                        day_button: "h-full w-full p-0 font-normal",
                         day_selected: "", // We handle selection styling in CustomDay
                         day_today: "", // We handle today styling in CustomDay
                         day_outside: "", // We handle outside day styling in CustomDay
