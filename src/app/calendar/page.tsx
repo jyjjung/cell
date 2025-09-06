@@ -97,11 +97,11 @@ export default function CalendarPage() {
         </time>
         {isCurrentMonth && dayEvents.length > 0 && (
           <div className="mt-1 flex-grow overflow-y-auto -mx-1 px-1 space-y-1 text-left">
-            {dayEvents.slice(0, 2).map((event) => (
+            {dayEvents.slice(0, 1).map((event) => (
               <div
                 key={event.id}
                 className={cn(
-                  "text-[11px] p-1 rounded-md leading-tight truncate font-medium",
+                  "text-[10px] p-0.5 rounded-sm leading-tight truncate font-medium",
                   categoryBackgroundColors[event.category],
                   categoryTextColors[event.category],
                 )}
@@ -109,8 +109,8 @@ export default function CalendarPage() {
                 {event.title}
               </div>
             ))}
-             {dayEvents.length > 2 && (
-              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 2} more</div>
+             {dayEvents.length > 1 && (
+              <div className="text-[10px] text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 1} more</div>
             )}
           </div>
         )}
@@ -178,6 +178,7 @@ export default function CalendarPage() {
                   <Calendar
                     mode="single"
                     selected={selectedDate}
+                    onSelect={setSelectedDate}
                     month={month}
                     onMonthChange={setMonth}
                     className="p-0"
@@ -189,7 +190,7 @@ export default function CalendarPage() {
                         head_row: "flex border-b border-border",
                         head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
                         row: "flex w-full",
-                        cell: "h-28 w-[14.28%] p-0 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
+                        cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r [&:not(:last-child)]:border-border",
                         day_button: "h-full w-full p-0 font-normal",
                         day_selected: "", // We handle selection styling in CustomDay
                         day_today: "", // We handle today styling in CustomDay
