@@ -20,6 +20,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
+import { Accordion } from '@/components/ui/accordion';
 
 
 interface WeeklyProgress {
@@ -148,10 +149,6 @@ export default function BibleChecklistPage() {
 
   // View for selected week
   if (selectedWeek) {
-     const allPassageTextsForWeek = selectedWeek.readings.flatMap(day => 
-        day.passages.map(p => p.displayText).filter(text => text && !text.startsWith("Error:"))
-      );
-
     return (
         <div className="space-y-6">
             <Button variant="ghost" onClick={() => setSelectedWeek(null)} className="mb-4">
@@ -160,9 +157,9 @@ export default function BibleChecklistPage() {
             <h1 className="text-3xl font-bold tracking-tight">Week {selectedWeek.weekNumber}</h1>
             <h2 className="text-lg text-muted-foreground -mt-4">{`${format(selectedWeek.startDate, 'MMM d')} - ${format(selectedWeek.endDate, 'MMM d, yyyy')}`}</h2>
             
-            <div className="space-y-4">
+            <Accordion type="multiple" className="w-full space-y-2">
                 {selectedWeek.readings
-                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                    .sort((a,b) => parseISO(a.date).getTime() - b.date.getTime())
                     .map(reading => (
                         <BiblePlanDisplay
                             key={reading.date}
@@ -174,11 +171,10 @@ export default function BibleChecklistPage() {
                             allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
                             loading={loadingChecklist}
                             planAvailable={true}
-                            hideDateInCard={true}
                             hidePlanMeta={true}
                         />
                 ))}
-            </div>
+            </Accordion>
              <BackToTopButton />
         </div>
     )
