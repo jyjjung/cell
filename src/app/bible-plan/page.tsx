@@ -6,63 +6,68 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion } from '@/components/ui/accordion';
-import { format, parseISO, startOfDay, isValid, isWithinInterval, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
-import { Loader2, Info } from 'lucide-react';
+import { format, parseISO, startOfWeek, endOfWeek, isValid } from 'date-fns';
+import { Loader2, Info, ArrowLeft, CalendarDays } from 'lucide-react';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
-import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { cn } from '@/lib/utils';
 
-type FilterMode = 'currentWeek' | 'fullPlan';
+interface WeeklyGrouping {
+  weekNumber: number;
+  startDate: Date;
+  endDate: Date;
+  readings: DailyReading[];
+}
+
+type ViewState = 
+  | { view: 'all-weeks' }
+  | { view: 'single-week-details'; week: WeeklyGrouping };
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
-  const [activeTab, setActiveTab] = useState<FilterMode>('currentWeek');
   const [isMounted, setIsMounted] = useState(false);
-  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
+  const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
   
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const sortedDailyReadings = useMemo(() => {
+  const weeklyGroupings = useMemo((): WeeklyGrouping[] => {
     if (!plan?.dailyReadings) return [];
-    return [...plan.dailyReadings].sort((a, b) => {
-      try {
-        const dateA = parseISO(a.date);
-        const dateB = parseISO(b.date);
-        if (!isValid(dateA) || !isValid(dateB)) return 0;
-        return dateA.getTime() - dateB.getTime();
-      } catch (e) { 
-         console.error("[FullBiblePlanPage] Error sorting daily readings by date:", a.date, b.date, e);
-        return 0; 
-      }
-    });
-  }, [plan]);
+    
+    const weeksMap = new Map<string, DailyReading[]>();
 
-  const sortedAndFilteredDailyReadings = useMemo(() => {
-     switch (activeTab) {
-      case 'currentWeek': {
-        const today = new Date();
-        const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 }); 
-        const currentWeekEnd = endOfWeek(today, { weekStartsOn: 0 });   
-        return sortedDailyReadings.filter(reading => {
-          try {
-            const readingDateObj = parseISO(reading.date); 
-            if (!isValid(readingDateObj)) return false;
-            return isWithinInterval(readingDateObj, { start: startOfDay(currentWeekStart), end: endOfDay(currentWeekEnd) });
-          } catch (e) { 
-            console.error(`[FullBiblePlanPage] Error parsing date for current week filtering: ${reading.date}`, e);
-            return false; 
-          }
-        });
+    for (const reading of plan.dailyReadings) {
+      try {
+        const date = parseISO(reading.date);
+        if (!isValid(date)) continue;
+        const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
+        const weekKey = format(weekStart, 'yyyy-MM-dd');
+
+        if (!weeksMap.has(weekKey)) {
+          weeksMap.set(weekKey, []);
+        }
+        weeksMap.get(weekKey)!.push(reading);
+      } catch (e) {
+        console.error("[FullBiblePlanPage] Error processing reading for week grouping:", reading, e);
       }
-      case 'fullPlan':
-      default:
-        return sortedDailyReadings;
     }
-  }, [sortedDailyReadings, activeTab]);
+    
+    return Array.from(weeksMap.entries())
+      .map(([weekKey, readings], index) => {
+        const weekStartDate = parseISO(weekKey);
+        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+        
+        return {
+          weekNumber: index + 1,
+          startDate: weekStartDate,
+          endDate: weekEndDate,
+          readings,
+        };
+      })
+      .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
+  }, [plan]);
 
   if (!isMounted) {
     return (
@@ -73,7 +78,7 @@ export default function FullBiblePlanPage() {
     );
   }
 
-  if (planLoading || loadingChecklist) {
+  if (planLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -95,41 +100,65 @@ export default function FullBiblePlanPage() {
               </p>
             </CardContent>
         </Card>
-        <BackToTopButton />
+      </div>
+    );
+  }
+
+  // View for a single week's daily readings
+  if (viewState.view === 'single-week-details') {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4"/> Back to Full Plan
+        </Button>
+        <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
+        
+        <Accordion type="single" collapsible className="w-full space-y-2">
+            {viewState.week.readings
+                .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                .map(reading => (
+                  <BiblePlanDisplay
+                    key={reading.date}
+                    readingToDisplay={reading}
+                    currentUser={null}
+                    completedPassages={[]}
+                    togglePassageCompletion={async () => {}}
+                    loading={false}
+                    planAvailable={true}
+                    hidePlanMeta={true}
+                  />
+            ))}
+        </Accordion>
+         <BackToTopButton />
       </div>
     );
   }
   
+  // Main view listing all weeks
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Full Bible Reading Plan</h1>
+      <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center self-start sm:self-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> Full Bible Reading Plan</h1>
+      </div>
 
-       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as FilterMode)} className="w-full">
-         <TabsList className="w-full sm:w-auto grid grid-cols-2">
-           <TabsTrigger value="currentWeek">Current Week</TabsTrigger>
-           <TabsTrigger value="fullPlan">Full Plan</TabsTrigger>
-         </TabsList>
-        <div className="mt-4">
-          {sortedAndFilteredDailyReadings.length === 0 ? (
-            <Card><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No readings found for this filter.</p></CardContent></Card>
-          ) : (
-            <Accordion type="single" collapsible className="w-full space-y-2">
-                {sortedAndFilteredDailyReadings.map((reading) => (
-                    <BiblePlanDisplay
-                        key={reading.date}
-                        readingToDisplay={reading}
-                        currentUser={null} // Pass null for guest view
-                        completedPassages={[]} // Empty for guest view
-                        togglePassageCompletion={async () => {}} // No-op for guest
-                        loading={planLoading}
-                        planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                        hidePlanMeta={true}
-                    />
-                ))}
-            </Accordion>
-          )}
+       <div className="space-y-3">
+          {weeklyGroupings.map((week) => (
+              <Card 
+                  key={week.weekNumber}
+                  className="shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
+                  onClick={() => setViewState({ view: 'single-week-details', week: week })}
+              >
+                  <CardHeader className="p-4">
+                     <div className="flex justify-between items-center">
+                          <div>
+                              <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                              <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                          </div>
+                     </div>
+                  </CardHeader>
+              </Card>
+          ))}
         </div>
-      </Tabs>
       <BackToTopButton />
     </div>
   );
