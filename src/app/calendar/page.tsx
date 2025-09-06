@@ -46,6 +46,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Set selected date on mount to avoid hydration mismatch
     setSelectedDate(new Date());
   }, []);
 
