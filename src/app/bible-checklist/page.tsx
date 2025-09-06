@@ -194,7 +194,7 @@ export default function BibleChecklistPage() {
         
         <Accordion type="single" collapsible className="w-full space-y-2">
             {viewState.week.readings
-                .sort((a,b) => parseISO(a.date).getTime() - b.date.getTime())
+                .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                 .map(reading => (
                   <BiblePlanDisplay
                     key={reading.date}
@@ -294,7 +294,7 @@ export default function BibleChecklistPage() {
                        <div className="flex justify-between items-center">
                             <div>
                                 <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED</p>
-                                <CardTitle className="text-xl">{`Weeks ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
+                                <CardTitle className="text-xl">{`weeks ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
                             </div>
                              <CheckCircle className="h-8 w-8 text-green-500" />
                        </div>
@@ -335,7 +335,5 @@ export default function BibleChecklistPage() {
     </>
   );
 }
-
-    
 
     
