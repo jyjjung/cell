@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { format, parseISO, isToday, isValid } from 'date-fns';
+import { format, parseISO, isToday, isValid, isBefore, startOfDay } from 'date-fns';
 import { CalendarX, CheckSquare, CheckCircle2, BookOpen, BookHeart, Loader2, Info } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
@@ -64,36 +64,14 @@ export default function BiblePlanDisplay({
     return readingToDisplay?.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
   }, [readingToDisplay]);
 
-  const passageSummary = useMemo(() => {
-    return validPassagesForThisReading.map(p => p.displayText).join(', ');
-  }, [validPassagesForThisReading]);
-
+  
   const isAllPassagesForThisReadingComplete = useMemo(() => {
     if (!allPassageTextsForDay || allPassageTextsForDay.length === 0) return false;
     const validTextsFromProp = allPassageTextsForDay.filter(text => text && !text.startsWith("Error:"));
     if (validTextsFromProp.length === 0) return false;
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allPassageTextsForDay, completedPassages]);
-
-  const handleMarkDayComplete = async () => {
-    if (onToggleAllToday && allPassageTextsForDay.length > 0) {
-      const validPassageTextsToToggle = allPassageTextsForDay.filter(text => text && !text.startsWith("Error:"));
-      if (validPassageTextsToToggle.length > 0) {
-        setIsTogglingDay(true);
-        try {
-          await onToggleAllToday(validPassageTextsToToggle, true);
-          let dayDateFormatted = "this day";
-          if (parsedDayDate) dayDateFormatted = format(parsedDayDate, "MMM d");
-          toast({ title: "Day Marked Complete", description: `All passages for ${dayDateFormatted} marked as read.` });
-        } catch (error: any) {
-          toast({ title: "Error", description: `Could not mark day complete: ${error.message}`, variant: "destructive" });
-        } finally {
-          setIsTogglingDay(false);
-        }
-      }
-    }
-  };
-
+  
   let parsedDayDate: Date | null = null;
   if (readingToDisplay?.date) {
     try {
@@ -104,6 +82,10 @@ export default function BiblePlanDisplay({
       parsedDayDate = null;
     }
   }
+
+  const isCurrentDay = parsedDayDate ? isToday(parsedDayDate) : false;
+  const isOverdueDay = parsedDayDate ? !isAllPassagesForThisReadingComplete && isBefore(parsedDayDate, startOfDay(new Date())) : false;
+
 
   const handlePassageClick = (passageDisplayText: string | undefined) => {
     if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
@@ -181,28 +163,26 @@ export default function BiblePlanDisplay({
   return (
     <>
       <AccordionItem value={readingToDisplay.date} className="border-b-0">
-         <Card className="bg-card/90 rounded-lg shadow-sm w-full">
+         <Card className={cn(
+             "bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200",
+             isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
+             isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
+             isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : ""
+         )}>
             <AccordionTrigger className="p-3 hover:no-underline w-full">
               <div className="flex justify-between items-center w-full">
                   <div className="text-left">
                       {parsedDayDate && (
-                          <p className="text-sm font-semibold text-primary">{format(parsedDayDate, "EEEE").toUpperCase()}</p>
+                          <p className={cn(
+                              "text-sm font-semibold",
+                              isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
+                              isCurrentDay ? "text-blue-600 dark:text-blue-400" :
+                              isOverdueDay ? "text-red-600 dark:text-red-400" :
+                              "text-primary"
+                          )}>
+                              {format(parsedDayDate, "EEEE").toUpperCase()}
+                          </p>
                       )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />}
-                    {currentUser && onToggleAllToday && validPassagesForThisReading.length > 0 && !isAllPassagesForThisReadingComplete && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => { e.stopPropagation(); handleMarkDayComplete(); }}
-                            disabled={isTogglingDay}
-                            className="h-auto py-1 px-2 text-xs"
-                        >
-                            {isTogglingDay ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <CheckSquare className="mr-2 h-3 w-3" />}
-                            Mark as Read
-                        </Button>
-                    )}
                   </div>
               </div>
             </AccordionTrigger>
