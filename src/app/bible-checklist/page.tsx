@@ -155,7 +155,6 @@ export default function BibleChecklistPage() {
                 <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
             </Button>
             <h1 className="text-3xl font-bold tracking-tight">Week {selectedWeek.weekNumber}</h1>
-            <h2 className="text-lg text-muted-foreground -mt-4">{`${format(selectedWeek.startDate, 'MMM d')} - ${format(selectedWeek.endDate, 'MMM d, yyyy')}`}</h2>
             
             <Accordion type="multiple" className="w-full space-y-2">
                 {selectedWeek.readings
