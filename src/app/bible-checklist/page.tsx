@@ -18,11 +18,14 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import ChapterUnit from '@/components/bible/chapter-unit';
+import { isBefore, parseISO, startOfDay } from 'date-fns';
+
 
 interface ChapterWithStatus {
   chapter: number;
   isCompleted: boolean;
   passages: StructuredPassage[];
+  date: string; // Add date to determine if overdue
 }
 
 interface BookSection {
@@ -59,14 +62,11 @@ export default function BibleChecklistPage() {
 
     const sections: BookSection[] = [];
     let currentBookName: string | null = null;
-    let currentChaptersMap = new Map<number, { passages: StructuredPassage[] }>();
+    let currentChaptersMap = new Map<number, { passages: StructuredPassage[], date: string }>();
     
-    // Helper function to convert a number to a Roman numeral.
     const toRoman = (num: number): string => {
-      const romanMap: { [key: number]: string } = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' };
-      if (romanMap[num]) return romanMap[num];
-      // Fallback for numbers greater than 10, though unlikely for book parts.
-      return num.toString();
+      const romanMap: { [key: number]: string } = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' };
+      return romanMap[num] || num.toString();
     };
 
     const processCurrentSection = () => {
@@ -76,13 +76,13 @@ export default function BibleChecklistPage() {
                 .map(([chapter, data]) => {
                     const validPassagesInChapter = data.passages.filter(p => p.displayText && !p.displayText.startsWith("Error:"));
                     const isCompleted = validPassagesInChapter.length > 0 && validPassagesInChapter.every(p => completedPassages.includes(p.displayText));
-                    return { chapter, isCompleted, passages: data.passages };
+                    return { chapter, isCompleted, passages: data.passages, date: data.date };
                 });
             
             const completedChapterCount = chaptersWithStatus.filter(c => c.isCompleted).length;
 
             sections.push({
-                sectionTitle: currentBookName, // Title will be adjusted later
+                sectionTitle: currentBookName,
                 bookName: currentBookName,
                 chapters: chaptersWithStatus,
                 completedChapters: completedChapterCount,
@@ -96,20 +96,19 @@ export default function BibleChecklistPage() {
             if (!passage || !passage.book || !passage.chapter) continue;
             
             if (passage.book !== currentBookName) {
-                processCurrentSection(); // Finalize and add the previous section
+                processCurrentSection();
                 currentBookName = passage.book;
                 currentChaptersMap = new Map();
             }
 
             if (!currentChaptersMap.has(passage.chapter)) {
-                currentChaptersMap.set(passage.chapter, { passages: [] });
+                currentChaptersMap.set(passage.chapter, { passages: [], date: dailyReading.date });
             }
             currentChaptersMap.get(passage.chapter)!.passages.push(passage);
         }
     }
-    processCurrentSection(); // Add the last section
+    processCurrentSection();
 
-    // Now, determine which books appear more than once and adjust titles
     const bookAppearanceCounts = sections.reduce((acc, section) => {
         acc.set(section.bookName, (acc.get(section.bookName) || 0) + 1);
         return acc;
@@ -128,8 +127,6 @@ export default function BibleChecklistPage() {
   }, [plan, completedPassages]);
   
   const handleChapterClick = (chapterData: ChapterWithStatus) => {
-    // For now, we will just use the first passage's reference to open the dialog.
-    // The dialog itself allows navigation. A more complex approach could pass all passages.
     const firstPassage = chapterData.passages?.[0];
     if (firstPassage?.displayText) {
       setSelectedPassageRef(firstPassage.displayText);
@@ -164,6 +161,7 @@ export default function BibleChecklistPage() {
     return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
+  const today = startOfDay(new Date());
 
   return (
     <div className="space-y-6">
@@ -194,15 +192,19 @@ export default function BibleChecklistPage() {
                            </CardHeader>
                             <AccordionContent>
                                 <div className="p-4 border-t">
-                                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4 justify-center">
-                                        {section.chapters.map((chapter) => (
-                                            <ChapterUnit
-                                                key={`${section.bookName}-${chapter.chapter}`}
-                                                chapterNumber={chapter.chapter}
-                                                isCompleted={chapter.isCompleted}
-                                                onClick={() => handleChapterClick(chapter)}
-                                            />
-                                        ))}
+                                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-x-4 gap-y-6">
+                                        {section.chapters.map((chapter) => {
+                                            const isOverdue = !chapter.isCompleted && isBefore(parseISO(chapter.date), today);
+                                            return (
+                                              <ChapterUnit
+                                                  key={`${section.bookName}-${chapter.chapter}`}
+                                                  chapterNumber={chapter.chapter}
+                                                  isCompleted={chapter.isCompleted}
+                                                  isOverdue={isOverdue}
+                                                  onClick={() => handleChapterClick(chapter)}
+                                              />
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </AccordionContent>
@@ -229,7 +231,3 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
-
-    
-
-    
