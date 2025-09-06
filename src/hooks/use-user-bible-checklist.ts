@@ -223,5 +223,4 @@ export function useUserBibleChecklist() {
 
   return { completedPassages, togglePassageCompletion, markReadRange, markMultiplePassages, loadingChecklist };
 }
-
     

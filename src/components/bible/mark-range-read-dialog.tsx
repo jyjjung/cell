@@ -148,5 +148,4 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
     </Dialog>
   );
 }
-
     
