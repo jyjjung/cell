@@ -26,7 +26,8 @@ interface ChapterWithStatus {
 }
 
 interface BookSection {
-  bookName: string;
+  sectionTitle: string; // e.g., "Genesis" or "1 Kings (Part 1)"
+  bookName: string; // The canonical book name, e.g. "Genesis"
   chapters: ChapterWithStatus[];
   completedChapters: number;
   totalChapters: number;
@@ -56,53 +57,68 @@ export default function BibleChecklistPage() {
   const bookSections = useMemo((): BookSection[] => {
     if (!plan?.dailyReadings) return [];
 
-    const chaptersByBook = new Map<string, Map<number, { passages: StructuredPassage[] }>>();
-    const bookOrderInPlan: string[] = [];
+    const sections: BookSection[] = [];
+    let currentBookName: string | null = null;
+    let currentChaptersMap = new Map<number, { passages: StructuredPassage[] }>();
+    const bookPartCounters = new Map<string, number>();
 
-    // 1. Group all passages by Book -> Chapter and establish plan order
-    for (const dailyReading of plan.dailyReadings) {
-        for (const passage of dailyReading.passages) {
-            if (!passage || !passage.book || !passage.chapter) continue;
-            
-            if (!chaptersByBook.has(passage.book)) {
-                chaptersByBook.set(passage.book, new Map());
-                bookOrderInPlan.push(passage.book); // Add book to order only when first seen
-            }
-            const bookMap = chaptersByBook.get(passage.book)!;
+    const processCurrentSection = () => {
+        if (currentBookName && currentChaptersMap.size > 0) {
+            const partCount = (bookPartCounters.get(currentBookName) || 0) + 1;
+            bookPartCounters.set(currentBookName, partCount);
 
-            if (!bookMap.has(passage.chapter)) {
-                bookMap.set(passage.chapter, { passages: [] });
-            }
-            bookMap.get(passage.chapter)!.passages.push(passage);
-        }
-    }
-
-    // 2. Build the BookSection array based on the discovered plan order
-    return bookOrderInPlan
-        .map(bookName => {
-            const bookMeta = BIBLE_BOOKS_DATA[bookName];
-            const chaptersMap = chaptersByBook.get(bookName)!;
-            
-            const chaptersWithStatus: ChapterWithStatus[] = Array.from(chaptersMap.entries())
+            const chaptersWithStatus: ChapterWithStatus[] = Array.from(currentChaptersMap.entries())
                 .sort(([a], [b]) => a - b)
                 .map(([chapter, data]) => {
                     const validPassagesInChapter = data.passages.filter(p => p.displayText && !p.displayText.startsWith("Error:"));
                     const isCompleted = validPassagesInChapter.length > 0 && validPassagesInChapter.every(p => completedPassages.includes(p.displayText));
-                    return {
-                        chapter,
-                        isCompleted,
-                        passages: data.passages,
-                    };
+                    return { chapter, isCompleted, passages: data.passages };
                 });
             
             const completedChapterCount = chaptersWithStatus.filter(c => c.isCompleted).length;
 
-            return {
-                bookName,
+            sections.push({
+                sectionTitle: currentBookName, // Title will be adjusted later
+                bookName: currentBookName,
                 chapters: chaptersWithStatus,
                 completedChapters: completedChapterCount,
                 totalChapters: chaptersWithStatus.length,
-            };
+            });
+        }
+    };
+
+    for (const dailyReading of plan.dailyReadings) {
+        for (const passage of dailyReading.passages) {
+            if (!passage || !passage.book || !passage.chapter) continue;
+            
+            if (passage.book !== currentBookName) {
+                processCurrentSection(); // Finalize and add the previous section
+                currentBookName = passage.book;
+                currentChaptersMap = new Map();
+            }
+
+            if (!currentChaptersMap.has(passage.chapter)) {
+                currentChaptersMap.set(passage.chapter, { passages: [] });
+            }
+            currentChaptersMap.get(passage.chapter)!.passages.push(passage);
+        }
+    }
+    processCurrentSection(); // Add the last section
+
+    // Now, determine which books appear more than once and adjust titles
+    const bookAppearanceCounts = sections.reduce((acc, section) => {
+        acc.set(section.bookName, (acc.get(section.bookName) || 0) + 1);
+        return acc;
+    }, new Map<string, number>());
+
+    const bookPartTracker = new Map<string, number>();
+    return sections.map(section => {
+        if ((bookAppearanceCounts.get(section.bookName) || 0) > 1) {
+            const partNumber = (bookPartTracker.get(section.bookName) || 0) + 1;
+            bookPartTracker.set(section.bookName, partNumber);
+            return { ...section, sectionTitle: `${section.bookName} (Part ${partNumber})` };
+        }
+        return section;
     });
 
   }, [plan, completedPassages]);
@@ -154,14 +170,14 @@ export default function BibleChecklistPage() {
         {bookSections.length > 0 ? (
             <Accordion type="multiple" className="w-full space-y-3">
                 {bookSections.map((section, index) => (
-                    <AccordionItem value={`item-${index}`} key={section.bookName} className="border-b-0">
+                    <AccordionItem value={`item-${index}`} key={section.sectionTitle} className="border-b-0">
                         <Card className="shadow-sm bg-card/80">
                            <CardHeader className="p-0">
                              <AccordionTrigger className="p-4 hover:no-underline">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
                                     <div className="text-left">
                                         <p className="text-xs font-semibold uppercase text-primary tracking-wider">Section {index + 1}</p>
-                                        <h2 className="text-xl font-bold text-card-foreground">{section.bookName}</h2>
+                                        <h2 className="text-xl font-bold text-card-foreground">{section.sectionTitle}</h2>
                                     </div>
                                     <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto max-w-xs">
                                         <Progress value={(section.completedChapters / section.totalChapters) * 100} className="w-full" />
@@ -209,3 +225,5 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    
