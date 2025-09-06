@@ -122,14 +122,14 @@ export default function BiblePlanDisplay({
   if (loading) {
     return (
       <Card className="bg-card/80 rounded-md shadow-sm">
-        <CardHeader className="p-4"> 
-           <div className="h-5 bg-muted rounded w-3/4 animate-pulse mb-1"></div> {/* Date Skeleton */}
-           <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
+        <CardHeader className="p-3"> 
+           <div className="h-4 bg-muted rounded w-3/4 animate-pulse mb-1"></div> {/* Date Skeleton */}
+           <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div>
         </CardHeader>
-        <CardContent className="p-4 space-y-2">
-            <div className="h-6 bg-muted rounded w-full animate-pulse"></div>
-            <div className="h-6 bg-muted rounded w-5/6 animate-pulse"></div>
-            <div className="h-6 bg-muted rounded w-full animate-pulse"></div>
+        <CardContent className="p-3 pt-0 space-y-1.5">
+            <div className="h-5 bg-muted rounded w-full animate-pulse"></div>
+            <div className="h-5 bg-muted rounded w-5/6 animate-pulse"></div>
+            <div className="h-5 bg-muted rounded w-full animate-pulse"></div>
         </CardContent>
       </Card>
     );
@@ -180,10 +180,11 @@ export default function BiblePlanDisplay({
       <Card className="bg-card/90 rounded-lg shadow-sm">
         <CardHeader className="p-3">
           <div className="flex justify-between items-center">
-              <div>
-                 <p className="text-xs font-semibold text-primary">{parsedDayDate ? format(parsedDayDate, "EEEE").toUpperCase() : "DATE"}</p>
-                 <CardTitle className="text-lg">{parsedDayDate ? format(parsedDayDate, "MMMM d, yyyy") : "Reading Date"}</CardTitle>
-              </div>
+            {parsedDayDate && (
+                 <div>
+                    <p className="text-sm font-semibold text-primary">{format(parsedDayDate, "EEEE").toUpperCase()}</p>
+                 </div>
+            )}
               {isAllPassagesForThisReadingComplete && validPassagesForThisReading.length > 0 && <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />}
               {currentUser && onToggleAllToday && validPassagesForThisReading.length > 0 && !isAllPassagesForThisReadingComplete && (
                 <Button

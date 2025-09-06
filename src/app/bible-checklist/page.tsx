@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import BackToTopButton from '@/components/ui/back-to-top-button';
 
 
 interface WeeklyProgress {
@@ -151,6 +152,7 @@ export default function BibleChecklistPage() {
                         />
                 ))}
             </div>
+             <BackToTopButton />
         </div>
     )
   }
@@ -186,6 +188,7 @@ export default function BibleChecklistPage() {
                 </Card>
             ))}
         </div>
+        <BackToTopButton />
     </div>
   );
 }
