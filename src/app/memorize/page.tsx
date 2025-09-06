@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import VerseDisplayDialog from '@/components/memorize/verse-display-dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import { Loader2, Brain, BookOpen, Info, ListChecks } from 'lucide-react';
+import { Loader2, Zap, BookOpen, Info, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function MemorizePage() {
@@ -46,8 +46,8 @@ export default function MemorizePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3 mb-4">
-        <Brain className="h-7 w-7 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight">Memory Verses</h1>
+        <Zap className="h-7 w-7 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight">Power-Ups</h1>
       </div>
 
       {memoryVerses.length === 0 ? (
@@ -55,7 +55,7 @@ export default function MemorizePage() {
           <CardHeader>
             <div className="flex items-center space-x-2">
               <Info className="h-6 w-6 text-muted-foreground" />
-              <CardTitle className="text-xl">No Verses Added</CardTitle>
+              <CardTitle className="text-xl">No Power-Ups Available</CardTitle>
             </div>
           </CardHeader>
           <CardContent>

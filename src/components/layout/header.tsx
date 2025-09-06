@@ -65,7 +65,7 @@ export default function Header() {
       )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" onClick={() => handleLinkClick('/memorize')}>
-          Memorize
+          Power-Ups
         </Button>
       </Link>
     </>
@@ -92,7 +92,7 @@ export default function Header() {
       )}
       <Link href="/memorize" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
-          Memorize
+          Power-Ups
         </Button>
       </Link>
     </>
@@ -140,8 +140,8 @@ export default function Header() {
                             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <Link href="/profile" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/profile')}>Profile</DropdownMenuItem></Link>
-                            <Link href="/bible-checklist" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/bible-checklist')}>My Checklist</DropdownMenuItem></Link>
-                            <Link href="/progress-overview" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/progress-overview')}>Progress Overview</DropdownMenuItem></Link>
+                            <Link href="/bible-checklist" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/bible-checklist')}>My Quest</DropdownMenuItem></Link>
+                            <Link href="/progress-overview" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/progress-overview')}>Team Progress</DropdownMenuItem></Link>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleUserSignOutClick} className="text-destructive focus:text-destructive">
                                 <LogOut className="mr-2 h-4 w-4" />
@@ -203,8 +203,8 @@ export default function Header() {
                 <>
                     <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">My Account</p>
                     <Link href="/profile" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}>Profile</Button></Link>
-                    <Link href="/bible-checklist" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>My Checklist</Button></Link>
-                    <Link href="/progress-overview" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>Progress Overview</Button></Link>
+                    <Link href="/bible-checklist" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>My Quest</Button></Link>
+                    <Link href="/progress-overview" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>Team Progress</Button></Link>
                     <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleUserSignOutClick}>Logout</Button>
                 </>
             )}

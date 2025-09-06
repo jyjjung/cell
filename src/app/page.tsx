@@ -11,7 +11,7 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, CheckCircle2, Brain, Loader2 } from 'lucide-react';
+import { Map, Award, Zap, Loader2 } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, isAfter } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
@@ -102,35 +102,35 @@ export default function HomePage() {
     <div className="space-y-12">
       <section id="stats-section">
         <h2 className="text-3xl font-bold tracking-tight mb-6 text-center">
-          App Snapshot
+          Mission Control
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatCard
-            title="Upcoming Events"
+            title="Upcoming Missions"
             value={eventsLoading ? null : allEvents.filter(e => isAfter(parseISO(e.date), new Date())).length}
             isLoading={eventsLoading}
             buttonText="View Details"
             buttonLink="#upcoming-events-section"
-            IconComponent={CalendarDays}
+            IconComponent={Map}
           />
           {currentUser && (
             <StatCard
-              title="Readings Logged"
+              title="Quests Completed"
               value={readingsLoggedStatValue}
               isLoading={loadingAuth || loadingChecklist || planLoading}
-              buttonText="My Checklist"
+              buttonText="My Quest"
               buttonLink="/bible-checklist"
-              IconComponent={CheckCircle2}
+              IconComponent={Award}
               buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
             />
           )}
           <StatCard
-            title="Memory Verses"
+            title="Power-Ups"
             value={memoryVersesLoading ? null : memoryVerses.length}
             isLoading={memoryVersesLoading}
             buttonText="Practice Now"
             buttonLink="/memorize"
-            IconComponent={Brain}
+            IconComponent={Zap}
           />
         </div>
       </section>
