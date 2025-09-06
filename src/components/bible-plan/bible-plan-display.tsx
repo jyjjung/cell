@@ -28,6 +28,7 @@ interface BiblePlanDisplayProps {
   planDescription?: string;
   generatedDate?: string; 
   hidePlanMeta?: boolean;
+  hideDateInCard?: boolean;
 }
 
 export default function BiblePlanDisplay({
@@ -43,6 +44,7 @@ export default function BiblePlanDisplay({
   planDescription,
   generatedDate,
   hidePlanMeta = false, 
+  hideDateInCard = false,
 }: BiblePlanDisplayProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
@@ -180,7 +182,7 @@ export default function BiblePlanDisplay({
       <Card className="bg-card/90 rounded-lg shadow-sm">
         <CardHeader className="p-3">
           <div className="flex justify-between items-center">
-            {parsedDayDate && (
+            {parsedDayDate && !hideDateInCard && (
                  <div>
                     <p className="text-sm font-semibold text-primary">{format(parsedDayDate, "EEEE").toUpperCase()}</p>
                  </div>
@@ -227,7 +229,8 @@ export default function BiblePlanDisplay({
                     <Label
                       htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
                       className={cn(
-                        "flex-grow font-medium text-sm",
+                        "flex-grow font-medium",
+                        "text-xs", // Make font size smaller
                         showIndividualCheckboxes && "cursor-pointer",
                         isChecked && "line-through text-muted-foreground"
                       )}
@@ -236,7 +239,8 @@ export default function BiblePlanDisplay({
                         <Button
                           variant="link"
                           className={cn(
-                            "p-0 h-auto text-sm font-medium text-left justify-start hover:no-underline",
+                            "p-0 h-auto font-medium text-left justify-start hover:no-underline",
+                            "text-xs", // Match label font size
                              isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}
                           onClick={() => handlePassageClick(passage.displayText)}
@@ -246,7 +250,7 @@ export default function BiblePlanDisplay({
                           {passage.displayText}
                         </Button>
                       ) : (
-                        <span className="text-destructive italic font-semibold text-sm">{passage.displayText || "Error: Passage Data Invalid"}</span>
+                        <span className="text-destructive italic font-semibold text-xs">{passage.displayText || "Error: Passage Data Invalid"}</span>
                       )}
                     </Label>
                   </li>
@@ -274,3 +278,5 @@ export default function BiblePlanDisplay({
     </>
   );
 }
+
+    

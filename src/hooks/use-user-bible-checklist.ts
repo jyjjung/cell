@@ -16,7 +16,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
-import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
+import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
 import { useBiblePlan } from './use-bible-plan'; 
 
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
@@ -167,8 +167,14 @@ export function useUserBibleChecklist() {
     let effectiveToChapter = toChapter === undefined ? fromChapter : toChapter;
     let effectiveToVerse = toVerse; // Can be undefined
 
-    const userStartPoint: ScripturePoint = { bookFullName: fromBook, chapter: fromChapter, verse: fromVerse };
-    const userEndPoint: ScripturePoint = { bookFullName: effectiveToBook, chapter: effectiveToChapter, verse: effectiveToVerse };
+    const fromBookResolved = BOOK_NAME_LOOKUP_MAP.get(fromBook.toLowerCase().trim());
+    const toBookResolved = BOOK_NAME_LOOKUP_MAP.get(effectiveToBook.toLowerCase().trim());
+
+    if (!fromBookResolved) throw new Error(`Could not recognize the starting book: "${fromBook}"`);
+    if (!toBookResolved) throw new Error(`Could not recognize the ending book: "${effectiveToBook}"`);
+
+    const userStartPoint: ScripturePoint = { bookFullName: fromBookResolved, chapter: fromChapter, verse: fromVerse };
+    const userEndPoint: ScripturePoint = { bookFullName: toBookResolved, chapter: effectiveToChapter, verse: effectiveToVerse };
 
     const passagesToComplete: string[] = [];
 
@@ -212,8 +218,10 @@ export function useUserBibleChecklist() {
     await updateChecklistDocument({ completedPassages: arrayUnion(...passagesToComplete) });
     return { markedCount: passagesToComplete.length };
 
-  }, [currentUser, currentGlobalPlan, completedPassages, checklistDocExists, updateChecklistDocument]);
+  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, completedPassages]);
 
 
   return { completedPassages, togglePassageCompletion, markReadRange, markMultiplePassages, loadingChecklist };
 }
+
+    

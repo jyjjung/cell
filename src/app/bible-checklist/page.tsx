@@ -11,13 +11,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
+import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
+import { cn } from '@/lib/utils';
 
 
 interface WeeklyProgress {
@@ -28,6 +30,9 @@ interface WeeklyProgress {
   completedCount: number;
   totalCount: number;
   progressPercentage: number;
+  isCompleted: boolean;
+  isCurrent: boolean;
+  isOverdue: boolean;
 }
 
 
@@ -41,6 +46,7 @@ export default function BibleChecklistPage() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<WeeklyProgress | null>(null);
+  const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -53,7 +59,8 @@ export default function BibleChecklistPage() {
   
   const weeklyProgressData = useMemo((): WeeklyProgress[] => {
     if (!plan?.dailyReadings) return [];
-
+    
+    const today = new Date();
     const weeksMap = new Map<string, DailyReading[]>();
 
     for (const reading of plan.dailyReadings) {
@@ -86,6 +93,11 @@ export default function BibleChecklistPage() {
             completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
         });
 
+        const isCompleted = totalCount > 0 && completedCount === totalCount;
+        const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
+        const isOverdue = !isCompleted && isBefore(weekEndDate, today);
+
+
         return {
           weekNumber: index + 1,
           startDate: weekStartDate,
@@ -93,11 +105,25 @@ export default function BibleChecklistPage() {
           readings,
           completedCount,
           totalCount,
-          progressPercentage: totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+          progressPercentage: totalCount > 0 ? (completedCount / totalCount) * 100 : 0,
+          isCompleted,
+          isCurrent,
+          isOverdue,
         };
       })
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
   }, [plan, completedPassages]);
+  
+  const overallProgress = useMemo(() => {
+    if (!plan?.dailyReadings || loadingChecklist) {
+      return { total: 0, completed: 0, percentage: 0 };
+    }
+    const total = plan.dailyReadings.reduce((acc, day) => acc + (day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0), 0);
+    const completed = completedPassages.length;
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+    return { total, completed, percentage };
+  }, [plan, completedPassages, loadingChecklist]);
+
 
   const PageSkeleton = () => (
     <div className="space-y-4">
@@ -148,6 +174,7 @@ export default function BibleChecklistPage() {
                             allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
                             loading={loadingChecklist}
                             planAvailable={true}
+                            hideDateInCard={true}
                             hidePlanMeta={true}
                         />
                 ))}
@@ -159,22 +186,54 @@ export default function BibleChecklistPage() {
 
   // Main view listing all weeks
   return (
+    <>
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <h1 className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</h1>
+            <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
+                <BookUp className="mr-2 h-4 w-4" /> Mark Range as Read
+            </Button>
         </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Overall Progress</CardTitle>
+                <CardDescription>Your total progress through the entire reading plan.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center gap-4">
+                    <Progress value={overallProgress.percentage} className="flex-grow" />
+                    <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                    You have completed {overallProgress.completed} of {overallProgress.total} total passages.
+                </p>
+            </CardContent>
+        </Card>
         
         <div className="space-y-3">
             {weeklyProgressData.map((week) => (
                 <Card 
                     key={week.weekNumber}
-                    className="shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                    className={cn(
+                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                        week.isCompleted ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70" :
+                        week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
+                        week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
+                        "hover:border-primary/50"
+                    )}
                     onClick={() => setSelectedWeek(week)}
                 >
                     <CardHeader className="p-4">
                        <div className="flex justify-between items-center">
                             <div>
-                                <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                                <p className={cn(
+                                    "text-sm font-semibold",
+                                     week.isCompleted ? "text-green-600 dark:text-green-400" :
+                                     week.isCurrent ? "text-blue-600 dark:text-blue-400" :
+                                     week.isOverdue ? "text-red-600 dark:text-red-400" :
+                                     "text-primary"
+                                )}>WEEK {week.weekNumber}</p>
                                 <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
                             </div>
                              <div className="flex items-center gap-4 w-full sm:w-auto max-w-[200px]">
@@ -190,5 +249,9 @@ export default function BibleChecklistPage() {
         </div>
         <BackToTopButton />
     </div>
+    <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
+    </>
   );
 }
+
+    
