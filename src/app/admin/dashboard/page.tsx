@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEvents } from '@/hooks/use-events';
@@ -17,17 +17,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
-import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ListOrdered, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { startOfDay, parseISO, format, isSameDay } from 'date-fns';
+import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { Calendar } from '@/components/ui/calendar';
-import { EventCategory } from '@/types';
-import { cn } from '@/lib/utils';
-import type { DayProps } from 'react-day-picker';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/color-utils';
 
 
 export default function AdminDashboardPage() {
@@ -41,10 +35,6 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
   const { setIsPageLoading } = usePageLoading(); 
 
-  // Calendar State
-  const [month, setMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -55,70 +45,6 @@ export default function AdminDashboardPage() {
       router.push('/admin');
     }
   }, [isAdmin, router, isMounted, setIsPageLoading]);
-
-  // Calendar memoized data
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, AppEvent[]>();
-    if (!events) return map;
-    events.forEach(event => {
-      try {
-        const eventDateStr = format(parseISO(event.date), 'yyyy-MM-dd');
-        if (!map.has(eventDateStr)) {
-          map.set(eventDateStr, []);
-        }
-        map.get(eventDateStr)!.push(event);
-      } catch (e) {
-        console.error("Error parsing event date for calendar:", event.date, e);
-      }
-    });
-    map.forEach((dayEvents) => {
-        dayEvents.sort((a,b) => a.category.localeCompare(b.category));
-    });
-    return map;
-  }, [events]);
-
-  const selectedDayEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return eventsByDate.get(dateStr) || [];
-  }, [selectedDate, eventsByDate]);
-
-  // Custom Day for Calendar
-  function CustomDay(props: DayProps) {
-    const { date, displayMonth } = props;
-    const isCurrentMonth = displayMonth.getMonth() === date.getMonth();
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayEvents = eventsByDate.get(dateStr) || [];
-    const isToday = isSameDay(date, new Date());
-
-    return (
-      <div className={cn("relative flex h-full flex-col p-0.5 border-t border-border/80 text-[10px]",!isCurrentMonth && "bg-muted/30 text-muted-foreground/50",isSameDay(date, selectedDate || new Date(0)) && isCurrentMonth && "bg-accent")}>
-        <time dateTime={format(date, 'yyyy-MM-dd')} className={cn("self-start font-semibold p-1 rounded-full", isToday && "flex h-5 w-5 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground text-xs")}>
-          {format(date, 'd')}
-        </time>
-        {isCurrentMonth && dayEvents.length > 0 && (
-          <div className="mt-0.5 flex-grow overflow-y-auto -mx-0.5 px-0.5 space-y-0.5 text-left">
-            {dayEvents.slice(0, 2).map((event) => (
-              <div key={event.id} className={cn("p-0.5 rounded-sm leading-tight truncate font-medium", categoryBackgroundColors[event.category], categoryTextColors[event.category])}>
-                {event.title}
-              </div>
-            ))}
-             {dayEvents.length > 2 && (
-              <div className="text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 2} more</div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const CalendarSkeleton = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-      <div className="lg:col-span-3"><Skeleton className="w-full aspect-video" /></div>
-      <div className="lg:col-span-1"><Skeleton className="w-full h-48" /></div>
-    </div>
-  );
-
 
   if (!isMounted) { 
     return (
@@ -335,62 +261,6 @@ export default function AdminDashboardPage() {
                     </AccordionContent>
                 </Card>
             </AccordionItem>
-            
-            <AccordionItem value="event-calendar" className="border-b-0">
-                <Card>
-                    <AccordionTrigger className="p-4 hover:no-underline w-full">
-                        <CardHeader className="p-0 flex-row justify-between items-center w-full">
-                            <CardTitle className="text-xl">Event Calendar</CardTitle>
-                        </CardHeader>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-4 pb-4">
-                        {eventsLoading ? <CalendarSkeleton /> : (
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                                <div className="lg:col-span-3">
-                                    <Calendar
-                                        mode="single"
-                                        selected={selectedDate}
-                                        onSelect={setSelectedDate}
-                                        month={month}
-                                        onMonthChange={setMonth}
-                                        className="p-0 border rounded-md"
-                                        classNames={{
-                                            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
-                                            month: "space-y-4 w-full",
-                                            table: "w-full border-collapse",
-                                            head_row: "flex border-b",
-                                            head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
-                                            row: "flex w-full",
-                                            cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
-                                            day_button: "h-full w-full p-0 font-normal",
-                                            day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
-                                        }}
-                                        components={{ Day: CustomDay }}
-                                    />
-                                </div>
-                                <div className="lg:col-span-1">
-                                    <div className="sticky top-20">
-                                        <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
-                                        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
-                                            {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                                <div key={event.id} className={cn("p-2 rounded-md border-l-4", categoryBorderColors[event.category])}>
-                                                    <div className="flex items-start justify-between">
-                                                        <p className="font-semibold text-sm">{event.title}</p>
-                                                        <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
-                                                    </div>
-                                                    {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                                                </div>
-                                            )) : (
-                                                <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
         </Accordion>
 
 
@@ -470,5 +340,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-
-    
