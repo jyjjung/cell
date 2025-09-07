@@ -23,24 +23,19 @@ AccordionItem.displayName = "AccordionItem"
 
 const AccordionTrigger = React.forwardRef<
   React.ElementRef<typeof AccordionPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { asChild?: boolean }
->(({ className, children, asChild = false, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
   <AccordionPrimitive.Header className="flex">
     <AccordionPrimitive.Trigger
       ref={ref}
-      asChild={asChild}
       className={cn(
-        !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        asChild && "w-full", // if asChild, it's just a simple wrapper
+        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
         className
       )}
       {...props}
     >
       {children}
-      {/* Only add the chevron if it's NOT a child wrapper */}
-      {!asChild && (
-        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-      )}
+      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
