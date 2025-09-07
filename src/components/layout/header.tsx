@@ -51,11 +51,6 @@ export default function Header() {
           Home
         </Button>
       </Link>
-      <Link href="/calendar" legacyBehavior passHref>
-        <Button variant="ghost" onClick={() => handleLinkClick('/calendar')}>
-          Calendar
-        </Button>
-      </Link>
       {!currentUser && (
         <Link href="/bible-plan" legacyBehavior passHref>
           <Button variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
@@ -76,11 +71,6 @@ export default function Header() {
       <Link href="/" legacyBehavior passHref>
         <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
           Home
-        </Button>
-      </Link>
-      <Link href="/calendar" legacyBehavior passHref>
-        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/calendar')}>
-          Calendar
         </Button>
       </Link>
       {!currentUser && (
