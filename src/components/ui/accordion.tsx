@@ -31,12 +31,13 @@ const AccordionTrigger = React.forwardRef<
       asChild={asChild}
       className={cn(
         !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        asChild && "w-full",
+        asChild && "w-full", // if asChild, it's just a simple wrapper
         className
       )}
       {...props}
     >
       {children}
+      {/* Only add the chevron if it's NOT a child wrapper */}
       {!asChild && (
         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
       )}

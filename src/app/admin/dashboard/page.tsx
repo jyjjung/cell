@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
-import { PlusCircle, Edit, Trash2, ListOrdered, Loader2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, ChevronDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -164,7 +164,10 @@ export default function AdminDashboardPage() {
                     <AccordionTrigger asChild className="p-4 hover:no-underline w-full cursor-pointer">
                         <div className="flex flex-1 items-center justify-between font-medium">
                             <CardHeader className="p-0 flex-row justify-between items-center w-full">
-                                <CardTitle className="text-xl">Manage Events</CardTitle>
+                                <div className="flex items-center">
+                                    <CardTitle className="text-xl">Manage Events</CardTitle>
+                                    <ChevronDown className="h-5 w-5 ml-2 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                </div>
                                 <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
                                 <DialogTrigger asChild>
                                     <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }} onFocus={(e) => e.stopPropagation()}>
