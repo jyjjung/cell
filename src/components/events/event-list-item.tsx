@@ -33,16 +33,20 @@ export default function EventListItem({ event }: EventListItemProps) {
   }
 
   return (
-    <div className="flex items-start space-x-4 p-4 transition-colors hover:bg-muted/50">
-       <div className={cn("flex-shrink-0 w-24 text-center py-2 px-1 rounded-md", styleInfo.bg, styleInfo.text)}>
-         <p className="text-sm font-semibold">{format(parsedDate, "MMM")}</p>
+    <div className="flex items-center space-x-4 p-4 transition-colors hover:bg-muted/50">
+       <div className={cn(
+           "flex-shrink-0 w-16 h-16 flex flex-col items-center justify-center rounded-lg", 
+           styleInfo.bg, 
+           styleInfo.text
+        )}>
+         <p className="text-sm font-semibold uppercase">{format(parsedDate, "MMM")}</p>
          <p className="text-2xl font-bold">{format(parsedDate, "d")}</p>
       </div>
-      <div className="flex-grow pt-1">
+      <div className="flex-grow">
         <p className="font-semibold text-card-foreground">{event.title}</p>
         <p className="text-sm text-muted-foreground">{dayOfWeek}</p>
         {descriptionText && (
-          <p className="text-sm text-muted-foreground mt-2">{descriptionText}</p>
+          <p className="text-sm text-muted-foreground mt-1">{descriptionText}</p>
         )}
       </div>
     </div>

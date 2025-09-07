@@ -28,11 +28,11 @@ const categoryDisplayOrder: EventCategory[] = [
   EventCategory.Snack,
 ];
 
-const categoryDetails: { [key in EventCategory]: { icon: React.ElementType, name: string } } = {
-  [EventCategory.Event]: { icon: Sparkles, name: 'Events' },
-  [EventCategory.Birthday]: { icon: Cake, name: 'Birthdays' },
-  [EventCategory.QT]: { icon: GlassWater, name: 'QTs' },
-  [EventCategory.Snack]: { icon: Utensils, name: 'Snacks' },
+const categoryDetails: { [key in EventCategory]: { name: string } } = {
+  [EventCategory.Event]: { name: 'Events' },
+  [EventCategory.Birthday]: { name: 'Birthdays' },
+  [EventCategory.QT]: { name: 'QTs' },
+  [EventCategory.Snack]: { name: 'Snacks' },
 };
 
 
@@ -82,15 +82,13 @@ export default function UpcomingEventsDisplay({ events, loading }: UpcomingEvent
 
   return (
     <div className="space-y-3">
-        <Accordion type="multiple" className="w-full space-y-2" defaultValue={categoryDisplayOrder}>
+        <Accordion type="multiple" className="w-full space-y-2" defaultValue={[]}>
             {categoryGroupedEvents.map((group) => {
-                const CategoryIcon = categoryDetails[group.category].icon;
                 return (
                     <AccordionItem value={group.category} key={group.category} className="border-b-0">
                         <Card className="bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200">
                             <AccordionTrigger className="p-4 hover:no-underline w-full">
                                <div className="flex items-center space-x-3">
-                                    <CategoryIcon className="h-6 w-6 text-primary" />
                                     <div className="text-left">
                                          <CardTitle className="text-lg">{categoryDetails[group.category].name}</CardTitle>
                                     </div>
