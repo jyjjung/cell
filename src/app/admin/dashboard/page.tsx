@@ -27,28 +27,7 @@ import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-
-
-const categoryBackgroundColors: { [key in EventCategory]: string } = {
-  [EventCategory.Event]: 'bg-purple-100 dark:bg-purple-500/20',
-  [EventCategory.Birthday]: 'bg-pink-100 dark:bg-pink-500/20',
-  [EventCategory.QT]: 'bg-blue-100 dark:bg-blue-500/20',
-  [EventCategory.Snack]: 'bg-orange-100 dark:bg-orange-500/20',
-};
-
-const categoryTextColors: { [key in EventCategory]: string } = {
-  [EventCategory.Event]: 'text-purple-800 dark:text-purple-200',
-  [EventCategory.Birthday]: 'text-pink-800 dark:text-pink-200',
-  [EventCategory.QT]: 'text-blue-800 dark:text-blue-200',
-  [EventCategory.Snack]: 'text-orange-800 dark:text-orange-200',
-};
-
-const categoryBorderColors: { [key in EventCategory]: string } = {
-  [EventCategory.Event]: 'border-purple-500',
-  [EventCategory.Birthday]: 'border-pink-500',
-  [EventCategory.QT]: 'border-blue-500',
-  [EventCategory.Snack]: 'border-orange-500',
-};
+import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/color-utils';
 
 
 export default function AdminDashboardPage() {
