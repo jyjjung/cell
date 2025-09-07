@@ -151,7 +151,7 @@ export default function HomePage() {
       <Separator />
 
       <section id="upcoming-events-section" className="space-y-6">
-        <div className="flex justify-center items-center gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-4">
             <h2 className="text-3xl font-bold tracking-tight text-center">Upcoming Dates</h2>
             <div className="flex items-center space-x-2">
                 <Switch 

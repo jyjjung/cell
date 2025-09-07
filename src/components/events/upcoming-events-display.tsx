@@ -1,65 +1,80 @@
 
 "use client";
 
+import { useMemo } from 'react';
 import type { AppEvent } from '@/types';
-import { EventCategory } from '@/types';
 import EventListItem from './event-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Info } from 'lucide-react';
+import { Info, CalendarDays } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { startOfWeek, endOfWeek, parseISO, format, isValid } from 'date-fns';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 interface UpcomingEventsDisplayProps {
   events: AppEvent[];
   loading: boolean;
 }
 
-const CategoryHeader = ({ title }: { title: string }) => (
-    <h3 className="text-lg font-semibold tracking-tight my-4">{title}</h3>
-);
+interface WeeklyEventGroup {
+  weekKey: string;
+  startDate: Date;
+  endDate: Date;
+  events: AppEvent[];
+}
 
 const EventListSkeleton = () => (
-    <div className="space-y-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex items-start space-x-4 p-4 border rounded-lg">
-                <div className="flex-shrink-0 w-16 text-center space-y-1">
-                    <Skeleton className="h-5 w-10 mx-auto" />
-                    <Skeleton className="h-8 w-14 mx-auto" />
-                </div>
-                <div className="flex-grow pt-1 space-y-2">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-4 w-20" />
-                </div>
-            </div>
-        ))}
+    <div className="space-y-4">
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
     </div>
 );
 
 export default function UpcomingEventsDisplay({ events, loading }: UpcomingEventsDisplayProps) {
+  const weeklyGroupedEvents = useMemo((): WeeklyEventGroup[] => {
+    if (!events) return [];
+
+    const weeksMap = new Map<string, AppEvent[]>();
+
+    for (const event of events) {
+      try {
+        const date = parseISO(event.date);
+        if (!isValid(date)) continue;
+        
+        const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
+        const weekKey = format(weekStart, 'yyyy-MM-dd');
+
+        if (!weeksMap.has(weekKey)) {
+          weeksMap.set(weekKey, []);
+        }
+        weeksMap.get(weekKey)!.push(event);
+      } catch (e) {
+        console.error("[UpcomingEventsDisplay] Error processing event for week grouping:", event, e);
+      }
+    }
+
+    return Array.from(weeksMap.entries())
+      .map(([weekKey, weeklyEvents]) => {
+        const weekStartDate = parseISO(weekKey);
+        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+        
+        return {
+          weekKey,
+          startDate: weekStartDate,
+          endDate: weekEndDate,
+          events: weeklyEvents.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()),
+        };
+      })
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+  }, [events]);
+
+
   if (loading) {
-    return (
-        <div className="space-y-8">
-            <div>
-                <Skeleton className="h-7 w-48 mb-4" />
-                <EventListSkeleton />
-            </div>
-             <div>
-                <Skeleton className="h-7 w-32 mb-4" />
-                <EventListSkeleton />
-            </div>
-        </div>
-    );
+    return <EventListSkeleton />;
   }
-
-  const categorizedEvents = {
-    events: events.filter(e => e.category === EventCategory.Event || e.category === EventCategory.Birthday),
-    qts: events.filter(e => e.category === EventCategory.QT),
-    snacks: events.filter(e => e.category === EventCategory.Snack),
-  };
-
-  const hasEvents = categorizedEvents.events.length > 0;
-  const hasQTs = categorizedEvents.qts.length > 0;
-  const hasSnacks = categorizedEvents.snacks.length > 0;
   
-  if (!hasEvents && !hasQTs && !hasSnacks) {
+  if (weeklyGroupedEvents.length === 0) {
     return (
         <div className="text-center py-10 px-4 border border-dashed rounded-lg mt-4 flex flex-col items-center justify-center">
             <Info className="h-8 w-8 text-muted-foreground mb-2"/>
@@ -69,35 +84,28 @@ export default function UpcomingEventsDisplay({ events, loading }: UpcomingEvent
   }
 
   return (
-    <div className="space-y-8">
-      {hasEvents && (
-        <div id="events-birthdays-section">
-          <CategoryHeader title="Events & Birthdays" />
-          <div className="mt-4 divide-y divide-border rounded-lg border">
-            {categorizedEvents.events.map(event => <EventListItem key={event.id} event={event} />)}
-          </div>
-        </div>
-      )}
-
-      {hasQTs && (
-        <div id="qt-section">
-            <CategoryHeader title="QT Schedule" />
-            <div className="mt-4 divide-y divide-border rounded-lg border">
-                {categorizedEvents.qts.map(event => <EventListItem key={event.id} event={event} />)}
-            </div>
-        </div>
-      )}
-
-      {hasSnacks && (
-        <div id="snack-section">
-            <CategoryHeader title="Snacks" />
-            <div className="mt-4 divide-y divide-border rounded-lg border">
-                {categorizedEvents.snacks.map(event => <EventListItem key={event.id} event={event} />)}
-            </div>
-        </div>
-      )}
+    <div className="space-y-3">
+        <Accordion type="single" collapsible className="w-full space-y-2">
+            {weeklyGroupedEvents.map((week) => (
+                <AccordionItem value={week.weekKey} key={week.weekKey} className="border-b-0">
+                    <Card className="bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200">
+                        <AccordionTrigger className="p-4 hover:no-underline w-full">
+                           <div className="flex items-center space-x-3">
+                                <CalendarDays className="h-6 w-6 text-primary" />
+                                <div className="text-left">
+                                     <CardTitle className="text-lg">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'd, yyyy')}`}</CardTitle>
+                                </div>
+                           </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           <div className="divide-y divide-border border-t">
+                                {week.events.map(event => <EventListItem key={event.id} event={event} />)}
+                            </div>
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+            ))}
+        </Accordion>
     </div>
   );
 }
-
-    
