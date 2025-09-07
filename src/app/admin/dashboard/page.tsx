@@ -161,31 +161,33 @@ export default function AdminDashboardPage() {
         <Accordion type="multiple" className="w-full space-y-6" defaultValue={["events-manager"]}>
             <AccordionItem value="events-manager" className="border-b-0">
                 <Card>
-                    <AccordionTrigger className="p-4 hover:no-underline w-full">
-                        <CardHeader className="p-0 flex-row justify-between items-center w-full">
-                            <CardTitle className="text-xl">Manage Events</CardTitle>
-                             <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-                            <DialogTrigger asChild>
-                                <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }} onFocus={(e) => e.stopPropagation()}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-                                </DialogHeader>
-                                <EventForm
-                                event={editingEvent}
-                                onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
-                                onCancel={() => {
-                                    setEditingEvent(null);
-                                    setIsFormModalOpen(false);
-                                }}
-                                submitButtonText={editingEvent ? "Update Event" : "Create Event"}
-                                />
-                            </DialogContent>
-                            </Dialog>
-                        </CardHeader>
+                    <AccordionTrigger asChild className="p-4 hover:no-underline w-full cursor-pointer">
+                        <div className="flex flex-1 items-center justify-between font-medium">
+                            <CardHeader className="p-0 flex-row justify-between items-center w-full">
+                                <CardTitle className="text-xl">Manage Events</CardTitle>
+                                <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+                                <DialogTrigger asChild>
+                                    <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }} onFocus={(e) => e.stopPropagation()}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                    <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+                                    </DialogHeader>
+                                    <EventForm
+                                    event={editingEvent}
+                                    onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
+                                    onCancel={() => {
+                                        setEditingEvent(null);
+                                        setIsFormModalOpen(false);
+                                    }}
+                                    submitButtonText={editingEvent ? "Update Event" : "Create Event"}
+                                    />
+                                </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                        </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                         {eventsLoading ? (

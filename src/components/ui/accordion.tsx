@@ -31,6 +31,7 @@ const AccordionTrigger = React.forwardRef<
       asChild={asChild}
       className={cn(
         !asChild && "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        asChild && "w-full",
         className
       )}
       {...props}
