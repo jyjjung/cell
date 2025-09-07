@@ -21,10 +21,10 @@ const categoryStyles: { [key in EventCategory]: { bg: string; text: string; icon
 
 export default function EventListItem({ event }: EventListItemProps) {
   const parsedDate = parseISO(event.date);
-  const month = format(parsedDate, "MMM");
-  const day = format(parsedDate, "d");
+  const dayOfWeek = format(parsedDate, "EEEE");
 
   const styleInfo = categoryStyles[event.category];
+  const Icon = styleInfo.icon;
   
   let descriptionText = '';
   if (event.category === EventCategory.Event && event.summary) {
@@ -35,13 +35,12 @@ export default function EventListItem({ event }: EventListItemProps) {
 
   return (
     <div className="flex items-start space-x-4 p-4 transition-colors hover:bg-muted/50">
-      <div className={cn("flex-shrink-0 w-16 text-center rounded-lg p-2 transition-colors", styleInfo.bg)}>
-        <div className={cn("text-sm font-bold transition-colors", styleInfo.text)}>{month.toUpperCase()}</div>
-        <div className={cn("text-3xl font-bold transition-colors", styleInfo.text)}>{day}</div>
+       <div className={cn("flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-lg", styleInfo.bg, styleInfo.text)}>
+         <Icon className="h-6 w-6" />
       </div>
       <div className="flex-grow pt-1">
         <p className="font-semibold text-card-foreground">{event.title}</p>
-        <p className="text-sm text-muted-foreground">{format(parsedDate, "EEEE")}</p>
+        <p className="text-sm text-muted-foreground">{dayOfWeek}, {format(parsedDate, "MMMM d")}</p>
         {descriptionText && (
           <p className="text-sm text-muted-foreground mt-2">{descriptionText}</p>
         )}
