@@ -16,7 +16,7 @@ import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format, 
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Accordion } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import type { AppEvent } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -377,17 +377,17 @@ export default function HomePage() {
                     <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
                     <Accordion type="single" collapsible className="w-full">
                         <Card>
-                            <Accordion.Item value="progress-item" className="border-0">
-                                <Accordion.Trigger className="p-4 hover:no-underline">
+                            <AccordionItem value="progress-item" className="border-0">
+                                <AccordionTrigger className="p-4 hover:no-underline">
                                     <div className="flex items-center space-x-3">
                                         <Users className="h-6 w-6 text-primary" />
                                         <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
                                     </div>
-                                </Accordion.Trigger>
-                                <Accordion.Content className="px-4 pb-4">
+                                </AccordionTrigger>
+                                <AccordionContent className="px-4 pb-4">
                                     <CommunityProgressContent />
-                                </Accordion.Content>
-                            </Accordion.Item>
+                                </AccordionContent>
+                            </AccordionItem>
                         </Card>
                     </Accordion>
                 </div>
@@ -417,3 +417,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
