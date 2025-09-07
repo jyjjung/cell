@@ -3,24 +3,38 @@
 
 import { useMemo } from 'react';
 import type { AppEvent } from '@/types';
+import { EventCategory } from '@/types';
 import EventListItem from './event-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Info, CalendarDays } from 'lucide-react';
+import { Info, CalendarDays, Utensils, Sparkles, Cake, GlassWater } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { startOfWeek, endOfWeek, parseISO, format, isValid } from 'date-fns';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface UpcomingEventsDisplayProps {
   events: AppEvent[];
   loading: boolean;
 }
 
-interface WeeklyEventGroup {
-  weekKey: string;
-  startDate: Date;
-  endDate: Date;
+interface CategoryEventGroup {
+  category: EventCategory;
   events: AppEvent[];
 }
+
+const categoryDisplayOrder: EventCategory[] = [
+  EventCategory.Event,
+  EventCategory.Birthday,
+  EventCategory.QT,
+  EventCategory.Snack,
+];
+
+const categoryDetails: { [key in EventCategory]: { icon: React.ElementType, name: string } } = {
+  [EventCategory.Event]: { icon: Sparkles, name: 'Events' },
+  [EventCategory.Birthday]: { icon: Cake, name: 'Birthdays' },
+  [EventCategory.QT]: { icon: GlassWater, name: 'QTs' },
+  [EventCategory.Snack]: { icon: Utensils, name: 'Snacks' },
+};
+
 
 const EventListSkeleton = () => (
     <div className="space-y-4">
@@ -31,41 +45,24 @@ const EventListSkeleton = () => (
 );
 
 export default function UpcomingEventsDisplay({ events, loading }: UpcomingEventsDisplayProps) {
-  const weeklyGroupedEvents = useMemo((): WeeklyEventGroup[] => {
+  const categoryGroupedEvents = useMemo((): CategoryEventGroup[] => {
     if (!events) return [];
 
-    const weeksMap = new Map<string, AppEvent[]>();
+    const categoriesMap = new Map<EventCategory, AppEvent[]>();
 
     for (const event of events) {
-      try {
-        const date = parseISO(event.date);
-        if (!isValid(date)) continue;
-        
-        const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
-        const weekKey = format(weekStart, 'yyyy-MM-dd');
-
-        if (!weeksMap.has(weekKey)) {
-          weeksMap.set(weekKey, []);
+        if (!categoriesMap.has(event.category)) {
+            categoriesMap.set(event.category, []);
         }
-        weeksMap.get(weekKey)!.push(event);
-      } catch (e) {
-        console.error("[UpcomingEventsDisplay] Error processing event for week grouping:", event, e);
-      }
+        categoriesMap.get(event.category)!.push(event);
     }
-
-    return Array.from(weeksMap.entries())
-      .map(([weekKey, weeklyEvents]) => {
-        const weekStartDate = parseISO(weekKey);
-        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
-        
-        return {
-          weekKey,
-          startDate: weekStartDate,
-          endDate: weekEndDate,
-          events: weeklyEvents.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()),
-        };
-      })
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    
+    return categoryDisplayOrder
+        .map(category => ({
+            category,
+            events: categoriesMap.get(category) || []
+        }))
+        .filter(group => group.events.length > 0);
 
   }, [events]);
 
@@ -74,7 +71,7 @@ export default function UpcomingEventsDisplay({ events, loading }: UpcomingEvent
     return <EventListSkeleton />;
   }
   
-  if (weeklyGroupedEvents.length === 0) {
+  if (categoryGroupedEvents.length === 0) {
     return (
         <div className="text-center py-10 px-4 border border-dashed rounded-lg mt-4 flex flex-col items-center justify-center">
             <Info className="h-8 w-8 text-muted-foreground mb-2"/>
@@ -85,26 +82,29 @@ export default function UpcomingEventsDisplay({ events, loading }: UpcomingEvent
 
   return (
     <div className="space-y-3">
-        <Accordion type="single" collapsible className="w-full space-y-2">
-            {weeklyGroupedEvents.map((week) => (
-                <AccordionItem value={week.weekKey} key={week.weekKey} className="border-b-0">
-                    <Card className="bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200">
-                        <AccordionTrigger className="p-4 hover:no-underline w-full">
-                           <div className="flex items-center space-x-3">
-                                <CalendarDays className="h-6 w-6 text-primary" />
-                                <div className="text-left">
-                                     <CardTitle className="text-lg">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'd, yyyy')}`}</CardTitle>
+        <Accordion type="multiple" className="w-full space-y-2" defaultValue={categoryDisplayOrder}>
+            {categoryGroupedEvents.map((group) => {
+                const CategoryIcon = categoryDetails[group.category].icon;
+                return (
+                    <AccordionItem value={group.category} key={group.category} className="border-b-0">
+                        <Card className="bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200">
+                            <AccordionTrigger className="p-4 hover:no-underline w-full">
+                               <div className="flex items-center space-x-3">
+                                    <CategoryIcon className="h-6 w-6 text-primary" />
+                                    <div className="text-left">
+                                         <CardTitle className="text-lg">{categoryDetails[group.category].name}</CardTitle>
+                                    </div>
+                               </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                               <div className="divide-y divide-border border-t">
+                                    {group.events.map(event => <EventListItem key={event.id} event={event} />)}
                                 </div>
-                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                           <div className="divide-y divide-border border-t">
-                                {week.events.map(event => <EventListItem key={event.id} event={event} />)}
-                            </div>
-                        </AccordionContent>
-                    </Card>
-                </AccordionItem>
-            ))}
+                            </AccordionContent>
+                        </Card>
+                    </AccordionItem>
+                );
+            })}
         </Accordion>
     </div>
   );
