@@ -11,8 +11,8 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2 } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format } from 'date-fns';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Info } from 'lucide-react';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format, isDateValid } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -24,9 +24,23 @@ import { EventCategory } from '@/types';
 import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/color-utils';
 import CalendarKey from '@/components/calendar/calendar-key';
+import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
+
+
+interface UserProgressDisplay {
+  userId: string;
+  userDisplayName: string | null;
+  completedCount: number;
+  progressPercentage: number;
+  totalPassagesToDate: number;
+}
+
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -35,6 +49,8 @@ export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
+  const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
+  const { allUsers, loading: usersLoading } = useAllUsers();
 
   // Calendar State
   const [month, setMonth] = useState<Date>(new Date());
@@ -117,6 +133,35 @@ export default function HomePage() {
     return eventsByDate.get(dateStr) || [];
   }, [selectedDate, eventsByDate]);
 
+  const userProgressData = useMemo(() => {
+    if (checklistsLoading || usersLoading || totalPassagesUpToToday === 0 || !allChecklists || !allUsers) {
+      return [];
+    }
+
+    const usersMap = new Map(allUsers.map(user => [user.uid, user]));
+
+    return allChecklists
+      .map(checklist => {
+        const user = usersMap.get(checklist.userId);
+        if (!user) {
+          return null;
+        }
+
+        const completedCount = checklist.completedPassages.length;
+        const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
+        
+        return {
+          userId: checklist.userId,
+          userDisplayName: user.displayName || user.email?.split('@')[0] || checklist.userId.substring(0, 8),
+          completedCount,
+          progressPercentage,
+          totalPassagesToDate: totalPassagesUpToToday,
+        };
+      })
+      .filter((item): item is UserProgressDisplay => item !== null)
+      .sort((a, b) => b.progressPercentage - a.progressPercentage);
+  }, [allChecklists, allUsers, totalPassagesUpToToday, checklistsLoading, usersLoading]);
+
   // Custom Day for Calendar
   function CustomDay(props: DayProps) {
     const { date, displayMonth } = props;
@@ -161,6 +206,79 @@ export default function HomePage() {
         <p className="text-xl text-muted-foreground">Loading page content...</p>
       </div>
     );
+  }
+
+  const CommunityProgressContent = () => {
+    if (planLoading || checklistsLoading || usersLoading) {
+        return (
+          <div className="flex items-center justify-center p-6">
+            <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading progress overview...</p>
+          </div>
+        );
+    }
+    
+    if (!plan || plan.dailyReadings.length === 0) {
+        return (
+          <Card className="mt-6 shadow-lg max-w-lg mx-auto">
+            <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader>
+            <CardContent><p className="text-muted-foreground">A Bible reading plan needs to be set by the admin first.</p></CardContent>
+          </Card>
+        );
+    }
+  
+    if (totalPassagesUpToToday === 0 && isMounted) {
+        return (
+            <Card className="mt-6 shadow-lg max-w-lg mx-auto">
+            <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Readings Scheduled Yet</CardTitle></div></CardHeader>
+            <CardContent><p className="text-muted-foreground">There are no Bible readings scheduled up to today in the current plan, or the plan has not started.</p></CardContent>
+            </Card>
+        );
+    }
+
+
+    if (userProgressData.length === 0 && isMounted) {
+        return (
+            <Card className="mt-6 shadow-lg max-w-lg mx-auto">
+            <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader>
+            <CardContent><p className="text-muted-foreground">No one has started tracking their progress, or no checklists were found for readings scheduled to date.</p></CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="shadow-lg">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[150px]">Person</TableHead>
+                <TableHead>Progress (% of readings due)</TableHead>
+                <TableHead className="text-right">Completed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {userProgressData.map((progressItem) => (
+                <TableRow key={progressItem.userId}>
+                  <TableCell className="font-medium text-xs truncate max-w-[150px] sm:max-w-xs">
+                    {progressItem.userDisplayName}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                        <Progress value={progressItem.progressPercentage} className="w-full h-3" />
+                        <span className="text-xs text-muted-foreground w-12 text-right">{progressItem.progressPercentage.toFixed(0)}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right text-sm">
+                    {progressItem.completedCount} / {progressItem.totalPassagesToDate}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -253,6 +371,31 @@ export default function HomePage() {
 
       <Separator />
 
+        {currentUser && (
+            <section id="community-progress-section">
+                <div className="max-w-4xl mx-auto">
+                    <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
+                    <Accordion type="single" collapsible className="w-full">
+                        <Card>
+                            <Accordion.Item value="progress-item" className="border-0">
+                                <Accordion.Trigger className="p-4 hover:no-underline">
+                                    <div className="flex items-center space-x-3">
+                                        <Users className="h-6 w-6 text-primary" />
+                                        <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
+                                    </div>
+                                </Accordion.Trigger>
+                                <Accordion.Content className="px-4 pb-4">
+                                    <CommunityProgressContent />
+                                </Accordion.Content>
+                            </Accordion.Item>
+                        </Card>
+                    </Accordion>
+                </div>
+            </section>
+        )}
+
+      <Separator />
+
       <section>
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
@@ -274,5 +417,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

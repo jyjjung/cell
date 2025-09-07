@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
-import { Menu, X, ShieldCheck, LogOut, User } from 'lucide-react';
+import { Menu, X, ShieldCheck, LogOut, User, Users } from 'lucide-react';
 import { usePathname } from 'next/navigation'; 
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import PageLoaderManager from './page-loader-manager';
