@@ -46,45 +46,33 @@ export default function Header() {
   
   const navLinks = (
      <>
-      <Link href="/" legacyBehavior passHref>
-        <Button variant="ghost" onClick={() => handleLinkClick('/')}>
-          Home
-        </Button>
-      </Link>
+      <Button asChild variant="ghost" onClick={() => handleLinkClick('/')}>
+        <Link href="/">Home</Link>
+      </Button>
       {!currentUser && (
-        <Link href="/bible-plan" legacyBehavior passHref>
-          <Button variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
-            Full Bible Plan
-          </Button>
-        </Link>
-      )}
-      <Link href="/memorize" legacyBehavior passHref>
-        <Button variant="ghost" onClick={() => handleLinkClick('/memorize')}>
-          Memory Verses
+        <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
+          <Link href="/bible-plan">Full Bible Plan</Link>
         </Button>
-      </Link>
+      )}
+      <Button asChild variant="ghost" onClick={() => handleLinkClick('/memorize')}>
+        <Link href="/memorize">Memory Verses</Link>
+      </Button>
     </>
   );
 
   const mobileNavLinks = (
      <>
-      <Link href="/" legacyBehavior passHref>
-        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
-          Home
-        </Button>
-      </Link>
+      <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
+        <Link href="/">Home</Link>
+      </Button>
       {!currentUser && (
-        <Link href="/bible-plan" legacyBehavior passHref>
-          <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
-            Full Bible Plan
-          </Button>
-        </Link>
+         <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
+            <Link href="/bible-plan">Full Bible Plan</Link>
+         </Button>
       )}
-      <Link href="/memorize" legacyBehavior passHref>
-        <Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
-          Memory Verses
-        </Button>
-      </Link>
+      <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
+        <Link href="/memorize">Memory Verses</Link>
+      </Button>
     </>
   );
 
@@ -129,9 +117,8 @@ export default function Header() {
                         <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <Link href="/profile" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/profile')}>Profile</DropdownMenuItem></Link>
-                            <Link href="/bible-checklist" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/bible-checklist')}>My Checklist</DropdownMenuItem></Link>
-                            <Link href="/progress-overview" legacyBehavior passHref><DropdownMenuItem onClick={() => handleLinkClick('/progress-overview')}>Community Progress</DropdownMenuItem></Link>
+                             <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/profile'); setIsPageLoading(true); }}><Link href="/profile">Profile</Link></DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/bible-checklist'); setIsPageLoading(true); }}><Link href="/bible-checklist">My Checklist</Link></DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleUserSignOutClick} className="text-destructive focus:text-destructive">
                                 <LogOut className="mr-2 h-4 w-4" />
@@ -144,22 +131,22 @@ export default function Header() {
                 {/* Guest Buttons */}
                 {!loadingAuth && !currentUser && (
                     <>
-                        <Link href="/login" legacyBehavior passHref><Button variant="ghost" size="sm" onClick={() => handleLinkClick('/login')}>Login</Button></Link>
-                        <Link href="/signup" legacyBehavior passHref><Button variant="default" size="sm" onClick={() => handleLinkClick('/signup')}>Sign Up</Button></Link>
+                        <Button asChild variant="ghost" size="sm" onClick={() => handleLinkClick('/login')}><Link href="/login">Login</Link></Button>
+                        <Button asChild variant="default" size="sm" onClick={() => handleLinkClick('/signup')}><Link href="/signup">Sign Up</Link></Button>
                     </>
                 )}
 
                 {/* Admin Controls */}
                 {isAdmin && (
                     <>
-                        <Link href="/admin/dashboard" legacyBehavior passHref><Button variant="outline" size="sm" onClick={() => handleLinkClick('/admin/dashboard')}><ShieldCheck className="mr-2 h-4 w-4" /> Admin</Button></Link>
+                        <Button asChild variant="outline" size="sm" onClick={() => handleLinkClick('/admin/dashboard')}><Link href="/admin/dashboard"><ShieldCheck className="mr-2 h-4 w-4" /> Admin</Link></Button>
                         <Button onClick={handleAdminLogoutClick} variant="ghost" size="sm" className="text-destructive hover:text-destructive"><LogOut className="mr-2 h-4 w-4" /> Logout Admin</Button>
                     </>
                 )}
 
                 {/* Admin Login for Guests */}
                 {!isAdmin && !currentUser && !loadingAuth && (
-                    <Link href="/admin" legacyBehavior passHref><Button variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}>Admin</Button></Link>
+                    <Button asChild variant="ghost" size="sm" onClick={() => handleLinkClick('/admin')}><Link href="/admin">Admin</Link></Button>
                 )}
             </div>
             
@@ -192,9 +179,8 @@ export default function Header() {
             {!loadingAuth && currentUser && (
                 <>
                     <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">My Account</p>
-                    <Link href="/profile" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}>Profile</Button></Link>
-                    <Link href="/bible-checklist" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>My Checklist</Button></Link>
-                    <Link href="/progress-overview" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/progress-overview')}>Community Progress</Button></Link>
+                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}><Link href="/profile">Profile</Link></Button>
+                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}><Link href="/bible-checklist">My Checklist</Link></Button>
                     <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleUserSignOutClick}>Logout</Button>
                 </>
             )}
@@ -202,8 +188,8 @@ export default function Header() {
             {/* Mobile Guest Section */}
             {!loadingAuth && !currentUser && (
                 <>
-                    <Link href="/login" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/login')}>Login</Button></Link>
-                    <Link href="/signup" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/signup')}>Sign Up</Button></Link>
+                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/login')}><Link href="/login">Login</Link></Button>
+                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/signup')}><Link href="/signup">Sign Up</Link></Button>
                 </>
             )}
 
@@ -213,11 +199,11 @@ export default function Header() {
             {isAdmin ? (
                 <>
                     <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">Administration</p>
-                    <Link href="/admin/dashboard" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin/dashboard')}>Admin Panel</Button></Link>
+                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin/dashboard')}><Link href="/admin/dashboard">Admin Panel</Link></Button>
                     <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleAdminLogoutClick}>Admin Logout</Button>
                 </>
             ) : !currentUser && (
-                 <Link href="/admin" legacyBehavior passHref><Button variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin')}>Admin Login</Button></Link>
+                 <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/admin')}><Link href="/admin">Admin Login</Link></Button>
             )}
           </nav>
         </div>
@@ -226,5 +212,3 @@ export default function Header() {
     </>
   );
 }
-
-    
