@@ -16,6 +16,7 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { motion, AnimatePresence } from 'framer-motion';
+import Confetti from '@/components/ui/confetti';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
@@ -49,7 +50,7 @@ export default function BiblePlanDisplay({
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   const [isTogglingDay, setIsTogglingDay] = useState(false);
-  const [showDayCompleteAnimation, setShowDayCompleteAnimation] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const wasPreviouslyCompleted = useRef(false);
 
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
@@ -77,8 +78,7 @@ export default function BiblePlanDisplay({
   
   useEffect(() => {
     if (isAllPassagesForThisReadingComplete && !wasPreviouslyCompleted.current) {
-        setShowDayCompleteAnimation(true);
-        setTimeout(() => setShowDayCompleteAnimation(false), 1500); // Animation duration
+        setShowConfetti(true);
     }
     wasPreviouslyCompleted.current = isAllPassagesForThisReadingComplete;
   }, [isAllPassagesForThisReadingComplete]);
@@ -174,6 +174,9 @@ export default function BiblePlanDisplay({
 
   return (
     <>
+      <AnimatePresence>
+        {showConfetti && <Confetti onAnimationComplete={() => setShowConfetti(false)} />}
+      </AnimatePresence>
       <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
          <motion.div
            initial={false}
@@ -199,19 +202,6 @@ export default function BiblePlanDisplay({
              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
              isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : ""
          )}>
-            <AnimatePresence>
-                {showDayCompleteAnimation && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1.2 }}
-                        exit={{ opacity: 0, scale: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
-                    >
-                        <Check className="h-16 w-16 text-green-500 drop-shadow-lg" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
             <AccordionTrigger className="p-3 hover:no-underline w-full">
               <div className="flex justify-between items-center w-full">
                   <div className="text-left">
@@ -242,7 +232,7 @@ export default function BiblePlanDisplay({
                         <motion.li
                           key={passageIdPart}
                           className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
-                          whileTap={{ scale: 0.97 }}
+                          whileTap={{ scale: 0.98 }}
                           whileHover={{ scale: 1.02 }}
                         >
                           {showIndividualCheckboxes && (
