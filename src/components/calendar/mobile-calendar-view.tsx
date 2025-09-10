@@ -102,8 +102,6 @@ export default function MobileCalendarView({
                 </CardContent>
             </Card>
         )}
-      
-      <CalendarKey />
     </div>
   );
 }
