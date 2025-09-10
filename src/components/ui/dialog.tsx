@@ -39,12 +39,8 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       onPointerDownOutside={(e) => {
-        // This is the key change. We check if the click target is inside an element
-        // with the 'cmdk-list' attribute, which is our combobox dropdown.
-        // If it is, we prevent the dialog from closing, which allows the click
-        // to go through to the combobox item.
         const target = e.target as HTMLElement;
-        if (target.closest('[cmdk-list]')) {
+        if (target.closest('[data-radix-popper-content-wrapper]')) {
           e.preventDefault();
         }
       }}

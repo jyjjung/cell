@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookUp } from 'lucide-react';
@@ -137,25 +138,27 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="startBook"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Starting Book</FormLabel>
                   <Autocomplete
                       options={bibleBookOptions}
                       value={field.value}
                       onChange={field.onChange}
-                      label="Starting Book"
+                      label="Select a book"
                       disabled={isLoading}
                   />
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="startChapterVerse"
               render={({ field }) => (
                 <FormItem>
+                  <FormLabel>Starting Chapter & Verse</FormLabel>
                   <FormControl>
-                    <Input placeholder="Starting Chapter & Verse (e.g., 1 or 1:15)" {...field} disabled={isLoading} />
+                    <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -166,12 +169,13 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="endBook"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Ending Book (Optional)</FormLabel>
                   <Autocomplete
                     options={bibleBookOptions}
                     value={field.value || ''}
-                    onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
-                    label="Ending Book (Optional)"
+                    onChange={(value) => field.onChange(value || startBookValue)} 
+                    label="Select a book"
                     disabled={isLoading}
                   />
                   <FormMessage />
@@ -183,8 +187,9 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               name="endChapterVerse"
               render={({ field }) => (
                 <FormItem>
+                   <FormLabel>Ending Chapter & Verse</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ending Chapter & Verse (e.g., 5 or 5:10)" {...field} disabled={isLoading}/>
+                    <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
