@@ -17,6 +17,7 @@ import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { motion } from 'framer-motion';
 
 import type { AppEvent } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -25,7 +26,7 @@ import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/utils';
+import { categoryTextColors, categoryBackgroundColors } from '@/lib/utils';
 import CalendarKey from '@/components/calendar/calendar-key';
 import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -286,47 +287,87 @@ export default function HomePage() {
       </Card>
     )
   }
+  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+      },
+    },
+  };
+
 
   return (
     <div className="space-y-12">
-      <section id="stats-section">
-        <h2 className="text-3xl font-bold tracking-tight mb-6 text-center">
+      <motion.section 
+        id="stats-section"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight mb-6 text-center">
           Dashboard
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatCard
-            title="Upcoming Events"
-            value={eventsLoading ? null : upcomingEventsCount}
-            isLoading={eventsLoading}
-            buttonText="View Events"
-            buttonLink="#event-calendar-section"
-            IconComponent={CalendarCheck}
-          />
-          {currentUser && (
+        </motion.h2>
+        <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div variants={itemVariants}>
             <StatCard
-              title="Reading Progress"
-              value={readingsLoggedStatValue}
-              isLoading={loadingAuth || loadingChecklist || planLoading}
-              buttonText="My Checklist"
-              buttonLink="/bible-checklist"
-              IconComponent={BookCheck}
-              buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
+              title="Upcoming Events"
+              value={eventsLoading ? null : upcomingEventsCount}
+              isLoading={eventsLoading}
+              buttonText="View Events"
+              buttonLink="#event-calendar-section"
+              IconComponent={CalendarCheck}
             />
+          </motion.div>
+          {currentUser && (
+            <motion.div variants={itemVariants}>
+              <StatCard
+                title="Reading Progress"
+                value={readingsLoggedStatValue}
+                isLoading={loadingAuth || loadingChecklist || planLoading}
+                buttonText="My Checklist"
+                buttonLink="/bible-checklist"
+                IconComponent={BookCheck}
+                buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
+              />
+            </motion.div>
           )}
-          <StatCard
-            title="Memory Verses"
-            value={memoryVersesLoading ? null : memoryVerses.length}
-            isLoading={memoryVersesLoading}
-            buttonText="Practice Verses"
-            buttonLink="/memorize"
-            IconComponent={BrainCircuit}
-          />
-        </div>
-      </section>
+          <motion.div variants={itemVariants}>
+            <StatCard
+              title="Memory Verses"
+              value={memoryVersesLoading ? null : memoryVerses.length}
+              isLoading={memoryVersesLoading}
+              buttonText="Practice Verses"
+              buttonLink="/memorize"
+              IconComponent={BrainCircuit}
+            />
+          </motion.div>
+        </motion.div>
+      </motion.section>
 
       <Separator />
 
-      <section id="event-calendar-section">
+      <motion.section 
+        id="event-calendar-section"
+        variants={itemVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
           <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
           {!isMobile && (
@@ -370,7 +411,7 @@ export default function HomePage() {
                             <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
                             <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
                                 {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                    <div key={event.id} className={cn("p-2 rounded-md border-l-4", categoryBorderColors[event.category])}>
+                                    <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
                                         <div className="flex items-start justify-between">
                                             <p className="font-semibold text-sm">{event.title}</p>
                                             <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
@@ -387,12 +428,18 @@ export default function HomePage() {
                 </div>
               )
           )}
-      </section>
+      </motion.section>
 
       <Separator />
 
         {currentUser && (
-            <section id="community-progress-section">
+            <motion.section 
+              id="community-progress-section"
+              variants={itemVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+            >
                 <div className="max-w-4xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
                     <Accordion type="single" collapsible className="w-full">
@@ -411,12 +458,17 @@ export default function HomePage() {
                         </Card>
                     </Accordion>
                 </div>
-            </section>
+            </motion.section>
         )}
 
       <Separator />
 
-      <section>
+      <motion.section
+        variants={itemVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
              <Accordion type="single" collapsible className="w-full">
@@ -433,7 +485,7 @@ export default function HomePage() {
                 />
             </Accordion>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }

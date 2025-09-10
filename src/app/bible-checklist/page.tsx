@@ -21,6 +21,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -173,6 +174,25 @@ export default function BibleChecklistPage() {
       </div>
     </div>
   );
+  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
+    },
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+    },
+  };
+
 
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
@@ -218,15 +238,23 @@ export default function BibleChecklistPage() {
   // View for listing only the completed weeks
   if (viewState.view === 'completed-weeks-list') {
      return (
-       <div className="space-y-6">
+       <motion.div 
+          className="space-y-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+       >
           <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Completed Weeks</h1>
-          <div className="space-y-3">
+          <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight">Completed Weeks</motion.h1>
+          <motion.div 
+            className="space-y-3"
+            variants={containerVariants}
+          >
              {viewState.weeks.map((week) => (
+               <motion.div variants={itemVariants} key={week.weekNumber}>
                 <Card 
-                    key={week.weekNumber}
                     className={cn(
                         "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
                         "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
@@ -243,20 +271,26 @@ export default function BibleChecklistPage() {
                        </div>
                     </CardHeader>
                 </Card>
+                </motion.div>
              ))}
-          </div>
+          </motion.div>
           <BackToTopButton />
-       </div>
+       </motion.div>
      )
   }
 
   // Main view listing all weeks (upcoming and the completed summary card)
   return (
     <>
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
         <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-            <h1 className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</h1>
-            <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
+            <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</motion.h1>
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
               {currentWeek && (
                   <Button onClick={handleJumpToCurrentWeek} variant="outline">
                       <LocateFixed className="mr-2 h-4 w-4" /> Current
@@ -265,23 +299,29 @@ export default function BibleChecklistPage() {
               <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
                   <BookUp className="mr-2 h-4 w-4" /> Mark Range
               </Button>
-            </div>
+            </motion.div>
         </div>
 
-        <Card>
-            <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                    <Progress value={overallProgress.percentage} className="flex-grow" />
-                    <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                    You have completed {overallProgress.completed} of {overallProgress.total} total passages.
-                </p>
-            </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card>
+              <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                      <Progress value={overallProgress.percentage} className="flex-grow" />
+                      <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                      You have completed {overallProgress.completed} of {overallProgress.total} total passages.
+                  </p>
+              </CardContent>
+          </Card>
+        </motion.div>
         
-        <div className="space-y-3">
+        <motion.div 
+          className="space-y-3"
+          variants={containerVariants}
+        >
             {completedWeeks.length > 0 && (
+              <motion.div variants={itemVariants}>
                 <Card 
                     key="completed-weeks-summary"
                     className={cn(
@@ -302,11 +342,12 @@ export default function BibleChecklistPage() {
                        </div>
                     </CardHeader>
                 </Card>
+              </motion.div>
             )}
 
             {upcomingWeeks.map((week) => (
+              <motion.div variants={itemVariants} key={week.weekNumber}>
                 <Card 
-                    key={week.weekNumber}
                     className={cn(
                         "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
                         week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
@@ -333,13 +374,12 @@ export default function BibleChecklistPage() {
                        </div>
                     </CardHeader>
                 </Card>
+              </motion.div>
             ))}
-        </div>
+        </motion.div>
         <BackToTopButton />
-    </div>
+    </motion.div>
     <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
     </>
   );
 }
-
-    

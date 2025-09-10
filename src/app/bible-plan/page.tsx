@@ -12,6 +12,7 @@ import { Loader2, Info, ArrowLeft, CalendarDays } from 'lucide-react';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface WeeklyGrouping {
   weekNumber: number;
@@ -68,6 +69,25 @@ export default function FullBiblePlanPage() {
       })
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
   }, [plan]);
+  
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+      },
+    },
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+    },
+  };
+
 
   if (!isMounted) {
     return (
@@ -136,15 +156,23 @@ export default function FullBiblePlanPage() {
   
   // Main view listing all weeks
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center self-start sm:self-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> Full Bible Reading Plan</h1>
+        <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center self-start sm:self-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> Full Bible Reading Plan</motion.h1>
       </div>
 
-       <div className="space-y-3">
+       <motion.div 
+        className="space-y-3"
+        variants={containerVariants}
+       >
           {weeklyGroupings.map((week) => (
+            <motion.div variants={itemVariants} key={week.weekNumber}>
               <Card 
-                  key={week.weekNumber}
                   className="shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
                   onClick={() => setViewState({ view: 'single-week-details', week: week })}
               >
@@ -157,9 +185,10 @@ export default function FullBiblePlanPage() {
                      </div>
                   </CardHeader>
               </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       <BackToTopButton />
-    </div>
+    </motion.div>
   );
 }
