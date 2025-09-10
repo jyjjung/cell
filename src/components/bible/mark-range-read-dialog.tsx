@@ -123,7 +123,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center"><BookUp className="mr-2 h-5 w-5"/> Mark Range as Read</DialogTitle>
           <DialogDescription>
@@ -131,73 +131,73 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
-                <FormField
-                control={form.control}
-                name="startBook"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Starting Book</FormLabel>
-                    <Autocomplete
-                        options={bibleBookOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Select a book..."
-                        searchPlaceholder="Search books..."
-                        emptyPlaceholder="No book found."
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="startChapterVerse"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Chapter & Verse</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., 1 or 1:15" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            
+            <FormField
+              control={form.control}
+              name="startBook"
+              render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                  <FormLabel>Starting Book</FormLabel>
+                  <Autocomplete
+                      options={bibleBookOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select a book..."
+                      searchPlaceholder="Search books..."
+                      emptyPlaceholder="No book found."
+                  />
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="startChapterVerse"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Starting Chapter & Verse</FormLabel>
+                  <FormControl>
+                      <Input placeholder="e.g., 1 or 1:15" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
 
-                <FormField
-                control={form.control}
-                name="endBook"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Ending Book (Optional)</FormLabel>
-                     <Autocomplete
-                        options={bibleBookOptions}
-                        value={field.value || ''}
-                        onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
-                        placeholder="Same as start book"
-                        searchPlaceholder="Search books..."
-                        emptyPlaceholder="No book found."
-                    />
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="endChapterVerse"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Chapter & Verse (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., 5 or 5:10" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <DialogFooter>
+            <FormField
+              control={form.control}
+              name="endBook"
+              render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                  <FormLabel>Ending Book (Optional)</FormLabel>
+                    <Autocomplete
+                      options={bibleBookOptions}
+                      value={field.value || ''}
+                      onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
+                      placeholder="Same as start book"
+                      searchPlaceholder="Search books..."
+                      emptyPlaceholder="No book found."
+                  />
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="endChapterVerse"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Ending Chapter & Verse (Optional)</FormLabel>
+                  <FormControl>
+                      <Input placeholder="e.g., 5 or 5:10" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+
+            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
                 Cancel
               </Button>
