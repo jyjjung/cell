@@ -75,10 +75,17 @@ export default function BiblePlanDisplay({
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allPassageTextsForDay, completedPassages]);
   
-  const previousCompletionState = useRef(isAllPassagesForThisReadingComplete);
+  const previousCompletionState = useRef<boolean | undefined>(undefined);
 
   useEffect(() => {
     if (isMounted) {
+      // On the first run after mounting, just set the initial state
+      if (previousCompletionState.current === undefined) {
+        previousCompletionState.current = isAllPassagesForThisReadingComplete;
+        return;
+      }
+
+      // On subsequent runs, check if the state has changed from false to true
       if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
         setShowConfetti(true);
       }
