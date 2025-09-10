@@ -16,7 +16,6 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { motion, AnimatePresence } from 'framer-motion';
-import Confetti from '@/components/ui/confetti';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
@@ -50,7 +49,6 @@ export default function BiblePlanDisplay({
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   const [isTogglingDay, setIsTogglingDay] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
   
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
   const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
@@ -75,23 +73,6 @@ export default function BiblePlanDisplay({
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allPassageTextsForDay, completedPassages]);
   
-  const previousCompletionState = useRef<boolean | undefined>(undefined);
-
-  useEffect(() => {
-    if (isMounted) {
-      if (previousCompletionState.current === undefined) {
-        previousCompletionState.current = isAllPassagesForThisReadingComplete;
-        return;
-      }
-
-      if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
-        setShowConfetti(true);
-      }
-      previousCompletionState.current = isAllPassagesForThisReadingComplete;
-    }
-  }, [isAllPassagesForThisReadingComplete, isMounted]);
-
-
   let parsedDayDate: Date | null = null;
   if (readingToDisplay?.date) {
     try {
@@ -182,9 +163,6 @@ export default function BiblePlanDisplay({
 
   return (
     <>
-      <AnimatePresence>
-        {showConfetti && <Confetti onAnimationComplete={() => setShowConfetti(false)} />}
-      </AnimatePresence>
       <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
          <motion.div
            initial={false}
