@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
@@ -163,9 +164,27 @@ export default function BiblePlanDisplay({
   return (
     <>
       <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
+         <motion.div
+           initial={false}
+           animate={isAllPassagesForThisReadingComplete ? "completed" : "initial"}
+           variants={{
+             initial: { background: 'hsl(var(--card))' },
+             completed: {
+               background: [
+                 'hsl(var(--card))', 
+                 'hsla(142, 71%, 47%, 0.4)', // Flash green
+                 'hsla(142, 60%, 96%, 0.3)', // Fade to light green (light mode)
+               ]
+             }
+           }}
+           transition={{ duration: 1.5, ease: "easeOut" }}
+           className={cn(
+             "bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200"
+           )}
+         >
          <Card className={cn(
-             "bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200",
-             isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
+             "bg-transparent", // Make card transparent to see animated div
+             isAllPassagesForThisReadingComplete ? "dark:bg-green-900/20 border-green-500/30" :
              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
              isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : ""
          )}>
@@ -196,7 +215,13 @@ export default function BiblePlanDisplay({
                       const isPassageValid = !passage.displayText.startsWith("Error:");
 
                       return (
-                        <li key={passageIdPart} className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40">
+                        <motion.li
+                          key={passageIdPart}
+                          className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
+                          initial={false}
+                          animate={{ scale: isChecked ? 1.03 : 1, transition: { duration: 0.2 } }}
+                          whileHover={{ scale: 1.02 }}
+                        >
                           {showIndividualCheckboxes && (
                             <Checkbox
                               id={passageIdPart}
@@ -234,7 +259,7 @@ export default function BiblePlanDisplay({
                               <span className="text-destructive italic font-semibold text-xs">{passage.displayText || "Error: Passage Data Invalid"}</span>
                             )}
                           </Label>
-                        </li>
+                        </motion.li>
                       );
                     })}
                   </ul>
@@ -250,6 +275,7 @@ export default function BiblePlanDisplay({
               </div>
             </AccordionContent>
           </Card>
+        </motion.div>
       </AccordionItem>
       <BiblePassageViewerDialog
         isOpen={isPassageViewerOpen}
