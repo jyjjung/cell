@@ -298,7 +298,7 @@ export default function HomePage() {
             title="Upcoming Events"
             value={eventsLoading ? null : upcomingEventsCount}
             isLoading={eventsLoading}
-            buttonText="View Calendar"
+            buttonText="View Events"
             buttonLink="#event-calendar-section"
             IconComponent={CalendarCheck}
           />
@@ -328,7 +328,7 @@ export default function HomePage() {
 
       <section id="event-calendar-section">
         <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
-          <h2 className="text-3xl font-bold tracking-tight text-center">Event Calendar</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
           {!isMobile && (
               <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
                   <TabsList>
