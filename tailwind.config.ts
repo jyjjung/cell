@@ -19,11 +19,11 @@ export default {
     'text-pink-800', 'dark:text-pink-200',
     'text-blue-800', 'dark:text-blue-200',
     'text-orange-800', 'dark:text-orange-200',
-    // Safelist all category border colors
-    'border-purple-500',
-    'border-pink-500',
-    'border-blue-500',
-    'border-orange-500',
+    // Safelist all category border colors (using CSS variables, so direct safelisting of the class name isn't needed, but good practice if direct classes were used)
+    'border-event-border-color',
+    'border-birthday-border-color',
+    'border-qt-border-color',
+    'border-snack-border-color',
   ],
   theme: {
   	extend: {

@@ -5,30 +5,51 @@ import { useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { format, parseISO, startOfDay, isBefore } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CalendarKey from '@/components/calendar/calendar-key';
 import type { AppEvent } from '@/types';
+import { EventCategory } from '@/types';
 import { categoryBackgroundColors, categoryTextColors, categoryBorderColors } from '@/lib/utils';
-import { CalendarOff } from 'lucide-react';
+import { CalendarOff, Calendar, Cake, Coffee, Users } from 'lucide-react';
 
 
 interface MobileCalendarViewProps {
   eventsByDate: Map<string, AppEvent[]>;
 }
 
+const categoryOrder = [
+    EventCategory.Event,
+    EventCategory.QT,
+    EventCategory.Snack,
+    EventCategory.Birthday,
+];
+
+const categoryIcons: { [key in EventCategory]: React.ComponentType<{ className?: string }> } = {
+    [EventCategory.Event]: Users,
+    [EventCategory.QT]: Calendar,
+    [EventCategory.Snack]: Coffee,
+    [EventCategory.Birthday]: Cake,
+};
+
 export default function MobileCalendarView({
   eventsByDate,
 }: MobileCalendarViewProps) {
-  const upcomingEvents = useMemo(() => {
+  const upcomingEventsByCategory = useMemo(() => {
     const today = startOfDay(new Date());
-    const allFutureEvents: { date: Date, event: AppEvent }[] = [];
+    const groupedByCategory = new Map<EventCategory, AppEvent[]>();
+
+    // Initialize map with all categories to maintain order
+    categoryOrder.forEach(cat => groupedByCategory.set(cat, []));
 
     eventsByDate.forEach((dayEvents) => {
         dayEvents.forEach(event => {
             try {
                 const eventDate = parseISO(event.date);
                 if (!isBefore(eventDate, today)) {
-                    allFutureEvents.push({ date: eventDate, event });
+                    const categoryEvents = groupedByCategory.get(event.category);
+                    if (categoryEvents) {
+                        categoryEvents.push(event);
+                    }
                 }
             } catch (e) {
                 console.error("Error parsing event date for mobile list:", event.date, e);
@@ -36,43 +57,42 @@ export default function MobileCalendarView({
         });
     });
 
-    allFutureEvents.sort((a,b) => a.date.getTime() - b.date.getTime());
-
-    const groupedByDate = new Map<string, AppEvent[]>();
-    allFutureEvents.forEach(({ event }) => {
-        const dateStr = format(parseISO(event.date), 'PPP');
-        if (!groupedByDate.has(dateStr)) {
-            groupedByDate.set(dateStr, []);
-        }
-        groupedByDate.get(dateStr)!.push(event);
+    // Sort events within each category
+    groupedByCategory.forEach((events) => {
+        events.sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
     });
 
-    return Array.from(groupedByDate.entries());
+    return Array.from(groupedByCategory.entries()).filter(([_, events]) => events.length > 0);
 
   }, [eventsByDate]);
 
 
   return (
-    <div className="space-y-4">
-        {upcomingEvents.length > 0 ? (
-            upcomingEvents.map(([dateStr, dayEvents]) => (
-                <div key={dateStr}>
-                    <h3 className="font-semibold text-lg mb-2 sticky top-16 bg-background py-2">{dateStr}</h3>
-                    <div className="space-y-2">
-                        {dayEvents.map(event => (
-                             <Card key={event.id} className={cn("p-2 rounded-md border-l-4", categoryBorderColors[event.category])}>
-                                <div className="flex items-start justify-between">
-                                    <p className="font-semibold text-sm">{event.title}</p>
-                                    <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap", categoryBackgroundColors[event.category], categoryTextColors[event.category])}>
-                                        {event.category}
-                                    </div>
+    <div className="space-y-6">
+        {upcomingEventsByCategory.length > 0 ? (
+            upcomingEventsByCategory.map(([category, events]) => {
+                 const Icon = categoryIcons[category] || Calendar;
+                 return (
+                    <Card key={category} className="shadow-md border-l-4" style={{ borderLeftColor: `var(--${category.toLowerCase()}-border-color)` }}>
+                        <CardHeader className="p-3">
+                            <CardTitle className="text-lg flex items-center">
+                               <Icon className={cn("h-5 w-5 mr-2", categoryTextColors[category])} />
+                               {category}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 pt-0 text-sm">
+                           <div className="space-y-1.5">
+                            {events.map(event => (
+                                <div key={event.id} className="flex justify-between items-center bg-background/50 p-2 rounded-md">
+                                    <span className="font-medium">{event.title}</span>
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">{format(parseISO(event.date), 'MMM d')}</span>
                                 </div>
-                                {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            ))
+                            ))}
+                           </div>
+                        </CardContent>
+                    </Card>
+                 )
+            })
         ) : (
              <Card>
                 <CardContent className="p-8 text-center">

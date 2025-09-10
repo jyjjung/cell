@@ -22,8 +22,8 @@ export const categoryTextColors: { [key in EventCategory]: string } = {
 };
 
 export const categoryBorderColors: { [key in EventCategory]: string } = {
-  [EventCategory.Event]: 'border-purple-500',
-  [EventCategory.Birthday]: 'border-pink-500',
-  [EventCategory.QT]: 'border-blue-500',
-  [EventCategory.Snack]: 'border-orange-500',
+  [EventCategory.Event]: 'hsl(var(--event-border-color, 259, 90%, 65%))',
+  [EventCategory.Birthday]: 'hsl(var(--birthday-border-color, 340, 82%, 69%))',
+  [EventCategory.QT]: 'hsl(var(--qt-border-color, 217, 91%, 60%))',
+  [EventCategory.Snack]: 'hsl(var(--snack-border-color, 38, 92%, 50%))',
 };
