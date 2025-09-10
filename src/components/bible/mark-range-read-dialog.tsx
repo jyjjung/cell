@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookUp } from 'lucide-react';
@@ -137,30 +137,28 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="startBook"
               render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Starting Book</FormLabel>
-                    <Autocomplete
-                        options={bibleBookOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Search for a book..."
-                        disabled={isLoading}
-                    />
+                <FormItem>
+                  <Autocomplete
+                      options={bibleBookOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      label="Starting Book"
+                      disabled={isLoading}
+                  />
                   <FormMessage />
-                  </FormItem>
+                </FormItem>
               )}
             />
             <FormField
               control={form.control}
               name="startChapterVerse"
               render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Starting Chapter & Verse</FormLabel>
+                <FormItem>
                   <FormControl>
-                      <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
+                    <Input placeholder="Starting Chapter & Verse (e.g., 1 or 1:15)" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
-                  </FormItem>
+                </FormItem>
               )}
             />
 
@@ -168,30 +166,28 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="endBook"
               render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Ending Book (Optional)</FormLabel>
-                    <Autocomplete
-                      options={bibleBookOptions}
-                      value={field.value || ''}
-                      onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
-                      placeholder="Same as start book"
-                      disabled={isLoading}
+                <FormItem>
+                  <Autocomplete
+                    options={bibleBookOptions}
+                    value={field.value || ''}
+                    onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
+                    label="Ending Book (Optional)"
+                    disabled={isLoading}
                   />
                   <FormMessage />
-                  </FormItem>
+                </FormItem>
               )}
             />
             <FormField
               control={form.control}
               name="endChapterVerse"
               render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Ending Chapter & Verse (Optional)</FormLabel>
+                <FormItem>
                   <FormControl>
-                      <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
+                    <Input placeholder="Ending Chapter & Verse (e.g., 5 or 5:10)" {...field} disabled={isLoading}/>
                   </FormControl>
                   <FormMessage />
-                  </FormItem>
+                </FormItem>
               )}
             />
 
