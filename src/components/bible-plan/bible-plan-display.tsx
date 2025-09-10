@@ -78,13 +78,13 @@ export default function BiblePlanDisplay({
   const previousCompletionState = useRef(isAllPassagesForThisReadingComplete);
 
   useEffect(() => {
-    // Only trigger confetti if the state changes from not complete to complete.
-    if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
-      setShowConfetti(true);
+    if (isMounted) {
+      if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
+        setShowConfetti(true);
+      }
+      previousCompletionState.current = isAllPassagesForThisReadingComplete;
     }
-    // Update the ref to the current state for the next render.
-    previousCompletionState.current = isAllPassagesForThisReadingComplete;
-  }, [isAllPassagesForThisReadingComplete]);
+  }, [isAllPassagesForThisReadingComplete, isMounted]);
 
 
   let parsedDayDate: Date | null = null;
@@ -183,27 +183,15 @@ export default function BiblePlanDisplay({
       <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
          <motion.div
            initial={false}
-           animate={isAllPassagesForThisReadingComplete ? "completed" : "initial"}
-           variants={{
-             initial: { background: 'hsl(var(--card))' },
-             completed: {
-               background: [
-                 'hsl(var(--card))', 
-                 'hsla(142, 71%, 47%, 0.4)', // Flash green
-                 'hsla(142, 60%, 96%, 0.3)', // Fade to light green (light mode)
-               ]
-             }
-           }}
-           transition={{ duration: 1.5, ease: "easeOut" }}
            className={cn(
-             "bg-card/90 rounded-lg shadow-sm w-full transition-colors duration-200"
+             "rounded-lg shadow-sm w-full transition-colors duration-200"
            )}
          >
          <Card className={cn(
-             "bg-transparent relative", // Make card transparent to see animated div
-             isAllPassagesForThisReadingComplete ? "dark:bg-green-900/20 border-green-500/30" :
+             "bg-card/90 relative", 
+             isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
-             isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : ""
+             isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
          )}>
             <AccordionTrigger className="p-3 hover:no-underline w-full">
               <div className="flex justify-between items-center w-full">
