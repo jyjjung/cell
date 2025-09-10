@@ -9,18 +9,18 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { DailyReading } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, startOfDay, isSameDay } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { DailyGoalProgressBar } from '@/components/ui/daily-goal-progress-bar';
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -32,6 +32,7 @@ interface WeeklyProgress {
   progressPercentage: number;
   isCompleted: boolean;
   isCurrent: boolean;
+
   isOverdue: boolean;
 }
 
@@ -119,49 +120,15 @@ export default function BibleChecklistPage() {
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
   }, [plan, completedPassages]);
   
-  const { completedPercentage, behindPercentage, todayGoalPercentage, totalPassagesInPlan } = useMemo(() => {
-    if (!plan?.dailyReadings || loadingChecklist || !isMounted) {
-      return { completedPercentage: 0, behindPercentage: 0, todayGoalPercentage: 0, totalPassagesInPlan: 0 };
+  const overallProgress = useMemo(() => {
+    if (!plan?.dailyReadings || loadingChecklist) {
+      return { total: 0, completed: 0, percentage: 0 };
     }
-    
-    const today = startOfDay(new Date());
-    let totalPlanPassages = 0;
-    let behindCount = 0;
-    let todayGoalCount = 0;
-
-    plan.dailyReadings.forEach(day => {
-        const validDayPassages = day.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
-        totalPlanPassages += validDayPassages.length;
-
-        try {
-            const readingDate = parseISO(day.date);
-            if(isValid(readingDate)) {
-                const unreadForDay = validDayPassages.filter(p => !completedPassages.includes(p.displayText)).length;
-
-                if (isBefore(readingDate, today)) {
-                    behindCount += unreadForDay;
-                } else if (isSameDay(readingDate, today)) {
-                    todayGoalCount += unreadForDay;
-                }
-            }
-        } catch (e) {
-            console.error("Error parsing reading date for overall progress calc:", day.date, e);
-        }
-    });
-
-    if (totalPlanPassages === 0) {
-      return { completedPercentage: 0, behindPercentage: 0, todayGoalPercentage: 0, totalPassagesInPlan: 0 };
-    }
-
-    const completedCount = completedPassages.length;
-    
-    return { 
-        completedPercentage: (completedCount / totalPlanPassages) * 100,
-        behindPercentage: (behindCount / totalPlanPassages) * 100,
-        todayGoalPercentage: (todayGoalCount / totalPlanPassages) * 100,
-        totalPassagesInPlan: totalPlanPassages,
-    };
-  }, [plan, completedPassages, loadingChecklist, isMounted]);
+    const total = plan.dailyReadings.reduce((acc, day) => acc + (day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0), 0);
+    const completed = completedPassages.length;
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+    return { total, completed, percentage };
+  }, [plan, completedPassages, loadingChecklist]);
 
 
   const currentWeek = useMemo(() => {
@@ -278,6 +245,7 @@ export default function BibleChecklistPage() {
                 </Card>
              ))}
           </div>
+          <BackToTopButton />
        </div>
      )
   }
@@ -303,21 +271,12 @@ export default function BibleChecklistPage() {
         <Card>
             <CardContent className="p-4">
                 <div className="flex items-center gap-4">
-                    <DailyGoalProgressBar
-                        completedPercentage={completedPercentage}
-                        behindPercentage={behindPercentage}
-                        todayGoalPercentage={todayGoalPercentage}
-                    />
-                    <span className="font-semibold text-muted-foreground">{Math.round(completedPercentage)}%</span>
+                    <Progress value={overallProgress.percentage} className="flex-grow" />
+                    <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
                 </div>
-                 <p className="text-sm text-muted-foreground mt-2">
-                    You have completed {completedPassages.length} of {totalPassagesInPlan} total passages.
+                <p className="text-sm text-muted-foreground mt-2">
+                    You have completed {overallProgress.completed} of {overallProgress.total} total passages.
                 </p>
-                <div className="text-xs mt-3 flex items-center gap-4 text-muted-foreground">
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div><span>Completed</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span>Behind (Past Days)</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span>Today's Goal</span></div>
-                </div>
             </CardContent>
         </Card>
         
