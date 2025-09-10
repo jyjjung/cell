@@ -21,7 +21,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -193,6 +193,12 @@ export default function BibleChecklistPage() {
     },
   };
 
+  const viewVariants = {
+    hidden: { opacity: 0, scale: 0.98 },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.98 },
+  };
+
 
   if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
     return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
@@ -204,182 +210,190 @@ export default function BibleChecklistPage() {
     return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
-  // View for a single week's daily readings
-  if (viewState.view === 'single-week-details') {
-    return (
-      <div className="space-y-6">
-        <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
-        </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
-        
-        <Accordion type="single" collapsible className="w-full space-y-2">
-            {viewState.week.readings
-                .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
-                .map(reading => (
-                  <BiblePlanDisplay
-                    key={reading.date}
-                    readingToDisplay={reading}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
-                    loading={loadingChecklist}
-                    planAvailable={true}
-                    hidePlanMeta={true}
-                  />
-            ))}
-        </Accordion>
-         <BackToTopButton />
-      </div>
-    );
-  }
-
-  // View for listing only the completed weeks
-  if (viewState.view === 'completed-weeks-list') {
-     return (
-       <motion.div 
-          className="space-y-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-       >
-          <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
-          </Button>
-          <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight">Completed Weeks</motion.h1>
-          <motion.div 
-            className="space-y-3"
-            variants={containerVariants}
-          >
-             {viewState.weeks.map((week) => (
-               <motion.div variants={itemVariants} key={week.weekNumber}>
-                <Card 
-                    className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
-                        "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
-                    )}
-                    onClick={() => setViewState({ view: 'single-week-details', week: week })}
-                >
-                    <CardHeader className="p-4">
-                       <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
-                                <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
-                            </div>
-                            <CheckCircle className="h-6 w-6 text-green-500" />
-                       </div>
-                    </CardHeader>
-                </Card>
-                </motion.div>
-             ))}
-          </motion.div>
-          <BackToTopButton />
-       </motion.div>
-     )
-  }
-
-  // Main view listing all weeks (upcoming and the completed summary card)
   return (
-    <>
-    <motion.div 
-      className="space-y-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-        <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-            <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</motion.h1>
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
-              {currentWeek && (
-                  <Button onClick={handleJumpToCurrentWeek} variant="outline">
-                      <LocateFixed className="mr-2 h-4 w-4" /> Current
-                  </Button>
-              )}
-              <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
-                  <BookUp className="mr-2 h-4 w-4" /> Mark Range
+    <AnimatePresence mode="wait">
+      <div key={viewState.view}>
+        {viewState.view === 'single-week-details' && (
+           <motion.div 
+            className="space-y-6"
+            variants={viewVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ duration: 0.2 }}
+           >
+            <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
+            
+            <Accordion type="single" collapsible className="w-full space-y-2">
+                {viewState.week.readings
+                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                    .map(reading => (
+                      <BiblePlanDisplay
+                        key={reading.date}
+                        readingToDisplay={reading}
+                        currentUser={currentUser}
+                        completedPassages={completedPassages}
+                        togglePassageCompletion={togglePassageCompletion}
+                        allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                        loading={loadingChecklist}
+                        planAvailable={true}
+                        hidePlanMeta={true}
+                      />
+                ))}
+            </Accordion>
+            <BackToTopButton />
+          </motion.div>
+        )}
+
+        {viewState.view === 'completed-weeks-list' && (
+          <motion.div 
+            className="space-y-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+              <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
               </Button>
-            </motion.div>
-        </div>
+              <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight">Completed Weeks</motion.h1>
+              <motion.div 
+                className="space-y-3"
+                variants={containerVariants}
+              >
+                {viewState.weeks.map((week) => (
+                  <motion.div variants={itemVariants} key={week.weekNumber}>
+                    <Card 
+                        className={cn(
+                            "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                            "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
+                        )}
+                        onClick={() => setViewState({ view: 'single-week-details', week: week })}
+                    >
+                        <CardHeader className="p-4">
+                          <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
+                                    <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                                </div>
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                          </div>
+                        </CardHeader>
+                    </Card>
+                    </motion.div>
+                ))}
+              </motion.div>
+              <BackToTopButton />
+          </motion.div>
+        )}
 
-        <motion.div variants={itemVariants}>
-          <Card>
-              <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                      <Progress value={overallProgress.percentage} className="flex-grow" />
-                      <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+        {viewState.view === 'all-weeks' && (
+            <>
+              <motion.div 
+                className="space-y-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                  <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
+                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</motion.h1>
+                      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
+                        {currentWeek && (
+                            <Button onClick={handleJumpToCurrentWeek} variant="outline">
+                                <LocateFixed className="mr-2 h-4 w-4" /> Current
+                            </Button>
+                        )}
+                        <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
+                            <BookUp className="mr-2 h-4 w-4" /> Mark Range
+                        </Button>
+                      </motion.div>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                      You have completed {overallProgress.completed} of {overallProgress.total} total passages.
-                  </p>
-              </CardContent>
-          </Card>
-        </motion.div>
-        
-        <motion.div 
-          className="space-y-3"
-          variants={containerVariants}
-        >
-            {completedWeeks.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <Card 
-                    key="completed-weeks-summary"
-                    className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
-                        "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
-                    )}
-                    onClick={() => {
-                        setViewState({ view: 'completed-weeks-list', weeks: completedWeeks });
-                    }}
-                >
-                    <CardHeader className="p-4">
-                       <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED</p>
-                                <CardTitle className="text-xl">{`Weeks ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
-                            </div>
-                             <CheckCircle className="h-8 w-8 text-green-500" />
-                       </div>
-                    </CardHeader>
-                </Card>
-              </motion.div>
-            )}
 
-            {upcomingWeeks.map((week) => (
-              <motion.div variants={itemVariants} key={week.weekNumber}>
-                <Card 
-                    className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
-                        week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
-                        week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
-                        "hover:border-primary/50"
-                    )}
-                    onClick={() => setViewState({ view: 'single-week-details', week: week })}
-                >
-                    <CardHeader className="p-4">
-                       <div className="flex justify-between items-center">
-                            <div>
-                                <p className={cn(
-                                    "text-sm font-semibold",
-                                     week.isCurrent ? "text-blue-600 dark:text-blue-400" :
-                                     week.isOverdue ? "text-red-600 dark:text-red-400" :
-                                     "text-primary"
-                                )}>WEEK {week.weekNumber}</p>
-                                <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                  <motion.div variants={itemVariants}>
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                                <Progress value={overallProgress.percentage} className="flex-grow" />
+                                <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
                             </div>
-                             <div className="text-right">
-                                <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
-                                <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
-                            </div>
-                       </div>
-                    </CardHeader>
-                </Card>
+                            <p className="text-sm text-muted-foreground mt-2">
+                                You have completed {overallProgress.completed} of {overallProgress.total} total passages.
+                            </p>
+                        </CardContent>
+                    </Card>
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="space-y-3"
+                    variants={containerVariants}
+                  >
+                      {completedWeeks.length > 0 && (
+                        <motion.div variants={itemVariants}>
+                          <Card 
+                              key="completed-weeks-summary"
+                              className={cn(
+                                  "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                                  "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
+                              )}
+                              onClick={() => {
+                                  setViewState({ view: 'completed-weeks-list', weeks: completedWeeks });
+                              }}
+                          >
+                              <CardHeader className="p-4">
+                                <div className="flex justify-between items-center">
+                                      <div>
+                                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">COMPLETED</p>
+                                          <CardTitle className="text-xl">{`Weeks ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</CardTitle>
+                                      </div>
+                                      <CheckCircle className="h-8 w-8 text-green-500" />
+                                </div>
+                              </CardHeader>
+                          </Card>
+                        </motion.div>
+                      )}
+
+                      {upcomingWeeks.map((week) => (
+                        <motion.div variants={itemVariants} key={week.weekNumber}>
+                          <Card 
+                              className={cn(
+                                  "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                                  week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
+                                  week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
+                                  "hover:border-primary/50"
+                              )}
+                              onClick={() => setViewState({ view: 'single-week-details', week: week })}
+                          >
+                              <CardHeader className="p-4">
+                                <div className="flex justify-between items-center">
+                                      <div>
+                                          <p className={cn(
+                                              "text-sm font-semibold",
+                                              week.isCurrent ? "text-blue-600 dark:text-blue-400" :
+                                              week.isOverdue ? "text-red-600 dark:text-red-400" :
+                                              "text-primary"
+                                          )}>WEEK {week.weekNumber}</p>
+                                          <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                                      </div>
+                                      <div className="text-right">
+                                          <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
+                                          <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
+                                      </div>
+                                </div>
+                              </CardHeader>
+                          </Card>
+                        </motion.div>
+                      ))}
+                  </motion.div>
+                  <BackToTopButton />
               </motion.div>
-            ))}
-        </motion.div>
-        <BackToTopButton />
-    </motion.div>
-    <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
-    </>
+              <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
+            </>
+        )}
+      </div>
+    </AnimatePresence>
   );
 }
