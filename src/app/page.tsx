@@ -11,7 +11,7 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Info } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Info, List, LayoutGrid } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format, isDateValid } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
@@ -32,7 +32,8 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MobileCalendarView from '@/components/calendar/mobile-calendar-view';
+import EventListView from '@/components/calendar/event-list-view';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface UserProgressDisplay {
@@ -58,6 +59,8 @@ export default function HomePage() {
   // Calendar State
   const [month, setMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [calendarView, setCalendarView] = useState<'grid' | 'list'>('grid');
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -324,10 +327,20 @@ export default function HomePage() {
       <Separator />
 
       <section id="event-calendar-section">
-        <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Event Calendar</h2>
+        <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
+          <h2 className="text-3xl font-bold tracking-tight text-center">Event Calendar</h2>
+          {!isMobile && (
+              <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
+                  <TabsList>
+                      <TabsTrigger value="grid"><LayoutGrid className="mr-2 h-4 w-4" /> Grid</TabsTrigger>
+                      <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> List</TabsTrigger>
+                  </TabsList>
+              </Tabs>
+          )}
+        </div>
           {eventsLoading ? <CalendarSkeleton /> : (
-              isMobile ? (
-                  <MobileCalendarView eventsByDate={eventsByDate} />
+              (isMobile || calendarView === 'list') ? (
+                  <EventListView eventsByDate={eventsByDate} />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div className="lg:col-span-3">

@@ -43,7 +43,7 @@ const TabsTrigger = React.forwardRef<
         transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
       />
     )}
-    <span className="relative z-20">{children}</span>
+    <span className="relative z-20 flex items-center">{children}</span>
   </TabsPrimitive.Trigger>
 ))
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName

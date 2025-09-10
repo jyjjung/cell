@@ -2,18 +2,15 @@
 "use client";
 
 import { useMemo } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-import { format, parseISO, startOfDay, isBefore } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import CalendarKey from '@/components/calendar/calendar-key';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
-import { categoryBackgroundColors, categoryTextColors, categoryBorderColors } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { categoryTextColors } from '@/lib/utils';
 import { CalendarOff, Calendar, Cake, Coffee, Users } from 'lucide-react';
 
-
-interface MobileCalendarViewProps {
+interface EventListViewProps {
   eventsByDate: Map<string, AppEvent[]>;
 }
 
@@ -31,39 +28,35 @@ const categoryIcons: { [key in EventCategory]: React.ComponentType<{ className?:
     [EventCategory.Birthday]: Cake,
 };
 
-export default function MobileCalendarView({
-  eventsByDate,
-}: MobileCalendarViewProps) {
+export default function EventListView({ eventsByDate }: EventListViewProps) {
   const upcomingEventsByCategory = useMemo(() => {
-    const today = startOfDay(new Date());
-    const groupedByCategory = new Map<EventCategory, AppEvent[]>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
 
-    // Initialize map with all categories to maintain order
+    const groupedByCategory = new Map<EventCategory, AppEvent[]>();
     categoryOrder.forEach(cat => groupedByCategory.set(cat, []));
 
     eventsByDate.forEach((dayEvents) => {
         dayEvents.forEach(event => {
             try {
                 const eventDate = parseISO(event.date);
-                if (!isBefore(eventDate, today)) {
+                if (eventDate >= today) {
                     const categoryEvents = groupedByCategory.get(event.category);
                     if (categoryEvents) {
                         categoryEvents.push(event);
                     }
                 }
             } catch (e) {
-                console.error("Error parsing event date for mobile list:", event.date, e);
+                console.error("Error parsing event date for list view:", event.date, e);
             }
         });
     });
 
-    // Sort events within each category
     groupedByCategory.forEach((events) => {
         events.sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
     });
 
     return Array.from(groupedByCategory.entries()).filter(([_, events]) => events.length > 0);
-
   }, [eventsByDate]);
 
 
