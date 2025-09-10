@@ -1,23 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
-
+import { ChevronsUpDown, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
 
 export interface AutocompleteOption {
   value: string;
@@ -26,9 +15,9 @@ export interface AutocompleteOption {
 
 interface AutocompleteProps {
   options: AutocompleteOption[];
-  value?: string;
+  value: string;
   onChange: (value: string) => void;
-  label: string;
+  placeholder?: string;
   disabled?: boolean;
 }
 
@@ -36,37 +25,46 @@ export function Autocomplete({
   options,
   value,
   onChange,
-  label,
+  placeholder,
   disabled = false,
 }: AutocompleteProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false)
+  
+  // Find the label for the current value, or use the value itself if not found
+  const displayLabel = options.find(option => option.value.toLowerCase() === value.toLowerCase())?.label || value;
 
-  const selectedOption = React.useMemo(
-    () => options.find((option) => option.value === value),
-    [options, value]
-  );
+  const handleSelect = (currentValue: string) => {
+    const selectedOption = options.find(option => option.value.toLowerCase() === currentValue.toLowerCase());
+    onChange(selectedOption ? selectedOption.value : currentValue);
+    setOpen(false);
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
-        >
-          {selectedOption ? selectedOption.label : label}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        <div className="relative">
+            <Input
+                value={displayLabel}
+                onFocus={() => setOpen(true)}
+                onChange={(e) => {
+                  // This allows the user to clear the input, but selection happens in the list
+                  if (e.target.value === '') {
+                    onChange('');
+                  }
+                }}
+                placeholder={placeholder}
+                className="w-full"
+                disabled={disabled}
+            />
+            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
+        </div>
       </PopoverTrigger>
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
-        // Prevent focus from being stolen by the popover, which would close the dialog
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command>
-          <CommandInput placeholder="Search book..." className="h-9" />
+          <CommandInput placeholder="Search book..." />
           <CommandList>
             <CommandEmpty>No book found.</CommandEmpty>
             <CommandGroup>
@@ -74,18 +72,15 @@ export function Autocomplete({
                 <CommandItem
                   key={option.value}
                   value={option.value}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
-                    setOpen(false);
-                  }}
+                  onSelect={handleSelect}
                 >
-                  {option.label}
                   <Check
                     className={cn(
-                      "ml-auto h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      "mr-2 h-4 w-4",
+                      value.toLowerCase() === option.value.toLowerCase() ? "opacity-100" : "opacity-0"
                     )}
                   />
+                  {option.label}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -93,5 +88,5 @@ export function Autocomplete({
         </Command>
       </PopoverContent>
     </Popover>
-  );
+  )
 }

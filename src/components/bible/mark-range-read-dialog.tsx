@@ -134,67 +134,76 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             
-            <FormField
-              control={form.control}
-              name="startBook"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Starting Book</FormLabel>
-                  <Autocomplete
-                      options={bibleBookOptions}
-                      value={field.value}
-                      onChange={field.onChange}
-                      label="Select a book"
-                      disabled={isLoading}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="startChapterVerse"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Starting Chapter & Verse</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+                <FormField
+                control={form.control}
+                name="startBook"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Starting Book</FormLabel>
+                    <FormControl>
+                        <Autocomplete
+                            options={bibleBookOptions}
+                            value={field.value}
+                            onChange={(value) => field.onChange(value)}
+                            placeholder="Select a book"
+                            disabled={isLoading}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="startChapterVerse"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Starting Chapter:Verse (Optional)</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="endBook"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Ending Book (Optional)</FormLabel>
-                  <Autocomplete
-                    options={bibleBookOptions}
-                    value={field.value || ''}
-                    onChange={(value) => field.onChange(value || startBookValue)} 
-                    label="Select a book"
-                    disabled={isLoading}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="endChapterVerse"
-              render={({ field }) => (
-                <FormItem>
-                   <FormLabel>Ending Chapter & Verse</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+                <FormField
+                control={form.control}
+                name="endBook"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Ending Book (Optional)</FormLabel>
+                    <FormControl>
+                        <Autocomplete
+                            options={bibleBookOptions}
+                            value={field.value || ''}
+                            onChange={(value) => field.onChange(value || startBookValue)} 
+                            placeholder="Select a book (or leave for same book)"
+                            disabled={isLoading}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="endChapterVerse"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Ending Chapter:Verse (Optional)</FormLabel>
+                    <FormControl>
+                        <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
