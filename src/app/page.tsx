@@ -17,7 +17,7 @@ import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import type { AppEvent } from '@/types';
 import { Calendar } from '@/components/ui/calendar';
@@ -310,6 +310,11 @@ export default function HomePage() {
     },
   };
 
+  const viewVariants = {
+    hidden: { opacity: 0, scale: 0.98 },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.98 },
+  };
 
   return (
     <div className="space-y-12">
@@ -384,7 +389,16 @@ export default function HomePage() {
               )}
             </div>
               {eventsLoading ? <CalendarSkeleton /> : (
-                  (isMobile || calendarView === 'list') ? (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                        key={isMobile ? 'list' : calendarView}
+                        variants={viewVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        transition={{ duration: 0.2 }}
+                    >
+                  {(isMobile || calendarView === 'list') ? (
                       <EventListView eventsByDate={eventsByDate} />
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -430,7 +444,9 @@ export default function HomePage() {
                             </div>
                         </div>
                     </div>
-                  )
+                  )}
+                  </motion.div>
+                </AnimatePresence>
               )}
           </motion.section>
         </>
