@@ -60,7 +60,6 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0"
-        style={{ zIndex: 999 }} // Ensures popover appears above dialog
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
