@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -20,13 +19,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export interface ComboboxOption {
+export interface AutocompleteOption {
     value: string;
     label: string;
 }
 
-interface ComboboxProps {
-    options: ComboboxOption[];
+interface AutocompleteProps {
+    options: AutocompleteOption[];
     value?: string;
     onChange: (value: string) => void;
     placeholder?: string;
@@ -34,14 +33,14 @@ interface ComboboxProps {
     emptyPlaceholder?: string;
 }
 
-export function Combobox({ 
+export function Autocomplete({ 
     options, 
     value, 
     onChange,
-    placeholder = "Select option...",
+    placeholder = "Select an option...",
     searchPlaceholder = "Search...",
     emptyPlaceholder = "No results found."
-}: ComboboxProps) {
+}: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -61,15 +60,15 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent 
         className="w-[--radix-popover-trigger-width] p-0"
-        // This prop is crucial. It stops the popover from trying to move focus
-        // back to the trigger, which was fighting with the dialog's focus trap.
         onInteractOutside={(e) => {
+          // This is a crucial piece of the solution. It prevents the dialog's
+          // own `onInteractOutside` from firing and closing when we are interacting
+          // with the popover's content.
           e.preventDefault();
         }}
         >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          {/* CommandList is the scrollable container. We give it a max height. */}
           <CommandList>
             <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
             <CommandGroup>

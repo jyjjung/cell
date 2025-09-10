@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookUp } from 'lucide-react';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Autocomplete, type AutocompleteOption } from '@/components/ui/autocomplete';
 import { CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 
 const markRangeSchema = z.object({
@@ -29,7 +28,7 @@ interface MarkRangeReadDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-const bibleBookOptions: ComboboxOption[] = CANONICAL_BIBLE_ORDER.map(book => ({
+const bibleBookOptions: AutocompleteOption[] = CANONICAL_BIBLE_ORDER.map(book => ({
   value: book,
   label: book,
 }));
@@ -140,7 +139,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Starting Book</FormLabel>
-                    <Combobox
+                    <Autocomplete
                         options={bibleBookOptions}
                         value={field.value}
                         onChange={field.onChange}
@@ -172,7 +171,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Ending Book (Optional)</FormLabel>
-                     <Combobox
+                     <Autocomplete
                         options={bibleBookOptions}
                         value={field.value || ''}
                         onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
