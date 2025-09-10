@@ -51,8 +51,7 @@ export default function BiblePlanDisplay({
   const { toast } = useToast();
   const [isTogglingDay, setIsTogglingDay] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const wasPreviouslyCompleted = useRef(false);
-
+  
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
   const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
 
@@ -76,13 +75,15 @@ export default function BiblePlanDisplay({
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allPassageTextsForDay, completedPassages]);
   
+  const previousCompletionState = useRef(isAllPassagesForThisReadingComplete);
+
   useEffect(() => {
-    // Only trigger confetti if the status changes from not complete to complete.
-    if (isAllPassagesForThisReadingComplete && !wasPreviouslyCompleted.current) {
-        setShowConfetti(true);
+    // Only trigger confetti if the state changes from not complete to complete.
+    if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
+      setShowConfetti(true);
     }
     // Update the ref to the current state for the next render.
-    wasPreviouslyCompleted.current = isAllPassagesForThisReadingComplete;
+    previousCompletionState.current = isAllPassagesForThisReadingComplete;
   }, [isAllPassagesForThisReadingComplete]);
 
 
@@ -235,7 +236,6 @@ export default function BiblePlanDisplay({
                           key={passageIdPart}
                           className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
                           whileTap={{ scale: 0.98 }}
-                          whileHover={{ scale: 1.02 }}
                         >
                           {showIndividualCheckboxes && (
                             <Checkbox
