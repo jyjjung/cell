@@ -308,8 +308,8 @@ export default function BibleChecklistPage() {
                 </p>
                 <div className="text-xs mt-3 flex items-center gap-4 text-muted-foreground">
                     <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div><span>Completed</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div><span>Behind</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span>Goal</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span>Behind</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span>Ahead</span></div>
                 </div>
             </CardContent>
         </Card>
@@ -375,7 +375,3 @@ export default function BibleChecklistPage() {
     </>
   );
 }
-
-    
-
-    
