@@ -31,6 +31,8 @@ import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileCalendarView from '@/components/calendar/mobile-calendar-view';
 
 
 interface UserProgressDisplay {
@@ -51,6 +53,7 @@ export default function HomePage() {
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
   const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
   const { allUsers, loading: usersLoading } = useAllUsers();
+  const isMobile = useIsMobile();
 
   // Calendar State
   const [month, setMonth] = useState<Date>(new Date());
@@ -323,49 +326,58 @@ export default function HomePage() {
       <section id="event-calendar-section">
         <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Event Calendar</h2>
           {eventsLoading ? <CalendarSkeleton /> : (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                  <div className="lg:col-span-3">
-                      <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          month={month}
-                          onMonthChange={setMonth}
-                          className="p-0 border rounded-md"
-                          classNames={{
-                              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
-                              month: "space-y-4 w-full",
-                              table: "w-full border-collapse",
-                              head_row: "flex border-b",
-                              head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
-                              row: "flex w-full",
-                              cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
-                              day_button: "h-full w-full p-0 font-normal",
-                              day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
-                          }}
-                          components={{ Day: CustomDay }}
-                      />
-                  </div>
-                  <div className="lg:col-span-1">
-                      <div className="sticky top-20">
-                          <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
-                          <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
-                              {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                  <div key={event.id} className={cn("p-2 rounded-md border-l-4", categoryBorderColors[event.category])}>
-                                      <div className="flex items-start justify-between">
-                                          <p className="font-semibold text-sm">{event.title}</p>
-                                          <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
-                                      </div>
-                                      {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                                  </div>
-                              )) : (
-                                  <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
-                              )}
-                          </div>
-                          <CalendarKey />
-                      </div>
-                  </div>
-              </div>
+              isMobile ? (
+                  <MobileCalendarView
+                      selectedDate={selectedDate}
+                      onSelectedDateChange={setSelectedDate}
+                      eventsByDate={eventsByDate}
+                      selectedDayEvents={selectedDayEvents}
+                  />
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    <div className="lg:col-span-3">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            month={month}
+                            onMonthChange={setMonth}
+                            className="p-0 border rounded-md"
+                            classNames={{
+                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
+                                month: "space-y-4 w-full",
+                                table: "w-full border-collapse",
+                                head_row: "flex border-b",
+                                head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
+                                row: "flex w-full",
+                                cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
+                                day_button: "h-full w-full p-0 font-normal",
+                                day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
+                            }}
+                            components={{ Day: CustomDay }}
+                        />
+                    </div>
+                    <div className="lg:col-span-1">
+                        <div className="sticky top-20">
+                            <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
+                            <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
+                                {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
+                                    <div key={event.id} className={cn("p-2 rounded-md border-l-4", categoryBorderColors[event.category])}>
+                                        <div className="flex items-start justify-between">
+                                            <p className="font-semibold text-sm">{event.title}</p>
+                                            <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
+                                        </div>
+                                        {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
+                                    </div>
+                                )) : (
+                                    <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
+                                )}
+                            </div>
+                            <CalendarKey />
+                        </div>
+                    </div>
+                </div>
+              )
           )}
       </section>
 
@@ -417,5 +429,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
