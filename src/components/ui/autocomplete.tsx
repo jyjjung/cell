@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -63,6 +62,7 @@ export function Autocomplete({
       </PopoverTrigger>
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
+        // Prevent focus from being stolen by the popover, which would close the dialog
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command>
