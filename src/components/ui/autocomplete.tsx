@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,7 +7,6 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Input } from "@/components/ui/input"
 
 export interface AutocompleteOption {
   value: string;
@@ -29,35 +29,28 @@ export function Autocomplete({
   disabled = false,
 }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
-  
-  // Find the label for the current value, or use the value itself if not found
-  const displayLabel = options.find(option => option.value.toLowerCase() === value.toLowerCase())?.label || value;
 
   const handleSelect = (currentValue: string) => {
     const selectedOption = options.find(option => option.value.toLowerCase() === currentValue.toLowerCase());
-    onChange(selectedOption ? selectedOption.value : currentValue);
+    onChange(selectedOption ? selectedOption.value : '');
     setOpen(false);
   }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative">
-            <Input
-                value={displayLabel}
-                onFocus={() => setOpen(true)}
-                onChange={(e) => {
-                  // This allows the user to clear the input, but selection happens in the list
-                  if (e.target.value === '') {
-                    onChange('');
-                  }
-                }}
-                placeholder={placeholder}
-                className="w-full"
-                disabled={disabled}
-            />
-            <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
-        </div>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          disabled={disabled}
+        >
+          {value
+            ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label
+            : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"

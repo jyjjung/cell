@@ -39,8 +39,6 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       onPointerDownOutside={(e) => {
-        // This prevents the dialog from closing when interacting with other Radix primitives inside.
-        // Specifically, it allows clicks on PopoverContent (used by Combobox/Select) inside a Dialog.
         const target = e.target as HTMLElement;
         if (target.closest('[data-radix-popper-content-wrapper]')) {
           e.preventDefault();
