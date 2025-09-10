@@ -20,7 +20,7 @@ import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
-import { MultiLayerProgressBar } from '@/components/ui/multi-layer-progress-bar';
+import { DailyGoalProgressBar } from '@/components/ui/daily-goal-progress-bar';
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -119,43 +119,49 @@ export default function BibleChecklistPage() {
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
   }, [plan, completedPassages]);
   
-  const overallProgress = useMemo(() => {
+  const { completedPercentage, behindPercentage, todayGoalPercentage, totalPassagesInPlan } = useMemo(() => {
     if (!plan?.dailyReadings || loadingChecklist || !isMounted) {
-      return { totalPassagesInPlan: 0, completedCount: 0, scheduledUpToTodayCount: 0 };
+      return { completedPercentage: 0, behindPercentage: 0, todayGoalPercentage: 0, totalPassagesInPlan: 0 };
     }
     
     const today = startOfDay(new Date());
-    let totalPassagesInPlan = 0;
-    let scheduledUpToTodayCount = 0;
+    let totalPlanPassages = 0;
+    let behindCount = 0;
+    let todayGoalCount = 0;
 
     plan.dailyReadings.forEach(day => {
         const validDayPassages = day.passages?.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
-        totalPassagesInPlan += validDayPassages.length;
+        totalPlanPassages += validDayPassages.length;
 
         try {
             const readingDate = parseISO(day.date);
-            if(isValid(readingDate) && (isBefore(readingDate, today) || isSameDay(readingDate, today))) {
-                scheduledUpToTodayCount += validDayPassages.length;
+            if(isValid(readingDate)) {
+                const unreadForDay = validDayPassages.filter(p => !completedPassages.includes(p.displayText)).length;
+
+                if (isBefore(readingDate, today)) {
+                    behindCount += unreadForDay;
+                } else if (isSameDay(readingDate, today)) {
+                    todayGoalCount += unreadForDay;
+                }
             }
         } catch (e) {
             console.error("Error parsing reading date for overall progress calc:", day.date, e);
         }
     });
 
+    if (totalPlanPassages === 0) {
+      return { completedPercentage: 0, behindPercentage: 0, todayGoalPercentage: 0, totalPassagesInPlan: 0 };
+    }
+
     const completedCount = completedPassages.length;
-
-    return { totalPassagesInPlan, completedCount, scheduledUpToTodayCount };
-  }, [plan, completedPassages, loadingChecklist, isMounted]);
-
-  const { completedPercentage, scheduledPercentage } = useMemo(() => {
-    const { totalPassagesInPlan, completedCount, scheduledUpToTodayCount } = overallProgress;
-    if (totalPassagesInPlan === 0) return { completedPercentage: 0, scheduledPercentage: 0 };
     
-    return {
-        completedPercentage: (completedCount / totalPassagesInPlan) * 100,
-        scheduledPercentage: (scheduledUpToTodayCount / totalPassagesInPlan) * 100,
+    return { 
+        completedPercentage: (completedCount / totalPlanPassages) * 100,
+        behindPercentage: (behindCount / totalPlanPassages) * 100,
+        todayGoalPercentage: (todayGoalCount / totalPlanPassages) * 100,
+        totalPassagesInPlan: totalPlanPassages,
     };
-  }, [overallProgress]);
+  }, [plan, completedPassages, loadingChecklist, isMounted]);
 
 
   const currentWeek = useMemo(() => {
@@ -297,19 +303,20 @@ export default function BibleChecklistPage() {
         <Card>
             <CardContent className="p-4">
                 <div className="flex items-center gap-4">
-                    <MultiLayerProgressBar
+                    <DailyGoalProgressBar
                         completedPercentage={completedPercentage}
-                        scheduledPercentage={scheduledPercentage}
+                        behindPercentage={behindPercentage}
+                        todayGoalPercentage={todayGoalPercentage}
                     />
                     <span className="font-semibold text-muted-foreground">{Math.round(completedPercentage)}%</span>
                 </div>
                  <p className="text-sm text-muted-foreground mt-2">
-                    You have completed {overallProgress.completedCount} of {overallProgress.totalPassagesInPlan} total passages.
+                    You have completed {completedPassages.length} of {totalPassagesInPlan} total passages.
                 </p>
                 <div className="text-xs mt-3 flex items-center gap-4 text-muted-foreground">
                     <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div><span>Completed</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span>Behind</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span>To Do (Scheduled)</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div><span>Behind (Past Days)</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div><span>Today's Goal</span></div>
                 </div>
             </CardContent>
         </Card>
@@ -375,3 +382,5 @@ export default function BibleChecklistPage() {
     </>
   );
 }
+
+    
