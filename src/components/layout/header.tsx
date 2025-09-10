@@ -49,6 +49,11 @@ export default function Header() {
       <Button asChild variant="ghost" onClick={() => handleLinkClick('/')}>
         <Link href="/">Home</Link>
       </Button>
+      {currentUser && (
+        <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-checklist')}>
+          <Link href="/bible-checklist">My Checklist</Link>
+        </Button>
+      )}
       {!currentUser && (
         <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
           <Link href="/bible-plan">Full Bible Plan</Link>
@@ -65,6 +70,11 @@ export default function Header() {
       <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
         <Link href="/">Home</Link>
       </Button>
+       {currentUser && (
+        <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
+          <Link href="/bible-checklist">My Checklist</Link>
+        </Button>
+      )}
       {!currentUser && (
          <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
             <Link href="/bible-plan">Full Bible Plan</Link>
@@ -118,7 +128,6 @@ export default function Header() {
                             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                              <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/profile'); setIsPageLoading(true); }}><Link href="/profile">Profile</Link></DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/bible-checklist'); setIsPageLoading(true); }}><Link href="/bible-checklist">My Checklist</Link></DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleUserSignOutClick} className="text-destructive focus:text-destructive">
                                 <LogOut className="mr-2 h-4 w-4" />
@@ -180,7 +189,6 @@ export default function Header() {
                 <>
                     <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">My Account</p>
                     <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/profile')}><Link href="/profile">Profile</Link></Button>
-                    <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}><Link href="/bible-checklist">My Checklist</Link></Button>
                     <Button variant="ghost" className="w-full justify-start text-base py-3 text-destructive hover:text-destructive" onClick={handleUserSignOutClick}>Logout</Button>
                 </>
             )}
