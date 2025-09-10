@@ -77,9 +77,11 @@ export default function BiblePlanDisplay({
   }, [allPassageTextsForDay, completedPassages]);
   
   useEffect(() => {
+    // Only trigger confetti if the status changes from not complete to complete.
     if (isAllPassagesForThisReadingComplete && !wasPreviouslyCompleted.current) {
         setShowConfetti(true);
     }
+    // Update the ref to the current state for the next render.
     wasPreviouslyCompleted.current = isAllPassagesForThisReadingComplete;
   }, [isAllPassagesForThisReadingComplete]);
 
