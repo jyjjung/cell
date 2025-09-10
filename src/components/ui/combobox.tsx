@@ -61,9 +61,15 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent 
         className="w-[--radix-popover-trigger-width] p-0"
+        // This prop is crucial. It stops the popover from trying to move focus
+        // back to the trigger, which was fighting with the dialog's focus trap.
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
         >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
+          {/* CommandList is the scrollable container. We give it a max height. */}
           <CommandList>
             <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
             <CommandGroup>
