@@ -29,14 +29,6 @@ export function DailyGoalProgressBar({
         className
       )}
     >
-      {/* Green layer for completed work, always starts from left */}
-      <motion.div
-        className="absolute top-0 left-0 h-full bg-green-500"
-        initial={{ width: 0 }}
-        animate={{ width: `${clampedCompleted}%` }}
-        transition={{ ease: "easeInOut", duration: 0.8 }}
-        style={{ zIndex: 1 }} // Ensure green is on top
-      />
       {/* Red layer for past-due work */}
       <motion.div
         className="absolute top-0 left-0 h-full bg-red-500"
@@ -52,8 +44,14 @@ export function DailyGoalProgressBar({
         animate={{ width: `${clampedTodayGoal}%` }}
         transition={{ ease: "easeInOut", duration: 0.8, delay: 0.4 }}
       />
+      {/* Green layer for completed work, always starts from left and overlays the others */}
+      <motion.div
+        className="absolute top-0 left-0 h-full bg-green-500"
+        initial={{ width: 0 }}
+        animate={{ width: `${clampedCompleted}%` }}
+        transition={{ ease: "easeInOut", duration: 0.8 }}
+        style={{ zIndex: 1 }} // Ensure green is on top
+      />
     </div>
   );
 }
-
-    
