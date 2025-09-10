@@ -323,16 +323,18 @@ export default function HomePage() {
           Dashboard
         </motion.h2>
         <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <motion.div variants={itemVariants}>
-            <StatCard
-              title="Upcoming Events"
-              value={eventsLoading ? null : upcomingEventsCount}
-              isLoading={eventsLoading}
-              buttonText="View Events"
-              buttonLink="#event-calendar-section"
-              IconComponent={CalendarCheck}
-            />
-          </motion.div>
+          {currentUser && (
+            <motion.div variants={itemVariants}>
+              <StatCard
+                title="Upcoming Events"
+                value={eventsLoading ? null : upcomingEventsCount}
+                isLoading={eventsLoading}
+                buttonText="View Events"
+                buttonLink="#event-calendar-section"
+                IconComponent={CalendarCheck}
+              />
+            </motion.div>
+          )}
           {currentUser && (
             <motion.div variants={itemVariants}>
               <StatCard
@@ -358,77 +360,82 @@ export default function HomePage() {
           </motion.div>
         </motion.div>
       </motion.section>
+      
+      {currentUser && (
+        <>
+          <Separator />
 
-      <Separator />
-
-      <motion.section 
-        id="event-calendar-section"
-        variants={itemVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.1 }}
-      >
-        <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
-          <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
-          {!isMobile && (
-              <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
-                  <TabsList>
-                      <TabsTrigger value="grid"><LayoutGrid className="mr-2 h-4 w-4" /> Grid</TabsTrigger>
-                      <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> List</TabsTrigger>
-                  </TabsList>
-              </Tabs>
-          )}
-        </div>
-          {eventsLoading ? <CalendarSkeleton /> : (
-              (isMobile || calendarView === 'list') ? (
-                  <EventListView eventsByDate={eventsByDate} />
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                    <div className="lg:col-span-3">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            month={month}
-                            onMonthChange={setMonth}
-                            className="p-0 border rounded-md"
-                            classNames={{
-                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
-                                month: "space-y-4 w-full",
-                                table: "w-full border-collapse",
-                                head_row: "flex border-b",
-                                head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
-                                row: "flex w-full",
-                                cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
-                                day_button: "h-full w-full p-0 font-normal",
-                                day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
-                            }}
-                            components={{ Day: CustomDay }}
-                        />
-                    </div>
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-20">
-                            <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
-                            <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
-                                {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                    <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
-                                        <div className="flex items-start justify-between">
-                                            <p className="font-semibold text-sm">{event.title}</p>
-                                            <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
+          <motion.section 
+            id="event-calendar-section"
+            variants={itemVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
+            <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
+              <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
+              {!isMobile && (
+                  <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
+                      <TabsList>
+                          <TabsTrigger value="grid"><LayoutGrid className="mr-2 h-4 w-4" /> Grid</TabsTrigger>
+                          <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> List</TabsTrigger>
+                      </TabsList>
+                  </Tabs>
+              )}
+            </div>
+              {eventsLoading ? <CalendarSkeleton /> : (
+                  (isMobile || calendarView === 'list') ? (
+                      <EventListView eventsByDate={eventsByDate} />
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                        <div className="lg:col-span-3">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                month={month}
+                                onMonthChange={setMonth}
+                                className="p-0 border rounded-md"
+                                classNames={{
+                                    months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
+                                    month: "space-y-4 w-full",
+                                    table: "w-full border-collapse",
+                                    head_row: "flex border-b",
+                                    head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
+                                    row: "flex w-full",
+                                    cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
+                                    day_button: "h-full w-full p-0 font-normal",
+                                    day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
+                                }}
+                                components={{ Day: CustomDay }}
+                            />
+                        </div>
+                        <div className="lg:col-span-1">
+                            <div className="sticky top-20">
+                                <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
+                                <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
+                                    {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
+                                        <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
+                                            <div className="flex items-start justify-between">
+                                                <p className="font-semibold text-sm">{event.title}</p>
+                                                <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
+                                            </div>
+                                            {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
                                         </div>
-                                        {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                                    </div>
-                                )) : (
-                                    <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
-                                )}
+                                    )) : (
+                                        <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
+                                    )}
+                                </div>
+                                <CalendarKey />
                             </div>
-                            <CalendarKey />
                         </div>
                     </div>
-                </div>
-              )
-          )}
-      </motion.section>
+                  )
+              )}
+          </motion.section>
+        </>
+      )}
+
 
       <Separator />
 
