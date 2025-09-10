@@ -251,10 +251,11 @@ export default function BibleChecklistPage() {
         {viewState.view === 'completed-weeks-list' && (
           <motion.div 
             className="space-y-6"
-            variants={containerVariants}
+            variants={viewVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
+            transition={{ duration: 0.2 }}
           >
               <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
                 <ArrowLeft className="mr-2 h-4 w-4"/> Back to All Weeks
@@ -294,10 +295,11 @@ export default function BibleChecklistPage() {
             <>
               <motion.div 
                 className="space-y-6"
-                variants={containerVariants}
+                variants={viewVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
+                transition={{ duration: 0.2 }}
               >
                   <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
                       <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</motion.h1>
