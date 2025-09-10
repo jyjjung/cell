@@ -79,13 +79,11 @@ export default function BiblePlanDisplay({
 
   useEffect(() => {
     if (isMounted) {
-      // On the first run after mounting, just set the initial state
       if (previousCompletionState.current === undefined) {
         previousCompletionState.current = isAllPassagesForThisReadingComplete;
         return;
       }
 
-      // On subsequent runs, check if the state has changed from false to true
       if (isAllPassagesForThisReadingComplete && !previousCompletionState.current) {
         setShowConfetti(true);
       }
@@ -204,6 +202,7 @@ export default function BiblePlanDisplay({
               <div className="flex justify-between items-center w-full">
                   <div className="text-left">
                       {parsedDayDate && (
+                        <>
                           <p className={cn(
                               "text-sm font-semibold",
                               isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
@@ -213,6 +212,10 @@ export default function BiblePlanDisplay({
                           )}>
                               {format(parsedDayDate, "EEEE").toUpperCase()}
                           </p>
+                           <p className="text-xs text-muted-foreground">
+                              {format(parsedDayDate, "MMMM d, yyyy")}
+                           </p>
+                        </>
                       )}
                   </div>
               </div>
