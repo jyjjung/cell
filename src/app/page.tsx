@@ -247,7 +247,7 @@ export default function HomePage() {
     }
 
     return (
-        <Card className="shadow-lg">
+        <Card className="shadow-lg hover:shadow-xl">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -376,7 +376,7 @@ export default function HomePage() {
                 <div className="max-w-4xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
                     <Accordion type="single" collapsible className="w-full">
-                        <Card>
+                        <Card className="hover:shadow-lg">
                             <AccordionItem value="progress-item" className="border-0">
                                 <AccordionTrigger className="p-4 hover:no-underline">
                                     <div className="flex items-center space-x-3">
@@ -417,5 +417,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

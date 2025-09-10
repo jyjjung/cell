@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -54,7 +55,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=open]:animate-in data-[state=open]:fade-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className
     )}
     {...props}
