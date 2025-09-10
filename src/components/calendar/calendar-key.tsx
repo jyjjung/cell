@@ -1,7 +1,7 @@
 "use client";
 
 import { EventCategory } from '@/types';
-import { categoryBackgroundColors, categoryTextColors } from '@/lib/color-utils';
+import { categoryBackgroundColors, categoryTextColors } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 export default function CalendarKey() {

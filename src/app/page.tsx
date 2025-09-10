@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import type { DayProps } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/color-utils';
+import { categoryBackgroundColors, categoryBorderColors, categoryTextColors } from '@/lib/utils';
 import CalendarKey from '@/components/calendar/calendar-key';
 import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
