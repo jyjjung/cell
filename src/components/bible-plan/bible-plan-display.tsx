@@ -7,8 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, isToday, isValid, isBefore, startOfDay } from 'date-fns';
-import { CalendarX, CheckSquare, CheckCircle2, BookOpen, BookHeart, Loader2, Info } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { CalendarX, CheckSquare, CheckCircle, BookOpen, BookHeart, Loader2, Info, Check } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +49,8 @@ export default function BiblePlanDisplay({
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
   const [isTogglingDay, setIsTogglingDay] = useState(false);
+  const [showDayCompleteAnimation, setShowDayCompleteAnimation] = useState(false);
+  const wasPreviouslyCompleted = useRef(false);
 
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
   const [selectedPassageRef, setSelectedPassageRef] = useState<string | null>(null);
@@ -73,6 +75,15 @@ export default function BiblePlanDisplay({
     return validTextsFromProp.every(text => completedPassages.includes(text));
   }, [allPassageTextsForDay, completedPassages]);
   
+  useEffect(() => {
+    if (isAllPassagesForThisReadingComplete && !wasPreviouslyCompleted.current) {
+        setShowDayCompleteAnimation(true);
+        setTimeout(() => setShowDayCompleteAnimation(false), 1500); // Animation duration
+    }
+    wasPreviouslyCompleted.current = isAllPassagesForThisReadingComplete;
+  }, [isAllPassagesForThisReadingComplete]);
+
+
   let parsedDayDate: Date | null = null;
   if (readingToDisplay?.date) {
     try {
@@ -183,11 +194,24 @@ export default function BiblePlanDisplay({
            )}
          >
          <Card className={cn(
-             "bg-transparent", // Make card transparent to see animated div
+             "bg-transparent relative", // Make card transparent to see animated div
              isAllPassagesForThisReadingComplete ? "dark:bg-green-900/20 border-green-500/30" :
              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
              isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : ""
          )}>
+            <AnimatePresence>
+                {showDayCompleteAnimation && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1.2 }}
+                        exit={{ opacity: 0, scale: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+                    >
+                        <Check className="h-16 w-16 text-green-500 drop-shadow-lg" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <AccordionTrigger className="p-3 hover:no-underline w-full">
               <div className="flex justify-between items-center w-full">
                   <div className="text-left">
@@ -218,8 +242,7 @@ export default function BiblePlanDisplay({
                         <motion.li
                           key={passageIdPart}
                           className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
-                          initial={false}
-                          animate={{ scale: isChecked ? 1.03 : 1, transition: { duration: 0.2 } }}
+                          whileTap={{ scale: 0.97 }}
                           whileHover={{ scale: 1.02 }}
                         >
                           {showIndividualCheckboxes && (
