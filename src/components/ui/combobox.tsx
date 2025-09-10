@@ -59,7 +59,9 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0"
+        style={{ zIndex: 999 }} // Ensures popover appears above dialog
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
