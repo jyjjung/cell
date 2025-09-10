@@ -7,7 +7,7 @@ import { EventCategory } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { categoryTextColors } from '@/lib/utils';
+import { categoryTextColors, categoryBackgroundColors } from '@/lib/utils';
 import { CalendarOff, Calendar, Cake, Coffee, Users } from 'lucide-react';
 
 interface EventListViewProps {
@@ -66,14 +66,14 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             upcomingEventsByCategory.map(([category, events]) => {
                  const Icon = categoryIcons[category] || Calendar;
                  return (
-                    <Card key={category} className="shadow-md border-l-4" style={{ borderLeftColor: `var(--${category.toLowerCase()}-border-color)` }}>
-                        <CardHeader className="p-3">
-                            <CardTitle className="text-lg flex items-center">
-                               <Icon className={cn("h-5 w-5 mr-2", categoryTextColors[category])} />
+                    <Card key={category} className="shadow-md overflow-hidden">
+                        <CardHeader className={cn("p-3", categoryBackgroundColors[category])}>
+                            <CardTitle className={cn("text-lg flex items-center", categoryTextColors[category])}>
+                               <Icon className="h-5 w-5 mr-2" />
                                {category}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="p-3 pt-0 text-sm">
+                        <CardContent className="p-3 text-sm">
                            <div className="space-y-1.5">
                             {events.map(event => (
                                 <div key={event.id} className="flex justify-between items-center bg-background/50 p-2 rounded-md">
