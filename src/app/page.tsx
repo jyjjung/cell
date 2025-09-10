@@ -327,12 +327,7 @@ export default function HomePage() {
         <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Event Calendar</h2>
           {eventsLoading ? <CalendarSkeleton /> : (
               isMobile ? (
-                  <MobileCalendarView
-                      selectedDate={selectedDate}
-                      onSelectedDateChange={setSelectedDate}
-                      eventsByDate={eventsByDate}
-                      selectedDayEvents={selectedDayEvents}
-                  />
+                  <MobileCalendarView eventsByDate={eventsByDate} />
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     <div className="lg:col-span-3">
