@@ -137,16 +137,15 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="startBook"
               render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                   <FormLabel>Starting Book</FormLabel>
-                  <Autocomplete
-                      options={bibleBookOptions}
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Select a book..."
-                      searchPlaceholder="Search books..."
-                      emptyPlaceholder="No book found."
-                  />
+                    <Autocomplete
+                        options={bibleBookOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Search for a book..."
+                        disabled={isLoading}
+                    />
                   <FormMessage />
                   </FormItem>
               )}
@@ -158,7 +157,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
                   <FormItem>
                   <FormLabel>Starting Chapter & Verse</FormLabel>
                   <FormControl>
-                      <Input placeholder="e.g., 1 or 1:15" {...field} />
+                      <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                   </FormItem>
@@ -169,15 +168,14 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
               control={form.control}
               name="endBook"
               render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                   <FormLabel>Ending Book (Optional)</FormLabel>
                     <Autocomplete
                       options={bibleBookOptions}
                       value={field.value || ''}
                       onChange={(value) => field.onChange(value || startBookValue)} // Default to startBook if cleared
                       placeholder="Same as start book"
-                      searchPlaceholder="Search books..."
-                      emptyPlaceholder="No book found."
+                      disabled={isLoading}
                   />
                   <FormMessage />
                   </FormItem>
@@ -190,7 +188,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
                   <FormItem>
                   <FormLabel>Ending Chapter & Verse (Optional)</FormLabel>
                   <FormControl>
-                      <Input placeholder="e.g., 5 or 5:10" {...field} />
+                      <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
                   </FormControl>
                   <FormMessage />
                   </FormItem>

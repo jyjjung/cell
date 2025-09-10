@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Input } from "./input"
 
 export interface AutocompleteOption {
     value: string;
@@ -31,6 +32,7 @@ interface AutocompleteProps {
     placeholder?: string;
     searchPlaceholder?: string;
     emptyPlaceholder?: string;
+    disabled?: boolean;
 }
 
 export function Autocomplete({ 
@@ -38,58 +40,88 @@ export function Autocomplete({
     value, 
     onChange,
     placeholder = "Select an option...",
-    searchPlaceholder = "Search...",
-    emptyPlaceholder = "No results found."
+    disabled = false
 }: AutocompleteProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false);
+  const [inputValue, setInputValue] = React.useState(value ? options.find(o => o.value === value)?.label || '' : '');
+
+  const selectedOption = React.useMemo(() => options.find(o => o.value === value), [options, value]);
+
+  React.useEffect(() => {
+    setInputValue(selectedOption?.label || '');
+  }, [selectedOption]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+    if (!open) setOpen(true);
+  };
+  
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange('');
+    setInputValue('');
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {value
-            ? options.find((option) => option.value.toLowerCase() === value.toLowerCase())?.label
-            : placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        <div className="relative w-full">
+          <Input
+            value={inputValue}
+            onChange={handleInputChange}
+            onFocus={() => setOpen(true)}
+            placeholder={placeholder}
+            className="pr-10"
+            disabled={disabled}
+            aria-autocomplete="list"
+            aria-expanded={open}
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            {inputValue && (
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleClear} type="button">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
+            {!inputValue && <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />}
+          </div>
+        </div>
       </PopoverTrigger>
       <PopoverContent 
         className="w-[--radix-popover-trigger-width] p-0"
-        onInteractOutside={(e) => {
-          // This is a crucial piece of the solution. It prevents the dialog's
-          // own `onInteractOutside` from firing and closing when we are interacting
-          // with the popover's content.
-          e.preventDefault();
-        }}
-        >
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+        onOpenAutoFocus={(e) => e.preventDefault()} // Prevent input from losing focus
+      >
+        <Command filter={(value, search) => {
+            const option = options.find(o => o.value === value);
+            if(option) {
+              return option.label.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+            }
+            return 0;
+        }}>
+          <CommandInput value={inputValue} onValueChange={setInputValue} className="h-9" />
           <CommandList>
-            <CommandEmpty>{emptyPlaceholder}</CommandEmpty>
+            <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
-            {options.map((option) => (
+            {options.map((option) => {
+              const isSelected = value === option.value;
+              return (
                 <CommandItem
-                key={option.value}
-                value={option.value}
-                onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                }}
+                  key={option.value}
+                  value={option.value}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? "" : currentValue);
+                    setOpen(false);
+                  }}
                 >
-                <Check
+                  {option.label}
+                  <Check
                     className={cn(
-                    "mr-2 h-4 w-4",
-                    value === option.value ? "opacity-100" : "opacity-0"
+                      "ml-auto h-4 w-4",
+                      isSelected ? "opacity-100" : "opacity-0"
                     )}
-                />
-                {option.label}
+                  />
                 </CommandItem>
-            ))}
+              );
+            })}
             </CommandGroup>
           </CommandList>
         </Command>
