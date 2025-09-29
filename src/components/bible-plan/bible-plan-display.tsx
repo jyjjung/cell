@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, isToday, isValid, isBefore, startOfDay } from 'date-fns';
 import { CalendarX, CheckSquare, CheckCircle, BookOpen, BookHeart, Loader2, Info, Check } from 'lucide-react';
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface BiblePlanDisplayProps {
   readingToDisplay: DailyReading | null;
@@ -64,8 +64,12 @@ export default function BiblePlanDisplay({
   const validPassagesForThisReading = useMemo(() => {
     return readingToDisplay?.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
   }, [readingToDisplay]);
-
   
+  const completedReadingsForThisDay = useMemo(() => {
+      return validPassagesForThisReading.filter(p => completedPassages.includes(p.displayText));
+  }, [validPassagesForThisReading, completedPassages]);
+
+
   const isAllPassagesForThisReadingComplete = useMemo(() => {
     if (!allPassageTextsForDay || allPassageTextsForDay.length === 0) return false;
     const validTextsFromProp = allPassageTextsForDay.filter(text => text && !text.startsWith("Error:"));
@@ -199,7 +203,23 @@ export default function BiblePlanDisplay({
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="p-3 pt-0 space-y-1">
+              <motion.div 
+                className="p-3 pt-0 space-y-1"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                {showIndividualCheckboxes && validPassagesForThisReading.length > 0 && (
+                    <div className="text-xs text-muted-foreground font-medium pb-2 mb-2 border-b">
+                        {isAllPassagesForThisReadingComplete ? (
+                            <div className="flex items-center text-green-600 dark:text-green-400">
+                                <CheckCircle className="h-4 w-4 mr-1.5"/> All readings complete for this day!
+                            </div>
+                        ) : (
+                            <span>{completedReadingsForThisDay.length} of {validPassagesForThisReading.length} readings complete</span>
+                        )}
+                    </div>
+                )}
                 {validPassagesForThisReading.length > 0 ? (
                   <ul className="space-y-1 text-sm">
                     {validPassagesForThisReading.map((passage, index) => {
@@ -208,10 +228,9 @@ export default function BiblePlanDisplay({
                       const isPassageValid = !passage.displayText.startsWith("Error:");
 
                       return (
-                        <motion.li
+                        <li
                           key={passageIdPart}
                           className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
-                          whileTap={{ scale: 0.98 }}
                         >
                           {showIndividualCheckboxes && (
                             <Checkbox
@@ -250,7 +269,7 @@ export default function BiblePlanDisplay({
                               <span className="text-destructive italic font-semibold text-xs">{passage.displayText || "Error: Passage Data Invalid"}</span>
                             )}
                           </Label>
-                        </motion.li>
+                        </li>
                       );
                     })}
                   </ul>
@@ -263,7 +282,7 @@ export default function BiblePlanDisplay({
                     {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
                   </CardDescription>
                 )}
-              </div>
+              </motion.div>
             </AccordionContent>
           </Card>
         </motion.div>
