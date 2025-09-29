@@ -65,11 +65,6 @@ export default function BiblePlanDisplay({
     return readingToDisplay?.passages.filter(p => p && typeof p.displayText === 'string' && p.displayText.trim() !== '' && !p.displayText.startsWith("Error:")) || [];
   }, [readingToDisplay]);
   
-  const completedReadingsForThisDay = useMemo(() => {
-      return validPassagesForThisReading.filter(p => completedPassages.includes(p.displayText));
-  }, [validPassagesForThisReading, completedPassages]);
-
-
   const isAllPassagesForThisReadingComplete = useMemo(() => {
     if (!allPassageTextsForDay || allPassageTextsForDay.length === 0) return false;
     const validTextsFromProp = allPassageTextsForDay.filter(text => text && !text.startsWith("Error:"));
@@ -209,27 +204,27 @@ export default function BiblePlanDisplay({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
               >
-                {showIndividualCheckboxes && validPassagesForThisReading.length > 0 && (
-                    <div className="text-xs text-muted-foreground font-medium pb-2 mb-2 border-b">
-                        {isAllPassagesForThisReadingComplete ? (
-                            <div className="flex items-center text-green-600 dark:text-green-400">
-                                <CheckCircle className="h-4 w-4 mr-1.5"/> All readings complete for this day!
-                            </div>
-                        ) : (
-                            <span>{completedReadingsForThisDay.length} of {validPassagesForThisReading.length} readings complete</span>
-                        )}
-                    </div>
-                )}
                 {validPassagesForThisReading.length > 0 ? (
-                  <ul className="space-y-1 text-sm">
+                  <motion.ul 
+                    variants={{
+                        visible: { transition: { staggerChildren: 0.05 } },
+                        hidden: {},
+                    }}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-1 text-sm">
                     {validPassagesForThisReading.map((passage, index) => {
                       const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
                       const isChecked = completedPassages.includes(passage.displayText);
                       const isPassageValid = !passage.displayText.startsWith("Error:");
 
                       return (
-                        <li
+                        <motion.li
                           key={passageIdPart}
+                          variants={{
+                            hidden: { y: 20, opacity: 0 },
+                            visible: { y: 0, opacity: 1 },
+                          }}
                           className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
                         >
                           {showIndividualCheckboxes && (
@@ -269,10 +264,10 @@ export default function BiblePlanDisplay({
                               <span className="text-destructive italic font-semibold text-xs">{passage.displayText || "Error: Passage Data Invalid"}</span>
                             )}
                           </Label>
-                        </li>
+                        </motion.li>
                       );
                     })}
-                  </ul>
+                  </motion.ul>
                 ) : (
                   <p className="text-muted-foreground text-xs p-2">No specific passages assigned for this reading.</p>
                 )}
