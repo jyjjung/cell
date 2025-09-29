@@ -86,6 +86,7 @@ export default function FullBiblePlanPage() {
       y: 0,
       opacity: 1,
     },
+    exit: { y: -20, opacity: 0 }
   };
 
 
@@ -171,7 +172,7 @@ export default function FullBiblePlanPage() {
         variants={containerVariants}
        >
           {weeklyGroupings.map((week) => (
-            <motion.div variants={itemVariants} key={week.weekNumber}>
+            <motion.div variants={itemVariants} key={week.weekNumber} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
               <Card 
                   className="shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
                   onClick={() => setViewState({ view: 'single-week-details', week: week })}
@@ -192,3 +193,5 @@ export default function FullBiblePlanPage() {
     </motion.div>
   );
 }
+
+    

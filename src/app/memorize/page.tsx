@@ -42,6 +42,7 @@ export default function MemorizePage() {
       y: 0,
       opacity: 1,
     },
+    exit: { y: -20, opacity: 0 }
   };
 
 
@@ -97,7 +98,7 @@ export default function MemorizePage() {
           variants={containerVariants}
         >
           {memoryVerses.map((verse) => (
-            <motion.div variants={itemVariants} key={verse.id}>
+            <motion.div variants={itemVariants} key={verse.id} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
               <Card className="shadow-sm hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <Button
