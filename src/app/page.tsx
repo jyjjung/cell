@@ -98,9 +98,18 @@ export default function HomePage() {
   }, [plan, isMounted]);
 
   const readingsLoggedStatValue = useMemo(() => {
-    if (loadingChecklist || planLoading || totalPassagesUpToToday === 0) return null; 
-    return `${completedPassages.length} of ${totalPassagesUpToToday}`;
-  }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading]);
+    if (loadingChecklist || planLoading || !isMounted) return null;
+    const passagesToRead = totalPassagesUpToToday - completedPassages.length;
+
+    if (passagesToRead <= 0) {
+      if (totalPassagesUpToToday > 0) {
+        return "All Caught Up!";
+      } else {
+        return "No readings yet";
+      }
+    }
+    return `${passagesToRead} Passages to read`;
+  }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading, isMounted]);
   
   const upcomingEventsCount = useMemo(() => {
     if (!isMounted) return 0;
@@ -308,6 +317,7 @@ export default function HomePage() {
         stiffness: 100,
       },
     },
+    exit: { y: -20, opacity: 0 }
   };
 
   const viewVariants = {
@@ -319,7 +329,6 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <motion.section 
-        id="stats-section"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -329,7 +338,7 @@ export default function HomePage() {
         </motion.h2>
         <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentUser && (
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
               <StatCard
                 title="Upcoming Events"
                 value={eventsLoading ? null : upcomingEventsCount}
@@ -341,7 +350,7 @@ export default function HomePage() {
             </motion.div>
           )}
           {currentUser && (
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
               <StatCard
                 title="Reading Progress"
                 value={readingsLoggedStatValue}
@@ -353,7 +362,7 @@ export default function HomePage() {
               />
             </motion.div>
           )}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
             <StatCard
               title="Memory Verses"
               value={memoryVersesLoading ? null : memoryVerses.length}
@@ -375,13 +384,14 @@ export default function HomePage() {
             variants={itemVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
+            exit="exit"
+            viewport={{ once: false }}
           >
             <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
               <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
               {!isMobile && (
                   <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
-                      <TabsList>
+                      <TabsList className="relative">
                           <TabsTrigger value="grid"><LayoutGrid className="mr-2 h-4 w-4" /> Grid</TabsTrigger>
                           <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> List</TabsTrigger>
                       </TabsList>
@@ -461,7 +471,8 @@ export default function HomePage() {
               variants={itemVariants}
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
+              exit="exit"
+              viewport={{ once: false }}
             >
                 <div className="max-w-4xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
@@ -490,7 +501,8 @@ export default function HomePage() {
         variants={itemVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        exit="exit"
+        viewport={{ once: false }}
       >
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
@@ -512,3 +524,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
