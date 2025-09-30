@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth'; // Import FirebaseUser
 
@@ -51,8 +50,6 @@ export interface BibleReadingPlan {
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
-  theme?: string; // e.g., 'system', 'theme-zinc', 'theme-rose'
-  mode?: string; // e.g., 'light', 'dark', 'system'
 }
 
 
@@ -64,8 +61,6 @@ export interface UserProfileData {
   photoURL?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
-  theme?: string;
-  mode?: string;
 }
 
 

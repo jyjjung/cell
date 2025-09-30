@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
@@ -20,7 +19,6 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { ThemeSwitcher } from '@/components/profile/theme-switcher';
 import type { UserProfileData } from '@/types';
 
 const profileFormSchema = z.object({
@@ -126,9 +124,6 @@ export default function ProfilePage() {
             <CardDescription>{currentUser.email}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Separator />
-            <ThemeSwitcher />
-          <Separator />
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField

@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -28,7 +27,7 @@ interface AuthContextType {
   signUpUser: (email: string, password: string) => Promise<AppUser | null>;
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
   signOutUser: () => Promise<void>;
-  updateUserProfile: (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday' | 'theme' | 'mode'>>) => Promise<void>;
+  updateUserProfile: (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,8 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...firebaseUser, // Base Firebase user properties
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             birthday: profileData.birthday || null,
-            theme: profileData.theme || 'system',
-            mode: profileData.mode || 'system',
           } as AppUser);
         } else {
           // Create a basic profile if it doesn't exist (e.g., first-time sign-up)
@@ -81,16 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             birthday: null,
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
-            theme: 'system',
-            mode: 'system',
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
             ...firebaseUser,
             displayName: newProfileData.displayName,
             birthday: newProfileData.birthday,
-            theme: newProfileData.theme,
-            mode: newProfileData.mode,
           } as AppUser);
         }
       } else {
@@ -130,15 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         birthday: null,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
-        theme: 'system',
-        mode: 'system',
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
       if (auth.currentUser) {
         await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
       }
-      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, theme: 'system', mode: 'system' } as AppUser;
+      return { ...firebaseUser, displayName: initialDisplayName, birthday: null } as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
       throw error;
@@ -178,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday' | 'theme' | 'mode'>>) => {
+  const updateUserProfile = async (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => {
     if (!currentUser || currentUser.uid !== userId) {
       console.error("User not authorized to update this profile or no user logged in.");
       throw new Error("Not authorized.");
@@ -200,8 +191,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prevUser,
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
-          theme: profileData.theme !== undefined ? profileData.theme : prevUser.theme,
-          mode: profileData.mode !== undefined ? profileData.mode : prevUser.mode,
         };
         return updatedUser;
       });
