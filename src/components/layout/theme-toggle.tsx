@@ -15,22 +15,25 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export function ThemeToggle() {
-  const { setTheme, theme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
+  const { setTheme } = useTheme()
   const { currentUser, updateUserProfile } = useAuth()
   const { toast } = useToast()
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
   const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
+    // We optimistically set the theme for immediate UI feedback
     setTheme(mode);
     
     if (!currentUser) {
+      // It's a guest, no need to save
       return;
     }
     try {
+      // Persist the preference to Firebase
       await updateUserProfile(currentUser.uid, { mode });
     } catch (error) {
       console.error("Failed to save mode preference:", error);
@@ -42,23 +45,23 @@ export function ThemeToggle() {
     }
   }
   
-  // Until the component is mounted, we can't be sure of the theme,
-  // so we render a placeholder to avoid hydration mismatch.
-  // Rendering null is one way to ensure the server and initial client render match.
   if (!mounted) {
+    // On the server and during hydration, render a disabled placeholder
+    // to prevent hydration mismatch errors.
     return (
-        <Button variant="ghost" size="icon" disabled>
-            <Monitor className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-    );
+      <Button variant="ghost" size="icon" disabled>
+        <Monitor className="h-[1.2rem] w-[1.2rem]" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    )
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>

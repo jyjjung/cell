@@ -6,54 +6,47 @@ import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 import { useAuth } from "@/contexts/auth-context"
 
-// This inner component will handle applying the user's theme from the DB
-// once it's loaded on the client.
-function ThemeApplier({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
-  const { setTheme, theme: activeTheme } = useTheme();
+// This inner component is the key to solving the issue.
+// It listens to the user's preferences from our AuthContext and
+// the system's theme from next-themes, then tells NextThemesProvider
+// which final theme to apply (e.g., "dark-theme-zinc").
+function ThemeResolver() {
+  const { currentUser } = useAuth()
+  const { setTheme, resolvedTheme } = useTheme() // resolvedTheme knows if system is light/dark
 
   React.useEffect(() => {
-    if (currentUser) {
-      const userTheme = currentUser.theme || 'system';
-      const userMode = currentUser.mode || 'system';
+    const userTheme = currentUser?.theme || 'system' // e.g., 'system', 'theme-zinc'
+    const userMode = currentUser?.mode || 'system'   // e.g., 'light', 'dark', 'system'
 
-      let targetTheme: string;
+    let finalTheme: string;
+
+    const isSystemDark = resolvedTheme === 'dark';
+
+    if (userMode === 'dark' || (userMode === 'system' && isSystemDark)) {
+      // Apply dark variant
       if (userTheme !== 'system') {
-        // A custom theme is selected
-        if (userMode === 'dark') {
-          targetTheme = `dark-${userTheme}`;
-        } else if (userMode === 'light') {
-          targetTheme = userTheme;
-        } else {
-          // system preference
-          targetTheme = userTheme; // next-themes handles adding .dark for system
-        }
+        finalTheme = `dark-${userTheme}`;
       } else {
-        // Default theme, just use the mode
-        targetTheme = userMode;
+        finalTheme = 'dark';
       }
-
-      if (activeTheme !== targetTheme) {
-        setTheme(targetTheme);
+    } else {
+      // Apply light variant
+      if (userTheme !== 'system') {
+        finalTheme = userTheme;
+      } else {
+        finalTheme = 'light';
       }
     }
-  }, [currentUser, activeTheme, setTheme]);
+    
+    // Tell next-themes to apply the calculated theme
+    setTheme(finalTheme);
 
-  return <>{children}</>;
+  }, [currentUser?.theme, currentUser?.mode, resolvedTheme, setTheme])
+
+  return null // This component does not render anything itself.
 }
 
-
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  if (!mounted) {
-    return <>{children}</>
-  }
-
   return (
     <NextThemesProvider
       attribute="class"
@@ -62,7 +55,8 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       themes={['light', 'dark', 'system', 'theme-zinc', 'theme-rose', 'dark-theme-zinc', 'dark-theme-rose']}
       {...props}
     >
-      <ThemeApplier>{children}</ThemeApplier>
+      <ThemeResolver />
+      {children}
     </NextThemesProvider>
   )
 }
