@@ -228,7 +228,7 @@ export default function BibleChecklistPage() {
                 <Card 
                     key={week.weekNumber}
                     className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02]",
+                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
                         "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
                     )}
                     onClick={() => setViewState({ view: 'single-week-details', week: week })}
@@ -284,7 +284,7 @@ export default function BibleChecklistPage() {
                 <Card 
                     key="completed-weeks-summary"
                     className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02]",
+                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
                         "bg-green-100/30 dark:bg-green-900/20 border-green-500/30 hover:border-green-500/70"
                     )}
                     onClick={() => {
@@ -307,7 +307,7 @@ export default function BibleChecklistPage() {
                 <Card 
                     key={week.weekNumber}
                     className={cn(
-                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02]",
+                        "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
                         week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
                         week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
                         "hover:border-primary/50"
@@ -340,3 +340,6 @@ export default function BibleChecklistPage() {
     </>
   );
 }
+
+
+    
