@@ -14,7 +14,26 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
+
+  const handleSetTheme = (newTheme: string) => {
+    if (newTheme === 'light') {
+      if (theme?.includes('dark-')) {
+        setTheme(theme.replace('dark-', ''))
+      } else {
+        setTheme('light');
+      }
+    } else if (newTheme === 'dark') {
+      if (theme === 'light' || theme === 'system') {
+        setTheme('dark');
+      } else if (theme && !theme.includes('dark-')) {
+        setTheme(`dark-${theme}`)
+      }
+    } else {
+       setTheme(newTheme);
+    }
+  }
+
 
   return (
     <DropdownMenu>
@@ -26,10 +45,10 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleSetTheme("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleSetTheme("dark")}>
           Dark
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
