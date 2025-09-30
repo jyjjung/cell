@@ -7,20 +7,19 @@ import { Check, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const themes = [
-  { name: "Default", value: "default" },
-  { name: "Zinc", value: "zinc" },
-  { name: "Rose", value: "rose" },
+  { name: "Default", value: "system" }, // "system" will handle light/dark automatically
+  { name: "Zinc", value: "theme-zinc" },
+  { name: "Rose", value: "theme-rose" },
 ];
 
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
 
   const isThemeActive = (themeValue: string) => {
-    if (themeValue === 'default') {
-      // "Default" is active if the current theme is 'system', 'light', 'dark', or not one of the custom themes.
-      return !theme?.startsWith('theme-');
+    if (themeValue === 'system' && (theme === 'system' || theme === 'light' || theme === 'dark')) {
+      return true;
     }
-    return theme === `theme-${themeValue}`;
+    return theme === themeValue;
   };
 
   return (
@@ -35,7 +34,7 @@ export function ThemeSwitcher() {
             key={t.value}
             variant={isThemeActive(t.value) ? "default" : "outline"}
             size="sm"
-            onClick={() => setTheme(t.value === 'default' ? 'system' : `theme-${t.value}`)}
+            onClick={() => setTheme(t.value)}
             className="justify-center"
           >
             {isThemeActive(t.value) && <Check className="mr-2 h-4 w-4" />}

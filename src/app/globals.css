@@ -92,7 +92,7 @@ body {
     --snack-border-color: 38 92% 60%;
   }
 
-  .theme-zinc {
+  html.theme-zinc {
     --background: 240 5.2% 33.9%;
     --foreground: 240 5% 95%;
 
@@ -122,7 +122,7 @@ body {
     --ring: 305 85% 70%;
   }
 
-  .dark.theme-zinc {
+  html.dark.theme-zinc {
     --background: 265 39% 12%;
     --foreground: 305 85% 90%;
 
@@ -152,7 +152,7 @@ body {
     --ring: 305 85% 80%;
   }
 
-  .theme-rose {
+  html.theme-rose {
     --background: 349 83% 95%;
     --foreground: 349 83% 20%;
 
@@ -182,7 +182,7 @@ body {
     --ring: 347 77% 50%;
   }
 
-  .dark.theme-rose {
+  html.dark.theme-rose {
     --background: 350 60% 10%;
     --foreground: 350 100% 95%;
 
