@@ -6,44 +6,26 @@ import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 import { useAuth } from "@/contexts/auth-context"
 
-function ThemeApplier() {
-    const { currentUser } = useAuth();
-    const { setTheme, theme: currentNextTheme } = useTheme();
-
-    React.useEffect(() => {
-        if (currentUser) {
-            const { mode, theme: themeName } = currentUser;
-            let effectiveTheme: string;
-
-            if (mode === 'system') {
-                effectiveTheme = 'system';
-            } else if (themeName === 'system') {
-                effectiveTheme = mode || 'system';
-            } else {
-                if (mode === 'dark') {
-                    effectiveTheme = `dark-${themeName}`;
-                } else {
-                    effectiveTheme = themeName || 'system';
-                }
-            }
-            
-            if (effectiveTheme !== currentNextTheme) {
-                setTheme(effectiveTheme);
-            }
-        }
-    }, [currentUser, setTheme, currentNextTheme]);
-
-    return null;
-}
-
 export function ThemeProvider({ children, ...props }: Omit<ThemeProviderProps, 'attribute' | 'themes'>) {
+  const { currentUser } = useAuth();
+
+  // Determine the theme to apply based on user settings.
+  // The `theme` prop in `NextThemesProvider` takes precedence. `enableSystem` handles the 'system' mode.
+  const userTheme = currentUser?.theme;
+  const userMode = currentUser?.mode;
+
+  // Let next-themes handle 'system' mode.
+  // If a specific theme is set, force it. If not, don't force anything and let system/mode toggle work.
+  const forcedTheme = userTheme && userTheme !== 'system' ? userTheme : undefined;
+  
   return (
     <NextThemesProvider 
         attribute="class"
-        themes={['light', 'dark', 'system', 'theme-zinc', 'dark-theme-zinc', 'theme-rose', 'dark-theme-rose']}
+        defaultTheme={userMode || "system"}
+        forcedTheme={forcedTheme}
+        enableSystem
         {...props}
     >
-        <ThemeApplier />
         {children}
     </NextThemesProvider>
   )

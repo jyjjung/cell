@@ -21,19 +21,19 @@ export function ThemeToggle() {
   const { toast } = useToast()
 
   const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
+    // Set theme locally for immediate visual feedback for all users
+    setTheme(mode);
+
     if (!currentUser) {
       toast({
-        title: "Not Logged In",
-        description: "You must be logged in to save theme preferences.",
-        variant: "destructive"
+        title: "Logged Out",
+        description: "Your preference will be saved when you log in.",
+        variant: "default"
       });
-      // Also apply theme locally for non-logged-in users
-      setTheme(mode);
       return;
     }
     try {
       await updateUserProfile(currentUser.uid, { mode });
-      // The ThemeApplier in ThemeProvider will handle setting the theme
     } catch (error) {
       console.error("Failed to save mode preference:", error);
       toast({
