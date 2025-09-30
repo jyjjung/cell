@@ -1,3 +1,4 @@
+
 "use client";
 
 import { EventCategory } from '@/types';
