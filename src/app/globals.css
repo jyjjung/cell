@@ -116,7 +116,7 @@ body {
     --ring: 240 10% 3.9%;
   }
 
-  .dark-theme-zinc {
+  .dark.theme-zinc {
     --background: 240 10% 3.9%;
     --foreground: 240 5% 95%;
     --card: 240 10% 3.9%;
@@ -160,7 +160,7 @@ body {
     --ring: 347 77% 50%;
   }
 
-  .dark-theme-rose {
+  .dark.theme-rose {
     --background: 350 60% 10%;
     --foreground: 350 100% 95%;
     --card: 350 60% 12%;
@@ -212,3 +212,5 @@ body {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
   }
 }
+
+    
