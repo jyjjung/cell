@@ -13,7 +13,7 @@ const themes = [
 ];
 
 export function ThemeSwitcher() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   return (
     <div className="space-y-2">

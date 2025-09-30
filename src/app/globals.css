@@ -92,121 +92,89 @@ body {
     --snack-border-color: 38 92% 60%;
   }
 
-  [data-theme="theme-zinc"] {
-    --background: 240 5.2% 33.9%;
-    --foreground: 240 5% 95%;
-
-    --card: 240 4.2% 38.9%;
-    --card-foreground: 240 5% 95%;
-
-    --popover: 240 5.9% 10%;
-    --popover-foreground: 240 5% 95%;
-
-    --primary: 305 85% 90%;
-    --primary-foreground: 305 85% 20%;
-
-    --secondary: 240 3.7% 25.9%;
-    --secondary-foreground: 240 5% 95%;
-
-    --muted: 240 3.7% 25.9%;
-    --muted-foreground: 240 3.8% 63.9%;
-
-    --accent: 240 3.7% 25.9%;
-    --accent-foreground: 240 5% 95%;
-
-    --destructive: 0 72.2% 50.6%;
+  html[data-theme="theme-zinc"] {
+    --background: 240 10% 3.9%;
+    --foreground: 240 5.9% 90%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 240 5.9% 90%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 240 5.9% 90%;
+    --primary: 240 5.9% 90%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 240 5.9% 90%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 240 5.9% 90%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 85.7% 97.3%;
-
-    --border: 240 3.7% 25.9%;
-    --input: 240 3.7% 25.9%;
-    --ring: 305 85% 70%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 5% 64.9%;
   }
 
-  .dark[data-theme="theme-zinc"] {
+  html.dark[data-theme="theme-zinc"] {
     --background: 265 39% 12%;
     --foreground: 305 85% 90%;
-
     --card: 265 39% 15%;
     --card-foreground: 305 85% 90%;
-
     --popover: 265 39% 8%;
     --popover-foreground: 305 85% 90%;
-
     --primary: 305 85% 85%;
     --primary-foreground: 265 39% 10%;
-
     --secondary: 265 39% 20%;
     --secondary-foreground: 305 85% 90%;
-
     --muted: 265 39% 20%;
     --muted-foreground: 265 10% 60%;
-
     --accent: 265 39% 20%;
     --accent-foreground: 305 85% 90%;
-
     --destructive: 0 72.2% 50.6%;
     --destructive-foreground: 0 85.7% 97.3%;
-
     --border: 265 39% 20%;
     --input: 265 39% 20%;
     --ring: 305 85% 80%;
   }
 
-  [data-theme="theme-rose"] {
+  html[data-theme="theme-rose"] {
     --background: 349 83% 95%;
     --foreground: 349 83% 20%;
-
     --card: 349 83% 98%;
     --card-foreground: 349 83% 20%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
     --primary: 347 77% 50%;
     --primary-foreground: 355 100% 97%;
-
     --secondary: 349 83% 92%;
     --secondary-foreground: 349 83% 20%;
-
     --muted: 349 83% 92%;
     --muted-foreground: 349 30% 50%;
-
     --accent: 349 83% 92%;
     --accent-foreground: 349 83% 20%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 349 83% 90%;
     --input: 349 83% 90%;
     --ring: 347 77% 50%;
   }
 
-  .dark[data-theme="theme-rose"] {
+  html.dark[data-theme="theme-rose"] {
     --background: 350 60% 10%;
     --foreground: 350 100% 95%;
-
     --card: 350 60% 12%;
     --card-foreground: 350 100% 95%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 348 90% 70%;
     --primary-foreground: 350 100% 10%;
-
     --secondary: 350 60% 18%;
     --secondary-foreground: 350 100% 95%;
-
     --muted: 350 60% 18%;
     --muted-foreground: 350 20% 60%;
-
     --accent: 350 60% 18%;
     --accent-foreground: 350 100% 95%;
-
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 350 60% 18%;
     --input: 350 60% 18%;
     --ring: 348 90% 70%;
