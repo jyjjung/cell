@@ -19,6 +19,8 @@ import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil } from 'lucide-
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { ThemeSwitcher } from '@/components/profile/theme-switcher';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
@@ -123,6 +125,9 @@ export default function ProfilePage() {
             <CardDescription>{currentUser.email}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <Separator />
+            <ThemeSwitcher />
+          <Separator />
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
