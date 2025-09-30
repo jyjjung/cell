@@ -16,9 +16,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'ESV API key not configured on the server. Please contact the administrator.' }, { status: 500 });
   }
   
-  // console.log(`[API Route /api/esv] Using API Key starting with: ${apiKey.substring(0, 4)}...`); // Optional: for verifying key is loaded, but be careful about logging sensitive info.
-  // console.log(`[API Route /api/esv] Calling ESV API for passage: "${passage}"`);
-
   const apiUrl = `https://api.esv.org/v3/passage/html/?q=${encodeURIComponent(passage)}&include-footnotes=false&include-headings=true&include-short-copyright=false&include-copyright=false&include-audio-link=false`;
 
   try {

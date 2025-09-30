@@ -1,3 +1,4 @@
+
 import { Suspense } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -10,6 +11,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from '@/components/theme-provider';
 import PageLoaderManager from '@/components/layout/page-loader-manager';
 import MovingBackground from '@/components/layout/moving-background';
+import GlobalBibleSearch from '@/components/bible/global-bible-search';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -42,6 +44,7 @@ export default function RootLayout({
                   {children}
                 </main>
               </div>
+              <GlobalBibleSearch />
               <Toaster />
               <GlobalPageLoader />
               <Analytics />
