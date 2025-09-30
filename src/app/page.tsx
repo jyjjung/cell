@@ -479,7 +479,7 @@ export default function HomePage() {
                     <Accordion type="single" collapsible className="w-full">
                         <Card className="hover:shadow-lg transition-shadow">
                             <AccordionItem value="progress-item" className="border-0">
-                                <AccordionTrigger className="p-4">
+                                <AccordionTrigger className="p-4 group">
                                     <div className="flex items-center space-x-3">
                                         <Users className="h-6 w-6 text-primary" />
                                         <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
@@ -505,7 +505,7 @@ export default function HomePage() {
       >
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
-             <Accordion type="single" collapsible className="w-full">
+             <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
                 <BiblePlanDisplay
                     readingToDisplay={todaysReadingForDisplay}
                     currentUser={currentUser}
@@ -516,6 +516,7 @@ export default function HomePage() {
                     loading={planLoading || loadingChecklist}
                     planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
                     hidePlanMeta={true}
+                    defaultOpen={true}
                 />
             </Accordion>
         </div>
@@ -523,3 +524,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    

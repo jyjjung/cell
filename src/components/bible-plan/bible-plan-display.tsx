@@ -30,6 +30,7 @@ interface BiblePlanDisplayProps {
   planDescription?: string;
   generatedDate?: string;
   hidePlanMeta?: boolean;
+  defaultOpen?: boolean;
 }
 
 export default function BiblePlanDisplay({
@@ -45,6 +46,7 @@ export default function BiblePlanDisplay({
   planDescription,
   generatedDate,
   hidePlanMeta = false,
+  defaultOpen = false,
 }: BiblePlanDisplayProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
@@ -162,7 +164,7 @@ export default function BiblePlanDisplay({
 
   return (
     <>
-      <AccordionItem value={readingToDisplay.date || 'no-date-reading'} className="border-b-0">
+      <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0">
          <motion.div
            initial={false}
            className={cn(
@@ -293,3 +295,5 @@ export default function BiblePlanDisplay({
     </>
   );
 }
+
+    
