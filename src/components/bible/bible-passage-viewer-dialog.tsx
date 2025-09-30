@@ -146,10 +146,12 @@ export default function BiblePassageViewerDialog({
         <DialogHeader className="pr-10 shrink-0 flex-row items-center justify-between">
            <Popover open={isSelectorOpen} onOpenChange={setIsSelectorOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="text-base sm:text-lg font-semibold p-2 -ml-2" disabled={isLoading}>
-                 {currentBook && currentChapter ? `${currentBook} ${currentChapter}` : currentDisplayRef || "No passage"}
-                 <ChevronUp className={cn("ml-2 h-4 w-4 shrink-0 transition-transform duration-200", isSelectorOpen ? "rotate-0" : "rotate-180")} />
-              </Button>
+                <DialogTitle asChild>
+                    <Button variant="ghost" className="text-base sm:text-lg font-semibold p-2 -ml-2" disabled={isLoading}>
+                        {currentBook && currentChapter ? `${currentBook} ${currentChapter}` : currentDisplayRef || "No passage"}
+                        <ChevronUp className={cn("ml-2 h-4 w-4 shrink-0 transition-transform duration-200", isSelectorOpen ? "rotate-0" : "rotate-180")} />
+                    </Button>
+                </DialogTitle>
             </PopoverTrigger>
             <PopoverContent className="w-80 h-[60vh] p-0" align="start">
               <BibleBookChapterSelector
