@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import UpcomingEventsDisplay from '@/components/events/upcoming-events-display';
-import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import MusicPlayer from '@/components/homepage/music-player';
 import StatCard from '@/components/homepage/stat-card';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useEvents } from '@/hooks/use-events';
@@ -35,6 +34,7 @@ import { Progress } from '@/components/ui/progress';
 import { useIsMobile } from '@/hooks/use-mobile';
 import EventListView from '@/components/calendar/event-list-view';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 
 
 interface UserProgressDisplay {
@@ -463,10 +463,36 @@ export default function HomePage() {
         </>
       )}
 
-
       <Separator />
 
+      <motion.section
+        variants={itemVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        <div className="max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
+             <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
+                <BiblePlanDisplay
+                    readingToDisplay={todaysReadingForDisplay}
+                    currentUser={currentUser}
+                    completedPassages={completedPassages}
+                    togglePassageCompletion={togglePassageCompletion}
+                    onToggleAllToday={markMultiplePassages}
+                    allPassageTextsForDay={allTodaysPassageTexts}
+                    loading={planLoading || loadingChecklist}
+                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                    hidePlanMeta={true}
+                    defaultOpen={true}
+                />
+            </Accordion>
+        </div>
+      </motion.section>
+      
         {currentUser && (
+            <>
+            <Separator />
             <motion.section 
               id="community-progress-section"
               variants={itemVariants}
@@ -493,6 +519,7 @@ export default function HomePage() {
                     </Accordion>
                 </div>
             </motion.section>
+            </>
         )}
 
       <Separator />
@@ -503,23 +530,7 @@ export default function HomePage() {
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
       >
-        <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
-             <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
-                <BiblePlanDisplay
-                    readingToDisplay={todaysReadingForDisplay}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    onToggleAllToday={markMultiplePassages}
-                    allPassageTextsForDay={allTodaysPassageTexts}
-                    loading={planLoading || loadingChecklist}
-                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                    hidePlanMeta={true}
-                    defaultOpen={true}
-                />
-            </Accordion>
-        </div>
+          <MusicPlayer />
       </motion.section>
     </div>
   );

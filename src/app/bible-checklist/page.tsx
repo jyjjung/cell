@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
@@ -22,6 +22,12 @@ import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface WeeklyProgress {
   weekNumber: number;
@@ -321,19 +327,34 @@ export default function BibleChecklistPage() {
                 exit="exit"
                 transition={{ duration: 0.2 }}
               >
-                  <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> {isGuest ? "Reading Plan" : "My Reading Plan"}</motion.h1>
-                      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
-                        {currentWeek && (
-                            <Button onClick={handleJumpToCurrentWeek} variant="outline">
-                                <LocateFixed className="mr-2 h-4 w-4" /> Current Week
-                            </Button>
-                        )}
-                        {!isGuest && (
-                          <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
-                              <BookUp className="mr-2 h-4 w-4" /> Mark Range
-                          </Button>
-                        )}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+                      <motion.div variants={itemVariants} className="flex items-center space-x-3">
+                          <CalendarDays className="h-8 w-8 text-primary" />
+                          <h1 className="text-3xl font-bold tracking-tight">{isGuest ? "Reading Plan" : "My Reading Plan"}</h1>
+                      </motion.div>
+
+                      <motion.div variants={itemVariants} className="flex gap-2">
+                          {currentWeek && (
+                              <Button onClick={handleJumpToCurrentWeek} variant="outline" size="sm">
+                                  <LocateFixed className="mr-2 h-4 w-4" /> Current Week
+                              </Button>
+                          )}
+                          {!isGuest && (
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="icon" className="h-9 w-9">
+                                          <MoreVertical className="h-4 w-4" />
+                                          <span className="sr-only">More options</span>
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onSelect={() => setIsMarkRangeDialogOpen(true)}>
+                                          <BookUp className="mr-2 h-4 w-4" />
+                                          Mark Range as Read
+                                      </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
+                          )}
                       </motion.div>
                   </div>
 
