@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -25,15 +26,11 @@ export function ThemeToggle() {
   }, [])
 
   const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
-    // We optimistically set the theme for immediate UI feedback
-    setTheme(mode);
-    
     if (!currentUser) {
-      // It's a guest, no need to save
+      setTheme(mode); // For guests, just change the theme without saving
       return;
     }
     try {
-      // Persist the preference to Firebase
       await updateUserProfile(currentUser.uid, { mode });
     } catch (error) {
       console.error("Failed to save mode preference:", error);
