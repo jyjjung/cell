@@ -16,7 +16,7 @@ import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, 
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
