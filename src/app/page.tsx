@@ -338,7 +338,7 @@ export default function HomePage() {
         </motion.h2>
         <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentUser && (
-            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+            <motion.div variants={itemVariants}>
               <StatCard
                 title="Upcoming Events"
                 value={eventsLoading ? null : upcomingEventsCount}
@@ -350,7 +350,7 @@ export default function HomePage() {
             </motion.div>
           )}
           {currentUser && (
-            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+            <motion.div variants={itemVariants}>
               <StatCard
                 title="Reading Progress"
                 value={readingsLoggedStatValue}
@@ -362,7 +362,7 @@ export default function HomePage() {
               />
             </motion.div>
           )}
-          <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+          <motion.div variants={itemVariants}>
             <StatCard
               title="Memory Verses"
               value={memoryVersesLoading ? null : memoryVerses.length}
@@ -384,8 +384,7 @@ export default function HomePage() {
             variants={itemVariants}
             initial="hidden"
             whileInView="visible"
-            exit="exit"
-            viewport={{ once: false, amount: 0.2 }}
+            viewport={{ once: true, amount: 0.2 }}
           >
             <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
               <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
@@ -471,8 +470,7 @@ export default function HomePage() {
               variants={itemVariants}
               initial="hidden"
               whileInView="visible"
-              exit="exit"
-              viewport={{ once: false, amount: 0.2 }}
+              viewport={{ once: true, amount: 0.2 }}
             >
                 <div className="max-w-4xl mx-auto">
                     <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
@@ -501,8 +499,7 @@ export default function HomePage() {
         variants={itemVariants}
         initial="hidden"
         whileInView="visible"
-        exit="exit"
-        viewport={{ once: false, amount: 0.2 }}
+        viewport={{ once: true, amount: 0.2 }}
       >
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
