@@ -1,11 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,23 +11,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 export function ThemeToggle() {
   const { setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
   const { currentUser, updateUserProfile } = useAuth()
   const { toast } = useToast()
 
-  const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
-    // Set theme locally for immediate visual feedback for all users
-    setTheme(mode);
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
-    // If there's a user, save their preference
+  const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
+    setTheme(mode);
+    
     if (!currentUser) {
-      toast({
-        title: "Preference Not Saved",
-        description: "Your light/dark mode preference will be saved when you log in.",
-        variant: "default"
-      });
       return;
     }
     try {
@@ -49,8 +46,14 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          {mounted ? (
+            <>
+              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </>
+          ) : (
+            <Monitor className="h-[1.2rem] w-[1.2rem]" />
+          )}
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
