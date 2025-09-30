@@ -16,7 +16,7 @@ import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, 
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
@@ -55,6 +55,7 @@ export default function BibleChecklistPage() {
   const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
   
   const isGuest = !currentUser;
+  const today = useMemo(() => startOfDay(new Date()), []);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -63,7 +64,6 @@ export default function BibleChecklistPage() {
   const weeklyProgressData = useMemo((): WeeklyProgress[] => {
     if (!plan?.dailyReadings) return [];
     
-    const today = new Date();
     const weeksMap = new Map<string, DailyReading[]>();
 
     for (const reading of plan.dailyReadings) {
@@ -92,15 +92,18 @@ export default function BibleChecklistPage() {
 
         readings.forEach(reading => {
             const validPassages = reading.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")) || [];
-            totalCount += validPassages.length;
-            if (!isGuest) {
+            const numValidPassages = validPassages.length;
+            totalCount += numValidPassages;
+            
+            if (isGuest) {
+              const readingDate = parseISO(reading.date);
+              if (isValid(readingDate) && isBefore(readingDate, today)) {
+                  completedCount += numValidPassages;
+              }
+            } else {
               completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
             }
         });
-        
-        if (isGuest) {
-            completedCount = totalCount;
-        }
 
         const isCompleted = totalCount > 0 && completedCount === totalCount;
         const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
@@ -121,17 +124,30 @@ export default function BibleChecklistPage() {
         };
       })
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
-  }, [plan, completedPassages, isGuest]);
+  }, [plan, completedPassages, isGuest, today]);
   
   const overallProgress = useMemo(() => {
-    if (isGuest || !plan?.dailyReadings || loadingChecklist) {
+    if (!plan?.dailyReadings || loadingChecklist) {
       return { total: 0, completed: 0, percentage: 0 };
     }
+    
     const total = plan.dailyReadings.reduce((acc, day) => acc + (day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0), 0);
-    const completed = completedPassages.length;
+    
+    let completed = 0;
+    if (isGuest) {
+       plan.dailyReadings.forEach(day => {
+         const dayDate = parseISO(day.date);
+         if (isValid(dayDate) && isBefore(dayDate, today)) {
+           completed += day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0;
+         }
+       });
+    } else {
+       completed = completedPassages.length;
+    }
+
     const percentage = total > 0 ? (completed / total) * 100 : 0;
     return { total, completed, percentage };
-  }, [plan, completedPassages, loadingChecklist, isGuest]);
+  }, [plan, completedPassages, loadingChecklist, isGuest, today]);
 
 
   const currentWeek = useMemo(() => {
@@ -306,7 +322,7 @@ export default function BibleChecklistPage() {
                 transition={{ duration: 0.2 }}
               >
                   <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> {isGuest ? "Full Reading Plan" : "My Reading Plan"}</motion.h1>
+                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> {isGuest ? "Reading Plan" : "My Reading Plan"}</motion.h1>
                       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
                         {currentWeek && (
                             <Button onClick={handleJumpToCurrentWeek} variant="outline">
@@ -321,8 +337,7 @@ export default function BibleChecklistPage() {
                       </motion.div>
                   </div>
 
-                  {!isGuest && (
-                    <motion.div variants={itemVariants}>
+                  <motion.div variants={itemVariants}>
                       <Card>
                           <CardContent className="p-4">
                               <div className="flex items-center gap-4">
@@ -330,12 +345,14 @@ export default function BibleChecklistPage() {
                                   <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
                               </div>
                               <p className="text-sm text-muted-foreground mt-2">
-                                  You have completed {overallProgress.completed} of {overallProgress.total} total passages.
+                                  {isGuest 
+                                    ? `The plan is ${Math.round(overallProgress.percentage)}% complete as of today.`
+                                    : `You have completed ${overallProgress.completed} of ${overallProgress.total} total passages.`
+                                  }
                               </p>
                           </CardContent>
                       </Card>
-                    </motion.div>
-                  )}
+                  </motion.div>
                   
                   <motion.div 
                     className="space-y-3"
@@ -388,12 +405,10 @@ export default function BibleChecklistPage() {
                                           )}>WEEK {week.weekNumber}</p>
                                           <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
                                       </div>
-                                      {!isGuest && (
-                                        <div className="text-right">
-                                            <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
-                                            <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
-                                        </div>
-                                      )}
+                                      <div className="text-right">
+                                          <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
+                                          <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
+                                      </div>
                                 </div>
                               </CardHeader>
                           </Card>
