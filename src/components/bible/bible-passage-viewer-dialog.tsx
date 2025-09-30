@@ -4,10 +4,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookOpenText, AlertTriangle, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
+import { Loader2, BookOpenText, AlertTriangle, ChevronLeft, ChevronRight, CheckSquare, ChevronUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parsePassageReferenceForNavigation, getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import BibleBookChapterSelector from './bible-book-chapter-selector';
+import { cn } from '@/lib/utils';
 
 interface BiblePassageViewerDialogProps {
   isOpen: boolean;
@@ -32,6 +35,7 @@ export default function BiblePassageViewerDialog({
   const [currentChapter, setCurrentChapter] = useState<number | null>(null);
   const [currentDisplayRef, setCurrentDisplayRef] = useState<string | null>(null);
   const { toast } = useToast();
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
   const updateCurrentPassageDetails = useCallback((ref: string | null) => {
     if (ref) {
@@ -39,11 +43,6 @@ export default function BiblePassageViewerDialog({
       if (parsed) {
         setCurrentBook(parsed.book);
         setCurrentChapter(parsed.chapter);
-        // For display and fetching, we now use the original ref if it has verses,
-        // or "Book Chapter" if it's just a chapter reference for ESV API compatibility.
-        // The ESV API handles "Book Chapter" well for whole chapters.
-        // If ref includes verses (e.g. "John 3:16-17"), use it as is.
-        // If ref is just "John 3", use "John 3".
         setCurrentDisplayRef(ref); 
       } else {
         console.warn(`[BiblePassageViewer] Could not parse for navigation: ${ref}`);
@@ -105,7 +104,7 @@ export default function BiblePassageViewerDialog({
     if (currentBook && currentChapter) {
       const prevRef = getPreviousChapterRef(currentBook, currentChapter);
       if (prevRef) {
-        updateCurrentPassageDetails(prevRef); // This will trigger the useEffect to fetch new passage
+        updateCurrentPassageDetails(prevRef);
       }
     }
   };
@@ -114,16 +113,13 @@ export default function BiblePassageViewerDialog({
     if (currentBook && currentChapter) {
       const nextRef = getNextChapterRef(currentBook, currentChapter);
       if (nextRef) {
-        updateCurrentPassageDetails(nextRef); // This will trigger the useEffect to fetch new passage
+        updateCurrentPassageDetails(nextRef);
       }
     }
   };
 
   const handleMarkComplete = async () => {
     if (markMultiplePassages && currentDisplayRef) {
-      // We mark the chapter reference (e.g., "John 3") as complete,
-      // assuming currentDisplayRef for ESV API is often the whole chapter.
-      // If currentDisplayRef is more specific (e.g. "John 3:16"), that exact ref is marked.
       const refToMark = (currentBook && currentChapter) ? `${currentBook} ${currentChapter}` : currentDisplayRef;
       try {
         await markMultiplePassages([refToMark], true);
@@ -134,6 +130,11 @@ export default function BiblePassageViewerDialog({
     }
   };
   
+  const handleSelection = (book: string, chapter: number) => {
+    updateCurrentPassageDetails(`${book} ${chapter}`);
+    setIsSelectorOpen(false);
+  };
+  
   const refForCompletionCheck = (currentBook && currentChapter) ? `${currentBook} ${currentChapter}` : currentDisplayRef;
   const isCurrentChapterComplete = refForCompletionCheck ? completedPassages.includes(refForCompletionCheck) : false;
   const canNavigatePrev = currentBook && currentChapter ? !!getPreviousChapterRef(currentBook, currentChapter) : false;
@@ -142,12 +143,23 @@ export default function BiblePassageViewerDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-4 sm:p-6">
-        <DialogHeader className="pr-10 shrink-0">
-          <DialogTitle className="flex items-center text-base sm:text-lg">
-            <BookOpenText className="mr-2 h-5 w-5 text-primary shrink-0" />
-            <span className="truncate">{currentDisplayRef || "No passage selected"}</span>
-            {!isLoading && !error && bibleHtml && <span className="ml-1 text-muted-foreground text-sm">(ESV)</span>}
-          </DialogTitle>
+        <DialogHeader className="pr-10 shrink-0 flex-row items-center justify-between">
+           <Popover open={isSelectorOpen} onOpenChange={setIsSelectorOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="text-base sm:text-lg font-semibold p-2 -ml-2" disabled={isLoading}>
+                 {currentBook && currentChapter ? `${currentBook} ${currentChapter}` : currentDisplayRef || "No passage"}
+                 <ChevronUp className={cn("ml-2 h-4 w-4 shrink-0 transition-transform duration-200", isSelectorOpen ? "rotate-0" : "rotate-180")} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 h-[60vh] p-0" align="start">
+              <BibleBookChapterSelector
+                initialBook={currentBook}
+                initialChapter={currentChapter}
+                onSelect={handleSelection}
+              />
+            </PopoverContent>
+          </Popover>
+          { !isLoading && !error && bibleHtml && <span className="text-muted-foreground text-sm">(ESV)</span> }
         </DialogHeader>
         
         <div className="flex-grow min-h-0 overflow-y-auto my-2 sm:my-4 pr-2 sm:pr-4 -mr-2 sm:-mr-4">
