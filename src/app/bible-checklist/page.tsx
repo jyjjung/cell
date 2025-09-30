@@ -97,8 +97,12 @@ export default function BibleChecklistPage() {
               completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
             }
         });
+        
+        if (isGuest) {
+            completedCount = totalCount;
+        }
 
-        const isCompleted = !isGuest && totalCount > 0 && completedCount === totalCount;
+        const isCompleted = totalCount > 0 && completedCount === totalCount;
         const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
         const isOverdue = !isGuest && !isCompleted && isBefore(weekEndDate, today);
 
@@ -135,9 +139,6 @@ export default function BibleChecklistPage() {
   }, [weeklyProgressData]);
 
   const { completedWeeks, upcomingWeeks } = useMemo(() => {
-    if (isGuest) {
-      return { completedWeeks: [], upcomingWeeks: weeklyProgressData };
-    }
     const completed: WeeklyProgress[] = [];
     const upcoming: WeeklyProgress[] = [];
     let consecutive = true;
@@ -150,7 +151,7 @@ export default function BibleChecklistPage() {
       }
     });
     return { completedWeeks: completed, upcomingWeeks: upcoming };
-  }, [weeklyProgressData, isGuest]);
+  }, [weeklyProgressData]);
 
 
   const handleJumpToCurrentWeek = () => {
