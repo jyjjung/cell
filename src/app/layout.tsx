@@ -34,7 +34,7 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-          themes={['light', 'dark', 'system', 'theme-zinc', 'dark-theme-zinc', 'theme-rose', 'dark-theme-rose']}
+          themes={['light', 'dark', 'theme-zinc', 'dark-theme-zinc', 'theme-rose', 'dark-theme-rose']}
         >
           <PageLoadingProvider>
             <AuthProvider>
