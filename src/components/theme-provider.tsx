@@ -8,23 +8,30 @@ import { useAuth } from "@/contexts/auth-context"
 
 function ThemeApplier() {
     const { currentUser } = useAuth();
-    const { setTheme } = useTheme();
+    const { setTheme, theme: currentNextTheme } = useTheme();
 
     React.useEffect(() => {
-        if (currentUser?.theme && currentUser?.mode) {
-            let effectiveTheme = currentUser.theme;
-            if (currentUser.mode === 'dark' && currentUser.theme !== 'system') {
-                effectiveTheme = `dark-${currentUser.theme}`;
-            } else if (currentUser.mode === 'light' && currentUser.theme !== 'system') {
-                effectiveTheme = currentUser.theme;
-            } else { // system mode
+        if (currentUser) {
+            const { mode, theme: themeName } = currentUser;
+            let effectiveTheme: string;
+
+            if (mode === 'system') {
                 effectiveTheme = 'system';
+            } else if (themeName === 'system') {
+                effectiveTheme = mode || 'system';
+            } else {
+                if (mode === 'dark') {
+                    effectiveTheme = `dark-${themeName}`;
+                } else {
+                    effectiveTheme = themeName || 'system';
+                }
             }
-             setTheme(effectiveTheme);
-        } else if (currentUser) {
-            setTheme('system'); // fallback for user with no settings
+            
+            if (effectiveTheme !== currentNextTheme) {
+                setTheme(effectiveTheme);
+            }
         }
-    }, [currentUser, setTheme]);
+    }, [currentUser, setTheme, currentNextTheme]);
 
     return null;
 }
