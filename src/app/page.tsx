@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import MusicPlayer from '@/components/homepage/music-player';
 import StatCard from '@/components/homepage/stat-card';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useEvents } from '@/hooks/use-events';
@@ -521,17 +520,8 @@ export default function HomePage() {
             </motion.section>
             </>
         )}
-
-      <Separator />
-
-      <motion.section
-        variants={itemVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-          <MusicPlayer />
-      </motion.section>
     </div>
   );
 }
+
+    
