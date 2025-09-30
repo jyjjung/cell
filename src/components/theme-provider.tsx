@@ -2,21 +2,28 @@
 "use client"
 
 import * as React from "react"
-import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 import { useAuth } from "@/contexts/auth-context"
 
-export function ThemeProvider({ children, ...props }: Omit<ThemeProviderProps, 'attribute' | 'themes'>) {
-  const { currentUser } = useAuth();
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+  const { currentUser } = useAuth()
+  const [isMounted, setIsMounted] = React.useState(false);
 
-  // Determine the theme to apply based on user settings.
-  // The `theme` prop in `NextThemesProvider` takes precedence. `enableSystem` handles the 'system' mode.
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const userTheme = currentUser?.theme;
   const userMode = currentUser?.mode;
 
-  // Let next-themes handle 'system' mode.
-  // If a specific theme is set, force it. If not, don't force anything and let system/mode toggle work.
   const forcedTheme = userTheme && userTheme !== 'system' ? userTheme : undefined;
+
+  // Only render the provider with the user's theme after the component has mounted on the client.
+  // Before that, render a null or a basic version to avoid server-client mismatch.
+  if (!isMounted) {
+    return null; 
+  }
   
   return (
     <NextThemesProvider 
