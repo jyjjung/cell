@@ -161,35 +161,35 @@ export default function AdminDashboardPage() {
         <Accordion type="multiple" className="w-full space-y-6" defaultValue={["events-manager"]}>
             <AccordionItem value="events-manager" className="border-b-0">
                 <Card>
-                    <CardHeader className="p-4 flex-row justify-between items-center w-full">
-                        <AccordionTrigger className="w-full text-left p-0">
-                           <div className="flex items-center">
-                                <CardTitle className="text-xl">Manage Events</CardTitle>
-                                <ChevronDown className="h-5 w-5 ml-2 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                            </div>
-                        </AccordionTrigger>
-                        <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                            <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-                            </DialogHeader>
-                            <EventForm
-                            event={editingEvent}
-                            onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
-                            onCancel={() => {
-                                setEditingEvent(null);
-                                setIsFormModalOpen(false);
-                            }}
-                            submitButtonText={editingEvent ? "Update Event" : "Create Event"}
-                            />
-                        </DialogContent>
-                        </Dialog>
-                    </CardHeader>
+                    <AccordionTrigger className="p-4 flex-row justify-between items-center w-full group">
+                        <div className="flex items-center">
+                            <CardTitle className="text-xl">Manage Events</CardTitle>
+                        </div>
+                         <div className="flex items-center space-x-4">
+                            <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+                                <DialogTrigger asChild>
+                                    <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                    <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+                                    </DialogHeader>
+                                    <EventForm
+                                    event={editingEvent}
+                                    onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
+                                    onCancel={() => {
+                                        setEditingEvent(null);
+                                        setIsFormModalOpen(false);
+                                    }}
+                                    submitButtonText={editingEvent ? "Update Event" : "Create Event"}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                            <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </div>
+                    </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                         {eventsLoading ? (
                             <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>

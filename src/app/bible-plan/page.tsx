@@ -136,7 +136,7 @@ export default function FullBiblePlanPage() {
         
         <Accordion type="single" collapsible className="w-full space-y-2">
             {viewState.week.readings
-                .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                .sort((a,b) => parseISO(a.date).getTime() - b.date.getTime())
                 .map(reading => (
                   <BiblePlanDisplay
                     key={reading.date}
@@ -193,5 +193,3 @@ export default function FullBiblePlanPage() {
     </motion.div>
   );
 }
-
-    

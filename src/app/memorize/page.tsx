@@ -129,5 +129,3 @@ export default function MemorizePage() {
     </motion.div>
   );
 }
-
-    
