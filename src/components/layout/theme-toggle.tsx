@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme()
+  const { setTheme, theme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   const { currentUser, updateUserProfile } = useAuth()
   const { toast } = useToast()
@@ -41,19 +41,24 @@ export function ThemeToggle() {
       });
     }
   }
+  
+  // Until the component is mounted, we can't be sure of the theme,
+  // so we render a placeholder to avoid hydration mismatch.
+  // Rendering null is one way to ensure the server and initial client render match.
+  if (!mounted) {
+    return (
+        <Button variant="ghost" size="icon" disabled>
+            <Monitor className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          {mounted ? (
-            <>
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            </>
-          ) : (
-            <Monitor className="h-[1.2rem] w-[1.2rem]" />
-          )}
+            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
