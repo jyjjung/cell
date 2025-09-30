@@ -15,6 +15,20 @@ const themes = [
 export function ThemeSwitcher() {
   const { theme, setTheme, resolvedTheme } = useTheme();
 
+  const handleThemeChange = (value: string) => {
+    if (value === "system") {
+      setTheme("system");
+    } else {
+      // When a custom theme is selected, we check the resolved base theme (light/dark)
+      // and append it to apply the correct variant.
+      if (resolvedTheme?.includes("dark")) {
+        setTheme(`dark-${value}`);
+      } else {
+        setTheme(value);
+      }
+    }
+  };
+
   return (
     <div className="space-y-2">
        <h3 className="text-sm font-medium flex items-center">
@@ -23,13 +37,18 @@ export function ThemeSwitcher() {
         </h3>
       <div className="grid grid-cols-3 gap-2">
         {themes.map((t) => {
-          const isActive = theme === t.value;
+          // Animate is active if the theme string starts with the custom theme name,
+          // or if both are 'system'.
+          const isActive = t.value === "system" 
+            ? theme === "system" 
+            : theme?.includes(t.value);
+
           return (
             <Button
               key={t.value}
               variant={isActive ? "default" : "outline"}
               size="sm"
-              onClick={() => setTheme(t.value)}
+              onClick={() => handleThemeChange(t.value)}
               className="justify-center"
             >
               {isActive && <Check className="mr-2 h-4 w-4" />}
