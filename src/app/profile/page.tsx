@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { ThemeSwitcher } from '@/components/profile/theme-switcher';
+import type { UserProfileData } from '@/types';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
@@ -75,7 +76,7 @@ export default function ProfilePage() {
     if (!currentUser) return;
     setIsSaving(true);
     try {
-      const profileUpdateData: { displayName?: string; birthday?: string } = {
+      const profileUpdateData: Partial<UserProfileData> = {
         displayName: data.displayName,
       };
       if (data.birthday) {

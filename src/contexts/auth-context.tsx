@@ -28,7 +28,7 @@ interface AuthContextType {
   signUpUser: (email: string, password: string) => Promise<AppUser | null>;
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
   signOutUser: () => Promise<void>;
-  updateUserProfile: (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => Promise<void>;
+  updateUserProfile: (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday' | 'theme' | 'mode'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,22 +68,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...firebaseUser, // Base Firebase user properties
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             birthday: profileData.birthday || null,
+            theme: profileData.theme || 'system',
+            mode: profileData.mode || 'system',
           } as AppUser);
         } else {
           // Create a basic profile if it doesn't exist (e.g., first-time sign-up)
+          const initialDisplayName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "New User";
           const newProfileData: UserProfileData = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "New User", // Use email prefix or "New User" if no displayName
+            displayName: initialDisplayName,
             birthday: null,
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
+            theme: 'system',
+            mode: 'system',
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
             ...firebaseUser,
             displayName: newProfileData.displayName,
             birthday: newProfileData.birthday,
+            theme: newProfileData.theme,
+            mode: newProfileData.mode,
           } as AppUser);
         }
       } else {
@@ -123,13 +130,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         birthday: null,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
+        theme: 'system',
+        mode: 'system',
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
       if (auth.currentUser) {
         await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
       }
-      return { ...firebaseUser, displayName: initialDisplayName, birthday: null } as AppUser;
+      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, theme: 'system', mode: 'system' } as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
       throw error;
@@ -169,14 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => {
+  const updateUserProfile = async (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday' | 'theme' | 'mode'>>) => {
     if (!currentUser || currentUser.uid !== userId) {
       console.error("User not authorized to update this profile or no user logged in.");
       throw new Error("Not authorized.");
     }
     const userDocRef = doc(db, USERS_COLLECTION, userId);
     try {
-      const dataToUpdate: Partial<UserProfileData> = { ...profileData, updatedAt: serverTimestamp() as Timestamp };
+      const dataToUpdate: Partial<UserProfileData> & {updatedAt: Timestamp} = { ...profileData, updatedAt: serverTimestamp() as Timestamp };
       await setDoc(userDocRef, dataToUpdate, { merge: true });
 
       // Update Firebase Auth profile's displayName if it's being changed
@@ -191,6 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prevUser,
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
+          theme: profileData.theme !== undefined ? profileData.theme : prevUser.theme,
+          mode: profileData.mode !== undefined ? profileData.mode : prevUser.mode,
         };
         return updatedUser;
       });

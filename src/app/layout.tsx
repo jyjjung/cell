@@ -29,15 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          themes={['light', 'dark', 'theme-zinc', 'theme-rose']}
-        >
-          <PageLoadingProvider>
-            <AuthProvider>
+        <PageLoadingProvider>
+          <AuthProvider>
+            <ThemeProvider>
               <Suspense fallback={null}>
                 <PageLoaderManager />
               </Suspense>
@@ -50,12 +44,10 @@ export default function RootLayout({
               <Toaster />
               <GlobalPageLoader />
               <Analytics />
-            </AuthProvider>
-          </PageLoadingProvider>
-        </ThemeProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </PageLoadingProvider>
       </body>
     </html>
   );
 }
-
-    

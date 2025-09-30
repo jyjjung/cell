@@ -2,8 +2,10 @@
 "use client"
 
 import * as React from "react"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +17,32 @@ import {
 
 export function ThemeToggle() {
   const { setTheme } = useTheme()
+  const { currentUser, updateUserProfile } = useAuth()
+  const { toast } = useToast()
+
+  const handleModeChange = async (mode: 'light' | 'dark' | 'system') => {
+    if (!currentUser) {
+      toast({
+        title: "Not Logged In",
+        description: "You must be logged in to save theme preferences.",
+        variant: "destructive"
+      });
+      // Also apply theme locally for non-logged-in users
+      setTheme(mode);
+      return;
+    }
+    try {
+      await updateUserProfile(currentUser.uid, { mode });
+      // The ThemeApplier in ThemeProvider will handle setting the theme
+    } catch (error) {
+      console.error("Failed to save mode preference:", error);
+      toast({
+        title: "Error",
+        description: "Could not save your mode preference.",
+        variant: "destructive"
+      });
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -26,18 +54,19 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleModeChange("light")}>
+          <Sun className="mr-2 h-4 w-4" />
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleModeChange("dark")}>
+          <Moon className="mr-2 h-4 w-4" />
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleModeChange("system")}>
+          <Monitor className="mr-2 h-4 w-4" />
           System
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
-
-    
