@@ -137,12 +137,12 @@ body {
     background-size: 200% 200%;
     background-image: radial-gradient(
       circle at 10% 10%,
-      hsl(var(--primary) / 0.1),
+      hsl(var(--primary) / 0.2),
       hsl(var(--background)) 30%
     ),
     radial-gradient(
       circle at 90% 80%,
-      hsl(var(--primary) / 0.1),
+      hsl(var(--primary) / 0.2),
       hsl(var(--background)) 25%
     );
     animation: bg-pan 25s ease-in-out infinite;
