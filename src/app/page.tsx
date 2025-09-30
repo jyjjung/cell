@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { Separator } from '@/components/ui/separator';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Info, List, LayoutGrid } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format, isDateValid } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -436,19 +436,21 @@ export default function HomePage() {
                         <div className="lg:col-span-1">
                             <div className="sticky top-20">
                                 <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
-                                <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-2 border rounded-md p-2">
-                                    {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                        <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
-                                            <div className="flex items-start justify-between">
-                                                <p className="font-semibold text-sm">{event.title}</p>
-                                                <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
+                                <Card className="shadow-sm">
+                                    <CardContent className="p-2 space-y-2 max-h-[28rem] overflow-y-auto">
+                                        {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
+                                            <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
+                                                <div className="flex items-start justify-between">
+                                                    <p className="font-semibold text-sm">{event.title}</p>
+                                                    <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
+                                                </div>
+                                                {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
                                             </div>
-                                            {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                                        </div>
-                                    )) : (
-                                        <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
-                                    )}
-                                </div>
+                                        )) : (
+                                            <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
                                 <CalendarKey />
                             </div>
                         </div>
@@ -477,7 +479,7 @@ export default function HomePage() {
                     <Accordion type="single" collapsible className="w-full">
                         <Card className="hover:shadow-lg transition-shadow">
                             <AccordionItem value="progress-item" className="border-0">
-                                <AccordionTrigger className="p-4 hover:no-underline">
+                                <AccordionTrigger className="p-4">
                                     <div className="flex items-center space-x-3">
                                         <Users className="h-6 w-6 text-primary" />
                                         <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
@@ -521,5 +523,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
