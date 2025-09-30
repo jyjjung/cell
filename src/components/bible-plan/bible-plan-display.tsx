@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, isToday, isValid, isBefore, startOfDay } from 'date-fns';
-import { CalendarX, CheckSquare, CheckCircle, BookOpen, BookHeart, Loader2, Info, Check } from 'lucide-react';
+import { CalendarX, CheckSquare, CheckCircle, BookOpen, BookHeart, Loader2, Info, Check, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
@@ -170,12 +170,12 @@ export default function BiblePlanDisplay({
            )}
          >
          <Card className={cn(
-             "bg-card/90 relative", 
+             "bg-card/90 relative hover:shadow-md transition-shadow", 
              isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
              isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
          )}>
-            <AccordionTrigger className="p-3 w-full group">
+            <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-t-lg transition-colors">
               <div className="flex justify-between items-center w-full">
                   <div className="text-left">
                       {parsedDayDate && (
@@ -195,16 +195,6 @@ export default function BiblePlanDisplay({
                         </>
                       )}
                   </div>
-                  <motion.div
-                    className="ml-auto"
-                    variants={{
-                        open: { rotate: 180 },
-                        closed: { rotate: 0 }
-                    }}
-                    transition={{ duration: 0.2 }}
-                    >
-                    <CheckCircle className="h-4 w-4 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform duration-200" />
-                  </motion.div>
               </div>
             </AccordionTrigger>
             <AccordionContent>
