@@ -11,6 +11,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from '@/components/theme-provider';
 import PageLoaderManager from '@/components/layout/page-loader-manager';
 import MovingBackground from '@/components/layout/moving-background';
+import GlobalBibleNavigator from '@/components/bible/global-bible-navigator';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -45,6 +46,7 @@ export default function RootLayout({
               </div>
               <Toaster />
               <GlobalPageLoader />
+              <GlobalBibleNavigator />
               <Analytics />
             </ThemeProvider>
           </AuthProvider>
