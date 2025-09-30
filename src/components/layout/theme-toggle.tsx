@@ -24,10 +24,11 @@ export function ThemeToggle() {
     // Set theme locally for immediate visual feedback for all users
     setTheme(mode);
 
+    // If there's a user, save their preference
     if (!currentUser) {
       toast({
-        title: "Logged Out",
-        description: "Your preference will be saved when you log in.",
+        title: "Preference Not Saved",
+        description: "Your light/dark mode preference will be saved when you log in.",
         variant: "default"
       });
       return;

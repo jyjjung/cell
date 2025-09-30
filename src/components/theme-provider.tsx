@@ -2,38 +2,56 @@
 "use client"
 
 import * as React from "react"
-import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 import type { ThemeProviderProps } from "next-themes/dist/types"
 import { useAuth } from "@/contexts/auth-context"
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  const { currentUser } = useAuth()
+// This inner component will handle applying the user's theme from the DB
+// once it's loaded on the client.
+function ThemeApplier({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useAuth();
+  const { setTheme, theme: activeTheme } = useTheme();
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const userTheme = currentUser?.theme;
-  const userMode = currentUser?.mode;
+  React.useEffect(() => {
+    if (isMounted && currentUser) {
+      const userTheme = currentUser.theme || 'system';
+      const userMode = currentUser.mode || 'system';
+      
+      let targetTheme: string;
 
-  const forcedTheme = userTheme && userTheme !== 'system' ? userTheme : undefined;
+      if (userTheme !== 'system') {
+        // If a custom theme is set, we use it. The light/dark mode is handled by the `class` on <html>
+        targetTheme = userTheme;
+      } else {
+        // If theme is 'system', then the mode (light/dark/system) dictates the theme.
+        targetTheme = userMode;
+      }
+      
+      if (activeTheme !== targetTheme) {
+        setTheme(targetTheme);
+      }
+    }
+  }, [currentUser, isMounted, activeTheme, setTheme]);
 
-  // Only render the provider with the user's theme after the component has mounted on the client.
-  // Before that, render a null or a basic version to avoid server-client mismatch.
-  if (!isMounted) {
-    return null; 
-  }
-  
+  return <>{children}</>;
+}
+
+
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    <NextThemesProvider 
-        attribute="class"
-        defaultTheme={userMode || "system"}
-        forcedTheme={forcedTheme}
-        enableSystem
-        {...props}
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      themes={['light', 'dark', 'system', 'theme-zinc', 'theme-rose']}
+      {...props}
     >
-        {children}
+      <ThemeApplier>{children}</ThemeApplier>
     </NextThemesProvider>
   )
 }
