@@ -15,6 +15,14 @@ const themes = [
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
 
+  const isThemeActive = (themeValue: string) => {
+    if (themeValue === 'default') {
+      // "Default" is active if the current theme is 'system', 'light', 'dark', or not one of the custom themes.
+      return !theme?.startsWith('theme-');
+    }
+    return theme === `theme-${themeValue}`;
+  };
+
   return (
     <div className="space-y-2">
        <h3 className="text-sm font-medium flex items-center">
@@ -25,12 +33,12 @@ export function ThemeSwitcher() {
         {themes.map((t) => (
           <Button
             key={t.value}
-            variant={theme === t.value || (t.value === 'default' && !themes.slice(1).map(th=>'theme-'+th.value).includes(theme || '')) ? "default" : "outline"}
+            variant={isThemeActive(t.value) ? "default" : "outline"}
             size="sm"
             onClick={() => setTheme(t.value === 'default' ? 'system' : `theme-${t.value}`)}
             className="justify-center"
           >
-            {theme === t.value || (t.value === 'default' && !themes.slice(1).map(th=>'theme-'+th.value).includes(theme || '')) ? <Check className="mr-2 h-4 w-4" /> : null}
+            {isThemeActive(t.value) && <Check className="mr-2 h-4 w-4" />}
             {t.name}
           </Button>
         ))}
