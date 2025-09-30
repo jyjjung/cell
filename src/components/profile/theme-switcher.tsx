@@ -13,11 +13,7 @@ const themes = [
 ];
 
 export function ThemeSwitcher() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-
-  // On the server, 'theme' might be undefined, so we check.
-  // 'resolvedTheme' gives us the actual theme ('light' or 'dark') even if 'theme' is 'system'.
-  const currentTheme = theme || 'system';
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="space-y-2">
@@ -27,7 +23,7 @@ export function ThemeSwitcher() {
         </h3>
       <div className="grid grid-cols-3 gap-2">
         {themes.map((t) => {
-          const isActive = currentTheme === t.value;
+          const isActive = theme === t.value;
           return (
             <Button
               key={t.value}
