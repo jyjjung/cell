@@ -268,7 +268,7 @@ export default function HomePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[150px]">Person</TableHead>
+                <TableHead className="w-[100px] sm:w-[150px]">Person</TableHead>
                 <TableHead>Progress (% of readings due)</TableHead>
                 <TableHead className="text-right">Completed</TableHead>
               </TableRow>
@@ -276,7 +276,7 @@ export default function HomePage() {
             <TableBody>
               {userProgressData.map((progressItem) => (
                 <TableRow key={progressItem.userId}>
-                  <TableCell className="font-medium text-xs truncate max-w-[150px] sm:max-w-xs">
+                  <TableCell className="font-medium text-xs truncate max-w-[100px] sm:max-w-xs">
                     {progressItem.userDisplayName}
                   </TableCell>
                   <TableCell>
@@ -524,5 +524,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    

@@ -53,15 +53,12 @@ export default function BibleChecklistPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
   const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
+  
+  const isGuest = !currentUser;
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  useEffect(() => {
-    if (isMounted && !loadingAuth && !currentUser) {
-      setIsPageLoading(true);
-      router.push('/login');
-    }
-  }, [currentUser, loadingAuth, router, isMounted, setIsPageLoading]);
+  // Note: Guest users are allowed, so no redirect on !currentUser
   
   const weeklyProgressData = useMemo((): WeeklyProgress[] => {
     if (!plan?.dailyReadings) return [];
@@ -96,12 +93,14 @@ export default function BibleChecklistPage() {
         readings.forEach(reading => {
             const validPassages = reading.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")) || [];
             totalCount += validPassages.length;
-            completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
+            if (!isGuest) {
+              completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
+            }
         });
 
-        const isCompleted = totalCount > 0 && completedCount === totalCount;
+        const isCompleted = !isGuest && totalCount > 0 && completedCount === totalCount;
         const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
-        const isOverdue = !isCompleted && isBefore(weekEndDate, today);
+        const isOverdue = !isGuest && !isCompleted && isBefore(weekEndDate, today);
 
 
         return {
@@ -118,17 +117,17 @@ export default function BibleChecklistPage() {
         };
       })
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
-  }, [plan, completedPassages]);
+  }, [plan, completedPassages, isGuest]);
   
   const overallProgress = useMemo(() => {
-    if (!plan?.dailyReadings || loadingChecklist) {
+    if (isGuest || !plan?.dailyReadings || loadingChecklist) {
       return { total: 0, completed: 0, percentage: 0 };
     }
     const total = plan.dailyReadings.reduce((acc, day) => acc + (day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0), 0);
     const completed = completedPassages.length;
     const percentage = total > 0 ? (completed / total) * 100 : 0;
     return { total, completed, percentage };
-  }, [plan, completedPassages, loadingChecklist]);
+  }, [plan, completedPassages, loadingChecklist, isGuest]);
 
 
   const currentWeek = useMemo(() => {
@@ -136,6 +135,9 @@ export default function BibleChecklistPage() {
   }, [weeklyProgressData]);
 
   const { completedWeeks, upcomingWeeks } = useMemo(() => {
+    if (isGuest) {
+      return { completedWeeks: [], upcomingWeeks: weeklyProgressData };
+    }
     const completed: WeeklyProgress[] = [];
     const upcoming: WeeklyProgress[] = [];
     let consecutive = true;
@@ -148,7 +150,7 @@ export default function BibleChecklistPage() {
       }
     });
     return { completedWeeks: completed, upcomingWeeks: upcoming };
-  }, [weeklyProgressData]);
+  }, [weeklyProgressData, isGuest]);
 
 
   const handleJumpToCurrentWeek = () => {
@@ -200,14 +202,14 @@ export default function BibleChecklistPage() {
   };
 
 
-  if (!isMounted || loadingAuth || (!loadingAuth && !currentUser && isMounted)) {
-    return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading authentication...</p></div>);
+  if (!isMounted || loadingAuth) {
+    return (<div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p className="text-xl text-muted-foreground">Loading content...</p></div>);
   }
-  if (planLoading || loadingChecklist) {
+  if (planLoading || (!isGuest && loadingChecklist)) {
     return <PageSkeleton />;
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">My Reading Checklist</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
+    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">Reading Plan</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
   return (
@@ -227,7 +229,7 @@ export default function BibleChecklistPage() {
             </Button>
             <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}</h1>
             
-            <Accordion type="single" collapsible className="w-full space-y-2">
+            <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={viewState.week.isCurrent ? format(new Date(), 'yyyy-MM-dd') : undefined}>
                 {viewState.week.readings
                     .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
                     .map(reading => (
@@ -241,6 +243,7 @@ export default function BibleChecklistPage() {
                         loading={loadingChecklist}
                         planAvailable={true}
                         hidePlanMeta={true}
+                        defaultOpen={isSameDay(new Date(), parseISO(reading.date))}
                       />
                 ))}
             </Accordion>
@@ -302,32 +305,36 @@ export default function BibleChecklistPage() {
                 transition={{ duration: 0.2 }}
               >
                   <div className="flex flex-col sm:items-center sm:justify-between mb-4 gap-4">
-                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> My Reading Plan</motion.h1>
+                      <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight flex items-center"><CalendarDays className="mr-3 h-8 w-8 text-primary"/> {isGuest ? "Full Reading Plan" : "My Reading Plan"}</motion.h1>
                       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
                         {currentWeek && (
                             <Button onClick={handleJumpToCurrentWeek} variant="outline">
-                                <LocateFixed className="mr-2 h-4 w-4" /> Current
+                                <LocateFixed className="mr-2 h-4 w-4" /> Current Week
                             </Button>
                         )}
-                        <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
-                            <BookUp className="mr-2 h-4 w-4" /> Mark Range
-                        </Button>
+                        {!isGuest && (
+                          <Button onClick={() => setIsMarkRangeDialogOpen(true)}>
+                              <BookUp className="mr-2 h-4 w-4" /> Mark Range
+                          </Button>
+                        )}
                       </motion.div>
                   </div>
 
-                  <motion.div variants={itemVariants}>
-                    <Card>
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-4">
-                                <Progress value={overallProgress.percentage} className="flex-grow" />
-                                <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-2">
-                                You have completed {overallProgress.completed} of {overallProgress.total} total passages.
-                            </p>
-                        </CardContent>
-                    </Card>
-                  </motion.div>
+                  {!isGuest && (
+                    <motion.div variants={itemVariants}>
+                      <Card>
+                          <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                  <Progress value={overallProgress.percentage} className="flex-grow" />
+                                  <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-2">
+                                  You have completed {overallProgress.completed} of {overallProgress.total} total passages.
+                              </p>
+                          </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
                   
                   <motion.div 
                     className="space-y-3"
@@ -363,8 +370,8 @@ export default function BibleChecklistPage() {
                           <Card 
                               className={cn(
                                   "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
-                                  week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
-                                  week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
+                                  !isGuest && week.isCurrent ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40 hover:border-blue-500/70" :
+                                  !isGuest && week.isOverdue ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30 hover:border-red-500/70" : 
                                   "hover:border-primary/50"
                               )}
                               onClick={() => setViewState({ view: 'single-week-details', week: week })}
@@ -374,16 +381,18 @@ export default function BibleChecklistPage() {
                                       <div>
                                           <p className={cn(
                                               "text-sm font-semibold",
-                                              week.isCurrent ? "text-blue-600 dark:text-blue-400" :
-                                              week.isOverdue ? "text-red-600 dark:text-red-400" :
+                                              !isGuest && week.isCurrent ? "text-blue-600 dark:text-blue-400" :
+                                              !isGuest && week.isOverdue ? "text-red-600 dark:text-red-400" :
                                               "text-primary"
                                           )}>WEEK {week.weekNumber}</p>
                                           <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
                                       </div>
-                                      <div className="text-right">
-                                          <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
-                                          <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
-                                      </div>
+                                      {!isGuest && (
+                                        <div className="text-right">
+                                            <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
+                                            <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
+                                        </div>
+                                      )}
                                 </div>
                               </CardHeader>
                           </Card>
@@ -392,14 +401,12 @@ export default function BibleChecklistPage() {
                   </motion.div>
                   <BackToTopButton />
               </motion.div>
-              <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
+              {!isGuest && (
+                <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />
+              )}
             </>
         )}
       </div>
     </AnimatePresence>
   );
 }
-
-    
-
-    

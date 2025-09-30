@@ -49,16 +49,9 @@ export default function Header() {
       <Button asChild variant="ghost" onClick={() => handleLinkClick('/')}>
         <Link href="/">Home</Link>
       </Button>
-      {currentUser && (
-        <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-checklist')}>
-          <Link href="/bible-checklist">My Checklist</Link>
-        </Button>
-      )}
-      {!currentUser && (
-        <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-plan')}>
-          <Link href="/bible-plan">Full Bible Plan</Link>
-        </Button>
-      )}
+      <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-checklist')}>
+        <Link href="/bible-checklist">{currentUser ? 'My Checklist' : 'Reading Plan'}</Link>
+      </Button>
       <Button asChild variant="ghost" onClick={() => handleLinkClick('/memorize')}>
         <Link href="/memorize">Memory Verses</Link>
       </Button>
@@ -70,16 +63,9 @@ export default function Header() {
       <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/')}>
         <Link href="/">Home</Link>
       </Button>
-       {currentUser && (
-        <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
-          <Link href="/bible-checklist">My Checklist</Link>
-        </Button>
-      )}
-      {!currentUser && (
-         <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-plan')}>
-            <Link href="/bible-plan">Full Bible Plan</Link>
-         </Button>
-      )}
+      <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
+          <Link href="/bible-checklist">{currentUser ? 'My Checklist' : 'Reading Plan'}</Link>
+      </Button>
       <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
         <Link href="/memorize">Memory Verses</Link>
       </Button>
