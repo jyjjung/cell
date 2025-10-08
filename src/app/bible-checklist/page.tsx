@@ -40,6 +40,7 @@ interface WeeklyProgress {
   isCompleted: boolean;
   isCurrent: boolean;
   isOverdue: boolean;
+  passageSummary: string;
 }
 
 type ViewState = 
@@ -69,6 +70,34 @@ export default function BibleChecklistPage() {
   
   const weeklyProgressData = useMemo((): WeeklyProgress[] => {
     if (!plan?.dailyReadings) return [];
+
+    const generatePassageSummary = (readings: DailyReading[]): string => {
+        const bookChapters: { [book: string]: number[] } = {};
+
+        readings.forEach(reading => {
+            reading.passages.forEach(passage => {
+                if (passage.book && !passage.book.includes("Error")) {
+                    if (!bookChapters[passage.book]) {
+                        bookChapters[passage.book] = [];
+                    }
+                    if (!bookChapters[passage.book].includes(passage.chapter)) {
+                        bookChapters[passage.book].push(passage.chapter);
+                    }
+                }
+            });
+        });
+
+        return Object.entries(bookChapters)
+            .map(([book, chapters]) => {
+                if (chapters.length === 0) return '';
+                chapters.sort((a, b) => a - b);
+                if (chapters.length === 1) return `${book} ${chapters[0]}`;
+                return `${book} ${chapters[0]}-${chapters[chapters.length - 1]}`;
+            })
+            .filter(summary => summary)
+            .join(', ');
+    };
+
     
     const weeksMap = new Map<string, DailyReading[]>();
 
@@ -114,6 +143,7 @@ export default function BibleChecklistPage() {
         const isCompleted = totalCount > 0 && completedCount === totalCount;
         const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
         const isOverdue = !isGuest && !isCompleted && isBefore(weekEndDate, today);
+        const passageSummary = generatePassageSummary(readings);
 
 
         return {
@@ -127,6 +157,7 @@ export default function BibleChecklistPage() {
           isCompleted,
           isCurrent,
           isOverdue,
+          passageSummary,
         };
       })
       .sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
@@ -301,12 +332,13 @@ export default function BibleChecklistPage() {
                         onClick={() => setViewState({ view: 'single-week-details', week: week })}
                     >
                         <CardHeader className="p-4">
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-start">
                                 <div>
                                     <p className="text-sm font-semibold text-primary">WEEK {week.weekNumber}</p>
                                     <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                                    <p className="text-xs text-muted-foreground mt-1 truncate">{week.passageSummary}</p>
                                 </div>
-                                <CheckCircle className="h-6 w-6 text-green-500" />
+                                <CheckCircle className="h-6 w-6 text-green-500 shrink-0 ml-2" />
                           </div>
                         </CardHeader>
                     </Card>
@@ -416,8 +448,8 @@ export default function BibleChecklistPage() {
                               onClick={() => setViewState({ view: 'single-week-details', week: week })}
                           >
                               <CardHeader className="p-4">
-                                <div className="flex justify-between items-center">
-                                      <div>
+                                <div className="flex justify-between items-start">
+                                      <div className="flex-1 min-w-0">
                                           <p className={cn(
                                               "text-sm font-semibold",
                                               !isGuest && week.isCurrent ? "text-blue-600 dark:text-blue-400" :
@@ -425,8 +457,9 @@ export default function BibleChecklistPage() {
                                               "text-primary"
                                           )}>WEEK {week.weekNumber}</p>
                                           <CardTitle className="text-xl">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</CardTitle>
+                                          <p className="text-xs text-muted-foreground mt-1 truncate">{week.passageSummary}</p>
                                       </div>
-                                      <div className="text-right">
+                                      <div className="text-right ml-2 shrink-0">
                                           <p className="text-xl font-bold">{Math.round(week.progressPercentage)}%</p>
                                           <p className="text-xs text-muted-foreground">{week.completedCount} / {week.totalCount}</p>
                                       </div>
