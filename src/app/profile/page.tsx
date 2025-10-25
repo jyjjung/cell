@@ -26,7 +26,6 @@ import { Switch } from '@/components/ui/switch';
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
   birthday: z.date().optional().nullable(),
-  showInCommunityProgress: z.boolean().default(true),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -39,13 +38,17 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Separate state for the toggle to allow for immediate updates
+  const [showProgress, setShowProgress] = useState(currentUser?.showInCommunityProgress ?? true);
+  const [isTogglingProgress, setIsTogglingProgress] = useState(false);
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       displayName: currentUser?.displayName || '',
       birthday: currentUser?.birthday ? parseISO(currentUser.birthday) : null,
-      showInCommunityProgress: currentUser?.showInCommunityProgress ?? true,
     },
   });
 
@@ -65,8 +68,8 @@ export default function ProfilePage() {
       form.reset({
         displayName: currentUser.displayName || '',
         birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
-        showInCommunityProgress: currentUser.showInCommunityProgress ?? true,
       });
+      setShowProgress(currentUser.showInCommunityProgress ?? true);
     }
   }, [currentUser, form]);
 
@@ -81,7 +84,6 @@ export default function ProfilePage() {
     try {
       const profileUpdateData: Partial<UserProfileData> = {
         displayName: data.displayName,
-        showInCommunityProgress: data.showInCommunityProgress,
       };
       if (data.birthday) {
         profileUpdateData.birthday = format(data.birthday, 'yyyy-MM-dd');
@@ -90,13 +92,34 @@ export default function ProfilePage() {
       }
 
       await updateUserProfile(currentUser.uid, profileUpdateData);
-      toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      toast({ title: "Profile Updated", description: "Your display name and birthday have been updated." });
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
       toast({ title: "Update Failed", description: "Could not update your profile. Please try again.", variant: "destructive" });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleProgressToggle = async (isChecked: boolean) => {
+    if (!currentUser) return;
+    setIsTogglingProgress(true);
+    setShowProgress(isChecked); // Optimistically update UI
+    try {
+      await updateUserProfile(currentUser.uid, { showInCommunityProgress: isChecked });
+      toast({
+        title: "Privacy Setting Updated",
+        description: isChecked 
+          ? "Your progress will now be shown on the leaderboard." 
+          : "Your progress is now hidden from the leaderboard.",
+      });
+    } catch (error) {
+      console.error("Failed to update progress visibility:", error);
+      toast({ title: "Update Failed", description: "Could not update your privacy setting.", variant: "destructive" });
+      setShowProgress(!isChecked); // Revert on error
+    } finally {
+      setIsTogglingProgress(false);
     }
   };
 
@@ -186,30 +209,6 @@ export default function ProfilePage() {
                 )}
               />
 
-              <Separator />
-              <FormField
-                control={form.control}
-                name="showInCommunityProgress"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</FormLabel>
-                      <FormDescription>
-                        Show your reading progress on the community leaderboard.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={!isEditing || isSaving}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-
               {isEditing && (
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => {
@@ -217,7 +216,6 @@ export default function ProfilePage() {
                     form.reset({
                       displayName: currentUser.displayName || '',
                       birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
-                      showInCommunityProgress: currentUser.showInCommunityProgress ?? true,
                     });
                   }} disabled={isSaving}>
                     Cancel
@@ -230,6 +228,25 @@ export default function ProfilePage() {
               )}
             </form>
           </Form>
+          
+          <Separator />
+
+          <div className="space-y-2">
+            <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                <Label htmlFor="community-progress-switch" className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</Label>
+                <p className="text-sm text-muted-foreground">
+                    Show your reading progress on the community leaderboard.
+                </p>
+                </div>
+                <Switch
+                    id="community-progress-switch"
+                    checked={showProgress}
+                    onCheckedChange={handleProgressToggle}
+                    disabled={isTogglingProgress || isSaving}
+                />
+            </div>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 pt-6 border-t">
           <Button onClick={handleSignOut} variant="destructive" className="w-full">
