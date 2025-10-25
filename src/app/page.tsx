@@ -152,16 +152,19 @@ export default function HomePage() {
     if (checklistsLoading || usersLoading || totalPassagesUpToToday === 0 || !allChecklists || !allUsers) {
       return [];
     }
-
+  
+    const visibleUsers = new Set(allUsers.filter(u => u.showInCommunityProgress ?? true).map(u => u.uid));
+  
     const usersMap = new Map(allUsers.map(user => [user.uid, user]));
-
+  
     return allChecklists
+      .filter(checklist => visibleUsers.has(checklist.userId)) // Filter out users who have opted out
       .map(checklist => {
         const user = usersMap.get(checklist.userId);
         if (!user) {
           return null;
         }
-
+  
         const completedCount = checklist.completedPassages.length;
         const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
         
@@ -489,7 +492,7 @@ export default function HomePage() {
         </div>
       </motion.section>
       
-        {currentUser && (
+        {currentUser && (currentUser.showInCommunityProgress ?? true) && (
             <>
             <Separator />
             <motion.section 
@@ -523,5 +526,7 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
 
     

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
@@ -14,16 +15,18 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil } from 'lucide-react';
+import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil, Users } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import type { UserProfileData } from '@/types';
+import { Switch } from '@/components/ui/switch';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
   birthday: z.date().optional().nullable(),
+  showInCommunityProgress: z.boolean().default(true),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -42,6 +45,7 @@ export default function ProfilePage() {
     defaultValues: {
       displayName: currentUser?.displayName || '',
       birthday: currentUser?.birthday ? parseISO(currentUser.birthday) : null,
+      showInCommunityProgress: currentUser?.showInCommunityProgress ?? true,
     },
   });
 
@@ -61,6 +65,7 @@ export default function ProfilePage() {
       form.reset({
         displayName: currentUser.displayName || '',
         birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
+        showInCommunityProgress: currentUser.showInCommunityProgress ?? true,
       });
     }
   }, [currentUser, form]);
@@ -76,6 +81,7 @@ export default function ProfilePage() {
     try {
       const profileUpdateData: Partial<UserProfileData> = {
         displayName: data.displayName,
+        showInCommunityProgress: data.showInCommunityProgress,
       };
       if (data.birthday) {
         profileUpdateData.birthday = format(data.birthday, 'yyyy-MM-dd');
@@ -179,6 +185,34 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
+
+              {isEditing && (
+                 <>
+                  <Separator />
+                  <FormField
+                    control={form.control}
+                    name="showInCommunityProgress"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</FormLabel>
+                          <FormDescription>
+                            Show your reading progress on the community leaderboard.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isSaving}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
               {isEditing && (
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => {
@@ -186,6 +220,7 @@ export default function ProfilePage() {
                     form.reset({
                       displayName: currentUser.displayName || '',
                       birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
+                      showInCommunityProgress: currentUser.showInCommunityProgress ?? true,
                     });
                   }} disabled={isSaving}>
                     Cancel
@@ -212,3 +247,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    

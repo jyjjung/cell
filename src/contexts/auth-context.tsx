@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -27,7 +28,7 @@ interface AuthContextType {
   signUpUser: (email: string, password: string) => Promise<AppUser | null>;
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
   signOutUser: () => Promise<void>;
-  updateUserProfile: (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => Promise<void>;
+  updateUserProfile: (userId: string, profileData: Partial<UserProfileData>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...firebaseUser, // Base Firebase user properties
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             birthday: profileData.birthday || null,
+            showInCommunityProgress: profileData.showInCommunityProgress ?? true, // Load new setting
           } as AppUser);
         } else {
           // Create a basic profile if it doesn't exist (e.g., first-time sign-up)
@@ -78,12 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             birthday: null,
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
+            showInCommunityProgress: true, // Default to true
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
             ...firebaseUser,
             displayName: newProfileData.displayName,
             birthday: newProfileData.birthday,
+            showInCommunityProgress: newProfileData.showInCommunityProgress,
           } as AppUser);
         }
       } else {
@@ -123,13 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         birthday: null,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
+        showInCommunityProgress: true,
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
       if (auth.currentUser) {
         await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
       }
-      return { ...firebaseUser, displayName: initialDisplayName, birthday: null } as AppUser;
+      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, showInCommunityProgress: true } as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
       throw error;
@@ -169,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (userId: string, profileData: Partial<Pick<UserProfileData, 'displayName' | 'birthday'>>) => {
+  const updateUserProfile = async (userId: string, profileData: Partial<UserProfileData>) => {
     if (!currentUser || currentUser.uid !== userId) {
       console.error("User not authorized to update this profile or no user logged in.");
       throw new Error("Not authorized.");
@@ -191,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...prevUser,
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
+          showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
         };
         return updatedUser;
       });
@@ -234,3 +240,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

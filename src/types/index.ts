@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth'; // Import FirebaseUser
 
@@ -50,6 +51,7 @@ export interface BibleReadingPlan {
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
+  showInCommunityProgress?: boolean;
 }
 
 
@@ -61,6 +63,7 @@ export interface UserProfileData {
   photoURL?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  showInCommunityProgress?: boolean;
 }
 
 
@@ -78,3 +81,5 @@ export interface MemoryVerse {
   addedAt: Timestamp;
   isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer or the single entry
 }
+
+    
