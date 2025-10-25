@@ -186,32 +186,29 @@ export default function ProfilePage() {
                 )}
               />
 
-              {isEditing && (
-                 <>
-                  <Separator />
-                  <FormField
-                    control={form.control}
-                    name="showInCommunityProgress"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</FormLabel>
-                          <FormDescription>
-                            Show your reading progress on the community leaderboard.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isSaving}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
+              <Separator />
+              <FormField
+                control={form.control}
+                name="showInCommunityProgress"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</FormLabel>
+                      <FormDescription>
+                        Show your reading progress on the community leaderboard.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={!isEditing || isSaving}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
 
               {isEditing && (
                 <div className="flex justify-end space-x-2 pt-4">
@@ -247,5 +244,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
