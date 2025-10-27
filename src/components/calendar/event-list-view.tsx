@@ -81,8 +81,8 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
     <div className="relative">
       <div
         ref={horizontalScrollRef}
-        className="flex w-full overflow-x-auto py-4 snap-x snap-mandatory scrollbar-hide"
-        style={{ scrollbarWidth: 'none', '-ms-overflow-style': 'none' }}
+        className="flex w-full overflow-x-auto py-4 snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <div className="flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4"></div>
         {upcomingEventsByCategory.map(([category, events], index) => {
