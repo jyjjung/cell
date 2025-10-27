@@ -129,7 +129,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true, amount: 0.3 }}
                 >
-                <Card className="shadow-lg overflow-hidden h-full flex flex-col min-h-[350px]">
+                <Card className="shadow-lg overflow-hidden h-full flex flex-col">
                     <CardHeader className={cn("p-4", categoryBackgroundColors[category])}>
                     <CardTitle className={cn("text-xl flex items-center gap-3", categoryTextColors[category])}>
                         <Icon className="h-6 w-6" />
