@@ -278,7 +278,7 @@ export default function HomePage() {
               >
                 <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
+                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {currentUser && (
@@ -323,9 +323,9 @@ export default function HomePage() {
         
         {currentUser && (
           <SectionWrapper id="event-calendar-section">
-            <div className="w-full">
+            <div className="w-full max-w-5xl mx-auto">
                 <AnimatedTitle text="Upcoming Events" />
-                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <div className="max-w-5xl mx-auto"><EventListView eventsByDate={eventsByDate} /></div>}
+                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
             </div>
           </SectionWrapper>
         )}
@@ -374,5 +374,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
