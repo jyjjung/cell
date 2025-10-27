@@ -180,214 +180,215 @@ export default function AdminDashboardPage() {
 
 
   return (
-    <motion.div 
-      className="space-y-8"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="container mx-auto py-8">
+      <motion.div
+        className="space-y-8 max-w-4xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <motion.div variants={itemVariants}>
           <Accordion type="multiple" className="w-full" defaultValue={["events-manager"]}>
-              <AccordionItem value="events-manager" className="border-b-0">
-                  <Card>
-                      <AccordionTrigger className="p-4 flex-row justify-between items-center w-full group">
-                          <div className="flex items-center">
-                              <CardTitle className="text-xl">Manage Events</CardTitle>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                              <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-                                  <DialogTrigger asChild>
-                                      <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }}>
-                                      <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
-                                      </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                                      <DialogHeader>
-                                      <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-                                      </DialogHeader>
-                                      <EventForm
-                                      event={editingEvent}
-                                      onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
-                                      onCancel={() => {
-                                          setEditingEvent(null);
-                                          setIsFormModalOpen(false);
-                                      }}
-                                      submitButtonText={editingEvent ? "Update Event" : "Create Event"}
-                                      />
-                                  </DialogContent>
-                              </Dialog>
-                              <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                          </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
-                          {eventsLoading ? (
-                              <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
-                          ) : events.length === 0 ? (
-                              <div className="p-10 text-center bg-muted/50 rounded-lg">
-                              <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                              <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
-                              </div>
-                          ) : (
-                              <div className="overflow-x-auto">
-                                  <Table>
-                                  <TableHeader>
-                                      <TableRow>
-                                      <TableHead className="min-w-[250px]">Title</TableHead>
-                                      <TableHead>Date</TableHead>
-                                      <TableHead>Category</TableHead>
-                                      <TableHead className="text-right">Actions</TableHead>
-                                      </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                      {events.map((event) => (
-                                      <TableRow key={event.id}>
-                                          <TableCell className="font-medium">{event.title}</TableCell>
-                                          <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
-                                          <TableCell>{event.category}</TableCell>
-                                          <TableCell className="text-right space-x-2">
-                                          <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">
-                                              <Edit className="h-4 w-4" />
-                                          </Button>
-                                          <AlertDialog>
-                                              <AlertDialogTrigger asChild>
-                                              <Button variant="destructive" size="icon" aria-label="Delete event">
-                                                  <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                              </AlertDialogTrigger>
-                                              <AlertDialogContent>
-                                              <AlertDialogHeader>
-                                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                  <AlertDialogDescription>
-                                                  This action cannot be undone. This will permanently delete the event titled "{event.title}".
-                                                  </AlertDialogDescription>
-                                              </AlertDialogHeader>
-                                              <AlertDialogFooter>
-                                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                  <AlertDialogAction
-                                                  onClick={async () => {
-                                                      try {
-                                                      await deleteEvent(event.id);
-                                                      toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
-                                                      } catch (error) {
-                                                      console.error("Failed to delete event:", error);
-                                                      toast({
-                                                          title: "Deletion Failed",
-                                                          description: `Could not delete event "${event.title}". Please try again.`,
-                                                          variant: "destructive",
-                                                      });
-                                                      }
-                                                  }}
-                                                  >
-                                                  Yes, delete event
-                                                  </AlertDialogAction>
-                                              </AlertDialogFooter>
-                                              </AlertDialogContent>
-                                          </AlertDialog>
-                                          </TableCell>
-                                      </TableRow>
-                                      ))}
-                                  </TableBody>
-                                  </Table>
-                              </div>
-                          )}
-                      </AccordionContent>
-                  </Card>
-              </AccordionItem>
+            <AccordionItem value="events-manager" className="border-b-0">
+              <Card>
+                <AccordionTrigger className="p-4 flex-row justify-between items-center w-full group">
+                  <div className="flex items-center">
+                    <CardTitle className="text-xl">Manage Events</CardTitle>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+                        </DialogHeader>
+                        <EventForm
+                          event={editingEvent}
+                          onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
+                          onCancel={() => {
+                            setEditingEvent(null);
+                            setIsFormModalOpen(false);
+                          }}
+                          submitButtonText={editingEvent ? "Update Event" : "Create Event"}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  {eventsLoading ? (
+                    <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
+                  ) : events.length === 0 ? (
+                    <div className="p-10 text-center bg-muted/50 rounded-lg">
+                      <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[250px]">Title</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {events.map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell className="font-medium">{event.title}</TableCell>
+                              <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
+                              <TableCell>{event.category}</TableCell>
+                              <TableCell className="text-right space-x-2">
+                                <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon" aria-label="Delete event">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the event titled "{event.title}".
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={async () => {
+                                          try {
+                                            await deleteEvent(event.id);
+                                            toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
+                                          } catch (error) {
+                                            console.error("Failed to delete event:", error);
+                                            toast({
+                                              title: "Deletion Failed",
+                                              description: `Could not delete event "${event.title}". Please try again.`,
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        Yes, delete event
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </AccordionContent>
+              </Card>
+            </AccordionItem>
           </Accordion>
         </motion.div>
 
 
-      <motion.div variants={itemVariants}>
-        <Separator />
-      </motion.div>
-
-      <motion.div 
-        variants={containerVariants}
-        className="grid md:grid-cols-2 gap-8"
-      >
         <motion.div variants={itemVariants}>
-          <Card>
-              <CardHeader>
-                  <CardTitle className="text-xl">Batch Import Events</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <BatchEventImportForm />
-              </CardContent>
-          </Card>
+          <Separator />
         </motion.div>
-        
-        <motion.div variants={itemVariants}>
-          <Card>
-              <CardHeader>
-                  <CardTitle className="text-xl">Manage Bible Plan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <BiblePlanAdminForm />
-              </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
-      
-      <motion.div variants={itemVariants}>
-        <Separator />
-      </motion.div>
 
-       <motion.div 
-        variants={containerVariants}
-        className="grid md:grid-cols-2 gap-8"
-       >
-         <motion.div variants={itemVariants}>
+        <motion.div
+          variants={containerVariants}
+          className="grid md:grid-cols-2 gap-8"
+        >
+          <motion.div variants={itemVariants}>
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl">Manage Memory Verses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <MemoryVerseAdmin />
-                </CardContent>
-            </Card>
-         </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card>
               <CardHeader>
-                  <CardTitle className="text-xl">Data Management</CardTitle>
-                  <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
+                <CardTitle className="text-xl">Batch Import Events</CardTitle>
               </CardHeader>
               <CardContent>
-              <AlertDialog>
+                <BatchEventImportForm />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Manage Bible Plan</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BiblePlanAdminForm />
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Separator />
+        </motion.div>
+
+        <motion.div
+          variants={containerVariants}
+          className="grid md:grid-cols-2 gap-8"
+        >
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Manage Memory Verses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MemoryVerseAdmin />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Data Management</CardTitle>
+                <CardDescription>Perform maintenance tasks like cleaning up old data.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog>
                   <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isDeletingPast || eventsLoading}>
+                    <Button variant="destructive" disabled={isDeletingPast || eventsLoading}>
                       {isDeletingPast ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="mr-2 h-4 w-4" />
                       )}
                       Clean Up Past Events
-                  </Button>
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
-                  <AlertDialogHeader>
+                    <AlertDialogHeader>
                       <AlertDialogTitle>Confirm Deletion of Past Events</AlertDialogTitle>
                       <AlertDialogDescription>
-                      Are you sure you want to permanently delete all events that have already occurred? This action cannot be undone.
+                        Are you sure you want to permanently delete all events that have already occurred? This action cannot be undone.
                       </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction onClick={handleDeletePastEvents} disabled={isDeletingPast}>
-                      {isDeletingPast ? 'Deleting...' : 'Yes, delete past events'}
+                        {isDeletingPast ? 'Deleting...' : 'Yes, delete past events'}
                       </AlertDialogAction>
-                  </AlertDialogFooter>
+                    </AlertDialogFooter>
                   </AlertDialogContent>
-              </AlertDialog>
-              <p className="text-sm text-muted-foreground mt-2">
+                </AlertDialog>
+                <p className="text-sm text-muted-foreground mt-2">
                   This will remove all events from the database whose date is before today.
-              </p>
+                </p>
               </CardContent>
-          </Card>
+            </Card>
+          </motion.div>
         </motion.div>
       </motion.div>
-
-    </motion.div>
+    </div>
   );
 }
