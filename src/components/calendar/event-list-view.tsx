@@ -114,9 +114,10 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
 
   return (
     <div className="relative w-full group">
+      <div className="flex justify-center">
         <div
             ref={scrollContainerRef}
-            className="flex gap-4 sm:gap-6 w-full mx-auto pb-4 overflow-x-auto snap-x snap-mandatory"
+            className="flex gap-4 sm:gap-6 pb-4 overflow-x-auto snap-x snap-mandatory"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
             {upcomingEventsByCategory.map(([category, events], index) => {
@@ -124,13 +125,13 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             return (
                 <motion.div
                 key={category}
-                className="flex-shrink-0 snap-start w-[85vw] max-w-72"
+                className="flex-shrink-0 snap-start"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true, amount: 0.3 }}
                 >
-                <Card className="shadow-lg overflow-hidden h-full flex flex-col">
+                <Card className="shadow-lg overflow-hidden h-full flex flex-col w-[85vw] max-w-72">
                     <CardHeader className={cn("p-2", categoryBackgroundColors[category])}>
                     <CardTitle className={cn("text-base flex items-center gap-3", categoryTextColors[category])}>
                         <Icon className="h-5 w-5" />
@@ -161,6 +162,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             );
             })}
         </div>
+      </div>
         
         {showLeftArrow && (
             <Button 
