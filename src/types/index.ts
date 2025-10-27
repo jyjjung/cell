@@ -82,4 +82,19 @@ export interface MemoryVerse {
   isLordsPrayerChunk?: boolean; // To identify parts of the Lord's Prayer or the single entry
 }
 
+
+export interface WeeklyProgress {
+  weekNumber: number;
+  startDate: Date;
+  endDate: Date;
+  readings: DailyReading[];
+  completedCount: number;
+  totalCount: number;
+  progressPercentage: number;
+  isCompleted: boolean;
+  isCurrent: boolean;
+  isOverdue: boolean;
+  passageSummary: string;
+}
+
     

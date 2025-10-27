@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import type { DailyReading } from '@/types';
+import type { DailyReading, WeeklyProgress } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
@@ -29,19 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-interface WeeklyProgress {
-  weekNumber: number;
-  startDate: Date;
-  endDate: Date;
-  readings: DailyReading[];
-  completedCount: number;
-  totalCount: number;
-  progressPercentage: number;
-  isCompleted: boolean;
-  isCurrent: boolean;
-  isOverdue: boolean;
-  passageSummary: string;
-}
 
 type ViewState = 
   | { view: 'all-weeks' }
@@ -481,3 +468,5 @@ export default function BibleChecklistPage() {
     </AnimatePresence>
   );
 }
+
+    
