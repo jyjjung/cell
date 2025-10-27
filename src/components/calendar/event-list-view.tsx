@@ -140,14 +140,14 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                     {events.map((event, eventIndex) => (
                         <motion.div
                         key={event.id}
-                        className="flex justify-between items-center bg-background/60 p-3 rounded-lg"
+                        className="flex flex-col items-start bg-background/60 p-3 rounded-lg"
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
                         viewport={{ once: true }}
                         >
                         <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap font-medium mt-1">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
                         </motion.div>
                     ))}
                     </CardContent>

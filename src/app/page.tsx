@@ -11,7 +11,7 @@ import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import type { AppEvent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -265,7 +265,7 @@ export default function HomePage() {
   return (
     <>
       <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-        <SectionWrapper id="dashboard-section" className="p-4 sm:p-8">
+        <SectionWrapper id="dashboard-section">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
@@ -322,15 +322,15 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section" className="p-4 sm:p-8">
+          <SectionWrapper id="event-calendar-section">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
-                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <div className="max-w-5xl mx-auto"><EventListView eventsByDate={eventsByDate} /></div>}
             </div>
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section" className="p-4 sm:p-8">
+        <SectionWrapper id="todays-reading-section">
           <div className="w-full max-w-2xl mx-auto overflow-y-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -352,7 +352,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section" className="p-4 sm:p-8">
+            <SectionWrapper id="community-progress-section">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
