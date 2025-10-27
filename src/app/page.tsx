@@ -36,7 +36,7 @@ interface UserProgressDisplay {
 }
 
 const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
-    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative h-screen", className)}>
+    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative", className)}>
         <div className="container mx-auto">
             {children}
         </div>
@@ -269,7 +269,7 @@ export default function HomePage() {
   return (
     <>
       <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-        <SectionWrapper id="dashboard-section">
+        <SectionWrapper id="dashboard-section" className="h-screen">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
@@ -326,8 +326,8 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section">
-            <div className="w-full max-w-5xl mx-auto">
+          <SectionWrapper id="event-calendar-section" className="h-screen">
+            <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
                 <div className="w-full max-w-5xl mx-auto">
                  {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
@@ -358,7 +358,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section">
+            <SectionWrapper id="community-progress-section" className="h-screen">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -380,5 +380,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
