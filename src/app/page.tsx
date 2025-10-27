@@ -509,21 +509,17 @@ export default function HomePage() {
                   <div className="max-w-4xl mx-auto">
                       <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</motion.h2>
                       <motion.div variants={itemVariants}>
-                        <Accordion type="single" collapsible className="w-full">
-                            <Card className="hover:shadow-lg transition-shadow">
-                                <AccordionItem value="progress-item" className="border-0">
-                                    <AccordionTrigger className="p-4 group">
-                                        <div className="flex items-center space-x-3">
-                                            <Users className="h-6 w-6 text-primary" />
-                                            <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-4 pb-4">
-                                        <CommunityProgressContent />
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Card>
-                        </Accordion>
+                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+                            <CardHeader>
+                                <div className="flex items-center space-x-3">
+                                    <Users className="h-6 w-6 text-primary" />
+                                    <CardTitle className="text-lg font-semibold tracking-tight">Leaderboard</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="px-4 pb-4">
+                                <CommunityProgressContent />
+                            </CardContent>
+                        </Card>
                       </motion.div>
                   </div>
               </div>
@@ -532,3 +528,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+
+    
