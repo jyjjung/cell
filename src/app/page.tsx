@@ -331,58 +331,59 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <motion.section 
+        className="scroll-snap-section"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight mb-6 text-center">
-          Dashboard
-        </motion.h2>
-        <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentUser && (
+        <div className="w-full">
+          <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight mb-6 text-center">
+            Dashboard
+          </motion.h2>
+          <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {currentUser && (
+              <motion.div variants={itemVariants}>
+                <StatCard
+                  title="Upcoming Events"
+                  value={eventsLoading ? null : upcomingEventsCount}
+                  isLoading={eventsLoading}
+                  buttonText="View Events"
+                  buttonLink="#event-calendar-section"
+                  IconComponent={CalendarCheck}
+                />
+              </motion.div>
+            )}
+            {currentUser && (
+              <motion.div variants={itemVariants}>
+                <StatCard
+                  title="Reading Progress"
+                  value={readingsLoggedStatValue}
+                  isLoading={loadingAuth || loadingChecklist || planLoading}
+                  buttonText="My Checklist"
+                  buttonLink="/bible-checklist"
+                  IconComponent={BookCheck}
+                  buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
+                />
+              </motion.div>
+            )}
             <motion.div variants={itemVariants}>
               <StatCard
-                title="Upcoming Events"
-                value={eventsLoading ? null : upcomingEventsCount}
-                isLoading={eventsLoading}
-                buttonText="View Events"
-                buttonLink="#event-calendar-section"
-                IconComponent={CalendarCheck}
+                title="Memory Verses"
+                value={memoryVersesLoading ? null : memoryVerses.length}
+                isLoading={memoryVersesLoading}
+                buttonText="Practice Verses"
+                buttonLink="/memorize"
+                IconComponent={BrainCircuit}
               />
             </motion.div>
-          )}
-          {currentUser && (
-            <motion.div variants={itemVariants}>
-              <StatCard
-                title="Reading Progress"
-                value={readingsLoggedStatValue}
-                isLoading={loadingAuth || loadingChecklist || planLoading}
-                buttonText="My Checklist"
-                buttonLink="/bible-checklist"
-                IconComponent={BookCheck}
-                buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
-              />
-            </motion.div>
-          )}
-          <motion.div variants={itemVariants}>
-            <StatCard
-              title="Memory Verses"
-              value={memoryVersesLoading ? null : memoryVerses.length}
-              isLoading={memoryVersesLoading}
-              buttonText="Practice Verses"
-              buttonLink="/memorize"
-              IconComponent={BrainCircuit}
-            />
           </motion.div>
-        </motion.div>
+        </div>
       </motion.section>
       
       {currentUser && (
-        <>
-          <Separator />
-
-          <motion.section 
-            id="event-calendar-section"
+        <section id="event-calendar-section" className="scroll-snap-section">
+          <motion.div 
+            className="w-full"
             variants={itemVariants}
             initial="hidden"
             whileInView="visible"
@@ -461,67 +462,67 @@ export default function HomePage() {
                   </motion.div>
                 </AnimatePresence>
               )}
-          </motion.section>
-        </>
+          </motion.div>
+        </section>
       )}
 
-      <Separator />
-
-      <motion.section
-        variants={itemVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
-             <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
-                <BiblePlanDisplay
-                    readingToDisplay={todaysReadingForDisplay}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    onToggleAllToday={markMultiplePassages}
-                    allPassageTextsForDay={allTodaysPassageTexts}
-                    loading={planLoading || loadingChecklist}
-                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                    hidePlanMeta={true}
-                    defaultOpen={true}
-                />
-            </Accordion>
-        </div>
-      </motion.section>
+      <section className="scroll-snap-section">
+        <motion.div
+          className="w-full"
+          variants={itemVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          <div className="max-w-2xl mx-auto">
+              <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
+               <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
+                  <BiblePlanDisplay
+                      readingToDisplay={todaysReadingForDisplay}
+                      currentUser={currentUser}
+                      completedPassages={completedPassages}
+                      togglePassageCompletion={togglePassageCompletion}
+                      onToggleAllToday={markMultiplePassages}
+                      allPassageTextsForDay={allTodaysPassageTexts}
+                      loading={planLoading || loadingChecklist}
+                      planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                      hidePlanMeta={true}
+                      defaultOpen={true}
+                  />
+              </Accordion>
+          </div>
+        </motion.div>
+      </section>
       
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <>
-            <Separator />
-            <motion.section 
-              id="community-progress-section"
-              variants={itemVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-            >
-                <div className="max-w-4xl mx-auto">
-                    <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
-                    <Accordion type="single" collapsible className="w-full">
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <AccordionItem value="progress-item" className="border-0">
-                                <AccordionTrigger className="p-4 group">
-                                    <div className="flex items-center space-x-3">
-                                        <Users className="h-6 w-6 text-primary" />
-                                        <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="px-4 pb-4">
-                                    <CommunityProgressContent />
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Card>
-                    </Accordion>
-                </div>
-            </motion.section>
-            </>
+            <section id="community-progress-section" className="scroll-snap-section">
+              <motion.div 
+                className="w-full"
+                variants={itemVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+              >
+                  <div className="max-w-4xl mx-auto">
+                      <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
+                      <Accordion type="single" collapsible className="w-full">
+                          <Card className="hover:shadow-lg transition-shadow">
+                              <AccordionItem value="progress-item" className="border-0">
+                                  <AccordionTrigger className="p-4 group">
+                                      <div className="flex items-center space-x-3">
+                                          <Users className="h-6 w-6 text-primary" />
+                                          <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
+                                      </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="px-4 pb-4">
+                                      <CommunityProgressContent />
+                                  </AccordionContent>
+                              </AccordionItem>
+                          </Card>
+                      </Accordion>
+                  </div>
+              </motion.div>
+            </section>
         )}
     </div>
   );
