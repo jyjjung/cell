@@ -282,7 +282,7 @@ export default function HomePage() {
               >
                 <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-2"
+                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory p-2 -m-2"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {currentUser && (
@@ -329,14 +329,14 @@ export default function HomePage() {
           <SectionWrapper id="event-calendar-section" className="h-screen">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
-                <div className="w-full max-w-5xl mx-auto">
+                <div className="mx-auto max-w-5xl">
                  {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
                 </div>
             </div>
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section">
+        <SectionWrapper id="todays-reading-section" className="h-screen">
           <div className="w-full max-w-2xl mx-auto overflow-y-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
