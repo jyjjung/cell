@@ -265,7 +265,6 @@ export default function HomePage() {
     }
 
     return (
-        <Card className="shadow-lg hover:shadow-xl transition-shadow">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -295,7 +294,6 @@ export default function HomePage() {
             </TableBody>
           </Table>
         </CardContent>
-      </Card>
     )
   }
   
@@ -488,6 +486,7 @@ export default function HomePage() {
                     planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
                     hidePlanMeta={true}
                     defaultOpen={true}
+                    isStandalone={true}
                 />
                </motion.div>
           </div>
@@ -514,9 +513,7 @@ export default function HomePage() {
                                     <CardTitle className="text-lg font-semibold tracking-tight">Leaderboard</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent className="px-4 pb-4">
-                                <CommunityProgressContent />
-                            </CardContent>
+                            <CommunityProgressContent />
                         </Card>
                       </motion.div>
                   </div>
@@ -526,8 +523,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-
-    
-
-    
