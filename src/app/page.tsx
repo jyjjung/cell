@@ -238,7 +238,16 @@ export default function HomePage() {
       <div className="space-y-0">
         <SectionWrapper id="dashboard-section">
           <AnimatedTitle text="Dashboard" />
-          <motion.div variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <motion.div 
+            variants={containerVariants} 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, amount: 0.2 }} 
+            className={cn(
+              "grid grid-cols-1 gap-6 max-w-5xl mx-auto",
+              currentUser ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-1"
+            )}
+          >
             {currentUser && (
               <motion.div variants={itemVariants}>
                 <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
@@ -249,7 +258,7 @@ export default function HomePage() {
                 <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
               </motion.div>
             )}
-            <motion.div variants={itemVariants} className={!currentUser ? 'md:col-start-2' : ''}>
+            <motion.div variants={itemVariants} className={!currentUser ? 'md:col-start-1' : ''}>
               <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
             </motion.div>
           </motion.div>
@@ -294,3 +303,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
