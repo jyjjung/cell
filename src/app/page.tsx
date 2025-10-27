@@ -324,6 +324,35 @@ export default function HomePage() {
     visible: { opacity: 1, scale: 1 },
     exit: { opacity: 0, scale: 0.98 },
   };
+  
+  const Title = ({text}: {text:string}) => (
+    <motion.div
+        className="relative mb-6 text-center"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.5 }}
+        transition={{ staggerChildren: 0.2 }}
+    >
+        <motion.div
+            variants={{
+                hidden: { width: "0%" },
+                visible: { width: "100%" },
+            }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="absolute inset-0 bg-primary/80"
+        />
+        <motion.h2
+            variants={{
+                hidden: { color: "hsl(var(--primary))" },
+                visible: { color: "hsl(var(--primary-foreground))" },
+            }}
+            transition={{ duration: 0.1, delay: 0.4 }}
+            className="relative text-3xl font-bold tracking-tight inline-block"
+        >
+            {text}
+        </motion.h2>
+    </motion.div>
+  );
 
   return (
     <div className="space-y-12">
@@ -334,9 +363,7 @@ export default function HomePage() {
         animate="visible"
       >
         <div className="w-full">
-          <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight mb-6 text-center">
-            Dashboard
-          </motion.h2>
+           <Title text="Dashboard" />
           <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {currentUser && (
               <motion.div variants={itemVariants}>
@@ -388,7 +415,7 @@ export default function HomePage() {
         >
           <div className="w-full">
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
-              <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
+              <Title text="Events" />
               {!isMobile && (
                   <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
                       <TabsList className="relative">
@@ -473,7 +500,7 @@ export default function HomePage() {
       >
         <div className="w-full">
           <div className="max-w-2xl mx-auto">
-              <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</motion.h2>
+              <Title text="Today's Bible Reading" />
                <motion.div variants={itemVariants}>
                 <BiblePlanDisplay
                     readingToDisplay={todaysReadingForDisplay}
@@ -504,7 +531,7 @@ export default function HomePage() {
             >
               <div className="w-full">
                   <div className="max-w-4xl mx-auto">
-                      <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</motion.h2>
+                      <Title text="Community Progress" />
                       <motion.div variants={itemVariants}>
                         <Card className="shadow-lg hover:shadow-xl transition-shadow">
                             <CardHeader>
