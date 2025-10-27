@@ -65,25 +65,6 @@ const AnimatedTitle = ({ text }: { text: string }) => {
     );
 };
 
-const HorizontalScrollSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
-    const targetRef = useRef<HTMLDivElement | null>(null);
-    const { scrollYProgress } = useScroll({
-      target: targetRef,
-    });
-  
-    const x = useTransform(scrollYProgress, [0, 1], ["0%", "-75%"]);
-  
-    return (
-      <section ref={targetRef} className={cn("relative h-[300vh]", className)}>
-        <div className="sticky top-0 flex h-screen items-center overflow-hidden">
-          <motion.div style={{ x }} className="flex gap-4">
-            {children}
-          </motion.div>
-        </div>
-      </section>
-    );
-};
-
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
   const { events: allEvents, loading: eventsLoading } = useEvents();
@@ -99,21 +80,6 @@ export default function HomePage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  const dashboardRef = useRef<HTMLDivElement | null>(null);
-  const { scrollYProgress: dashboardScrollProgress } = useScroll({
-    target: dashboardRef,
-    offset: ['start start', 'end start']
-  });
-  const dashboardX = useTransform(dashboardScrollProgress, [0, 1], ["1%", currentUser ? "-100%" : "1%"]);
-
-
-  const eventsRef = useRef<HTMLDivElement | null>(null);
-  const { scrollYProgress: eventsScrollProgress } = useScroll({
-      target: eventsRef,
-      offset: ['start start', 'end start']
-  });
-  const eventsX = useTransform(eventsScrollProgress, [0, 1], ["1%", "-50%"]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -270,49 +236,61 @@ export default function HomePage() {
   return (
     <>
       <div className="space-y-0">
-        <section id="dashboard-section" ref={dashboardRef} className="relative h-[300vh]">
-            <div className="sticky top-0 flex h-screen items-center overflow-hidden">
-                <motion.div style={{ x: dashboardX }} className="flex items-center gap-8 pl-12">
-                    <div className="w-screen max-w-lg shrink-0">
-                         <AnimatedTitle text="Dashboard" />
+        <SectionWrapper id="dashboard-section" className="min-h-screen">
+          <div className="w-full">
+            <AnimatedTitle text="Dashboard" />
+            <motion.div 
+              className="w-full overflow-x-auto pb-4"
+              variants={itemVariants} 
+              initial="hidden" 
+              whileInView="visible" 
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              <div className="flex flex-nowrap gap-4 sm:gap-6 w-max mx-auto px-4">
+                {currentUser && (
+                    <>
+                    <div className="w-64 sm:w-72 flex-shrink-0">
+                        <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
                     </div>
-                    {currentUser && (
-                        <div className="w-80 shrink-0">
-                            <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                        </div>
-                    )}
-                    {currentUser && (
-                        <div className="w-80 shrink-0">
-                            <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                        </div>
-                    )}
-                    <div className="w-80 shrink-0">
-                        <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+                    <div className="w-64 sm:w-72 flex-shrink-0">
+                        <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
                     </div>
-                </motion.div>
-            </div>
-        </section>
+                    </>
+                )}
+                <div className="w-64 sm:w-72 flex-shrink-0">
+                    <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </SectionWrapper>
         
         {currentUser && (
-          <section id="event-calendar-section" ref={eventsRef} className="relative h-[300vh]">
-              <div className="sticky top-0 h-screen overflow-hidden">
-                  <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full">
-                      <div className="container mx-auto px-4 sm:px-8">
-                           <AnimatedTitle text="Upcoming Events" />
-                      </div>
-                      <motion.div style={{ x: eventsX }}>
-                          {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
-                      </motion.div>
-                  </div>
-              </div>
-          </section>
+          <SectionWrapper id="event-calendar-section" className="min-h-screen">
+            <div className="w-full">
+                <AnimatedTitle text="Upcoming Events" />
+                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+            </div>
+          </SectionWrapper>
         )}
 
         <SectionWrapper id="todays-reading-section" className="min-h-screen">
           <div className="w-full max-w-2xl mx-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
-                <BiblePlanDisplay readingToDisplay={todaysReadingForDisplay} currentUser={currentUser} completedPassages={completedPassages} togglePassageCompletion={togglePassageCompletion} onToggleAllToday={markMultiplePassages} allPassageTextsForDay={allTodaysPassageTexts} loading={planLoading || loadingChecklist} planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0} hidePlanMeta={true} defaultOpen={true} isStandalone={true} />
+                <BiblePlanDisplay 
+                  readingToDisplay={todaysReadingForDisplay} 
+                  currentUser={currentUser} 
+                  completedPassages={completedPassages} 
+                  togglePassageCompletion={togglePassageCompletion} 
+                  onToggleAllToday={markMultiplePassages} 
+                  allPassageTextsForDay={allTodaysPassageTexts} 
+                  loading={planLoading || loadingChecklist} 
+                  planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0} 
+                  hidePlanMeta={true} 
+                  defaultOpen={true} 
+                  isStandalone={true} 
+                />
             </motion.div>
           </div>
         </SectionWrapper>

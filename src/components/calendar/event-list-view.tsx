@@ -78,40 +78,46 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
   }
 
   return (
-    <div className="flex gap-4 pl-12">
-        {upcomingEventsByCategory.map(([category, events], index) => {
-          const Icon = categoryIcons[category] || Calendar;
-          return (
-            <motion.div
-              key={category}
-              className="w-[80vw] max-w-sm sm:max-w-md md:w-full flex-shrink-0"
-            >
-              <Card className="shadow-xl overflow-hidden h-full flex flex-col min-h-[350px]">
-                <CardHeader className={cn("p-4", categoryBackgroundColors[category])}>
-                  <CardTitle className={cn("text-xl flex items-center gap-3", categoryTextColors[category])}>
-                    <Icon className="h-6 w-6" />
-                    {category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 flex-grow space-y-2 overflow-y-auto">
-                  {events.map((event, eventIndex) => (
-                    <motion.div
-                      key={event.id}
-                      className="flex justify-between items-center bg-background/60 p-3 rounded-lg"
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
-                      viewport={{ once: true }}
-                    >
-                      <span className="font-semibold text-foreground truncate pr-4">{event.title}</span>
-                      <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
-                    </motion.div>
-                  ))}
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
+    <div className="w-full overflow-x-auto pb-4">
+        <div className="flex gap-4 sm:gap-6 w-max mx-auto px-4">
+            {upcomingEventsByCategory.map(([category, events], index) => {
+            const Icon = categoryIcons[category] || Calendar;
+            return (
+                <motion.div
+                key={category}
+                className="w-[80vw] max-w-sm sm:max-w-md md:w-full flex-shrink-0"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                >
+                <Card className="shadow-lg overflow-hidden h-full flex flex-col min-h-[350px]">
+                    <CardHeader className={cn("p-4", categoryBackgroundColors[category])}>
+                    <CardTitle className={cn("text-xl flex items-center gap-3", categoryTextColors[category])}>
+                        <Icon className="h-6 w-6" />
+                        {category}
+                    </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 flex-grow space-y-2 overflow-y-auto">
+                    {events.map((event, eventIndex) => (
+                        <motion.div
+                        key={event.id}
+                        className="flex justify-between items-center bg-background/60 p-3 rounded-lg"
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
+                        viewport={{ once: true }}
+                        >
+                        <span className="font-semibold text-foreground truncate pr-4">{event.title}</span>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
+                        </motion.div>
+                    ))}
+                    </CardContent>
+                </Card>
+                </motion.div>
+            );
+            })}
+        </div>
+    </div>
   );
 }
