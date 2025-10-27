@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -36,7 +35,7 @@ interface UserProgressDisplay {
 }
 
 const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
-    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative", className)}>
+    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-6 relative", className)}>
         <div className="container mx-auto">
             {children}
         </div>
@@ -274,7 +273,7 @@ export default function HomePage() {
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
               <motion.div 
-                  className="relative w-full py-2"
+                  className="relative w-full p-2 -m-2"
                   variants={itemVariants} 
                   initial="hidden" 
                   whileInView="visible" 
@@ -282,7 +281,7 @@ export default function HomePage() {
               >
                 <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory p-2 -m-2"
+                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {currentUser && (
@@ -329,8 +328,8 @@ export default function HomePage() {
           <SectionWrapper id="event-calendar-section" className="h-screen">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
-                <div className="mx-auto max-w-5xl">
-                 {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+                <div className="flex justify-center">
+                  <EventListView eventsByDate={eventsByDate} />
                 </div>
             </div>
           </SectionWrapper>
