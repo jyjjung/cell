@@ -146,8 +146,8 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                         transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
                         viewport={{ once: true }}
                         >
-                        <span className="font-semibold text-foreground truncate pr-4">{event.title}</span>
-                        <span className="text-sm text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
+                        <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
                         </motion.div>
                     ))}
                     </CardContent>
