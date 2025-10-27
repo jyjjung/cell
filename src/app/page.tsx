@@ -1,39 +1,28 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import StatCard from '@/components/homepage/stat-card';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import { Separator } from '@/components/ui/separator';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Info, List, LayoutGrid } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay, addMonths, format } from 'date-fns';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users } from 'lucide-react';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { motion, AnimatePresence } from 'framer-motion';
-
+import { motion, useInView } from 'framer-motion';
 import type { AppEvent } from '@/types';
-import { Calendar } from '@/components/ui/calendar';
-import { EventCategory } from '@/types';
-import { cn } from '@/lib/utils';
-import type { DayProps } from 'react-day-picker';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { categoryTextColors, categoryBackgroundColors } from '@/lib/utils';
-import CalendarKey from '@/components/calendar/calendar-key';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import EventListView from '@/components/calendar/event-list-view';
+import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { useIsMobile } from '@/hooks/use-mobile';
-import EventListView from '@/components/calendar/event-list-view';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import { cn } from '@/lib/utils';
+import SectionIndicator from '@/components/layout/section-indicator';
 
 
 interface UserProgressDisplay {
@@ -43,6 +32,32 @@ interface UserProgressDisplay {
   progressPercentage: number;
   totalPassagesToDate: number;
 }
+
+const SectionWrapper = ({ children, id }: { children: React.ReactNode, id: string }) => (
+    <section id={id} className="scroll-snap-section min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-8 relative">
+        <div className="container mx-auto">
+            {children}
+        </div>
+    </section>
+);
+
+const AnimatedTitle = ({ text }: { text: string }) => {
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true, amount: 0.5 });
+
+    return (
+        <div ref={ref} className="relative mb-8 md:mb-12 text-center overflow-hidden">
+            <motion.h2
+                className="text-4xl md:text-5xl font-bold tracking-tight"
+                initial={{ y: "100%" }}
+                animate={{ y: isInView ? "0%" : "100%" }}
+                transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
+            >
+                {text}
+            </motion.h2>
+        </div>
+    );
+};
 
 
 export default function HomePage() {
@@ -54,14 +69,9 @@ export default function HomePage() {
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
   const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
   const { allUsers, loading: usersLoading } = useAllUsers();
-  const isMobile = useIsMobile();
 
-  // Calendar State
-  const [month, setMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [calendarView, setCalendarView] = useState<'grid' | 'list'>('grid');
-
-
+  const sections = ['dashboard-section', 'event-calendar-section', 'todays-reading-section', 'community-progress-section'];
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -121,13 +131,12 @@ export default function HomePage() {
     }).length;
   }, [allEvents, isMounted]);
 
-  // Calendar memoized data
   const eventsByDate = useMemo(() => {
     const map = new Map<string, AppEvent[]>();
     if (!allEvents) return map;
     allEvents.forEach(event => {
       try {
-        const eventDateStr = format(parseISO(event.date), 'yyyy-MM-dd');
+        const eventDateStr = parseISO(event.date).toISOString().split('T')[0];
         if (!map.has(eventDateStr)) {
           map.set(eventDateStr, []);
         }
@@ -142,35 +151,26 @@ export default function HomePage() {
     return map;
   }, [allEvents]);
 
-  const selectedDayEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    return eventsByDate.get(dateStr) || [];
-  }, [selectedDate, eventsByDate]);
-
   const userProgressData = useMemo(() => {
     if (checklistsLoading || usersLoading || totalPassagesUpToToday === 0 || !allChecklists || !allUsers) {
       return [];
     }
   
     const visibleUsers = new Set(allUsers.filter(u => u.showInCommunityProgress ?? true).map(u => u.uid));
-  
     const usersMap = new Map(allUsers.map(user => [user.uid, user]));
   
     return allChecklists
-      .filter(checklist => visibleUsers.has(checklist.userId)) // Filter out users who have opted out
+      .filter(checklist => visibleUsers.has(checklist.userId))
       .map(checklist => {
         const user = usersMap.get(checklist.userId);
-        if (!user) {
-          return null;
-        }
+        if (!user) return null;
   
         const completedCount = checklist.completedPassages.length;
         const progressPercentage = totalPassagesUpToToday > 0 ? parseFloat(((completedCount / totalPassagesUpToToday) * 100).toFixed(1)) : 0;
         
         return {
           userId: checklist.userId,
-          userDisplayName: user.displayName || user.email?.split('@')[0] || checklist.userId.substring(0, 8),
+          userDisplayName: user.displayName || user.email?.split('@')[0] || 'User',
           completedCount,
           progressPercentage,
           totalPassagesToDate: totalPassagesUpToToday,
@@ -180,114 +180,42 @@ export default function HomePage() {
       .sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, allUsers, totalPassagesUpToToday, checklistsLoading, usersLoading]);
 
-  // Custom Day for Calendar
-  function CustomDay(props: DayProps) {
-    const { date, displayMonth } = props;
-    const isCurrentMonth = displayMonth.getMonth() === date.getMonth();
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayEvents = eventsByDate.get(dateStr) || [];
-    const isToday = isSameDay(date, new Date());
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+  };
 
-    return (
-      <div className={cn("relative flex h-full flex-col p-0.5 border-t border-border/80 text-[10px]",!isCurrentMonth && "bg-muted/30 text-muted-foreground/50",isSameDay(date, selectedDate || new Date(0)) && isCurrentMonth && "bg-accent")}>
-        <time dateTime={format(date, 'yyyy-MM-dd')} className={cn("self-start font-semibold p-1 rounded-full", isToday && "flex h-5 w-5 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground text-xs")}>
-          {format(date, 'd')}
-        </time>
-        {isCurrentMonth && dayEvents.length > 0 && (
-          <div className="mt-0.5 flex-grow overflow-y-auto -mx-0.5 px-0.5 space-y-0.5 text-left">
-            {dayEvents.slice(0, 2).map((event) => (
-              <div key={event.id} className={cn("p-0.5 rounded-sm leading-tight truncate font-medium", categoryBackgroundColors[event.category], categoryTextColors[event.category])}>
-                {event.title}
-              </div>
-            ))}
-             {dayEvents.length > 2 && (
-              <div className="text-muted-foreground pl-1 pt-0.5">+ {dayEvents.length - 2} more</div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const CalendarSkeleton = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-      <div className="lg:col-span-3"><Skeleton className="w-full aspect-video" /></div>
-      <div className="lg:col-span-1"><Skeleton className="w-full h-48" /></div>
-    </div>
-  );
-
-
-  if (!isMounted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-15rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-xl text-muted-foreground">Loading page content...</p>
-      </div>
-    );
-  }
+  const itemVariants = {
+    hidden: { y: 30, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 80, damping: 15 } },
+  };
 
   const CommunityProgressContent = () => {
     if (planLoading || checklistsLoading || usersLoading) {
-        return (
-          <div className="flex items-center justify-center p-6">
-            <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading progress overview...</p>
-          </div>
-        );
+        return <div className="flex items-center justify-center p-6"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /></div>;
     }
-    
-    if (!plan || plan.dailyReadings.length === 0) {
-        return (
-          <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-            <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-destructive" /><CardTitle className="text-xl">No Plan Available</CardTitle></div></CardHeader>
-            <CardContent><p className="text-muted-foreground">A Bible reading plan needs to be set by the admin first.</p></CardContent>
-          </Card>
-        );
-    }
-  
-    if (totalPassagesUpToToday === 0 && isMounted) {
-        return (
-            <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-            <CardHeader><div className="flex items-center space-x-2"><Info className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Readings Scheduled Yet</CardTitle></div></CardHeader>
-            <CardContent><p className="text-muted-foreground">There are no Bible readings scheduled up to today in the current plan, or the plan has not started.</p></CardContent>
-            </Card>
-        );
-    }
-
-
-    if (userProgressData.length === 0 && isMounted) {
-        return (
-            <Card className="mt-6 shadow-lg max-w-lg mx-auto">
-            <CardHeader><div className="flex items-center space-x-2"><Users className="h-6 w-6 text-muted-foreground" /><CardTitle className="text-xl">No Progress Yet</CardTitle></div></CardHeader>
-            <CardContent><p className="text-muted-foreground">No one has started tracking their progress, or no checklists were found for readings scheduled to date.</p></CardContent>
-            </Card>
-        );
+    if (userProgressData.length === 0) {
+        return <div className="p-6 text-center text-muted-foreground">No community progress to show yet.</div>;
     }
 
     return (
-        <CardContent className="p-0">
+        <CardContent className="p-0 max-h-[50vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[100px] sm:w-[150px]">Person</TableHead>
-                <TableHead>Progress (% of readings due)</TableHead>
-                <TableHead className="text-right">Completed</TableHead>
+                <TableHead>Progress</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userProgressData.map((progressItem) => (
+              {userProgressData.map((progressItem, index) => (
                 <TableRow key={progressItem.userId}>
-                  <TableCell className="font-medium text-xs truncate max-w-[100px] sm:max-w-xs">
-                    {progressItem.userDisplayName}
-                  </TableCell>
+                  <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                        <Progress value={progressItem.progressPercentage} className="w-full h-3" />
-                        <span className="text-xs text-muted-foreground w-12 text-right">{progressItem.progressPercentage.toFixed(0)}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right text-sm">
-                    {progressItem.completedCount} / {progressItem.totalPassagesToDate}
+                    <motion.div initial={{ width: "0%" }} whileInView={{ width: "100%" }} transition={{ duration: 0.8, delay: index * 0.1, ease: "easeOut" }}>
+                      <Progress value={progressItem.progressPercentage} className="h-3" />
+                    </motion.div>
+                    <span className="text-xs text-muted-foreground mt-1 block">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -296,242 +224,73 @@ export default function HomePage() {
         </CardContent>
     )
   }
-  
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
-  };
-
-  const viewVariants = {
-    hidden: { opacity: 0, scale: 0.98 },
-    visible: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.98 },
-  };
-  
-  const Title = ({text}: {text:string}) => (
-    <motion.h2
-        className="relative mb-6 text-3xl font-bold tracking-tight text-center"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.5 }}
-        variants={itemVariants}
-    >
-        {text}
-    </motion.h2>
-  );
+  if (!isMounted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-12">
-      <motion.section 
-        className="scroll-snap-section"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="w-full">
-           <Title text="Dashboard" />
-          <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+    <>
+      <div className="space-y-0">
+        <SectionWrapper id="dashboard-section">
+          <AnimatedTitle text="Dashboard" />
+          <motion.div variants={containerVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {currentUser && (
               <motion.div variants={itemVariants}>
-                <StatCard
-                  title="Upcoming Events"
-                  value={eventsLoading ? null : upcomingEventsCount}
-                  isLoading={eventsLoading}
-                  buttonText="View Events"
-                  buttonLink="#event-calendar-section"
-                  IconComponent={CalendarCheck}
-                />
+                <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
               </motion.div>
             )}
             {currentUser && (
               <motion.div variants={itemVariants}>
-                <StatCard
-                  title="Reading Progress"
-                  value={readingsLoggedStatValue}
-                  isLoading={loadingAuth || loadingChecklist || planLoading}
-                  buttonText="My Checklist"
-                  buttonLink="/bible-checklist"
-                  IconComponent={BookCheck}
-                  buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0}
-                />
+                <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
               </motion.div>
             )}
-            <motion.div variants={itemVariants}>
-              <StatCard
-                title="Memory Verses"
-                value={memoryVersesLoading ? null : memoryVerses.length}
-                isLoading={memoryVersesLoading}
-                buttonText="Practice Verses"
-                buttonLink="/memorize"
-                IconComponent={BrainCircuit}
-              />
+            <motion.div variants={itemVariants} className={!currentUser ? 'md:col-start-2' : ''}>
+              <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
             </motion.div>
           </motion.div>
-        </div>
-      </motion.section>
-      
-      {currentUser && (
-        <motion.section 
-          id="event-calendar-section" 
-          className="scroll-snap-section"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <div className="w-full">
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
-              <Title text="Events" />
-              {!isMobile && (
-                  <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
-                      <TabsList className="relative">
-                          <TabsTrigger value="grid"><LayoutGrid className="mr-2 h-4 w-4" /> Grid</TabsTrigger>
-                          <TabsTrigger value="list"><List className="mr-2 h-4 w-4" /> List</TabsTrigger>
-                      </TabsList>
-                  </Tabs>
-              )}
-            </motion.div>
-              {eventsLoading ? <CalendarSkeleton /> : (
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                        key={isMobile ? 'list' : calendarView}
-                        variants={viewVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        transition={{ duration: 0.2 }}
-                    >
-                  {(isMobile || calendarView === 'list') ? (
-                      <EventListView eventsByDate={eventsByDate} />
-                  ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                        <div className="lg:col-span-3">
-                            <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                month={month}
-                                onMonthChange={setMonth}
-                                className="p-0 border rounded-md"
-                                classNames={{
-                                    months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 p-3",
-                                    month: "space-y-4 w-full",
-                                    table: "w-full border-collapse",
-                                    head_row: "flex border-b",
-                                    head_cell: "text-muted-foreground w-[14.28%] text-center font-normal text-[0.8rem] py-2",
-                                    row: "flex w-full",
-                                    cell: "h-20 w-[14.28%] p-0 [&:not(:last-child)]:border-r",
-                                    day_button: "h-full w-full p-0 font-normal",
-                                    day_selected: "", day_today: "", day_outside: "", day_disabled: "text-muted-foreground opacity-50",
-                                }}
-                                components={{ Day: CustomDay }}
-                            />
-                        </div>
-                        <div className="lg:col-span-1">
-                            <div className="sticky top-20">
-                                <h3 className="font-semibold text-lg mb-2">{selectedDate ? format(selectedDate, "PPP") : "No date selected"}</h3>
-                                <Card className="shadow-sm">
-                                    <CardContent className="p-2 space-y-2 max-h-[28rem] overflow-y-auto">
-                                        {selectedDayEvents.length > 0 ? selectedDayEvents.map(event => (
-                                            <div key={event.id} className={cn("p-2 rounded-md border-l-4", 'border-' + event.category.toLowerCase())}>
-                                                <div className="flex items-start justify-between">
-                                                    <p className="font-semibold text-sm">{event.title}</p>
-                                                    <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full", categoryBackgroundColors[event.category], categoryTextColors[event.category] )}>{event.category}</div>
-                                                </div>
-                                                {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
-                                            </div>
-                                        )) : (
-                                            <p className="text-muted-foreground text-sm text-center py-4">No events scheduled.</p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                                <CalendarKey />
-                            </div>
-                        </div>
-                    </div>
-                  )}
-                  </motion.div>
-                </AnimatePresence>
-              )}
-          </div>
-        </motion.section>
-      )}
-
-      <motion.section 
-        className="scroll-snap-section"
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        <div className="w-full">
-          <div className="max-w-2xl mx-auto">
-              <Title text="Today's Bible Reading" />
-               <motion.div variants={itemVariants}>
-                <BiblePlanDisplay
-                    readingToDisplay={todaysReadingForDisplay}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    onToggleAllToday={markMultiplePassages}
-                    allPassageTextsForDay={allTodaysPassageTexts}
-                    loading={planLoading || loadingChecklist}
-                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                    hidePlanMeta={true}
-                    defaultOpen={true}
-                    isStandalone={true}
-                />
-               </motion.div>
-          </div>
-        </div>
-      </motion.section>
-      
-        {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <motion.section 
-              id="community-progress-section" 
-              className="scroll-snap-section"
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-            >
-              <div className="w-full">
-                  <div className="max-w-4xl mx-auto">
-                      <Title text="Community Progress" />
-                      <motion.div variants={itemVariants}>
-                        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-center space-x-3">
-                                    <Users className="h-6 w-6 text-primary" />
-                                    <CardTitle className="text-lg font-semibold tracking-tight">Leaderboard</CardTitle>
-                                </div>
-                            </CardHeader>
-                            <CommunityProgressContent />
-                        </Card>
-                      </motion.div>
-                  </div>
-              </div>
-            </motion.section>
+        </SectionWrapper>
+        
+        {currentUser && (
+          <SectionWrapper id="event-calendar-section">
+            <AnimatedTitle text="Upcoming Events" />
+            {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+          </SectionWrapper>
         )}
-    </div>
+
+        <SectionWrapper id="todays-reading-section">
+          <div className="w-full max-w-2xl mx-auto">
+            <AnimatedTitle text="Today's Bible Reading" />
+            <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
+                <BiblePlanDisplay readingToDisplay={todaysReadingForDisplay} currentUser={currentUser} completedPassages={completedPassages} togglePassageCompletion={togglePassageCompletion} onToggleAllToday={markMultiplePassages} allPassageTextsForDay={allTodaysPassageTexts} loading={planLoading || loadingChecklist} planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0} hidePlanMeta={true} defaultOpen={true} isStandalone={true} />
+            </motion.div>
+          </div>
+        </SectionWrapper>
+        
+        {currentUser && (currentUser.showInCommunityProgress ?? true) && (
+            <SectionWrapper id="community-progress-section">
+              <div className="w-full max-w-4xl mx-auto">
+                  <AnimatedTitle text="Community Progress" />
+                  <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
+                    <Card className="shadow-lg overflow-hidden">
+                        <CardHeader>
+                            <div className="flex items-center space-x-3">
+                                <Users className="h-6 w-6 text-primary" />
+                                <CardTitle className="text-xl font-semibold tracking-tight">Leaderboard</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CommunityProgressContent />
+                    </Card>
+                  </motion.div>
+              </div>
+            </SectionWrapper>
+        )}
+      </div>
+      <SectionIndicator sections={currentUser ? sections : sections.filter(s => s !== 'event-calendar-section' && s !== 'community-progress-section')} />
+    </>
   );
 }
-
-    

@@ -3,10 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
     --background: 220 15% 94%; /* #eaebed - Dreamy */
@@ -98,8 +94,9 @@ body {
     @apply border-border;
   }
   html {
+    scroll-behavior: smooth;
     scroll-snap-type: y mandatory;
-    scroll-padding-top: 6rem; /* Header height + padding */
+    scroll-padding-top: 5rem; /* Header height */
   }
   body {
     @apply bg-background text-foreground;
@@ -124,6 +121,21 @@ body {
   .prose .esv-text h4, .prose-sm .esv-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
   }
-}
 
-    
+  .moving-bg-gradient {
+    background: linear-gradient(-45deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1), hsl(var(--primary) / 0.2), hsl(var(--secondary) / 0.1));
+    background-size: 400% 400%;
+    animation: gradient 30s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .scroll-snap-section {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+  }
+}
