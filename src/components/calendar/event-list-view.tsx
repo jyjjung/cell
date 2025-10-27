@@ -137,7 +137,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                         {category}
                     </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-2 flex-grow overflow-y-auto">
+                    <CardContent className="p-2 flex-grow overflow-y-auto max-h-[60vh]">
                       <div className="flex flex-col">
                         {events.map((event, eventIndex) => (
                             <motion.div
