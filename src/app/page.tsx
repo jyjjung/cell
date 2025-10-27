@@ -11,7 +11,7 @@ import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { motion, useInView } from 'framer-motion';
+import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import type { AppEvent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,8 +33,8 @@ interface UserProgressDisplay {
   totalPassagesToDate: number;
 }
 
-const SectionWrapper = ({ children, id }: { children: React.ReactNode, id: string }) => (
-    <section id={id} className="scroll-snap-section min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-8 relative">
+const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
+    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative", className)}>
         <div className="container mx-auto">
             {children}
         </div>
@@ -47,11 +47,17 @@ const AnimatedTitle = ({ text }: { text: string }) => {
 
     return (
         <div ref={ref} className="relative mb-8 md:mb-12 text-center overflow-hidden">
+             <motion.div
+                className="absolute inset-0 bg-primary z-10"
+                initial={{ x: "-100%" }}
+                animate={{ x: isInView ? "101%" : "-100%" }}
+                transition={{ duration: 1.2, ease: [0.2, 0.65, 0.3, 0.9] }}
+            />
             <motion.h2
                 className="text-4xl md:text-5xl font-bold tracking-tight"
-                initial={{ y: "100%" }}
-                animate={{ y: isInView ? "0%" : "100%" }}
-                transition={{ duration: 0.8, ease: [0.2, 0.65, 0.3, 0.9] }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isInView ? 1 : 0 }}
+                transition={{ duration: 0.1, delay: 0.4 }}
             >
                 {text}
             </motion.h2>
@@ -59,6 +65,24 @@ const AnimatedTitle = ({ text }: { text: string }) => {
     );
 };
 
+const HorizontalScrollSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+    const targetRef = useRef<HTMLDivElement | null>(null);
+    const { scrollYProgress } = useScroll({
+      target: targetRef,
+    });
+  
+    const x = useTransform(scrollYProgress, [0, 1], ["0%", "-75%"]);
+  
+    return (
+      <section ref={targetRef} className={cn("relative h-[300vh]", className)}>
+        <div className="sticky top-0 flex h-screen items-center overflow-hidden">
+          <motion.div style={{ x }} className="flex gap-4">
+            {children}
+          </motion.div>
+        </div>
+      </section>
+    );
+};
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -75,6 +99,21 @@ export default function HomePage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  
+  const dashboardRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress: dashboardScrollProgress } = useScroll({
+    target: dashboardRef,
+    offset: ['start start', 'end start']
+  });
+  const dashboardX = useTransform(dashboardScrollProgress, [0, 1], ["1%", currentUser ? "-100%" : "1%"]);
+
+
+  const eventsRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress: eventsScrollProgress } = useScroll({
+      target: eventsRef,
+      offset: ['start start', 'end start']
+  });
+  const eventsX = useTransform(eventsScrollProgress, [0, 1], ["1%", "-50%"]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -180,11 +219,6 @@ export default function HomePage() {
       .sort((a, b) => b.progressPercentage - a.progressPercentage);
   }, [allChecklists, allUsers, totalPassagesUpToToday, checklistsLoading, usersLoading]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-  };
-
   const itemVariants = {
     hidden: { y: 30, opacity: 0 },
     visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 80, damping: 15 } },
@@ -236,42 +270,45 @@ export default function HomePage() {
   return (
     <>
       <div className="space-y-0">
-        <SectionWrapper id="dashboard-section">
-          <AnimatedTitle text="Dashboard" />
-          <motion.div 
-            variants={containerVariants} 
-            initial="hidden" 
-            whileInView="visible" 
-            viewport={{ once: true, amount: 0.2 }} 
-            className={cn(
-              "grid grid-cols-1 gap-6 max-w-5xl mx-auto",
-              currentUser ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-1"
-            )}
-          >
-            {currentUser && (
-              <motion.div variants={itemVariants}>
-                <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-              </motion.div>
-            )}
-            {currentUser && (
-              <motion.div variants={itemVariants}>
-                <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-              </motion.div>
-            )}
-            <motion.div variants={itemVariants} className={!currentUser ? 'md:col-start-1' : ''}>
-              <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
-            </motion.div>
-          </motion.div>
-        </SectionWrapper>
+        <section id="dashboard-section" ref={dashboardRef} className="relative h-[300vh]">
+            <div className="sticky top-0 flex h-screen items-center overflow-hidden">
+                <motion.div style={{ x: dashboardX }} className="flex items-center gap-8 pl-12">
+                    <div className="w-screen max-w-lg shrink-0">
+                         <AnimatedTitle text="Dashboard" />
+                    </div>
+                    {currentUser && (
+                        <div className="w-80 shrink-0">
+                            <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
+                        </div>
+                    )}
+                    {currentUser && (
+                        <div className="w-80 shrink-0">
+                            <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
+                        </div>
+                    )}
+                    <div className="w-80 shrink-0">
+                        <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+                    </div>
+                </motion.div>
+            </div>
+        </section>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section">
-            <AnimatedTitle text="Upcoming Events" />
-            {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
-          </SectionWrapper>
+          <section id="event-calendar-section" ref={eventsRef} className="relative h-[300vh]">
+              <div className="sticky top-0 h-screen overflow-hidden">
+                  <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full">
+                      <div className="container mx-auto px-4 sm:px-8">
+                           <AnimatedTitle text="Upcoming Events" />
+                      </div>
+                      <motion.div style={{ x: eventsX }}>
+                          {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+                      </motion.div>
+                  </div>
+              </div>
+          </section>
         )}
 
-        <SectionWrapper id="todays-reading-section">
+        <SectionWrapper id="todays-reading-section" className="min-h-screen">
           <div className="w-full max-w-2xl mx-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -281,7 +318,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section">
+            <SectionWrapper id="community-progress-section" className="min-h-screen">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -303,5 +340,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    

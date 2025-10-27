@@ -57,7 +57,7 @@ export default function SectionIndicator({ sections }: SectionIndicatorProps) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50"
+          className="fixed bottom-4 left-0 right-0 mx-auto z-50 w-fit"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
