@@ -270,7 +270,7 @@ export default function HomePage() {
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
               <motion.div 
-                  className="relative w-full group"
+                  className="relative w-full"
                   variants={itemVariants} 
                   initial="hidden" 
                   whileInView="visible" 
