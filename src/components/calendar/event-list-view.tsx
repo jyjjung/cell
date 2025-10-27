@@ -115,7 +115,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
     <div className="relative w-full group">
         <div
             ref={scrollContainerRef}
-            className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
+            className="flex gap-4 sm:gap-6 w-full mx-auto pb-4 overflow-x-auto snap-x snap-mandatory"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
             {upcomingEventsByCategory.map(([category, events], index) => {
@@ -123,7 +123,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             return (
                 <motion.div
                 key={category}
-                className="w-80 flex-shrink-0 snap-start"
+                className="w-72 flex-shrink-0 snap-start"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
