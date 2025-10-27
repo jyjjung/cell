@@ -477,20 +477,18 @@ export default function HomePage() {
           <div className="max-w-2xl mx-auto">
               <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</motion.h2>
                <motion.div variants={itemVariants}>
-                <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
-                    <BiblePlanDisplay
-                        readingToDisplay={todaysReadingForDisplay}
-                        currentUser={currentUser}
-                        completedPassages={completedPassages}
-                        togglePassageCompletion={togglePassageCompletion}
-                        onToggleAllToday={markMultiplePassages}
-                        allPassageTextsForDay={allTodaysPassageTexts}
-                        loading={planLoading || loadingChecklist}
-                        planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                        hidePlanMeta={true}
-                        defaultOpen={true}
-                    />
-                </Accordion>
+                <BiblePlanDisplay
+                    readingToDisplay={todaysReadingForDisplay}
+                    currentUser={currentUser}
+                    completedPassages={completedPassages}
+                    togglePassageCompletion={togglePassageCompletion}
+                    onToggleAllToday={markMultiplePassages}
+                    allPassageTextsForDay={allTodaysPassageTexts}
+                    loading={planLoading || loadingChecklist}
+                    planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                    hidePlanMeta={true}
+                    defaultOpen={true}
+                />
                </motion.div>
           </div>
         </div>
@@ -529,5 +527,7 @@ export default function HomePage() {
   );
 }
 
+
+    
 
     
