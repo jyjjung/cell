@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { categoryTextColors, categoryBackgroundColors } from '@/lib/utils';
 import { CalendarOff, Calendar, Cake, Coffee, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Separator } from '@/components/ui/separator';
 
 interface EventListViewProps {
   eventsByDate: Map<string, AppEvent[]>;
@@ -130,26 +131,29 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                 viewport={{ once: true, amount: 0.3 }}
                 >
                 <Card className="shadow-lg overflow-hidden h-full flex flex-col">
-                    <CardHeader className={cn("p-4", categoryBackgroundColors[category])}>
-                    <CardTitle className={cn("text-xl flex items-center gap-3", categoryTextColors[category])}>
-                        <Icon className="h-6 w-6" />
+                    <CardHeader className={cn("p-3", categoryBackgroundColors[category])}>
+                    <CardTitle className={cn("text-lg flex items-center gap-3", categoryTextColors[category])}>
+                        <Icon className="h-5 w-5" />
                         {category}
                     </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 flex-grow space-y-2 overflow-y-auto">
-                    {events.map((event, eventIndex) => (
-                        <motion.div
-                        key={event.id}
-                        className="flex flex-col items-start bg-background/60 p-3 rounded-lg"
-                        initial={{ opacity: 0, x: -20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
-                        viewport={{ once: true }}
-                        >
-                        <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap font-medium mt-1">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
-                        </motion.div>
-                    ))}
+                    <CardContent className="p-3 flex-grow overflow-y-auto">
+                      <div className="space-y-2">
+                        {events.map((event, eventIndex) => (
+                            <motion.div
+                            key={event.id}
+                            className="flex flex-col items-start"
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
+                            viewport={{ once: true }}
+                            >
+                              {eventIndex > 0 && <Separator className="my-2" />}
+                              <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
+                            </motion.div>
+                        ))}
+                      </div>
                     </CardContent>
                 </Card>
                 </motion.div>
