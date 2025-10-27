@@ -207,7 +207,7 @@ export default function BibleChecklistPage() {
 
 
   const PageSkeleton = () => (
-    <div className="space-y-4">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
       <Skeleton className="h-10 w-2/3 rounded-md" />
       <div className="space-y-3">
         <Skeleton className="h-20 w-full rounded-lg" />
@@ -249,10 +249,11 @@ export default function BibleChecklistPage() {
     return <PageSkeleton />;
   }
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (<div className="space-y-8"><h1 className="text-3xl font-bold tracking-tight">Reading Plan</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
+    return (<div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8"><h1 className="text-3xl font-bold tracking-tight">Reading Plan</h1><Card className="mt-6 max-w-lg mx-auto"><CardContent className="p-8 text-center"><Info className="mx-auto h-12 w-12 text-destructive mb-4" /><h3 className="text-xl font-semibold">No Plan Available</h3><p className="text-muted-foreground mt-2">No Bible reading plan has been set by the admin.</p></CardContent></Card></div>);
   }
 
   return (
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <AnimatePresence mode="wait">
       <div key={viewState.view}>
         {viewState.view === 'single-week-details' && (
@@ -466,7 +467,6 @@ export default function BibleChecklistPage() {
         )}
       </div>
     </AnimatePresence>
+    </div>
   );
 }
-
-    

@@ -35,7 +35,7 @@ interface UserProgressDisplay {
 }
 
 const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
-    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative", className)}>
+    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-8 relative h-screen", className)}>
         <div className="container mx-auto">
             {children}
         </div>
@@ -48,12 +48,6 @@ const AnimatedTitle = ({ text }: { text: string }) => {
 
     return (
         <div ref={ref} className="relative mb-8 md:mb-12 text-center overflow-hidden">
-             <motion.div
-                className="absolute inset-0 bg-primary z-10"
-                initial={{ x: "-100%" }}
-                animate={{ x: isInView ? "101%" : "-100%" }}
-                transition={{ duration: 1.2, ease: [0.2, 0.65, 0.3, 0.9] }}
-            />
             <motion.h2
                 className="text-4xl md:text-5xl font-bold tracking-tight"
                 initial={{ opacity: 0 }}
@@ -274,8 +268,8 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="space-y-0">
-        <SectionWrapper id="dashboard-section" className="min-h-screen">
+      <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
+        <SectionWrapper id="dashboard-section">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <motion.div 
@@ -330,7 +324,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section" className="min-h-screen">
+          <SectionWrapper id="event-calendar-section">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
                  {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
@@ -338,8 +332,8 @@ export default function HomePage() {
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section" className="min-h-screen">
-          <div className="w-full max-w-2xl mx-auto">
+        <SectionWrapper id="todays-reading-section">
+          <div className="w-full max-w-2xl mx-auto overflow-y-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
                 <BiblePlanDisplay 
@@ -360,7 +354,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section" className="min-h-screen">
+            <SectionWrapper id="community-progress-section">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -382,5 +376,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
