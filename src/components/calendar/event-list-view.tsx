@@ -124,7 +124,7 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             return (
                 <motion.div
                 key={category}
-                className="w-72 flex-shrink-0 snap-start"
+                className="flex-shrink-0 snap-start w-[85vw] max-w-72"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
