@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -273,7 +274,7 @@ export default function HomePage() {
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
               <motion.div 
-                  className="relative w-full"
+                  className="relative w-full py-2"
                   variants={itemVariants} 
                   initial="hidden" 
                   whileInView="visible" 
@@ -328,7 +329,9 @@ export default function HomePage() {
           <SectionWrapper id="event-calendar-section">
             <div className="w-full max-w-5xl mx-auto">
                 <AnimatedTitle text="Upcoming Events" />
+                <div className="w-full max-w-5xl mx-auto">
                  {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
+                </div>
             </div>
           </SectionWrapper>
         )}
