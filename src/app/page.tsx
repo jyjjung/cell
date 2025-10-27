@@ -8,12 +8,13 @@ import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import type { AppEvent } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import EventListView from '@/components/calendar/event-list-view';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
@@ -76,10 +77,48 @@ export default function HomePage() {
   const { allUsers, loading: usersLoading } = useAllUsers();
 
   const sections = ['dashboard-section', 'event-calendar-section', 'todays-reading-section', 'community-progress-section'];
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
   
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+
+    const checkArrows = () => {
+      if (!scrollEl) return;
+      const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
+      setShowLeftArrow(scrollLeft > 1);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+    };
+
+    checkArrows();
+
+    scrollEl?.addEventListener('scroll', checkArrows, { passive: true });
+    window.addEventListener('resize', checkArrows);
+
+    const observer = new ResizeObserver(checkArrows);
+    if(scrollEl) observer.observe(scrollEl);
+
+    return () => {
+      scrollEl?.removeEventListener('scroll', checkArrows);
+      window.removeEventListener('resize', checkArrows);
+      if(scrollEl) observer.unobserve(scrollEl);
+    };
+  }, [isMounted, currentUser]); 
+
+  const scrollLeft = () => {
+    scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+  };
+
+  const scrollRight = () => {
+    scrollContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
+  };
+
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -240,27 +279,52 @@ export default function HomePage() {
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <motion.div 
-              className="w-full overflow-x-auto pb-4"
-              variants={itemVariants} 
-              initial="hidden" 
-              whileInView="visible" 
-              viewport={{ once: true, amount: 0.2 }}
+                className="relative w-full group"
+                variants={itemVariants} 
+                initial="hidden" 
+                whileInView="visible" 
+                viewport={{ once: true, amount: 0.2 }}
             >
-              <div className="flex flex-nowrap gap-4 sm:gap-6 w-max mx-auto px-4">
-                {currentUser && (
-                    <>
-                    <div className="w-64 sm:w-72 flex-shrink-0">
-                        <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                    </div>
-                    <div className="w-64 sm:w-72 flex-shrink-0">
-                        <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                    </div>
-                    </>
-                )}
-                <div className="w-64 sm:w-72 flex-shrink-0">
-                    <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
-                </div>
+              <div
+                  ref={scrollContainerRef}
+                  className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                  {currentUser && (
+                      <>
+                      <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                          <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
+                      </div>
+                      <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                          <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
+                      </div>
+                      </>
+                  )}
+                  <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                      <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+                  </div>
               </div>
+              
+              {showLeftArrow && (
+                  <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={scrollLeft}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                  >
+                      <ChevronLeft className="h-6 w-6" />
+                  </Button>
+              )}
+              {showRightArrow && (
+                  <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={scrollRight}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                  >
+                      <ChevronRight className="h-6 w-6" />
+                  </Button>
+              )}
             </motion.div>
           </div>
         </SectionWrapper>
@@ -318,3 +382,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
