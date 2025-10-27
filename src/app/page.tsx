@@ -241,9 +241,12 @@ export default function HomePage() {
                 <TableRow key={progressItem.userId}>
                   <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
                   <TableCell>
-                    <motion.div initial={{ width: "0%" }} whileInView={{ width: "100%" }} transition={{ duration: 0.8, delay: index * 0.1, ease: "easeOut" }}>
-                      <Progress value={progressItem.progressPercentage} className="h-3" />
-                    </motion.div>
+                    <div className="flex items-center gap-4">
+                      <motion.div className="flex-grow" initial={{ width: "0%" }} whileInView={{ width: "100%" }} transition={{ duration: 0.8, delay: index * 0.1, ease: "easeOut" }}>
+                        <Progress value={progressItem.progressPercentage} className="h-3" />
+                      </motion.div>
+                      <span className="text-sm font-semibold text-muted-foreground w-14 text-right">{progressItem.progressPercentage}%</span>
+                    </div>
                     <span className="text-xs text-muted-foreground mt-1 block">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
                   </TableCell>
                 </TableRow>
@@ -270,7 +273,7 @@ export default function HomePage() {
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-4xl mx-auto">
               <motion.div 
-                  className="relative w-full"
+                  className="relative w-full group"
                   variants={itemVariants} 
                   initial="hidden" 
                   whileInView="visible" 
@@ -278,7 +281,7 @@ export default function HomePage() {
               >
                 <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory"
+                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-2"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {currentUser && (
@@ -374,3 +377,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
