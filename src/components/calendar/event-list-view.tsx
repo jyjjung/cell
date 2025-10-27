@@ -131,26 +131,27 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
                 viewport={{ once: true, amount: 0.3 }}
                 >
                 <Card className="shadow-lg overflow-hidden h-full flex flex-col">
-                    <CardHeader className={cn("p-3", categoryBackgroundColors[category])}>
-                    <CardTitle className={cn("text-lg flex items-center gap-3", categoryTextColors[category])}>
+                    <CardHeader className={cn("p-2", categoryBackgroundColors[category])}>
+                    <CardTitle className={cn("text-base flex items-center gap-3", categoryTextColors[category])}>
                         <Icon className="h-5 w-5" />
                         {category}
                     </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-3 flex-grow overflow-y-auto">
-                      <div className="space-y-2">
+                    <CardContent className="p-2 flex-grow overflow-y-auto">
+                      <div className="flex flex-col">
                         {events.map((event, eventIndex) => (
                             <motion.div
                             key={event.id}
-                            className="flex flex-col items-start"
                             initial={{ opacity: 0, x: -20 }}
                             whileInView={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.5, delay: eventIndex * 0.05 }}
                             viewport={{ once: true }}
                             >
-                              {eventIndex > 0 && <Separator className="my-2" />}
-                              <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
+                              {eventIndex > 0 && <Separator className="my-1" />}
+                              <div className="flex justify-between items-center py-1">
+                                <span className="font-semibold text-sm text-foreground truncate pr-4">{event.title}</span>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">{format(parseISO(event.date), 'dd/MM')}</span>
+                              </div>
                             </motion.div>
                         ))}
                       </div>
