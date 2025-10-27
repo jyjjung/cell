@@ -335,7 +335,7 @@ export default function HomePage() {
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section" className="h-screen">
+        <SectionWrapper id="todays-reading-section" className="min-h-screen py-12 md:py-24">
           <div className="w-full max-w-2xl mx-auto overflow-y-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -357,7 +357,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section" className="h-screen">
+            <SectionWrapper id="community-progress-section" className="min-h-screen py-12 md:py-24">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -379,3 +379,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
