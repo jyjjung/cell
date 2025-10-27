@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { categoryTextColors, categoryBackgroundColors } from '@/lib/utils';
-import { CalendarOff, Calendar, Cake, Coffee, Users } from 'lucide-react';
+import { CalendarOff, Calendar, Cake, Coffee, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface EventListViewProps {
@@ -61,6 +62,39 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
     return Array.from(groupedByCategory.entries()).filter(([_, events]) => events.length > 0);
   }, [eventsByDate]);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+
+    const checkArrows = () => {
+      if (!scrollEl) return;
+      const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1); // -1 for pixel rounding
+    };
+
+    checkArrows(); // Initial check
+
+    scrollEl?.addEventListener('scroll', checkArrows);
+    window.addEventListener('resize', checkArrows);
+
+    return () => {
+      scrollEl?.removeEventListener('scroll', checkArrows);
+      window.removeEventListener('resize', checkArrows);
+    };
+  }, [upcomingEventsByCategory]); // Re-check when data changes
+
+  const scrollLeft = () => {
+    scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+  };
+
+  const scrollRight = () => {
+    scrollContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
+  };
+
   if (upcomingEventsByCategory.length === 0) {
     return (
         <div className="container mx-auto px-4">
@@ -78,14 +112,18 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
   }
 
   return (
-    <div className="w-full overflow-x-auto pb-4">
-        <div className="flex gap-4 sm:gap-6 w-max mx-auto px-4">
+    <div className="relative w-full group">
+        <div
+            ref={scrollContainerRef}
+            className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
             {upcomingEventsByCategory.map(([category, events], index) => {
             const Icon = categoryIcons[category] || Calendar;
             return (
                 <motion.div
                 key={category}
-                className="w-[80vw] max-w-sm sm:max-w-md md:w-full flex-shrink-0"
+                className="w-80 flex-shrink-0 snap-start"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -118,6 +156,27 @@ export default function EventListView({ eventsByDate }: EventListViewProps) {
             );
             })}
         </div>
+        
+        {showLeftArrow && (
+            <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={scrollLeft}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+            >
+                <ChevronLeft className="h-6 w-6" />
+            </Button>
+        )}
+        {showRightArrow && (
+            <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={scrollRight}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+            >
+                <ChevronRight className="h-6 w-6" />
+            </Button>
+        )}
     </div>
   );
 }
