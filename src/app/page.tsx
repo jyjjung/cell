@@ -47,16 +47,12 @@ const AnimatedTitle = ({ text }: { text: string }) => {
     const isInView = useInView(ref, { once: true, amount: 0.5 });
 
     return (
-        <div ref={ref} className="relative mb-8 md:mb-12 text-center overflow-hidden">
-            <motion.h2
-                className="text-4xl md:text-5xl font-bold tracking-tight"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isInView ? 1 : 0 }}
-                transition={{ duration: 0.1, delay: 0.4 }}
-            >
-                {text}
-            </motion.h2>
-        </div>
+        <h2 
+            ref={ref}
+            className="text-4xl md:text-5xl font-bold tracking-tight mb-8 md:mb-12 text-center"
+        >
+            {text}
+        </h2>
     );
 };
 
@@ -269,62 +265,64 @@ export default function HomePage() {
   return (
     <>
       <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-        <SectionWrapper id="dashboard-section">
+        <SectionWrapper id="dashboard-section" className="p-4 sm:p-8">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
-            <motion.div 
-                className="relative w-full group"
-                variants={itemVariants} 
-                initial="hidden" 
-                whileInView="visible" 
-                viewport={{ once: true, amount: 0.2 }}
-            >
-              <div
-                  ref={scrollContainerRef}
-                  className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            <div className="max-w-4xl mx-auto">
+              <motion.div 
+                  className="relative w-full group"
+                  variants={itemVariants} 
+                  initial="hidden" 
+                  whileInView="visible" 
+                  viewport={{ once: true, amount: 0.2 }}
               >
-                  {currentUser && (
-                      <>
-                      <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
-                          <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                      </div>
-                      <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
-                          <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                      </div>
-                      </>
-                  )}
-                  <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
-                      <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
-                  </div>
-              </div>
-              
-              {showLeftArrow && (
-                  <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={scrollLeft}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                  >
-                      <ChevronLeft className="h-6 w-6" />
-                  </Button>
-              )}
-              {showRightArrow && (
-                  <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={scrollRight}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                  >
-                      <ChevronRight className="h-6 w-6" />
-                  </Button>
-              )}
-            </motion.div>
+                <div
+                    ref={scrollContainerRef}
+                    className="flex gap-4 sm:gap-6 w-full mx-auto px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                    {currentUser && (
+                        <>
+                        <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                            <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
+                        </div>
+                        <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                            <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
+                        </div>
+                        </>
+                    )}
+                    <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                        <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+                    </div>
+                </div>
+                
+                {showLeftArrow && (
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={scrollLeft}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    >
+                        <ChevronLeft className="h-6 w-6" />
+                    </Button>
+                )}
+                {showRightArrow && (
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={scrollRight}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    >
+                        <ChevronRight className="h-6 w-6" />
+                    </Button>
+                )}
+              </motion.div>
+            </div>
           </div>
         </SectionWrapper>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section">
+          <SectionWrapper id="event-calendar-section" className="p-4 sm:p-8">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
                  {eventsLoading ? <Skeleton className="w-full h-[400px]" /> : <EventListView eventsByDate={eventsByDate} />}
@@ -332,7 +330,7 @@ export default function HomePage() {
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section">
+        <SectionWrapper id="todays-reading-section" className="p-4 sm:p-8">
           <div className="w-full max-w-2xl mx-auto overflow-y-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -354,7 +352,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section">
+            <SectionWrapper id="community-progress-section" className="p-4 sm:p-8">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -376,3 +374,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
