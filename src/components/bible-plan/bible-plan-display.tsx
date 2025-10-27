@@ -165,62 +165,9 @@ export default function BiblePlanDisplay({
   }
 
   const CardContentComponent = (
-    <Card className={cn(
-        "bg-card/90 relative hover:shadow-md transition-shadow", 
-        isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
-        isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
-        isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
-    )}>
-      {isStandalone ? (
-          <CardHeader className="p-3">
-              <div className="text-left">
-                  {parsedDayDate && (
-                    <>
-                      <p className={cn(
-                          "text-sm font-semibold",
-                          isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
-                          isCurrentDay ? "text-blue-600 dark:text-blue-400" :
-                          isOverdueDay ? "text-red-600 dark:text-red-400" :
-                          "text-primary"
-                      )}>
-                          {format(parsedDayDate, "EEEE").toUpperCase()}
-                      </p>
-                       <p className="text-xs text-muted-foreground">
-                          {format(parsedDayDate, "MMMM d, yyyy")}
-                       </p>
-                    </>
-                  )}
-              </div>
-          </CardHeader>
-      ) : (
-        <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-t-lg transition-colors">
-          <div className="flex justify-between items-center w-full">
-              <div className="text-left">
-                  {parsedDayDate && (
-                    <>
-                      <p className={cn(
-                          "text-sm font-semibold",
-                          isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
-                          isCurrentDay ? "text-blue-600 dark:text-blue-400" :
-                          isOverdueDay ? "text-red-600 dark:text-red-400" :
-                          "text-primary"
-                      )}>
-                          {format(parsedDayDate, "EEEE").toUpperCase()}
-                      </p>
-                       <p className="text-xs text-muted-foreground">
-                          {format(parsedDayDate, "MMMM d, yyyy")}
-                       </p>
-                    </>
-                  )}
-              </div>
-          </div>
-        </AccordionTrigger>
-      )}
-
-      
-      <div className={cn(isStandalone && 'p-3 pt-0')}>
-        <motion.div 
-          className={cn("space-y-1", !isStandalone && 'p-3 pt-0')}
+    <div className="p-3 pt-2">
+       <motion.div 
+          className="space-y-1"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
@@ -300,193 +247,66 @@ export default function BiblePlanDisplay({
             </CardDescription>
           )}
         </motion.div>
+    </div>
+  );
+
+  const HeaderComponent = (
+    <div className="flex justify-between items-center w-full">
+      <div className="text-left">
+        {parsedDayDate && (
+          <>
+            <p className={cn(
+                "text-sm font-semibold",
+                isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
+                isCurrentDay ? "text-blue-600 dark:text-blue-400" :
+                isOverdueDay ? "text-red-600 dark:text-red-400" :
+                "text-primary"
+            )}>
+                {format(parsedDayDate, "EEEE").toUpperCase()}
+            </p>
+             <p className="text-xs text-muted-foreground">
+                {format(parsedDayDate, "MMMM d, yyyy")}
+             </p>
+          </>
+        )}
       </div>
+    </div>
+  );
+
+  const CardWrapper = ({ children }: {children: React.ReactNode}) => (
+    <Card className={cn(
+        "bg-card/90 relative hover:shadow-md transition-shadow", 
+        isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
+        isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
+        isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
+    )}>
+      {children}
     </Card>
   );
 
-  const renderContent = () => {
-    if (isStandalone) {
-      return CardContentComponent;
-    }
-    return (
-      <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0">
-        <motion.div
-          initial={false}
-          className={cn("rounded-lg shadow-sm w-full transition-colors duration-200")}
-        >
-          <AccordionContent className="p-0">
-            {CardContentComponent}
-          </AccordionContent>
-        </motion.div>
-      </AccordionItem>
-    );
-  };
-  
-  const StandaloneWrapper = ({ children }: { children: React.ReactNode }) => <>{children}</>;
-  const AccordionItemWrapper = ({ children }: { children: React.ReactNode }) => (
-      <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0">
-          {children}
-      </AccordionItem>
-  );
-  
-  const Wrapper = isStandalone ? StandaloneWrapper : AccordionItemWrapper;
-
-
   return (
     <>
-      <Wrapper>
-        <motion.div
-          initial={false}
-          className={cn("rounded-lg shadow-sm w-full transition-colors duration-200")}
-        >
-            <Card className={cn(
-                "bg-card/90 relative hover:shadow-md transition-shadow", 
-                isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
-                isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
-                isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
-            )}>
-              {isStandalone ? (
-                 <CardHeader className="p-3">
-                    <div className="text-left">
-                        {parsedDayDate && (
-                          <>
-                            <p className={cn(
-                                "text-sm font-semibold",
-                                isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
-                                isCurrentDay ? "text-blue-600 dark:text-blue-400" :
-                                isOverdueDay ? "text-red-600 dark:text-red-400" :
-                                "text-primary"
-                            )}>
-                                {format(parsedDayDate, "EEEE").toUpperCase()}
-                            </p>
-                             <p className="text-xs text-muted-foreground">
-                                {format(parsedDayDate, "MMMM d, yyyy")}
-                             </p>
-                          </>
-                        )}
-                    </div>
-                </CardHeader>
-              ) : (
-                  <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-t-lg transition-colors">
-                    <div className="flex justify-between items-center w-full">
-                        <div className="text-left">
-                            {parsedDayDate && (
-                              <>
-                                <p className={cn(
-                                    "text-sm font-semibold",
-                                    isAllPassagesForThisReadingComplete ? "text-green-600 dark:text-green-400" :
-                                    isCurrentDay ? "text-blue-600 dark:text-blue-400" :
-                                    isOverdueDay ? "text-red-600 dark:text-red-400" :
-                                    "text-primary"
-                                )}>
-                                    {format(parsedDayDate, "EEEE").toUpperCase()}
-                                </p>
-                                 <p className="text-xs text-muted-foreground">
-                                    {format(parsedDayDate, "MMMM d, yyyy")}
-                                 </p>
-                              </>
-                            )}
-                        </div>
-                    </div>
-                  </AccordionTrigger>
-              )}
-              
-              <div className={cn(isStandalone && 'p-3 pt-2 border-t')}>
-                {isStandalone ? (
-                  // Content for standalone view
-                  <motion.div 
-                    className="space-y-1"
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    {/* Inner content here */}
-                    {validPassagesForThisReading.length > 0 ? (
-                      <ul className="space-y-1 text-sm">
-                        {validPassagesForThisReading.map((passage, index) => {
-                          const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
-                          const isChecked = completedPassages.includes(passage.displayText);
-                          const isPassageValid = !passage.displayText.startsWith("Error:");
-
-                          return (
-                            <li
-                              key={passageIdPart}
-                              className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
-                            >
-                              {showIndividualCheckboxes && ( <Checkbox id={passageIdPart} checked={isChecked} onCheckedChange={() => togglePassageCompletion(passage.displayText)} disabled={!isPassageValid} /> )}
-                              <Label htmlFor={showIndividualCheckboxes ? passageIdPart : undefined} className={cn("flex-grow text-xs font-medium", isChecked && "line-through text-muted-foreground")}>
-                                <Button variant="link" className={cn("p-0 h-auto font-medium text-left justify-start text-xs", isChecked ? "text-muted-foreground" : "text-foreground")} onClick={() => handlePassageClick(passage.displayText)}>
-                                  {passage.displayText}
-                                </Button>
-                              </Label>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : ( <p className="text-muted-foreground text-xs p-2">No specific passages.</p> )}
-                  </motion.div>
-                ) : (
-                  // Content for accordion view
-                  <AccordionContent>
-                      <motion.div 
-                        className="p-3 pt-0 space-y-1"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                      >
-                        {validPassagesForThisReading.length > 0 ? (
-                          <motion.ul 
-                            variants={{ visible: { transition: { staggerChildren: 0.05 } }, hidden: {} }}
-                            initial="hidden"
-                            animate="visible"
-                            className="space-y-1 text-sm">
-                            {validPassagesForThisReading.map((passage, index) => {
-                              const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
-                              const isChecked = completedPassages.includes(passage.displayText);
-                              const isPassageValid = !passage.displayText.startsWith("Error:");
-
-                              return (
-                                <motion.li
-                                  key={passageIdPart}
-                                  variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-                                  className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
-                                >
-                                  {showIndividualCheckboxes && (
-                                    <Checkbox
-                                      id={passageIdPart}
-                                      checked={isChecked}
-                                      onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
-                                      aria-label={`Mark ${passage.displayText} as read`}
-                                      className="h-4 w-4"
-                                      disabled={!isPassageValid || isTogglingDay}
-                                    />
-                                  )}
-                                  <Label
-                                    htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
-                                    className={cn( "flex-grow font-medium", "text-xs", showIndividualCheckboxes && "cursor-pointer", isChecked && "line-through text-muted-foreground" )}
-                                  >
-                                    {isPassageValid ? (
-                                      <Button variant="link" className={cn("p-0 h-auto font-medium text-left justify-start hover:no-underline", "text-xs", isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary")} onClick={() => handlePassageClick(passage.displayText)} title={`View ${passage.displayText}`} disabled={isTogglingDay} >
-                                        {passage.displayText}
-                                      </Button>
-                                    ) : (
-                                      <span className="text-destructive italic font-semibold text-xs">{passage.displayText || "Error: Passage Data Invalid"}</span>
-                                    )}
-                                  </Label>
-                                </motion.li>
-                              );
-                            })}
-                          </motion.ul>
-                        ) : (
-                          <p className="text-muted-foreground text-xs p-2">No specific passages assigned for this reading.</p>
-                        )}
-                      </motion.div>
-                  </AccordionContent>
-                )}
-              </div>
-            </Card>
-        </motion.div>
-      </Wrapper>
+      {isStandalone ? (
+        <CardWrapper>
+          <CardHeader className="p-3">
+            {HeaderComponent}
+          </CardHeader>
+          <div className="border-t">
+            {CardContentComponent}
+          </div>
+        </CardWrapper>
+      ) : (
+        <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0">
+          <CardWrapper>
+            <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-lg transition-colors">
+              {HeaderComponent}
+            </AccordionTrigger>
+            <AccordionContent>
+              {CardContentComponent}
+            </AccordionContent>
+          </CardWrapper>
+        </AccordionItem>
+      )}
       <BiblePassageViewerDialog
         isOpen={isPassageViewerOpen}
         onOpenChange={setIsPassageViewerOpen}
@@ -497,3 +317,5 @@ export default function BiblePlanDisplay({
     </>
   );
 }
+
+    

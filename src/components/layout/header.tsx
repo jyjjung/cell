@@ -113,9 +113,11 @@ export default function Header() {
                         <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>{currentUser.email}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                             <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/profile'); setIsPageLoading(true); }}><Link href="/profile">Profile</Link></DropdownMenuItem>
+                             <DropdownMenuItem onSelect={() => { closeMobileMenu(); router.push('/profile'); setIsPageLoading(true); }}>
+                               <div className="flex items-center cursor-pointer"><User className="mr-2 h-4 w-4" />Profile</div>
+                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleUserSignOutClick} className="text-destructive focus:text-destructive">
+                            <DropdownMenuItem onClick={handleUserSignOutClick} className="text-destructive focus:text-destructive cursor-pointer">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 Logout
                             </DropdownMenuItem>
@@ -206,3 +208,5 @@ export default function Header() {
     </>
   );
 }
+
+    

@@ -126,39 +126,4 @@ body {
   }
 }
 
-@layer utilities {
-  .scroll-snap-section {
-    scroll-snap-align: start;
-    min-height: calc(100vh - 4rem);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  @keyframes bg-pan {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-  .moving-bg-gradient {
-    background-size: 200% 200%;
-    background-image: radial-gradient(
-      circle at 10% 10%,
-      hsl(var(--primary) / 0.2),
-      hsl(var(--background)) 30%
-    ),
-    radial-gradient(
-      circle at 90% 80%,
-      hsl(var(--primary) / 0.2),
-      hsl(var(--background)) 25%
-    );
-    animation: bg-pan 25s ease-in-out infinite;
-  }
-}
-
     

@@ -36,7 +36,6 @@ export default function RootLayout({
               <Suspense fallback={null}>
                 <PageLoaderManager />
               </Suspense>
-              <MovingBackground />
               <div className="relative z-10 flex min-h-screen flex-col">
                 <Header />
                 <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -53,3 +52,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

@@ -326,32 +326,15 @@ export default function HomePage() {
   };
   
   const Title = ({text}: {text:string}) => (
-    <motion.div
-        className="relative mb-6 text-center"
+    <motion.h2
+        className="relative mb-6 text-3xl font-bold tracking-tight text-center"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.5 }}
-        transition={{ staggerChildren: 0.2 }}
+        variants={itemVariants}
     >
-        <motion.div
-            variants={{
-                hidden: { width: "0%" },
-                visible: { width: "100%" },
-            }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="absolute inset-0 bg-primary/80"
-        />
-        <motion.h2
-            variants={{
-                hidden: { color: "hsl(var(--primary))" },
-                visible: { color: "hsl(var(--primary-foreground))" },
-            }}
-            transition={{ duration: 0.1, delay: 0.4 }}
-            className="relative text-3xl font-bold tracking-tight inline-block"
-        >
-            {text}
-        </motion.h2>
-    </motion.div>
+        {text}
+    </motion.h2>
   );
 
   return (
