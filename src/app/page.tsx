@@ -319,7 +319,6 @@ export default function HomePage() {
         stiffness: 100,
       },
     },
-    exit: { y: -20, opacity: 0 }
   };
 
   const viewVariants = {
@@ -381,15 +380,16 @@ export default function HomePage() {
       </motion.section>
       
       {currentUser && (
-        <section id="event-calendar-section" className="scroll-snap-section">
-          <motion.div 
-            className="w-full"
-            variants={itemVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-          >
-            <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
+        <motion.section 
+          id="event-calendar-section" 
+          className="scroll-snap-section"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          <div className="w-full">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center sm:justify-between items-center mb-6 gap-4">
               <h2 className="text-3xl font-bold tracking-tight text-center">Events</h2>
               {!isMobile && (
                   <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'grid' | 'list')} className="w-auto">
@@ -399,7 +399,7 @@ export default function HomePage() {
                       </TabsList>
                   </Tabs>
               )}
-            </div>
+            </motion.div>
               {eventsLoading ? <CalendarSkeleton /> : (
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -462,72 +462,73 @@ export default function HomePage() {
                   </motion.div>
                 </AnimatePresence>
               )}
-          </motion.div>
-        </section>
+          </div>
+        </motion.section>
       )}
 
-      <section className="scroll-snap-section">
-        <motion.div
-          className="w-full"
-          variants={itemVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-        >
+      <motion.section 
+        className="scroll-snap-section"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        <div className="w-full">
           <div className="max-w-2xl mx-auto">
-              <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</h2>
-               <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
-                  <BiblePlanDisplay
-                      readingToDisplay={todaysReadingForDisplay}
-                      currentUser={currentUser}
-                      completedPassages={completedPassages}
-                      togglePassageCompletion={togglePassageCompletion}
-                      onToggleAllToday={markMultiplePassages}
-                      allPassageTextsForDay={allTodaysPassageTexts}
-                      loading={planLoading || loadingChecklist}
-                      planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
-                      hidePlanMeta={true}
-                      defaultOpen={true}
-                  />
-              </Accordion>
+              <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Today's Bible Reading</motion.h2>
+               <motion.div variants={itemVariants}>
+                <Accordion type="single" collapsible className="w-full" defaultValue="bible-reading-item">
+                    <BiblePlanDisplay
+                        readingToDisplay={todaysReadingForDisplay}
+                        currentUser={currentUser}
+                        completedPassages={completedPassages}
+                        togglePassageCompletion={togglePassageCompletion}
+                        onToggleAllToday={markMultiplePassages}
+                        allPassageTextsForDay={allTodaysPassageTexts}
+                        loading={planLoading || loadingChecklist}
+                        planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0}
+                        hidePlanMeta={true}
+                        defaultOpen={true}
+                    />
+                </Accordion>
+               </motion.div>
           </div>
-        </motion.div>
-      </section>
+        </div>
+      </motion.section>
       
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <section id="community-progress-section" className="scroll-snap-section">
-              <motion.div 
-                className="w-full"
-                variants={itemVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-              >
+            <motion.section 
+              id="community-progress-section" 
+              className="scroll-snap-section"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              <div className="w-full">
                   <div className="max-w-4xl mx-auto">
-                      <h2 className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</h2>
-                      <Accordion type="single" collapsible className="w-full">
-                          <Card className="hover:shadow-lg transition-shadow">
-                              <AccordionItem value="progress-item" className="border-0">
-                                  <AccordionTrigger className="p-4 group">
-                                      <div className="flex items-center space-x-3">
-                                          <Users className="h-6 w-6 text-primary" />
-                                          <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
-                                      </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="px-4 pb-4">
-                                      <CommunityProgressContent />
-                                  </AccordionContent>
-                              </AccordionItem>
-                          </Card>
-                      </Accordion>
+                      <motion.h2 variants={itemVariants} className="text-3xl font-bold tracking-tight text-center mb-6">Community Progress</motion.h2>
+                      <motion.div variants={itemVariants}>
+                        <Accordion type="single" collapsible className="w-full">
+                            <Card className="hover:shadow-lg transition-shadow">
+                                <AccordionItem value="progress-item" className="border-0">
+                                    <AccordionTrigger className="p-4 group">
+                                        <div className="flex items-center space-x-3">
+                                            <Users className="h-6 w-6 text-primary" />
+                                            <h3 className="text-lg font-semibold tracking-tight">Leaderboard</h3>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-4">
+                                        <CommunityProgressContent />
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Card>
+                        </Accordion>
+                      </motion.div>
                   </div>
-              </motion.div>
-            </section>
+              </div>
+            </motion.section>
         )}
     </div>
   );
 }
-
-    
-
-    

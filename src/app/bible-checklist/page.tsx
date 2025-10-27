@@ -246,7 +246,6 @@ export default function BibleChecklistPage() {
       y: 0,
       opacity: 1,
     },
-    exit: { y: -20, opacity: 0 }
   };
 
   const viewVariants = {
@@ -323,7 +322,7 @@ export default function BibleChecklistPage() {
                 variants={containerVariants}
               >
                 {viewState.weeks.map((week) => (
-                  <motion.div variants={itemVariants} key={week.weekNumber} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+                  <motion.div variants={itemVariants} key={week.weekNumber}>
                     <Card 
                         className={cn(
                             "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
@@ -410,9 +409,11 @@ export default function BibleChecklistPage() {
                   <motion.div 
                     className="space-y-3"
                     variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
                   >
                       {completedWeeks.length > 0 && (
-                        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+                        <motion.div variants={itemVariants}>
                           <Card 
                               key="completed-weeks-summary"
                               className={cn(
@@ -437,7 +438,7 @@ export default function BibleChecklistPage() {
                       )}
 
                       {upcomingWeeks.map((week) => (
-                        <motion.div variants={itemVariants} key={week.weekNumber} initial="hidden" whileInView="visible" exit="exit" viewport={{ once: false }}>
+                        <motion.div variants={itemVariants} key={week.weekNumber}>
                           <Card 
                               className={cn(
                                   "shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
