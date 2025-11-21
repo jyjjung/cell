@@ -33,6 +33,8 @@
     --input: 220 15% 88%;
     --ring: 90 70% 38%; /* Darker green for ring */
 
+    --radius: 0.8rem; /* Increased for more rounded corners */
+
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -73,6 +75,8 @@
     --border: 240 4% 15%;
     --input: 240 4% 15%;
     --ring: 84 80% 50%; /* Vibrant Lime Green */
+
+    --radius: 0.8rem; /* Increased for more rounded corners */
 
     --chart-1: 84 70% 50%;
     --chart-2: 90 60% 45%;
