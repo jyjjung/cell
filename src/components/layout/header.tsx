@@ -52,6 +52,9 @@ export default function Header() {
       <Button asChild variant="ghost" onClick={() => handleLinkClick('/bible-checklist')}>
         <Link href="/bible-checklist">{currentUser ? 'My Checklist' : 'Reading Plan'}</Link>
       </Button>
+       <Button asChild variant="ghost" onClick={() => handleLinkClick('/full-plan')}>
+        <Link href="/full-plan">Full Plan</Link>
+      </Button>
       <Button asChild variant="ghost" onClick={() => handleLinkClick('/memorize')}>
         <Link href="/memorize">Memory Verses</Link>
       </Button>
@@ -65,6 +68,9 @@ export default function Header() {
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/bible-checklist')}>
           <Link href="/bible-checklist">{currentUser ? 'My Checklist' : 'Reading Plan'}</Link>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/full-plan')}>
+        <Link href="/full-plan">Full Plan</Link>
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start text-base py-3" onClick={() => handleLinkClick('/memorize')}>
         <Link href="/memorize">Memory Verses</Link>
@@ -208,5 +214,4 @@ export default function Header() {
     </>
   );
 }
-
     
