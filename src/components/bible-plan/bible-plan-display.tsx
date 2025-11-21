@@ -82,7 +82,7 @@ export default function BiblePlanDisplay({
       parsedDayDate = parseISO(readingToDisplay.date);
       if (!isValid(parsedDayDate)) throw new Error("Invalid date after parsing for today's reading");
     } catch (e) {
-      console.error(`[BiblePlanDisplay] Invalid date for reading display: ${'\'\'\''}{readingToDisplay.date}\'\'\'`, e);
+      console.error(`[BiblePlanDisplay] Invalid date for reading display: '${readingToDisplay.date}'`, e);
       parsedDayDate = null;
     }
   }
@@ -156,7 +156,7 @@ export default function BiblePlanDisplay({
             <CardContent className="p-4 pt-0">
                 <CardDescription className="text-xs text-muted-foreground">
                 Current Plan: "{planDescription}"
-                {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${'\'\'\''}{format(parseISO(generatedDate), "MMM d, yyyy")}\'\'\''}`}
+                {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: '${format(parseISO(generatedDate), "MMM d, yyyy")}'`}
                 </CardDescription>
             </CardContent>
         )}
@@ -195,7 +195,7 @@ export default function BiblePlanDisplay({
               variants={listVariants}
               className="space-y-1 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
-                const passageIdPart = `passage-${'\'\'\''}{readingToDisplay.date}\'\'\''}-${index}`;
+                const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
                 const isChecked = completedPassages.includes(passage.displayText);
                 const isPassageValid = !passage.displayText.startsWith("Error:");
 
@@ -210,7 +210,7 @@ export default function BiblePlanDisplay({
                         id={passageIdPart}
                         checked={isChecked}
                         onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
-                        aria-label={`Mark ${'\'\'\''}{passage.displayText}\'\'\''} as read`}
+                        aria-label={`Mark '${passage.displayText}' as read`}
                         className="h-4 w-4"
                         disabled={!isPassageValid || isTogglingDay}
                       />
@@ -233,7 +233,7 @@ export default function BiblePlanDisplay({
                             isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}
                           onClick={() => handlePassageClick(passage.displayText)}
-                          title={`View ${'\'\'\''}{passage.displayText}\'\'\''}`}
+                          title={`View '${passage.displayText}'`}
                           disabled={isTogglingDay}
                         >
                           {passage.displayText}
@@ -252,7 +252,7 @@ export default function BiblePlanDisplay({
           {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
               Plan: "{planDescription}"
-              {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${'\'\'\''}{format(parseISO(generatedDate), "MMM d, yyyy")}\'\'\''}`}
+              {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: '${format(parseISO(generatedDate), "MMM d, yyyy")}'`}
             </CardDescription>
           )}
         </motion.div>
@@ -293,6 +293,7 @@ export default function BiblePlanDisplay({
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.3 }}
+        variants={itemVariants}
     >
       {children}
     </motion.div>

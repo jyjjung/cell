@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Loader2, Info, BookOpen } from 'lucide-react';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import { Accordion } from '@/components/ui/accordion';
 import { motion } from 'framer-motion';
 
 export default function FullBiblePlanPage() {
@@ -65,26 +64,25 @@ export default function FullBiblePlanPage() {
           <h1 className="text-2xl font-bold tracking-tight">Full Reading Plan</h1>
       </div>
       <motion.div 
-        className="space-y-6"
+        className="space-y-2"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
       >
-        <Accordion type="single" collapsible className="w-full space-y-2">
-            {sortedReadings?.map(reading => (
-                <BiblePlanDisplay
-                    key={reading.date}
-                    readingToDisplay={reading}
-                    currentUser={currentUser}
-                    completedPassages={completedPassages}
-                    togglePassageCompletion={togglePassageCompletion}
-                    allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean) as string[]}
-                    loading={loadingChecklist}
-                    planAvailable={true}
-                    hidePlanMeta={true}
-                />
-            ))}
-        </Accordion>
+        {sortedReadings?.map(reading => (
+            <BiblePlanDisplay
+                key={reading.date}
+                readingToDisplay={reading}
+                currentUser={currentUser}
+                completedPassages={completedPassages}
+                togglePassageCompletion={togglePassageCompletion}
+                allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean) as string[]}
+                loading={loadingChecklist}
+                planAvailable={true}
+                hidePlanMeta={true}
+                isStandalone={true}
+            />
+        ))}
       </motion.div>
       <BackToTopButton />
     </div>
