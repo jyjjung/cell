@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 200 15% 20%;
 
-    --primary: 84 80% 50%; /* Vibrant Lime Green */
-    --primary-foreground: 84 100% 10%; /* Dark green for contrast */
+    --primary: 90 70% 38%; /* Darker, more subdued green */
+    --primary-foreground: 90 100% 98%; /* Light text for contrast */
 
     --secondary: 220 15% 96%;
     --secondary-foreground: 220 15% 20%;
@@ -31,9 +31,7 @@
 
     --border: 220 15% 88%;
     --input: 220 15% 88%;
-    --ring: 84 80% 50%; /* Vibrant Lime Green */
-
-    --radius: 0.75rem; /* Slightly more rounded corners */
+    --ring: 90 70% 38%; /* Darker green for ring */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
