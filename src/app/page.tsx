@@ -242,15 +242,7 @@ export default function HomePage() {
                   <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-4">
-                      <motion.div 
-                        className="flex-grow"
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        transition={{ duration: 0.5, delay: index * 0.1 }}
-                        viewport={{ once: true }}
-                      >
-                        <Progress value={progressItem.progressPercentage} className="h-3" />
-                      </motion.div>
+                      <Progress value={progressItem.progressPercentage} className="h-3" />
                       <span className="text-sm font-semibold text-muted-foreground w-14 text-right">{progressItem.progressPercentage}%</span>
                     </div>
                     <span className="text-xs text-muted-foreground mt-1 block">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
@@ -287,7 +279,7 @@ export default function HomePage() {
               >
                 <div
                     ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory"
+                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {currentUser && (
@@ -341,7 +333,7 @@ export default function HomePage() {
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section" className="min-h-screen py-12 md:py-24">
+        <SectionWrapper id="todays-reading-section" className="py-12 md:py-24">
           <div className="w-full max-w-2xl mx-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -363,7 +355,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section" className="min-h-screen py-12 md:py-24">
+            <SectionWrapper id="community-progress-section" className="py-12 md:py-24">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
