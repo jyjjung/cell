@@ -94,7 +94,7 @@ export default function DashboardCards({
     };
 
     return (
-        <div className="relative w-full group">
+        <div className="relative w-full">
             <div
                 ref={scrollContainerRef}
                 className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4"
@@ -102,15 +102,15 @@ export default function DashboardCards({
             >
                 {currentUser && (
                     <>
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" viewport={{ once: true, amount: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
                         </motion.div>
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" viewport={{ once: true, amount: 0.2, delay: 0.1 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{delay: 0.1}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
                         </motion.div>
                     </>
                 )}
-                <motion.div variants={itemVariants} initial="hidden" animate="visible" viewport={{ once: true, amount: 0.2, delay: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{delay: 0.2}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                     <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVersesCount} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
                 </motion.div>
             </div>
