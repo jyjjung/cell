@@ -5,16 +5,16 @@
 
 @layer base {
   :root {
-    --background: 220 15% 94%; /* #eaebed - Dreamy */
-    --foreground: 200 15% 20%;
+    --background: 220 20% 98%; /* Lighter, cleaner off-white */
+    --foreground: 220 15% 20%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 200 15% 20%;
+    --card: 220 20% 100%;
+    --card-foreground: 220 15% 20%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 200 15% 20%;
 
-    --primary: 195 100% 27%; /* #006989 - Ocean */
+    --primary: 217 91% 60%; /* Vibrant Blue */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 220 15% 96%;
@@ -31,9 +31,9 @@
 
     --border: 220 15% 88%;
     --input: 220 15% 88%;
-    --ring: 195 100% 27%; /* #006989 - Ocean */
+    --ring: 217 91% 60%; /* Vibrant Blue */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Slightly more rounded corners */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -48,33 +48,33 @@
   }
 
   .dark {
-    --background: 200 15% 10%;
+    --background: 220 15% 5%;
     --foreground: 220 15% 95%;
 
-    --card: 200 15% 12%;
+    --card: 220 15% 12%;
     --card-foreground: 220 15% 95%;
 
     --popover: 200 15% 12%;
     --popover-foreground: 220 15% 95%;
 
-    --primary: 195 80% 65%; /* Lighter version of Ocean for dark mode */
-    --primary-foreground: 195 100% 10%;
+    --primary: 217 91% 65%; /* Lighter blue for dark mode */
+    --primary-foreground: 217 91% 10%;
 
-    --secondary: 200 15% 20%;
+    --secondary: 220 15% 15%;
     --secondary-foreground: 220 15% 95%;
 
-    --muted: 200 15% 25%;
+    --muted: 220 15% 20%;
     --muted-foreground: 220 10% 70%;
 
-    --accent: 200 15% 22%;
+    --accent: 220 15% 18%;
     --accent-foreground: 220 15% 95%;
 
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 200 15% 20%;
-    --input: 200 15% 20%;
-    --ring: 195 80% 65%; /* Lighter version of Ocean for dark mode */
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 217 91% 65%; /* Lighter blue for dark mode */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -123,7 +123,7 @@
   }
 
   .moving-bg-gradient {
-    background: linear-gradient(-45deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1), hsl(var(--primary) / 0.2), hsl(var(--secondary) / 0.1));
+    background: linear-gradient(-45deg, hsl(var(--primary) / 0.05), hsl(var(--accent) / 0.05), hsl(var(--primary) / 0.1), hsl(var(--secondary) / 0.05));
     background-size: 400% 400%;
     animation: gradient 30s ease infinite;
   }

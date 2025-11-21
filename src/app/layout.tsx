@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased moving-bg-gradient`}>
         <PageLoadingProvider>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -45,7 +45,7 @@ export default function RootLayout({
               <Toaster />
               <GlobalPageLoader />
               <Analytics />
-              <MovingBackground />
+              {/* MovingBackground component is removed, effect is now on body */}
             </ThemeProvider>
           </AuthProvider>
         </PageLoadingProvider>

@@ -1,10 +1,8 @@
 "use client";
 
 export default function MovingBackground() {
-  return (
-    <div
-      className="moving-bg-gradient fixed inset-0 -z-10"
-      aria-hidden="true"
-    />
-  );
+  // This component is no longer used directly as the moving gradient
+  // is now applied to the body tag in the main layout.
+  // This file could be deleted, but is kept for reference.
+  return null;
 }
