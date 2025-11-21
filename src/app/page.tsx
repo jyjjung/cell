@@ -8,22 +8,20 @@ import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { motion, useInView } from 'framer-motion';
 import type { AppEvent } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import EventListView from '@/components/calendar/event-list-view';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import SectionIndicator from '@/components/layout/section-indicator';
+import DashboardCards from '@/components/homepage/dashboard-cards';
 
 
 interface UserProgressDisplay {
@@ -35,7 +33,7 @@ interface UserProgressDisplay {
 }
 
 const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
-    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-6 relative", className)}>
+    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-6 relative min-h-screen", className)}>
         <div className="container mx-auto">
             {children}
         </div>
@@ -68,47 +66,9 @@ export default function HomePage() {
 
   const sections = ['dashboard-section', 'event-calendar-section', 'todays-reading-section', 'community-progress-section'];
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(false);
-  
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  useEffect(() => {
-    const scrollEl = scrollContainerRef.current;
-
-    const checkArrows = () => {
-      if (!scrollEl) return;
-      const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
-      setShowLeftArrow(scrollLeft > 1);
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
-    };
-
-    checkArrows();
-
-    scrollEl?.addEventListener('scroll', checkArrows, { passive: true });
-    window.addEventListener('resize', checkArrows);
-
-    const observer = new ResizeObserver(checkArrows);
-    if(scrollEl) observer.observe(scrollEl);
-
-    return () => {
-      scrollEl?.removeEventListener('scroll', checkArrows);
-      window.removeEventListener('resize', checkArrows);
-      if(scrollEl) observer.unobserve(scrollEl);
-    };
-  }, [isMounted, currentUser]); 
-
-  const scrollLeft = () => {
-    scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
-  };
-
-  const scrollRight = () => {
-    scrollContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
-  };
-
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -139,31 +99,6 @@ export default function HomePage() {
         return acc + validDayPassages.length;
     }, 0);
   }, [plan, isMounted]);
-
-  const readingsLoggedStatValue = useMemo(() => {
-    if (loadingChecklist || planLoading || !isMounted) return null;
-    const passagesToRead = totalPassagesUpToToday - completedPassages.length;
-
-    if (passagesToRead <= 0) {
-      if (totalPassagesUpToToday > 0) {
-        return "All Caught Up!";
-      } else {
-        return "No readings yet";
-      }
-    }
-    return `${passagesToRead} Passages to read`;
-  }, [completedPassages.length, totalPassagesUpToToday, loadingChecklist, planLoading, isMounted]);
-  
-  const upcomingEventsCount = useMemo(() => {
-    if (!isMounted) return 0;
-    const today = startOfDay(new Date());
-    return allEvents.filter(event => {
-        try {
-          const eventDate = parseISO(event.date);
-          return isValid(eventDate) && !isBefore(eventDate, today);
-        } catch(e) { return false; }
-    }).length;
-  }, [allEvents, isMounted]);
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, AppEvent[]>();
@@ -243,7 +178,7 @@ export default function HomePage() {
                   <TableCell className="text-right px-4 py-2">
                      <div className="flex items-baseline justify-end gap-x-2">
                       <span className="font-semibold text-foreground text-sm tabular-nums">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
-                      <span className="font-bold text-primary text-base tabular-nums">({progressItem.progressPercentage}%)</span>
+                      <span className="text-muted-foreground text-base tabular-nums">({progressItem.progressPercentage}%)</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -265,58 +200,28 @@ export default function HomePage() {
   return (
     <>
       <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-        <SectionWrapper id="dashboard-section" className="h-screen">
+        <SectionWrapper id="dashboard-section">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-5xl mx-auto">
-              <div className="relative w-full group">
-                <div
-                    ref={scrollContainerRef}
-                    className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    {currentUser && (
-                        <>
-                        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                            <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                        </motion.div>
-                        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2, delay: 0.1 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                            <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                        </motion.div>
-                        </>
-                    )}
-                    <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2, delay: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                        <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
-                    </motion.div>
-                </div>
-                
-                {showLeftArrow && (
-                    <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={scrollLeft}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                    >
-                        <ChevronLeft className="h-6 w-6" />
-                    </Button>
-                )}
-                {showRightArrow && (
-                    <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={scrollRight}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                    >
-                        <ChevronRight className="h-6 w-6" />
-                    </Button>
-                )}
-              </div>
+                <DashboardCards
+                    currentUser={currentUser}
+                    loadingAuth={loadingAuth}
+                    eventsLoading={eventsLoading}
+                    allEvents={allEvents}
+                    loadingChecklist={loadingChecklist}
+                    planLoading={planLoading}
+                    totalPassagesUpToToday={totalPassagesUpToToday}
+                    completedPassagesCount={completedPassages.length}
+                    memoryVersesLoading={memoryVersesLoading}
+                    memoryVersesCount={memoryVerses.length}
+                />
             </div>
           </div>
         </SectionWrapper>
         
         {currentUser && (
-          <SectionWrapper id="event-calendar-section" className="h-screen">
+          <SectionWrapper id="event-calendar-section">
             <div className="w-full">
                 <AnimatedTitle text="Upcoming Events" />
                 <div className="flex justify-center">
@@ -326,7 +231,7 @@ export default function HomePage() {
           </SectionWrapper>
         )}
 
-        <SectionWrapper id="todays-reading-section" className="py-12 md:py-24">
+        <SectionWrapper id="todays-reading-section">
           <div className="w-full max-w-2xl mx-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -348,7 +253,7 @@ export default function HomePage() {
         </SectionWrapper>
         
         {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section" className="py-12 md:py-24">
+            <SectionWrapper id="community-progress-section">
               <div className="w-full max-w-4xl mx-auto">
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
@@ -370,3 +275,4 @@ export default function HomePage() {
     </>
   );
 }
+
