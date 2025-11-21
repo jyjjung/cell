@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import StatCard from '@/components/homepage/stat-card';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -38,15 +38,16 @@ export default function DashboardCards({
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(true);
 
+    const checkArrows = () => {
+        const scrollEl = scrollContainerRef.current;
+        if (!scrollEl) return;
+        const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
+        setShowLeftArrow(scrollLeft > 10); // Show arrow only if scrolled a bit
+        setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    };
+
     useEffect(() => {
         const scrollEl = scrollContainerRef.current;
-        const checkArrows = () => {
-            if (!scrollEl) return;
-            const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
-            setShowLeftArrow(scrollLeft > 1);
-            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
-        };
-
         checkArrows();
         scrollEl?.addEventListener('scroll', checkArrows, { passive: true });
         window.addEventListener('resize', checkArrows);
@@ -94,10 +95,10 @@ export default function DashboardCards({
     };
 
     return (
-        <div className="relative w-full">
+        <div className="relative w-full group">
             <div
                 ref={scrollContainerRef}
-                className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4"
+                className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4 px-4"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 {currentUser && (
@@ -120,7 +121,7 @@ export default function DashboardCards({
                     variant="outline" 
                     size="icon" 
                     onClick={scrollLeft}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
                 >
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
@@ -130,7 +131,7 @@ export default function DashboardCards({
                     variant="outline" 
                     size="icon" 
                     onClick={scrollRight}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
                 >
                     <ChevronRight className="h-6 w-6" />
                 </Button>
