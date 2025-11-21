@@ -233,19 +233,20 @@ export default function HomePage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[100px] sm:w-[150px]">Person</TableHead>
-                <TableHead>Progress</TableHead>
+                <TableHead className="text-right">Progress</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {userProgressData.map((progressItem, index) => (
                 <TableRow key={progressItem.userId}>
                   <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-4">
-                      <Progress value={progressItem.progressPercentage} />
-                      <span className="text-sm font-semibold text-muted-foreground w-14 text-right">{progressItem.progressPercentage}%</span>
+                  <TableCell className="text-right">
+                     <div className="flex flex-col items-end">
+                      <span className="font-semibold text-foreground">{progressItem.progressPercentage}%</span>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {progressItem.completedCount} / {progressItem.totalPassagesToDate}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground mt-1 block">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -377,9 +378,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
-
-    
-
-    
