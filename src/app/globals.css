@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 200 15% 20%;
 
-    --primary: 217 91% 60%; /* Vibrant Blue */
-    --primary-foreground: 210 40% 98%;
+    --primary: 84 80% 50%; /* Vibrant Lime Green */
+    --primary-foreground: 84 100% 10%; /* Dark green for contrast */
 
     --secondary: 220 15% 96%;
     --secondary-foreground: 220 15% 20%;
@@ -31,7 +31,7 @@
 
     --border: 220 15% 88%;
     --input: 220 15% 88%;
-    --ring: 217 91% 60%; /* Vibrant Blue */
+    --ring: 84 80% 50%; /* Vibrant Lime Green */
 
     --radius: 0.75rem; /* Slightly more rounded corners */
 
@@ -43,7 +43,7 @@
 
     --event-border-color: 259 90% 65%;
     --birthday-border-color: 340 82% 69%;
-    --qt-border-color: 217 91% 60%;
+    --qt-border-color: 84 80% 50%; /* Green to match */
     --snack-border-color: 38 92% 50%;
   }
 
