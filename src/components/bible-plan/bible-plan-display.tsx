@@ -82,7 +82,7 @@ export default function BiblePlanDisplay({
       parsedDayDate = parseISO(readingToDisplay.date);
       if (!isValid(parsedDayDate)) throw new Error("Invalid date after parsing for today's reading");
     } catch (e) {
-      console.error(`[BiblePlanDisplay] Invalid date for reading display: ${readingToDisplay.date}`, e);
+      console.error(`[BiblePlanDisplay] Invalid date for reading display: ${'\'\'\''}{readingToDisplay.date}\'\'\'`, e);
       parsedDayDate = null;
     }
   }
@@ -156,7 +156,7 @@ export default function BiblePlanDisplay({
             <CardContent className="p-4 pt-0">
                 <CardDescription className="text-xs text-muted-foreground">
                 Current Plan: "{planDescription}"
-                {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
+                {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${'\'\'\''}{format(parseISO(generatedDate), "MMM d, yyyy")}\'\'\''}`}
                 </CardDescription>
             </CardContent>
         )}
@@ -164,36 +164,45 @@ export default function BiblePlanDisplay({
     );
   }
 
+  const listVariants = {
+    visible: {
+      transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+    },
+    hidden: {},
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 120,
+        damping: 15,
+      },
+    },
+  };
+
   const CardContentComponent = (
     <div className="p-3 pt-2">
        <motion.div 
           className="space-y-1"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          variants={itemVariants}
         >
           {validPassagesForThisReading.length > 0 ? (
             <motion.ul 
-              variants={{
-                  visible: { transition: { staggerChildren: 0.05 } },
-                  hidden: {},
-              }}
-              initial="hidden"
-              animate="visible"
+              variants={listVariants}
               className="space-y-1 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
-                const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
+                const passageIdPart = `passage-${'\'\'\''}{readingToDisplay.date}\'\'\''}-${index}`;
                 const isChecked = completedPassages.includes(passage.displayText);
                 const isPassageValid = !passage.displayText.startsWith("Error:");
 
                 return (
                   <motion.li
                     key={passageIdPart}
-                    variants={{
-                      hidden: { y: 20, opacity: 0 },
-                      visible: { y: 0, opacity: 1 },
-                    }}
+                    variants={itemVariants}
                     className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
                   >
                     {showIndividualCheckboxes && (
@@ -201,7 +210,7 @@ export default function BiblePlanDisplay({
                         id={passageIdPart}
                         checked={isChecked}
                         onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
-                        aria-label={`Mark ${passage.displayText} as read`}
+                        aria-label={`Mark ${'\'\'\''}{passage.displayText}\'\'\''} as read`}
                         className="h-4 w-4"
                         disabled={!isPassageValid || isTogglingDay}
                       />
@@ -224,7 +233,7 @@ export default function BiblePlanDisplay({
                             isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}
                           onClick={() => handlePassageClick(passage.displayText)}
-                          title={`View ${passage.displayText}`}
+                          title={`View ${'\'\'\''}{passage.displayText}\'\'\''}`}
                           disabled={isTogglingDay}
                         >
                           {passage.displayText}
@@ -243,7 +252,7 @@ export default function BiblePlanDisplay({
           {!hidePlanMeta && planDescription && (
             <CardDescription className="text-xs pt-2 border-t mt-2 text-muted-foreground">
               Plan: "{planDescription}"
-              {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${format(parseISO(generatedDate), "MMM d, yyyy")}`}
+              {generatedDate && generatedDate !== "Unknown Generation Date" && isValid(parseISO(generatedDate)) && ` | Generated: ${'\'\'\''}{format(parseISO(generatedDate), "MMM d, yyyy")}\'\'\''}`}
             </CardDescription>
           )}
         </motion.div>
@@ -274,14 +283,19 @@ export default function BiblePlanDisplay({
   );
 
   const CardWrapper = ({ children }: {children: React.ReactNode}) => (
-    <Card className={cn(
-        "bg-card/90 relative hover:shadow-md transition-shadow", 
-        isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
-        isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
-        isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
-    )}>
+    <motion.div 
+        className={cn(
+            "bg-card/90 relative hover:shadow-md transition-shadow rounded-lg border", 
+            isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
+            isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
+            isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
+        )}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+    >
       {children}
-    </Card>
+    </motion.div>
   );
 
   return (
@@ -297,14 +311,19 @@ export default function BiblePlanDisplay({
         </CardWrapper>
       ) : (
         <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0">
-          <CardWrapper>
-            <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-lg transition-colors">
+           <Card className={cn(
+              "bg-card/90 relative hover:shadow-md transition-shadow", 
+              isAllPassagesForThisReadingComplete ? "bg-green-100/30 dark:bg-green-900/20 border-green-500/30" :
+              isCurrentDay ? "bg-blue-100/30 dark:bg-blue-900/20 border-blue-500/40" :
+              isOverdueDay ? "bg-red-100/30 dark:bg-red-900/20 border-red-500/30" : "bg-card"
+          )}>
+            <AccordionTrigger className="p-3 w-full group hover:bg-accent/50 rounded-t-lg transition-colors">
               {HeaderComponent}
             </AccordionTrigger>
             <AccordionContent>
               {CardContentComponent}
             </AccordionContent>
-          </CardWrapper>
+          </Card>
         </AccordionItem>
       )}
       <BiblePassageViewerDialog
@@ -317,5 +336,3 @@ export default function BiblePlanDisplay({
     </>
   );
 }
-
-    
