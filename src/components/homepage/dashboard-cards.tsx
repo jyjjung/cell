@@ -42,7 +42,8 @@ export default function DashboardCards({
         const scrollEl = scrollContainerRef.current;
         if (!scrollEl) return;
         const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
-        setShowLeftArrow(scrollLeft > 10); // Show arrow only if scrolled a bit
+        // Add a small buffer to prevent arrows from flickering at the very edge
+        setShowLeftArrow(scrollLeft > 10);
         setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
     };
 
@@ -95,7 +96,7 @@ export default function DashboardCards({
     };
 
     return (
-        <div className="relative w-full group">
+        <div className="relative w-full scroller-group">
             <div
                 ref={scrollContainerRef}
                 className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4 px-4"
@@ -103,15 +104,15 @@ export default function DashboardCards({
             >
                 {currentUser && (
                     <>
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        <motion.div variants={itemVariants} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
                         </motion.div>
-                        <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{delay: 0.1}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        <motion.div variants={itemVariants} transition={{delay: 0.1}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
                         </motion.div>
                     </>
                 )}
-                <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{delay: 0.2}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                <motion.div variants={itemVariants} transition={{delay: 0.2}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                     <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVersesCount} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
                 </motion.div>
             </div>
@@ -121,7 +122,7 @@ export default function DashboardCards({
                     variant="outline" 
                     size="icon" 
                     onClick={scrollLeft}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 scroller-group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
                 >
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
@@ -131,7 +132,7 @@ export default function DashboardCards({
                     variant="outline" 
                     size="icon" 
                     onClick={scrollRight}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 scroller-group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
                 >
                     <ChevronRight className="h-6 w-6" />
                 </Button>

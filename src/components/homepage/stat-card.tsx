@@ -63,9 +63,9 @@ export default function StatCard({
             </CardHeader>
             <CardContent className="flex-grow p-3 pt-0">
                 {isLoading ? (
-                <Skeleton className="h-7 w-20 rounded-md" />
+                <Skeleton className="h-6 w-24 rounded-md" />
                 ) : (
-                <div className="text-2xl font-bold">{value ?? 'N/A'}</div>
+                <div className="text-xl font-bold">{value ?? 'N/A'}</div>
                 )}
             </CardContent>
             <CardContent className="p-3 pt-0 text-xs text-muted-foreground">
