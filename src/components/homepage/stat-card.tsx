@@ -57,21 +57,21 @@ export default function StatCard({
         passHref
     >
         <Card className="transition-all ease-in-out duration-300 flex flex-col h-full border-border/60 hover:border-primary/50 group-hover:shadow-lg group-hover:shadow-primary/10 group-hover:scale-[1.02] group-hover:border-primary/60 overflow-visible">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1">
+                <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
                 <IconComponent className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="flex-grow p-4 pt-0">
+            <CardContent className="flex-grow p-3 pt-0">
                 {isLoading ? (
-                <Skeleton className="h-8 w-24 rounded-md" />
+                <Skeleton className="h-7 w-20 rounded-md" />
                 ) : (
-                <div className="text-3xl font-bold">{value ?? 'N/A'}</div>
+                <div className="text-2xl font-bold">{value ?? 'N/A'}</div>
                 )}
             </CardContent>
-            <CardContent className="p-4 pt-0 text-xs text-muted-foreground">
+            <CardContent className="p-3 pt-0 text-xs text-muted-foreground">
                 <div className="flex items-center group-hover:text-primary transition-colors">
                     <span>{buttonText}</span>
-                    <ArrowRight className="ml-1.5 h-3.5 w-3.5 transform transition-transform duration-300 group-hover:translate-x-1" />
+                    <ArrowRight className="ml-1.5 h-3 w-3 transform transition-transform duration-300 group-hover:translate-x-1" />
                 </div>
             </CardContent>
         </Card>

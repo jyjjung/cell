@@ -232,20 +232,18 @@ export default function HomePage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px] sm:w-[150px]">Person</TableHead>
-                <TableHead className="text-right">Progress</TableHead>
+                <TableHead className="w-[100px] sm:w-[150px] px-4">Person</TableHead>
+                <TableHead className="text-right px-4">Progress</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {userProgressData.map((progressItem, index) => (
+              {userProgressData.map((progressItem) => (
                 <TableRow key={progressItem.userId}>
-                  <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
-                  <TableCell className="text-right">
-                     <div className="flex flex-col items-end">
-                      <span className="font-semibold text-foreground">{progressItem.progressPercentage}%</span>
-                      <span className="text-xs text-muted-foreground mt-1">
-                        {progressItem.completedCount} / {progressItem.totalPassagesToDate}
-                      </span>
+                  <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs px-4 py-2">{progressItem.userDisplayName}</TableCell>
+                  <TableCell className="text-right px-4 py-2">
+                     <div className="flex items-baseline justify-end gap-x-2">
+                      <span className="font-semibold text-foreground text-sm tabular-nums">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
+                      <span className="font-bold text-primary text-base tabular-nums">({progressItem.progressPercentage}%)</span>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -271,13 +269,7 @@ export default function HomePage() {
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
             <div className="max-w-5xl mx-auto">
-              <motion.div 
-                  className="relative w-full group"
-                  variants={itemVariants} 
-                  initial="hidden" 
-                  whileInView="visible" 
-                  viewport={{ once: true, amount: 0.2 }}
-              >
+              <div className="relative w-full group">
                 <div
                     ref={scrollContainerRef}
                     className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4"
@@ -285,17 +277,17 @@ export default function HomePage() {
                 >
                     {currentUser && (
                         <>
-                        <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                        </div>
-                        <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                        </motion.div>
+                        <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2, delay: 0.1 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                        </div>
+                        </motion.div>
                         </>
                     )}
-                    <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
+                    <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2, delay: 0.2 }} className="w-60 sm:w-64 flex-shrink-0 snap-center">
                         <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
-                    </div>
+                    </motion.div>
                 </div>
                 
                 {showLeftArrow && (
@@ -318,7 +310,7 @@ export default function HomePage() {
                         <ChevronRight className="h-6 w-6" />
                     </Button>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
         </SectionWrapper>
