@@ -101,7 +101,7 @@ export default function FullBiblePlanPage() {
           <h1 className="text-3xl font-bold tracking-tight">Full Reading Plan</h1>
       </div>
       <motion.ul 
-        className="space-y-3"
+        className="space-y-1"
         initial="hidden"
         animate="visible"
         variants={containerVariants}
@@ -110,10 +110,10 @@ export default function FullBiblePlanPage() {
            <motion.li 
               key={reading.date}
               variants={itemVariants}
-              className="p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
+              className="py-2 border-b"
            >
-              <p className="text-sm font-semibold text-primary">{format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}</p>
-              <p className="text-base font-medium text-foreground">{generatePassageSummary(reading)}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}</p>
+              <p className="text-sm font-medium text-foreground">{generatePassageSummary(reading)}</p>
            </motion.li>
         ))}
       </motion.ul>
