@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
 import { Menu, X, ShieldCheck, LogOut, User, Users } from 'lucide-react';
-import { usePathname } from 'next/navigation'; 
+import { usePathname, useRouter } from 'next/navigation'; 
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import PageLoaderManager from './page-loader-manager';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,6 +16,7 @@ export default function Header() {
   const { isAdmin, adminLogout, currentUser, signOutUser, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
   const pathname = usePathname(); 
 
   const handleLinkClick = (targetPath: string) => {
@@ -81,7 +82,7 @@ export default function Header() {
   return (
     <>
     <PageLoaderManager />
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 max-w-screen-2xl items-center px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center space-x-2 mr-6" onClick={() => handleLinkClick('/')}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
@@ -214,4 +215,3 @@ export default function Header() {
     </>
   );
 }
-    

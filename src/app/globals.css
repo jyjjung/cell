@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 98%; /* Lighter, cleaner off-white */
+    --background: 220 20% 98%;
     --foreground: 220 15% 20%;
 
     --card: 220 20% 100%;
@@ -15,7 +15,7 @@
     --popover-foreground: 200 15% 20%;
 
     --primary: 90 55% 25%; /* Extremely dark green */
-    --primary-foreground: 90 100% 98%; /* Light text for contrast */
+    --primary-foreground: 90 100% 98%;
 
     --secondary: 220 15% 96%;
     --secondary-foreground: 220 15% 20%;
