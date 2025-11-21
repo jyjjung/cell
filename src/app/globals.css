@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 200 15% 20%;
 
-    --primary: 90 70% 38%; /* Darker, more subdued green */
+    --primary: 90 55% 25%; /* Extremely dark green */
     --primary-foreground: 90 100% 98%; /* Light text for contrast */
 
     --secondary: 220 15% 96%;
@@ -31,7 +31,7 @@
 
     --border: 220 15% 88%;
     --input: 220 15% 88%;
-    --ring: 90 70% 38%; /* Darker green for ring */
+    --ring: 90 55% 25%; /* Extremely dark green for ring */
 
     --radius: 0.8rem; /* Increased for more rounded corners */
 
