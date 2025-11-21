@@ -228,7 +228,7 @@ export default function HomePage() {
     }
 
     return (
-        <CardContent className="p-0 max-h-[50vh] overflow-y-auto">
+        <CardContent className="p-0 max-h-[45vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -242,7 +242,7 @@ export default function HomePage() {
                   <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-4">
-                      <Progress value={progressItem.progressPercentage} className="h-3" />
+                      <Progress value={progressItem.progressPercentage} />
                       <span className="text-sm font-semibold text-muted-foreground w-14 text-right">{progressItem.progressPercentage}%</span>
                     </div>
                     <span className="text-xs text-muted-foreground mt-1 block">{progressItem.completedCount} / {progressItem.totalPassagesToDate}</span>
@@ -269,9 +269,9 @@ export default function HomePage() {
         <SectionWrapper id="dashboard-section" className="h-screen">
           <div className="w-full">
             <AnimatedTitle text="Dashboard" />
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <motion.div 
-                  className="relative w-full"
+                  className="relative w-full group"
                   variants={itemVariants} 
                   initial="hidden" 
                   whileInView="visible" 
@@ -360,7 +360,7 @@ export default function HomePage() {
                   <AnimatedTitle text="Community Progress" />
                   <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
                     <Card className="shadow-lg overflow-hidden">
-                        <CardHeader>
+                        <CardHeader className="py-4">
                             <div className="flex items-center space-x-3">
                                 <Users className="h-6 w-6 text-primary" />
                                 <CardTitle className="text-xl font-semibold tracking-tight">Leaderboard</CardTitle>
@@ -377,6 +377,8 @@ export default function HomePage() {
     </>
   );
 }
+
+    
 
     
 
