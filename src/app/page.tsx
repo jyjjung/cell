@@ -242,7 +242,13 @@ export default function HomePage() {
                   <TableCell className="font-medium text-sm truncate max-w-[100px] sm:max-w-xs">{progressItem.userDisplayName}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-4">
-                      <motion.div className="flex-grow" initial={{ width: "0%" }} whileInView={{ width: "100%" }} transition={{ duration: 0.8, delay: index * 0.1, ease: "easeOut" }}>
+                      <motion.div 
+                        className="flex-grow"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        viewport={{ once: true }}
+                      >
                         <Progress value={progressItem.progressPercentage} className="h-3" />
                       </motion.div>
                       <span className="text-sm font-semibold text-muted-foreground w-14 text-right">{progressItem.progressPercentage}%</span>

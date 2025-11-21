@@ -21,14 +21,10 @@ const Progress = React.forwardRef<
   >
     <motion.div
       className="h-full w-full flex-1 bg-primary"
-      initial={{ x: "-100%" }}
-      animate={{ x: `-${100 - (value || 0)}%` }}
-      transition={{ ease: "easeInOut", duration: 0.5 }}
+      style={{ width: `${value || 0}%` }}
     />
   </ProgressPrimitive.Root>
 ))
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }
-
-    
