@@ -4,15 +4,19 @@
 import { useState, useEffect } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Loader2, Info, BookOpen } from 'lucide-react';
+import { Loader2, Info, BookOpen, Copy } from 'lucide-react';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { motion } from 'framer-motion';
 import type { DailyReading } from '@/types';
 import { format, parseISO } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
   const [isMounted, setIsMounted] = useState(false);
+  const [planAsText, setPlanAsText] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsMounted(true);
@@ -48,6 +52,28 @@ export default function FullBiblePlanPage() {
         })
         .filter(summary => summary)
         .join(', ');
+  };
+  
+  useEffect(() => {
+    if (sortedReadings) {
+      const text = sortedReadings.map(reading => {
+        const date = format(parseISO(reading.date), "EEEE, MMMM d, yyyy");
+        const summary = generatePassageSummary(reading);
+        return `${date}\n${summary}`;
+      }).join('\n\n');
+      setPlanAsText(text);
+    }
+  }, [sortedReadings]);
+
+  const handleCopyToClipboard = () => {
+    if (planAsText) {
+      navigator.clipboard.writeText(planAsText).then(() => {
+        toast({ title: 'Plan Copied!', description: 'The full reading plan has been copied to your clipboard.' });
+      }).catch(err => {
+        toast({ title: 'Copy Failed', description: 'Could not copy the plan to clipboard.', variant: 'destructive' });
+        console.error('Failed to copy text: ', err);
+      });
+    }
   };
 
 
@@ -96,9 +122,15 @@ export default function FullBiblePlanPage() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-2xl">
-      <div className="flex items-center space-x-3 mb-6">
-          <BookOpen className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Full Reading Plan</h1>
+      <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+              <BookOpen className="h-7 w-7 text-primary" />
+              <h1 className="text-3xl font-bold tracking-tight">Full Reading Plan</h1>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleCopyToClipboard} disabled={!planAsText}>
+            <Copy className="mr-2 h-4 w-4" />
+            Copy to Clipboard
+          </Button>
       </div>
       <motion.ul 
         className="space-y-1"
