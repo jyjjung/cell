@@ -48,43 +48,43 @@
   }
 
   .dark {
-    --background: 220 15% 5%;
-    --foreground: 220 15% 95%;
+    --background: 240 10% 4%; /* Near black */
+    --foreground: 240 5% 95%; /* Off-white */
 
-    --card: 220 15% 12%;
-    --card-foreground: 220 15% 95%;
+    --card: 240 5% 10%;
+    --card-foreground: 240 5% 95%;
 
-    --popover: 200 15% 12%;
-    --popover-foreground: 220 15% 95%;
+    --popover: 240 10% 4%;
+    --popover-foreground: 240 5% 95%;
 
-    --primary: 217 91% 65%; /* Lighter blue for dark mode */
-    --primary-foreground: 217 91% 10%;
+    --primary: 84 80% 50%; /* Vibrant Lime Green */
+    --primary-foreground: 84 100% 10%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 220 15% 95%;
+    --secondary: 240 4% 15%;
+    --secondary-foreground: 240 5% 95%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 70%;
+    --muted: 240 4% 15%;
+    --muted-foreground: 240 4% 65%;
 
-    --accent: 220 15% 18%;
-    --accent-foreground: 220 15% 95%;
+    --accent: 240 4% 15%;
+    --accent-foreground: 240 5% 95%;
 
-    --destructive: 0 62.8% 50.6%;
+    --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 15%;
-    --input: 220 15% 15%;
-    --ring: 217 91% 65%; /* Lighter blue for dark mode */
+    --border: 240 4% 15%;
+    --input: 240 4% 15%;
+    --ring: 84 80% 50%; /* Vibrant Lime Green */
 
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-
+    --chart-1: 84 70% 50%;
+    --chart-2: 90 60% 45%;
+    --chart-3: 80 80% 55%;
+    --chart-4: 95 65% 60%;
+    --chart-5: 88 75% 55%;
+    
     --event-border-color: 259 80% 75%;
     --birthday-border-color: 340 82% 79%;
-    --qt-border-color: 217 91% 70%;
+    --qt-border-color: 84 80% 55%; /* Green to match */
     --snack-border-color: 38 92% 60%;
   }
 }

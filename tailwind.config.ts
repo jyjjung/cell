@@ -9,21 +9,16 @@ export default {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
-    // Safelist all category background colors for light and dark mode
+    // Safelist category background colors for light and dark mode
     'bg-purple-100', 'dark:bg-purple-500/20',
     'bg-pink-100', 'dark:bg-pink-500/20',
     'bg-blue-100', 'dark:bg-blue-500/20',
     'bg-orange-100', 'dark:bg-orange-500/20',
-    // Safelist all category text colors for light and dark mode
+    // Safelist category text colors for light and dark mode
     'text-purple-800', 'dark:text-purple-200',
     'text-pink-800', 'dark:text-pink-200',
     'text-blue-800', 'dark:text-blue-200',
     'text-orange-800', 'dark:text-orange-200',
-    // Safelist all category border colors (using CSS variables, so direct safelisting of the class name isn't needed, but good practice if direct classes were used)
-    'border-event-border-color',
-    'border-birthday-border-color',
-    'border-qt-border-color',
-    'border-snack-border-color',
   ],
   theme: {
   	extend: {
