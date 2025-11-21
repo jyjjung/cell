@@ -56,7 +56,7 @@ export default function StatCard({
         )}
         passHref
     >
-        <Card className="transition-all ease-in-out duration-300 flex flex-col h-full border-border/60 hover:border-primary/50 group-hover:shadow-lg group-hover:shadow-primary/10 group-hover:scale-[1.02] group-hover:border-primary/60">
+        <Card className="transition-all ease-in-out duration-300 flex flex-col h-full border-border/60 hover:border-primary/50 group-hover:shadow-lg group-hover:shadow-primary/10 group-hover:scale-[1.02] group-hover:border-primary/60 overflow-visible">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 pb-1">
                 <CardTitle className="text-xs font-medium text-muted-foreground">{title}</CardTitle>
                 <IconComponent className="h-4 w-4 text-muted-foreground" />

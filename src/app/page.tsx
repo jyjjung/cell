@@ -286,15 +286,15 @@ export default function HomePage() {
                 >
                     {currentUser && (
                         <>
-                        <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                        <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
                         </div>
-                        <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                        <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
                             <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
                         </div>
                         </>
                     )}
-                    <div className="w-64 sm:w-72 flex-shrink-0 snap-center">
+                    <div className="w-60 sm:w-64 flex-shrink-0 snap-center">
                         <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVerses.length} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
                     </div>
                 </div>
@@ -336,7 +336,7 @@ export default function HomePage() {
         )}
 
         <SectionWrapper id="todays-reading-section" className="min-h-screen py-12 md:py-24">
-          <div className="w-full max-w-2xl mx-auto overflow-y-auto">
+          <div className="w-full max-w-2xl mx-auto">
             <AnimatedTitle text="Today's Bible Reading" />
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
                 <BiblePlanDisplay 
