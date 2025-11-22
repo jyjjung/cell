@@ -75,8 +75,8 @@ export default function AppSidebar() {
   
   const adminNavItems = [
       { href: '/admin/events', label: 'Events', icon: Calendar },
-      { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
       { href: '/admin/memory-verses', label: 'Memory Verses', icon: BookMarked },
+      { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
   ];
 
   const renderNavItems = (items: typeof mainNavItems) => {
@@ -169,54 +169,56 @@ export default function AppSidebar() {
                 </div>
               ) : null}
 
-              <SidebarSeparator />
-
-              {isAdmin ? (
-                <SidebarGroup>
-                    <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
-                    <SidebarMenu>
-                        {adminNavItems.map(item => (
-                             <SidebarMenuItem key={item.href}>
-                                <Link href={item.href} passHref legacyBehavior>
-                                    <SidebarMenuButton
-                                        isActive={pathname.startsWith(item.href)}
-                                        onClick={() => handleLinkClick(item.href)}
-                                        tooltip={item.label}
-                                    >
-                                        <item.icon />
-                                        <span>{item.label}</span>
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        ))}
-                         <SidebarMenuItem>
-                            <SidebarMenuButton
-                                onClick={handleAdminLogout}
-                                tooltip="Logout Admin"
-                                className="text-destructive hover:bg-destructive/10"
-                            >
-                                <LogOut />
-                                <span>Logout Admin</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
-              ) : (
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                         <Link href="/admin" passHref legacyBehavior>
-                            <SidebarMenuButton
-                                isActive={pathname === '/admin'}
-                                onClick={() => handleLinkClick('/admin')}
-                                tooltip="Admin"
-                            >
-                                <Shield />
-                                <span>Admin</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-              )}
+              
+              <div className={cn(!currentUser ? "border-t border-border mt-2" : "")}>
+                <SidebarSeparator />
+                {isAdmin ? (
+                  <SidebarGroup>
+                      <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
+                      <SidebarMenu>
+                          {adminNavItems.map(item => (
+                              <SidebarMenuItem key={item.href}>
+                                  <Link href={item.href} passHref legacyBehavior>
+                                      <SidebarMenuButton
+                                          isActive={pathname.startsWith(item.href)}
+                                          onClick={() => handleLinkClick(item.href)}
+                                          tooltip={item.label}
+                                      >
+                                          <item.icon />
+                                          <span>{item.label}</span>
+                                      </SidebarMenuButton>
+                                  </Link>
+                              </SidebarMenuItem>
+                          ))}
+                          <SidebarMenuItem>
+                              <SidebarMenuButton
+                                  onClick={handleAdminLogout}
+                                  tooltip="Logout Admin"
+                                  className="text-destructive hover:bg-destructive/10"
+                              >
+                                  <LogOut />
+                                  <span>Logout Admin</span>
+                              </SidebarMenuButton>
+                          </SidebarMenuItem>
+                      </SidebarMenu>
+                  </SidebarGroup>
+                ) : (
+                  <SidebarMenu>
+                      <SidebarMenuItem>
+                          <Link href="/admin" passHref legacyBehavior>
+                              <SidebarMenuButton
+                                  isActive={pathname === '/admin'}
+                                  onClick={() => handleLinkClick('/admin')}
+                                  tooltip="Admin"
+                              >
+                                  <Shield />
+                                  <span>Admin</span>
+                              </SidebarMenuButton>
+                          </Link>
+                      </SidebarMenuItem>
+                  </SidebarMenu>
+                )}
+              </div>
         </SidebarContent>
 
         <SidebarFooter>
