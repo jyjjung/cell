@@ -667,10 +667,7 @@ const SidebarMenuSkeleton = React.forwardRef<
           data-sidebar="menu-skeleton-icon"
         />
       )}
-      <Skeleton
-        className="h-4 flex-1 w-3/4"
-        data-sidebar="menu-skeleton-text"
-      />
+      <Skeleton className="h-4 w-3/4" data-sidebar="menu-skeleton-text" />
     </div>
   )
 })
