@@ -28,7 +28,6 @@ import {
     SidebarFooter,
     SidebarSeparator,
     useSidebar,
-    SidebarGroup,
     SidebarGroupLabel,
     SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
@@ -138,113 +137,66 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-               { !isMounted || loadingAuth ? (
-                 <>
-                  <SidebarMenuSkeleton />
-                  <SidebarMenuSkeleton />
-                  <SidebarMenuSkeleton />
-                 </>
-               ) : (
-                mainNavItems.map((item) => {
-                  const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-                  return (
-                      <SidebarMenuItem key={item.href + item.label} className={cn(!isVisibleByPref ? 'hidden' : '')}>
-                          <Link href={item.href} passHref legacyBehavior>
-                              <SidebarMenuButton
-                                  isActive={pathname === item.href}
-                                  onClick={() => handleLinkClick(item.href)}
-                                  tooltip={item.tooltip}
-                              >
-                                  <item.icon />
-                                  <span>{item.label}</span>
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                  )
-                })
-               )}
-            </SidebarMenu>
-            
-            <div className={cn(!isMounted || loadingAuth || !isReadingPlanSectionVisible ? 'hidden' : '')}>
-                <SidebarSeparator />
-            </div>
-
-            { !isMounted || loadingAuth ? (
-                <div className="p-2 space-y-2">
-                    <Skeleton className="h-4 w-1/2 mb-2" />
-                    <SidebarMenuSkeleton />
-                    <SidebarMenuSkeleton />
-                </div>
-            ) : (
+              {!isMounted || loadingAuth ? (
                 <>
-                {isReadingPlanSectionVisible && (
-                  <SidebarGroup>
-                      <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                          Reading Plan
-                      </SidebarGroupLabel>
-                      <SidebarMenu>
-                          {renderNavItems(readingPlanNavItems)}
-                      </SidebarMenu>
-                  </SidebarGroup>
-                )}
+                  <SidebarMenuSkeleton />
+                  <SidebarMenuSkeleton />
+                  <SidebarMenuSkeleton />
+                </>
+              ) : (
+                renderNavItems(mainNavItems)
+              )}
 
-                {currentUser && (isNavItemVisible({key: 'admin'}) || isAdminSectionVisible) && <SidebarSeparator />}
+              {isReadingPlanSectionVisible && <SidebarSeparator />}
 
-                <SidebarGroup>
-                    {isAdminSectionVisible && (
-                        <>
-                        <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
-                        <SidebarMenu>
-                            {adminNavItems.map(item => {
-                               const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-                               if (!isVisibleByPref) return null;
-                               return (
-                                <SidebarMenuItem key={item.href}>
-                                    <Link href={item.href} passHref legacyBehavior>
-                                        <SidebarMenuButton
-                                            isActive={pathname.startsWith(item.href)}
-                                            onClick={() => handleLinkClick(item.href)}
-                                            tooltip={item.label}
-                                        >
-                                            <item.icon />
-                                            <span>{item.label}</span>
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                               )
-                            })}
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    onClick={handleAdminLogout}
-                                    tooltip="Logout Admin"
-                                    className="text-destructive hover:bg-destructive/10"
-                                >
-                                    <LogOut />
-                                    <span>Logout Admin</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                        </>
-                    )}
-                    { currentUser && !isAdmin && (
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <Link href="/admin" passHref legacyBehavior>
-                                    <SidebarMenuButton
-                                        isActive={pathname === '/admin'}
-                                        onClick={() => handleLinkClick('/admin')}
-                                        tooltip="Admin"
-                                    >
-                                        <Shield />
-                                        <span>Admin</span>
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    )}
-                </SidebarGroup>
-              </>
-            )}
+              {isReadingPlanSectionVisible && (
+                  <SidebarMenuItem className="pointer-events-none">
+                    <SidebarGroupLabel className="px-2 pt-2">
+                        Reading Plan
+                    </SidebarGroupLabel>
+                  </SidebarMenuItem>
+              )}
+              {renderNavItems(readingPlanNavItems)}
+
+              {currentUser && (isNavItemVisible({key: 'admin'}) || isAdminSectionVisible) && <SidebarSeparator />}
+              
+              {isAdminSectionVisible && (
+                  <SidebarMenuItem className="pointer-events-none">
+                    <SidebarGroupLabel className="px-2 pt-2">
+                        Admin
+                    </SidebarGroupLabel>
+                  </SidebarMenuItem>
+              )}
+              {isAdmin && renderNavItems(adminNavItems)}
+              
+              {isAdmin && (
+                  <SidebarMenuItem>
+                      <SidebarMenuButton
+                          onClick={handleAdminLogout}
+                          tooltip="Logout Admin"
+                          className="text-destructive hover:bg-destructive/10"
+                      >
+                          <LogOut />
+                          <span>Logout Admin</span>
+                      </SidebarMenuButton>
+                  </SidebarMenuItem>
+              )}
+
+              { currentUser && !isAdmin && (
+                  <SidebarMenuItem>
+                      <Link href="/admin" passHref legacyBehavior>
+                          <SidebarMenuButton
+                              isActive={pathname === '/admin'}
+                              onClick={() => handleLinkClick('/admin')}
+                              tooltip="Admin"
+                          >
+                              <Shield />
+                              <span>Admin</span>
+                          </SidebarMenuButton>
+                      </Link>
+                  </SidebarMenuItem>
+              )}
+            </SidebarMenu>
             
             { !isMounted || loadingAuth ? null : (
                 !currentUser && (
