@@ -164,6 +164,50 @@ export default function AppSidebar() {
                    </Button>
                 </div>
               ) : null}
+
+              <SidebarSeparator />
+
+              <SidebarMenu>
+                {isAdmin ? (
+                    <>
+                    <SidebarMenuItem>
+                        <Link href="/admin/dashboard" passHref legacyBehavior>
+                            <SidebarMenuButton
+                                isActive={pathname.startsWith('/admin/dashboard')}
+                                onClick={() => handleLinkClick('/admin/dashboard')}
+                                tooltip="Admin Dashboard"
+                            >
+                                <Shield />
+                                <span>Admin Dashboard</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={handleAdminLogout}
+                            tooltip="Logout Admin"
+                            className="text-destructive hover:bg-destructive/10"
+                        >
+                            <LogOut />
+                            <span>Logout Admin</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    </>
+                ) : (
+                    <SidebarMenuItem>
+                         <Link href="/admin" passHref legacyBehavior>
+                            <SidebarMenuButton
+                                isActive={pathname === '/admin'}
+                                onClick={() => handleLinkClick('/admin')}
+                                tooltip="Admin"
+                            >
+                                <Shield />
+                                <span>Admin</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                )}
+              </SidebarMenu>
         </SidebarContent>
 
         <SidebarFooter>
@@ -195,35 +239,13 @@ export default function AppSidebar() {
                                 <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
                                     <User className="mr-2 h-4 w-4" /> Profile
                                 </DropdownMenuItem>
-                              </>
-                            ) : (
-                              <DropdownMenuLabel>Guest</DropdownMenuLabel>
-                            )}
-                            
-                            <DropdownMenuSeparator />
-
-                            {isAdmin ? (
-                                <>
-                                <DropdownMenuItem onSelect={() => {router.push('/admin/dashboard'); handleLinkClick('/admin/dashboard')}}>
-                                    <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive focus:text-destructive">
-                                    <LogOut className="mr-2 h-4 w-4" /> Logout Admin
-                                </DropdownMenuItem>
-                                </>
-                            ) : (
-                                <DropdownMenuItem onSelect={() => {router.push('/admin'); handleLinkClick('/admin')}}>
-                                    <Shield className="mr-2 h-4 w-4" /> Admin
-                                </DropdownMenuItem>
-                            )}
-
-                            {currentUser && (
-                              <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
                                 </DropdownMenuItem>
                               </>
+                            ) : (
+                              <DropdownMenuLabel>Guest</DropdownMenuLabel>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>
