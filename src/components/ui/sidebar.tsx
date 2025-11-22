@@ -207,8 +207,8 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <SheetHeader className="p-0 m-0 h-0">
-                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <SheetHeader className="p-0 m-0 h-0 sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
@@ -232,7 +232,7 @@ const Sidebar = React.forwardRef<
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.8))]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
           )}
         />

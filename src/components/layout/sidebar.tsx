@@ -26,6 +26,7 @@ import {
     SidebarMenuButton,
     SidebarFooter,
     SidebarSeparator,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '../ui/skeleton';
 
@@ -34,12 +35,14 @@ export default function AppSidebar() {
   const { currentUser, isAdmin, signOutUser, adminLogout, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
 
 
   const handleLinkClick = (path: string) => {
     if (pathname !== path) {
       setIsPageLoading(true);
     }
+    setOpenMobile(false); // Close mobile sidebar on navigation
   };
 
   const handleSignOut = async () => {
@@ -111,10 +114,19 @@ export default function AppSidebar() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : !currentUser ? (
-                <div className="p-2 space-y-2">
-                   <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
+                 <div className="p-2 space-y-2">
+                   <p className="text-sm text-sidebar-foreground/70 px-2 group-data-[collapsible=icon]:hidden">Sign in to track your progress.</p>
                    <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
-                       <Link href="/login"><LogIn className="mr-2 h-4 w-4" /> Login</Link>
+                       <Link href="/login" className="flex items-center justify-center">
+                          <LogIn className="mr-2 h-4 w-4" /> 
+                          <span className="group-data-[collapsible=icon]:hidden">Login</span>
+                       </Link>
+                   </Button>
+                   <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
+                       <Link href="/signup" className="flex items-center justify-center">
+                          <UserPlus className="mr-2 h-4 w-4" /> 
+                          <span className="group-data-[collapsible=icon]:hidden">Sign Up</span>
+                        </Link>
                    </Button>
                 </div>
               ) : null}
@@ -125,7 +137,7 @@ export default function AppSidebar() {
                 {loadingAuth ? (
                      <div className="flex items-center w-full">
                         <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="space-y-2 ml-2 w-full">
+                        <div className="space-y-2 ml-2 w-full group-data-[collapsible=icon]:hidden">
                             <Skeleton className="h-4 w-3/4" />
                         </div>
                     </div>
@@ -134,7 +146,7 @@ export default function AppSidebar() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="w-full justify-start text-left h-auto px-2 py-1">
                                 <User className="mr-3 h-5 w-5 shrink-0" />
-                                <div className="flex flex-col truncate">
+                                <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
                                     <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
                                 </div>
                             </Button>
@@ -142,12 +154,12 @@ export default function AppSidebar() {
                         <DropdownMenuContent side="top" align="start" className="w-56 mb-2">
                             <DropdownMenuLabel className="truncate">{currentUser.email}</DropdownMenuLabel>
                              <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => {router.push('/profile'); setIsPageLoading(true);}}>
+                            <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
                                 <User className="mr-2 h-4 w-4" /> Profile
                             </DropdownMenuItem>
                             {isAdmin && (
                                 <>
-                                <DropdownMenuItem onSelect={() => {router.push('/admin/dashboard'); setIsPageLoading(true);}}>
+                                <DropdownMenuItem onSelect={() => {router.push('/admin/dashboard'); handleLinkClick('/admin/dashboard')}}>
                                     <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive focus:text-destructive">
