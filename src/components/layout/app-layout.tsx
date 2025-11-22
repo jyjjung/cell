@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={getInitialSidebarState()}>
       <Sidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <Header />
         <main className="flex-1">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
