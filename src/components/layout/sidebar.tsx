@@ -175,23 +175,34 @@ export default function AppSidebar() {
                             <Skeleton className="h-4 w-3/4" />
                         </div>
                     </div>
-                ) : currentUser ? (
+                ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="w-full justify-start text-left h-auto px-2 py-1">
                                 <User className="mr-3 h-5 w-5 shrink-0" />
-                                <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
-                                    <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
-                                </div>
+                                {currentUser && (
+                                  <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
+                                      <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
+                                  </div>
+                                )}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="start" className="w-56 mb-2">
-                            <DropdownMenuLabel className="truncate">{currentUser.email}</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
-                                <User className="mr-2 h-4 w-4" /> Profile
-                            </DropdownMenuItem>
-                            {isAdmin && (
+                            {currentUser ? (
+                              <>
+                                <DropdownMenuLabel className="truncate">{currentUser.email}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
+                                    <User className="mr-2 h-4 w-4" /> Profile
+                                </DropdownMenuItem>
+                              </>
+                            ) : (
+                              <DropdownMenuLabel>Guest</DropdownMenuLabel>
+                            )}
+                            
+                            <DropdownMenuSeparator />
+
+                            {isAdmin ? (
                                 <>
                                 <DropdownMenuItem onSelect={() => {router.push('/admin/dashboard'); handleLinkClick('/admin/dashboard')}}>
                                     <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
@@ -200,14 +211,23 @@ export default function AppSidebar() {
                                     <LogOut className="mr-2 h-4 w-4" /> Logout Admin
                                 </DropdownMenuItem>
                                 </>
+                            ) : (
+                                <DropdownMenuItem onSelect={() => {router.push('/admin'); handleLinkClick('/admin')}}>
+                                    <Shield className="mr-2 h-4 w-4" /> Admin
+                                </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
-                                <LogOut className="mr-2 h-4 w-4" /> Sign Out
-                            </DropdownMenuItem>
+
+                            {currentUser && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
+                                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                                </DropdownMenuItem>
+                              </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                ) : null}
+                )}
                 <ThemeToggle />
             </div>
         </SidebarFooter>
