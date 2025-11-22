@@ -1,11 +1,20 @@
-
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './sidebar';
 import BottomNav from './bottom-nav';
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { setIsPageLoading } = usePageLoading();
+
+  useEffect(() => {
+    // Hide the loader whenever the path changes
+    setIsPageLoading(false);
+  }, [pathname, setIsPageLoading]);
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
