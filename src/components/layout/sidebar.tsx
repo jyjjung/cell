@@ -161,8 +161,8 @@ export default function AppSidebar() {
               ) : null}
 
               
-              <div className={cn(isAdmin || !currentUser ? "border-t border-border mt-2" : "")}>
-                <SidebarSeparator />
+              <div className={cn(isAdmin ? "border-t border-border mt-2" : "")}>
+                {isAdmin && <SidebarSeparator />}
                 {isAdmin ? (
                   <SidebarGroup>
                       <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
@@ -194,20 +194,23 @@ export default function AppSidebar() {
                       </SidebarMenu>
                   </SidebarGroup>
                 ) : (
-                  <SidebarMenu>
-                      <SidebarMenuItem>
-                          <Link href="/admin" passHref legacyBehavior>
-                              <SidebarMenuButton
-                                  isActive={pathname === '/admin'}
-                                  onClick={() => handleLinkClick('/admin')}
-                                  tooltip="Admin"
-                              >
-                                  <Shield />
-                                  <span>Admin</span>
-                              </SidebarMenuButton>
-                          </Link>
-                      </SidebarMenuItem>
-                  </SidebarMenu>
+                  <div className="mt-2">
+                    <SidebarSeparator />
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <Link href="/admin" passHref legacyBehavior>
+                                <SidebarMenuButton
+                                    isActive={pathname === '/admin'}
+                                    onClick={() => handleLinkClick('/admin')}
+                                    tooltip="Admin"
+                                >
+                                    <Shield />
+                                    <span>Admin</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                  </div>
                 )}
               </div>
         </SidebarContent>
@@ -225,11 +228,20 @@ export default function AppSidebar() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="w-full justify-start text-left h-auto px-2 py-1">
-                                <User className="mr-3 h-5 w-5 shrink-0" />
-                                {currentUser && (
-                                  <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
-                                      <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
-                                  </div>
+                                {currentUser ? (
+                                    <>
+                                        <User className="mr-3 h-5 w-5 shrink-0" />
+                                        <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
+                                            <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                     <>
+                                        <User className="mr-3 h-5 w-5 shrink-0" />
+                                        <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
+                                            <span className="font-semibold truncate">Guest</span>
+                                        </div>
+                                    </>
                                 )}
                             </Button>
                         </DropdownMenuTrigger>
@@ -241,13 +253,30 @@ export default function AppSidebar() {
                                 <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
                                     <User className="mr-2 h-4 w-4" /> Profile
                                 </DropdownMenuItem>
+                                {isAdmin && (
+                                  <>
+                                  <DropdownMenuSeparator />
+                                   <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive focus:text-destructive">
+                                      <LogOut className="mr-2 h-4 w-4" /> Logout Admin
+                                  </DropdownMenuItem>
+                                  </>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
                                 </DropdownMenuItem>
                               </>
                             ) : (
-                              <DropdownMenuLabel>Guest</DropdownMenuLabel>
+                              <>
+                                <DropdownMenuLabel>Guest</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => handleLinkClick('/login')}>
+                                  <LogIn className="mr-2 h-4 w-4" /> Login
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => handleLinkClick('/signup')}>
+                                  <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+                                </DropdownMenuItem>
+                              </>
                             )}
                         </DropdownMenuContent>
                     </DropdownMenu>
