@@ -195,10 +195,13 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center">
                     <CardTitle className="text-xl">Manage Events</CardTitle>
                   </div>
-                  <div className="flex items-center space-x-4">
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="flex justify-end mb-4">
                     <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
                       <DialogTrigger asChild>
-                        <Button onClick={(e) => { e.stopPropagation(); openAddModal(); }}>
+                        <Button onClick={openAddModal}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
                         </Button>
                       </DialogTrigger>
@@ -217,10 +220,7 @@ export default function AdminDashboardPage() {
                         />
                       </DialogContent>
                     </Dialog>
-                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
                   {eventsLoading ? (
                     <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
                   ) : events.length === 0 ? (
