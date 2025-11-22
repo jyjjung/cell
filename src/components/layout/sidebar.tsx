@@ -140,9 +140,9 @@ export default function AppSidebar() {
             <SidebarMenu>
                { !isMounted || loadingAuth ? (
                  <>
-                  <SidebarMenuSkeleton showIcon={true} />
-                  <SidebarMenuSkeleton showIcon={true} />
-                  <SidebarMenuSkeleton showIcon={true} />
+                  <SidebarMenuSkeleton />
+                  <SidebarMenuSkeleton />
+                  <SidebarMenuSkeleton />
                  </>
                ) : (
                 mainNavItems.map((item) => {
@@ -172,8 +172,8 @@ export default function AppSidebar() {
             { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
                     <Skeleton className="h-4 w-1/2 mb-2" />
-                    <SidebarMenuSkeleton showIcon={true} />
-                    <SidebarMenuSkeleton showIcon={true} />
+                    <SidebarMenuSkeleton />
+                    <SidebarMenuSkeleton />
                 </div>
             ) : (
                 <>
@@ -188,7 +188,7 @@ export default function AppSidebar() {
                   </SidebarGroup>
                 )}
 
-                {currentUser && isAdminSectionVisible && <SidebarSeparator />}
+                {currentUser && (isNavItemVisible({key: 'admin'}) || isAdminSectionVisible) && <SidebarSeparator />}
 
                 <SidebarGroup>
                     {isAdminSectionVisible && (
