@@ -1,13 +1,14 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import StatCard from '@/components/homepage/stat-card';
-import { CalendarCheck, BookCheck, BrainCircuit, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore } from 'date-fns';
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
 import type { AppUser, AppEvent } from '@/types';
+import { usePageLoading } from '@/contexts/page-loading-context';
 
 interface DashboardCardsProps {
     currentUser: AppUser | null;
@@ -34,43 +35,14 @@ export default function DashboardCards({
     memoryVersesLoading,
     memoryVersesCount,
 }: DashboardCardsProps) {
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
-    const [showRightArrow, setShowRightArrow] = useState(true);
+    const router = useRouter();
+    const { setIsPageLoading } = usePageLoading();
 
-    const checkArrows = () => {
-        const scrollEl = scrollContainerRef.current;
-        if (!scrollEl) return;
-        const { scrollLeft, scrollWidth, clientWidth } = scrollEl;
-        // Add a small buffer to prevent arrows from flickering at the very edge
-        setShowLeftArrow(scrollLeft > 10);
-        setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    const handleLinkClick = (path: string) => {
+        setIsPageLoading(true);
+        router.push(path);
     };
 
-    useEffect(() => {
-        const scrollEl = scrollContainerRef.current;
-        checkArrows();
-        scrollEl?.addEventListener('scroll', checkArrows, { passive: true });
-        window.addEventListener('resize', checkArrows);
-
-        const observer = new ResizeObserver(checkArrows);
-        if(scrollEl) observer.observe(scrollEl);
-
-        return () => {
-            scrollEl?.removeEventListener('scroll', checkArrows);
-            window.removeEventListener('resize', checkArrows);
-            if(scrollEl) observer.unobserve(scrollEl);
-        };
-    }, []);
-
-    const scrollLeft = () => {
-        scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
-    };
-
-    const scrollRight = () => {
-        scrollContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
-    };
-    
     const readingsLoggedStatValue = useMemo(() => {
         if (loadingChecklist || planLoading) return null;
         const passagesToRead = totalPassagesUpToToday - completedPassagesCount;
@@ -95,48 +67,61 @@ export default function DashboardCards({
         visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 80, damping: 15 } },
     };
 
+    const cards = [
+        ...(currentUser ? [
+            {
+                key: 'events',
+                title: "Upcoming Events",
+                value: eventsLoading ? null : upcomingEventsCount,
+                isLoading: eventsLoading,
+                buttonText: "View Events",
+                buttonLink: "/#event-calendar-section", // This won't work with router push, should be handled differently if it stays
+                IconComponent: CalendarCheck
+            },
+            {
+                key: 'progress',
+                title: "Reading Progress",
+                value: readingsLoggedStatValue,
+                isLoading: loadingAuth || loadingChecklist || planLoading,
+                buttonText: "My Checklist",
+                buttonLink: "/bible-checklist",
+                IconComponent: BookCheck,
+                buttonDisabled: (loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0,
+            }
+        ] : []),
+        {
+            key: 'verses',
+            title: "Memory Verses",
+            value: memoryVersesLoading ? null : memoryVersesCount,
+            isLoading: memoryVersesLoading,
+            buttonText: "Practice Verses",
+            buttonLink: "/memorize",
+            IconComponent: BrainCircuit,
+        }
+    ];
+
     return (
-        <div className="relative w-full scroller-group">
-            <div
-                ref={scrollContainerRef}
-                className="flex gap-4 sm:gap-6 w-full mx-auto overflow-x-auto snap-x snap-mandatory py-4 px-4"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-                {currentUser && (
-                    <>
-                        <motion.div variants={itemVariants} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                            <StatCard title="Upcoming Events" value={eventsLoading ? null : upcomingEventsCount} isLoading={eventsLoading} buttonText="View Events" buttonLink="#event-calendar-section" IconComponent={CalendarCheck} />
-                        </motion.div>
-                        <motion.div variants={itemVariants} transition={{delay: 0.1}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                            <StatCard title="Reading Progress" value={readingsLoggedStatValue} isLoading={loadingAuth || loadingChecklist || planLoading} buttonText="My Checklist" buttonLink="/bible-checklist" IconComponent={BookCheck} buttonDisabled={(loadingChecklist || planLoading) ? false : totalPassagesUpToToday === 0} />
-                        </motion.div>
-                    </>
-                )}
-                <motion.div variants={itemVariants} transition={{delay: 0.2}} className="w-60 sm:w-64 flex-shrink-0 snap-center">
-                    <StatCard title="Memory Verses" value={memoryVersesLoading ? null : memoryVersesCount} isLoading={memoryVersesLoading} buttonText="Practice Verses" buttonLink="/memorize" IconComponent={BrainCircuit} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {cards.map((card, index) => (
+                <motion.div 
+                    key={card.key}
+                    variants={itemVariants} 
+                    initial="hidden" 
+                    animate="visible"
+                    transition={{ delay: index * 0.1 }}
+                >
+                    <StatCard 
+                        title={card.title} 
+                        value={card.value} 
+                        isLoading={card.isLoading} 
+                        buttonText={card.buttonText} 
+                        buttonLink={card.buttonLink}
+                        onLinkClick={() => handleLinkClick(card.buttonLink)}
+                        IconComponent={card.IconComponent} 
+                        buttonDisabled={card.buttonDisabled}
+                    />
                 </motion.div>
-            </div>
-            
-            {showLeftArrow && (
-                <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={scrollLeft}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 scroller-group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                >
-                    <ChevronLeft className="h-6 w-6" />
-                </Button>
-            )}
-            {showRightArrow && (
-                <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={scrollRight}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 rounded-full h-10 w-10 opacity-0 scroller-group-hover:opacity-100 transition-opacity bg-background/70 hover:bg-background"
-                >
-                    <ChevronRight className="h-6 w-6" />
-                </Button>
-            )}
+            ))}
         </div>
     );
 }

@@ -20,7 +20,6 @@ import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import SectionIndicator from '@/components/layout/section-indicator';
 import DashboardCards from '@/components/homepage/dashboard-cards';
 
 
@@ -32,27 +31,15 @@ interface UserProgressDisplay {
   totalPassagesToDate: number;
 }
 
-const SectionWrapper = ({ children, id, className }: { children: React.ReactNode, id: string, className?: string }) => (
-    <section id={id} className={cn("scroll-snap-section w-full flex flex-col items-center justify-center p-4 sm:p-6 relative min-h-screen", className)}>
-        <div className="container mx-auto">
-            {children}
-        </div>
+const Section = ({ children, title, id }: { children: React.ReactNode, title: string, id: string }) => (
+    <section id={id} className="py-8 md:py-12">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6 md:mb-8 text-center md:text-left">
+            {title}
+        </h2>
+        {children}
     </section>
 );
 
-const AnimatedTitle = ({ text }: { text: string }) => {
-    const ref = useRef(null);
-    const isInView = useInView(ref, { once: true, amount: 0.5 });
-
-    return (
-        <h2 
-            ref={ref}
-            className="text-4xl md:text-5xl font-bold tracking-tight mb-8 md:mb-12 text-center"
-        >
-            {text}
-        </h2>
-    );
-};
 
 export default function HomePage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -63,8 +50,6 @@ export default function HomePage() {
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
   const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
   const { allUsers, loading: usersLoading } = useAllUsers();
-
-  const sections = ['dashboard-section', 'event-calendar-section', 'todays-reading-section', 'community-progress-section'];
 
   useEffect(() => {
     setIsMounted(true);
@@ -198,81 +183,65 @@ export default function HomePage() {
   }
 
   return (
-    <>
-      <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-        <SectionWrapper id="dashboard-section">
-          <div className="w-full">
-            <AnimatedTitle text="Dashboard" />
-            <div className="max-w-5xl mx-auto">
-                <DashboardCards
-                    currentUser={currentUser}
-                    loadingAuth={loadingAuth}
-                    eventsLoading={eventsLoading}
-                    allEvents={allEvents}
-                    loadingChecklist={loadingChecklist}
-                    planLoading={planLoading}
-                    totalPassagesUpToToday={totalPassagesUpToToday}
-                    completedPassagesCount={completedPassages.length}
-                    memoryVersesLoading={memoryVersesLoading}
-                    memoryVersesCount={memoryVerses.length}
-                />
-            </div>
-          </div>
-        </SectionWrapper>
-        
-        {currentUser && (
-          <SectionWrapper id="event-calendar-section">
-            <div className="w-full">
-                <AnimatedTitle text="Upcoming Events" />
-                <div className="flex justify-center">
-                  <EventListView eventsByDate={eventsByDate} />
-                </div>
-            </div>
-          </SectionWrapper>
-        )}
+    <div className="space-y-8">
+      <Section id="dashboard-section" title="Dashboard">
+         <DashboardCards
+            currentUser={currentUser}
+            loadingAuth={loadingAuth}
+            eventsLoading={eventsLoading}
+            allEvents={allEvents}
+            loadingChecklist={loadingChecklist}
+            planLoading={planLoading}
+            totalPassagesUpToToday={totalPassagesUpToToday}
+            completedPassagesCount={completedPassages.length}
+            memoryVersesLoading={memoryVersesLoading}
+            memoryVersesCount={memoryVerses.length}
+        />
+      </Section>
 
-        <SectionWrapper id="todays-reading-section">
-          <div className="w-full max-w-2xl mx-auto">
-            <AnimatedTitle text="Today's Bible Reading" />
+      {currentUser && (
+        <Section id="event-calendar-section" title="Upcoming Events">
+          <EventListView eventsByDate={eventsByDate} />
+        </Section>
+      )}
+
+      <Section id="todays-reading-section" title="Today's Bible Reading">
+        <div className="max-w-2xl mx-auto">
+          <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
+              <BiblePlanDisplay 
+                readingToDisplay={todaysReadingForDisplay} 
+                currentUser={currentUser} 
+                completedPassages={completedPassages} 
+                togglePassageCompletion={togglePassageCompletion} 
+                onToggleAllToday={markMultiplePassages} 
+                allPassageTextsForDay={allTodaysPassageTexts} 
+                loading={planLoading || loadingChecklist} 
+                planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0} 
+                hidePlanMeta={true} 
+                defaultOpen={true} 
+                isStandalone={true} 
+              />
+          </motion.div>
+        </div>
+      </Section>
+      
+      {currentUser && (currentUser.showInCommunityProgress ?? true) && (
+        <Section id="community-progress-section" title="Community Progress">
+          <div className="max-w-4xl mx-auto">
             <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
-                <BiblePlanDisplay 
-                  readingToDisplay={todaysReadingForDisplay} 
-                  currentUser={currentUser} 
-                  completedPassages={completedPassages} 
-                  togglePassageCompletion={togglePassageCompletion} 
-                  onToggleAllToday={markMultiplePassages} 
-                  allPassageTextsForDay={allTodaysPassageTexts} 
-                  loading={planLoading || loadingChecklist} 
-                  planAvailable={!!plan && !!plan.dailyReadings && plan.dailyReadings.length > 0} 
-                  hidePlanMeta={true} 
-                  defaultOpen={true} 
-                  isStandalone={true} 
-                />
+              <Card className="shadow-lg overflow-hidden">
+                  <CardHeader className="py-4">
+                      <div className="flex items-center space-x-3">
+                          <Users className="h-6 w-6 text-primary" />
+                          <CardTitle className="text-xl font-semibold tracking-tight">Leaderboard</CardTitle>
+                      </div>
+                  </CardHeader>
+                  <CommunityProgressContent />
+              </Card>
             </motion.div>
           </div>
-        </SectionWrapper>
-        
-        {currentUser && (currentUser.showInCommunityProgress ?? true) && (
-            <SectionWrapper id="community-progress-section">
-              <div className="w-full max-w-4xl mx-auto">
-                  <AnimatedTitle text="Community Progress" />
-                  <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.5 }}>
-                    <Card className="shadow-lg overflow-hidden">
-                        <CardHeader className="py-4">
-                            <div className="flex items-center space-x-3">
-                                <Users className="h-6 w-6 text-primary" />
-                                <CardTitle className="text-xl font-semibold tracking-tight">Leaderboard</CardTitle>
-                            </div>
-                        </CardHeader>
-                        <CommunityProgressContent />
-                    </Card>
-                  </motion.div>
-              </div>
-            </SectionWrapper>
-        )}
-      </div>
-      <SectionIndicator sections={currentUser ? sections : sections.filter(s => s !== 'event-calendar-section' && s !== 'community-progress-section')} />
-    </>
+        </Section>
+      )}
+    </div>
   );
 }
-
