@@ -76,13 +76,12 @@ export default function AppSidebar() {
       { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
   ];
 
-  const renderNavItems = (items: typeof mainNavItems) => {
+  const renderNavItems = (items: (typeof mainNavItems | typeof readingPlanNavItems)[0][]) => {
     return items.map((item) => {
       const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
-      if (!shouldShow) return null;
-
+      
       return (
-          <SidebarMenuItem key={item.href + item.label}>
+          <SidebarMenuItem key={item.href + item.label} className={cn(!shouldShow && "hidden")}>
               <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
@@ -126,7 +125,6 @@ export default function AppSidebar() {
               {renderNavItems(mainNavItems)}
             </SidebarMenu>
 
-            <SidebarSeparator />
             
             <SidebarGroup>
                 <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
@@ -161,8 +159,8 @@ export default function AppSidebar() {
               ) : null}
 
               
-              <div className={cn(isAdmin ? "border-t border-border mt-2" : "")}>
-                {isAdmin && <SidebarSeparator />}
+              <div className={cn("mt-2")}>
+                 <SidebarSeparator />
                 {isAdmin ? (
                   <SidebarGroup>
                       <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
@@ -194,10 +192,8 @@ export default function AppSidebar() {
                       </SidebarMenu>
                   </SidebarGroup>
                 ) : (
-                  <div className="mt-2">
-                    <SidebarSeparator />
                     <SidebarMenu>
-                        <SidebarMenuItem>
+                        <SidebarMenuItem className={cn(loadingAuth && "hidden")}>
                             <Link href="/admin" passHref legacyBehavior>
                                 <SidebarMenuButton
                                     isActive={pathname === '/admin'}
@@ -210,7 +206,6 @@ export default function AppSidebar() {
                             </Link>
                         </SidebarMenuItem>
                     </SidebarMenu>
-                  </div>
                 )}
               </div>
         </SidebarContent>
@@ -275,6 +270,9 @@ export default function AppSidebar() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => handleLinkClick('/signup')}>
                                   <UserPlus className="mr-2 h-4 w-4" /> Sign Up
+                                </DropdownMenuItem>
+                                 <DropdownMenuItem onSelect={() => handleLinkClick('/admin')}>
+                                  <Shield className="mr-2 h-4 w-4" /> Admin
                                 </DropdownMenuItem>
                               </>
                             )}
