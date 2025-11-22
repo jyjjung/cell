@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookHeart, BookMarked, ListOrdered } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -84,10 +84,12 @@ export default function AppSidebar() {
 
   const renderNavItems = (items: (typeof mainNavItems | typeof readingPlanNavItems)[0][]) => {
     return items.map((item) => {
-      const shouldShow = !isMounted || (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+      // This logic is now safe because it's wrapped in `isMounted` check
+      const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+      if (!shouldShow) return null;
       
       return (
-          <SidebarMenuItem key={item.href + item.label} className={cn(!shouldShow && "hidden")}>
+          <SidebarMenuItem key={item.href + item.label}>
               <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
@@ -128,101 +130,112 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-              {renderNavItems(mainNavItems)}
+              {mainNavItems.map((item) => (
+                 <SidebarMenuItem key={item.href}>
+                    <Link href={item.href} passHref legacyBehavior>
+                        <SidebarMenuButton
+                            isActive={pathname === item.href}
+                            onClick={() => handleLinkClick(item.href)}
+                            tooltip={item.tooltip}
+                        >
+                            <item.icon />
+                            <span>{item.label}</span>
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
-
             
-            <SidebarGroup>
-                <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                    Reading Plan
-                </SidebarGroupLabel>
-                <SidebarMenu>
-                    { !isMounted ? (
-                      <>
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                      </>
-                    ) : renderNavItems(readingPlanNavItems) }
-                </SidebarMenu>
-            </SidebarGroup>
+            <SidebarSeparator />
 
-              { !isMounted || loadingAuth ? (
+            { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              ) : !currentUser ? (
-                 <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden">
-                   <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
-                   <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
-                       <Link href="/login" className="flex items-center justify-center">
-                          <LogIn className="mr-2 h-4 w-4" /> 
-                          <span>Login</span>
-                       </Link>
-                   </Button>
-                   <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
-                       <Link href="/signup" className="flex items-center justify-center">
-                          <UserPlus className="mr-2 h-4 w-4" /> 
-                          <span>Sign Up</span>
-                        </Link>
-                   </Button>
-                </div>
-              ) : null}
-
-              
-              <div className={cn("mt-2")}>
-                {isMounted && isAdmin ? (
-                  <SidebarGroup>
-                      <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
-                      <SidebarMenu>
-                          {adminNavItems.map(item => (
-                              <SidebarMenuItem key={item.href}>
-                                  <Link href={item.href} passHref legacyBehavior>
-                                      <SidebarMenuButton
-                                          isActive={pathname.startsWith(item.href)}
-                                          onClick={() => handleLinkClick(item.href)}
-                                          tooltip={item.label}
-                                      >
-                                          <item.icon />
-                                          <span>{item.label}</span>
-                                      </SidebarMenuButton>
-                                  </Link>
-                              </SidebarMenuItem>
-                          ))}
-                          <SidebarMenuItem>
-                              <SidebarMenuButton
-                                  onClick={handleAdminLogout}
-                                  tooltip="Logout Admin"
-                                  className="text-destructive hover:bg-destructive/10"
-                              >
-                                  <LogOut />
-                                  <span>Logout Admin</span>
-                              </SidebarMenuButton>
-                          </SidebarMenuItem>
-                      </SidebarMenu>
-                  </SidebarGroup>
-                ) : isMounted && !isAdmin ? (
-                    <SidebarMenu>
-                        <SidebarMenuItem className={cn(loadingAuth && "hidden")}>
-                            <Link href="/admin" passHref legacyBehavior>
-                                <SidebarMenuButton
-                                    isActive={pathname === '/admin'}
-                                    onClick={() => handleLinkClick('/admin')}
-                                    tooltip="Admin"
-                                >
-                                    <Shield />
-                                    <span>Admin</span>
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                ) : (
-                  <div className="p-2">
+                    <Skeleton className="h-4 w-1/2 mb-2" />
                     <Skeleton className="h-8 w-full" />
-                  </div>
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+            ) : (
+                <>
+                <SidebarGroup>
+                    <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                        Reading Plan
+                    </SidebarGroupLabel>
+                    <SidebarMenu>
+                        {renderNavItems(readingPlanNavItems)}
+                    </SidebarMenu>
+                </SidebarGroup>
+
+                {!currentUser && (
+                    <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden">
+                        <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
+                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
+                            <Link href="/login" className="flex items-center justify-center">
+                                <LogIn className="mr-2 h-4 w-4" /> 
+                                <span>Login</span>
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
+                            <Link href="/signup" className="flex items-center justify-center">
+                                <UserPlus className="mr-2 h-4 w-4" /> 
+                                <span>Sign Up</span>
+                            </Link>
+                        </Button>
+                    </div>
                 )}
-              </div>
+                
+                <SidebarSeparator />
+
+                <SidebarGroup>
+                    {isAdmin ? (
+                        <>
+                        <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
+                        <SidebarMenu>
+                            {adminNavItems.map(item => (
+                                <SidebarMenuItem key={item.href}>
+                                    <Link href={item.href} passHref legacyBehavior>
+                                        <SidebarMenuButton
+                                            isActive={pathname.startsWith(item.href)}
+                                            onClick={() => handleLinkClick(item.href)}
+                                            tooltip={item.label}
+                                        >
+                                            <item.icon />
+                                            <span>{item.label}</span>
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                            ))}
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    onClick={handleAdminLogout}
+                                    tooltip="Logout Admin"
+                                    className="text-destructive hover:bg-destructive/10"
+                                >
+                                    <LogOut />
+                                    <span>Logout Admin</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                        </>
+                    ) : (
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Link href="/admin" passHref legacyBehavior>
+                                    <SidebarMenuButton
+                                        isActive={pathname === '/admin'}
+                                        onClick={() => handleLinkClick('/admin')}
+                                        tooltip="Admin"
+                                    >
+                                        <Shield />
+                                        <span>Admin</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    )}
+                </SidebarGroup>
+              </>
+            )}
         </SidebarContent>
 
         <SidebarFooter>
@@ -263,14 +276,6 @@ export default function AppSidebar() {
                                 <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
                                     <User className="mr-2 h-4 w-4" /> Profile
                                 </DropdownMenuItem>
-                                {isAdmin && (
-                                  <>
-                                  <DropdownMenuSeparator />
-                                   <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive focus:text-destructive">
-                                      <LogOut className="mr-2 h-4 w-4" /> Logout Admin
-                                  </DropdownMenuItem>
-                                  </>
-                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
@@ -285,9 +290,6 @@ export default function AppSidebar() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => handleLinkClick('/signup')}>
                                   <UserPlus className="mr-2 h-4 w-4" /> Sign Up
-                                </DropdownMenuItem>
-                                 <DropdownMenuItem onSelect={() => handleLinkClick('/admin')}>
-                                  <Shield className="mr-2 h-4 w-4" /> Admin
                                 </DropdownMenuItem>
                               </>
                             )}
