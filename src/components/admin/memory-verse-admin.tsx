@@ -11,10 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Trash2, BookMarked, Loader2, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
+import { Card, CardContent } from '@/components/ui/card';
 
 const memoryVerseSchema = z.object({
   reference: z.string().min(3, { message: "Verse reference must be at least 3 characters." }).max(100, {message: "Reference too long."}),
@@ -109,52 +109,56 @@ export default function MemoryVerseAdmin() {
             <p className="text-muted-foreground">No memory verses added yet.</p>
           </div>
         ) : (
-          <ScrollArea className="h-[300px] border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[70%]">Reference</TableHead>
-                  <TableHead>Added</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {memoryVerses.map((verse) => (
-                  <TableRow key={verse.id}>
-                    <TableCell className="font-medium">{verse.reference} {verse.isLordsPrayerChunk && <span className="text-xs text-muted-foreground">(LP)</span>}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {verse.addedAt ? format(verse.addedAt.toDate(), 'dd/MM/yyyy') : 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="xs" aria-label="Delete verse">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete the memory verse "{verse.reference}".
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteVerse(verse.id, verse.reference)}>
-                              Yes, delete verse
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+          <Card>
+            <CardContent className="p-0">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead className="w-[70%]">Reference</TableHead>
+                    <TableHead>Added</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {memoryVerses.map((verse) => (
+                    <TableRow key={verse.id}>
+                        <TableCell className="font-medium">{verse.reference} {verse.isLordsPrayerChunk && <span className="text-xs text-muted-foreground">(LP)</span>}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                        {verse.addedAt ? format(verse.addedAt.toDate(), 'dd/MM/yyyy') : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="xs" aria-label="Delete verse">
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This will permanently delete the memory verse "{verse.reference}".
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteVerse(verse.id, verse.reference)}>
+                                Yes, delete verse
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
   );
 }
+
+    

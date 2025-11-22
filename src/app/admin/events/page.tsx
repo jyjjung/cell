@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEvents } from '@/hooks/use-events';
@@ -17,9 +17,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
 import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Calendar } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { startOfDay, parseISO, format } from 'date-fns';
+import { startOfDay, parseISO, format, isBefore } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { motion } from 'framer-motion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 export default function AdminEventsPage() {
@@ -43,6 +44,25 @@ export default function AdminEventsPage() {
       router.push('/admin');
     }
   }, [isAdmin, router, isMounted, setIsPageLoading]);
+
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const today = startOfDay(new Date());
+    const upcoming: AppEvent[] = [];
+    const past: AppEvent[] = [];
+    events.forEach(event => {
+      try {
+        if (isBefore(parseISO(event.date), today)) {
+          past.push(event);
+        } else {
+          upcoming.push(event);
+        }
+      } catch (e) {
+        console.error("Error parsing event date for filtering:", event.date, e);
+      }
+    });
+    return { upcomingEvents: upcoming, pastEvents: past.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()) };
+  }, [events]);
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -133,25 +153,15 @@ export default function AdminEventsPage() {
 
   const handleDeletePastEvents = async () => {
     setIsDeletingPast(true);
-    const today = startOfDay(new Date());
-    const pastEventsToDelete = events.filter(event => {
-        try {
-            const eventDate = parseISO(event.date); 
-            return eventDate < today;
-        } catch(e) { 
-            console.error("Error parsing event date for deletion:", event.date, e);
-            return false; 
-        }
-    });
-
-    if (pastEventsToDelete.length === 0) {
+    
+    if (pastEvents.length === 0) {
       toast({ title: "No Past Events", description: "There are no past events to delete." });
       setIsDeletingPast(false);
       return;
     }
 
     try {
-      const deletionPromises = pastEventsToDelete.map(event => deleteEvent(event.id));
+      const deletionPromises = pastEvents.map(event => deleteEvent(event.id));
       const results = await Promise.allSettled(deletionPromises);
 
       const successfulDeletions = results.filter(result => result.status === 'fulfilled').length;
@@ -171,6 +181,70 @@ export default function AdminEventsPage() {
     }
   };
 
+  const EventTable = ({ eventsToDisplay }: { eventsToDisplay: AppEvent[] }) => (
+     <div className="overflow-x-auto">
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead className="min-w-[250px]">Title</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {eventsToDisplay.map((event) => (
+                <TableRow key={event.id}>
+                <TableCell className="font-medium">{event.title}</TableCell>
+                <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
+                <TableCell>{event.category}</TableCell>
+                <TableCell className="text-right space-x-2">
+                    <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">
+                    <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" aria-label="Delete event">
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the event titled "{event.title}".
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                            try {
+                                await deleteEvent(event.id);
+                                toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
+                            } catch (error) {
+                                console.error("Failed to delete event:", error);
+                                toast({
+                                title: "Deletion Failed",
+                                description: `Could not delete event "${event.title}". Please try again.`,
+                                variant: "destructive",
+                                });
+                            }
+                            }}
+                        >
+                            Yes, delete event
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                    </AlertDialog>
+                </TableCell>
+                </TableRow>
+            ))}
+            </TableBody>
+        </Table>
+    </div>
+  );
+
 
   return (
     <div className="container mx-auto py-8">
@@ -189,7 +263,7 @@ export default function AdminEventsPage() {
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">Events List</CardTitle>
+                <CardTitle className="text-xl">Upcoming Events</CardTitle>
                 <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={openAddModal}>
@@ -216,80 +290,16 @@ export default function AdminEventsPage() {
             <CardContent>
               {eventsLoading ? (
                 <div className="p-6 text-center flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /><p>Loading events...</p></div>
-              ) : events.length === 0 ? (
+              ) : upcomingEvents.length === 0 ? (
                 <div className="p-10 text-center bg-muted/50 rounded-lg">
                   <ListOrdered className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No events yet. Click "Add New Event" to get started.</p>
+                  <p className="text-muted-foreground">No upcoming events. Click "Add New Event" to get started.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[250px]">Title</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {events.map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell className="font-medium">{event.title}</TableCell>
-                          <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
-                          <TableCell>{event.category}</TableCell>
-                          <TableCell className="text-right space-x-2">
-                            <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon" aria-label="Delete event">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the event titled "{event.title}".
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={async () => {
-                                      try {
-                                        await deleteEvent(event.id);
-                                        toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
-                                      } catch (error) {
-                                        console.error("Failed to delete event:", error);
-                                        toast({
-                                          title: "Deletion Failed",
-                                          description: `Could not delete event "${event.title}". Please try again.`,
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    Yes, delete event
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <EventTable eventsToDisplay={upcomingEvents} />
               )}
             </CardContent>
           </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Separator />
         </motion.div>
 
         <motion.div
@@ -343,7 +353,29 @@ export default function AdminEventsPage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {pastEvents.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="past-events">
+                <AccordionTrigger>
+                  <h3 className="text-lg font-medium">View Past Events ({pastEvents.length})</h3>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card>
+                    <CardContent className="p-0">
+                      <EventTable eventsToDisplay={pastEvents} />
+                    </CardContent>
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </motion.div>
+        )}
+
       </motion.div>
     </div>
   );
 }
+
+    
