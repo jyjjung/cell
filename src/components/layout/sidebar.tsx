@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookHeart, BookMarked, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -71,6 +71,12 @@ export default function AppSidebar() {
 
   const personalNavItems = [
      { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
+  ];
+  
+  const adminNavItems = [
+      { href: '/admin/events', label: 'Events', icon: Calendar },
+      { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
+      { href: '/admin/memory-verses', label: 'Memory Verses', icon: BookMarked },
   ];
 
   const renderNavItems = (items: typeof mainNavItems) => {
@@ -140,8 +146,6 @@ export default function AppSidebar() {
                 {renderNavItems(personalNavItems)}
             </SidebarMenu>
 
-
-             <SidebarSeparator />
               {loadingAuth ? (
                 <div className="p-2 space-y-2">
                   <Skeleton className="h-8 w-full" />
@@ -167,33 +171,38 @@ export default function AppSidebar() {
 
               <SidebarSeparator />
 
-              <SidebarMenu>
-                {isAdmin ? (
-                    <>
-                    <SidebarMenuItem>
-                        <Link href="/admin/dashboard" passHref legacyBehavior>
+              {isAdmin ? (
+                <SidebarGroup>
+                    <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
+                    <SidebarMenu>
+                        {adminNavItems.map(item => (
+                             <SidebarMenuItem key={item.href}>
+                                <Link href={item.href} passHref legacyBehavior>
+                                    <SidebarMenuButton
+                                        isActive={pathname.startsWith(item.href)}
+                                        onClick={() => handleLinkClick(item.href)}
+                                        tooltip={item.label}
+                                    >
+                                        <item.icon />
+                                        <span>{item.label}</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        ))}
+                         <SidebarMenuItem>
                             <SidebarMenuButton
-                                isActive={pathname.startsWith('/admin/dashboard')}
-                                onClick={() => handleLinkClick('/admin/dashboard')}
-                                tooltip="Admin Dashboard"
+                                onClick={handleAdminLogout}
+                                tooltip="Logout Admin"
+                                className="text-destructive hover:bg-destructive/10"
                             >
-                                <Shield />
-                                <span>Admin Dashboard</span>
+                                <LogOut />
+                                <span>Logout Admin</span>
                             </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            onClick={handleAdminLogout}
-                            tooltip="Logout Admin"
-                            className="text-destructive hover:bg-destructive/10"
-                        >
-                            <LogOut />
-                            <span>Logout Admin</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    </>
-                ) : (
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroup>
+              ) : (
+                <SidebarMenu>
                     <SidebarMenuItem>
                          <Link href="/admin" passHref legacyBehavior>
                             <SidebarMenuButton
@@ -206,8 +215,8 @@ export default function AppSidebar() {
                             </SidebarMenuButton>
                         </Link>
                     </SidebarMenuItem>
-                )}
-              </SidebarMenu>
+                </SidebarMenu>
+              )}
         </SidebarContent>
 
         <SidebarFooter>
