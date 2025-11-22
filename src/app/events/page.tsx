@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from 'react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
 import { useEvents } from '@/hooks/use-events';
-import { format, parseISO, getMonth, getYear, isBefore, startOfToday, compareDesc } from 'date-fns';
+import { format, parseISO, getMonth, getYear, isBefore, startOfToday, compareAsc, compareDesc } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -37,7 +37,7 @@ export default function EventsPage() {
 
         if (!events) return { upcomingEventsByMonth: [], pastEventsByMonth: [] };
 
-        const sortedEvents = [...events].sort((a,b) => compareDesc(parseISO(a.date), parseISO(b.date)));
+        const sortedEvents = [...events].sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date)));
 
         for (const event of sortedEvents) {
             try {
@@ -56,12 +56,12 @@ export default function EventsPage() {
             }
         }
         
-        // Reverse the upcoming events within each month to be chronological
-        upcoming.forEach(monthEvents => monthEvents.reverse());
+        // Past events within each month should be reverse-chronological (newest first)
+        past.forEach(monthEvents => monthEvents.reverse());
 
         return { 
             upcomingEventsByMonth: Array.from(upcoming.entries()), 
-            pastEventsByMonth: Array.from(past.entries()) 
+            pastEventsByMonth: Array.from(past.entries()).reverse() // Also reverse the order of past months
         };
     }, [events]);
 
