@@ -29,7 +29,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
 } from '@/components/ui/sidebar';
-import { Skeleton } from '../ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AppSidebar() {
   const pathname = usePathname();
