@@ -59,7 +59,8 @@ export default function AppSidebar() {
 
   const mainNavItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Home' },
-    { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events', requiresAuth: true },
+    { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events' },
+    { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
   ];
 
   const readingPlanNavItems = [
@@ -67,10 +68,6 @@ export default function AppSidebar() {
     { href: '/bible-checklist', label: 'Reading Plan', icon: ListChecks, requiresGuest: true, tooltip: 'Reading Plan' },
     { href: '/full-plan', label: 'Full Plan', icon: BookOpen, tooltip: 'Full Plan' },
     { href: '/leaderboard', label: 'Leaderboard', icon: Users, tooltip: 'Leaderboard', requiresAuth: true },
-  ];
-
-  const personalNavItems = [
-     { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
   ];
   
   const adminNavItems = [
@@ -140,12 +137,6 @@ export default function AppSidebar() {
                 </SidebarMenu>
             </SidebarGroup>
 
-            <SidebarSeparator />
-
-            <SidebarMenu>
-                {renderNavItems(personalNavItems)}
-            </SidebarMenu>
-
               {loadingAuth ? (
                 <div className="p-2 space-y-2">
                   <Skeleton className="h-8 w-full" />
@@ -170,7 +161,7 @@ export default function AppSidebar() {
               ) : null}
 
               
-              <div className={cn(!currentUser ? "border-t border-border mt-2" : "")}>
+              <div className={cn(isAdmin || !currentUser ? "border-t border-border mt-2" : "")}>
                 <SidebarSeparator />
                 {isAdmin ? (
                   <SidebarGroup>
