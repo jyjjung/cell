@@ -35,9 +35,9 @@ import { Skeleton } from '../ui/skeleton';
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentUser, isAdmin, signOutUser, adminLogout, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
-  const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -88,6 +88,7 @@ export default function AppSidebar() {
       const shouldShowForAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
       const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
       
+      if (!isMounted) return null;
       if (!shouldShowForAuth || !isVisibleByPref) return null;
       
       return (
@@ -132,13 +133,25 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-              {isMounted ? renderNavItems(mainNavItems) : (
-                 <>
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                 </>
-              )}
+               {mainNavItems.map((item) => {
+                const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
+                if (!isMounted || !isVisibleByPref) return null;
+                return (
+                    <SidebarMenuItem key={item.href + item.label}>
+                        <Link href={item.href} passHref legacyBehavior>
+                            <SidebarMenuButton
+                                isActive={pathname === item.href}
+                                onClick={() => handleLinkClick(item.href)}
+                                tooltip={item.tooltip}
+                            >
+                                <item.icon />
+                                <span>{item.label}</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                )
+              })}
+              { (!isMounted || loadingAuth) && <><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></>}
             </SidebarMenu>
             
             <SidebarSeparator />
@@ -159,6 +172,8 @@ export default function AppSidebar() {
                         {renderNavItems(readingPlanNavItems)}
                     </SidebarMenu>
                 </SidebarGroup>
+
+                {isAdmin && <SidebarSeparator />}
 
                 {!currentUser && (
                     <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden">
