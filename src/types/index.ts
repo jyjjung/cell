@@ -47,11 +47,21 @@ export interface BibleReadingPlan {
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
 
+export interface SidebarPreferences {
+  home: boolean;
+  events: boolean;
+  memorize: boolean;
+  checklist: boolean;
+  fullPlan: boolean;
+  leaderboard: boolean;
+}
+
 // Extended user type
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   birthday?: string | null; // YYYY-MM-DD format
   showInCommunityProgress?: boolean;
+  sidebar?: Partial<SidebarPreferences>;
 }
 
 
@@ -64,6 +74,7 @@ export interface UserProfileData {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
+  sidebar?: Partial<SidebarPreferences>;
 }
 
 

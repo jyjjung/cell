@@ -14,7 +14,7 @@ import {
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import type { AppUser, UserProfileData } from '@/types';
+import type { AppUser, UserProfileData, SidebarPreferences } from '@/types';
 import { useEvents } from '@/hooks/use-events'; // For birthday event management
 import { usePageLoading } from '@/contexts/page-loading-context';
 
@@ -36,6 +36,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const ADMIN_PASSWORD = "Admin123";
 const ADMIN_AUTH_KEY = "cell_dates_admin_auth";
 const USERS_COLLECTION = 'users';
+
+const defaultSidebarPreferences: SidebarPreferences = {
+  home: true,
+  events: true,
+  memorize: true,
+  checklist: true,
+  fullPlan: true,
+  leaderboard: true,
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -68,7 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...firebaseUser, // Base Firebase user properties
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             birthday: profileData.birthday || null,
-            showInCommunityProgress: profileData.showInCommunityProgress ?? true, // Load new setting
+            showInCommunityProgress: profileData.showInCommunityProgress ?? true,
+            sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) }
           } as AppUser);
         } else {
           // Create a basic profile if it doesn't exist (e.g., first-time sign-up)
@@ -81,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
             showInCommunityProgress: true, // Default to true
+            sidebar: defaultSidebarPreferences,
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
@@ -88,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: newProfileData.displayName,
             birthday: newProfileData.birthday,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
+            sidebar: newProfileData.sidebar,
           } as AppUser);
         }
       } else {
@@ -128,13 +140,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
         showInCommunityProgress: true,
+        sidebar: defaultSidebarPreferences,
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
       if (auth.currentUser) {
         await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
       }
-      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, showInCommunityProgress: true } as AppUser;
+      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, showInCommunityProgress: true, sidebar: defaultSidebarPreferences } as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
       throw error;
@@ -197,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
+          sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
         };
         return updatedUser;
       });

@@ -15,12 +15,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil, Users } from 'lucide-react';
+import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil, Users, PanelLeft } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import type { UserProfileData } from '@/types';
+import type { UserProfileData, SidebarPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
 
 const profileFormSchema = z.object({
@@ -29,6 +29,20 @@ const profileFormSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+type SidebarConfigItem = {
+  key: keyof SidebarPreferences;
+  label: string;
+};
+
+const sidebarConfig: SidebarConfigItem[] = [
+  { key: 'home', label: 'Home' },
+  { key: 'events', label: 'Events' },
+  { key: 'memorize', label: 'Memory Verses' },
+  { key: 'checklist', label: 'My Checklist' },
+  { key: 'fullPlan', label: 'Full Plan' },
+  { key: 'leaderboard', label: 'Leaderboard' },
+];
 
 export default function ProfilePage() {
   const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
@@ -39,10 +53,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Separate state for the toggle to allow for immediate updates
   const [showProgress, setShowProgress] = useState(currentUser?.showInCommunityProgress ?? true);
-  const [isTogglingProgress, setIsTogglingProgress] = useState(false);
-
+  const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -70,9 +82,9 @@ export default function ProfilePage() {
         birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
       });
       setShowProgress(currentUser.showInCommunityProgress ?? true);
+      setSidebarPrefs(currentUser.sidebar || {});
     }
   }, [currentUser, form]);
-
 
   const handleSignOut = async () => {
     await signOutUser();
@@ -104,7 +116,6 @@ export default function ProfilePage() {
 
   const handleProgressToggle = async (isChecked: boolean) => {
     if (!currentUser) return;
-    setIsTogglingProgress(true);
     setShowProgress(isChecked); // Optimistically update UI
     try {
       await updateUserProfile(currentUser.uid, { showInCommunityProgress: isChecked });
@@ -118,8 +129,25 @@ export default function ProfilePage() {
       console.error("Failed to update progress visibility:", error);
       toast({ title: "Update Failed", description: "Could not update your privacy setting.", variant: "destructive" });
       setShowProgress(!isChecked); // Revert on error
-    } finally {
-      setIsTogglingProgress(false);
+    }
+  };
+  
+  const handleSidebarToggle = async (key: keyof SidebarPreferences, isChecked: boolean) => {
+    if (!currentUser) return;
+    const newPrefs = { ...sidebarPrefs, [key]: isChecked };
+    setSidebarPrefs(newPrefs); // Optimistic UI update
+    
+    try {
+      await updateUserProfile(currentUser.uid, { sidebar: newPrefs });
+      toast({
+        title: "Sidebar Updated",
+        description: `'${sidebarConfig.find(c => c.key === key)?.label}' item is now ${isChecked ? 'visible' : 'hidden'}.`,
+      });
+    } catch (error) {
+      console.error("Failed to update sidebar preference:", error);
+      toast({ title: "Update Failed", description: "Could not update your sidebar setting.", variant: "destructive" });
+      const revertedPrefs = { ...sidebarPrefs, [key]: !isChecked };
+      setSidebarPrefs(revertedPrefs); // Revert on error
     }
   };
 
@@ -137,10 +165,9 @@ export default function ProfilePage() {
 
   if (!currentUser) return null;
 
-
   return (
-    <div className="flex min-h-[calc(100vh-15rem)] items-center justify-center">
-      <Card className="w-full max-w-lg">
+    <div className="container mx-auto py-8 max-w-2xl space-y-8">
+      <Card>
         <CardHeader className="text-center items-center relative">
             <Button onClick={() => setIsEditing(!isEditing)} variant="ghost" size="icon" className="absolute top-4 right-4 h-8 w-8">
               <Pencil className="h-4 w-4" />
@@ -228,25 +255,6 @@ export default function ProfilePage() {
               )}
             </form>
           </Form>
-          
-          <Separator />
-
-          <div className="space-y-2">
-            <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                <div className="space-y-0.5">
-                <Label htmlFor="community-progress-switch" className="flex items-center"><Users className="mr-2 h-4 w-4"/>Community Progress</Label>
-                <p className="text-sm text-muted-foreground">
-                    Show your reading progress on the community leaderboard.
-                </p>
-                </div>
-                <Switch
-                    id="community-progress-switch"
-                    checked={showProgress}
-                    onCheckedChange={handleProgressToggle}
-                    disabled={isTogglingProgress || isSaving}
-                />
-            </div>
-          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 pt-6 border-t">
           <Button onClick={handleSignOut} variant="destructive" className="w-full">
@@ -257,6 +265,48 @@ export default function ProfilePage() {
             <p className="text-muted-foreground text-xs break-all text-center">{currentUser.uid}</p>
           </div>
         </CardFooter>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><PanelLeft className="mr-2 h-5 w-5" /> Sidebar Customization</CardTitle>
+          <CardDescription>Choose which items you want to see in the sidebar.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sidebarConfig.map(({key, label}) => (
+            <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`sidebar-switch-${key}`}>{label}</Label>
+                </div>
+                <Switch
+                    id={`sidebar-switch-${key}`}
+                    checked={sidebarPrefs[key] ?? true}
+                    onCheckedChange={(checked) => handleSidebarToggle(key, checked)}
+                />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5" />Community Settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+              <Label htmlFor="community-progress-switch">Community Progress</Label>
+              <p className="text-sm text-muted-foreground">
+                  Show your reading progress on the community leaderboard.
+              </p>
+              </div>
+              <Switch
+                  id="community-progress-switch"
+                  checked={showProgress}
+                  onCheckedChange={handleProgressToggle}
+              />
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

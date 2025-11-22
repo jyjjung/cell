@@ -45,7 +45,6 @@ export default function AppSidebar() {
     setIsMounted(true);
   }, []);
 
-
   const handleLinkClick = (path: string) => {
     if (pathname !== path) {
       setIsPageLoading(true);
@@ -62,18 +61,20 @@ export default function AppSidebar() {
     adminLogout();
     router.push('/admin');
   };
+  
+  const sidebarPrefs = currentUser?.sidebar;
 
   const mainNavItems = [
-    { href: '/', label: 'Home', icon: Home, tooltip: 'Home' },
-    { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events' },
-    { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
+    { href: '/', label: 'Home', icon: Home, tooltip: 'Home', key: 'home' },
+    { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events', key: 'events' },
+    { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses', key: 'memorize' },
   ];
 
   const readingPlanNavItems = [
-     { href: '/bible-checklist', label: 'My Checklist', icon: ListChecks, requiresAuth: true, tooltip: 'My Checklist' },
-    { href: '/bible-checklist', label: 'Reading Plan', icon: ListChecks, requiresGuest: true, tooltip: 'Reading Plan' },
-    { href: '/full-plan', label: 'Full Plan', icon: BookOpen, tooltip: 'Full Plan' },
-    { href: '/leaderboard', label: 'Leaderboard', icon: Users, tooltip: 'Leaderboard', requiresAuth: true },
+    { href: '/bible-checklist', label: 'My Checklist', icon: ListChecks, requiresAuth: true, tooltip: 'My Checklist', key: 'checklist' },
+    { href: '/bible-checklist', label: 'Reading Plan', icon: ListChecks, requiresGuest: true, tooltip: 'Reading Plan', key: 'checklist' },
+    { href: '/full-plan', label: 'Full Plan', icon: BookOpen, tooltip: 'Full Plan', key: 'fullPlan' },
+    { href: '/leaderboard', label: 'Leaderboard', icon: Users, tooltip: 'Leaderboard', requiresAuth: true, key: 'leaderboard' },
   ];
   
   const adminNavItems = [
@@ -82,11 +83,12 @@ export default function AppSidebar() {
       { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
   ];
 
-  const renderNavItems = (items: (typeof mainNavItems | typeof readingPlanNavItems)[0][]) => {
+  const renderNavItems = (items: any[]) => {
     return items.map((item) => {
-      // This logic is now safe because it's wrapped in `isMounted` check
-      const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
-      if (!shouldShow) return null;
+      const shouldShowForAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+      const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
+      
+      if (!shouldShowForAuth || !isVisibleByPref) return null;
       
       return (
           <SidebarMenuItem key={item.href + item.label}>
@@ -130,20 +132,13 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
-                 <SidebarMenuItem key={item.href}>
-                    <Link href={item.href} passHref legacyBehavior>
-                        <SidebarMenuButton
-                            isActive={pathname === item.href}
-                            onClick={() => handleLinkClick(item.href)}
-                            tooltip={item.tooltip}
-                        >
-                            <item.icon />
-                            <span>{item.label}</span>
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-              ))}
+              {isMounted && !loadingAuth ? renderNavItems(mainNavItems) : (
+                 <>
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                 </>
+              )}
             </SidebarMenu>
             
             <SidebarSeparator />
@@ -151,7 +146,6 @@ export default function AppSidebar() {
             { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
                     <Skeleton className="h-4 w-1/2 mb-2" />
-                    <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
                 </div>
