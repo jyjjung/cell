@@ -88,7 +88,6 @@ export default function AppSidebar() {
       const shouldShowForAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
       const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
       
-      if (!isMounted) return null;
       if (!shouldShowForAuth || !isVisibleByPref) return null;
       
       return (
@@ -135,7 +134,7 @@ export default function AppSidebar() {
             <SidebarMenu>
                {mainNavItems.map((item) => {
                 const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-                if (!isMounted || !isVisibleByPref) return null;
+                if (!isMounted || !isVisibleByPref) return null; // Still hide based on prefs
                 return (
                     <SidebarMenuItem key={item.href + item.label}>
                         <Link href={item.href} passHref legacyBehavior>
@@ -151,7 +150,6 @@ export default function AppSidebar() {
                     </SidebarMenuItem>
                 )
               })}
-              { (!isMounted || loadingAuth) && <><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></>}
             </SidebarMenu>
             
             <SidebarSeparator />
@@ -173,26 +171,8 @@ export default function AppSidebar() {
                     </SidebarMenu>
                 </SidebarGroup>
 
-                {isAdmin && <SidebarSeparator />}
+                {currentUser && <SidebarSeparator />}
 
-                {!currentUser && (
-                    <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden">
-                        <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
-                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
-                            <Link href="/login" className="flex items-center justify-center">
-                                <LogIn className="mr-2 h-4 w-4" /> 
-                                <span>Login</span>
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
-                            <Link href="/signup" className="flex items-center justify-center">
-                                <UserPlus className="mr-2 h-4 w-4" /> 
-                                <span>Sign Up</span>
-                            </Link>
-                        </Button>
-                    </div>
-                )}
-                
                 <SidebarGroup>
                     {isAdmin ? (
                         <>
@@ -248,6 +228,27 @@ export default function AppSidebar() {
                     )}
                 </SidebarGroup>
               </>
+            )}
+            
+            { !isMounted ? null : (
+                !currentUser && (
+                    <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden mt-auto">
+                        <SidebarSeparator />
+                        <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
+                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
+                            <Link href="/login" className="flex items-center justify-center">
+                                <LogIn className="mr-2 h-4 w-4" /> 
+                                <span>Login</span>
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
+                            <Link href="/signup" className="flex items-center justify-center">
+                                <UserPlus className="mr-2 h-4 w-4" /> 
+                                <span>Sign Up</span>
+                            </Link>
+                        </Button>
+                    </div>
+                )
             )}
         </SidebarContent>
 
