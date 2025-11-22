@@ -54,6 +54,9 @@ export interface SidebarPreferences {
   checklist: boolean;
   fullPlan: boolean;
   leaderboard: boolean;
+  adminEvents?: boolean;
+  adminMemoryVerses?: boolean;
+  adminBiblePlan?: boolean;
 }
 
 // Extended user type
@@ -109,5 +112,3 @@ export interface WeeklyProgress {
   isOverdue: boolean;
   passageSummary: string;
 }
-
-    

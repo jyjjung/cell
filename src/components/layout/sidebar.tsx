@@ -78,9 +78,9 @@ export default function AppSidebar() {
   ];
   
   const adminNavItems = [
-      { href: '/admin/events', label: 'Events', icon: Calendar },
-      { href: '/admin/memory-verses', label: 'Memory Verses', icon: BookMarked },
-      { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen },
+      { href: '/admin/events', label: 'Events', icon: Calendar, key: 'adminEvents' },
+      { href: '/admin/memory-verses', label: 'Memory Verses', icon: BookMarked, key: 'adminMemoryVerses' },
+      { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen, key: 'adminBiblePlan' },
   ];
 
   const renderNavItems = (items: any[]) => {
@@ -143,7 +143,7 @@ export default function AppSidebar() {
             
             <SidebarSeparator />
 
-            { !isMounted ? (
+            { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
                     <Skeleton className="h-4 w-1/2 mb-2" />
                     <Skeleton className="h-8 w-full" />
@@ -183,7 +183,10 @@ export default function AppSidebar() {
                         <>
                         <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
                         <SidebarMenu>
-                            {adminNavItems.map(item => (
+                            {adminNavItems.map(item => {
+                               const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
+                               if (!isVisibleByPref) return null;
+                               return (
                                 <SidebarMenuItem key={item.href}>
                                     <Link href={item.href} passHref legacyBehavior>
                                         <SidebarMenuButton
@@ -196,7 +199,8 @@ export default function AppSidebar() {
                                         </SidebarMenuButton>
                                     </Link>
                                 </SidebarMenuItem>
-                            ))}
+                               )
+                            })}
                             <SidebarMenuItem>
                                 <SidebarMenuButton
                                     onClick={handleAdminLogout}
@@ -299,5 +303,3 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PanelLeft } from 'lucide-react';
+import { Loader2, PanelLeft, Shield } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import type { SidebarPreferences } from '@/types';
@@ -17,7 +17,7 @@ type SidebarConfigItem = {
   label: string;
 };
 
-const sidebarConfig: SidebarConfigItem[] = [
+const userSidebarConfig: SidebarConfigItem[] = [
   { key: 'home', label: 'Home' },
   { key: 'events', label: 'Events' },
   { key: 'memorize', label: 'Memory Verses' },
@@ -26,8 +26,15 @@ const sidebarConfig: SidebarConfigItem[] = [
   { key: 'leaderboard', label: 'Leaderboard' },
 ];
 
+const adminSidebarConfig: SidebarConfigItem[] = [
+  { key: 'adminEvents', label: 'Admin: Events' },
+  { key: 'adminMemoryVerses', label: 'Admin: Memory Verses' },
+  { key: 'adminBiblePlan', label: 'Admin: Bible Plan' },
+];
+
+
 export default function SettingsPage() {
-  const { currentUser, loadingAuth, updateUserProfile } = useAuth();
+  const { currentUser, isAdmin, loadingAuth, updateUserProfile } = useAuth();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
@@ -59,9 +66,10 @@ export default function SettingsPage() {
     
     try {
       await updateUserProfile(currentUser.uid, { sidebar: newPrefs });
+      const configItem = [...userSidebarConfig, ...adminSidebarConfig].find(c => c.key === key);
       toast({
         title: "Sidebar Updated",
-        description: `'${sidebarConfig.find(c => c.key === key)?.label}' item is now ${isChecked ? 'visible' : 'hidden'}.`,
+        description: `'${configItem?.label}' item is now ${isChecked ? 'visible' : 'hidden'}.`,
       });
     } catch (error) {
       console.error("Failed to update sidebar preference:", error);
@@ -95,7 +103,7 @@ export default function SettingsPage() {
           <CardDescription>Choose which items you want to see in the sidebar.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {sidebarConfig.map(({key, label}) => (
+          {userSidebarConfig.map(({key, label}) => (
             <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <Label htmlFor={`sidebar-switch-${key}`}>{label}</Label>
@@ -109,8 +117,30 @@ export default function SettingsPage() {
           ))}
         </CardContent>
       </Card>
+      
+      {isAdmin && (
+         <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center"><Shield className="mr-2 h-5 w-5" /> Admin Sidebar</CardTitle>
+                <CardDescription>Customize the visibility of admin pages in the sidebar.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            {adminSidebarConfig.map(({key, label}) => (
+                <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                    <Label htmlFor={`sidebar-switch-${key}`}>{label}</Label>
+                    </div>
+                    <Switch
+                        id={`sidebar-switch-${key}`}
+                        checked={sidebarPrefs[key] ?? true}
+                        onCheckedChange={(checked) => handleSidebarToggle(key, checked)}
+                    />
+                </div>
+            ))}
+            </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }
-
-    

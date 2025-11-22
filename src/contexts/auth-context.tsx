@@ -43,6 +43,9 @@ const defaultSidebarPreferences: SidebarPreferences = {
   checklist: true,
   fullPlan: true,
   leaderboard: true,
+  adminEvents: true,
+  adminMemoryVerses: true,
+  adminBiblePlan: true,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
