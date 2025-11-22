@@ -140,9 +140,8 @@ export default function AppSidebar() {
                ) : (
                 mainNavItems.map((item) => {
                   const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-                  if (!isVisibleByPref) return null;
                   return (
-                      <SidebarMenuItem key={item.href + item.label}>
+                      <SidebarMenuItem key={item.href + item.label} className={cn(!isVisibleByPref ? 'hidden' : '')}>
                           <Link href={item.href} passHref legacyBehavior>
                               <SidebarMenuButton
                                   isActive={pathname === item.href}
@@ -164,8 +163,8 @@ export default function AppSidebar() {
             { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
                     <Skeleton className="h-4 w-1/2 mb-2" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
+                    <SidebarMenuSkeleton showIcon={true} />
+                    <SidebarMenuSkeleton showIcon={true} />
                 </div>
             ) : (
                 <>
