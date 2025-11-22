@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookHeart, BookMarked, ListOrdered } from 'lucide-react';
@@ -38,6 +39,11 @@ export default function AppSidebar() {
   const { setIsPageLoading } = usePageLoading();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
 
   const handleLinkClick = (path: string) => {
@@ -78,7 +84,7 @@ export default function AppSidebar() {
 
   const renderNavItems = (items: (typeof mainNavItems | typeof readingPlanNavItems)[0][]) => {
     return items.map((item) => {
-      const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+      const shouldShow = !isMounted || (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
       
       return (
           <SidebarMenuItem key={item.href + item.label} className={cn(!shouldShow && "hidden")}>
@@ -131,11 +137,17 @@ export default function AppSidebar() {
                     Reading Plan
                 </SidebarGroupLabel>
                 <SidebarMenu>
-                    {renderNavItems(readingPlanNavItems)}
+                    { !isMounted ? (
+                      <>
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                      </>
+                    ) : renderNavItems(readingPlanNavItems) }
                 </SidebarMenu>
             </SidebarGroup>
 
-              {loadingAuth ? (
+              { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -160,8 +172,7 @@ export default function AppSidebar() {
 
               
               <div className={cn("mt-2")}>
-                 <SidebarSeparator />
-                {isAdmin ? (
+                {isMounted && isAdmin ? (
                   <SidebarGroup>
                       <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
                       <SidebarMenu>
@@ -191,7 +202,7 @@ export default function AppSidebar() {
                           </SidebarMenuItem>
                       </SidebarMenu>
                   </SidebarGroup>
-                ) : (
+                ) : isMounted && !isAdmin ? (
                     <SidebarMenu>
                         <SidebarMenuItem className={cn(loadingAuth && "hidden")}>
                             <Link href="/admin" passHref legacyBehavior>
@@ -206,13 +217,17 @@ export default function AppSidebar() {
                             </Link>
                         </SidebarMenuItem>
                     </SidebarMenu>
+                ) : (
+                  <div className="p-2">
+                    <Skeleton className="h-8 w-full" />
+                  </div>
                 )}
               </div>
         </SidebarContent>
 
         <SidebarFooter>
             <div className="flex items-center justify-between">
-                {loadingAuth ? (
+                { !isMounted || loadingAuth ? (
                      <div className="flex items-center w-full">
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <div className="space-y-2 ml-2 w-full group-data-[collapsible=icon]:hidden">
