@@ -84,13 +84,20 @@ export default function AppSidebar() {
       { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen, key: 'adminBiblePlan' },
   ];
 
+  const isNavItemVisible = (item: any) => {
+    const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
+    if (!isVisibleByPref) return false;
+
+    const isVisibleByAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+    return isVisibleByAuth;
+  };
+
+  const isReadingPlanSectionVisible = readingPlanNavItems.some(isNavItemVisible);
+  const isAdminSectionVisible = isAdmin && adminNavItems.some(item => sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true);
+
   const renderNavItems = (items: any[]) => {
-    return items.map((item) => {
-      const shouldShowForAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
-      const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-      
-      return (
-          <SidebarMenuItem key={item.href + item.label} className={cn(!shouldShowForAuth || !isVisibleByPref ? 'hidden' : '')}>
+    return items.map((item) => (
+          <SidebarMenuItem key={item.href + item.label} className={cn(!isNavItemVisible(item) ? 'hidden' : '')}>
               <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
@@ -103,7 +110,7 @@ export default function AppSidebar() {
               </Link>
           </SidebarMenuItem>
       )
-    });
+    );
   }
 
 
@@ -158,7 +165,9 @@ export default function AppSidebar() {
                )}
             </SidebarMenu>
             
-            <SidebarSeparator />
+            <div className={cn(!isMounted || loadingAuth || !isReadingPlanSectionVisible ? 'hidden' : '')}>
+                <SidebarSeparator />
+            </div>
 
             { !isMounted || loadingAuth ? (
                 <div className="p-2 space-y-2">
@@ -168,19 +177,21 @@ export default function AppSidebar() {
                 </div>
             ) : (
                 <>
-                <SidebarGroup>
-                    <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
-                        Reading Plan
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        {renderNavItems(readingPlanNavItems)}
-                    </SidebarMenu>
-                </SidebarGroup>
+                {isReadingPlanSectionVisible && (
+                  <SidebarGroup>
+                      <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                          Reading Plan
+                      </SidebarGroupLabel>
+                      <SidebarMenu>
+                          {renderNavItems(readingPlanNavItems)}
+                      </SidebarMenu>
+                  </SidebarGroup>
+                )}
 
-                {currentUser && <SidebarSeparator />}
+                {currentUser && isAdminSectionVisible && <SidebarSeparator />}
 
                 <SidebarGroup>
-                    {isAdmin ? (
+                    {isAdminSectionVisible && (
                         <>
                         <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Admin</SidebarGroupLabel>
                         <SidebarMenu>
@@ -214,23 +225,22 @@ export default function AppSidebar() {
                             </SidebarMenuItem>
                         </SidebarMenu>
                         </>
-                    ) : (
-                        currentUser && (
-                            <SidebarMenu>
-                                <SidebarMenuItem>
-                                    <Link href="/admin" passHref legacyBehavior>
-                                        <SidebarMenuButton
-                                            isActive={pathname === '/admin'}
-                                            onClick={() => handleLinkClick('/admin')}
-                                            tooltip="Admin"
-                                        >
-                                            <Shield />
-                                            <span>Admin</span>
-                                        </SidebarMenuButton>
-                                    </Link>
-                                </SidebarMenuItem>
-                            </SidebarMenu>
-                        )
+                    )}
+                    { currentUser && !isAdmin && (
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <Link href="/admin" passHref legacyBehavior>
+                                    <SidebarMenuButton
+                                        isActive={pathname === '/admin'}
+                                        onClick={() => handleLinkClick('/admin')}
+                                        tooltip="Admin"
+                                    >
+                                        <Shield />
+                                        <span>Admin</span>
+                                    </SidebarMenuButton>
+                                </Link>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
                     )}
                 </SidebarGroup>
               </>
