@@ -148,7 +148,7 @@ export default function HomePage() {
     }
 
     return (
-        <CardContent className="p-0 max-h-[45vh] overflow-y-auto">
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
