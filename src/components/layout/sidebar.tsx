@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -132,7 +132,7 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-              {isMounted && !loadingAuth ? renderNavItems(mainNavItems) : (
+              {isMounted ? renderNavItems(mainNavItems) : (
                  <>
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -143,7 +143,7 @@ export default function AppSidebar() {
             
             <SidebarSeparator />
 
-            { !isMounted || loadingAuth ? (
+            { !isMounted ? (
                 <div className="p-2 space-y-2">
                     <Skeleton className="h-4 w-1/2 mb-2" />
                     <Skeleton className="h-8 w-full" />
@@ -178,8 +178,6 @@ export default function AppSidebar() {
                     </div>
                 )}
                 
-                <SidebarSeparator />
-
                 <SidebarGroup>
                     {isAdmin ? (
                         <>
@@ -212,20 +210,22 @@ export default function AppSidebar() {
                         </SidebarMenu>
                         </>
                     ) : (
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <Link href="/admin" passHref legacyBehavior>
-                                    <SidebarMenuButton
-                                        isActive={pathname === '/admin'}
-                                        onClick={() => handleLinkClick('/admin')}
-                                        tooltip="Admin"
-                                    >
-                                        <Shield />
-                                        <span>Admin</span>
-                                    </SidebarMenuButton>
-                                </Link>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
+                        currentUser && (
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <Link href="/admin" passHref legacyBehavior>
+                                        <SidebarMenuButton
+                                            isActive={pathname === '/admin'}
+                                            onClick={() => handleLinkClick('/admin')}
+                                            tooltip="Admin"
+                                        >
+                                            <Shield />
+                                            <span>Admin</span>
+                                        </SidebarMenuButton>
+                                    </Link>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        )
                     )}
                 </SidebarGroup>
               </>
@@ -270,6 +270,9 @@ export default function AppSidebar() {
                                 <DropdownMenuItem onSelect={() => {router.push('/profile'); handleLinkClick('/profile')}}>
                                     <User className="mr-2 h-4 w-4" /> Profile
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => {router.push('/settings'); handleLinkClick('/settings')}}>
+                                    <Settings className="mr-2 h-4 w-4" /> Settings
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
@@ -296,3 +299,5 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+
+    
