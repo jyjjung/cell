@@ -25,6 +25,7 @@ import {
     SidebarMenuItem,
     SidebarMenuButton,
     SidebarFooter,
+    SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '../ui/skeleton';
 
@@ -103,6 +104,20 @@ export default function AppSidebar() {
                 )
                 })}
             </SidebarMenu>
+             <SidebarSeparator />
+              {loadingAuth ? (
+                <div className="p-2 space-y-2">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              ) : !currentUser ? (
+                <div className="p-2 space-y-2">
+                   <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
+                   <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
+                       <Link href="/login"><LogIn className="mr-2 h-4 w-4" /> Login</Link>
+                   </Button>
+                </div>
+              ) : null}
         </SidebarContent>
 
         <SidebarFooter>
@@ -112,7 +127,6 @@ export default function AppSidebar() {
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <div className="space-y-2 ml-2 w-full">
                             <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-3 w-1/2" />
                         </div>
                     </div>
                 ) : currentUser ? (
@@ -122,11 +136,12 @@ export default function AppSidebar() {
                                 <User className="mr-3 h-5 w-5 shrink-0" />
                                 <div className="flex flex-col truncate">
                                     <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
-                                    <span className="text-xs text-muted-foreground truncate">{currentUser.email}</span>
                                 </div>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="start" className="w-56 mb-2">
+                            <DropdownMenuLabel className="truncate">{currentUser.email}</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => {router.push('/profile'); setIsPageLoading(true);}}>
                                 <User className="mr-2 h-4 w-4" /> Profile
                             </DropdownMenuItem>
@@ -135,27 +150,18 @@ export default function AppSidebar() {
                                 <DropdownMenuItem onSelect={() => {router.push('/admin/dashboard'); setIsPageLoading(true);}}>
                                     <Shield className="mr-2 h-4 w-4" /> Admin Dashboard
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive">
+                                <DropdownMenuItem onSelect={handleAdminLogout} className="text-destructive focus:text-destructive">
                                     <LogOut className="mr-2 h-4 w-4" /> Logout Admin
                                 </DropdownMenuItem>
                                 </>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={handleSignOut} className="text-destructive">
+                            <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                                 <LogOut className="mr-2 h-4 w-4" /> Sign Out
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                ) : (
-                    <div className="w-full space-y-2">
-                        <Button asChild variant="default" className="w-full" onClick={() => handleLinkClick('/login')}>
-                            <Link href="/login"><LogIn className="mr-2 h-4 w-4" /> Login</Link>
-                        </Button>
-                        <Button asChild variant="secondary" className="w-full" onClick={() => handleLinkClick('/signup')}>
-                            <Link href="/signup"><UserPlus className="mr-2 h-4 w-4" /> Sign Up</Link>
-                        </Button>
-                    </div>
-                )}
+                ) : null}
                 <ThemeToggle />
             </div>
         </SidebarFooter>
