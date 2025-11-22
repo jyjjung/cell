@@ -20,8 +20,8 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 
 interface AuthContextType {
   isAdmin: boolean;
-  adminPasswordLogin: (password: string) => boolean;
-  adminLogout: () => void;
+  adminPasswordLogin: (password: string) => Promise<boolean>;
+  adminLogout: () => Promise<void>;
 
   currentUser: AppUser | null; // Changed to AppUser
   loadingAuth: boolean;
@@ -34,7 +34,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_PASSWORD = "Admin123";
-const ADMIN_AUTH_KEY = "cell_dates_admin_auth";
 const USERS_COLLECTION = 'users';
 
 const defaultSidebarPreferences: SidebarPreferences = {
@@ -57,16 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedAdminAuth = sessionStorage.getItem(ADMIN_AUTH_KEY);
-      if (storedAdminAuth === "true") {
-        setIsAdmin(true);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoadingAuth(true);
       if (firebaseUser) {
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -78,8 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             birthday: profileData.birthday || null,
             showInCommunityProgress: profileData.showInCommunityProgress ?? true,
-            sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) }
+            sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
+            isAdmin: profileData.isAdmin || false,
           } as AppUser);
+          setIsAdmin(profileData.isAdmin || false); // Set admin state from Firestore
         } else {
           // Create a basic profile if it doesn't exist (e.g., first-time sign-up)
           const initialDisplayName = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "New User";
@@ -92,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updatedAt: serverTimestamp() as Timestamp,
             showInCommunityProgress: true, // Default to true
             sidebar: defaultSidebarPreferences,
+            isAdmin: false, // Default to not admin
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
@@ -100,30 +94,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             birthday: newProfileData.birthday,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
             sidebar: newProfileData.sidebar,
+            isAdmin: newProfileData.isAdmin,
           } as AppUser);
+          setIsAdmin(false);
         }
       } else {
         setCurrentUser(null);
+        setIsAdmin(false); // No user, not an admin
       }
       setLoadingAuth(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const adminPasswordLogin = useCallback((password: string): boolean => {
+  const adminPasswordLogin = async (password: string): Promise<boolean> => {
+    if (!currentUser) {
+        throw new Error("No user is logged in to grant admin access to.");
+    }
     if (password === ADMIN_PASSWORD) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, "true");
-      setIsAdmin(true);
+      await updateUserProfile(currentUser.uid, { isAdmin: true });
+      // The onAuthStateChanged listener will handle the state update,
+      // but we can set it optimistically here for faster UI response.
+      setIsAdmin(true); 
       return true;
     }
     return false;
-  }, []);
+  };
 
-  const adminLogout = useCallback(() => {
-    sessionStorage.removeItem(ADMIN_AUTH_KEY);
-    setIsAdmin(false);
-    router.push('/admin');
-  }, [router]);
+  const adminLogout = async (): Promise<void> => {
+    if (!currentUser) {
+        console.warn("adminLogout called but no user is logged in.");
+        return;
+    }
+    try {
+        await updateUserProfile(currentUser.uid, { isAdmin: false });
+        setIsAdmin(false); // Optimistic update
+        router.push('/admin');
+    } catch(err) {
+        console.error("Failed to revoke admin status:", err);
+    }
+  };
 
   const signUpUser = async (email: string, password: string): Promise<AppUser | null> => {
     try {
@@ -141,13 +151,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: serverTimestamp() as Timestamp,
         showInCommunityProgress: true,
         sidebar: defaultSidebarPreferences,
+        isAdmin: false,
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
       if (auth.currentUser) {
         await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
       }
-      return { ...firebaseUser, displayName: initialDisplayName, birthday: null, showInCommunityProgress: true, sidebar: defaultSidebarPreferences } as AppUser;
+      return { ...firebaseUser, ...newProfileData } as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
       throw error;
@@ -188,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserProfile = async (userId: string, profileData: Partial<UserProfileData>) => {
-    if (!currentUser || currentUser.uid !== userId) {
+    if (!auth.currentUser || auth.currentUser.uid !== userId) {
       console.error("User not authorized to update this profile or no user logged in.");
       throw new Error("Not authorized.");
     }
@@ -211,14 +222,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
+          isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
         };
         return updatedUser;
       });
 
+       // Also update the top-level isAdmin state in the context
+       if (profileData.isAdmin !== undefined) {
+          setIsAdmin(profileData.isAdmin);
+       }
+
       // Handle birthday event creation/update
       if (profileData.birthday && profileData.displayName) { // Ensure displayName is available
          await addOrUpdateBirthdayEvent(userId, profileData.displayName, profileData.birthday);
-      } else if (profileData.birthday && currentUser.displayName) { // Fallback to current user's display name
+      } else if (profileData.birthday && currentUser && currentUser.displayName) { // Fallback to current user's display name
          await addOrUpdateBirthdayEvent(userId, currentUser.displayName, profileData.birthday);
       }
 

@@ -62,6 +62,7 @@ export interface AppUser extends FirebaseUser {
   birthday?: string | null; // YYYY-MM-DD format
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
+  isAdmin?: boolean;
 }
 
 
@@ -75,6 +76,7 @@ export interface UserProfileData {
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
+  isAdmin?: boolean;
 }
 
 
