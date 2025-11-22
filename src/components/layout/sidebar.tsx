@@ -30,6 +30,7 @@ import {
     useSidebar,
     SidebarGroup,
     SidebarGroupLabel,
+    SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '../ui/skeleton';
 
@@ -88,10 +89,8 @@ export default function AppSidebar() {
       const shouldShowForAuth = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
       const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
       
-      if (!shouldShowForAuth || !isVisibleByPref) return null;
-      
       return (
-          <SidebarMenuItem key={item.href + item.label}>
+          <SidebarMenuItem key={item.href + item.label} className={cn(!shouldShowForAuth || !isVisibleByPref ? 'hidden' : '')}>
               <Link href={item.href} passHref legacyBehavior>
                   <SidebarMenuButton
                       isActive={pathname === item.href}
@@ -132,24 +131,32 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-               {mainNavItems.map((item) => {
-                const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
-                if (!isMounted || !isVisibleByPref) return null; // Still hide based on prefs
-                return (
-                    <SidebarMenuItem key={item.href + item.label}>
-                        <Link href={item.href} passHref legacyBehavior>
-                            <SidebarMenuButton
-                                isActive={pathname === item.href}
-                                onClick={() => handleLinkClick(item.href)}
-                                tooltip={item.tooltip}
-                            >
-                                <item.icon />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                )
-              })}
+               { !isMounted || loadingAuth ? (
+                 <>
+                  <SidebarMenuSkeleton showIcon={true} />
+                  <SidebarMenuSkeleton showIcon={true} />
+                  <SidebarMenuSkeleton showIcon={true} />
+                 </>
+               ) : (
+                mainNavItems.map((item) => {
+                  const isVisibleByPref = item.key ? sidebarPrefs?.[item.key as keyof typeof sidebarPrefs] ?? true : true;
+                  if (!isVisibleByPref) return null;
+                  return (
+                      <SidebarMenuItem key={item.href + item.label}>
+                          <Link href={item.href} passHref legacyBehavior>
+                              <SidebarMenuButton
+                                  isActive={pathname === item.href}
+                                  onClick={() => handleLinkClick(item.href)}
+                                  tooltip={item.tooltip}
+                              >
+                                  <item.icon />
+                                  <span>{item.label}</span>
+                              </SidebarMenuButton>
+                          </Link>
+                      </SidebarMenuItem>
+                  )
+                })
+               )}
             </SidebarMenu>
             
             <SidebarSeparator />
@@ -230,7 +237,7 @@ export default function AppSidebar() {
               </>
             )}
             
-            { !isMounted ? null : (
+            { !isMounted || loadingAuth ? null : (
                 !currentUser && (
                     <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden mt-auto">
                         <SidebarSeparator />
