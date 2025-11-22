@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -27,6 +27,8 @@ import {
     SidebarFooter,
     SidebarSeparator,
     useSidebar,
+    SidebarGroup,
+    SidebarGroupLabel,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '../ui/skeleton';
 
@@ -55,13 +57,44 @@ export default function AppSidebar() {
     router.push('/admin');
   };
 
-  const navItems = [
+  const mainNavItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Home' },
-    { href: '/bible-checklist', label: 'My Checklist', icon: ListChecks, requiresAuth: true, tooltip: 'My Checklist' },
+    { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events', requiresAuth: true },
+  ];
+
+  const readingPlanNavItems = [
+     { href: '/bible-checklist', label: 'My Checklist', icon: ListChecks, requiresAuth: true, tooltip: 'My Checklist' },
     { href: '/bible-checklist', label: 'Reading Plan', icon: ListChecks, requiresGuest: true, tooltip: 'Reading Plan' },
     { href: '/full-plan', label: 'Full Plan', icon: BookOpen, tooltip: 'Full Plan' },
-    { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
+    { href: '/leaderboard', label: 'Leaderboard', icon: Users, tooltip: 'Leaderboard', requiresAuth: true },
   ];
+
+  const personalNavItems = [
+     { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses' },
+  ];
+
+  const renderNavItems = (items: typeof mainNavItems) => {
+    return items.map((item) => {
+      const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+      if (!shouldShow) return null;
+
+      return (
+          <SidebarMenuItem key={item.href + item.label}>
+              <Link href={item.href} passHref legacyBehavior>
+                  <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      onClick={() => handleLinkClick(item.href)}
+                      tooltip={item.tooltip}
+                  >
+                      <item.icon />
+                      <span>{item.label}</span>
+                  </SidebarMenuButton>
+              </Link>
+          </SidebarMenuItem>
+      )
+    });
+  }
+
 
   return (
     <Sidebar collapsible="icon">
@@ -87,26 +120,27 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-                {navItems.map((item) => {
-                const shouldShow = (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
-                if (!shouldShow) return null;
-
-                return (
-                    <SidebarMenuItem key={item.href + item.label}>
-                        <Link href={item.href} passHref legacyBehavior>
-                            <SidebarMenuButton
-                                isActive={pathname === item.href}
-                                onClick={() => handleLinkClick(item.href)}
-                                tooltip={item.tooltip}
-                            >
-                                <item.icon />
-                                <span>{item.label}</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                )
-                })}
+              {renderNavItems(mainNavItems)}
             </SidebarMenu>
+
+            <SidebarSeparator />
+            
+            <SidebarGroup>
+                <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+                    Reading Plan
+                </SidebarGroupLabel>
+                <SidebarMenu>
+                    {renderNavItems(readingPlanNavItems)}
+                </SidebarMenu>
+            </SidebarGroup>
+
+            <SidebarSeparator />
+
+            <SidebarMenu>
+                {renderNavItems(personalNavItems)}
+            </SidebarMenu>
+
+
              <SidebarSeparator />
               {loadingAuth ? (
                 <div className="p-2 space-y-2">
@@ -114,18 +148,18 @@ export default function AppSidebar() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : !currentUser ? (
-                 <div className="p-2 space-y-2">
-                   <p className="text-sm text-sidebar-foreground/70 px-2 group-data-[collapsible=icon]:hidden">Sign in to track your progress.</p>
+                 <div className="p-2 space-y-2 group-data-[collapsible=icon]:hidden">
+                   <p className="text-sm text-sidebar-foreground/70 px-2">Sign in to track your progress.</p>
                    <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/login')}>
                        <Link href="/login" className="flex items-center justify-center">
                           <LogIn className="mr-2 h-4 w-4" /> 
-                          <span className="group-data-[collapsible=icon]:hidden">Login</span>
+                          <span>Login</span>
                        </Link>
                    </Button>
                    <Button asChild variant="outline" className="w-full border-sidebar-border" onClick={() => handleLinkClick('/signup')}>
                        <Link href="/signup" className="flex items-center justify-center">
                           <UserPlus className="mr-2 h-4 w-4" /> 
-                          <span className="group-data-[collapsible=icon]:hidden">Sign Up</span>
+                          <span>Sign Up</span>
                         </Link>
                    </Button>
                 </div>

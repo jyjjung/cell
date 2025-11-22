@@ -74,8 +74,8 @@ export default function DashboardCards({
                 title: "Upcoming Events",
                 value: eventsLoading ? null : upcomingEventsCount,
                 isLoading: eventsLoading,
-                buttonText: "View Events",
-                buttonLink: "/#event-calendar-section", // This won't work with router push, should be handled differently if it stays
+                buttonText: "View All Events",
+                buttonLink: "/events",
                 IconComponent: CalendarCheck
             },
             {
