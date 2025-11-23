@@ -156,7 +156,7 @@ export default function SettingsPage() {
   };
   
   const handleNotifPrefToggle = async (key: keyof NotificationPreferences, isChecked: boolean) => {
-    if (!currentUser) return;
+    if (!currentUser || key === 'admin') return; // Prevent changing admin notifications
     const newPrefs = { ...notifPrefs, [key]: isChecked };
     setNotifPrefs(newPrefs);
     
@@ -240,14 +240,14 @@ export default function SettingsPage() {
                  {notificationPrefsConfig.map(({key, label, description}) => (
                     <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
                         <div className="space-y-0.5">
-                            <Label htmlFor={`notif-switch-${key}`}>{label}</Label>
+                            <Label htmlFor={`notif-switch-${key}`} className={cn(key === 'admin' && "text-muted-foreground")}>{label}</Label>
                             <p className="text-xs text-muted-foreground">{description}</p>
                         </div>
                         <Switch
                             id={`notif-switch-${key}`}
-                            checked={notifPrefs[key] ?? true}
+                            checked={key === 'admin' ? true : notifPrefs[key] ?? true}
                             onCheckedChange={(checked) => handleNotifPrefToggle(key, checked)}
-                            disabled={isPending}
+                            disabled={isPending || key === 'admin'}
                             aria-label={label}
                         />
                     </div>
