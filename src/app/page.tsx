@@ -22,19 +22,19 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: Layout } } = {
   notifications: { 
     component: NotificationsWidget, 
-    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 } 
+    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, minW: 1 } 
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 3, minH: 3, minW: 1, isResizable: false } 
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, minH: 4, minW: 1 } 
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
-    default: { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 4, minW: 1 } 
+    default: { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, minH: 4, minW: 1 } 
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 3, w: 1, h: 3, minH: 3, minW: 1, isResizable: false } 
+    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 4, minH: 4, minW: 1 } 
   },
 };
 
@@ -254,4 +254,3 @@ export default function HomePage() {
   );
 }
 
-    
