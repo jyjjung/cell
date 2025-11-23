@@ -8,7 +8,7 @@ import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users } from 'lucide-react';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Bell } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { motion, useInView } from 'framer-motion';
@@ -85,6 +85,15 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      <Section id="notifications-section" title="Notifications">
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <Bell className="mx-auto h-8 w-8 mb-2" />
+            You have no new notifications.
+          </CardContent>
+        </Card>
+      </Section>
+
       <Section id="dashboard-section" title="Dashboard">
          <DashboardCards
             currentUser={currentUser}
