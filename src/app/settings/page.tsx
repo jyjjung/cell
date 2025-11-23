@@ -67,7 +67,6 @@ const dashboardWidgetsConfig: DashboardWidgetConfigItem[] = [
   { key: 'todayReading', label: "Today's Reading", description: 'Display the bible reading for the current day.' },
   { key: 'upcomingEvents', label: 'Upcoming Events', description: 'A quick look at the next few events.' },
   { key: 'nextReading', label: 'Next Unread Reading', description: 'Shows your next reading to catch up on.' },
-  { key: 'verseOfTheDay', label: 'Verse of the Day', description: 'Display a verse from the memory verses list.' },
 ];
 
 

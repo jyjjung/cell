@@ -14,7 +14,6 @@ import NotificationsWidget from '@/components/dashboard-widgets/notifications-wi
 import TodayReadingWidget from '@/components/dashboard-widgets/today-reading-widget';
 import UpcomingEventsWidget from '@/components/dashboard-widgets/upcoming-events-widget';
 import NextReadingWidget from '@/components/dashboard-widgets/next-reading-widget';
-import VerseOfTheDayWidget from '@/components/dashboard-widgets/verse-of-the-day-widget';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -23,7 +22,6 @@ const WIDGET_COMPONENTS: { [key: string]: React.FC } = {
   todayReading: TodayReadingWidget,
   upcomingEvents: UpcomingEventsWidget,
   nextReading: NextReadingWidget,
-  verseOfTheDay: VerseOfTheDayWidget,
 };
 
 const DEFAULT_LAYOUTS: { [key: string]: Layout[] } = {
@@ -32,21 +30,18 @@ const DEFAULT_LAYOUTS: { [key: string]: Layout[] } = {
     { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'nextReading', x: 1, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, minH: 1, minW: 1 },
   ],
   md: [
     { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'nextReading', x: 1, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, minH: 1, minW: 1 },
   ],
   sm: [
     { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'todayReading', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 2, minH: 2, minW: 1 },
     { i: 'nextReading', x: 0, y: 6, w: 1, h: 2, minH: 2, minW: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 8, w: 1, h: 1, minH: 1, minW: 1 },
   ]
 };
 
@@ -85,7 +80,6 @@ export default function HomePage() {
       todayReading: true,
       upcomingEvents: true,
       nextReading: true,
-      verseOfTheDay: true,
     },
     layouts: DEFAULT_LAYOUTS,
   };

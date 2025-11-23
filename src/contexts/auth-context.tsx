@@ -64,7 +64,6 @@ const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   todayReading: true,
   upcomingEvents: true,
   nextReading: true,
-  verseOfTheDay: true,
 };
 
 

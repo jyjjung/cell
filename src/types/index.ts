@@ -77,7 +77,6 @@ export interface DashboardPreferences {
     todayReading: boolean;
     upcomingEvents: boolean;
     nextReading: boolean;
-    verseOfTheDay: boolean;
     [key: string]: boolean;
   },
   layouts: {
