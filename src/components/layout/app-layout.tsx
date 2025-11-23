@@ -52,13 +52,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     const checkEventReminders = async () => {
       // --- Check for Today's Events ---
-      const todayStart = startOfDay(new Date());
-      const todayEnd = endOfDay(new Date());
+      const todayStart = startOfDay(new Date()).toISOString();
+      const todayEnd = endOfDay(new Date()).toISOString();
       
       const todaysEventsQuery = query(
         collection(db, EVENTS_COLLECTION),
-        where('date', '>=', todayStart.toISOString()),
-        where('date', '<=', todayEnd.toISOString())
+        where('date', '>=', todayStart),
+        where('date', '<=', todayEnd)
       );
 
       try {
@@ -92,13 +92,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
 
       // --- Check for Events One Week Away ---
-      const oneWeekFromNowStart = startOfDay(addDays(new Date(), 7));
-      const oneWeekFromNowEnd = endOfDay(addDays(new Date(), 7));
+      const oneWeekFromNowStart = startOfDay(addDays(new Date(), 7)).toISOString();
+      const oneWeekFromNowEnd = endOfDay(addDays(new Date(), 7)).toISOString();
 
       const weekAwayEventsQuery = query(
         collection(db, EVENTS_COLLECTION),
-        where('date', '>=', oneWeekFromNowStart.toISOString()),
-        where('date', '<=', oneWeekFromNowEnd.toISOString())
+        where('date', '>=', oneWeekFromNowStart),
+        where('date', '<=', oneWeekFromNowEnd)
       );
 
       try {
