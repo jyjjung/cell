@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AppEvent } from '@/types';
+import type { AppEvent, AppNotification } from '@/types';
 import { EventCategory } from '@/types'; // Ensure EventCategory is imported
 import { db } from '@/lib/firebase';
 import {
@@ -67,18 +67,15 @@ export function useEvents() {
       
       // Create a notification for the new event, except for birthdays which are handled separately
       if (eventData.category !== EventCategory.Birthday) {
-          try {
-              await createNotification({
-                  title: `New ${eventData.category}: ${eventData.title}`,
-                  message: `Scheduled for ${format(parseISO(eventData.date), 'MMMM d, yyyy')}.`,
-                  type: 'event',
-                  isGlobal: true,
-                  relatedUrl: `/events#${docRef.id}`
-              });
-          } catch(notifError) {
-              console.error("Failed to create notification for new event:", notifError);
-              // Do not block the main flow if notification fails
-          }
+          const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
+            title: `New ${eventData.category}: ${eventData.title}`,
+            message: `Scheduled for ${format(parseISO(eventData.date), 'MMMM d, yyyy')}.`,
+            type: 'event',
+            isGlobal: true,
+            relatedUrl: `/events#${docRef.id}`
+          };
+          // This will create the in-app notif and trigger the push notif via the API route
+          await createNotification(notificationData);
       }
 
       return docRef.id; // Return the new document ID

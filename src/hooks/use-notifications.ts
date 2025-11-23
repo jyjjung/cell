@@ -24,6 +24,22 @@ import { useAuth } from '@/contexts/auth-context';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 
+async function triggerPushNotification(notification: AppNotification, targetUserIds?: string[]) {
+    try {
+        await fetch('/api/send-push', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ notification, targetUserIds }),
+        });
+    } catch (error) {
+        console.error("Failed to trigger push notification:", error);
+        // This failure is logged but not thrown, as the in-app notification is the primary mechanism.
+    }
+}
+
+
 export function useNotifications() {
   const { currentUser, isAdmin } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -84,11 +100,27 @@ export function useNotifications() {
     }
     
     try {
-        const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
-          ...notificationData,
-          createdAt: serverTimestamp(),
-          readBy: [], 
-        });
+        const dataToSave = {
+            ...notificationData,
+            createdAt: serverTimestamp(),
+            readBy: [], 
+        };
+        const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), dataToSave);
+
+        // After successfully creating the notification, trigger the push
+        const fullNotification: AppNotification = {
+            id: docRef.id,
+            createdAt: new Timestamp(Date.now() / 1000, 0), // Approximate timestamp
+            ...notificationData,
+            readBy: []
+        };
+        
+        if (notificationData.isGlobal) {
+            triggerPushNotification(fullNotification); // Global push
+        } else if (notificationData.userId) {
+            triggerPushNotification(fullNotification, [notificationData.userId]); // Targeted push
+        }
+        
         return docRef.id;
       } catch(error) {
           console.error("Error creating notification:", error, "Data:", notificationData);

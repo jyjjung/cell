@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { MemoryVerse } from '@/types';
+import type { MemoryVerse, AppNotification } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -74,13 +74,14 @@ export function useMemoryVerses() {
         textOverride: null, // Standard verses use API
       });
 
-      await createNotification({
+      const notificationData: Omit<AppNotification, 'id'|'createdAt'|'readBy'> = {
         title: 'New Memory Verse',
         message: `Verse "${reference}" was added to the list.`,
         type: 'admin',
         isGlobal: true,
         relatedUrl: '/memorize'
-      });
+      };
+      await createNotification(notificationData);
 
       return docRef.id;
     } catch (error) {
@@ -106,13 +107,14 @@ export function useMemoryVerses() {
         isLordsPrayerChunk: true, 
       });
 
-      await createNotification({
+      const notificationData: Omit<AppNotification, 'id'|'createdAt'|'readBy'> = {
         title: 'New Memory Verse',
         message: `"${LORDS_PRAYER_REFERENCE_TITLE}" was added to the list.`,
         type: 'admin',
         isGlobal: true,
         relatedUrl: '/memorize'
-      });
+      };
+      await createNotification(notificationData);
 
       return { addedCount: 1 }; // Signifies one entry added
     } catch (error) {

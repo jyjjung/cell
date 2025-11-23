@@ -74,6 +74,7 @@ export interface AppUser extends FirebaseUser {
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
   notificationPreferences?: NotificationPreferences;
+  fcmTokens?: string[];
   isAdmin?: boolean;
 }
 
@@ -87,7 +88,8 @@ export interface UserProfileData {
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
-  notificationPreferences?: NotificationPreferences;
+  notificationPreferences?: Partial<NotificationPreferences>;
+  fcmTokens?: string[];
   isAdmin?: boolean;
 }
 

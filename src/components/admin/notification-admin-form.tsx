@@ -43,11 +43,12 @@ export default function NotificationAdminForm() {
         isGlobal: true, // Admin-created notifications are global
       };
       
+      // This will create the in-app notification and trigger the API route to send the push notification.
       await createNotification(notificationData);
 
       toast({
         title: "Notification Sent!",
-        description: "The global notification has been created and will appear for all users in-app.",
+        description: "The global notification has been created and will be pushed to users.",
       });
       form.reset();
     } catch (error: any) {
