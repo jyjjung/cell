@@ -7,7 +7,7 @@ import { Responsive, WidthProvider, type Layout, type Layouts } from 'react-grid
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, X, Plus, Check, Edit } from 'lucide-react';
+import { Loader2, X, Plus, Check, Edit, GripVertical } from 'lucide-react';
 import type { DashboardPreferences } from '@/types';
 import { cn } from '@/lib/utils';
 import NotificationsWidget from '@/components/dashboard-widgets/notifications-widget';
@@ -22,28 +22,43 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: Layout } } = {
   notifications: { 
     component: NotificationsWidget, 
-    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, minW: 1 } 
+    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 4 } 
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, minH: 4, minW: 1 } 
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false }
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
-    default: { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, minH: 4, minW: 1 } 
+    default: { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4 }
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 4, minH: 4, minW: 1 } 
+    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 4 }
   },
 };
 
 const ALL_WIDGET_KEYS = Object.keys(WIDGET_COMPONENTS);
 
 const DEFAULT_LAYOUTS: Layouts = {
-  lg: ALL_WIDGET_KEYS.map(key => WIDGET_COMPONENTS[key].default),
-  md: ALL_WIDGET_KEYS.map(key => WIDGET_COMPONENTS[key].default),
-  sm: ALL_WIDGET_KEYS.map(key => ({ ...WIDGET_COMPONENTS[key].default, w: 1 })),
+  lg: [
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4 },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4 },
+      { i: 'nextReading', x: 1, y: 4, w: 1, h: 4 },
+  ],
+  md: [
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4 },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4 },
+      { i: 'nextReading', x: 1, y: 4, w: 1, h: 4 },
+  ],
+  sm: [
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4 },
+      { i: 'todayReading', x: 0, y: 4, w: 1, h: 4, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 8, w: 1, h: 4 },
+      { i: 'nextReading', x: 0, y: 12, w: 1, h: 4 },
+  ]
 };
 
 function sanitizeForFirebase<T>(obj: T): T {
@@ -83,7 +98,6 @@ export default function HomePage() {
   );
   const [layouts, setLayouts] = useState(dashboardPrefs.layouts || DEFAULT_LAYOUTS);
   
-  // This state will hold the current layout for rendering, including runtime props like height.
   const [currentLayout, setCurrentLayout] = useState<Layout[]>([]);
 
   useEffect(() => {
@@ -97,9 +111,9 @@ export default function HomePage() {
        setLayouts(sanitizedLayouts);
     }
   }, [currentUser]);
-
+  
   const handleLayoutChange = (newLayout: Layout[], allLayouts: Layouts) => {
-    setCurrentLayout(newLayout); // Keep track of current layout for rendering props
+    setCurrentLayout(newLayout);
     if (!currentUser || loadingAuth || !isCustomizeMode) return;
     const sanitizedLayouts = sanitizeForFirebase(allLayouts);
     setLayouts(sanitizedLayouts);
@@ -134,7 +148,6 @@ export default function HomePage() {
         const newVisible = isVisible ? prev.filter(key => key !== widgetKey) : [...prev, widgetKey];
         
         if (!isVisible) {
-            // Add widget back to a default position if not in layout
             const currentBreakpoint = getCurrentBreakpoint();
             setLayouts(currentLayouts => {
                 const widgetExistsInLayout = currentLayouts[currentBreakpoint]?.some(l => l.i === widgetKey);
@@ -170,7 +183,6 @@ export default function HomePage() {
     );
   }
 
-  // Filter visibleWidgets to ensure they exist in WIDGET_COMPONENTS
   const existingVisibleWidgets = visibleWidgets.filter(key => ALL_WIDGET_KEYS.includes(key));
   
   const filteredLayouts = Object.keys(layouts).reduce((acc, breakpoint) => {
@@ -212,7 +224,7 @@ export default function HomePage() {
         layouts={filteredLayouts}
         breakpoints={{ lg: 1200, md: 768, sm: 0 }}
         cols={{ lg: 2, md: 2, sm: 1 }}
-        rowHeight={150}
+        rowHeight={30}
         onLayoutChange={handleLayoutChange}
         isDraggable={isCustomizeMode}
         isResizable={isCustomizeMode}
@@ -223,6 +235,11 @@ export default function HomePage() {
           const layoutProps = currentLayout.find(l => l.i === key) || WIDGET_COMPONENTS[key].default;
           return (
             <div key={key} className={cn("relative group/widget", isCustomizeMode && "shadow-xl")}>
+              {isCustomizeMode && (
+                <button className="drag-handle absolute top-2 right-2 z-20 cursor-move text-muted-foreground hover:text-foreground transition-colors">
+                    <GripVertical className="h-5 w-5" />
+                </button>
+              )}
               <WidgetComponent {...layoutProps} />
               {isCustomizeMode && (
                 <Button 
@@ -254,3 +271,4 @@ export default function HomePage() {
   );
 }
 
+    
