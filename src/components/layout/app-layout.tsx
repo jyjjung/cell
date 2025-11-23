@@ -15,6 +15,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay, subDays, isAfter } from 'date-fns';
 import type { AppEvent } from '@/types';
+import { cn } from '@/lib/utils';
 
 const EVENTS_COLLECTION = 'events';
 
@@ -32,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Read the initial state from cookies to prevent flash of wrong state
     const getInitialSidebarState = () => {
+      if (typeof document === 'undefined') return true;
       const cookieValue = document.cookie
         .split('; ')
         .find(row => row.startsWith('sidebar_state='))
@@ -288,7 +290,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Sidebar />
             <SidebarInset className="min-w-0">
                 <Header />
-                <main className="flex-1">
+                <main role="main" className="flex-1">
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         {children}
                     </div>
@@ -301,9 +303,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <Sidebar />
-      <SidebarInset className="min-w-0">
+      <SidebarInset className="min-w-0" aria-hidden={isSidebarOpen && hasMounted && window.innerWidth < 768}>
         <Header />
-        <main className="flex-1">
+        <main role="main" className="flex-1">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {children}
           </div>

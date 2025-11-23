@@ -144,8 +144,10 @@ export default function FullBiblePlanPage() {
               variants={itemVariants}
               className="py-1"
            >
-              <p className="text-xs font-semibold text-muted-foreground">{format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}</p>
-              <p className="text-sm font-medium text-foreground">{generatePassageSummary(reading)}</p>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">{format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}</p>
+                <p className="text-sm font-medium text-foreground">{generatePassageSummary(reading)}</p>
+              </div>
            </motion.li>
         ))}
       </motion.ul>
