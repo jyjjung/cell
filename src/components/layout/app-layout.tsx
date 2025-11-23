@@ -13,7 +13,7 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
-import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay, subDays } from 'date-fns';
+import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay, subDays, isAfter } from 'date-fns';
 import type { AppEvent } from '@/types';
 
 const EVENTS_COLLECTION = 'events';
