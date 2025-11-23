@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { UserBibleChecklist, BibleReadingPlan, StructuredPassage } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -18,6 +18,8 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
 import { useBiblePlan } from './use-bible-plan'; 
+import { useNotifications } from './use-notifications';
+import { startOfDay, parseISO, isBefore, isSameDay, isValid } from 'date-fns';
 
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
@@ -58,6 +60,9 @@ export function useUserBibleChecklist() {
   const [completedPassages, setCompletedPassages] = useState<string[]>([]); 
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
+  const { createNotification } = useNotifications();
+  const notificationSentRef = useRef<{ behind: boolean; caughtUp: boolean }>({ behind: false, caughtUp: false });
+
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -71,15 +76,55 @@ export function useUserBibleChecklist() {
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
 
     const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
+      let currentCompleted: string[] = [];
       if (docSnapshot.exists()) {
         const data = docSnapshot.data() as UserBibleChecklist;
-        setCompletedPassages(data.completedPassages || []);
+        currentCompleted = data.completedPassages || [];
+        setCompletedPassages(currentCompleted);
         setChecklistDocExists(true);
       } else {
         setCompletedPassages([]);
         setChecklistDocExists(false);
       }
       setLoadingChecklist(false);
+
+      // Process notifications based on the new state
+      if (currentGlobalPlan && currentUser) {
+         const today = startOfDay(new Date());
+         const passagesToDate = (currentGlobalPlan.dailyReadings || [])
+            .filter(r => isValid(parseISO(r.date)) && (isBefore(parseISO(r.date), today) || isSameDay(parseISO(r.date), today)))
+            .flatMap(r => r.passages)
+            .map(p => p.displayText)
+            .filter(Boolean);
+        
+        const totalToDate = passagesToDate.length;
+        const completedToDate = passagesToDate.filter(p => currentCompleted.includes(p)).length;
+        const isBehind = totalToDate > 0 && completedToDate < totalToDate;
+        const isCaughtUp = totalToDate > 0 && completedToDate === totalToDate;
+
+        if (isBehind && !notificationSentRef.current.behind) {
+            createNotification({
+                title: "Catch up on your reading",
+                message: "You have some past Bible readings that are not yet completed.",
+                type: 'reading_progress',
+                isGlobal: false,
+                userId: currentUser.uid,
+                relatedUrl: '/bible-checklist'
+            });
+            notificationSentRef.current.behind = true;
+        } else if (isCaughtUp && !notificationSentRef.current.caughtUp) {
+            createNotification({
+                title: "All Caught Up!",
+                message: "Great job! You've completed all your Bible readings to date.",
+                type: 'reading_progress',
+                isGlobal: false,
+                userId: currentUser.uid,
+                relatedUrl: '/bible-checklist'
+            });
+            notificationSentRef.current.caughtUp = true;
+        }
+      }
+
     }, (error) => {
       console.error("Error fetching user Bible checklist:", error);
       setCompletedPassages([]);
@@ -88,7 +133,7 @@ export function useUserBibleChecklist() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.uid]);
+  }, [currentUser, currentGlobalPlan, createNotification]);
 
   const updateChecklistDocument = async (updatePayload: any) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");
@@ -223,4 +268,6 @@ export function useUserBibleChecklist() {
 
   return { completedPassages, togglePassageCompletion, markReadRange, markMultiplePassages, loadingChecklist };
 }
+    
+
     

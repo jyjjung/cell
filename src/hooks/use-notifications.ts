@@ -17,28 +17,12 @@ import {
   arrayUnion,
   serverTimestamp,
   Timestamp,
+  limit,
+  getDocs,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
-
-// This function now lives in the hook file to be used by other hooks.
-// It's not exported as part of the hook itself, just a utility function.
-const createAutomatedNotification = async (
-  notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>
-) => {
-  try {
-    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
-      ...notificationData,
-      createdAt: serverTimestamp(),
-      readBy: [], 
-    });
-  } catch(error) {
-      console.error("Error creating automated notification:", error, "Data:", notificationData);
-      // We don't re-throw here because this is a non-critical background task.
-  }
-};
-
 
 export function useNotifications() {
   const { currentUser, isAdmin } = useAuth();
@@ -53,46 +37,88 @@ export function useNotifications() {
     }
     setLoading(true);
     
-    // Query for global notifications OR notifications targeted at the current user
     const notificationsQuery = query(
       collection(db, NOTIFICATIONS_COLLECTION),
       where('isGlobal', '==', true),
-      orderBy('createdAt', 'desc')
-      // Note: Firestore does not allow OR queries on different fields in this way.
-      // We will fetch global notifications and then user-specific ones if needed,
-      // or combine them on the client side. For now, we focus on global.
-      // A more complex setup would involve two listeners or a different data model.
+      orderBy('createdAt', 'desc'),
+      limit(50) // Fetch last 50 global notifications
     );
 
-    const unsubscribe = onSnapshot(notificationsQuery, (querySnapshot) => {
-      const notificationsData: AppNotification[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        notificationsData.push({
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt as Timestamp,
-          readBy: data.readBy || [],
-        } as AppNotification);
+    const userNotificationsQuery = query(
+      collection(db, NOTIFICATIONS_COLLECTION),
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc'),
+      limit(50) // Fetch last 50 user-specific notifications
+    );
+
+    const unsubGlobal = onSnapshot(notificationsQuery, (globalSnapshot) => {
+      const globalNotifs = globalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+      
+      setNotifications(prev => {
+        const userNotifs = prev.filter(n => !n.isGlobal);
+        const combined = [...globalNotifs, ...userNotifs];
+        combined.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        return combined.slice(0, 100); // Limit total notifications in state
       });
-      setNotifications(notificationsData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching notifications:", error);
+      console.error("Error fetching global notifications:", error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubUser = onSnapshot(userNotificationsQuery, (userSnapshot) => {
+      const userNotifs = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+
+      setNotifications(prev => {
+        const globalNotifs = prev.filter(n => n.isGlobal);
+        const combined = [...globalNotifs, ...userNotifs];
+        combined.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        return combined.slice(0, 100);
+      });
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching user-specific notifications:", error);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubGlobal();
+      unsubUser();
+    };
   }, [currentUser]);
 
   const createNotification = useCallback(async (
     notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>
   ) => {
-    if (!isAdmin) {
-      throw new Error("You are not authorized to create notifications.");
+    if (!notificationData.isGlobal && !notificationData.userId) {
+        console.error("A non-global notification must have a userId.");
+        return;
     }
-    return createAutomatedNotification(notificationData);
-  }, [isAdmin]);
+    // Prevent duplicate reading-progress notifications
+    if (notificationData.type === 'reading_progress') {
+      const q = query(
+        collection(db, NOTIFICATIONS_COLLECTION), 
+        where('userId', '==', notificationData.userId),
+        where('type', '==', 'reading_progress'),
+        where('title', '==', notificationData.title)
+      );
+      const existing = await getDocs(q);
+      if (!existing.empty) {
+        // console.log("Skipping duplicate reading progress notification.");
+        return;
+      }
+    }
+    
+    try {
+        await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
+          ...notificationData,
+          createdAt: serverTimestamp(),
+          readBy: [], 
+        });
+      } catch(error) {
+          console.error("Error creating notification:", error, "Data:", notificationData);
+      }
+  }, []);
   
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!isAdmin) {
@@ -130,3 +156,5 @@ export function useNotifications() {
 
   return { notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead };
 }
+
+    
