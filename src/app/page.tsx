@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Responsive, WidthProvider, type Layout } from 'react-grid-layout';
+import { Responsive, WidthProvider, type Layout, type Layouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useToast } from '@/hooks/use-toast';
@@ -27,27 +28,50 @@ const WIDGET_COMPONENTS: { [key: string]: React.FC } = {
 
 const DEFAULT_LAYOUTS: { [key: string]: Layout[] } = {
   lg: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2 },
-    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2 },
-    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1 },
-    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1 },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
+    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, static: false },
+    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1, static: false },
+    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1, static: false },
+    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, static: false },
   ],
   md: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2 },
-    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2 },
-    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1 },
-    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1 },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
+    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, static: false },
+    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1, static: false },
+    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1, static: false },
+    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, static: false },
   ],
   sm: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2 },
-    { i: 'todayReading', x: 0, y: 2, w: 1, h: 2 },
-    { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 1 },
-    { i: 'nextReading', x: 0, y: 5, w: 1, h: 1 },
-    { i: 'verseOfTheDay', x: 0, y: 6, w: 1, h: 1 },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
+    { i: 'todayReading', x: 0, y: 2, w: 1, h: 2, static: false },
+    { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 1, static: false },
+    { i: 'nextReading', x: 0, y: 5, w: 1, h: 1, static: false },
+    { i: 'verseOfTheDay', x: 0, y: 6, w: 1, h: 1, static: false },
   ]
 };
+
+// Helper function to remove undefined values from objects, which Firestore doesn't support
+function sanitizeForFirebase<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForFirebase(item)) as any;
+  }
+
+  const newObj: { [key: string]: any } = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = (obj as any)[key];
+      if (value !== undefined) {
+        newObj[key] = sanitizeForFirebase(value);
+      }
+    }
+  }
+  return newObj as T;
+}
+
 
 export default function HomePage() {
   const { currentUser, loadingAuth, updateUserProfile } = useAuth();
@@ -69,25 +93,22 @@ export default function HomePage() {
     setIsMounted(true);
   }, []);
 
-  const handleLayoutChange = (newLayout: Layout[], allLayouts: { [key: string]: Layout[] }) => {
+  const handleLayoutChange = (newLayout: Layout[], allLayouts: Layouts) => {
     if (!currentUser || loadingAuth) return;
-
-    // We only want to save if the layout has actually changed for the current breakpoint
-    const currentBreakpoint = getCurrentBreakpoint();
-    const oldLayout = dashboardPrefs.layouts?.[currentBreakpoint] || [];
-    
-    // Naive check, but good enough for this purpose
-    if (JSON.stringify(oldLayout) !== JSON.stringify(newLayout)) {
-       updateUserProfile(currentUser.uid, {
-        dashboard: { ...dashboardPrefs, layouts: allLayouts },
-      }).catch((error) => {
-        toast({
-          title: "Layout Save Failed",
-          description: "Could not save your new dashboard layout.",
-          variant: "destructive"
-        });
+  
+    // Sanitize the layouts object to remove any `undefined` values
+    const sanitizedLayouts = sanitizeForFirebase(allLayouts);
+  
+    updateUserProfile(currentUser.uid, {
+      dashboard: { ...dashboardPrefs, layouts: sanitizedLayouts },
+    }).catch((error) => {
+      console.error("Error saving layout:", error);
+      toast({
+        title: "Layout Save Failed",
+        description: "Could not save your new dashboard layout. The previous layout will be restored on refresh.",
+        variant: "destructive"
       });
-    }
+    });
   };
   
   const getCurrentBreakpoint = () => {
