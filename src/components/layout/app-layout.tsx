@@ -13,7 +13,7 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
-import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO } from 'date-fns';
+import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay } from 'date-fns';
 import type { AppEvent } from '@/types';
 
 const EVENTS_COLLECTION = 'events';
@@ -203,6 +203,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
 
         const today = startOfDay(new Date());
+        const isSunday = getDay(today) === 0;
+
         const passagesToDate = (currentGlobalPlan.dailyReadings || [])
             .filter(r => {
                 try {
@@ -226,7 +228,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const existingBehindNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "Catch up on your reading");
         const existingCaughtUpNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "All Caught Up!");
 
-        if (isBehind && !existingBehindNotification) {
+        // Only send the "catch up" notification on Sundays
+        if (isSunday && isBehind && !existingBehindNotification) {
             createNotification({
                 title: "Catch up on your reading",
                 message: "You have some past Bible readings that are not yet completed.",
@@ -235,7 +238,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 userId: currentUser.uid,
                 relatedUrl: '/bible-checklist'
             });
-        } else if (isCaughtUp && !existingCaughtUpNotification) {
+        }
+        
+        // The "All Caught Up" notification can be sent any day
+        if (isCaughtUp && !existingCaughtUpNotification) {
              createNotification({
                 title: "All Caught Up!",
                 message: "Great job! You've completed all your Bible readings to date.",
