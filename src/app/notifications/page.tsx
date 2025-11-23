@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function NotificationsPage() {
   const { currentUser } = useAuth();
@@ -92,28 +94,45 @@ export default function NotificationsPage() {
             </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-            {unreadNotifications.length > 0 && (
-                <div>
-                    <h2 className="text-lg font-semibold mb-3">New</h2>
+        <Tabs defaultValue="new" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="new">New ({unreadNotifications.length})</TabsTrigger>
+                <TabsTrigger value="read">Read</TabsTrigger>
+            </TabsList>
+            <TabsContent value="new" className="mt-6">
+                {unreadNotifications.length > 0 ? (
                     <AnimatePresence>
                         {unreadNotifications.map(notification => (
                             <NotificationCard key={notification.id} notification={notification} isRead={false} />
                         ))}
                     </AnimatePresence>
-                </div>
-            )}
-            {readNotifications.length > 0 && (
-                 <div>
-                    <h2 className="text-lg font-semibold mb-3">Read</h2>
+                ) : (
+                    <Card className="text-center p-12">
+                        <CardContent>
+                            <Check className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="text-xl font-semibold">No new notifications</h3>
+                            <p className="text-muted-foreground mt-2">You're all caught up.</p>
+                        </CardContent>
+                    </Card>
+                )}
+            </TabsContent>
+            <TabsContent value="read" className="mt-6">
+                 {readNotifications.length > 0 ? (
                     <div className="space-y-4">
                         {readNotifications.map(notification => (
                            <NotificationCard key={notification.id} notification={notification} isRead={true} />
                         ))}
                     </div>
-                </div>
-            )}
-        </div>
+                ) : (
+                    <Card className="text-center p-12">
+                        <CardContent>
+                             <h3 className="text-xl font-semibold">No read notifications</h3>
+                            <p className="text-muted-foreground mt-2">Your read notifications will appear here.</p>
+                        </CardContent>
+                    </Card>
+                )}
+            </TabsContent>
+        </Tabs>
       )}
     </div>
   );
