@@ -37,53 +37,28 @@ export function useNotifications() {
     }
     setLoading(true);
     
+    // Query for all recent notifications and we'll filter on the client
     const notificationsQuery = query(
       collection(db, NOTIFICATIONS_COLLECTION),
-      where('isGlobal', '==', true),
       orderBy('createdAt', 'desc'),
-      limit(50) // Fetch last 50 global notifications
+      limit(100) // Fetch a reasonable number of recent notifications
     );
 
-    const userNotificationsQuery = query(
-      collection(db, NOTIFICATIONS_COLLECTION),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc'),
-      limit(50) // Fetch last 50 user-specific notifications
-    );
-
-    const unsubGlobal = onSnapshot(notificationsQuery, (globalSnapshot) => {
-      const globalNotifs = globalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+      const allRecentNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
       
-      setNotifications(prev => {
-        const userNotifs = prev.filter(n => !n.isGlobal);
-        const combined = [...globalNotifs, ...userNotifs];
-        combined.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        return combined.slice(0, 100); // Limit total notifications in state
-      });
+      // Filter for global notifications or notifications for the current user
+      const relevantNotifs = allRecentNotifs.filter(n => n.isGlobal || n.userId === currentUser.uid);
+
+      setNotifications(relevantNotifs);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching global notifications:", error);
-      setLoading(false);
-    });
-
-    const unsubUser = onSnapshot(userNotificationsQuery, (userSnapshot) => {
-      const userNotifs = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
-
-      setNotifications(prev => {
-        const globalNotifs = prev.filter(n => n.isGlobal);
-        const combined = [...globalNotifs, ...userNotifs];
-        combined.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-        return combined.slice(0, 100);
-      });
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching user-specific notifications:", error);
+      console.error("Error fetching notifications:", error);
       setLoading(false);
     });
 
     return () => {
-      unsubGlobal();
-      unsubUser();
+      unsubscribe();
     };
   }, [currentUser]);
 
@@ -156,5 +131,3 @@ export function useNotifications() {
 
   return { notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead };
 }
-
-    
