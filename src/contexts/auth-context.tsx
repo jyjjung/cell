@@ -15,7 +15,6 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import type { AppUser, UserProfileData, SidebarPreferences } from '@/types';
-import { useEvents } from '@/hooks/use-events'; // For birthday event management
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 interface AuthContextType {
@@ -57,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
-  const { addOrUpdateBirthdayEvent } = useEvents();
 
 
   useEffect(() => {
@@ -236,14 +234,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        if (profileData.isAdmin !== undefined) {
           setIsAdmin(profileData.isAdmin);
        }
-
-      // Handle birthday event creation/update
-      if (profileData.birthday && profileData.displayName) { // Ensure displayName is available
-         await addOrUpdateBirthdayEvent(userId, profileData.displayName, profileData.birthday);
-      } else if (profileData.birthday && currentUser && currentUser.displayName) { // Fallback to current user's display name
-         await addOrUpdateBirthdayEvent(userId, currentUser.displayName, profileData.birthday);
-      }
-
 
     } catch (error) {
       console.error("Error updating user profile:", error);

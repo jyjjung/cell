@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import type { UserProfileData } from '@/types';
 import { Switch } from '@/components/ui/switch';
+import { useEvents } from '@/hooks/use-events';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
@@ -32,6 +33,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
   const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
+  const { addOrUpdateBirthdayEvent } = useEvents();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
@@ -88,6 +90,12 @@ export default function ProfilePage() {
       }
 
       await updateUserProfile(currentUser.uid, profileUpdateData);
+      
+      // Handle birthday event creation/update after profile is successfully updated
+      if (profileUpdateData.birthday && profileUpdateData.displayName) {
+         await addOrUpdateBirthdayEvent(currentUser.uid, profileUpdateData.displayName, profileUpdateData.birthday);
+      }
+      
       toast({ title: "Profile Updated", description: "Your display name and birthday have been updated." });
       setIsEditing(false);
     } catch (error) {
@@ -255,5 +263,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

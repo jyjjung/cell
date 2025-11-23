@@ -37,6 +37,7 @@ export default function EventsPage() {
 
         if (!events) return { upcomingEventsByMonth: [], pastEventsByMonth: [] };
 
+        // Sort all events chronologically first
         const sortedEvents = [...events].sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date)));
 
         for (const event of sortedEvents) {
@@ -56,12 +57,14 @@ export default function EventsPage() {
             }
         }
         
-        // Past events within each month should be reverse-chronological (newest first)
-        past.forEach(monthEvents => monthEvents.reverse());
+        // For the "Past" tab, we want the most recent months first.
+        // We also want events within those past months to be newest-to-oldest.
+        const pastEventsArray = Array.from(past.entries()).reverse(); // Reverse months: [July, June, May]
+        pastEventsArray.forEach(([, monthEvents]) => monthEvents.reverse()); // Reverse events within each month
 
         return { 
-            upcomingEventsByMonth: Array.from(upcoming.entries()), 
-            pastEventsByMonth: Array.from(past.entries()).reverse() // Also reverse the order of past months
+            upcomingEventsByMonth: Array.from(upcoming.entries()), // Already chronological
+            pastEventsByMonth: pastEventsArray 
         };
     }, [events]);
 
@@ -77,7 +80,7 @@ export default function EventsPage() {
                 {events.map((event) => {
                     const Icon = categoryIcons[event.category] || CalendarIcon;
                     return (
-                        <Card key={event.id} className="shadow-sm hover:shadow-md transition-shadow">
+                        <Card key={event.id} id={event.id} className="shadow-sm hover:shadow-md transition-shadow scroll-mt-20">
                             <CardContent className="p-3 flex items-center space-x-4">
                                 <div className={cn("p-2 rounded-full", categoryBackgroundColors[event.category])}>
                                     <Icon className={cn("h-5 w-5", categoryTextColors[event.category])} />

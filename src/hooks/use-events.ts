@@ -20,6 +20,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { format, parseISO, getYear, getMonth, getDate } from 'date-fns';
+import { useNotifications } from './use-notifications'; // Import the notifications hook
 
 
 const EVENTS_COLLECTION = 'events';
@@ -27,6 +28,7 @@ const EVENTS_COLLECTION = 'events';
 export function useEvents() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const { createNotification } = useNotifications();
 
   useEffect(() => {
     const q = query(collection(db, EVENTS_COLLECTION), orderBy("date", "asc"));
@@ -62,6 +64,23 @@ export function useEvents() {
         updatedAt: serverTimestamp(),
       };
       const docRef = await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
+      
+      // Create a notification for the new event, except for birthdays which are handled separately
+      if (eventData.category !== EventCategory.Birthday) {
+          try {
+              await createNotification({
+                  title: `New ${eventData.category}: ${eventData.title}`,
+                  message: `Scheduled for ${format(parseISO(eventData.date), 'MMMM d, yyyy')}.`,
+                  type: 'event',
+                  isGlobal: true,
+                  relatedUrl: `/events#${docRef.id}`
+              });
+          } catch(notifError) {
+              console.error("Failed to create notification for new event:", notifError);
+              // Do not block the main flow if notification fails
+          }
+      }
+
       return docRef.id; // Return the new document ID
     } catch (error: any) {
       console.error("Error adding event to Firestore. Data:", eventData, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
@@ -70,7 +89,7 @@ export function useEvents() {
       }
       throw error; // Re-throw error
     }
-  }, []);
+  }, [createNotification]);
 
   const updateEvent = useCallback(async (updatedEvent: AppEvent) => {
     if (!updatedEvent.id) {

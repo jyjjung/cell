@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bell, X, Check } from 'lucide-react';
+import { Loader2, Bell, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';

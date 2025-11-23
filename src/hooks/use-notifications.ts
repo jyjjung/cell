@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,6 +21,24 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
+
+// This function now lives in the hook file to be used by other hooks.
+// It's not exported as part of the hook itself, just a utility function.
+const createAutomatedNotification = async (
+  notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>
+) => {
+  try {
+    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
+      ...notificationData,
+      createdAt: serverTimestamp(),
+      readBy: [], 
+    });
+  } catch(error) {
+      console.error("Error creating automated notification:", error, "Data:", notificationData);
+      // We don't re-throw here because this is a non-critical background task.
+  }
+};
+
 
 export function useNotifications() {
   const { currentUser, isAdmin } = useAuth();
@@ -72,11 +91,7 @@ export function useNotifications() {
     if (!isAdmin) {
       throw new Error("You are not authorized to create notifications.");
     }
-    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
-      ...notificationData,
-      createdAt: serverTimestamp(),
-      readBy: [], // Initially read by no one
-    });
+    return createAutomatedNotification(notificationData);
   }, [isAdmin]);
   
   const deleteNotification = useCallback(async (notificationId: string) => {
