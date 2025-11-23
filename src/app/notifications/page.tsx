@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Bell, Check } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -37,13 +37,28 @@ export default function NotificationsPage() {
     );
   }
 
-  const NotificationCard = ({ notification, isRead }: { notification: any, isRead: boolean }) => (
+  const NotificationCard = ({ notification, isRead }: { notification: any, isRead: boolean }) => {
+    const x = useMotionValue(0);
+    const opacity = useTransform(x, [-150, 0, 150], [0, 1, 0]);
+
+    const handleDragEnd = (event: any, info: any) => {
+        if (info.offset.x > 100 && !isRead) {
+            markAsRead(notification.id);
+        }
+    };
+
+    return (
     <motion.div
         layout
         variants={itemVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
+        drag={!isRead ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        style={{ x, opacity }}
+        onDragEnd={handleDragEnd}
+        dragElastic={{ left: 0.2, right: 0.5 }}
     >
         <Card className={cn("transition-colors", isRead && "bg-muted/50")}>
         <CardContent className="p-4 flex items-start justify-between gap-4">
@@ -68,7 +83,7 @@ export default function NotificationsPage() {
         </CardContent>
         </Card>
     </motion.div>
-  );
+  )};
 
 
   return (
