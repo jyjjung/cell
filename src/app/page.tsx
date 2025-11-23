@@ -10,14 +10,15 @@ import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import { useNotifications } from '@/hooks/use-notifications';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Bell, X, Check } from 'lucide-react';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
+import { startOfDay, parseISO, isValid, isBefore, isSameDay, formatDistanceToNow } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AppEvent } from '@/types';
+import type { AppEvent, AppNotification } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import DashboardCards from '@/components/homepage/dashboard-cards';
+import { cn } from '@/lib/utils';
 
 
 const Section = ({ children, title, id }: { children: React.ReactNode, title: string, id: string }) => (
@@ -27,6 +28,36 @@ const Section = ({ children, title, id }: { children: React.ReactNode, title: st
         </h2>
         {children}
     </section>
+);
+
+const NotificationCard = ({ notification, onMarkRead }: { notification: AppNotification, onMarkRead: () => void }) => (
+    <motion.div
+        layout
+        initial={{ opacity: 0, x: -50, height: 0, marginBottom: 0 }}
+        animate={{ opacity: 1, x: 0, height: 'auto', marginBottom: '1rem' }}
+        exit={{ opacity: 0, x: 100, height: 0, marginBottom: 0, transition: { duration: 0.3 } }}
+    >
+        <Card>
+            <CardContent className="p-4 flex items-start justify-between gap-4">
+                <div className="flex-grow">
+                    <p className="font-semibold text-sm">{notification.title}</p>
+                    <p className="text-muted-foreground text-sm">{notification.message}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        {notification.createdAt ? `${formatDistanceToNow(notification.createdAt.toDate())} ago` : 'just now'}
+                    </p>
+                </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={onMarkRead}
+                    aria-label="Mark as read"
+                >
+                    <Check className="h-4 w-4" />
+                </Button>
+            </CardContent>
+        </Card>
+    </motion.div>
 );
 
 
@@ -100,49 +131,30 @@ export default function HomePage() {
   return (
     <div className="space-y-8">
       <Section id="notifications-section" title="Notifications">
-        <Card>
-          <CardContent className="p-4 space-y-2">
+        {notificationsLoading ? (
+          <div className="p-4 text-center text-muted-foreground flex items-center justify-center">
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Loading notifications...
+          </div>
+        ) : unreadNotifications.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-muted-foreground">
+              <Bell className="mx-auto h-8 w-8 mb-2" />
+              You're all caught up! No new notifications.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
             <AnimatePresence>
-            {notificationsLoading ? (
-              <div className="p-4 text-center text-muted-foreground flex items-center justify-center">
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Loading notifications...
-              </div>
-            ) : unreadNotifications.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                <Bell className="mx-auto h-8 w-8 mb-2" />
-                You're all caught up! No new notifications.
-              </div>
-            ) : (
-                unreadNotifications.map(notification => (
-                  <motion.div
-                    key={notification.id}
-                    layout
-                    variants={notificationItemVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="bg-primary/10 border-l-4 border-primary p-3 rounded-r-md"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold text-sm text-primary-foreground">{notification.title}</p>
-                        <p className="text-sm text-primary-foreground/80">{notification.message}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/20"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))
-            )}
+              {unreadNotifications.map(notification => (
+                <NotificationCard
+                  key={notification.id}
+                  notification={notification}
+                  onMarkRead={() => markAsRead(notification.id)}
+                />
+              ))}
             </AnimatePresence>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </Section>
 
       <Section id="dashboard-section" title="Dashboard">
