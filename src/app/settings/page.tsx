@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFirestore } from '@/lib/firebase';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -46,8 +47,13 @@ type NotificationConfigItem = {
 const notificationPrefsConfig: NotificationConfigItem[] = [
     { key: 'admin', label: 'Admin Announcements', description: 'Receive general announcements from admins.' },
     { key: 'event', label: 'New Events', description: 'Get notified when new global events are created.' },
-    { key: 'reminder', label: 'Event Reminders', description: 'Reminders for events happening today or tomorrow.' },
     { key: 'reading_progress', label: 'Reading Progress', description: 'Updates on your Bible reading progress.' },
+];
+
+const reminderPrefsConfig: NotificationConfigItem[] = [
+    { key: 'reminderWeekBefore', label: 'A week before', description: 'Get a heads-up for events happening next week.'},
+    { key: 'reminderDayBefore', label: 'The day before', description: 'A reminder for events happening tomorrow.' },
+    { key: 'reminderOnDay', label: 'On the day', description: 'Reminders for events happening today.' },
 ];
 
 
@@ -164,9 +170,10 @@ export default function SettingsPage() {
     startTransition(async () => {
         try {
             await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
+            const configItem = [...notificationPrefsConfig, ...reminderPrefsConfig].find(c => c.key === key);
             toast({
                 title: "Preference Updated",
-                description: `'${notificationPrefsConfig.find(c => c.key === key)?.label}' notifications ${isChecked ? 'enabled' : 'disabled'}.`
+                description: `'${configItem?.label}' notifications ${isChecked ? 'enabled' : 'disabled'}.`
             });
         } catch (error) {
             console.error("Failed to update notification preference:", error);
@@ -246,13 +253,33 @@ export default function SettingsPage() {
                         </div>
                         <Switch
                             id={`notif-switch-${key}`}
-                            checked={key === 'admin' ? true : notifPrefs[key] ?? true}
-                            onCheckedChange={(checked) => handleNotifPrefToggle(key, checked)}
+                            checked={key === 'admin' ? true : notifPrefs[key as keyof typeof notifPrefs] ?? true}
+                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
                             disabled={isPending || key === 'admin'}
                             aria-label={label}
                         />
                     </div>
                 ))}
+                
+                <Separator className="my-4" />
+
+                <h4 className="text-sm font-medium pt-2">Event Reminders</h4>
+                 {reminderPrefsConfig.map(({key, label, description}) => (
+                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
+                        <div className="space-y-0.5">
+                            <Label htmlFor={`notif-switch-${key}`} >{label}</Label>
+                            <p className="text-xs text-muted-foreground">{description}</p>
+                        </div>
+                        <Switch
+                            id={`notif-switch-${key}`}
+                            checked={notifPrefs[key as keyof typeof notifPrefs] ?? true}
+                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
+                            disabled={isPending}
+                            aria-label={label}
+                        />
+                    </div>
+                ))}
+
             </div>
         </CardContent>
       </Card>

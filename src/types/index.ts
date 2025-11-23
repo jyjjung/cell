@@ -65,7 +65,9 @@ export interface NotificationPreferences {
   admin: boolean;
   event: boolean;
   reading_progress: boolean;
-  reminder: boolean;
+  reminderOnDay: boolean;
+  reminderDayBefore: boolean;
+  reminderWeekBefore: boolean;
 }
 
 // Extended user type
@@ -137,5 +139,3 @@ export interface AppNotification {
   readBy: string[]; // Array of user UIDs who have read it
   relatedUrl?: string; // e.g., link to the event or reading plan
 }
-
-    

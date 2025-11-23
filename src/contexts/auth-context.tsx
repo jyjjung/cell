@@ -54,7 +54,9 @@ const defaultNotificationPreferences: NotificationPreferences = {
   admin: true,
   event: true,
   reading_progress: true,
-  reminder: true,
+  reminderOnDay: true,
+  reminderDayBefore: true,
+  reminderWeekBefore: true,
 };
 
 
