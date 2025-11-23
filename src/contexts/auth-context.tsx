@@ -14,7 +14,7 @@ import {
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import type { AppUser, UserProfileData, SidebarPreferences, NotificationPreferences, AppEvent } from '@/types';
+import type { AppUser, UserProfileData, SidebarPreferences, NotificationPreferences, DashboardPreferences } from '@/types';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 
@@ -59,6 +59,14 @@ const defaultNotificationPreferences: NotificationPreferences = {
   reminderWeekBefore: true,
 };
 
+const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
+  notifications: true,
+  todayReading: true,
+  upcomingEvents: true,
+  nextReading: true,
+  verseOfTheDay: true,
+};
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -84,6 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             showInCommunityProgress: profileData.showInCommunityProgress ?? true,
             sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
             notificationPreferences: { ...defaultNotificationPreferences, ...(profileData.notificationPreferences || {}) },
+            dashboard: { 
+              layouts: profileData.dashboard?.layouts || {},
+              widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
+            },
             isAdmin: profileData.isAdmin || false,
           } as AppUser);
           setIsAdmin(profileData.isAdmin || false); // Set admin state from Firestore
@@ -99,15 +111,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             showInCommunityProgress: true, // Default to true
             sidebar: defaultSidebarPreferences,
             notificationPreferences: defaultNotificationPreferences,
+            dashboard: {
+              widgetVisibility: defaultDashboardPreferences,
+              layouts: {}, // Let it be populated on first dashboard use
+            },
             isAdmin: false, // Default to not admin
           };
           await setDoc(userDocRef, newProfileData);
+          // Also update Firebase Auth profile if possible (for displayName)
+          if (auth.currentUser) {
+            await updateFirebaseProfile(auth.currentUser, { displayName: initialDisplayName });
+          }
           setCurrentUser({
             ...firebaseUser,
             displayName: newProfileData.displayName,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
             sidebar: newProfileData.sidebar,
             notificationPreferences: newProfileData.notificationPreferences,
+            dashboard: newProfileData.dashboard,
             isAdmin: newProfileData.isAdmin,
           } as AppUser);
           setIsAdmin(false);
@@ -165,6 +186,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         showInCommunityProgress: true,
         sidebar: defaultSidebarPreferences,
         notificationPreferences: defaultNotificationPreferences,
+        dashboard: {
+          widgetVisibility: defaultDashboardPreferences,
+          layouts: {},
+        },
         isAdmin: false,
       };
       await setDoc(userDocRef, newProfileData);
@@ -230,12 +255,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update local context state
       setCurrentUser(prevUser => {
         if (!prevUser) return null;
+        
         const updatedUser: AppUser = {
           ...prevUser,
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
           notificationPreferences: profileData.notificationPreferences !== undefined ? { ...prevUser.notificationPreferences, ...profileData.notificationPreferences } : prevUser.notificationPreferences,
+          dashboard: profileData.dashboard !== undefined ? { ...(prevUser.dashboard || { widgetVisibility: {}, layouts: {} }), ...profileData.dashboard } : prevUser.dashboard,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
         };
         return updatedUser;

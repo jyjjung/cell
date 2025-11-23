@@ -1,6 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth'; // Import FirebaseUser
+import type { Layout } from 'react-grid-layout';
 
 export enum EventCategory {
   QT = "QT", // Quiet Time
@@ -70,12 +71,30 @@ export interface NotificationPreferences {
   reminderWeekBefore: boolean;
 }
 
+export interface DashboardPreferences {
+  widgetVisibility: {
+    notifications: boolean;
+    todayReading: boolean;
+    upcomingEvents: boolean;
+    nextReading: boolean;
+    verseOfTheDay: boolean;
+    [key: string]: boolean;
+  },
+  layouts: {
+    lg: Layout[],
+    md: Layout[],
+    sm: Layout[],
+    [key: string]: Layout[]
+  }
+}
+
 // Extended user type
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
   notificationPreferences?: NotificationPreferences;
+  dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;
 }
@@ -91,6 +110,7 @@ export interface UserProfileData {
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
   notificationPreferences?: Partial<NotificationPreferences>;
+  dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;
 }
