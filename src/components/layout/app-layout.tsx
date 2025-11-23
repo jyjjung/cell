@@ -66,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const todaysEvents = todaysEventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
 
         for (const event of todaysEvents) {
-          const notificationTitle = `Reminder: ${event.title} is today!`;
+          const notificationTitle = `Reminder: ${event.category} - ${event.title}`;
 
           const notificationQuery = query(
               collection(db, 'notifications'),
@@ -106,7 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const weekAwayEvents = weekAwayEventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
 
         for (const event of weekAwayEvents) {
-          const notificationTitle = `Heads up: ${event.title} is one week away!`;
+          const notificationTitle = `Heads up: ${event.category} - ${event.title}`;
 
           const notificationQuery = query(
               collection(db, 'notifications'),
