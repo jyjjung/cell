@@ -45,7 +45,7 @@ type NotificationConfigItem = {
 const notificationPrefsConfig: NotificationConfigItem[] = [
     { key: 'admin', label: 'Admin Announcements', description: 'Receive general announcements from admins.' },
     { key: 'event', label: 'New Events', description: 'Get notified when new global events are created.' },
-    { key: 'reminder', label: 'Event Reminders', description: 'Reminders for events happening today or next week.' },
+    { key: 'reminder', label: 'Event Reminders', description: 'Reminders for events happening today or tomorrow.' },
     { key: 'reading_progress', label: 'Reading Progress', description: 'Updates on your Bible reading progress.' },
 ];
 
@@ -217,7 +217,7 @@ export default function SettingsPage() {
       
       <Card>
         <CardHeader>
-            <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Push Notifications</CardTitle>
+            <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Notifications</CardTitle>
             <CardDescription>Enable or disable push notifications on this device and choose what alerts you receive.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -235,26 +235,24 @@ export default function SettingsPage() {
                 />
             </div>
             
-            {pushEnabled && (
-                <div className="space-y-2 pt-4 border-t">
-                    <h4 className="text-sm font-medium">Notification Types</h4>
-                     {notificationPrefsConfig.map(({key, label, description}) => (
-                        <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                            <div className="space-y-0.5">
-                                <Label htmlFor={`notif-switch-${key}`}>{label}</Label>
-                                <p className="text-xs text-muted-foreground">{description}</p>
-                            </div>
-                            <Switch
-                                id={`notif-switch-${key}`}
-                                checked={notifPrefs[key] ?? true}
-                                onCheckedChange={(checked) => handleNotifPrefToggle(key, checked)}
-                                disabled={isPending}
-                                aria-label={label}
-                            />
+            <div className="space-y-2 pt-4 border-t">
+                <h4 className="text-sm font-medium">Notification Types</h4>
+                 {notificationPrefsConfig.map(({key, label, description}) => (
+                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
+                        <div className="space-y-0.5">
+                            <Label htmlFor={`notif-switch-${key}`}>{label}</Label>
+                            <p className="text-xs text-muted-foreground">{description}</p>
                         </div>
-                    ))}
-                </div>
-            )}
+                        <Switch
+                            id={`notif-switch-${key}`}
+                            checked={notifPrefs[key] ?? true}
+                            onCheckedChange={(checked) => handleNotifPrefToggle(key, checked)}
+                            disabled={isPending}
+                            aria-label={label}
+                        />
+                    </div>
+                ))}
+            </div>
         </CardContent>
       </Card>
 

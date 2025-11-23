@@ -19,10 +19,12 @@ import {
   Timestamp,
   limit,
   getDocs,
+  getDoc,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
+const USERS_COLLECTION = 'users';
 
 async function triggerPushNotification(notification: AppNotification, targetUserIds?: string[]) {
     try {
@@ -100,6 +102,14 @@ export function useNotifications() {
     }
     
     try {
+        const userNotifPrefs = currentUser?.notificationPreferences;
+        const canReceiveNotification = userNotifPrefs ? userNotifPrefs[notificationData.type] ?? true : true;
+        
+        if (!notificationData.isGlobal && !canReceiveNotification) {
+            console.log(`User has disabled '${notificationData.type}' notifications. Skipping creation.`);
+            return ''; // Return empty string to indicate skipped notification
+        }
+
         const dataToSave = {
             ...notificationData,
             createdAt: serverTimestamp(),
@@ -116,9 +126,12 @@ export function useNotifications() {
         };
         
         if (notificationData.isGlobal) {
-            triggerPushNotification(fullNotification); // Global push
+            // For global notifications, we need to respect each user's preference for this type
+            // The logic for this is now handled in the /api/send-push route
+            triggerPushNotification(fullNotification);
         } else if (notificationData.userId) {
-            triggerPushNotification(fullNotification, [notificationData.userId]); // Targeted push
+            // For personal notifications, we already checked the preference
+            triggerPushNotification(fullNotification, [notificationData.userId]);
         }
         
         return docRef.id;
@@ -126,7 +139,7 @@ export function useNotifications() {
           console.error("Error creating notification:", error, "Data:", notificationData);
           throw error;
       }
-  }, []);
+  }, [currentUser]);
   
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!isAdmin) {

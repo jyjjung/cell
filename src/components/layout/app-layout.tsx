@@ -152,6 +152,46 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         console.error("Failed to check for today's events:", error);
       }
 
+      // --- Check for Events One Day Away (Tomorrow) ---
+      const tomorrowStart = startOfDay(addDays(new Date(), 1)).toISOString();
+      const tomorrowEnd = endOfDay(addDays(new Date(), 1)).toISOString();
+
+      const tomorrowEventsQuery = query(
+        collection(db, EVENTS_COLLECTION),
+        where('date', '>=', tomorrowStart),
+        where('date', '<=', tomorrowEnd)
+      );
+      
+      try {
+        const tomorrowEventsSnapshot = await getDocs(tomorrowEventsQuery);
+        const tomorrowEvents = tomorrowEventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
+
+        for (const event of tomorrowEvents) {
+          const notificationTitle = `Reminder: ${event.title} is tomorrow`;
+          
+          const notificationQuery = query(
+              collection(db, 'notifications'),
+              where('userId', '==', currentUser.uid),
+              where('type', '==', 'reminder'),
+              where('title', '==', notificationTitle)
+          );
+          const existingNotifications = await getDocs(notificationQuery);
+
+           if (existingNotifications.empty) {
+             await createNotification({
+              title: notificationTitle,
+              message: `This ${event.category.toLowerCase()} event is happening tomorrow.`,
+              type: 'reminder',
+              isGlobal: false,
+              userId: currentUser.uid,
+              relatedUrl: `/events#${event.id}`
+            });
+          }
+        }
+      } catch (error) {
+          console.error("Failed to check for tomorrow's events:", error);
+      }
+
       // --- Check for Events One Week Away ---
       const oneWeekFromNowStart = startOfDay(addDays(new Date(), 7)).toISOString();
       const oneWeekFromNowEnd = endOfDay(addDays(new Date(), 7)).toISOString();
