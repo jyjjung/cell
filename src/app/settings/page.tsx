@@ -231,6 +231,7 @@ export default function SettingsPage() {
                     checked={pushEnabled}
                     onCheckedChange={handlePushNotificationToggle}
                     disabled={isUpdatingPush}
+                    aria-label="Enable Push Notifications"
                 />
             </div>
             
@@ -248,6 +249,7 @@ export default function SettingsPage() {
                                 checked={notifPrefs[key] ?? true}
                                 onCheckedChange={(checked) => handleNotifPrefToggle(key, checked)}
                                 disabled={isPending}
+                                aria-label={label}
                             />
                         </div>
                     ))}
@@ -271,6 +273,7 @@ export default function SettingsPage() {
                     id={`sidebar-switch-${key}`}
                     checked={sidebarPrefs[key] ?? true}
                     onCheckedChange={(checked) => handleSidebarToggle(key, checked)}
+                    aria-label={`Toggle ${label} sidebar item`}
                 />
             </div>
           ))}
@@ -293,6 +296,7 @@ export default function SettingsPage() {
                         id={`sidebar-switch-${key}`}
                         checked={sidebarPrefs[key] ?? true}
                         onCheckedChange={(checked) => handleSidebarToggle(key, checked)}
+                        aria-label={`Toggle ${label} sidebar item`}
                     />
                 </div>
             ))}
