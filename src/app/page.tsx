@@ -8,12 +8,14 @@ import { useEvents } from '@/hooks/use-events';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
 import { useMemoryVerses } from '@/hooks/use-memory-verses';
-import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Bell } from 'lucide-react';
+import { useNotifications } from '@/hooks/use-notifications';
+import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Bell, X, Check } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { motion, useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { AppEvent } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import DashboardCards from '@/components/homepage/dashboard-cards';
 
@@ -35,10 +37,16 @@ export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
+  const { notifications, loading: notificationsLoading, markAsRead } = useNotifications();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const unreadNotifications = useMemo(() => {
+    if (!currentUser || !notifications) return [];
+    return notifications.filter(n => !n.readBy.includes(currentUser.uid));
+  }, [notifications, currentUser]);
 
   const todaysReadingForDisplay = useMemo(() => {
     if (!isMounted || !plan?.dailyReadings) return null;
@@ -75,6 +83,12 @@ export default function HomePage() {
     visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 80, damping: 15 } },
   };
 
+  const notificationItemVariants = {
+    hidden: { opacity: 0, y: -20, scale: 0.95 },
+    visible: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, x: -50, transition: { duration: 0.2 } },
+  };
+
   if (!isMounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -87,9 +101,46 @@ export default function HomePage() {
     <div className="space-y-8">
       <Section id="notifications-section" title="Notifications">
         <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <Bell className="mx-auto h-8 w-8 mb-2" />
-            You have no new notifications.
+          <CardContent className="p-4 space-y-2">
+            <AnimatePresence>
+            {notificationsLoading ? (
+              <div className="p-4 text-center text-muted-foreground flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Loading notifications...
+              </div>
+            ) : unreadNotifications.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                <Bell className="mx-auto h-8 w-8 mb-2" />
+                You're all caught up! No new notifications.
+              </div>
+            ) : (
+                unreadNotifications.map(notification => (
+                  <motion.div
+                    key={notification.id}
+                    layout
+                    variants={notificationItemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="bg-primary/10 border-l-4 border-primary p-3 rounded-r-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-sm text-primary-foreground">{notification.title}</p>
+                        <p className="text-sm text-primary-foreground/80">{notification.message}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/20"
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))
+            )}
+            </AnimatePresence>
           </CardContent>
         </Card>
       </Section>

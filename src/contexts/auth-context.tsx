@@ -38,6 +38,7 @@ const USERS_COLLECTION = 'users';
 
 const defaultSidebarPreferences: SidebarPreferences = {
   home: true,
+  notifications: true,
   events: true,
   memorize: true,
   checklist: true,
@@ -46,6 +47,7 @@ const defaultSidebarPreferences: SidebarPreferences = {
   adminEvents: true,
   adminMemoryVerses: true,
   adminBiblePlan: true,
+  adminNotifications: true,
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {

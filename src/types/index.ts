@@ -49,6 +49,7 @@ export interface BibleReadingPlan {
 
 export interface SidebarPreferences {
   home: boolean;
+  notifications: boolean;
   events: boolean;
   memorize: boolean;
   checklist: boolean;
@@ -57,6 +58,7 @@ export interface SidebarPreferences {
   adminEvents?: boolean;
   adminMemoryVerses?: boolean;
   adminBiblePlan?: boolean;
+  adminNotifications?: boolean;
 }
 
 // Extended user type
@@ -111,4 +113,16 @@ export interface WeeklyProgress {
   isCurrent: boolean;
   isOverdue: boolean;
   passageSummary: string;
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'admin' | 'event' | 'reading_progress' | 'reminder';
+  isGlobal: boolean; // True for admin-created global notifications
+  userId?: string; // For user-specific notifications
+  createdAt: Timestamp;
+  readBy: string[]; // Array of user UIDs who have read it
+  relatedUrl?: string; // e.g., link to the event or reading plan
 }

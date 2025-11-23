@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PanelLeft, Shield } from 'lucide-react';
+import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import type { SidebarPreferences } from '@/types';
@@ -19,6 +19,7 @@ type SidebarConfigItem = {
 
 const userSidebarConfig: SidebarConfigItem[] = [
   { key: 'home', label: 'Home' },
+  { key: 'notifications', label: 'Notifications' },
   { key: 'events', label: 'Events' },
   { key: 'memorize', label: 'Memory Verses' },
   { key: 'checklist', label: 'My Checklist' },
@@ -30,6 +31,7 @@ const adminSidebarConfig: SidebarConfigItem[] = [
   { key: 'adminEvents', label: 'Admin: Events' },
   { key: 'adminMemoryVerses', label: 'Admin: Memory Verses' },
   { key: 'adminBiblePlan', label: 'Admin: Bible Plan' },
+  { key: 'adminNotifications', label: 'Admin: Notifications'},
 ];
 
 

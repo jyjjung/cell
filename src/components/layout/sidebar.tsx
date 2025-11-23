@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered, Settings } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered, Settings, Bell, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -66,6 +66,7 @@ export default function AppSidebar() {
 
   const mainNavItems = [
     { href: '/', label: 'Home', icon: Home, tooltip: 'Home', key: 'home' },
+    { href: '/notifications', label: 'Notifications', icon: Bell, tooltip: 'Notifications', key: 'notifications'},
     { href: '/events', label: 'Events', icon: Calendar, tooltip: 'Events', key: 'events' },
     { href: '/memorize', label: 'Memory Verses', icon: BrainCircuit, tooltip: 'Memory Verses', key: 'memorize' },
   ];
@@ -81,6 +82,7 @@ export default function AppSidebar() {
       { href: '/admin/events', label: 'Events', icon: Calendar, key: 'adminEvents' },
       { href: '/admin/memory-verses', label: 'Memory Verses', icon: BookMarked, key: 'adminMemoryVerses' },
       { href: '/admin/bible-plan', label: 'Bible Plan', icon: BookOpen, key: 'adminBiblePlan' },
+      { href: '/admin/notifications', label: 'Notifications', icon: BellRing, key: 'adminNotifications' },
   ];
 
   const isNavItemVisible = (item: any) => {
@@ -137,8 +139,9 @@ export default function AppSidebar() {
 
         <SidebarContent>
             <SidebarMenu>
-              {!isMounted || loadingAuth ? (
+              {(!isMounted || loadingAuth) ? (
                 <>
+                  <SidebarMenuSkeleton />
                   <SidebarMenuSkeleton />
                   <SidebarMenuSkeleton />
                   <SidebarMenuSkeleton />
@@ -158,7 +161,7 @@ export default function AppSidebar() {
               )}
               {renderNavItems(readingPlanNavItems)}
 
-              {currentUser && (isNavItemVisible({key: 'admin'}) || isAdminSectionVisible) && <SidebarSeparator />}
+              {currentUser && <SidebarSeparator />}
               
               {isAdminSectionVisible && (
                   <SidebarMenuItem className="pointer-events-none">
@@ -181,7 +184,7 @@ export default function AppSidebar() {
                       </SidebarMenuButton>
                   </SidebarMenuItem>
               )}
-
+              
               { currentUser && !isAdmin && (
                   <SidebarMenuItem>
                       <Link href="/admin" passHref legacyBehavior>
