@@ -203,7 +203,7 @@ export default function BiblePlanDisplay({
                   <motion.li
                     key={passageIdPart}
                     variants={itemVariants}
-                    className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40"
+                    className="bg-background/70 border rounded-md flex items-center space-x-2 p-2 transition-colors hover:bg-muted/40 min-w-0"
                   >
                     {showIndividualCheckboxes && (
                       <Checkbox
@@ -218,7 +218,7 @@ export default function BiblePlanDisplay({
                     <Label
                       htmlFor={showIndividualCheckboxes ? passageIdPart : undefined}
                       className={cn(
-                        "flex-grow font-medium",
+                        "flex-grow font-medium min-w-0",
                         "text-xs",
                         showIndividualCheckboxes && "cursor-pointer",
                         isChecked && "line-through text-muted-foreground"
@@ -228,7 +228,7 @@ export default function BiblePlanDisplay({
                         <Button
                           variant="link"
                           className={cn(
-                            "p-0 h-auto font-medium text-left justify-start hover:no-underline",
+                            "p-0 h-auto font-medium text-left justify-start hover:no-underline truncate",
                             "text-xs",
                             isChecked ? "text-muted-foreground hover:text-muted-foreground/80" : "text-foreground hover:text-primary"
                           )}

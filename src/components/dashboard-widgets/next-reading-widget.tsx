@@ -53,9 +53,9 @@ export default function NextReadingWidget() {
             ) : (
                 <div className="space-y-2">
                     {nextUnread.passages.filter(p => !completedPassages.includes(p.displayText)).slice(0,3).map(passage => (
-                        <div key={passage.displayText} className="flex items-center space-x-3 text-sm p-2 rounded-md bg-muted/50">
-                             <BookUp className="h-4 w-4 text-muted-foreground" />
-                             <span className="font-medium">{passage.displayText}</span>
+                        <div key={passage.displayText} className="flex items-center space-x-3 text-sm p-2 rounded-md bg-muted/50 min-w-0">
+                             <BookUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                             <span className="font-medium truncate">{passage.displayText}</span>
                         </div>
                     ))}
                 </div>

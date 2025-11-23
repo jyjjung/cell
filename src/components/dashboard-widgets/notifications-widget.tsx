@@ -10,6 +10,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, Bell } from 'lucide-react';
+import { usePageLoading } from '@/contexts/page-loading-context';
+import { useRouter } from 'next/navigation';
 
 const NotificationItem = ({ notification, onMarkRead }: { notification: any, onMarkRead: () => void }) => (
   <motion.div
@@ -23,9 +25,9 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: any, onM
     <Card className="bg-background/50 hover:bg-muted/50 transition-colors">
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-grow">
-            <p className="font-semibold text-sm">{notification.title}</p>
-            <p className="text-muted-foreground text-xs">{notification.message}</p>
+          <div className="flex-grow min-w-0">
+            <p className="font-semibold text-sm truncate">{notification.title}</p>
+            <p className="text-muted-foreground text-xs truncate">{notification.message}</p>
             <p className="text-xs text-muted-foreground/80 mt-1">
               {notification.createdAt ? `${formatDistanceToNow(notification.createdAt.toDate())} ago` : 'just now'}
             </p>
@@ -42,17 +44,29 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: any, onM
 export default function NotificationsWidget() {
   const { currentUser } = useAuth();
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
+  const router = useRouter();
+  const { setIsPageLoading } = usePageLoading();
 
   const unreadNotifications = useMemo(() => {
     if (!currentUser || !notifications) return [];
     return notifications.filter(n => !n.readBy.includes(currentUser.uid)).slice(0, 5); // Show max 5
   }, [notifications, currentUser]);
+  
+  const handleGoToNotifications = () => {
+    setIsPageLoading(true);
+    router.push('/notifications');
+  }
 
   return (
     <WidgetCard
       title="Notifications"
+      titleExtraContent={
+        unreadNotifications.length > 0 ? (
+          <Button variant="outline" size="xs" onClick={markAllAsRead}>Mark All Read</Button>
+        ) : null
+      }
       description={unreadNotifications.length > 0 ? `You have ${unreadNotifications.length} unread notifications.` : "You're all caught up."}
-      footer={unreadNotifications.length > 0 ? <Button variant="outline" size="sm" className="w-full" onClick={markAllAsRead}>Mark All as Read</Button> : null}
+      footer={<Button variant="outline" size="sm" className="w-full" onClick={handleGoToNotifications}>View All</Button>}
     >
       {loading ? (
         <div className="h-full flex items-center justify-center text-muted-foreground">

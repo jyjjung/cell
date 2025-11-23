@@ -24,8 +24,8 @@ const EventItem = ({ event }: { event: AppEvent }) => {
     const Icon = categoryIcons[event.category] || Calendar;
     return (
         <div className="flex items-center space-x-3 text-sm">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium flex-grow truncate">{event.title}</span>
+            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <span className="font-medium flex-grow truncate min-w-0">{event.title}</span>
             <span className="text-muted-foreground shrink-0">{parseISO(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}</span>
         </div>
     )
