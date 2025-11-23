@@ -56,12 +56,10 @@ function comparePoints(p1: ScripturePoint, p2: ScripturePoint): number {
 
 export function useUserBibleChecklist() {
   const { currentUser } = useAuth();
-  const { plan: currentGlobalPlan } = useBiblePlan(); 
   const [completedPassages, setCompletedPassages] = useState<string[]>([]); 
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
-  const { createNotification } = useNotifications();
-
+  const { plan: currentGlobalPlan } = useBiblePlan(); 
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -75,53 +73,15 @@ export function useUserBibleChecklist() {
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
 
     const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
-      let currentCompleted: string[] = [];
       if (docSnapshot.exists()) {
         const data = docSnapshot.data() as UserBibleChecklist;
-        currentCompleted = data.completedPassages || [];
-        setCompletedPassages(currentCompleted);
+        setCompletedPassages(data.completedPassages || []);
         setChecklistDocExists(true);
       } else {
         setCompletedPassages([]);
         setChecklistDocExists(false);
       }
       setLoadingChecklist(false);
-
-      // Process notifications based on the new state
-      if (currentGlobalPlan && currentUser) {
-         const today = startOfDay(new Date());
-         const passagesToDate = (currentGlobalPlan.dailyReadings || [])
-            .filter(r => isValid(parseISO(r.date)) && (isBefore(parseISO(r.date), today) || isSameDay(parseISO(r.date), today)))
-            .flatMap(r => r.passages)
-            .map(p => p.displayText)
-            .filter(Boolean);
-        
-        const totalToDate = passagesToDate.length;
-        const completedToDate = passagesToDate.filter(p => currentCompleted.includes(p)).length;
-        const isBehind = totalToDate > 0 && completedToDate < totalToDate;
-        const isCaughtUp = totalToDate > 0 && completedToDate === totalToDate;
-
-        if (isBehind) {
-            createNotification({
-                title: "Catch up on your reading",
-                message: "You have some past Bible readings that are not yet completed.",
-                type: 'reading_progress',
-                isGlobal: false,
-                userId: currentUser.uid,
-                relatedUrl: '/bible-checklist'
-            });
-        } else if (isCaughtUp) {
-            createNotification({
-                title: "All Caught Up!",
-                message: "Great job! You've completed all your Bible readings to date.",
-                type: 'reading_progress',
-                isGlobal: false,
-                userId: currentUser.uid,
-                relatedUrl: '/bible-checklist'
-            });
-        }
-      }
-
     }, (error) => {
       console.error("Error fetching user Bible checklist:", error);
       setCompletedPassages([]);
@@ -130,7 +90,7 @@ export function useUserBibleChecklist() {
     });
 
     return () => unsubscribe();
-  }, [currentUser, currentGlobalPlan, createNotification]);
+  }, [currentUser]);
 
   const updateChecklistDocument = async (updatePayload: any) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");

@@ -9,9 +9,11 @@ import Header from './header';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { startOfDay, endOfDay, addDays } from 'date-fns';
+import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO } from 'date-fns';
 import type { AppEvent } from '@/types';
 
 const EVENTS_COLLECTION = 'events';
@@ -22,7 +24,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const { currentUser, loadingAuth } = useAuth();
-  const { createNotification } = useNotifications();
+  const { notifications, createNotification } = useNotifications();
+  const { plan: currentGlobalPlan, loading: planLoading } = useBiblePlan();
+  const { completedPassages, loadingChecklist } = useUserBibleChecklist();
 
 
   useEffect(() => {
@@ -137,6 +141,62 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     
   }, [currentUser, loadingAuth, createNotification]);
   
+    // Effect for creating reading progress notifications
+    useEffect(() => {
+        if (loadingAuth || planLoading || loadingChecklist || !currentUser || !currentGlobalPlan?.dailyReadings) {
+            return;
+        }
+
+        const today = startOfDay(new Date());
+        const passagesToDate = (currentGlobalPlan.dailyReadings || [])
+            .filter(r => {
+                try {
+                    return isValid(parseISO(r.date)) && (isBefore(parseISO(r.date), today) || isSameDay(parseISO(r.date), today));
+                } catch {
+                    return false;
+                }
+            })
+            .flatMap(r => r.passages)
+            .map(p => p.displayText)
+            .filter(Boolean);
+
+        if (passagesToDate.length === 0) return;
+
+        const completedToDateCount = passagesToDate.filter(p => completedPassages.includes(p)).length;
+        
+        const isBehind = completedToDateCount < passagesToDate.length;
+        const isCaughtUp = completedToDateCount === passagesToDate.length;
+
+        // Check against existing notifications already fetched by the useNotifications hook
+        const existingBehindNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "Catch up on your reading");
+        const existingCaughtUpNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "All Caught Up!");
+
+        if (isBehind && !existingBehindNotification) {
+            // If user is behind and has an "All Caught Up" notification, we assume it's from a previous state.
+            // A more advanced system might clear it, but for now we just add the "behind" notification.
+            createNotification({
+                title: "Catch up on your reading",
+                message: "You have some past Bible readings that are not yet completed.",
+                type: 'reading_progress',
+                isGlobal: false,
+                userId: currentUser.uid,
+                relatedUrl: '/bible-checklist'
+            });
+        } else if (isCaughtUp && !existingCaughtUpNotification) {
+            // Similar to above, if they are caught up and have a "behind" notification, we just add the "caught up" one.
+             createNotification({
+                title: "All Caught Up!",
+                message: "Great job! You've completed all your Bible readings to date.",
+                type: 'reading_progress',
+                isGlobal: false,
+                userId: currentUser.uid,
+                relatedUrl: '/bible-checklist'
+            });
+        }
+
+    }, [currentUser, loadingAuth, currentGlobalPlan, planLoading, completedPassages, loadingChecklist, notifications, createNotification]);
+
+
   if (!hasMounted) {
     // Render nothing or a skeleton loader until the client-side state is determined
     // to prevent hydration mismatch.
