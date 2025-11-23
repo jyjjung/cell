@@ -61,7 +61,6 @@ export function useUserBibleChecklist() {
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
   const { createNotification } = useNotifications();
-  const notificationSentRef = useRef<{ behind: boolean; caughtUp: boolean }>({ behind: false, caughtUp: false });
 
 
   useEffect(() => {
@@ -102,7 +101,7 @@ export function useUserBibleChecklist() {
         const isBehind = totalToDate > 0 && completedToDate < totalToDate;
         const isCaughtUp = totalToDate > 0 && completedToDate === totalToDate;
 
-        if (isBehind && !notificationSentRef.current.behind) {
+        if (isBehind) {
             createNotification({
                 title: "Catch up on your reading",
                 message: "You have some past Bible readings that are not yet completed.",
@@ -111,8 +110,7 @@ export function useUserBibleChecklist() {
                 userId: currentUser.uid,
                 relatedUrl: '/bible-checklist'
             });
-            notificationSentRef.current.behind = true;
-        } else if (isCaughtUp && !notificationSentRef.current.caughtUp) {
+        } else if (isCaughtUp) {
             createNotification({
                 title: "All Caught Up!",
                 message: "Great job! You've completed all your Bible readings to date.",
@@ -121,7 +119,6 @@ export function useUserBibleChecklist() {
                 userId: currentUser.uid,
                 relatedUrl: '/bible-checklist'
             });
-            notificationSentRef.current.caughtUp = true;
         }
       }
 

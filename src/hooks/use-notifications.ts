@@ -69,8 +69,8 @@ export function useNotifications() {
         console.error("A non-global notification must have a userId.");
         return;
     }
-    // Prevent duplicate reading-progress notifications
-    if (notificationData.type === 'reading_progress') {
+    // Prevent duplicate reading-progress notifications by checking the database
+    if (notificationData.type === 'reading_progress' && notificationData.userId) {
       const q = query(
         collection(db, NOTIFICATIONS_COLLECTION), 
         where('userId', '==', notificationData.userId),
