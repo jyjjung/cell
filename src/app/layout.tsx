@@ -20,6 +20,17 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const metadata = {
+  title: "em.",
+  description: "A simple app for cell group organization.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  themeColor: "#ffffff",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,6 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PageLoadingProvider>
           <AuthProvider>
