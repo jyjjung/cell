@@ -12,7 +12,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { CalendarCheck, BookCheck, BrainCircuit, Loader2, Users, Bell, X, Check } from 'lucide-react';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay, formatDistanceToNow } from 'date-fns';
 import { findTodaysReading } from '@/lib/reading-utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import type { AppEvent, AppNotification } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,35 +30,56 @@ const Section = ({ children, title, id }: { children: React.ReactNode, title: st
     </section>
 );
 
-const NotificationCard = ({ notification, onMarkRead }: { notification: AppNotification, onMarkRead: () => void }) => (
-    <motion.div
-        layout
-        initial={{ opacity: 0, x: -50, height: 0, marginBottom: 0 }}
-        animate={{ opacity: 1, x: 0, height: 'auto', marginBottom: '1rem' }}
-        exit={{ opacity: 0, x: 100, height: 0, marginBottom: 0, transition: { duration: 0.3 } }}
-    >
-        <Card>
-            <CardContent className="p-4 flex items-start justify-between gap-4">
-                <div className="flex-grow">
-                    <p className="font-semibold text-sm">{notification.title}</p>
-                    <p className="text-muted-foreground text-sm">{notification.message}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                        {notification.createdAt ? `${formatDistanceToNow(notification.createdAt.toDate())} ago` : 'just now'}
-                    </p>
-                </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={onMarkRead}
-                    aria-label="Mark as read"
-                >
-                    <Check className="h-4 w-4" />
-                </Button>
-            </CardContent>
-        </Card>
-    </motion.div>
-);
+const NotificationCard = ({ notification, onMarkRead }: { notification: AppNotification, onMarkRead: () => void }) => {
+    const x = useMotionValue(0);
+    const opacity = useTransform(x, [-150, 0, 150], [0, 1, 0]);
+
+    const handleDragEnd = (event: any, info: any) => {
+        if (info.offset.x > 100) {
+            onMarkRead();
+        }
+    };
+
+    return (
+        <motion.div
+            layout
+            variants={{
+                hidden: { opacity: 0, x: -50, height: 0, marginBottom: 0 },
+                visible: { opacity: 1, x: 0, height: 'auto', marginBottom: '1rem' },
+                exit: { opacity: 0, x: 100, height: 0, marginBottom: 0, transition: { duration: 0.3 } },
+            }}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            style={{ x, opacity }}
+            onDragEnd={handleDragEnd}
+            dragElastic={{ left: 0.2, right: 0.5 }}
+        >
+            <Card>
+                <CardContent className="p-4 flex items-start justify-between gap-4">
+                    <div className="flex-grow">
+                        <p className="font-semibold text-sm">{notification.title}</p>
+                        <p className="text-muted-foreground text-sm">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            {notification.createdAt ? `${formatDistanceToNow(notification.createdAt.toDate())} ago` : 'just now'}
+                        </p>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={onMarkRead}
+                        aria-label="Mark as read"
+                    >
+                        <Check className="h-4 w-4" />
+                    </Button>
+                </CardContent>
+            </Card>
+        </motion.div>
+    );
+};
 
 
 export default function HomePage() {
@@ -68,7 +89,7 @@ export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { memoryVerses, loading: memoryVersesLoading } = useMemoryVerses();
-  const { notifications, loading: notificationsLoading, markAsRead } = useNotifications();
+  const { notifications, loading: notificationsLoading, markAsRead, markAllAsRead } = useNotifications();
 
   useEffect(() => {
     setIsMounted(true);
