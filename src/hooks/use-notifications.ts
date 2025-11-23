@@ -64,10 +64,9 @@ export function useNotifications() {
 
   const createNotification = useCallback(async (
     notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>
-  ) => {
+  ): Promise<string> => {
     if (!notificationData.isGlobal && !notificationData.userId) {
-        console.error("A non-global notification must have a userId.");
-        return;
+        throw new Error("A non-global notification must have a userId.");
     }
     // Prevent duplicate reading-progress notifications by checking the database
     if (notificationData.type === 'reading_progress' && notificationData.userId) {
@@ -79,19 +78,21 @@ export function useNotifications() {
       );
       const existing = await getDocs(q);
       if (!existing.empty) {
-        // console.log("Skipping duplicate reading progress notification.");
-        return;
+        console.log("Skipping duplicate reading progress notification.");
+        return existing.docs[0].id; // Return existing ID, but don't re-create or re-send
       }
     }
     
     try {
-        await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
+        const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), {
           ...notificationData,
           createdAt: serverTimestamp(),
           readBy: [], 
         });
+        return docRef.id;
       } catch(error) {
           console.error("Error creating notification:", error, "Data:", notificationData);
+          throw error;
       }
   }, []);
   

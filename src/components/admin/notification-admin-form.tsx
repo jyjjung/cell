@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Loader2, Send } from 'lucide-react';
+import type { AppNotification } from '@/types';
 
 const notificationFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
@@ -34,15 +35,25 @@ export default function NotificationAdminForm() {
   async function onSubmit(data: NotificationFormValues) {
     setIsLoading(true);
     try {
-      await createNotification({
+      const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
         title: data.title,
         message: data.message,
         type: 'admin',
         isGlobal: true, // Admin-created notifications are global
+      };
+      
+      const newNotificationId = await createNotification(notificationData);
+
+      // Trigger the push notification API route
+      await fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: newNotificationId }),
       });
+
       toast({
         title: "Notification Sent!",
-        description: "The global notification has been sent to all users.",
+        description: "The global notification has been created and sent to all users.",
       });
       form.reset();
     } catch (error: any) {
