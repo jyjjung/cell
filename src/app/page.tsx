@@ -21,11 +21,14 @@ import DashboardCards from '@/components/homepage/dashboard-cards';
 import { cn } from '@/lib/utils';
 
 
-const Section = ({ children, title, id }: { children: React.ReactNode, title: string, id: string }) => (
+const Section = ({ children, title, id, extraHeaderContent }: { children: React.ReactNode, title: string, id: string, extraHeaderContent?: React.ReactNode }) => (
     <section id={id} className="py-8 md:py-12">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6 md:mb-8 text-center md:text-left">
-            {title}
-        </h2>
+        <div className="flex justify-between items-center mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-center md:text-left">
+                {title}
+            </h2>
+            {extraHeaderContent}
+        </div>
         {children}
     </section>
 );
@@ -151,7 +154,17 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
-      <Section id="notifications-section" title="Notifications">
+      <Section 
+        id="notifications-section" 
+        title="Notifications"
+        extraHeaderContent={
+            !notificationsLoading && unreadNotifications.length > 0 ? (
+                <Button variant="outline" size="sm" onClick={markAllAsRead}>
+                    Mark All as Read
+                </Button>
+            ) : null
+        }
+      >
         {notificationsLoading ? (
           <div className="p-4 text-center text-muted-foreground flex items-center justify-center">
             <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Loading notifications...
