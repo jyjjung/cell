@@ -11,6 +11,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import type { SidebarPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
+import { requestNotificationPermission, removeNotificationToken } from '@/lib/firebase';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -43,9 +44,13 @@ export default function SettingsPage() {
   const { toast } = useToast();
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      setPushNotificationsEnabled(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -81,6 +86,45 @@ export default function SettingsPage() {
     }
   };
 
+  const handlePushNotificationToggle = async (enabled: boolean) => {
+    if (!currentUser) return;
+
+    if (enabled) {
+      try {
+        await requestNotificationPermission(currentUser.uid);
+        setPushNotificationsEnabled(true);
+        toast({
+          title: "Push Notifications Enabled",
+          description: "You will now receive updates on your device.",
+        });
+      } catch (error: any) {
+        console.error("Error enabling push notifications:", error);
+        toast({
+          title: "Could Not Enable Notifications",
+          description: error.message || "Please check your browser settings.",
+          variant: "destructive",
+        });
+        setPushNotificationsEnabled(false);
+      }
+    } else {
+      try {
+        await removeNotificationToken(currentUser.uid);
+        setPushNotificationsEnabled(false);
+        toast({
+            title: "Push Notifications Disabled",
+            description: "You will no longer receive push notifications on this device.",
+        });
+      } catch (error: any) {
+          console.error("Error disabling push notifications:", error);
+          toast({
+              title: "Error",
+              description: "Could not disable push notifications fully. You may need to do so in browser settings.",
+              variant: "destructive",
+          });
+      }
+    }
+  };
+
   if (!isMounted || loadingAuth) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
@@ -99,6 +143,29 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage your application settings.</p>
       </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Notifications</CardTitle>
+          <CardDescription>Manage how you receive notifications from the app.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+              <Label htmlFor="push-notifications-switch">Push Notifications</Label>
+              <p className="text-sm text-muted-foreground">
+                  Receive notifications on your device even when the app is closed.
+              </p>
+              </div>
+              <Switch
+                  id="push-notifications-switch"
+                  checked={pushNotificationsEnabled}
+                  onCheckedChange={handlePushNotificationToggle}
+              />
+          </div>
+        </CardContent>
+      </Card>
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center"><PanelLeft className="mr-2 h-5 w-5" /> Sidebar Customization</CardTitle>
