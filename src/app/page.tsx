@@ -28,27 +28,28 @@ const WIDGET_COMPONENTS: { [key: string]: React.FC } = {
 
 const DEFAULT_LAYOUTS: { [key: string]: Layout[] } = {
   lg: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
-    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, static: false },
-    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1, static: false },
-    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1, static: false },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, static: false },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'nextReading', x: 1, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, minH: 1, minW: 1 },
   ],
   md: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
-    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, static: false },
-    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 1, static: false },
-    { i: 'nextReading', x: 1, y: 2, w: 1, h: 1, static: false },
-    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, static: false },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'nextReading', x: 1, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'verseOfTheDay', x: 0, y: 3, w: 1, h: 1, minH: 1, minW: 1 },
   ],
   sm: [
-    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, static: false },
-    { i: 'todayReading', x: 0, y: 2, w: 1, h: 2, static: false },
-    { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 1, static: false },
-    { i: 'nextReading', x: 0, y: 5, w: 1, h: 1, static: false },
-    { i: 'verseOfTheDay', x: 0, y: 6, w: 1, h: 1, static: false },
+    { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'todayReading', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'nextReading', x: 0, y: 6, w: 1, h: 2, minH: 2, minW: 1 },
+    { i: 'verseOfTheDay', x: 0, y: 8, w: 1, h: 1, minH: 1, minW: 1 },
   ]
 };
+
 
 // Helper function to remove undefined values from objects, which Firestore doesn't support
 function sanitizeForFirebase<T>(obj: T): T {
@@ -138,7 +139,7 @@ export default function HomePage() {
         layouts={dashboardPrefs.layouts || DEFAULT_LAYOUTS}
         breakpoints={{ lg: 1200, md: 768, sm: 0 }}
         cols={{ lg: 2, md: 2, sm: 1 }}
-        rowHeight={200}
+        rowHeight={150}
         onLayoutChange={handleLayoutChange}
         isDraggable={!loadingAuth}
         isResizable={!loadingAuth}

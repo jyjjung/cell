@@ -38,7 +38,7 @@ export default function TodayReadingWidget() {
     <WidgetCard
       title="Today's Reading"
       description={todaysReadingForDisplay ? `For ${todaysReadingForDisplay.date}` : "No reading scheduled"}
-      footer={<Button variant="outline" size="sm" className="w-full" onClick={handleGoToPlan}>Go to Full Plan</Button>}
+      footer={<Button variant="outline" size="sm" className="w-full" onClick={handleGoToPlan}>Go to Checklist</Button>}
     >
       <div className="h-full">
          <BiblePlanDisplay 
