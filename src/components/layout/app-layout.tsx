@@ -13,7 +13,7 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
-import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay } from 'date-fns';
+import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO, getDay, subDays } from 'date-fns';
 import type { AppEvent } from '@/types';
 
 const EVENTS_COLLECTION = 'events';
@@ -205,50 +205,75 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const today = startOfDay(new Date());
         const isSunday = getDay(today) === 0;
 
-        const passagesToDate = (currentGlobalPlan.dailyReadings || [])
+        const passagesToToday = (currentGlobalPlan.dailyReadings || [])
             .filter(r => {
                 try {
                     return isValid(parseISO(r.date)) && (isBefore(parseISO(r.date), today) || isSameDay(parseISO(r.date), today));
-                } catch {
-                    return false;
-                }
+                } catch { return false; }
             })
             .flatMap(r => r.passages)
             .map(p => p.displayText)
             .filter(Boolean);
 
-        if (passagesToDate.length === 0) return;
-
-        const completedToDateCount = passagesToDate.filter(p => completedPassages.includes(p)).length;
+        if (passagesToToday.length === 0) return;
+        const completedToDateCount = passagesToToday.filter(p => completedPassages.includes(p)).length;
+        const isBehind = completedToDateCount < passagesToToday.length;
+        const isCaughtUp = !isBehind;
         
-        const isBehind = completedToDateCount < passagesToDate.length;
-        const isCaughtUp = completedToDateCount === passagesToDate.length;
+        // --- Logic for when the user was previously caught up but now isn't ---
+        const yesterday = subDays(today, 1);
+        const passagesToYesterday = (currentGlobalPlan.dailyReadings || [])
+             .filter(r => {
+                try {
+                     return isValid(parseISO(r.date)) && (isBefore(parseISO(r.date), yesterday) || isSameDay(parseISO(r.date), yesterday));
+                } catch { return false; }
+            })
+            .flatMap(r => r.passages)
+            .map(p => p.displayText)
+            .filter(Boolean);
+        const completedToYesterdayCount = passagesToYesterday.filter(p => completedPassages.includes(p)).length;
+        const wasCaughtUpYesterday = passagesToYesterday.length > 0 && completedToYesterdayCount === passagesToYesterday.length;
+        
+        // --- Check existing notifications from the last week ---
+        const sixDaysAgo = subDays(today, 6);
+        const hasRecentBehindNotification = notifications.some(n => 
+            n.userId === currentUser.uid &&
+            n.type === 'reading_progress' &&
+            n.title === "Catch up on your reading" &&
+            isAfter(n.createdAt.toDate(), sixDaysAgo)
+        );
+        const hasRecentCaughtUpNotification = notifications.some(n => 
+            n.userId === currentUser.uid &&
+            n.type === 'reading_progress' &&
+            n.title === "All Caught Up!" &&
+            isAfter(n.createdAt.toDate(), sixDaysAgo)
+        );
 
-        // Check against existing notifications already fetched by the useNotifications hook
-        const existingBehindNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "Catch up on your reading");
-        const existingCaughtUpNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "All Caught Up!");
-
-        // Only send the "catch up" notification on Sundays
-        if (isSunday && isBehind && !existingBehindNotification) {
+        // --- Notification Logic ---
+        if (isBehind) {
+            // Scenario 1: Weekly Sunday catch-up reminder
+            if (isSunday && !hasRecentBehindNotification) {
+                createNotification({
+                    title: "Catch up on your reading",
+                    message: "You have some past Bible readings that are not yet completed.",
+                    type: 'reading_progress', isGlobal: false, userId: currentUser.uid, relatedUrl: '/bible-checklist'
+                });
+            }
+            // Scenario 2: User was caught up yesterday but is behind today
+            else if (wasCaughtUpYesterday && !isSunday && !hasRecentBehindNotification) {
+                 createNotification({
+                    title: "Catch up on your reading",
+                    message: "You have some past Bible readings that are not yet completed.",
+                    type: 'reading_progress', isGlobal: false, userId: currentUser.uid, relatedUrl: '/bible-checklist'
+                });
+            }
+        } 
+        else if (isCaughtUp && !hasRecentCaughtUpNotification) {
+            // Scenario 3: User is all caught up, send a positive notification
             createNotification({
-                title: "Catch up on your reading",
-                message: "You have some past Bible readings that are not yet completed.",
-                type: 'reading_progress',
-                isGlobal: false,
-                userId: currentUser.uid,
-                relatedUrl: '/bible-checklist'
-            });
-        }
-        
-        // The "All Caught Up" notification can be sent any day
-        if (isCaughtUp && !existingCaughtUpNotification) {
-             createNotification({
                 title: "All Caught Up!",
                 message: "Great job! You've completed all your Bible readings to date.",
-                type: 'reading_progress',
-                isGlobal: false,
-                userId: currentUser.uid,
-                relatedUrl: '/bible-checklist'
+                type: 'reading_progress', isGlobal: false, userId: currentUser.uid, relatedUrl: '/bible-checklist'
             });
         }
 
