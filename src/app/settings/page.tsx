@@ -13,6 +13,7 @@ import type { SidebarPreferences, NotificationPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFirestore } from '@/lib/firebase';
 import useLocalStorage from '@/hooks/use-local-storage';
+import { cn } from '@/lib/utils';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
