@@ -1,4 +1,14 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="100" fill="white"/>
-<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Geist, sans-serif" font-size="200" font-weight="bold" fill="black">em.</text>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .bg { fill: white; }
+    .fg { fill: black; }
+    @media (prefers-color-scheme: light) {
+      .bg { fill: black; }
+      .fg { fill: white; }
+    }
+  </style>
+  <rect class="bg" width="200" height="200" rx="40"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Geist, sans-serif" font-size="90" font-weight="bold" class="fg">
+    em.
+  </text>
 </svg>
