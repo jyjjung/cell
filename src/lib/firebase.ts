@@ -48,6 +48,13 @@ export const requestNotificationPermission = async (userId: string): Promise<boo
   }
 
   const messaging = getMessaging(app);
+  
+  // Do not request permission if it's already denied.
+  if (Notification.permission === 'denied') {
+    console.log('Notification permission was previously denied.');
+    return false;
+  }
+  
   const permission = await Notification.requestPermission();
 
   if (permission === 'granted') {
@@ -64,11 +71,12 @@ export const requestNotificationPermission = async (userId: string): Promise<boo
       return true;
     } else {
       console.log('No registration token available. Request permission to generate one.');
-      throw new Error('Could not get FCM token.');
+      // This can happen if the service worker isn't registered correctly.
+      throw new Error('Could not get FCM token. Ensure the service worker is set up.');
     }
   } else {
     console.log('Unable to get permission to notify.');
-    return false; // Return false instead of throwing an error
+    return false; // User denied permission or dismissed the prompt
   }
 };
 

@@ -67,7 +67,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       setPushNotificationsEnabled(true);
     }
   }, []);
@@ -107,9 +107,21 @@ export default function SettingsPage() {
   };
 
   const handlePushNotificationToggle = async (enabled: boolean) => {
-    if (!currentUser) return;
-
+    if (!currentUser || typeof window === 'undefined' || !('Notification' in window)) return;
+  
     if (enabled) {
+      // Check permission status *before* trying to request it.
+      if (Notification.permission === 'denied') {
+        toast({
+          title: "Permissions Blocked",
+          description: "You have previously blocked notifications. Please enable them in your browser settings for this site.",
+          variant: "destructive",
+          duration: 10000,
+        });
+        setPushNotificationsEnabled(false); // Make sure switch is off
+        return;
+      }
+      
       try {
         const permissionGranted = await requestNotificationPermission(currentUser.uid);
         if (permissionGranted) {
@@ -119,11 +131,11 @@ export default function SettingsPage() {
             description: "You will now receive updates on your device.",
           });
         } else {
-           // This case is for when the user denies permission. The requestNotificationPermission will not throw an error here.
+           // This case is for when the user denies permission during the prompt.
            setPushNotificationsEnabled(false);
            toast({
               title: "Permission Required",
-              description: "You need to grant notification permissions in your browser to enable this feature.",
+              description: "You need to grant notification permissions to enable this feature.",
               variant: "default",
            });
         }
