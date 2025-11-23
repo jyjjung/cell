@@ -1,6 +1,12 @@
+
 import { type NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import type { AppNotification } from '@/types';
+
+// Check if the service account key is available
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+}
 
 // Initialize Firebase Admin SDK
 // This needs to be done only once.
