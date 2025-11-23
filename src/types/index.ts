@@ -137,3 +137,5 @@ export interface AppNotification {
   readBy: string[]; // Array of user UIDs who have read it
   relatedUrl?: string; // e.g., link to the event or reading plan
 }
+
+    
