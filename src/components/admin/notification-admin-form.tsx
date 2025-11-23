@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -42,18 +43,11 @@ export default function NotificationAdminForm() {
         isGlobal: true, // Admin-created notifications are global
       };
       
-      const newNotificationId = await createNotification(notificationData);
-
-      // Trigger the push notification API route
-      await fetch('/api/send-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId: newNotificationId }),
-      });
+      await createNotification(notificationData);
 
       toast({
         title: "Notification Sent!",
-        description: "The global notification has been created and sent to all users.",
+        description: "The global notification has been created and will appear for all users in-app.",
       });
       form.reset();
     } catch (error: any) {

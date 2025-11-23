@@ -6,13 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
+import { Loader2, PanelLeft, Shield } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
-import type { SidebarPreferences, NotificationPreferences } from '@/types';
+import type { SidebarPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { requestNotificationPermission, removeNotificationToken } from '@/lib/firebase';
-import { Separator } from '@/components/ui/separator';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -36,22 +34,6 @@ const adminSidebarConfig: SidebarConfigItem[] = [
   { key: 'adminNotifications', label: 'Admin: Notifications'},
 ];
 
-const defaultNotificationPreferences: NotificationPreferences = {
-  admin: true,
-  event: true,
-  reading_progress: true,
-  reminder: true,
-};
-
-type NotificationTypeKey = keyof NotificationPreferences;
-
-const notificationTypeLabels: Record<NotificationTypeKey, string> = {
-  admin: "Admin Announcements",
-  event: "New Events & Updates",
-  reminder: "Event Reminders",
-  reading_progress: "Reading Progress",
-};
-
 
 export default function SettingsPage() {
   const { currentUser, isAdmin, loadingAuth, updateUserProfile } = useAuth();
@@ -61,15 +43,10 @@ export default function SettingsPage() {
   const { toast } = useToast();
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
-  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(currentUser?.notificationPreferences || defaultNotificationPreferences);
 
 
   useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      setPushNotificationsEnabled(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -82,7 +59,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (currentUser) {
       setSidebarPrefs(currentUser.sidebar || {});
-      setNotifPrefs(currentUser.notificationPreferences || defaultNotificationPreferences);
     }
   }, [currentUser]);
 
@@ -106,90 +82,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handlePushNotificationToggle = async (enabled: boolean) => {
-    if (!currentUser || typeof window === 'undefined' || !('Notification' in window)) return;
-  
-    if (enabled) {
-      if (Notification.permission === 'denied') {
-        toast({
-          title: "Permissions Blocked",
-          description: "You have previously blocked notifications. Please enable them in your browser settings for this site.",
-          variant: "destructive",
-          duration: 10000,
-        });
-        setPushNotificationsEnabled(false);
-        return;
-      }
-      
-      try {
-        const permissionGranted = await requestNotificationPermission(currentUser.uid);
-        if (permissionGranted) {
-          setPushNotificationsEnabled(true);
-          toast({
-            title: "Push Notifications Enabled",
-            description: "You will now receive updates on your device.",
-          });
-        } else {
-           setPushNotificationsEnabled(false);
-           toast({
-              title: "Permission Required",
-              description: "You need to grant notification permissions to enable this feature.",
-              variant: "default",
-           });
-        }
-      } catch (error: any) {
-        console.error("Error enabling push notifications:", error);
-        toast({
-          title: "Could Not Enable Notifications",
-          description: error.message || "Please check your browser settings.",
-          variant: "destructive",
-        });
-        setPushNotificationsEnabled(false);
-      }
-    } else {
-      try {
-        await removeNotificationToken(currentUser.uid);
-        setPushNotificationsEnabled(false);
-        toast({
-            title: "Push Notifications Disabled",
-            description: "You will no longer receive push notifications on this device.",
-        });
-      } catch (error: any) {
-          console.error("Error disabling push notifications:", error);
-          toast({
-              title: "Error",
-              description: "Could not disable push notifications fully. You may need to do so in browser settings.",
-              variant: "destructive",
-          });
-      }
-    }
-  };
-  
-  const handleNotifPrefToggle = async (key: NotificationTypeKey, isChecked: boolean) => {
-    if (!currentUser) return;
-
-    const newPrefs = { ...notifPrefs, [key]: isChecked };
-    setNotifPrefs(newPrefs); // Optimistic update
-
-    try {
-        await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
-        toast({
-            title: "Notification Preference Updated",
-            description: `${notificationTypeLabels[key]} alerts are now ${isChecked ? 'enabled' : 'disabled'}.`
-        });
-    } catch (error: any) {
-        console.error(`Failed to update ${key} notification preference:`, error);
-        toast({
-            title: "Update Failed",
-            description: `Could not update setting for ${notificationTypeLabels[key]}.`,
-            variant: "destructive",
-        });
-        // Revert UI on error
-        setNotifPrefs(prev => ({...prev, [key]: !isChecked}));
-    }
-  };
-
-
   if (!isMounted || loadingAuth) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
@@ -208,47 +100,6 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage your application settings.</p>
       </div>
-
-       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Push Notifications</CardTitle>
-          <CardDescription>Manage how you receive push notifications from the app.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <Label htmlFor="push-notifications-switch">Enable Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                    Receive notifications on your device even when the app is closed.
-                </p>
-              </div>
-              <Switch
-                  id="push-notifications-switch"
-                  checked={pushNotificationsEnabled}
-                  onCheckedChange={handlePushNotificationToggle}
-              />
-          </div>
-          {pushNotificationsEnabled && (
-            <div className="space-y-2 pt-4">
-              <Separator />
-               <p className="text-sm font-medium pt-2 text-foreground">Notification Types</p>
-               {Object.keys(notificationTypeLabels).map((key) => (
-                  <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                          <Label htmlFor={`notif-switch-${key}`}>{notificationTypeLabels[key as NotificationTypeKey]}</Label>
-                      </div>
-                      <Switch
-                          id={`notif-switch-${key}`}
-                          checked={notifPrefs[key as NotificationTypeKey]}
-                          onCheckedChange={(checked) => handleNotifPrefToggle(key as NotificationTypeKey, checked)}
-                          disabled={!pushNotificationsEnabled}
-                      />
-                  </div>
-                ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>

@@ -83,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
             notificationPreferences: { ...defaultNotificationPreferences, ...(profileData.notificationPreferences || {}) },
             isAdmin: profileData.isAdmin || false,
-            fcmTokens: profileData.fcmTokens || [],
           } as AppUser);
           setIsAdmin(profileData.isAdmin || false); // Set admin state from Firestore
         } else {
@@ -99,7 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sidebar: defaultSidebarPreferences,
             notificationPreferences: defaultNotificationPreferences,
             isAdmin: false, // Default to not admin
-            fcmTokens: [],
           };
           await setDoc(userDocRef, newProfileData);
           setCurrentUser({
@@ -109,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sidebar: newProfileData.sidebar,
             notificationPreferences: newProfileData.notificationPreferences,
             isAdmin: newProfileData.isAdmin,
-            fcmTokens: newProfileData.fcmTokens,
           } as AppUser);
           setIsAdmin(false);
         }
@@ -167,7 +164,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sidebar: defaultSidebarPreferences,
         notificationPreferences: defaultNotificationPreferences,
         isAdmin: false,
-        fcmTokens: [],
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
@@ -239,7 +235,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
           notificationPreferences: profileData.notificationPreferences !== undefined ? { ...prevUser.notificationPreferences, ...profileData.notificationPreferences } : prevUser.notificationPreferences,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
-          fcmTokens: profileData.fcmTokens !== undefined ? profileData.fcmTokens : prevUser.fcmTokens,
         };
         return updatedUser;
       });

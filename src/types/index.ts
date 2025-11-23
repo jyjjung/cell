@@ -75,7 +75,6 @@ export interface AppUser extends FirebaseUser {
   sidebar?: Partial<SidebarPreferences>;
   notificationPreferences?: NotificationPreferences;
   isAdmin?: boolean;
-  fcmTokens?: string[];
 }
 
 
@@ -90,7 +89,6 @@ export interface UserProfileData {
   sidebar?: Partial<SidebarPreferences>;
   notificationPreferences?: NotificationPreferences;
   isAdmin?: boolean;
-  fcmTokens?: string[];
 }
 
 
