@@ -241,6 +241,7 @@ export default function AppSidebar() {
                                         <User className="mr-3 h-5 w-5 shrink-0" />
                                         <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
                                             <span className="font-semibold truncate">{currentUser.displayName || "User"}</span>
+                                             <span className="text-xs text-muted-foreground">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
                                         </div>
                                     </>
                                 ) : (
@@ -248,6 +249,7 @@ export default function AppSidebar() {
                                         <User className="mr-3 h-5 w-5 shrink-0" />
                                         <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
                                             <span className="font-semibold truncate">Guest</span>
+                                            <span className="text-xs text-muted-foreground">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
                                         </div>
                                     </>
                                 )}
