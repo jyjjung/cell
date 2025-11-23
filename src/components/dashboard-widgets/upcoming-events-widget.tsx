@@ -12,6 +12,12 @@ import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff } from 'lucide-reac
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
 import { cn } from '@/lib/utils';
+import type { Layout } from 'react-grid-layout';
+
+// Approximate heights for calculation
+const WIDGET_HEADER_HEIGHT = 60; // px
+const WIDGET_FOOTER_HEIGHT = 50; // px
+const EVENT_ITEM_HEIGHT = 38;  // px
 
 const categoryIcons: { [key in EventCategory]: React.ComponentType<{ className?: string }> } = {
     [EventCategory.Event]: Users,
@@ -31,7 +37,7 @@ const EventItem = ({ event }: { event: AppEvent }) => {
     )
 }
 
-export default function UpcomingEventsWidget() {
+export default function UpcomingEventsWidget(props: Partial<Layout>) {
     const { events, loading } = useEvents();
     const router = useRouter();
     const { setIsPageLoading } = usePageLoading();
@@ -48,8 +54,15 @@ export default function UpcomingEventsWidget() {
                     return false;
                 }
             })
-            .slice(0, 5); // Take the next 5
+            .slice(0, 10); // Take the next 10 and we'll slice it dynamically
     }, [events]);
+
+    const maxItemsToShow = useMemo(() => {
+        if (!props.h) return 5; // Default
+        const widgetHeight = props.h * 150; // rowHeight is 150
+        const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
+        return Math.max(1, Math.floor(contentHeight / EVENT_ITEM_HEIGHT));
+    }, [props.h]);
 
     const handleGoToEvents = () => {
         setIsPageLoading(true);
@@ -77,7 +90,7 @@ export default function UpcomingEventsWidget() {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {upcomingEvents.map(event => (
+                    {upcomingEvents.slice(0, maxItemsToShow).map(event => (
                         <EventItem key={event.id} event={event} />
                     ))}
                 </div>

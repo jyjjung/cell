@@ -15,8 +15,14 @@ import { useAuth } from '@/contexts/auth-context';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import type { StructuredPassage } from '@/types';
 import { cn } from '@/lib/utils';
+import type { Layout } from 'react-grid-layout';
 
-export default function NextReadingWidget() {
+// Approximate heights for calculation
+const WIDGET_HEADER_HEIGHT = 60; // px
+const WIDGET_FOOTER_HEIGHT = 50; // px
+const PASSAGE_ITEM_HEIGHT = 42;  // px
+
+export default function NextReadingWidget(props: Partial<Layout>) {
     const { plan, loading: planLoading } = useBiblePlan();
     const { currentUser } = useAuth();
     const { completedPassages, loadingChecklist, togglePassageCompletion, markMultiplePassages } = useUserBibleChecklist();
@@ -32,8 +38,15 @@ export default function NextReadingWidget() {
     
     const unreadPassagesToShow = useMemo(() => {
         if (!nextUnread) return [];
-        return nextUnread.passages.filter(p => !completedPassages.includes(p.displayText)).slice(0, 4);
+        return nextUnread.passages.filter(p => !completedPassages.includes(p.displayText));
     }, [nextUnread, completedPassages]);
+
+    const maxItemsToShow = useMemo(() => {
+        if (!props.h) return 4; // Default if height is not provided
+        const widgetHeight = props.h * 150; // rowHeight is 150
+        const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
+        return Math.max(1, Math.floor(contentHeight / PASSAGE_ITEM_HEIGHT));
+    }, [props.h]);
 
 
     const handleGoToPlan = () => {
@@ -79,7 +92,7 @@ export default function NextReadingWidget() {
                     </div>
                 ) : (
                     <div className="space-y-2">
-                        {unreadPassagesToShow.map(passage => (
+                        {unreadPassagesToShow.slice(0, maxItemsToShow).map(passage => (
                              <div key={passage.displayText} className="flex items-center space-x-2 text-sm p-1.5 rounded-md bg-muted/50 min-w-0">
                                  <Checkbox
                                      id={`next-reading-${passage.displayText}`}
@@ -113,4 +126,3 @@ export default function NextReadingWidget() {
         </>
     );
 }
-

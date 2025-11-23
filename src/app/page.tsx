@@ -19,14 +19,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const WIDGET_COMPONENTS: { [key: string]: { component: React.FC; default: Layout } } = {
+const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: Layout } } = {
   notifications: { 
     component: NotificationsWidget, 
     default: { i: 'notifications', x: 0, y: 0, w: 1, h: 2, minH: 2, minW: 1 } 
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1 } 
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1, isResizable: false } 
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
@@ -82,16 +82,24 @@ export default function HomePage() {
     Object.keys(dashboardPrefs.widgetVisibility || {}).filter(key => dashboardPrefs.widgetVisibility[key])
   );
   const [layouts, setLayouts] = useState(dashboardPrefs.layouts || DEFAULT_LAYOUTS);
+  
+  // This state will hold the current layout for rendering, including runtime props like height.
+  const [currentLayout, setCurrentLayout] = useState<Layout[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
     if (currentUser) {
-       setVisibleWidgets(Object.keys(currentUser.dashboard?.widgetVisibility || {}).filter(key => currentUser.dashboard?.widgetVisibility[key]));
-       setLayouts(currentUser.dashboard?.layouts || DEFAULT_LAYOUTS);
+       const userVisible = Object.keys(currentUser.dashboard?.widgetVisibility || ALL_WIDGET_KEYS.reduce((acc, key) => ({...acc, [key]: true}), {})).filter(key => currentUser.dashboard?.widgetVisibility[key]);
+       setVisibleWidgets(userVisible);
+       
+       const userLayouts = currentUser.dashboard?.layouts;
+       const sanitizedLayouts = userLayouts && Object.keys(userLayouts).length > 0 ? userLayouts : DEFAULT_LAYOUTS;
+       setLayouts(sanitizedLayouts);
     }
   }, [currentUser]);
 
   const handleLayoutChange = (newLayout: Layout[], allLayouts: Layouts) => {
+    setCurrentLayout(newLayout); // Keep track of current layout for rendering props
     if (!currentUser || loadingAuth || !isCustomizeMode) return;
     const sanitizedLayouts = sanitizeForFirebase(allLayouts);
     setLayouts(sanitizedLayouts);
@@ -122,25 +130,24 @@ export default function HomePage() {
   
   const handleToggleWidget = (widgetKey: string) => {
     setVisibleWidgets(prev => {
-        if (prev.includes(widgetKey)) {
-            return prev.filter(key => key !== widgetKey);
-        } else {
+        const isVisible = prev.includes(widgetKey);
+        const newVisible = isVisible ? prev.filter(key => key !== widgetKey) : [...prev, widgetKey];
+        
+        if (!isVisible) {
             // Add widget back to a default position if not in layout
             const currentBreakpoint = getCurrentBreakpoint();
-            const widgetExistsInLayout = layouts[currentBreakpoint]?.some(l => l.i === widgetKey);
+            setLayouts(currentLayouts => {
+                const widgetExistsInLayout = currentLayouts[currentBreakpoint]?.some(l => l.i === widgetKey);
+                if (widgetExistsInLayout) return currentLayouts;
 
-            if (!widgetExistsInLayout) {
                 const defaultWidgetLayout = WIDGET_COMPONENTS[widgetKey].default;
-                // Add to a new row at the bottom
-                const newY = Math.max(0, ...layouts[currentBreakpoint].map(l => l.y + l.h));
-
-                setLayouts(currentLayouts => ({
-                    ...currentLayouts,
-                    [currentBreakpoint]: [...(currentLayouts[currentBreakpoint] || []), { ...defaultWidgetLayout, y: newY }]
-                }));
-            }
-            return [...prev, widgetKey];
+                const newY = Math.max(0, ...(currentLayouts[currentBreakpoint] || []).map(l => l.y + l.h));
+                const newLayoutForBreakpoint = [...(currentLayouts[currentBreakpoint] || []), { ...defaultWidgetLayout, y: newY }];
+                
+                return { ...currentLayouts, [currentBreakpoint]: newLayoutForBreakpoint };
+            });
         }
+        return newVisible;
     });
   };
 
@@ -167,7 +174,7 @@ export default function HomePage() {
   const existingVisibleWidgets = visibleWidgets.filter(key => ALL_WIDGET_KEYS.includes(key));
   
   const filteredLayouts = Object.keys(layouts).reduce((acc, breakpoint) => {
-      acc[breakpoint] = layouts[breakpoint].filter(layoutItem => existingVisibleWidgets.includes(layoutItem.i));
+      acc[breakpoint] = layouts[breakpoint]?.filter(layoutItem => existingVisibleWidgets.includes(layoutItem.i)) || [];
       return acc;
   }, {} as Layouts);
 
@@ -213,9 +220,10 @@ export default function HomePage() {
       >
         {existingVisibleWidgets.map(key => {
           const WidgetComponent = WIDGET_COMPONENTS[key].component;
+          const layoutProps = currentLayout.find(l => l.i === key) || WIDGET_COMPONENTS[key].default;
           return (
             <div key={key} className={cn("relative group/widget", isCustomizeMode && "shadow-xl")}>
-              <WidgetComponent />
+              <WidgetComponent {...layoutProps} />
               {isCustomizeMode && (
                 <Button 
                     variant="destructive" 

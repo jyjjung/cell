@@ -12,6 +12,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, Bell } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useRouter } from 'next/navigation';
+import type { Layout } from 'react-grid-layout';
+
+// Approximate heights for calculation
+const WIDGET_HEADER_HEIGHT = 60; // px
+const WIDGET_FOOTER_HEIGHT = 50; // px
+const NOTIFICATION_ITEM_HEIGHT = 72; // px
 
 const NotificationItem = ({ notification, onMarkRead }: { notification: any, onMarkRead: () => void }) => (
   <motion.div
@@ -41,7 +47,7 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: any, onM
   </motion.div>
 );
 
-export default function NotificationsWidget() {
+export default function NotificationsWidget(props: Partial<Layout>) {
   const { currentUser } = useAuth();
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
@@ -49,8 +55,15 @@ export default function NotificationsWidget() {
 
   const unreadNotifications = useMemo(() => {
     if (!currentUser || !notifications) return [];
-    return notifications.filter(n => !n.readBy.includes(currentUser.uid)).slice(0, 5); // Show max 5
+    return notifications.filter(n => !n.readBy.includes(currentUser.uid));
   }, [notifications, currentUser]);
+  
+  const maxItemsToShow = useMemo(() => {
+    if (!props.h) return 3; // Default
+    const widgetHeight = props.h * 150; // rowHeight is 150
+    const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
+    return Math.max(1, Math.floor(contentHeight / NOTIFICATION_ITEM_HEIGHT));
+  }, [props.h]);
   
   const handleGoToNotifications = () => {
     setIsPageLoading(true);
@@ -80,7 +93,7 @@ export default function NotificationsWidget() {
       ) : (
         <div className="space-y-2">
           <AnimatePresence>
-            {unreadNotifications.map(notification => (
+            {unreadNotifications.slice(0, maxItemsToShow).map(notification => (
               <NotificationItem
                 key={notification.id}
                 notification={notification}
