@@ -7,33 +7,25 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, UserCircle, LogOut, Save, CalendarIcon, Pencil, Users } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Loader2, UserCircle, LogOut, Save, Pencil, Users } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 import type { UserProfileData } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { useEvents } from '@/hooks/use-events';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, { message: "Display name must be at least 2 characters." }).max(50, { message: "Display name cannot exceed 50 characters."}),
-  birthday: z.date().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
   const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
-  const { addOrUpdateBirthdayEvent } = useEvents();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
@@ -47,7 +39,6 @@ export default function ProfilePage() {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       displayName: currentUser?.displayName || '',
-      birthday: currentUser?.birthday ? parseISO(currentUser.birthday) : null,
     },
   });
 
@@ -66,7 +57,6 @@ export default function ProfilePage() {
     if (currentUser) {
       form.reset({
         displayName: currentUser.displayName || '',
-        birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
       });
       setShowProgress(currentUser.showInCommunityProgress ?? true);
     }
@@ -83,20 +73,10 @@ export default function ProfilePage() {
       const profileUpdateData: Partial<UserProfileData> = {
         displayName: data.displayName,
       };
-      if (data.birthday) {
-        profileUpdateData.birthday = format(data.birthday, 'yyyy-MM-dd');
-      } else {
-        profileUpdateData.birthday = '';
-      }
 
       await updateUserProfile(currentUser.uid, profileUpdateData);
       
-      // Handle birthday event creation/update after profile is successfully updated
-      if (profileUpdateData.birthday && profileUpdateData.displayName) {
-         await addOrUpdateBirthdayEvent(currentUser.uid, profileUpdateData.displayName, profileUpdateData.birthday);
-      }
-      
-      toast({ title: "Profile Updated", description: "Your display name and birthday have been updated." });
+      toast({ title: "Profile Updated", description: "Your display name has been updated." });
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -169,53 +149,12 @@ export default function ProfilePage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="birthday"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Birthday</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                            disabled={!isEditing || isSaving}
-                          >
-                            {field.value ? format(field.value, "PPP") : <span>Pick your birthday</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={(date) => field.onChange(date)}
-                          disabled={(date) => date > new Date() || date < new Date("1900-01-01") || !isEditing || isSaving}
-                          initialFocus
-                          captionLayout="dropdown-buttons"
-                          fromYear={1900}
-                          toYear={new Date().getFullYear()}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {isEditing && (
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => {
                     setIsEditing(false);
                     form.reset({
                       displayName: currentUser.displayName || '',
-                      birthday: currentUser.birthday ? parseISO(currentUser.birthday) : null,
                     });
                   }} disabled={isSaving}>
                     Cancel

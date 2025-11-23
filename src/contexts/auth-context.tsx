@@ -70,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentUser({
             ...firebaseUser, // Base Firebase user properties
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
-            birthday: profileData.birthday || null,
             showInCommunityProgress: profileData.showInCommunityProgress ?? true,
             sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
             isAdmin: profileData.isAdmin || false,
@@ -83,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: initialDisplayName,
-            birthday: null,
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
             showInCommunityProgress: true, // Default to true
@@ -94,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCurrentUser({
             ...firebaseUser,
             displayName: newProfileData.displayName,
-            birthday: newProfileData.birthday,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
             sidebar: newProfileData.sidebar,
             isAdmin: newProfileData.isAdmin,
@@ -149,7 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: initialDisplayName,
-        birthday: null,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
         showInCommunityProgress: true,
@@ -222,7 +218,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const updatedUser: AppUser = {
           ...prevUser,
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
-          birthday: profileData.birthday !== undefined ? profileData.birthday : prevUser.birthday,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,

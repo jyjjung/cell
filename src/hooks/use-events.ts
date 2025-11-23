@@ -19,7 +19,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { format, parseISO, getYear, getMonth, getDate } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useNotifications } from './use-notifications'; // Import the notifications hook
 
 
@@ -128,51 +128,5 @@ export function useEvents() {
     }
   }, []);
 
-  const addOrUpdateBirthdayEvent = useCallback(async (userId: string, displayName: string, birthdayISO: string) => {
-    try {
-      const birthdayDate = parseISO(birthdayISO); 
-      const currentYear = getYear(new Date());
-      
-      const eventDateForCurrentYear = new Date(Date.UTC(currentYear, getMonth(birthdayDate), getDate(birthdayDate)));
-      const eventDateISO = eventDateForCurrentYear.toISOString().split('T')[0]; 
-
-      const q = query(
-        collection(db, EVENTS_COLLECTION),
-        where("userId", "==", userId),
-        where("category", "==", EventCategory.Birthday)
-      );
-      const querySnapshot = await getDocs(q);
-
-      const eventTitle = `${displayName}'s Birthday`;
-      const eventDetails = `Happy Birthday to ${displayName}!`; 
-
-      if (!querySnapshot.empty) {
-        const existingEventDoc = querySnapshot.docs[0];
-        await updateDoc(existingEventDoc.ref, {
-          title: eventTitle,
-          date: eventDateISO,
-          details: eventDetails, 
-          summary: '', 
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await addDoc(collection(db, EVENTS_COLLECTION), {
-          title: eventTitle,
-          date: eventDateISO,
-          category: EventCategory.Birthday,
-          details: eventDetails, 
-          summary: '', 
-          userId: userId,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-    } catch (error) {
-      console.error(`Error adding/updating birthday event for user ${userId}:`, error);
-    }
-  }, []);
-
-
-  return { events, addEvent, updateEvent, deleteEvent, addOrUpdateBirthdayEvent, loading };
+  return { events, addEvent, updateEvent, deleteEvent, loading };
 }
-

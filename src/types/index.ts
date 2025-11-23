@@ -64,7 +64,6 @@ export interface SidebarPreferences {
 // Extended user type
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
-  birthday?: string | null; // YYYY-MM-DD format
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
   isAdmin?: boolean;
@@ -75,7 +74,6 @@ export interface UserProfileData {
   uid: string;
   email: string | null;
   displayName: string | null;
-  birthday?: string | null; // YYYY-MM-DD format
   photoURL?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
