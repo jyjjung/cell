@@ -1,3 +1,4 @@
+
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
@@ -10,50 +11,71 @@ export const sendPushOnNewNotification = functions.firestore
   .onCreate(async (snapshot, context) => {
     const notificationData = snapshot.data();
 
-    // Only send for global notifications created by an admin
-    if (!notificationData.isGlobal || notificationData.type !== "admin") {
+    // Log the incoming notification data for debugging
+    functions.logger.log(
+      "New notification created:",
+      context.params.notificationId,
+      notificationData
+    );
+
+    let tokens: string[] = [];
+
+    // Case 1: Global notification
+    if (notificationData.isGlobal) {
+      functions.logger.log("Global notification detected, sending to all users.");
+      const usersSnapshot = await db.collection("users").get();
+      if (usersSnapshot.empty) {
+        functions.logger.log("No users found to send global notification.");
+        return null;
+      }
+      const allTokens: string[] = [];
+      usersSnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
+          allTokens.push(...userData.fcmTokens);
+        }
+      });
+      tokens = [...new Set(allTokens)]; // Deduplicate tokens
+    }
+    // Case 2: User-specific notification
+    else if (notificationData.userId) {
       functions.logger.log(
-        "Notification is not a global admin notification, skipping push."
+        `User-specific notification for user ${notificationData.userId}.`
+      );
+      const userDoc = await db
+        .collection("users")
+        .doc(notificationData.userId)
+        .get();
+      if (!userDoc.exists) {
+        functions.logger.log(
+          `User ${notificationData.userId} not found, cannot send notification.`
+        );
+        return null;
+      }
+      const userData = userDoc.data();
+      if (userData?.fcmTokens && Array.isArray(userData.fcmTokens)) {
+        tokens = userData.fcmTokens;
+      }
+    } else {
+      functions.logger.log(
+        "Notification is neither global nor user-specific. Skipping."
       );
       return null;
     }
 
-    functions.logger.log(
-      "New global notification detected:",
-      notificationData.title
-    );
-
-    // 1. Get all users
-    const usersSnapshot = await db.collection("users").get();
-    if (usersSnapshot.empty) {
-      functions.logger.log("No users found to send notifications to.");
+    if (tokens.length === 0) {
+      functions.logger.log("No FCM tokens found to send the notification to.");
       return null;
     }
 
-    // 2. Collect all FCM tokens
-    const allTokens: string[] = [];
-    usersSnapshot.forEach((userDoc) => {
-      const userData = userDoc.data();
-      if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
-        allTokens.push(...userData.fcmTokens);
-      }
-    });
+    functions.logger.log(`Preparing to send notification to ${tokens.length} token(s).`);
 
-    if (allTokens.length === 0) {
-      functions.logger.log("No FCM tokens found among users.");
-      return null;
-    }
-
-    // Deduplicate tokens
-    const uniqueTokens = [...new Set(allTokens)];
-    functions.logger.log(`Found ${uniqueTokens.length} unique tokens.`);
-
-    // 3. Construct the push notification payload
+    // Construct the push notification payload
     const payload: admin.messaging.MessagingPayload = {
       notification: {
         title: notificationData.title,
         body: notificationData.message,
-        icon: "/icon-192x192.png", // Optional: path to your icon
+        icon: "/icon-192x192.png",
       },
       webpush: {
         fcmOptions: {
@@ -62,11 +84,9 @@ export const sendPushOnNewNotification = functions.firestore
       },
     };
 
-    // 4. Send the messages
+    // Send the messages
     try {
-      const response = await admin
-        .messaging()
-        .sendToDevice(uniqueTokens, payload);
+      const response = await admin.messaging().sendToDevice(tokens, payload);
       functions.logger.log(
         "Successfully sent message:",
         response.successCount,
@@ -75,27 +95,22 @@ export const sendPushOnNewNotification = functions.firestore
         "failures."
       );
 
-      // 5. Clean up invalid tokens
+      // Clean up invalid tokens
       const tokensToRemove: Promise<any>[] = [];
       response.results.forEach((result, index) => {
         const error = result.error;
         if (error) {
           functions.logger.error(
             "Failure sending notification to",
-            uniqueTokens[index],
+            tokens[index],
             error
           );
-          // Cleanup the tokens who are not registered anymore.
           if (
             error.code === "messaging/invalid-registration-token" ||
             error.code === "messaging/registration-token-not-registered"
           ) {
-            // This is complex to do efficiently. A simple approach is to find
-            // the user with this token and remove it. For a large user base,
-            // a more scalable solution (like a separate collection for tokens)
-            // would be better. For now, we'll log it.
             functions.logger.warn(
-              `Token ${uniqueTokens[index]} is invalid. Consider implementing cleanup.`
+              `Token ${tokens[index]} is invalid. Consider implementing cleanup.`
             );
           }
         }
