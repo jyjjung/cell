@@ -14,7 +14,7 @@ import {
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import type { AppUser, UserProfileData, SidebarPreferences, AppEvent } from '@/types';
+import type { AppUser, UserProfileData, SidebarPreferences, NotificationPreferences, AppEvent } from '@/types';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 
@@ -50,6 +50,14 @@ const defaultSidebarPreferences: SidebarPreferences = {
   adminNotifications: true,
 };
 
+const defaultNotificationPreferences: NotificationPreferences = {
+  admin: true,
+  event: true,
+  reading_progress: true,
+  reminder: true,
+};
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -73,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             showInCommunityProgress: profileData.showInCommunityProgress ?? true,
             sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
+            notificationPreferences: { ...defaultNotificationPreferences, ...(profileData.notificationPreferences || {}) },
             isAdmin: profileData.isAdmin || false,
             fcmTokens: profileData.fcmTokens || [],
           } as AppUser);
@@ -88,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updatedAt: serverTimestamp() as Timestamp,
             showInCommunityProgress: true, // Default to true
             sidebar: defaultSidebarPreferences,
+            notificationPreferences: defaultNotificationPreferences,
             isAdmin: false, // Default to not admin
             fcmTokens: [],
           };
@@ -97,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: newProfileData.displayName,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
             sidebar: newProfileData.sidebar,
+            notificationPreferences: newProfileData.notificationPreferences,
             isAdmin: newProfileData.isAdmin,
             fcmTokens: newProfileData.fcmTokens,
           } as AppUser);
@@ -154,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: serverTimestamp() as Timestamp,
         showInCommunityProgress: true,
         sidebar: defaultSidebarPreferences,
+        notificationPreferences: defaultNotificationPreferences,
         isAdmin: false,
         fcmTokens: [],
       };
@@ -225,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
+          notificationPreferences: profileData.notificationPreferences !== undefined ? { ...prevUser.notificationPreferences, ...profileData.notificationPreferences } : prevUser.notificationPreferences,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
           fcmTokens: profileData.fcmTokens !== undefined ? profileData.fcmTokens : prevUser.fcmTokens,
         };

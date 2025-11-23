@@ -61,11 +61,19 @@ export interface SidebarPreferences {
   adminNotifications?: boolean;
 }
 
+export interface NotificationPreferences {
+  admin: boolean;
+  event: boolean;
+  reading_progress: boolean;
+  reminder: boolean;
+}
+
 // Extended user type
 export interface AppUser extends FirebaseUser {
   displayName: string | null;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
+  notificationPreferences?: NotificationPreferences;
   isAdmin?: boolean;
   fcmTokens?: string[];
 }
@@ -80,6 +88,7 @@ export interface UserProfileData {
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
+  notificationPreferences?: NotificationPreferences;
   isAdmin?: boolean;
   fcmTokens?: string[];
 }
@@ -115,11 +124,13 @@ export interface WeeklyProgress {
   passageSummary: string;
 }
 
+export type AppNotificationType = 'admin' | 'event' | 'reading_progress' | 'reminder';
+
 export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'admin' | 'event' | 'reading_progress' | 'reminder';
+  type: AppNotificationType;
   isGlobal: boolean; // True for admin-created global notifications
   userId?: string; // For user-specific notifications
   createdAt: Timestamp;

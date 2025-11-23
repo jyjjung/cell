@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
-import type { SidebarPreferences } from '@/types';
+import type { SidebarPreferences, NotificationPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { requestNotificationPermission, removeNotificationToken } from '@/lib/firebase';
+import { Separator } from '@/components/ui/separator';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -35,6 +36,22 @@ const adminSidebarConfig: SidebarConfigItem[] = [
   { key: 'adminNotifications', label: 'Admin: Notifications'},
 ];
 
+const defaultNotificationPreferences: NotificationPreferences = {
+  admin: true,
+  event: true,
+  reading_progress: true,
+  reminder: true,
+};
+
+type NotificationTypeKey = keyof NotificationPreferences;
+
+const notificationTypeLabels: Record<NotificationTypeKey, string> = {
+  admin: "Admin Announcements",
+  event: "New Events & Updates",
+  reminder: "Event Reminders",
+  reading_progress: "Reading Progress",
+};
+
 
 export default function SettingsPage() {
   const { currentUser, isAdmin, loadingAuth, updateUserProfile } = useAuth();
@@ -45,6 +62,8 @@ export default function SettingsPage() {
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
   const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(currentUser?.notificationPreferences || defaultNotificationPreferences);
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -63,6 +82,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (currentUser) {
       setSidebarPrefs(currentUser.sidebar || {});
+      setNotifPrefs(currentUser.notificationPreferences || defaultNotificationPreferences);
     }
   }, [currentUser]);
 
@@ -124,6 +144,31 @@ export default function SettingsPage() {
       }
     }
   };
+  
+  const handleNotifPrefToggle = async (key: NotificationTypeKey, isChecked: boolean) => {
+    if (!currentUser) return;
+
+    const newPrefs = { ...notifPrefs, [key]: isChecked };
+    setNotifPrefs(newPrefs); // Optimistic update
+
+    try {
+        await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
+        toast({
+            title: "Notification Preference Updated",
+            description: `${notificationTypeLabels[key]} alerts are now ${isChecked ? 'enabled' : 'disabled'}.`
+        });
+    } catch (error: any) {
+        console.error(`Failed to update ${key} notification preference:`, error);
+        toast({
+            title: "Update Failed",
+            description: `Could not update setting for ${notificationTypeLabels[key]}.`,
+            variant: "destructive",
+        });
+        // Revert UI on error
+        setNotifPrefs(prev => ({...prev, [key]: !isChecked}));
+    }
+  };
+
 
   if (!isMounted || loadingAuth) {
     return (
@@ -146,16 +191,16 @@ export default function SettingsPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Notifications</CardTitle>
-          <CardDescription>Manage how you receive notifications from the app.</CardDescription>
+          <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Push Notifications</CardTitle>
+          <CardDescription>Manage how you receive push notifications from the app.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
               <div className="space-y-0.5">
-              <Label htmlFor="push-notifications-switch">Push Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                  Receive notifications on your device even when the app is closed.
-              </p>
+                <Label htmlFor="push-notifications-switch">Enable Push Notifications</Label>
+                <p className="text-sm text-muted-foreground">
+                    Receive notifications on your device even when the app is closed.
+                </p>
               </div>
               <Switch
                   id="push-notifications-switch"
@@ -163,6 +208,25 @@ export default function SettingsPage() {
                   onCheckedChange={handlePushNotificationToggle}
               />
           </div>
+          {pushNotificationsEnabled && (
+            <div className="space-y-2 pt-4">
+              <Separator />
+               <p className="text-sm font-medium pt-2 text-foreground">Notification Types</p>
+               {Object.keys(notificationTypeLabels).map((key) => (
+                  <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                          <Label htmlFor={`notif-switch-${key}`}>{notificationTypeLabels[key as NotificationTypeKey]}</Label>
+                      </div>
+                      <Switch
+                          id={`notif-switch-${key}`}
+                          checked={notifPrefs[key as NotificationTypeKey]}
+                          onCheckedChange={(checked) => handleNotifPrefToggle(key as NotificationTypeKey, checked)}
+                          disabled={!pushNotificationsEnabled}
+                      />
+                  </div>
+                ))}
+            </div>
+          )}
         </CardContent>
       </Card>
       

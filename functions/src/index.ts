@@ -11,7 +11,6 @@ export const sendPushOnNewNotification = functions.firestore
   .onCreate(async (snapshot, context) => {
     const notificationData = snapshot.data();
 
-    // Log the incoming notification data for debugging
     functions.logger.log(
       "New notification created:",
       context.params.notificationId,
@@ -20,9 +19,8 @@ export const sendPushOnNewNotification = functions.firestore
 
     let tokens: string[] = [];
 
-    // Case 1: Global notification
     if (notificationData.isGlobal) {
-      functions.logger.log("Global notification detected, sending to all users.");
+      functions.logger.log("Global notification detected, sending to users who opted in.");
       const usersSnapshot = await db.collection("users").get();
       if (usersSnapshot.empty) {
         functions.logger.log("No users found to send global notification.");
@@ -31,14 +29,15 @@ export const sendPushOnNewNotification = functions.firestore
       const allTokens: string[] = [];
       usersSnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
-        if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
+        const notifPrefs = userData.notificationPreferences || {};
+        const notifType = notificationData.type || 'admin';
+        // Send if user has tokens AND has opted into this notification type (or if prefs don't exist, default to true)
+        if (userData.fcmTokens && Array.isArray(userData.fcmTokens) && (notifPrefs[notifType] !== false)) {
           allTokens.push(...userData.fcmTokens);
         }
       });
-      tokens = [...new Set(allTokens)]; // Deduplicate tokens
-    }
-    // Case 2: User-specific notification
-    else if (notificationData.userId) {
+      tokens = [...new Set(allTokens)];
+    } else if (notificationData.userId) {
       functions.logger.log(
         `User-specific notification for user ${notificationData.userId}.`
       );
@@ -53,7 +52,10 @@ export const sendPushOnNewNotification = functions.firestore
         return null;
       }
       const userData = userDoc.data();
-      if (userData?.fcmTokens && Array.isArray(userData.fcmTokens)) {
+      const notifPrefs = userData?.notificationPreferences || {};
+      const notifType = notificationData.type || 'admin';
+      // Send if user has tokens AND has opted into this notification type (or if prefs don't exist, default to true)
+      if (userData?.fcmTokens && Array.isArray(userData.fcmTokens) && (notifPrefs[notifType] !== false)) {
         tokens = userData.fcmTokens;
       }
     } else {
@@ -64,13 +66,12 @@ export const sendPushOnNewNotification = functions.firestore
     }
 
     if (tokens.length === 0) {
-      functions.logger.log("No FCM tokens found to send the notification to.");
+      functions.logger.log("No FCM tokens found or user opted out for this notification type.");
       return null;
     }
 
     functions.logger.log(`Preparing to send notification to ${tokens.length} token(s).`);
 
-    // Construct the push notification payload
     const payload: admin.messaging.MessagingPayload = {
       notification: {
         title: notificationData.title,
@@ -84,7 +85,6 @@ export const sendPushOnNewNotification = functions.firestore
       },
     };
 
-    // Send the messages
     try {
       const response = await admin.messaging().sendToDevice(tokens, payload);
       functions.logger.log(
@@ -95,7 +95,6 @@ export const sendPushOnNewNotification = functions.firestore
         "failures."
       );
 
-      // Clean up invalid tokens
       const tokensToRemove: Promise<any>[] = [];
       response.results.forEach((result, index) => {
         const error = result.error;
