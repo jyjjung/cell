@@ -19,6 +19,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { useNotifications } from './use-notifications';
 
 const MEMORY_VERSES_COLLECTION = 'memoryVerses';
 const LORDS_PRAYER_TEXT = "Our Father in heaven,\nhallowed be your name.\nYour kingdom come,\nyour will be done,\non earth as it is in heaven.\nGive us this day our daily bread,\nand forgive us our debts,\nas we also have forgiven our debtors.\nAnd lead us not into temptation,\nbut deliver us from evil.\nFor yours is the kingdom,\nand the power, and the glory,\nforever. Amen.";
@@ -28,6 +29,7 @@ export function useMemoryVerses() {
   const { isAdmin } = useAuth();
   const [memoryVerses, setMemoryVerses] = useState<MemoryVerse[]>([]);
   const [loading, setLoading] = useState(true);
+  const { createNotification } = useNotifications();
 
   useEffect(() => {
     setLoading(true);
@@ -71,12 +73,21 @@ export function useMemoryVerses() {
         isLordsPrayerChunk: false, // Standard verses are not LP chunks
         textOverride: null, // Standard verses use API
       });
+
+      await createNotification({
+        title: 'New Memory Verse',
+        message: `Verse "${reference}" was added to the list.`,
+        type: 'admin',
+        isGlobal: true,
+        relatedUrl: '/memorize'
+      });
+
       return docRef.id;
     } catch (error) {
       console.error("Error adding memory verse:", error);
       throw error;
     }
-  }, [isAdmin]);
+  }, [isAdmin, createNotification]);
 
   const addLordsPrayer = useCallback(async () => {
     if (!isAdmin) throw new Error("User is not authorized to add memory verses.");
@@ -94,12 +105,21 @@ export function useMemoryVerses() {
         addedAt: serverTimestamp(),
         isLordsPrayerChunk: true, 
       });
+
+      await createNotification({
+        title: 'New Memory Verse',
+        message: `"${LORDS_PRAYER_REFERENCE_TITLE}" was added to the list.`,
+        type: 'admin',
+        isGlobal: true,
+        relatedUrl: '/memorize'
+      });
+
       return { addedCount: 1 }; // Signifies one entry added
     } catch (error) {
       console.error("Error adding The Lord's Prayer:", error);
       throw error;
     }
-  }, [isAdmin]);
+  }, [isAdmin, createNotification]);
 
   const deleteMemoryVerse = useCallback(async (verseId: string) => {
     if (!isAdmin) throw new Error("User is not authorized to delete memory verses.");
