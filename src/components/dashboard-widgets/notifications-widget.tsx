@@ -60,7 +60,7 @@ export default function NotificationsWidget(props: Partial<Layout>) {
   
   const maxItemsToShow = useMemo(() => {
     if (!props.h) return 3; // Default
-    const widgetHeight = props.h * 150; // rowHeight is 150
+    const widgetHeight = props.h * 1; // rowHeight is 1
     const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
     return Math.max(1, Math.floor(contentHeight / NOTIFICATION_ITEM_HEIGHT));
   }, [props.h]);

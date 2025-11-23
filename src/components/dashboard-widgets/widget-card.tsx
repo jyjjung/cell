@@ -32,12 +32,10 @@ export default function WidgetCard({ title, description, className, footer, chil
             {titleExtraContent && <div className="ml-2 flex-shrink-0">{titleExtraContent}</div>}
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0 flex-grow overflow-y-auto">
+      <CardContent className="p-4 pt-0 flex-grow">
         {children}
       </CardContent>
       {footer && <CardFooter className="p-4 pt-2 border-t mt-auto">{footer}</CardFooter>}
     </Card>
   );
 }
-
-    
