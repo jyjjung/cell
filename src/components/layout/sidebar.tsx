@@ -119,8 +119,8 @@ export default function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
         <SidebarHeader className="p-4">
-            <Link href="/" className="flex items-center justify-center space-x-2" onClick={() => handleLinkClick('/')}>
-                <Image src="/icon.svg" alt="em." width={28} height={28} className="h-7 w-7" />
+            <Link href="/" className="flex items-center justify-start space-x-2" onClick={() => handleLinkClick('/')}>
+                <Image src="/icon.svg" alt="em." width={36} height={36} className="h-9 w-9" />
             </Link>
         </SidebarHeader>
 
