@@ -26,15 +26,15 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 2, minH: 2, minW: 1, isResizable: false } 
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 3, minH: 3, minW: 1, isResizable: false } 
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
-    default: { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 2, minW: 1 } 
+    default: { i: 'upcomingEvents', x: 0, y: 2, w: 1, h: 2, minH: 4, minW: 1 } 
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 2, w: 1, h: 2, minH: 2, minW: 1 } 
+    default: { i: 'nextReading', x: 1, y: 3, w: 1, h: 3, minH: 3, minW: 1, isResizable: false } 
   },
 };
 
@@ -239,7 +239,7 @@ export default function HomePage() {
         })}
       </ResponsiveGridLayout>
 
-       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+       <div className="mt-8 flex justify-center">
             {isCustomizeMode ? (
                 <Button onClick={saveCustomization} size="lg" className="rounded-full shadow-lg">
                     <Check className="mr-2 h-5 w-5" /> Done
@@ -253,3 +253,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
