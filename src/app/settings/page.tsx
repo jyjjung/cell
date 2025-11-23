@@ -110,7 +110,6 @@ export default function SettingsPage() {
     if (!currentUser || typeof window === 'undefined' || !('Notification' in window)) return;
   
     if (enabled) {
-      // Check permission status *before* trying to request it.
       if (Notification.permission === 'denied') {
         toast({
           title: "Permissions Blocked",
@@ -118,7 +117,7 @@ export default function SettingsPage() {
           variant: "destructive",
           duration: 10000,
         });
-        setPushNotificationsEnabled(false); // Make sure switch is off
+        setPushNotificationsEnabled(false);
         return;
       }
       
@@ -131,7 +130,6 @@ export default function SettingsPage() {
             description: "You will now receive updates on your device.",
           });
         } else {
-           // This case is for when the user denies permission during the prompt.
            setPushNotificationsEnabled(false);
            toast({
               title: "Permission Required",

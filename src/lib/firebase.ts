@@ -49,7 +49,6 @@ export const requestNotificationPermission = async (userId: string): Promise<boo
 
   const messaging = getMessaging(app);
   
-  // Do not request permission if it's already denied.
   if (Notification.permission === 'denied') {
     console.log('Notification permission was previously denied.');
     return false;
@@ -59,11 +58,9 @@ export const requestNotificationPermission = async (userId: string): Promise<boo
 
   if (permission === 'granted') {
     console.log('Notification permission granted.');
-    // Get the token
     const currentToken = await getToken(messaging, { vapidKey: 'BPE1Sj5U6D6wULADs8p87r8iOo_i1PSVOPtqVaxLqgA6yNBhXgO1AtA0X8KjG8F3s6eA0e8-0J0c6S7i3B_X8vE' });
     if (currentToken) {
       console.log('FCM Token:', currentToken);
-      // Save the token to the user's profile
       const userDocRef = doc(db, 'users', userId);
       await updateDoc(userDocRef, {
         fcmTokens: arrayUnion(currentToken)
@@ -71,12 +68,11 @@ export const requestNotificationPermission = async (userId: string): Promise<boo
       return true;
     } else {
       console.log('No registration token available. Request permission to generate one.');
-      // This can happen if the service worker isn't registered correctly.
       throw new Error('Could not get FCM token. Ensure the service worker is set up.');
     }
   } else {
     console.log('Unable to get permission to notify.');
-    return false; // User denied permission or dismissed the prompt
+    return false;
   }
 };
 
