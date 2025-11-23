@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, addDays } from 'date-fns';
 import type { AppEvent } from '@/types';
 
 const EVENTS_COLLECTION = 'events';
@@ -44,42 +44,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setIsPageLoading(false);
   }, [pathname, setIsPageLoading]);
 
-  // Effect for creating timed notifications for today's events
+  // Effect for creating timed notifications for events
   useEffect(() => {
     if (!currentUser || loadingAuth) {
       return;
     }
 
-    const checkTodaysEvents = async () => {
+    const checkEventReminders = async () => {
+      // --- Check for Today's Events ---
       const todayStart = startOfDay(new Date());
       const todayEnd = endOfDay(new Date());
       
-      const eventsQuery = query(
+      const todaysEventsQuery = query(
         collection(db, EVENTS_COLLECTION),
-        where('date', '>=', todayStart.toISOString().split('T')[0]),
+        where('date', '>=', todayStart.toISOString()),
         where('date', '<=', todayEnd.toISOString())
       );
 
       try {
-        const eventsSnapshot = await getDocs(eventsQuery);
-        const todaysEvents = eventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
+        const todaysEventsSnapshot = await getDocs(todaysEventsQuery);
+        const todaysEvents = todaysEventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
 
         for (const event of todaysEvents) {
-          // Unique identifier for this user and this event reminder
           const notificationTitle = `Reminder: ${event.title} is today!`;
 
-          // Check if a reminder for this event has already been sent to this user
           const notificationQuery = query(
               collection(db, 'notifications'),
               where('userId', '==', currentUser.uid),
               where('type', '==', 'reminder'),
               where('title', '==', notificationTitle)
           );
-
           const existingNotifications = await getDocs(notificationQuery);
 
           if (existingNotifications.empty) {
-            // No reminder found, so create one
             await createNotification({
               title: notificationTitle,
               message: 'This event is scheduled for today.',
@@ -93,9 +90,50 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Failed to check for today's events:", error);
       }
+
+      // --- Check for Events One Week Away ---
+      const oneWeekFromNowStart = startOfDay(addDays(new Date(), 7));
+      const oneWeekFromNowEnd = endOfDay(addDays(new Date(), 7));
+
+      const weekAwayEventsQuery = query(
+        collection(db, EVENTS_COLLECTION),
+        where('date', '>=', oneWeekFromNowStart.toISOString()),
+        where('date', '<=', oneWeekFromNowEnd.toISOString())
+      );
+
+      try {
+        const weekAwayEventsSnapshot = await getDocs(weekAwayEventsQuery);
+        const weekAwayEvents = weekAwayEventsSnapshot.docs.map(d => ({id: d.id, ...d.data()})) as AppEvent[];
+
+        for (const event of weekAwayEvents) {
+          const notificationTitle = `Heads up: ${event.title} is one week away!`;
+
+          const notificationQuery = query(
+              collection(db, 'notifications'),
+              where('userId', '==', currentUser.uid),
+              where('type', '==', 'reminder'),
+              where('title', '==', notificationTitle)
+          );
+          const existingNotifications = await getDocs(notificationQuery);
+          
+          if (existingNotifications.empty) {
+            await createNotification({
+              title: notificationTitle,
+              message: `This event is scheduled for next week.`,
+              type: 'reminder',
+              isGlobal: false,
+              userId: currentUser.uid,
+              relatedUrl: `/events#${event.id}`
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check for week-away events:", error);
+      }
+
     };
 
-    checkTodaysEvents();
+    checkEventReminders();
     
   }, [currentUser, loadingAuth, createNotification]);
   
