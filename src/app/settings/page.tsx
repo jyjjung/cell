@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PanelLeft, Shield, Bell, LayoutGrid } from 'lucide-react';
+import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
-import type { SidebarPreferences, NotificationPreferences, DashboardPreferences } from '@/types';
+import type { SidebarPreferences, NotificationPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFirestore } from '@/lib/firebase';
 import useLocalStorage from '@/hooks/use-local-storage';
@@ -56,19 +56,6 @@ const reminderPrefsConfig: NotificationConfigItem[] = [
     { key: 'reminderOnDay', label: 'On the day', description: 'Reminders for events happening today.' },
 ];
 
-type DashboardWidgetConfigItem = {
-  key: keyof DashboardPreferences['widgetVisibility'];
-  label: string;
-  description: string;
-};
-
-const dashboardWidgetsConfig: DashboardWidgetConfigItem[] = [
-  { key: 'notifications', label: 'Notifications', description: 'Show recent unread notifications.' },
-  { key: 'todayReading', label: "Today's Reading", description: 'Display the bible reading for the current day.' },
-  { key: 'upcomingEvents', label: 'Upcoming Events', description: 'A quick look at the next few events.' },
-  { key: 'nextReading', label: 'Next Unread Reading', description: 'Shows your next reading to catch up on.' },
-];
-
 
 export default function SettingsPage() {
   const { currentUser, isAdmin, loadingAuth, updateUserProfile } = useAuth();
@@ -79,7 +66,6 @@ export default function SettingsPage() {
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
   const [notifPrefs, setNotifPrefs] = useState<Partial<NotificationPreferences>>(currentUser?.notificationPreferences || {});
-  const [dashboardPrefs, setDashboardPrefs] = useState<Partial<DashboardPreferences['widgetVisibility']>>(currentUser?.dashboard?.widgetVisibility || {});
   
   const [fcmToken, setFcmToken] = useLocalStorage<string | null>('fcmToken', null);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -99,7 +85,6 @@ export default function SettingsPage() {
     if (currentUser) {
       setSidebarPrefs(currentUser.sidebar || {});
       setNotifPrefs(currentUser.notificationPreferences || {});
-      setDashboardPrefs(currentUser.dashboard?.widgetVisibility || {});
     }
   }, [currentUser]);
 
@@ -219,31 +204,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDashboardWidgetToggle = async (key: keyof DashboardPreferences['widgetVisibility'], isChecked: boolean) => {
-    if (!currentUser) return;
-    const newWidgetPrefs = { ...dashboardPrefs, [key]: isChecked };
-    setDashboardPrefs(newWidgetPrefs);
-
-    try {
-      const existingDashboardPrefs = currentUser.dashboard || {};
-      const updatedDashboardPrefs = {
-        ...existingDashboardPrefs,
-        widgetVisibility: newWidgetPrefs,
-      };
-      await updateUserProfile(currentUser.uid, { dashboard: updatedDashboardPrefs });
-      const configItem = dashboardWidgetsConfig.find(c => c.key === key);
-      toast({
-        title: "Dashboard Updated",
-        description: `'${configItem?.label}' widget is now ${isChecked ? 'visible' : 'hidden'}.`,
-      });
-    } catch (error) {
-       console.error("Failed to update dashboard preference:", error);
-      toast({ title: "Update Failed", description: "Could not update your dashboard setting.", variant: "destructive" });
-      const revertedPrefs = { ...dashboardPrefs, [key]: !isChecked };
-      setDashboardPrefs(revertedPrefs);
-    }
-  };
-
   if (!isMounted || loadingAuth) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
@@ -262,29 +222,6 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage your application and notification settings.</p>
       </div>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center"><LayoutGrid className="mr-2 h-5 w-5" /> Dashboard Customization</CardTitle>
-            <CardDescription>Choose which widgets to display on your homepage dashboard.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-             {dashboardWidgetsConfig.map(({key, label, description}) => (
-                <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                    <div className="space-y-0.5">
-                        <Label htmlFor={`dash-switch-${key}`}>{label}</Label>
-                        <p className="text-xs text-muted-foreground">{description}</p>
-                    </div>
-                    <Switch
-                        id={`dash-switch-${key}`}
-                        checked={dashboardPrefs[key] ?? true}
-                        onCheckedChange={(checked) => handleDashboardWidgetToggle(key, checked)}
-                        aria-label={label}
-                    />
-                </div>
-            ))}
-        </CardContent>
-      </Card>
       
       <Card>
         <CardHeader>
@@ -396,3 +333,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

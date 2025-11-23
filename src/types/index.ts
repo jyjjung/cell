@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth'; // Import FirebaseUser
-import type { Layout } from 'react-grid-layout';
+import type { Layout, Layouts } from 'react-grid-layout';
 
 export enum EventCategory {
   QT = "QT", // Quiet Time
@@ -79,12 +79,7 @@ export interface DashboardPreferences {
     nextReading: boolean;
     [key: string]: boolean;
   },
-  layouts: {
-    lg: Layout[],
-    md: Layout[],
-    sm: Layout[],
-    [key: string]: Layout[]
-  }
+  layouts: Layouts;
 }
 
 // Extended user type
@@ -158,3 +153,5 @@ export interface AppNotification {
   readBy: string[]; // Array of user UIDs who have read it
   relatedUrl?: string; // e.g., link to the event or reading plan
 }
+
+    
