@@ -162,9 +162,12 @@ export default function HomePage() {
       </div>
     );
   }
+
+  // Filter visibleWidgets to ensure they exist in WIDGET_COMPONENTS
+  const existingVisibleWidgets = visibleWidgets.filter(key => ALL_WIDGET_KEYS.includes(key));
   
   const filteredLayouts = Object.keys(layouts).reduce((acc, breakpoint) => {
-      acc[breakpoint] = layouts[breakpoint].filter(layoutItem => visibleWidgets.includes(layoutItem.i));
+      acc[breakpoint] = layouts[breakpoint].filter(layoutItem => existingVisibleWidgets.includes(layoutItem.i));
       return acc;
   }, {} as Layouts);
 
@@ -183,12 +186,12 @@ export default function HomePage() {
                         {ALL_WIDGET_KEYS.map(key => (
                             <Button
                                 key={key}
-                                variant={visibleWidgets.includes(key) ? "default" : "outline"}
+                                variant={existingVisibleWidgets.includes(key) ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleToggleWidget(key)}
                                 className="transition-all"
                             >
-                                {visibleWidgets.includes(key) ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                                {existingVisibleWidgets.includes(key) ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
                                 {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                             </Button>
                         ))}
@@ -208,7 +211,7 @@ export default function HomePage() {
         isResizable={isCustomizeMode}
         draggableHandle=".drag-handle"
       >
-        {visibleWidgets.map(key => {
+        {existingVisibleWidgets.map(key => {
           const WidgetComponent = WIDGET_COMPONENTS[key].component;
           return (
             <div key={key} className={cn("relative group/widget", isCustomizeMode && "shadow-xl")}>
@@ -242,5 +245,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-    
