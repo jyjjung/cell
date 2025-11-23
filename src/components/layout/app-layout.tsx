@@ -12,7 +12,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
 import { startOfDay, endOfDay, addDays, isBefore, isSameDay, isValid, parseISO } from 'date-fns';
 import type { AppEvent } from '@/types';
 
@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const { currentUser, loadingAuth } = useAuth();
-  const { notifications, createNotification } = useNotifications();
+  const { notifications, createNotification, markAsRead } = useNotifications();
   const { plan: currentGlobalPlan, loading: planLoading } = useBiblePlan();
   const { completedPassages, loadingChecklist } = useUserBibleChecklist();
 
@@ -47,6 +47,61 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Hide the loader whenever the path changes
     setIsPageLoading(false);
   }, [pathname, setIsPageLoading]);
+  
+  // Effect for auto-marking past event notifications as read
+  useEffect(() => {
+    if (!currentUser || notifications.length === 0) return;
+
+    const unreadReminders = notifications.filter(n =>
+      (n.type === 'reminder' || n.type === 'event') &&
+      !n.readBy.includes(currentUser.uid) &&
+      n.relatedUrl?.includes('/events#')
+    );
+
+    if (unreadReminders.length === 0) return;
+
+    const checkAndMarkPastEventNotifs = async () => {
+      const eventIdsToFetch = unreadReminders.map(n => n.relatedUrl!.split('#')[1]).filter(Boolean);
+      if (eventIdsToFetch.length === 0) return;
+
+      try {
+        const eventsQuery = query(collection(db, EVENTS_COLLECTION), where(documentId(), 'in', eventIdsToFetch));
+        const eventSnapshots = await getDocs(eventsQuery);
+        const fetchedEvents = new Map<string, AppEvent>();
+        eventSnapshots.forEach(doc => {
+          fetchedEvents.set(doc.id, { id: doc.id, ...doc.data() } as AppEvent);
+        });
+
+        const today = startOfDay(new Date());
+        const notificationsToMarkRead: string[] = [];
+
+        unreadReminders.forEach(notification => {
+          const eventId = notification.relatedUrl!.split('#')[1];
+          const event = fetchedEvents.get(eventId);
+          if (event) {
+            try {
+              const eventDate = parseISO(event.date);
+              if (isValid(eventDate) && isBefore(eventDate, today)) {
+                notificationsToMarkRead.push(notification.id);
+              }
+            } catch (e) {
+              console.error(`Error parsing date for event ${event.id}:`, event.date, e);
+            }
+          }
+        });
+
+        if (notificationsToMarkRead.length > 0) {
+          const markPromises = notificationsToMarkRead.map(id => markAsRead(id));
+          await Promise.all(markPromises);
+        }
+      } catch (error) {
+        console.error("Error auto-marking past event notifications:", error);
+      }
+    };
+
+    checkAndMarkPastEventNotifs();
+  }, [notifications, currentUser, markAsRead]);
+
 
   // Effect for creating timed notifications for events
   useEffect(() => {
@@ -172,8 +227,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const existingCaughtUpNotification = notifications.find(n => n.type === 'reading_progress' && n.title === "All Caught Up!");
 
         if (isBehind && !existingBehindNotification) {
-            // If user is behind and has an "All Caught Up" notification, we assume it's from a previous state.
-            // A more advanced system might clear it, but for now we just add the "behind" notification.
             createNotification({
                 title: "Catch up on your reading",
                 message: "You have some past Bible readings that are not yet completed.",
@@ -183,7 +236,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 relatedUrl: '/bible-checklist'
             });
         } else if (isCaughtUp && !existingCaughtUpNotification) {
-            // Similar to above, if they are caught up and have a "behind" notification, we just add the "caught up" one.
              createNotification({
                 title: "All Caught Up!",
                 message: "Great job! You've completed all your Bible readings to date.",
