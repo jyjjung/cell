@@ -42,7 +42,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Push Notifications
-export const requestNotificationPermission = async (userId: string) => {
+export const requestNotificationPermission = async (userId: string): Promise<boolean> => {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     throw new Error("This browser does not support desktop notification");
   }
@@ -68,7 +68,7 @@ export const requestNotificationPermission = async (userId: string) => {
     }
   } else {
     console.log('Unable to get permission to notify.');
-    throw new Error('Notification permission not granted.');
+    return false; // Return false instead of throwing an error
   }
 };
 

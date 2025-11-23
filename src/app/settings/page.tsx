@@ -111,12 +111,22 @@ export default function SettingsPage() {
 
     if (enabled) {
       try {
-        await requestNotificationPermission(currentUser.uid);
-        setPushNotificationsEnabled(true);
-        toast({
-          title: "Push Notifications Enabled",
-          description: "You will now receive updates on your device.",
-        });
+        const permissionGranted = await requestNotificationPermission(currentUser.uid);
+        if (permissionGranted) {
+          setPushNotificationsEnabled(true);
+          toast({
+            title: "Push Notifications Enabled",
+            description: "You will now receive updates on your device.",
+          });
+        } else {
+           // This case is for when the user denies permission. The requestNotificationPermission will not throw an error here.
+           setPushNotificationsEnabled(false);
+           toast({
+              title: "Permission Required",
+              description: "You need to grant notification permissions in your browser to enable this feature.",
+              variant: "default",
+           });
+        }
       } catch (error: any) {
         console.error("Error enabling push notifications:", error);
         toast({
