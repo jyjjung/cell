@@ -13,9 +13,10 @@ import {
   type User as FirebaseUser,
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import type { AppUser, UserProfileData, SidebarPreferences } from '@/types';
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import type { AppUser, UserProfileData, SidebarPreferences, AppEvent } from '@/types';
 import { usePageLoading } from '@/contexts/page-loading-context';
+
 
 interface AuthContextType {
   isAdmin: boolean;
