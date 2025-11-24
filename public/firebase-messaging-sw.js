@@ -1,11 +1,12 @@
+// This file is intentionally left empty.
+// It's a placeholder for Firebase Cloud Messaging service worker.
+// The actual service worker logic is handled by next-pwa.
+// For more details on Firebase messaging with PWA, see the Firebase documentation.
 
-// Check if Firebase has been initialized
-if (typeof firebase === 'undefined') {
-    importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-    importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
-}
+// Scripts for firebase and firebase messaging
+importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
   authDomain: "cell-abca4.firebaseapp.com",
@@ -16,12 +17,9 @@ const firebaseConfig = {
   measurementId: "G-1E3HH6TK1J"
 };
 
+firebase.initializeApp(firebaseConfig);
 
-// Initialize Firebase
-if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
-}
-
+// This is required for the service worker to handle background notifications.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
