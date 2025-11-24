@@ -49,6 +49,8 @@ export default function ForgotPasswordPage() {
         message = "No user found with this email address.";
       } else if (err.code === 'auth/invalid-email') {
         message = "Please enter a valid email address.";
+      } else if (err.code === 'auth/too-many-requests') {
+        message = "Too many requests have been sent from this device. Please wait a while before trying again.";
       }
       setError(message);
     } finally {
