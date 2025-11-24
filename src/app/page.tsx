@@ -22,19 +22,19 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: Layout } } = {
   notifications: { 
     component: NotificationsWidget, 
-    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false } 
+    default: { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, isResizable: false } 
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false }
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, minH: 6, isResizable: false }
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
-    default: { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false }
+    default: { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, minH: 4, isResizable: false }
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 4, isResizable: false }
+    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 6, minH: 6, isResizable: false }
   },
 };
 
@@ -42,22 +42,22 @@ const ALL_WIDGET_KEYS = Object.keys(WIDGET_COMPONENTS);
 
 const DEFAULT_LAYOUTS: Layouts = {
   lg: [
-      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 4, w: 1, h: 4, isResizable: false },
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, minH: 6, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'nextReading', x: 1, y: 6, w: 1, h: 6, minH: 6, isResizable: false },
   ],
   md: [
-      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 1, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 4, w: 1, h: 4, isResizable: false },
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, minH: 6, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'nextReading', x: 1, y: 6, w: 1, h: 6, minH: 6, isResizable: false },
   ],
   sm: [
-      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'upcomingEvents', x: 0, y: 8, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 0, y: 12, w: 1, h: 4, isResizable: false },
+      { i: 'notifications', x: 0, y: 0, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'todayReading', x: 0, y: 4, w: 1, h: 6, minH: 6, isResizable: false },
+      { i: 'upcomingEvents', x: 0, y: 10, w: 1, h: 4, minH: 4, isResizable: false },
+      { i: 'nextReading', x: 0, y: 14, w: 1, h: 6, minH: 6, isResizable: false },
   ]
 };
 
@@ -270,3 +270,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
