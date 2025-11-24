@@ -49,6 +49,8 @@ export default function LoginForm() {
       let message = "Invalid email or password. Please try again.";
        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         message = 'Invalid email or password.';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Access to this account has been temporarily disabled due to many failed login attempts. You can reset your password or try again later.';
       } else if (error.message) {
         message = error.message;
       }
