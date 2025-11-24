@@ -25,19 +25,19 @@ if (!getApps().length) {
 const db = getFirestore(app);
 const auth = getAuth(app); // Initialize Firebase Auth
 
-// Enable offline persistence
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db)
-    .catch((err) => {
-      if (err.code == 'failed-precondition') {
-        console.warn('Firebase: Multiple tabs open, persistence can only be enabled in one tab at a time.');
-      } else if (err.code == 'unimplemented') {
-        console.warn('Firebase: The current browser does not support all of the features required to enable persistence.');
-      } else {
-        console.warn('Firebase: Error enabling persistence:', err);
-      }
-    });
-}
+// Disable offline persistence to prevent quota errors
+// if (typeof window !== 'undefined') {
+//   enableMultiTabIndexedDbPersistence(db)
+//     .catch((err) => {
+//       if (err.code == 'failed-precondition') {
+//         console.warn('Firebase: Multiple tabs open, persistence can only be enabled in one tab at a time.');
+//       } else if (err.code == 'unimplemented') {
+//         console.warn('Firebase: The current browser does not support all of the features required to enable persistence.');
+//       } else {
+//         console.warn('Firebase: Error enabling persistence:', err);
+//       }
+//     });
+// }
 
 // --- Firebase Cloud Messaging (FCM) ---
 export const getMessagingInstance = () => {
