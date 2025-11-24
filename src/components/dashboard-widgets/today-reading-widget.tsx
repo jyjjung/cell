@@ -110,7 +110,6 @@ export default function TodayReadingWidget(props: Partial<Layout>) {
                        onClick={() => handlePassageClick(passage)}
                        title={`View '${passage.displayText}'`}
                    >
-                       <BookUp className="h-4 w-4 text-muted-foreground flex-shrink-0 mr-2" />
                        <span className="truncate">{passage.displayText}</span>
                    </Button>
                 </div>
