@@ -25,7 +25,7 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, isResizable: false }
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false }
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
@@ -33,7 +33,7 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 5, w: 1, h: 6, isResizable: false }
+    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false }
   },
 };
 
@@ -42,21 +42,21 @@ const ALL_WIDGET_KEYS = Object.keys(WIDGET_COMPONENTS);
 const DEFAULT_LAYOUTS: Layouts = {
   lg: [
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, isResizable: false },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false },
       { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 5, w: 1, h: 6, isResizable: false },
+      { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false },
   ],
   md: [
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, isResizable: false },
+      { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false },
       { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 5, w: 1, h: 6, isResizable: false },
+      { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false },
   ],
   sm: [
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
-      { i: 'todayReading', x: 0, y: 4, w: 1, h: 6, isResizable: false },
+      { i: 'todayReading', x: 0, y: 4, w: 1, h: 5, isResizable: false },
       { i: 'upcomingEvents', x: 0, y: 9, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 0, y: 13, w: 1, h: 6, isResizable: false },
+      { i: 'nextReading', x: 0, y: 13, w: 1, h: 7, isResizable: false },
   ]
 };
 
@@ -127,8 +127,6 @@ export default function HomePage() {
 
     await updateUserProfile(currentUser.uid, {
       dashboard: { widgetVisibility, layouts },
-    }).catch((error) => {
-      console.error("Error saving layout:", error);
     });
     
     setIsCustomizeMode(false);
