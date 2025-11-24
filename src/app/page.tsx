@@ -33,7 +33,7 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false }
+    default: { i: 'nextReading', x: 1, y: 5, w: 1, h: 7, isResizable: false }
   },
 };
 
@@ -44,13 +44,13 @@ const DEFAULT_LAYOUTS: Layouts = {
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
       { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false },
       { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false },
+      { i: 'nextReading', x: 1, y: 5, w: 1, h: 7, isResizable: false },
   ],
   md: [
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
       { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false },
       { i: 'upcomingEvents', x: 0, y: 4, w: 1, h: 4, isResizable: false },
-      { i: 'nextReading', x: 1, y: 4, w: 1, h: 7, isResizable: false },
+      { i: 'nextReading', x: 1, y: 5, w: 1, h: 7, isResizable: false },
   ],
   sm: [
       { i: 'notifications', x: 0, y: 0, w: 1, h: 4, isResizable: false },
