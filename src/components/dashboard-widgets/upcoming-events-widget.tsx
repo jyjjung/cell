@@ -1,9 +1,7 @@
-
 "use client";
 
 import { useMemo } from 'react';
 import { useEvents } from '@/hooks/use-events';
-import WidgetCard from './widget-card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -11,13 +9,6 @@ import { isBefore, parseISO, startOfToday, isValid } from 'date-fns';
 import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
-import { cn } from '@/lib/utils';
-import type { Layout } from 'react-grid-layout';
-
-// Approximate heights for calculation
-const WIDGET_HEADER_HEIGHT = 60; // px
-const WIDGET_FOOTER_HEIGHT = 50; // px
-const EVENT_ITEM_HEIGHT = 38;  // px
 
 const categoryIcons: { [key in EventCategory]: React.ComponentType<{ className?: string }> } = {
     [EventCategory.Event]: Users,
@@ -37,7 +28,7 @@ const EventItem = ({ event }: { event: AppEvent }) => {
     )
 }
 
-export default function UpcomingEventsWidget(props: Partial<Layout>) {
+export default function UpcomingEventsWidget() {
     const { events, loading } = useEvents();
     const router = useRouter();
     const { setIsPageLoading } = usePageLoading();
@@ -54,15 +45,8 @@ export default function UpcomingEventsWidget(props: Partial<Layout>) {
                     return false;
                 }
             })
-            .slice(0, 10); // Take the next 10 and we'll slice it dynamically
+            .slice(0, 5);
     }, [events]);
-
-    const maxItemsToShow = useMemo(() => {
-        if (!props.h) return 5; // Default
-        const widgetHeight = props.h * 1; // rowHeight is 1
-        const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
-        return Math.max(1, Math.floor(contentHeight / EVENT_ITEM_HEIGHT));
-    }, [props.h]);
 
     const handleGoToEvents = () => {
         setIsPageLoading(true);
@@ -70,15 +54,8 @@ export default function UpcomingEventsWidget(props: Partial<Layout>) {
     };
 
     return (
-        <WidgetCard
-            title="Upcoming Events"
-            description={upcomingEvents.length > 0 ? `Next ${upcomingEvents.length} upcoming events.` : "No upcoming events."}
-            footer={
-                <Button variant="outline" size="sm" className="w-full" onClick={handleGoToEvents}>
-                    View All Events
-                </Button>
-            }
-        >
+        <div className="h-full flex flex-col">
+            <div className="flex-grow">
             {loading ? (
                 <div className="h-full flex items-center justify-center text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -90,11 +67,17 @@ export default function UpcomingEventsWidget(props: Partial<Layout>) {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {upcomingEvents.slice(0, maxItemsToShow).map(event => (
+                    {upcomingEvents.map(event => (
                         <EventItem key={event.id} event={event} />
                     ))}
                 </div>
             )}
-        </WidgetCard>
+            </div>
+             <div className="pt-4 border-t mt-4">
+                <Button variant="outline" size="sm" className="w-full" onClick={handleGoToEvents}>
+                    View All Events
+                </Button>
+            </div>
+        </div>
     );
 }
