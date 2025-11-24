@@ -42,12 +42,7 @@ export default function TodayReadingWidget(props: Partial<Layout>) {
     return todaysReading.passages.filter(p => p.displayText && !p.displayText.startsWith("Error:"));
   }, [todaysReading]);
 
-  const maxItemsToShow = useMemo(() => {
-      if (!props.h) return 4; // Default if height is not provided
-      const widgetHeight = props.h * 1; // rowHeight is 1
-      const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
-      return Math.max(1, Math.floor(contentHeight / PASSAGE_ITEM_HEIGHT));
-  }, [props.h]);
+  const maxItemsToShow = 4;
 
 
   const handleGoToPlan = () => {
@@ -61,11 +56,7 @@ export default function TodayReadingWidget(props: Partial<Layout>) {
   };
     
   const handleCheckboxToggle = async (passageText: string) => {
-      try {
-          await togglePassageCompletion(passageText);
-      } catch (error) {
-          console.error("Failed to toggle passage completion:", error);
-      }
+      // No toast notification will be shown here.
   };
 
   const isAllComplete = useMemo(() => {
@@ -104,7 +95,7 @@ export default function TodayReadingWidget(props: Partial<Layout>) {
                     <Checkbox
                         id={`today-reading-${passage.displayText}`}
                         checked={isChecked}
-                        onCheckedChange={() => handleCheckboxToggle(passage.displayText)}
+                        onCheckedChange={() => togglePassageCompletion(passage.displayText)}
                         aria-label={`Mark ${passage.displayText} as read`}
                         className="h-4 w-4"
                     />

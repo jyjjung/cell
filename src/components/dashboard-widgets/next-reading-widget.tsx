@@ -41,12 +41,7 @@ export default function NextReadingWidget(props: Partial<Layout>) {
         return nextUnread.passages.filter(p => !completedPassages.includes(p.displayText));
     }, [nextUnread, completedPassages]);
 
-    const maxItemsToShow = useMemo(() => {
-        if (!props.h) return 4; // Default if height is not provided
-        const widgetHeight = props.h * 1; // rowHeight is 1
-        const contentHeight = widgetHeight - WIDGET_HEADER_HEIGHT - WIDGET_FOOTER_HEIGHT;
-        return Math.max(1, Math.floor(contentHeight / PASSAGE_ITEM_HEIGHT));
-    }, [props.h]);
+    const maxItemsToShow = 4;
 
 
     const handleGoToPlan = () => {
@@ -107,9 +102,9 @@ export default function NextReadingWidget(props: Partial<Layout>) {
                                      )}
                                      onClick={() => handlePassageClick(passage)}
                                      title={`View '${passage.displayText}'`}
-                                >
-                                    <BookUp className="h-4 w-4 text-muted-foreground flex-shrink-0 mr-2" />
-                                    <span className="truncate">{passage.displayText}</span>
+                                 >
+                                     <BookUp className="h-4 w-4 text-muted-foreground flex-shrink-0 mr-2" />
+                                     <span className="truncate">{passage.displayText}</span>
                                  </Button>
                             </div>
                         ))}
