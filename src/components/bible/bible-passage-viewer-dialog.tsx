@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parsePassageReferenceForNavigation, getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
-import { useToast } from '@/hooks/use-toast';
 
 interface BiblePassageViewerDialogProps {
   isOpen: boolean;
@@ -31,7 +30,6 @@ export default function BiblePassageViewerDialog({
   const [currentBook, setCurrentBook] = useState<string | null>(null);
   const [currentChapter, setCurrentChapter] = useState<number | null>(null);
   const [currentDisplayRef, setCurrentDisplayRef] = useState<string | null>(null);
-  const { toast } = useToast();
 
   const updateCurrentPassageDetails = useCallback((ref: string | null) => {
     if (ref) {
@@ -119,9 +117,8 @@ export default function BiblePassageViewerDialog({
       const refToMark = (currentBook && currentChapter) ? `${currentBook} ${currentChapter}` : currentDisplayRef;
       try {
         await markMultiplePassages([refToMark], true);
-        toast({ title: "Passage Marked", description: `"${refToMark}" marked as complete.` });
       } catch (e: any) {
-        toast({ title: "Error", description: `Could not mark passage: ${e.message}`, variant: "destructive" });
+        console.error("Error marking passage", e);
       }
     }
   };

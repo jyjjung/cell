@@ -14,7 +14,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, UserCircle, LogOut, Save, Pencil, Users } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { useToast } from '@/hooks/use-toast';
 import type { UserProfileData } from '@/types';
 import { Switch } from '@/components/ui/switch';
 
@@ -29,7 +28,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
-  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -76,11 +74,9 @@ export default function ProfilePage() {
 
       await updateUserProfile(currentUser.uid, profileUpdateData);
       
-      toast({ title: "Profile Updated", description: "Your display name has been updated." });
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
-      toast({ title: "Update Failed", description: "Could not update your profile. Please try again.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -91,15 +87,8 @@ export default function ProfilePage() {
     setShowProgress(isChecked); // Optimistically update UI
     try {
       await updateUserProfile(currentUser.uid, { showInCommunityProgress: isChecked });
-      toast({
-        title: "Privacy Setting Updated",
-        description: isChecked 
-          ? "Your progress will now be shown on the leaderboard." 
-          : "Your progress is now hidden from the leaderboard.",
-      });
     } catch (error) {
       console.error("Failed to update progress visibility:", error);
-      toast({ title: "Update Failed", description: "Could not update your privacy setting.", variant: "destructive" });
       setShowProgress(!isChecked); // Revert on error
     }
   };

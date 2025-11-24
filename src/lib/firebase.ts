@@ -3,7 +3,6 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, enableMultiTabIndexedDbPersistence, Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { getAuth } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { useToast } from '@/hooks/use-toast';
 
 // Ensuring this matches the user's latest provided configuration
 const firebaseConfig = {
@@ -103,11 +102,6 @@ export const onForegroundMessage = () => {
     if (messaging) {
         onMessage(messaging, (payload) => {
             console.log('Foreground message received.', payload);
-            const { toast } = useToast();
-            toast({
-                title: payload.notification?.title,
-                description: payload.notification?.body,
-            });
         });
     }
 };

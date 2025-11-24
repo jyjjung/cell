@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
-import type { AppNotification } from '@/types';
 import NotificationAdminForm from '@/components/admin/notification-admin-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,6 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useToast } from '@/hooks/use-toast';
 
 export default function AdminNotificationsPage() {
   const { isAdmin } = useAuth();
@@ -22,7 +21,6 @@ export default function AdminNotificationsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const { setIsPageLoading } = usePageLoading();
   const { notifications, loading, deleteNotification } = useNotifications();
-  const { toast } = useToast();
 
   useEffect(() => {
     setIsMounted(true);
@@ -60,16 +58,8 @@ export default function AdminNotificationsPage() {
   const handleDelete = async (notificationId: string) => {
     try {
       await deleteNotification(notificationId);
-      toast({
-        title: "Notification Deleted",
-        description: "The notification has been successfully removed.",
-      });
     } catch (error: any) {
-      toast({
-        title: "Error Deleting Notification",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      console.error("Error Deleting Notification", error);
     }
   };
 

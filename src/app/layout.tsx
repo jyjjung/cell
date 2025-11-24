@@ -2,7 +2,6 @@
 import { Suspense } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/auth-context';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import GlobalPageLoader from '@/components/layout/global-page-loader';
@@ -46,7 +45,6 @@ export default function RootLayout({
               <AppLayout>
                 {children}
               </AppLayout>
-              <Toaster />
               <GlobalPageLoader />
               <Analytics />
             </ThemeProvider>

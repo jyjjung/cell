@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Loader2, Send } from 'lucide-react';
 import type { AppNotification } from '@/types';
@@ -22,7 +21,6 @@ type NotificationFormValues = z.infer<typeof notificationFormSchema>;
 
 export default function NotificationAdminForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const { createNotification } = useNotifications();
 
   const form = useForm<NotificationFormValues>({
@@ -46,17 +44,9 @@ export default function NotificationAdminForm() {
       // This will create the in-app notification and trigger the API route to send the push notification.
       await createNotification(notificationData);
 
-      toast({
-        title: "Notification Sent!",
-        description: "The global notification has been created and will be pushed to users.",
-      });
       form.reset();
     } catch (error: any) {
-      toast({
-        title: "Error Sending Notification",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      console.error("Error Sending Notification", error);
     } finally {
       setIsLoading(false);
     }

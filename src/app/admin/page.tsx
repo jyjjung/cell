@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { Lock, Loader2, UserCheck, LogIn } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
@@ -17,7 +16,6 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const { currentUser, loadingAuth, adminPasswordLogin, isAdmin } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
   const { setIsPageLoading } = usePageLoading(); 
 
@@ -38,22 +36,17 @@ export default function AdminLoginPage() {
     
     if (!currentUser) {
       setError('You must be logged in to become an admin.');
-      toast({ title: "Login Required", description: "Please log in with your user account first.", variant: "destructive" });
       return;
     }
 
     try {
       const success = await adminPasswordLogin(password);
-      if (success) {
-        toast({ title: "Admin Access Granted", description: "Your account now has admin privileges." });
-        // The useEffect will handle the redirect
-      } else {
+      if (!success) {
         throw new Error("Incorrect password.");
       }
     } catch (err: any) {
       const message = err.message || 'An unexpected error occurred.';
       setError(message);
-      toast({ title: "Login Failed", description: message, variant: "destructive" });
     }
   };
 

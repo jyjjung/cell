@@ -11,8 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useToast } from '@/hooks/use-toast';
-import { ToastAction } from "@/components/ui/toast";
 import { useEvents } from '@/hooks/use-events';
 import { AppEvent, EventCategory } from '@/types';
 import { addDays, format } from 'date-fns';
@@ -40,8 +38,7 @@ type BatchImportFormValues = z.infer<typeof batchImportSchema>;
 
 export default function BatchEventImportForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { addEvent, deleteEvent } = useEvents(); // Added deleteEvent
+  const { addEvent } = useEvents();
 
   const form = useForm<BatchImportFormValues>({
     resolver: zodResolver(batchImportSchema),
@@ -55,14 +52,10 @@ export default function BatchEventImportForm() {
   const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{
     eventsAddedFromTextCount: number;
     eventsParsedFromTextCount: number;
-    finalTextErrorMessages: string[];
-    addedTextEventIds: string[];
   }> => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const lines = rawInput.trim().split('\n');
     let currentCategory: EventCategory | null = null;
-    let localParseErrors: string[] = [];
-    const addedTextEventIds: string[] = [];
     
     let i = 0;
     while (i < lines.length) {
@@ -82,17 +75,11 @@ export default function BatchEventImportForm() {
         
         if (newCategory) {
             currentCategory = newCategory;
-            if (currentCategory === EventCategory.Snack && ignoreSnackCategoryFromText) {
-                localParseErrors.push(`Info: Switched to category '${currentCategory}', but it will be ignored in the text area due to Rota fields usage.`);
-            } else {
-                localParseErrors.push(`Info: Switched to category: ${currentCategory}.`);
-            }
             i++;
             continue;
         }
 
         if (!currentCategory) {
-            localParseErrors.push(`Skipping line (no active category): "${line}". Ensure a category (SNACKS, QT, BIRTHDAY, EVENT) is defined before dates/names.`);
             i++;
             continue;
         }
@@ -105,7 +92,6 @@ export default function BatchEventImportForm() {
         const dateStr = line;
         const dateStrPartsTest = dateStr.split('/');
         if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
-            localParseErrors.push(`Skipping line under category "${currentCategory}": "${dateStr}". Not a DD/MM/YYYY date or unrecognised line.`);
             i++;
             continue;
         }
@@ -129,7 +115,6 @@ export default function BatchEventImportForm() {
                 case EventCategory.Event: details = ""; break; 
             }
         } else {
-            localParseErrors.push(`Missing name/title for date: "${dateStr}" under category "${currentCategory}". Each date needs a name/title on the next line.`);
             i++; 
             continue;
         }
@@ -139,14 +124,12 @@ export default function BatchEventImportForm() {
         const year = parseInt(dateStrPartsTest[2], 10);
 
         if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-            localParseErrors.push(`Invalid date components in: "${dateStr}" under category "${currentCategory}". Skipping.`);
             i += advanceLines;
             continue;
         }
         
         const date = new Date(Date.UTC(year, month, day)); 
         if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
-             localParseErrors.push(`Invalid date constructed from: "${dateStr}" (e.g., 31/02/2025) under category "${currentCategory}". Skipping.`);
             i += advanceLines;
             continue;
         }
@@ -163,57 +146,26 @@ export default function BatchEventImportForm() {
     }
 
     let eventsAddedFromTextCount = 0;
-    const textEventAddErrors: string[] = [];
 
     if (eventsToCreate.length > 0) {
       const creationPromises = eventsToCreate.map(async eventData => {
         try {
-          const newEventId = await addEvent(eventData);
-          addedTextEventIds.push(newEventId);
+          await addEvent(eventData);
           eventsAddedFromTextCount++;
         } catch (error: any) {
-          let dateForError = 'unknown date';
-          try { dateForError = eventData.date ? new Date(eventData.date).toLocaleDateString() : 'unknown date'; } catch (_) {}
-          textEventAddErrors.push(`Text Import: Failed to add event "${eventData.title}" on ${dateForError}: ${error.message}`);
+          console.error(`Batch Import: Failed to add event "${eventData.title}"`, error);
         }
       });
       await Promise.allSettled(creationPromises);
     }
-    const combinedTextErrors = [...localParseErrors, ...textEventAddErrors];
     return { 
       eventsAddedFromTextCount, 
       eventsParsedFromTextCount: eventsToCreate.length,
-      finalTextErrorMessages: combinedTextErrors,
-      addedTextEventIds
     };
   };
-  
-  const handleUndoBatchImport = async (eventIdsToUndo: string[]) => {
-    if (eventIdsToUndo.length === 0) return;
-    setIsLoading(true); // Consider a specific undo loading state if needed
-
-    const deletionPromises = eventIdsToUndo.map(id => deleteEvent(id));
-    const results = await Promise.allSettled(deletionPromises);
-
-    const successfulDeletions = results.filter(r => r.status === 'fulfilled').length;
-    
-    toast({
-      title: "Batch Undo Successful",
-      description: `${successfulDeletions} event(s) from the batch import have been removed.`,
-    });
-    setIsLoading(false);
-  };
-
 
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
-    let rotaSnacksAdded = 0;
-    const rotaSnackErrors: string[] = [];
-    let batchTextAdded = 0;
-    let batchTextParsed = 0;
-    let batchTextErrorMessages: string[] = [];
-    const allAddedEventIds: string[] = [];
-
 
     const rotaFieldsAreUsed = !!(data.snackRotaNames && data.snackRotaNames.trim() !== '' && data.snackRotaStartDate);
 
@@ -230,99 +182,19 @@ export default function BatchEventImportForm() {
           summary: '', 
         };
         try {
-          const newEventId = await addEvent(snackEvent);
-          allAddedEventIds.push(newEventId);
-          rotaSnacksAdded++;
+          await addEvent(snackEvent);
         } catch (error: any) {
-          rotaSnackErrors.push(`Rota: Failed to add snack event for ${name} on ${format(currentDate, "PP")}: ${error.message}`);
+          console.error(`Rota: Failed to add snack event for ${name}`, error);
         }
         currentDate = addDays(currentDate, 7);
       }
     }
 
     if (data.batchText && data.batchText.trim() !== '') {
-      const { eventsAddedFromTextCount, eventsParsedFromTextCount, finalTextErrorMessages, addedTextEventIds } = await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
-      batchTextAdded = eventsAddedFromTextCount;
-      batchTextParsed = eventsParsedFromTextCount;
-      batchTextErrorMessages = finalTextErrorMessages;
-      allAddedEventIds.push(...addedTextEventIds);
+      await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
     }
     
-    const totalAdded = rotaSnacksAdded + batchTextAdded;
-    const totalRotaProcessed = rotaFieldsAreUsed ? data.snackRotaNames!.trim().split(',').map(name => name.trim()).filter(name => name).length : 0;
-    const infoMessages = batchTextErrorMessages.filter(msg => msg.startsWith("Info:"));
-    const actualParseAndAddErrors = [
-        ...rotaSnackErrors, 
-        ...batchTextErrorMessages.filter(msg => !infoMessages.includes(msg))
-    ];
-
-    if (actualParseAndAddErrors.length > 0 || (totalRotaProcessed > 0 && rotaSnacksAdded < totalRotaProcessed) || (batchTextParsed > 0 && batchTextAdded < batchTextParsed)) {
-      toast({
-        title: totalAdded > 0 ? "Batch Import Partially Completed" : ( (totalRotaProcessed > 0 || batchTextParsed > 0) ? "Batch Import Failed" : "Batch Import Notice"),
-        description: (
-          <div className="max-h-60 overflow-y-auto text-xs">
-            {rotaFieldsAreUsed && <p className="mb-1 font-semibold">Rota Snacks: {rotaSnacksAdded} of {totalRotaProcessed} event(s) added.</p>}
-            {(data.batchText && data.batchText.trim() !== '') && <p className="mb-1 font-semibold">Text Import: {batchTextAdded} of {batchTextParsed} potential event(s) added.</p>}
-            
-            {infoMessages.length > 0 && (
-              <>
-                <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info from Text Import:</p>
-                <ul className="list-disc pl-4 text-muted-foreground">
-                  {infoMessages.map((info, idx) => <li key={`info-${idx}`}>{info}</li>)}
-                </ul>
-              </>
-            )}
-            {actualParseAndAddErrors.length > 0 && (
-              <>
-                <p className="mt-2 mb-1 font-semibold">Please review the following issues:</p>
-                <ul className="list-disc pl-4">
-                  {actualParseAndAddErrors.map((err, idx) => <li key={`err-${idx}`}>{err}</li>)}
-                </ul>
-              </>
-            )}
-          </div>
-        ),
-        action: allAddedEventIds.length > 0 ? (
-          <ToastAction altText="Undo batch import" onClick={() => handleUndoBatchImport(allAddedEventIds)}>
-            Undo {allAddedEventIds.length} Added
-          </ToastAction>
-        ) : undefined,
-        variant: actualParseAndAddErrors.length > 0 || (totalRotaProcessed > 0 && rotaSnacksAdded < totalRotaProcessed) || (batchTextParsed > 0 && batchTextAdded < batchTextParsed) ? "destructive" : "default",
-        duration: 20000, 
-      });
-    } else if (totalAdded > 0) {
-      toast({
-        title: "Batch Import Successful!",
-        description: (
-           <div className="max-h-60 overflow-y-auto text-xs">
-            {rotaFieldsAreUsed && <p className="mb-1 font-semibold">Rota Snacks: {rotaSnacksAdded} event(s) successfully added.</p>}
-            {(data.batchText && data.batchText.trim() !== '') && <p className="mb-1 font-semibold">Text Import: {batchTextAdded} event(s) successfully added.</p>}
-             {infoMessages.length > 0 && (
-              <>
-                <p className="text-xs mt-2 mb-1 text-muted-foreground">Processing Info from Text Import:</p>
-                <ul className="list-disc pl-4 text-muted-foreground">
-                  {infoMessages.map((info, idx) => <li key={`info-${idx}`}>{info}</li>)}
-                </ul>
-              </>
-            )}
-           </div>
-        ),
-        action: allAddedEventIds.length > 0 ? (
-          <ToastAction altText="Undo batch import" onClick={() => handleUndoBatchImport(allAddedEventIds)}>
-            Undo {allAddedEventIds.length} Added
-          </ToastAction>
-        ) : undefined,
-        duration: 10000,
-      });
-      form.reset(); 
-    } else { 
-         toast({
-            title: "Batch Import: No Changes",
-            description: "No new events were generated from Rota or parsed from the text input.",
-            variant: "default", 
-            duration: 8000,
-        });
-    }
+    form.reset(); 
     setIsLoading(false);
   }
 
@@ -435,5 +307,3 @@ Bob
     </Form>
   );
 }
-
-    

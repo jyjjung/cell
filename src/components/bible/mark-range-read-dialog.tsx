@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2, BookUp } from 'lucide-react';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { Autocomplete, type AutocompleteOption } from '@/components/ui/autocomplete';
@@ -47,7 +46,6 @@ const parseChapterVerse = (cv: string) => {
 
 export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeReadDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const { markReadRange } = useUserBibleChecklist();
 
   const form = useForm<MarkRangeFormValues>({
@@ -80,7 +78,7 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
     try {
       const startCV = parseChapterVerse(data.startChapterVerse || '1');
       if (!startCV) {
-        toast({ title: "Invalid Format", description: "Could not parse the starting chapter/verse. Use 'Chapter' or 'Chapter:Verse'.", variant: "destructive" });
+        console.error("Invalid start chapter/verse format");
         setIsLoading(false);
         return;
       }
@@ -89,13 +87,13 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
       if (data.endChapterVerse) {
         endCV = parseChapterVerse(data.endChapterVerse);
         if (!endCV) {
-            toast({ title: "Invalid Format", description: "Could not parse the ending chapter/verse. Use 'Chapter' or 'Chapter:Verse'.", variant: "destructive" });
+            console.error("Invalid end chapter/verse format");
             setIsLoading(false);
             return;
         }
       }
 
-      const { markedCount } = await markReadRange(
+      await markReadRange(
           data.startBook,
           startCV.chapter,
           startCV.verse,
@@ -103,20 +101,10 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
           endCV?.chapter,
           endCV?.verse
       );
-      
-      toast({
-        title: "Range Marked as Read",
-        description: `${markedCount} new passage(s) within your specified range have been marked as complete.`,
-      });
 
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error marking range as read:", error);
-      toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred while marking the range.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }

@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Loader2, Send, CheckCircle } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useRouter } from 'next/navigation';
@@ -20,7 +19,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { sendPasswordReset, currentUser, loadingAuth } = useAuth();
-  const { toast } = useToast();
   const { setIsPageLoading } = usePageLoading();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -45,10 +43,6 @@ export default function ForgotPasswordPage() {
     try {
       await sendPasswordReset(email);
       setIsSubmitted(true);
-      toast({
-        title: "Check Your Email",
-        description: `A password reset link has been sent to ${email}.`,
-      });
     } catch (err: any) {
       let message = "An unexpected error occurred. Please try again.";
       if (err.code === 'auth/user-not-found') {
@@ -57,11 +51,6 @@ export default function ForgotPasswordPage() {
         message = "Please enter a valid email address.";
       }
       setError(message);
-      toast({
-        title: "Request Failed",
-        description: message,
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }

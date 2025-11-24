@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { useToast } from '@/hooks/use-toast';
 import type { SidebarPreferences, NotificationPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFirestore } from '@/lib/firebase';
@@ -62,7 +61,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
-  const { toast } = useToast();
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
   const [notifPrefs, setNotifPrefs] = useState<Partial<NotificationPreferences>>(currentUser?.notificationPreferences || {});
@@ -110,16 +108,9 @@ export default function SettingsPage() {
             await saveTokenToFirestore(currentUser.uid, token);
             setFcmToken(token);
             setPushEnabled(true);
-            toast({ title: "Push Notifications Enabled" });
           }
         } else if (currentPermission === 'denied') {
           // Permission was previously denied
-          toast({
-            title: "Permission Required",
-            description: "Notification permission is blocked. Please enable it in your browser settings.",
-            variant: "destructive",
-            duration: 7000
-          });
           setPushEnabled(false);
         } else { // 'default' state
           // Request permission
@@ -128,7 +119,6 @@ export default function SettingsPage() {
             await saveTokenToFirestore(currentUser.uid, token);
             setFcmToken(token);
             setPushEnabled(true);
-            toast({ title: "Push Notifications Enabled" });
           } else {
             // This case might not be hit if requestPermission throws, but included for safety.
             setPushEnabled(false);
@@ -136,11 +126,6 @@ export default function SettingsPage() {
         }
       } catch (error: any) {
         console.error("Error enabling push notifications:", error);
-        toast({
-          title: "Could Not Enable Notifications",
-          description: error.message || "An unknown error occurred.",
-          variant: "destructive"
-        });
         setPushEnabled(false);
       }
     } else {
@@ -150,10 +135,8 @@ export default function SettingsPage() {
           await removeTokenFromFirestore(currentUser.uid, fcmToken);
           setFcmToken(null);
           setPushEnabled(false);
-          toast({ title: "Push Notifications Disabled" });
         } catch (error: any) {
           console.error("Error disabling push notifications:", error);
-          toast({ title: "Error", description: "Failed to disable notifications. Please try again.", variant: "destructive"});
         }
       } else {
         setPushEnabled(false);
@@ -170,14 +153,8 @@ export default function SettingsPage() {
     startTransition(async () => {
         try {
             await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
-            const configItem = [...notificationPrefsConfig, ...reminderPrefsConfig].find(c => c.key === key);
-            toast({
-                title: "Preference Updated",
-                description: `'${configItem?.label}' notifications ${isChecked ? 'enabled' : 'disabled'}.`
-            });
         } catch (error) {
             console.error("Failed to update notification preference:", error);
-            toast({ title: "Update Failed", description: "Could not save your preference.", variant: "destructive" });
             const revertedPrefs = { ...notifPrefs, [key]: !isChecked };
             setNotifPrefs(revertedPrefs); // Revert on error
         }
@@ -191,14 +168,8 @@ export default function SettingsPage() {
     
     try {
       await updateUserProfile(currentUser.uid, { sidebar: newPrefs });
-      const configItem = [...userSidebarConfig, ...adminSidebarConfig].find(c => c.key === key);
-      toast({
-        title: "Sidebar Updated",
-        description: `'${configItem?.label}' item is now ${isChecked ? 'visible' : 'hidden'}.`,
-      });
     } catch (error) {
       console.error("Failed to update sidebar preference:", error);
-      toast({ title: "Update Failed", description: "Could not update your sidebar setting.", variant: "destructive" });
       const revertedPrefs = { ...sidebarPrefs, [key]: !isChecked };
       setSidebarPrefs(revertedPrefs); // Revert on error
     }
@@ -333,5 +304,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    

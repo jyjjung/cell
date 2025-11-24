@@ -13,10 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
-import { ToastAction } from "@/components/ui/toast";
 import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Calendar } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { startOfDay, parseISO, format, isBefore } from 'date-fns';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { motion } from 'framer-motion';
@@ -31,7 +28,6 @@ export default function AdminEventsPage() {
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeletingPast, setIsDeletingPast] = useState(false);
-  const { toast } = useToast();
   const { setIsPageLoading } = usePageLoading(); 
 
   useEffect(() => {
@@ -94,50 +90,23 @@ export default function AdminEventsPage() {
     );
   }
 
-  const handleUndoAddSingleEvent = async (eventId: string, eventTitle: string) => {
-    try {
-      await deleteEvent(eventId);
-      toast({
-        title: "Undo Successful",
-        description: `Event "${eventTitle}" has been removed.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Undo Failed",
-        description: `Could not remove event "${eventTitle}". Please try again.`,
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleAddEvent = async (data: AppEvent) => {
     const { id, ...eventDataNoId } = data;
     try {
-      const newEventId = await addEvent(eventDataNoId);
-      toast({ 
-        title: "Event Added", 
-        description: `"${data.title}" has been successfully added.`,
-        action: (
-            <ToastAction altText="Undo add event" onClick={() => handleUndoAddSingleEvent(newEventId, data.title)}>
-              Undo
-            </ToastAction>
-        ),
-        duration: 7000, 
-      });
+      await addEvent(eventDataNoId);
       setIsFormModalOpen(false);
     } catch (error) {
-       toast({ title: "Error Adding Event", description: `Failed to add "${data.title}". Please try again.`, variant: "destructive" });
+       console.error("Error Adding Event", error);
     }
   };
 
   const handleUpdateEvent = async (data: AppEvent) => {
      try {
       await updateEvent(data);
-      toast({ title: "Event Updated", description: `"${data.title}" has been successfully updated.` });
       setEditingEvent(null);
       setIsFormModalOpen(false);
     } catch (error) {
-      toast({ title: "Error Updating Event", description: `Failed to update "${data.title}". Please try again.`, variant: "destructive" });
+      console.error("Error Updating Event", error);
     }
   };
 
@@ -155,27 +124,15 @@ export default function AdminEventsPage() {
     setIsDeletingPast(true);
     
     if (pastEvents.length === 0) {
-      toast({ title: "No Past Events", description: "There are no past events to delete." });
       setIsDeletingPast(false);
       return;
     }
 
     try {
       const deletionPromises = pastEvents.map(event => deleteEvent(event.id));
-      const results = await Promise.allSettled(deletionPromises);
-
-      const successfulDeletions = results.filter(result => result.status === 'fulfilled').length;
-      const failedDeletions = results.length - successfulDeletions;
-
-      if (successfulDeletions > 0) {
-        toast({ title: "Past Events Deleted", description: `${successfulDeletions} past event(s) have been deleted.` });
-      }
-      if (failedDeletions > 0) {
-         toast({ title: "Deletion Error", description: `Failed to delete ${failedDeletions} past event(s). Check console for details.`, variant: "destructive" });
-      }
+      await Promise.allSettled(deletionPromises);
     } catch (error: any) {
       console.error("Error during batch deletion of past events:", error);
-      toast({ title: "Error Deleting Past Events", description: error.message || "An unexpected error occurred.", variant: "destructive" });
     } finally {
       setIsDeletingPast(false);
     }
@@ -221,14 +178,8 @@ export default function AdminEventsPage() {
                             onClick={async () => {
                             try {
                                 await deleteEvent(event.id);
-                                toast({ title: "Event Deleted", description: `"${event.title}" has been successfully deleted.` });
                             } catch (error) {
                                 console.error("Failed to delete event:", error);
-                                toast({
-                                title: "Deletion Failed",
-                                description: `Could not delete event "${event.title}". Please try again.`,
-                                variant: "destructive",
-                                });
                             }
                             }}
                         >
@@ -377,7 +328,3 @@ export default function AdminEventsPage() {
     </div>
   );
 }
-
-    
-
-    

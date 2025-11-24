@@ -18,7 +18,6 @@ import { format, parseISO } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { summarizeDateDetails } from '@/ai/flows/summarize-date-details';
-import { useToast } from '@/hooks/use-toast';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
@@ -39,7 +38,6 @@ interface EventFormProps {
 
 export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save Event" }: EventFormProps) {
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const { toast } = useToast();
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -59,17 +57,8 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
       try {
         const summaryResult = await summarizeDateDetails({ notes: data.details! });
         finalSummary = summaryResult.summary;
-        toast({
-            title: "AI Summary Generated",
-            description: "A short summary has been created from your event details."
-        });
       } catch (error: any) {
         console.error("Error generating summary:", error);
-        toast({
-          title: "AI Summary Failed",
-          description: `Could not generate AI summary. Saving event without it. Error: ${error.message}`,
-          variant: "destructive",
-        });
         // Let finalSummary remain as it was (empty string)
       } finally {
         setIsSummarizing(false);
@@ -212,5 +201,3 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
     </Form>
   );
 }
-
-    

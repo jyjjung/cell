@@ -11,7 +11,6 @@ import { CalendarX, CheckSquare, CheckCircle, BookOpen, BookHeart, Loader2, Info
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -51,7 +50,6 @@ export default function BiblePlanDisplay({
   isStandalone = false, // Default to not standalone
 }: BiblePlanDisplayProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const { toast } = useToast();
   const [isTogglingDay, setIsTogglingDay] = useState(false);
   
   const [isPassageViewerOpen, setIsPassageViewerOpen] = useState(false);
@@ -95,12 +93,6 @@ export default function BiblePlanDisplay({
     if (passageDisplayText && typeof passageDisplayText === 'string' && !passageDisplayText.toLowerCase().includes("error:")) {
       setSelectedPassageRef(passageDisplayText);
       setIsPassageViewerOpen(true);
-    } else {
-      toast({
-        title: "Invalid Passage",
-        description: "Cannot view details for an invalid or error passage.",
-        variant: "default"
-      });
     }
   };
 

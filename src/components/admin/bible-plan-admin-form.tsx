@@ -11,7 +11,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, BookOpen, ListOrdered } from 'lucide-react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
@@ -42,7 +41,6 @@ type AdminPlanFormValues = z.infer<typeof adminPlanFormSchema>;
 
 export default function BiblePlanAdminForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const { saveBiblePlan, plan: currentPlan, loading: planLoading } = useBiblePlan();
 
   const form = useForm<AdminPlanFormValues>({
@@ -90,7 +88,6 @@ export default function BiblePlanAdminForm() {
 
       if (data.planType === 'canonical') {
         if (!data.startBook) {
-          toast({ title: "Error", description: "Starting book is required for Canonical plan.", variant: "destructive" });
           setIsLoading(false);
           return;
         }
@@ -102,7 +99,6 @@ export default function BiblePlanAdminForm() {
       }
 
       if (readingUnits.length === 0) {
-        toast({ title: "Warning", description: "No reading passages were generated for this plan. Check selection.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -110,7 +106,6 @@ export default function BiblePlanAdminForm() {
       const dailyReadings: DailyReading[] = scheduleReadings(readingUnits, data.startDate, 4);
 
       if (dailyReadings.length === 0) {
-        toast({ title: "Warning", description: "The generated plan has no actual reading days. This might happen if the start date leads to all units falling on Sundays or if there are very few units.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -124,15 +119,8 @@ export default function BiblePlanAdminForm() {
       };
 
       await saveBiblePlan(newPlan);
-
-      toast({ title: "Success!", description: `New Bible reading plan (${planDescription}) generated and saved.` });
     } catch (error: any) {
       console.error("Error generating or saving Bible plan:", error);
-      toast({
-        title: "Error Generating Plan",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }

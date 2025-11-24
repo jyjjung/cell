@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const signupFormSchema = z.object({
@@ -26,7 +25,6 @@ export default function SignupForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const { signUpUser } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -41,7 +39,6 @@ export default function SignupForm() {
     setFormError(null);
     try {
       await signUpUser(data.email, data.password);
-      toast({ title: "Signup Successful", description: "Welcome! You are now logged in." });
       router.push('/'); // Redirect to homepage or a profile page
     } catch (error: any) {
       let message = "An unexpected error occurred. Please try again.";
@@ -51,7 +48,6 @@ export default function SignupForm() {
         message = error.message;
       }
       setFormError(message);
-      toast({ title: "Signup Failed", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }

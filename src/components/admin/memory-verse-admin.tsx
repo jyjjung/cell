@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Trash2, BookMarked, Loader2, ListChecks } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,7 +23,6 @@ type MemoryVerseFormValues = z.infer<typeof memoryVerseSchema>;
 
 export default function MemoryVerseAdmin() {
   const { memoryVerses, addMemoryVerse, addLordsPrayer, deleteMemoryVerse, loading } = useMemoryVerses();
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddingLordsPrayer, setIsAddingLordsPrayer] = useState(false);
 
@@ -39,10 +37,9 @@ export default function MemoryVerseAdmin() {
     setIsSubmitting(true);
     try {
       await addMemoryVerse(data.reference);
-      toast({ title: "Verse Added", description: `"${data.reference}" has been added.` });
       form.reset();
     } catch (error: any) {
-      toast({ title: "Error Adding Verse", description: error.message || "Could not add verse.", variant: "destructive" });
+      console.error("Error Adding Verse", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -51,10 +48,9 @@ export default function MemoryVerseAdmin() {
   const handleAddLordsPrayer = async () => {
     setIsAddingLordsPrayer(true);
     try {
-      const result = await addLordsPrayer();
-      toast({ title: "Lord's Prayer", description: `${result.addedCount} verse(s) of The Lord's Prayer added.` });
+      await addLordsPrayer();
     } catch (error: any) {
-      toast({ title: "Error Adding Lord's Prayer", description: error.message || "Could not add The Lord's Prayer.", variant: "destructive" });
+      console.error("Error Adding Lord's Prayer", error);
     } finally {
       setIsAddingLordsPrayer(false);
     }
@@ -63,9 +59,8 @@ export default function MemoryVerseAdmin() {
   const handleDeleteVerse = async (verseId: string, verseRef: string) => {
     try {
       await deleteMemoryVerse(verseId);
-      toast({ title: "Verse Deleted", description: `"${verseRef}" has been deleted.` });
     } catch (error: any) {
-      toast({ title: "Error Deleting Verse", description: error.message || "Could not delete verse.", variant: "destructive" });
+      console.error("Error Deleting Verse", error);
     }
   };
 
@@ -160,5 +155,3 @@ export default function MemoryVerseAdmin() {
     </div>
   );
 }
-
-    

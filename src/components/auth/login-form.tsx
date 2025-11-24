@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -27,7 +26,6 @@ export default function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const { signInUser } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
   const { setIsPageLoading } = usePageLoading();
 
   const form = useForm<LoginFormValues>({
@@ -43,7 +41,6 @@ export default function LoginForm() {
     setFormError(null);
     try {
       await signInUser(data.email, data.password);
-      toast({ title: "Login Successful", description: "Welcome back!" });
       router.push('/'); // Redirect to homepage or a profile page
     } catch (error: any) {
       let message = "Invalid email or password. Please try again.";
@@ -55,7 +52,6 @@ export default function LoginForm() {
         message = error.message;
       }
       setFormError(message);
-      toast({ title: "Login Failed", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
