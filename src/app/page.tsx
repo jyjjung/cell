@@ -72,7 +72,7 @@ export default function HomePage() {
             <WidgetCard title="Notifications" description="Recent updates and announcements.">
                 <NotificationsWidget />
             </WidgetCard>
-            <WidgetCard title="Today's Reading">
+            <WidgetCard title="Today's Reading" description="Your daily portion of the reading plan.">
                 <TodayReadingWidget />
             </WidgetCard>
         </div>
