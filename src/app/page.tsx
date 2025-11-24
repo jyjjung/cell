@@ -25,7 +25,7 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   todayReading: { 
     component: TodayReadingWidget, 
-    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 5, isResizable: false }
+    default: { i: 'todayReading', x: 1, y: 0, w: 1, h: 6, isResizable: false }
   },
   upcomingEvents: { 
     component: UpcomingEventsWidget, 
@@ -33,7 +33,7 @@ const WIDGET_COMPONENTS: { [key: string]: { component: React.FC<any>; default: L
   },
   nextReading: { 
     component: NextReadingWidget, 
-    default: { i: 'nextReading', x: 1, y: 5, w: 1, h: 7, isResizable: false }
+    default: { i: 'nextReading', x: 1, y: 5, w: 1, h: 6, isResizable: false }
   },
 };
 
