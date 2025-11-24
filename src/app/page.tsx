@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -71,13 +72,13 @@ export default function HomePage() {
             <WidgetCard title="Notifications" description="Recent updates and announcements.">
                 <NotificationsWidget />
             </WidgetCard>
-            <WidgetCard title="Upcoming Events" description="What's happening next.">
-                <UpcomingEventsWidget />
+            <WidgetCard title="Today's Reading">
+                <TodayReadingWidget />
             </WidgetCard>
         </div>
         <div className="flex flex-col gap-6">
-             <WidgetCard title="Today's Reading">
-                <TodayReadingWidget />
+            <WidgetCard title="Upcoming Events" description="What's happening next.">
+                <UpcomingEventsWidget />
             </WidgetCard>
             <WidgetCard title="Next Reading" description="Keep up with the plan.">
                 <NextReadingWidget />
