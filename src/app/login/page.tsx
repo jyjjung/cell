@@ -43,6 +43,11 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <LoginForm />
+          <div className="mt-4 text-center text-sm">
+            <Link href="/forgot-password" onClick={() => setIsPageLoading(true)} className="font-semibold text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link href="/signup" onClick={() => setIsPageLoading(true)} className="font-semibold text-primary hover:underline">

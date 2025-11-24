@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   type User as FirebaseUser,
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
@@ -29,6 +30,7 @@ interface AuthContextType {
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
   signOutUser: () => Promise<void>;
   updateUserProfile: (userId: string, profileData: Partial<UserProfileData>) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -236,6 +238,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendPasswordReset = async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      throw error;
+    }
+  };
+
   const updateUserProfile = async (userId: string, profileData: Partial<UserProfileData>) => {
     if (!auth.currentUser || auth.currentUser.uid !== userId) {
       console.error("User not authorized to update this profile or no user logged in.");
@@ -290,6 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInUser,
       signOutUser,
       updateUserProfile,
+      sendPasswordReset,
     }}>
       {children}
     </AuthContext.Provider>
