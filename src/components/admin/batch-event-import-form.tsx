@@ -54,67 +54,65 @@ export default function BatchEventImportForm() {
   const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{ eventsAdded: number; eventsParsed: number; errors: string[] }> => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const errors: string[] = [];
-
-    // Regex to find category headers
+    let currentCategory: EventCategory | null = null;
+  
     const categoryRegex = /^(SNACKS|QT|BIRTHDAY|EVENT)\s*$/im;
-    const parts = rawInput.trim().split(categoryRegex).filter(p => p.trim() !== '');
+    const hasCategoryHeaders = categoryRegex.test(rawInput);
+  
+    const processBlock = (dataBlock: string, category: EventCategory | null) => {
+      const eventRegex = /(\d{1,2}\/\d{1,2}\/\d{4})\s*\n([^\n]+)/g;
+      let match;
+      while ((match = eventRegex.exec(dataBlock)) !== null) {
+        const dateStr = match[1];
+        const title = match[2].trim();
+        
+        const [day, month, year] = dateStr.split('/').map(Number);
+        if (!day || !month || !year || year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+          errors.push(`Invalid date format or value: "${dateStr}"`);
+          continue;
+        }
+  
+        const date = new Date(Date.UTC(year, month - 1, day));
+        if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+          errors.push(`Invalid date (e.g., Feb 30): "${dateStr}"`);
+          continue;
+        }
+  
+        // Default to 'Event' if no category is specified
+        const finalCategory = category || EventCategory.Event;
 
-    if (parts.length === 0 && rawInput.trim() !== '') {
-        errors.push("Could not find any valid category headers (QT, EVENT, SNACKS, BIRTHDAY).");
-        return { eventsAdded: 0, eventsParsed: 0, errors };
-    }
-    
-    for (let i = 0; i < parts.length; i += 2) {
+        // Skip snacks from text if rota is used
+        if (finalCategory === EventCategory.Snack && ignoreSnackCategoryFromText) continue;
+
+        eventsToCreate.push({
+          title,
+          date: date.toISOString(),
+          category: finalCategory,
+          details: finalCategory === EventCategory.Birthday ? `Happy Birthday ${title}!` : '',
+          summary: '',
+        });
+      }
+    };
+  
+    if (hasCategoryHeaders) {
+      const parts = rawInput.trim().split(categoryRegex).filter(p => p.trim() !== '');
+      for (let i = 0; i < parts.length; i += 2) {
         const categoryStr = parts[i].trim().toUpperCase();
         const dataBlock = parts[i+1]?.trim();
-
+  
         if (!dataBlock) continue;
-
-        let currentCategory: EventCategory | null = null;
+  
         if (categoryStr === "SNACKS") currentCategory = EventCategory.Snack;
         else if (categoryStr === "QT") currentCategory = EventCategory.QT;
         else if (categoryStr === "BIRTHDAY") currentCategory = EventCategory.Birthday;
         else if (categoryStr === "EVENT") currentCategory = EventCategory.Event;
-
-        if (!currentCategory) continue;
-
-        if (currentCategory === EventCategory.Snack && ignoreSnackCategoryFromText) {
-            continue; // Skip SNACKS section if rota is used
-        }
-
-        // Regex for each line within a data block. Date is required, title is required.
-        const eventBlockRegex = /(\d{1,2}\/\d{1,2}\/\d{4})\s*\n([^]+)/g;
-        let match;
-        while ((match = eventBlockRegex.exec(dataBlock)) !== null) {
-            const dateStr = match[1];
-            const remainingBlock = match[2].split(/\n(?=\d{1,2}\/\d{1,2}\/\d{4})/)[0].trim();
-            const lines = remainingBlock.split('\n').map(l => l.trim()).filter(l => l);
-
-            if (lines.length === 0) continue;
-
-            const title = lines[0];
-            const details = lines.slice(1).join('\n');
-            
-            const [day, month, year] = dateStr.split('/').map(Number);
-            if (!day || !month || !year || year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
-                errors.push(`Invalid date format or value: "${dateStr}"`);
-                continue;
-            }
-
-            const date = new Date(Date.UTC(year, month - 1, day));
-             if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-                errors.push(`Invalid date (e.g., Feb 30): "${dateStr}"`);
-                continue;
-            }
-            
-            eventsToCreate.push({
-                title: title, 
-                date: date.toISOString(), 
-                category: currentCategory, 
-                details: details || (currentCategory === EventCategory.Birthday ? `Happy Birthday ${title}!` : ''),
-                summary: '', 
-            });
-        }
+        else continue;
+  
+        processBlock(dataBlock, currentCategory);
+      }
+    } else {
+      // No category headers found, treat the whole text as a single block
+      processBlock(rawInput.trim(), null);
     }
     
     let eventsAddedCount = 0;
