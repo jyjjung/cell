@@ -74,10 +74,14 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined' && Notification.permission === 'granted' && fcmToken) {
+    // This effect now ONLY runs on the client after mount.
+    // It safely checks the notification permission and updates the toggle state.
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted' && fcmToken) {
         setPushEnabled(true);
-    } else {
+      } else {
         setPushEnabled(false);
+      }
     }
   }, [fcmToken]);
 
@@ -96,70 +100,72 @@ export default function SettingsPage() {
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
   const handlePushNotificationToggle = async (isChecked: boolean) => {
-    if (!currentUser) return;
+    if (!currentUser || !isMounted) return;
+
     setIsUpdatingPush(true);
-  
+
     if (isChecked) {
-      // Logic to enable push notifications
-      try {
-        const currentPermission = Notification.permission;
-        if (currentPermission === 'denied') {
-           toast({
-              variant: "destructive",
-              title: "Permission Denied",
-              description: "You have previously blocked notifications. Please enable them in your browser settings.",
-            });
-           setPushEnabled(false);
-        } else {
-          // 'granted' or 'default'
-          const token = await requestNotificationPermission();
-          if (token) {
-            await saveTokenToFirestore(currentUser.uid, token);
-            setFcmToken(token);
-            setPushEnabled(true);
-            toast({
-              title: "Notifications Enabled",
-              description: "You will now receive push notifications on this device.",
-            });
-          } else {
-            // This case occurs if the user closes the permission prompt ('default')
-            setPushEnabled(false);
-          }
-        }
-      } catch (error: any) {
-        console.error("Error enabling push notifications:", error);
-        if (error.message !== 'Notification permission not granted.') {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: error.message || "Could not enable notifications.",
-            });
-        }
-        setPushEnabled(false);
-      }
-    } else {
-      // Logic to disable push notifications
-      if (fcmToken) {
+        // Trying to ENABLE notifications
         try {
-          await removeTokenFromFirestore(currentUser.uid, fcmToken);
-          setFcmToken(null);
-          setPushEnabled(false);
-          toast({
-            title: "Notifications Disabled",
-            description: "You will no longer receive push notifications on this device.",
-          });
+            if (Notification.permission === 'denied') {
+                toast({
+                    variant: "destructive",
+                    title: "Permission Denied",
+                    description: "You have previously blocked notifications. Please enable them in your browser or site settings.",
+                });
+                setPushEnabled(false); // Make sure toggle is off
+            } else {
+                // Permission is 'granted' or 'default', so we proceed
+                const token = await requestNotificationPermission();
+                if (token) {
+                    await saveTokenToFirestore(currentUser.uid, token);
+                    setFcmToken(token);
+                    setPushEnabled(true);
+                    toast({
+                        title: "Notifications Enabled",
+                        description: "You will now receive push notifications on this device.",
+                    });
+                } else {
+                    // This happens if the user closes the prompt without choosing
+                    setPushEnabled(false);
+                }
+            }
         } catch (error: any) {
-          console.error("Error disabling push notifications:", error);
-           toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not disable notifications.",
-          });
+            console.error("Error enabling push notifications:", error);
+            if (error.message !== 'Notification permission not granted.') {
+                 toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not enable notifications. Check your browser settings.",
+                });
+            }
+            setPushEnabled(false);
         }
-      } else {
-        setPushEnabled(false);
-      }
+    } else {
+        // Trying to DISABLE notifications
+        if (fcmToken) {
+            try {
+                await removeTokenFromFirestore(currentUser.uid, fcmToken);
+                setFcmToken(null);
+                setPushEnabled(false);
+                toast({
+                    title: "Notifications Disabled",
+                    description: "You will no longer receive push notifications on this device.",
+                });
+            } catch (error: any) {
+                console.error("Error disabling push notifications:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not disable notifications.",
+                });
+            }
+        } else {
+            // Already disabled, ensure state is correct
+            setPushEnabled(false);
+        }
     }
+
     setIsUpdatingPush(false);
   };
   
@@ -322,3 +328,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
