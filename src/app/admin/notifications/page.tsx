@@ -20,7 +20,8 @@ export default function AdminNotificationsPage() {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
   const { setIsPageLoading } = usePageLoading();
-  const { notifications, loading, deleteNotification } = useNotifications();
+  const { notifications, loading, deleteNotification, deleteAllNotifications } = useNotifications();
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -63,6 +64,17 @@ export default function AdminNotificationsPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setIsDeletingAll(true);
+    try {
+      await deleteAllNotifications();
+    } catch (error: any) {
+      console.error("Error Deleting All Notifications", error);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
 
   if (!isMounted || !isAdmin) {
     return (
@@ -100,8 +112,34 @@ export default function AdminNotificationsPage() {
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Sent Notifications</CardTitle>
-              <CardDescription>List of recently sent global and automated notifications.</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                    <CardTitle className="text-xl">Sent Notifications</CardTitle>
+                    <CardDescription>List of recently sent global and automated notifications.</CardDescription>
+                </div>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isDeletingAll || loading || notifications.length === 0}>
+                      {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                       Delete All
+                    </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete all notifications for all users.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll}>
+                          {isDeletingAll ? 'Deleting...' : 'Yes, delete all'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardHeader>
             <CardContent>
                {loading ? (

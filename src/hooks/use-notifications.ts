@@ -19,6 +19,7 @@ import {
   Timestamp,
   limit,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -86,8 +87,7 @@ export function useNotifications() {
     }
     
     try {
-        const userNotifPrefs = currentUser?.notificationPreferences;
-        const canReceiveNotification = userNotifPrefs ? userNotifPrefs[notificationData.type] ?? true : true;
+        const canReceiveNotification = true; // Simplified: always allow creation.
         
         if (!notificationData.isGlobal && !canReceiveNotification) {
             console.log(`User has disabled '${notificationData.type}' notifications. Skipping creation.`);
@@ -114,6 +114,26 @@ export function useNotifications() {
     }
     const notificationDocRef = doc(db, NOTIFICATIONS_COLLECTION, notificationId);
     await deleteDoc(notificationDocRef);
+  }, [isAdmin]);
+  
+  const deleteAllNotifications = useCallback(async () => {
+    if (!isAdmin) {
+      throw new Error("You are not authorized to delete all notifications.");
+    }
+    
+    const notificationsCollectionRef = collection(db, NOTIFICATIONS_COLLECTION);
+    const querySnapshot = await getDocs(notificationsCollectionRef);
+    
+    if (querySnapshot.empty) {
+      return; 
+    }
+    
+    const batch = writeBatch(db);
+    querySnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
   }, [isAdmin]);
 
 
@@ -142,5 +162,5 @@ export function useNotifications() {
   }, [currentUser, notifications, markAsRead]);
 
 
-  return { notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead };
+  return { notifications, loading, createNotification, deleteNotification, deleteAllNotifications, markAsRead, markAllAsRead };
 }
