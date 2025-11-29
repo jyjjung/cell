@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useMemo } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,7 +71,7 @@ export default function NotificationsWidget() {
         ) : (
             <div className="space-y-2">
             <AnimatePresence>
-                {unreadNotifications.slice(0, 4).map(notification => (
+                {unreadNotifications.slice(0, 2).map(notification => (
                 <NotificationItem
                     key={notification.id}
                     notification={notification}
@@ -83,7 +84,9 @@ export default function NotificationsWidget() {
         </div>
         <div className="pt-4 border-t mt-4">
             <div className="flex items-center justify-between">
-                 <Button variant="outline" size="sm" className="w-full" onClick={handleGoToNotifications}>View All</Button>
+                 <Button variant="outline" size="sm" className="w-full" onClick={handleGoToNotifications}>
+                   {unreadNotifications.length > 2 ? `View all ${unreadNotifications.length} notifications` : 'View All'}
+                 </Button>
                  {unreadNotifications.length > 0 && (
                     <Button variant="ghost" size="sm" onClick={markAllAsRead} className="ml-2">Mark All Read</Button>
                  )}

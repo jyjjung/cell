@@ -36,7 +36,7 @@ const withPWA = require('next-pwa')({
       },
     },
     {
-      urlPattern: /^https:\/\/placehold\.co\/.*/,
+      urlPattern: /^https:\/\/picsum\.photos\/.*/,
       handler: 'CacheFirst',
       options: {
         cacheName: 'placeholder-images',
@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
       },

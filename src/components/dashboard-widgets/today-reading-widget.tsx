@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { findTodaysReading } from '@/lib/reading-utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';

@@ -12,19 +12,27 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { motion } from 'framer-motion';
 
 // Reusable WidgetCard component for a consistent look and feel
-const WidgetCard = ({ title, description, footer, children }: { title: string, description?: string, footer?: React.ReactNode, children: React.ReactNode }) => (
-  <Card className="h-full flex flex-col shadow-md">
-    <CardHeader className="p-4 pb-2">
-      <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      {description && <CardDescription className="text-xs">{description}</CardDescription>}
-    </CardHeader>
-    <CardContent className="p-4 pt-0 flex-grow">
-      {children}
-    </CardContent>
-    {footer && <CardFooter className="p-4 pt-2 border-t mt-auto">{footer}</CardFooter>}
-  </Card>
+const WidgetCard = ({ title, description, footer, children, className }: { title: string, description?: string, footer?: React.ReactNode, children: React.ReactNode, className?: string }) => (
+  <motion.div
+    className={className}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+  >
+    <Card className="h-full flex flex-col shadow-md">
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className="p-4 pt-0 flex-grow">
+        {children}
+      </CardContent>
+      {footer && <CardFooter className="p-4 pt-2 border-t mt-auto">{footer}</CardFooter>}
+    </Card>
+  </motion.div>
 );
 
 
@@ -67,23 +75,16 @@ export default function HomePage() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-6">
-            <WidgetCard title="Notifications" description="Recent updates and announcements.">
-                <NotificationsWidget />
-            </WidgetCard>
-            <WidgetCard title="Today's Reading" description="Your daily portion of the reading plan.">
-                <TodayReadingWidget />
-            </WidgetCard>
-        </div>
-        <div className="flex flex-col gap-6">
-            <WidgetCard title="Upcoming Events" description="What's happening next.">
-                <UpcomingEventsWidget />
-            </WidgetCard>
-            <WidgetCard title="Next Reading" description="Keep up with the plan.">
-                <NextReadingWidget />
-            </WidgetCard>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <WidgetCard title="Today's Reading" description="Your daily portion of the reading plan." className="lg:col-span-2">
+        <TodayReadingWidget />
+      </WidgetCard>
+      <WidgetCard title="Upcoming Events" description="What's happening next." className="lg:col-span-2">
+        <UpcomingEventsWidget />
+      </WidgetCard>
+      <WidgetCard title="Notifications" description="Recent updates and announcements." className="lg:col-span-4">
+        <NotificationsWidget />
+      </WidgetCard>
     </div>
   );
 }
