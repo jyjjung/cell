@@ -14,6 +14,7 @@ import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFir
 import useLocalStorage from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -69,10 +70,11 @@ export default function SettingsPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isUpdatingPush, setIsUpdatingPush] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsMounted(true);
-    if (Notification.permission === 'granted' && fcmToken) {
+    if (typeof window !== 'undefined' && Notification.permission === 'granted' && fcmToken) {
         setPushEnabled(true);
     } else {
         setPushEnabled(false);
@@ -101,31 +103,36 @@ export default function SettingsPage() {
       // Logic to enable push notifications
       try {
         const currentPermission = Notification.permission;
-        if (currentPermission === 'granted') {
-          // Already granted, just get the token
+        if (currentPermission === 'denied') {
+           toast({
+              variant: "destructive",
+              title: "Permission Denied",
+              description: "You have previously blocked notifications. Please enable them in your browser settings.",
+            });
+           setPushEnabled(false);
+        } else {
+          // 'granted' or 'default'
           const token = await requestNotificationPermission();
           if (token) {
             await saveTokenToFirestore(currentUser.uid, token);
             setFcmToken(token);
             setPushEnabled(true);
-          }
-        } else if (currentPermission === 'denied') {
-          // Permission was previously denied
-          setPushEnabled(false);
-        } else { // 'default' state
-          // Request permission
-          const token = await requestNotificationPermission();
-          if (token) {
-            await saveTokenToFirestore(currentUser.uid, token);
-            setFcmToken(token);
-            setPushEnabled(true);
+            toast({
+              title: "Notifications Enabled",
+              description: "You will now receive push notifications on this device.",
+            });
           } else {
-            // This case might not be hit if requestPermission throws, but included for safety.
+            // This case occurs if the user closes the permission prompt ('default')
             setPushEnabled(false);
           }
         }
       } catch (error: any) {
         console.error("Error enabling push notifications:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Could not enable notifications.",
+        });
         setPushEnabled(false);
       }
     } else {
@@ -135,8 +142,17 @@ export default function SettingsPage() {
           await removeTokenFromFirestore(currentUser.uid, fcmToken);
           setFcmToken(null);
           setPushEnabled(false);
+          toast({
+            title: "Notifications Disabled",
+            description: "You will no longer receive push notifications on this device.",
+          });
         } catch (error: any) {
           console.error("Error disabling push notifications:", error);
+           toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not disable notifications.",
+          });
         }
       } else {
         setPushEnabled(false);
