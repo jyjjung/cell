@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEvents } from '@/hooks/use-events';
 import { AppEvent, EventCategory } from '@/types';
 import { addDays, format } from 'date-fns';
@@ -18,20 +19,37 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+const categoryRegex = /^\s*(SNACKS|QT|BIRTHDAY|EVENT)\s*$/im;
+
 const batchImportSchema = z.object({
   batchText: z.string().max(10000, { message: "Batch text input is too long (max 10000 characters)." }).optional(),
   snackRotaStartDate: z.date().optional(),
   snackRotaNames: z.string().optional(),
-}).refine(data => {
+  defaultCategory: z.nativeEnum(EventCategory).optional(),
+})
+.refine(data => {
   const namesProvided = data.snackRotaNames && data.snackRotaNames.trim() !== '';
   const dateProvided = !!data.snackRotaStartDate;
-
-  if (namesProvided && !dateProvided) return false; 
-  if (dateProvided && !namesProvided) return false; 
+  if ((namesProvided && !dateProvided) || (dateProvided && !namesProvided)) {
+    return false;
+  }
   return true; 
 }, {
-  message: "Snack Rota Start Date and Names must be provided together, or neither should be filled.",
+  message: "Snack Rota Start Date and Names must be provided together.",
   path: ["snackRotaStartDate"], 
+})
+.refine(data => {
+    if (data.batchText && data.batchText.trim() !== '') {
+        const hasCategoryHeaders = categoryRegex.test(data.batchText);
+        // If there are no category headers, a default category must be selected.
+        if (!hasCategoryHeaders && !data.defaultCategory) {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: "A default category is required when no category headers are in the text.",
+    path: ["defaultCategory"],
 });
 
 
@@ -48,15 +66,17 @@ export default function BatchEventImportForm() {
       batchText: '',
       snackRotaNames: '',
       snackRotaStartDate: undefined,
+      defaultCategory: undefined,
     },
   });
 
-  const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{ eventsAdded: number; eventsParsed: number; errors: string[] }> => {
+  const batchTextValue = form.watch('batchText');
+  const showDefaultCategorySelector = batchTextValue && batchTextValue.trim() !== '' && !categoryRegex.test(batchTextValue);
+
+  const parseAndCreateEventsFromText = async (rawInput: string, defaultCategory: EventCategory | undefined): Promise<{ eventsAdded: number; eventsParsed: number; errors: string[] }> => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
     const errors: string[] = [];
-    let currentCategory: EventCategory | null = null;
   
-    const categoryRegex = /^(SNACKS|QT|BIRTHDAY|EVENT)\s*$/im;
     const hasCategoryHeaders = categoryRegex.test(rawInput);
   
     const processBlock = (dataBlock: string, category: EventCategory | null) => {
@@ -78,11 +98,7 @@ export default function BatchEventImportForm() {
           continue;
         }
   
-        // Default to 'Event' if no category is specified
-        const finalCategory = category || EventCategory.Event;
-
-        // Skip snacks from text if rota is used
-        if (finalCategory === EventCategory.Snack && ignoreSnackCategoryFromText) continue;
+        const finalCategory = category || defaultCategory || EventCategory.Event;
 
         eventsToCreate.push({
           title,
@@ -101,7 +117,8 @@ export default function BatchEventImportForm() {
         const dataBlock = parts[i+1]?.trim();
   
         if (!dataBlock) continue;
-  
+        
+        let currentCategory: EventCategory | null = null;
         if (categoryStr === "SNACKS") currentCategory = EventCategory.Snack;
         else if (categoryStr === "QT") currentCategory = EventCategory.QT;
         else if (categoryStr === "BIRTHDAY") currentCategory = EventCategory.Birthday;
@@ -111,7 +128,7 @@ export default function BatchEventImportForm() {
         processBlock(dataBlock, currentCategory);
       }
     } else {
-      // No category headers found, treat the whole text as a single block
+      // No category headers found, treat the whole text as a single block with default category
       processBlock(rawInput.trim(), null);
     }
     
@@ -168,7 +185,7 @@ export default function BatchEventImportForm() {
     }
 
     if (data.batchText && data.batchText.trim() !== '') {
-      const textResult = await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
+      const textResult = await parseAndCreateEventsFromText(data.batchText, data.defaultCategory);
       totalAdded += textResult.eventsAdded;
       totalParsed += textResult.eventsParsed;
       allErrors.push(...textResult.errors);
@@ -257,28 +274,18 @@ export default function BatchEventImportForm() {
           name="batchText"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Event Data (for QT, Birthday, Event types)</FormLabel>
+              <FormLabel>Event Data</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder={
 `EVENT
 04/07/2025
 Community BBQ
-This is a multi-line detail.
-Everyone is welcome.
 
-QT
-01/06/2025
-Ada Lovelace
+or just a list of dates and names:
 
-BIRTHDAY
-09/12/2025
-Grace Hopper
-
-If Snack Rota fields (above) are NOT used, you can also add Snacks here like:
-SNACKS
-10/06/2025
-Bob
+01/12/2025
+David Jung
 `
                   }
                   {...field}
@@ -288,12 +295,40 @@ Bob
                 />
               </FormControl>
               <FormDescription className="text-xs">
-                Use category headers (QT, BIRTHDAY, EVENT). Each event requires a DD/MM/YYYY date and a title on new lines. Multi-line details are optional.
+                Use category headers (QT, BIRTHDAY, EVENT, SNACKS) or provide a simple list of dates and names.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+        
+        {showDefaultCategorySelector && (
+            <FormField
+              control={form.control}
+              name="defaultCategory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Default Category for Text Import</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a default category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(EventCategory).map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="text-xs">
+                    This category will be applied to all events from the text area since no category headers were found.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        )}
         
         <div className="pt-4 border-t"> 
         <Button type="submit" className="w-full" disabled={isLoading}>
@@ -305,3 +340,5 @@ Bob
     </Form>
   );
 }
+
+    
