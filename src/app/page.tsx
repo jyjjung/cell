@@ -4,47 +4,25 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2, ArrowRight } from 'lucide-react';
-import StatCard from '@/components/homepage/stat-card';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { useBiblePlan } from '@/hooks/use-bible-plan';
-import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { useEvents } from '@/hooks/use-events';
-import { findNextUnreadReading } from '@/lib/reading-utils';
-import { isAfter, parseISO, startOfToday } from 'date-fns';
-import { BookText, CalendarDays } from 'lucide-react';
 
 export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
-  const { plan: biblePlan, loading: planLoading } = useBiblePlan();
-  const { completedPassages, loadingChecklist } = useUserBibleChecklist();
-  const { events, loading: eventsLoading } = useEvents();
-
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  const nextReading = findNextUnreadReading(biblePlan?.dailyReadings || [], completedPassages);
-  
-  const upcomingEventsCount = events.filter(event => {
-    try {
-      return isAfter(parseISO(event.date), startOfToday());
-    } catch {
-      return false; // Invalid date format
-    }
-  }).length;
 
   const handleLinkClick = (path: string) => {
     setIsPageLoading(true);
     router.push(path);
   };
-  
 
   if (!isMounted || loadingAuth) {
     return (
@@ -91,28 +69,6 @@ export default function HomePage() {
                     </Button>
                 </CardFooter>
             </Card>
-        </div>
-        <div className="space-y-6">
-            <StatCard 
-                title="Next Reading"
-                value={nextReading?.passages[0]?.displayText ?? 'Completed!'}
-                isLoading={planLoading || loadingChecklist}
-                buttonText="Go to plan"
-                buttonLink="/bible-checklist"
-                onLinkClick={() => handleLinkClick('/bible-checklist')}
-                IconComponent={BookText}
-                buttonDisabled={!nextReading}
-            />
-            <StatCard 
-                title="Upcoming Events"
-                value={upcomingEventsCount > 0 ? `${upcomingEventsCount}` : 'None'}
-                isLoading={eventsLoading}
-                buttonText="View calendar"
-                buttonLink="/events"
-                onLinkClick={() => handleLinkClick('/events')}
-                IconComponent={CalendarDays}
-                buttonDisabled={upcomingEventsCount === 0}
-            />
         </div>
     </div>
   );
