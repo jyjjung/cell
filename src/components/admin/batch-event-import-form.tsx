@@ -16,6 +16,7 @@ import { AppEvent, EventCategory } from '@/types';
 import { addDays, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const batchImportSchema = z.object({
   batchText: z.string().max(10000, { message: "Batch text input is too long (max 10000 characters)." }).optional(),
@@ -39,6 +40,7 @@ type BatchImportFormValues = z.infer<typeof batchImportSchema>;
 export default function BatchEventImportForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { addEvent } = useEvents();
+  const { toast } = useToast();
 
   const form = useForm<BatchImportFormValues>({
     resolver: zodResolver(batchImportSchema),
@@ -49,123 +51,97 @@ export default function BatchEventImportForm() {
     },
   });
 
-  const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{
-    eventsAddedFromTextCount: number;
-    eventsParsedFromTextCount: number;
-  }> => {
+  const parseAndCreateEventsFromText = async (rawInput: string, ignoreSnackCategoryFromText: boolean): Promise<{ eventsAdded: number; eventsParsed: number; errors: string[] }> => {
     const eventsToCreate: Omit<AppEvent, 'id' | 'createdAt' | 'updatedAt'>[] = [];
-    const lines = rawInput.trim().split('\n');
-    let currentCategory: EventCategory | null = null;
+    const errors: string[] = [];
+
+    // Regex to find category headers
+    const categoryRegex = /^(SNACKS|QT|BIRTHDAY|EVENT)\s*$/im;
+    const parts = rawInput.trim().split(categoryRegex).filter(p => p.trim() !== '');
+
+    if (parts.length === 0 && rawInput.trim() !== '') {
+        errors.push("Could not find any valid category headers (QT, EVENT, SNACKS, BIRTHDAY).");
+        return { eventsAdded: 0, eventsParsed: 0, errors };
+    }
     
-    let i = 0;
-    while (i < lines.length) {
-        let line = lines[i]?.trim();
-        if (!line) { 
-            i++;
-            continue;
-        }
+    for (let i = 0; i < parts.length; i += 2) {
+        const categoryStr = parts[i].trim().toUpperCase();
+        const dataBlock = parts[i+1]?.trim();
 
-        const upperLine = line.toUpperCase();
-        let newCategory: EventCategory | null = null;
+        if (!dataBlock) continue;
 
-        if (upperLine.startsWith("SNACKS")) newCategory = EventCategory.Snack;
-        else if (upperLine.startsWith("QT")) newCategory = EventCategory.QT;
-        else if (upperLine.startsWith("BIRTHDAY")) newCategory = EventCategory.Birthday;
-        else if (upperLine.startsWith("EVENT")) newCategory = EventCategory.Event;
-        
-        if (newCategory) {
-            currentCategory = newCategory;
-            i++;
-            continue;
-        }
+        let currentCategory: EventCategory | null = null;
+        if (categoryStr === "SNACKS") currentCategory = EventCategory.Snack;
+        else if (categoryStr === "QT") currentCategory = EventCategory.QT;
+        else if (categoryStr === "BIRTHDAY") currentCategory = EventCategory.Birthday;
+        else if (categoryStr === "EVENT") currentCategory = EventCategory.Event;
 
-        if (!currentCategory) {
-            i++;
-            continue;
-        }
+        if (!currentCategory) continue;
 
         if (currentCategory === EventCategory.Snack && ignoreSnackCategoryFromText) {
-            i++; 
-            continue;
-        }
-        
-        const dateStr = line;
-        const dateStrPartsTest = dateStr.split('/');
-        if (dateStrPartsTest.length !== 3 || !/^\d{1,2}$/.test(dateStrPartsTest[0]) || !/^\d{1,2}$/.test(dateStrPartsTest[1]) || !/^\d{4}$/.test(dateStrPartsTest[2])) {
-            i++;
-            continue;
+            continue; // Skip SNACKS section if rota is used
         }
 
-        let title: string | null = null;
-        let details: string = "";
-        let advanceLines = 0;
+        // Regex for each line within a data block. Date is required, title is required.
+        const eventBlockRegex = /(\d{1,2}\/\d{1,2}\/\d{4})\s*\n([^]+)/g;
+        let match;
+        while ((match = eventBlockRegex.exec(dataBlock)) !== null) {
+            const dateStr = match[1];
+            const remainingBlock = match[2].split(/\n(?=\d{1,2}\/\d{1,2}\/\d{4})/)[0].trim();
+            const lines = remainingBlock.split('\n').map(l => l.trim()).filter(l => l);
 
-        const nameLineCandidate = lines[i+1]?.trim();
-        const nextLineIsNewCategoryOrDate = nameLineCandidate && 
-                                           (/^(SNACKS|QT|BIRTHDAY|EVENT)/i.test(nameLineCandidate) || 
-                                            /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(nameLineCandidate));
+            if (lines.length === 0) continue;
 
-        if (nameLineCandidate && !nextLineIsNewCategoryOrDate) {
-            title = nameLineCandidate;
-            advanceLines = 2; 
-            switch(currentCategory) {
-                case EventCategory.Snack: details = title; break; 
-                case EventCategory.QT: details = `QT with ${title}.`; break;
-                case EventCategory.Birthday: details = `Happy Birthday ${title}!`; break;
-                case EventCategory.Event: details = ""; break; 
+            const title = lines[0];
+            const details = lines.slice(1).join('\n');
+            
+            const [day, month, year] = dateStr.split('/').map(Number);
+            if (!day || !month || !year || year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+                errors.push(`Invalid date format or value: "${dateStr}"`);
+                continue;
             }
-        } else {
-            i++; 
-            continue;
-        }
-        
-        const day = parseInt(dateStrPartsTest[0], 10);
-        const month = parseInt(dateStrPartsTest[1], 10) - 1; 
-        const year = parseInt(dateStrPartsTest[2], 10);
 
-        if (year < 2000 || year > 2100 || month < 0 || month > 11 || day < 1 || day > 31) {
-            i += advanceLines;
-            continue;
+            const date = new Date(Date.UTC(year, month - 1, day));
+             if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+                errors.push(`Invalid date (e.g., Feb 30): "${dateStr}"`);
+                continue;
+            }
+            
+            eventsToCreate.push({
+                title: title, 
+                date: date.toISOString(), 
+                category: currentCategory, 
+                details: details || (currentCategory === EventCategory.Birthday ? `Happy Birthday ${title}!` : ''),
+                summary: '', 
+            });
         }
-        
-        const date = new Date(Date.UTC(year, month, day)); 
-        if (isNaN(date.getTime()) || date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) {
-            i += advanceLines;
-            continue;
-        }
-        
-        eventsToCreate.push({
-            title: title!, 
-            date: date.toISOString(), 
-            category: currentCategory as EventCategory, 
-            details: details,
-            summary: '', 
-        });
-        
-        i += advanceLines;
     }
-
-    let eventsAddedFromTextCount = 0;
-
+    
+    let eventsAddedCount = 0;
     if (eventsToCreate.length > 0) {
-      const creationPromises = eventsToCreate.map(async eventData => {
+      for (const eventData of eventsToCreate) {
         try {
           await addEvent(eventData);
-          eventsAddedFromTextCount++;
+          eventsAddedCount++;
         } catch (error: any) {
           console.error(`Batch Import: Failed to add event "${eventData.title}"`, error);
+          errors.push(`Failed to add: ${eventData.title} on ${eventData.date.substring(0, 10)}`);
         }
-      });
-      await Promise.allSettled(creationPromises);
+      }
     }
+    
     return { 
-      eventsAddedFromTextCount, 
-      eventsParsedFromTextCount: eventsToCreate.length,
+      eventsAdded: eventsAddedCount, 
+      eventsParsed: eventsToCreate.length,
+      errors
     };
   };
 
   async function onSubmit(data: BatchImportFormValues) {
     setIsLoading(true);
+    let totalAdded = 0;
+    let totalParsed = 0;
+    const allErrors: string[] = [];
 
     const rotaFieldsAreUsed = !!(data.snackRotaNames && data.snackRotaNames.trim() !== '' && data.snackRotaStartDate);
 
@@ -183,15 +159,36 @@ export default function BatchEventImportForm() {
         };
         try {
           await addEvent(snackEvent);
+          totalAdded++;
+          totalParsed++;
         } catch (error: any) {
           console.error(`Rota: Failed to add snack event for ${name}`, error);
+          allErrors.push(`Failed to add snack for: ${name}`);
         }
         currentDate = addDays(currentDate, 7);
       }
     }
 
     if (data.batchText && data.batchText.trim() !== '') {
-      await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
+      const textResult = await parseAndCreateEventsFromText(data.batchText, rotaFieldsAreUsed);
+      totalAdded += textResult.eventsAdded;
+      totalParsed += textResult.eventsParsed;
+      allErrors.push(...textResult.errors);
+    }
+    
+    if (totalParsed > 0 || allErrors.length > 0) {
+      if (allErrors.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Import Complete with Errors",
+          description: `Added ${totalAdded} of ${totalParsed} events. Errors: ${allErrors.join(', ')}`,
+        });
+      } else {
+        toast({
+          title: "Import Successful",
+          description: `Successfully added ${totalAdded} events.`,
+        });
+      }
     }
     
     form.reset(); 
@@ -266,15 +263,19 @@ export default function BatchEventImportForm() {
               <FormControl>
                 <Textarea
                   placeholder={
-`Example for QT/Birthday/Event:
+`EVENT
+04/07/2025
+Community BBQ
+This is a multi-line detail.
+Everyone is welcome.
+
 QT
 01/06/2025
 Ada Lovelace
 
-EVENT
-04/07/2025
-Community BBQ
-(Event details are added via Edit Event)
+BIRTHDAY
+09/12/2025
+Grace Hopper
 
 If Snack Rota fields (above) are NOT used, you can also add Snacks here like:
 SNACKS
@@ -289,8 +290,7 @@ Bob
                 />
               </FormControl>
               <FormDescription className="text-xs">
-                Define categories (QT, BIRTHDAY, EVENT), then DD/MM/YYYY dates, then names/titles on new lines.
-                If Snack Rota fields above are filled, any 'SNACKS' section here will be ignored.
+                Use category headers (QT, BIRTHDAY, EVENT). Each event requires a DD/MM/YYYY date and a title on new lines. Multi-line details are optional.
               </FormDescription>
               <FormMessage />
             </FormItem>
