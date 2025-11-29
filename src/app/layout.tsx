@@ -1,6 +1,8 @@
 
 import { Suspense } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
@@ -8,26 +10,21 @@ import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider } from '@/components/theme-provider';
 import AppLayout from '@/components/layout/app-layout';
+import { Toaster } from '@/components/ui/toaster';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
-
-export const metadata = {
-  title: "em.",
+export const metadata: Metadata = {
+  title: "Cell Dates",
   description: "A simple app for cell group organization.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192x192.png",
     apple: "/icon-192x192.png",
   },
-  themeColor: "#ffffff",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#3F51B5",
 };
 
 export default function RootLayout({
@@ -37,25 +34,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="em." />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PageLoadingProvider>
-          <AuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <AppLayout>
-                {children}
-              </AppLayout>
-              <GlobalPageLoader />
-              <Analytics />
-            </ThemeProvider>
-          </AuthProvider>
-        </PageLoadingProvider>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <PageLoadingProvider>
+            <AuthProvider>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+                <GlobalPageLoader />
+                <Analytics />
+                <Toaster />
+            </AuthProvider>
+          </PageLoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -3,27 +3,31 @@ import { type NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import type { AppNotification, UserProfileData } from '@/types';
 
-// Initialize Firebase Admin SDK
-// This is a server-side only operation
-try {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.");
+// Function to initialize Firebase Admin SDK
+function initializeFirebaseAdmin() {
+  if (admin.apps.length > 0) {
+    return;
   }
-  
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 
-  if (admin.apps.length === 0) {
+  try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.");
+    }
+    
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
+  } catch (error: any) {
+    console.error("Firebase Admin Initialization Error in /api/send-push:", error.message);
+    // Don't re-throw; the check below will handle the uninitialized state.
   }
-} catch (error: any) {
-  console.error("Firebase Admin Initialization Error in /api/send-push:", error.message);
-  // We don't re-throw here because we want the app to build, but push notifications will fail.
-  // The functions below will check for initialization and fail gracefully.
 }
 
 export async function POST(request: NextRequest) {
+  initializeFirebaseAdmin();
+
   if (admin.apps.length === 0) {
     console.error("API Route /api/send-push: Firebase Admin SDK not initialized. Push notification will not be sent.");
     return NextResponse.json({ success: false, error: "Server not configured for push notifications." }, { status: 500 });
@@ -40,8 +44,16 @@ export async function POST(request: NextRequest) {
     const db = admin.firestore();
     let tokens: string[] = [];
 
-    // If targetUserIds are specified (for non-global notifications), fetch only those users.
-    if (targetUserIds && targetUserIds.length > 0) {
+    if (notification.isGlobal) {
+        const usersSnapshot = await db.collection('users').get();
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data() as UserProfileData;
+            const canReceive = userData.notificationPreferences?.[notification.type] ?? true;
+            if (canReceive && userData.fcmTokens && userData.fcmTokens.length > 0) {
+                tokens.push(...userData.fcmTokens);
+            }
+        });
+    } else if (targetUserIds && targetUserIds.length > 0) {
         // Chunk the user IDs to stay within Firestore's 30-item limit for 'in' queries
         for (let i = 0; i < targetUserIds.length; i += 30) {
             const chunk = targetUserIds.slice(i, i + 30);
@@ -54,25 +66,12 @@ export async function POST(request: NextRequest) {
                 }
             });
         }
-    } 
-    // If it's a global notification, fetch all users and check their preferences.
-    else if (notification.isGlobal) {
-        const usersSnapshot = await db.collection('users').get();
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data() as UserProfileData;
-            // Check if the user wants this type of notification. Default to true if not set.
-            const canReceive = userData.notificationPreferences?.[notification.type] ?? true;
-            if (canReceive && userData.fcmTokens && userData.fcmTokens.length > 0) {
-                tokens.push(...userData.fcmTokens);
-            }
-        });
     }
 
     if (tokens.length === 0) {
       return NextResponse.json({ success: true, message: 'No users subscribed to push notifications for this type.' });
     }
 
-    // Remove duplicate tokens
     const uniqueTokens = [...new Set(tokens)];
 
     const messagePayload = {
@@ -92,17 +91,13 @@ export async function POST(request: NextRequest) {
 
     if (uniqueTokens.length > 0) {
       const response = await admin.messaging().sendToDevice(uniqueTokens, messagePayload);
-
-      // Optional: Clean up invalid tokens from Firestore based on the response
+      
       response.results.forEach((result, index) => {
         const error = result.error;
         if (error) {
           console.warn('Failure sending notification to', uniqueTokens[index], error);
-          // Cleanup the tokens that are not registered anymore.
           if (error.code === 'messaging/invalid-registration-token' || error.code === 'messaging/registration-token-not-registered') {
-            // This part is complex because you need to find which user has this token.
-            // For simplicity, we'll skip the cleanup in this implementation, but in a real-world app,
-            // you would query for the user with this token and remove it.
+            // In a real-world app, you would implement cleanup logic here.
           }
         }
       });
