@@ -17,14 +17,13 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { summarizeDateDetails } from '@/ai/flows/summarize-date-details';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
   category: z.nativeEnum(EventCategory),
   details: z.string().optional(),
-  summary: z.string().optional(), // Added summary field
+  summary: z.string().optional(),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -37,7 +36,7 @@ interface EventFormProps {
 }
 
 export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save Event" }: EventFormProps) {
-  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -47,37 +46,21 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
   });
 
   async function handleSubmit(data: EventFormValues) {
-    let finalSummary = data.summary || '';
-
-    // Condition to generate summary: details exist, and the summary field is empty.
-    const shouldGenerateSummary = data.details && data.details.trim() !== '' && (!data.summary || data.summary.trim() === '');
-    
-    if (shouldGenerateSummary) {
-      setIsSummarizing(true);
-      try {
-        const summaryResult = await summarizeDateDetails({ notes: data.details! });
-        finalSummary = summaryResult.summary;
-      } catch (error: any) {
-        console.error("Error generating summary:", error);
-        // Let finalSummary remain as it was (empty string)
-      } finally {
-        setIsSummarizing(false);
-      }
-    }
-
+    setIsLoading(true);
     const processedData: AppEvent = {
       id: event?.id || '',
       title: data.title,
       date: data.date.toISOString(),
       category: data.category,
       details: data.details || '',
-      summary: finalSummary,
+      summary: data.summary || '',
     };
     
     onSubmit(processedData);
     if (!event) {
       form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() });
     }
+    setIsLoading(false);
   }
 
   return (
@@ -177,10 +160,10 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           name="summary"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>AI Summary (Editable)</FormLabel>
+              <FormLabel>Summary (Optional)</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="A short summary will be generated if details are provided and this field is left empty. You can also write your own." 
+                  placeholder="A short summary of the event." 
                   className="resize-y" 
                   {...field} 
                   value={field.value ?? ''} 
@@ -192,9 +175,9 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
         />
 
         <div className="flex justify-end space-x-2 pt-4">
-          {onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isSummarizing}>Cancel</Button>}
-          <Button type="submit" disabled={isSummarizing}>
-            {isSummarizing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Summarizing...</> : submitButtonText}
+          {onCancel && <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>Cancel</Button>}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : submitButtonText}
           </Button>
         </div>
       </form>
