@@ -8,41 +8,6 @@ const withPWA = require('next-pwa')({
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   sw: 'firebase-messaging-sw.js',
-   runtimeCaching: [
-    {
-      urlPattern: /\.(?:png|gif|jpg|jpeg|svg)$/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'images',
-        expiration: {
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'google-fonts-webfonts',
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/placehold\.co\/.*/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'placeholder-images',
-        expiration: {
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-      },
-    },
-  ],
 });
 
 const nextConfig: NextConfig = {
