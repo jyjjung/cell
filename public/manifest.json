@@ -1,7 +1,6 @@
 {
   "name": "em.",
   "short_name": "em.",
-  "description": "A simple app for community and faith.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
