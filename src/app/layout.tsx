@@ -14,8 +14,8 @@ import { Toaster } from '@/components/ui/toaster';
 
 
 export const metadata: Metadata = {
-  title: "Cell Dates",
-  description: "A simple app for cell group organization.",
+  title: "em.",
+  description: "A simple app for community and faith.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192x192.png",

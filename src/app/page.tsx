@@ -51,8 +51,8 @@ export default function HomePage() {
         <div className="flex items-center justify-center min-h-[calc(100vh-15rem)]">
             <Card className="w-full max-w-lg text-center">
                 <CardHeader>
-                    <CardTitle className="text-3xl font-bold">Welcome!</CardTitle>
-                    <CardDescription className="text-md">This is a simple app to help you organize your cell group's activities and reading plans.</CardDescription>
+                    <CardTitle className="text-3xl font-bold">Welcome to em.</CardTitle>
+                    <CardDescription className="text-md">A simple app for community and faith.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="mb-4 text-muted-foreground">Log in or sign up to get started.</p>
