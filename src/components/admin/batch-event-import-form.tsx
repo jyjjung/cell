@@ -13,11 +13,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEvents } from '@/hooks/use-events';
-import { AppEvent, EventCategory } from '@/types';
+import { AppEvent, EventCategory, AppNotification } from '@/types';
 import { addDays, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/use-notifications';
+
 
 const categoryRegex = /^\s*(SNACKS|QT|BIRTHDAY|EVENT)\s*$/im;
 
@@ -59,6 +61,7 @@ export default function BatchEventImportForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { addEvent } = useEvents();
   const { toast } = useToast();
+  const { createNotification } = useNotifications();
 
   const form = useForm<BatchImportFormValues>({
     resolver: zodResolver(batchImportSchema),
@@ -136,7 +139,7 @@ export default function BatchEventImportForm() {
     if (eventsToCreate.length > 0) {
       for (const eventData of eventsToCreate) {
         try {
-          await addEvent(eventData);
+          await addEvent(eventData, false); // Pass false to suppress individual notifications
           eventsAddedCount++;
         } catch (error: any) {
           console.error(`Batch Import: Failed to add event "${eventData.title}"`, error);
@@ -173,7 +176,7 @@ export default function BatchEventImportForm() {
           summary: '', 
         };
         try {
-          await addEvent(snackEvent);
+          await addEvent(snackEvent, false); // Suppress notification
           totalAdded++;
           totalParsed++;
         } catch (error: any) {
@@ -189,6 +192,22 @@ export default function BatchEventImportForm() {
       totalAdded += textResult.eventsAdded;
       totalParsed += textResult.eventsParsed;
       allErrors.push(...textResult.errors);
+    }
+    
+    // Send a single summary notification if any events were successfully added
+    if (totalAdded > 0) {
+      try {
+        const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
+          title: 'Batch Event Import',
+          message: `Successfully added ${totalAdded} new event${totalAdded > 1 ? 's' : ''}.`,
+          type: 'event',
+          isGlobal: true,
+          relatedUrl: `/events`
+        };
+        await createNotification(notificationData);
+      } catch (notifError) {
+        console.error("Failed to send batch import summary notification:", notifError);
+      }
     }
     
     if (totalParsed > 0 || allErrors.length > 0) {
@@ -340,5 +359,3 @@ David Jung
     </Form>
   );
 }
-
-    

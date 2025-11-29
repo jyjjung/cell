@@ -54,7 +54,7 @@ export function useEvents() {
     return () => unsubscribe();
   }, []);
 
-  const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>): Promise<string> => {
+  const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>, sendNotification = true): Promise<string> => {
     try {
       const dataToSend = {
         ...eventData,
@@ -66,7 +66,7 @@ export function useEvents() {
       const docRef = await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
       
       // Create a notification for the new event, except for birthdays which are handled separately
-      if (eventData.category !== EventCategory.Birthday) {
+      if (sendNotification && eventData.category !== EventCategory.Birthday) {
           const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
             title: `New ${eventData.category}: ${eventData.title}`,
             message: `Scheduled for ${format(parseISO(eventData.date), 'MMMM d, yyyy')}.`,
@@ -127,5 +127,3 @@ export function useEvents() {
 
   return { events, addEvent, updateEvent, deleteEvent, loading };
 }
-
-    
