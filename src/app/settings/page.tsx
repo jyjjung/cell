@@ -3,18 +3,13 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition, useCallback } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
+import { Loader2, PanelLeft, Shield } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import type { SidebarPreferences, NotificationPreferences } from '@/types';
+import type { SidebarPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { requestNotificationPermission, saveTokenToFirestore, removeTokenFromFirestore } from '@/lib/firebase';
-import useLocalStorage from '@/hooks/use-local-storage';
-import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -38,24 +33,6 @@ const adminSidebarConfig: SidebarConfigItem[] = [
   { key: 'adminNotifications', label: 'Admin: Notifications'},
 ];
 
-type NotificationConfigItem = {
-  key: keyof NotificationPreferences;
-  label: string;
-  description: string;
-};
-
-const notificationPrefsConfig: NotificationConfigItem[] = [
-    { key: 'admin', label: 'Admin Announcements', description: 'Receive general announcements from admins.' },
-    { key: 'event', label: 'New Events', description: 'Get notified when new global events are created.' },
-    { key: 'reading_progress', label: 'Reading Progress', description: 'Updates on your Bible reading progress.' },
-];
-
-const reminderPrefsConfig: NotificationConfigItem[] = [
-    { key: 'reminderWeekBefore', label: 'A week before', description: 'Get a heads-up for events happening next week.'},
-    { key: 'reminderDayBefore', label: 'The day before', description: 'A reminder for events happening tomorrow.' },
-    { key: 'reminderOnDay', label: 'On the day', description: 'Reminders for events happening today.' },
-];
-
 
 export default function SettingsPage() {
   const { currentUser, isAdmin, loadingAuth, updateUserProfile } = useAuth();
@@ -64,31 +41,14 @@ export default function SettingsPage() {
   const [isMounted, setIsMounted] = useState(false);
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
-  const [notifPrefs, setNotifPrefs] = useState<Partial<NotificationPreferences>>(currentUser?.notificationPreferences || {});
   
-  const [fcmToken, setFcmToken] = useLocalStorage<string | null>('fcmToken', null);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [isUpdatingPush, setIsUpdatingPush] = useState(false);
-  const [pushSupport, setPushSupport] = useState({ supported: false, isIOS: false });
-  const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
-
   useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const supported = ('serviceWorker' in navigator && 'PushManager' in window);
-      setPushSupport({ supported, isIOS });
-      if (supported) {
-        setPushEnabled(Notification.permission === 'granted');
-      }
-    }
   }, []);
 
   useEffect(() => {
     if (currentUser) {
       setSidebarPrefs(currentUser.sidebar || {});
-      setNotifPrefs(currentUser.notificationPreferences || {});
     }
   }, [currentUser]);
 
@@ -98,79 +58,6 @@ export default function SettingsPage() {
       router.push('/login');
     }
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
-
-  const handlePushNotificationToggle = async (isChecked: boolean) => {
-    if (!currentUser || !isMounted || !pushSupport.supported) return;
-    
-    setIsUpdatingPush(true);
-    try {
-      if (isChecked) {
-        // --- ENABLE ---
-        if (Notification.permission === 'denied') {
-          toast({
-            variant: "destructive",
-            title: "Permission Blocked",
-            description: "Notifications are blocked. Please enable them in your browser or OS settings.",
-          });
-          return;
-        }
-
-        const token = await requestNotificationPermission();
-        if (token) {
-          await saveTokenToFirestore(currentUser.uid, token);
-          setFcmToken(token);
-          setPushEnabled(true);
-          toast({
-            title: "Notifications Enabled",
-            description: "You will now receive push notifications on this device.",
-          });
-        } else {
-           setPushEnabled(false);
-        }
-
-      } else {
-        // --- DISABLE ---
-        if (fcmToken) {
-          await removeTokenFromFirestore(currentUser.uid, fcmToken);
-          setFcmToken(null);
-        }
-        setPushEnabled(false);
-        toast({
-          title: "Notifications Disabled",
-          description: "You will no longer receive push notifications on this device.",
-        });
-      }
-    } catch (error: any) {
-      console.error("Error handling push notification toggle:", error);
-      toast({
-        variant: "destructive",
-        title: "Operation Failed",
-        description: error.message || "Could not update notification settings.",
-      });
-      // Revert UI state on any error
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        setPushEnabled(Notification.permission === 'granted');
-      }
-    } finally {
-      setIsUpdatingPush(false);
-    }
-  };
-  
-  const handleNotifPrefToggle = async (key: keyof NotificationPreferences, isChecked: boolean) => {
-    if (!currentUser || key === 'admin') return; // Prevent changing admin notifications
-    const newPrefs = { ...notifPrefs, [key]: isChecked };
-    setNotifPrefs(newPrefs);
-    
-    startTransition(async () => {
-        try {
-            await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
-        } catch (error) {
-            console.error("Failed to update notification preference:", error);
-            const revertedPrefs = { ...notifPrefs, [key]: !isChecked };
-            setNotifPrefs(revertedPrefs); // Revert on error
-        }
-    });
-  };
 
   const handleSidebarToggle = async (key: keyof SidebarPreferences, isChecked: boolean) => {
     if (!currentUser) return;
@@ -198,85 +85,12 @@ export default function SettingsPage() {
     return null;
   }
   
-  const showUnsupportedMessage = !pushSupport.supported;
-
   return (
     <div className="container mx-auto py-8 max-w-2xl space-y-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your application and notification settings.</p>
+        <p className="text-muted-foreground">Manage your application settings.</p>
       </div>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> Notifications</CardTitle>
-            <CardDescription>Enable or disable push notifications on this device and choose what alerts you receive.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                <div className="space-y-0.5">
-                    <Label htmlFor="push-master-switch" className={cn(showUnsupportedMessage && "text-muted-foreground")}>Enable Push Notifications</Label>
-                    <p className="text-xs text-muted-foreground">
-                        {showUnsupportedMessage 
-                          ? "Your browser or device does not support push notifications."
-                          : "Receive alerts even when the app is closed."
-                        }
-                    </p>
-                </div>
-                <Switch
-                    id="push-master-switch"
-                    checked={pushEnabled}
-                    onCheckedChange={handlePushNotificationToggle}
-                    disabled={isUpdatingPush || showUnsupportedMessage}
-                    aria-label="Enable Push Notifications"
-                />
-            </div>
-             {pushSupport.isIOS && (
-              <div className="p-3 text-xs text-blue-800 bg-blue-50 rounded-lg dark:bg-blue-900/30 dark:text-blue-200">
-                <p><b>For iPhone/iPad users:</b> To receive notifications, you must first add this app to your Home Screen from the Safari share menu, then enable notifications from the installed app.</p>
-              </div>
-            )}
-            
-            <div className="space-y-2 pt-4 border-t">
-                <h4 className="text-sm font-medium">Notification Types</h4>
-                 {notificationPrefsConfig.map(({key, label, description}) => (
-                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                        <div className="space-y-0.5">
-                            <Label htmlFor={`notif-switch-${key}`} className={cn(key === 'admin' && "text-muted-foreground")}>{label}</Label>
-                            <p className="text-xs text-muted-foreground">{description}</p>
-                        </div>
-                        <Switch
-                            id={`notif-switch-${key}`}
-                            checked={key === 'admin' ? true : notifPrefs[key as keyof typeof notifPrefs] ?? true}
-                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
-                            disabled={isPending || key === 'admin'}
-                            aria-label={label}
-                        />
-                    </div>
-                ))}
-                
-                <Separator className="my-4" />
-
-                <h4 className="text-sm font-medium pt-2">Event Reminders</h4>
-                 {reminderPrefsConfig.map(({key, label, description}) => (
-                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                        <div className="space-y-0.5">
-                            <Label htmlFor={`notif-switch-${key}`} >{label}</Label>
-                            <p className="text-xs text-muted-foreground">{description}</p>
-                        </div>
-                        <Switch
-                            id={`notif-switch-${key}`}
-                            checked={notifPrefs[key as keyof typeof notifPrefs] ?? true}
-                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
-                            disabled={isPending}
-                            aria-label={label}
-                        />
-                    </div>
-                ))}
-
-            </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

@@ -19,28 +19,12 @@ import {
   Timestamp,
   limit,
   getDocs,
-  getDoc,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
-const USERS_COLLECTION = 'users';
 
-async function triggerPushNotification(notification: AppNotification, targetUserIds?: string[]) {
-    try {
-        await fetch('/api/send-push', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ notification, targetUserIds }),
-        });
-    } catch (error) {
-        console.error("Failed to trigger push notification:", error);
-        // This failure is logged but not thrown, as the in-app notification is the primary mechanism.
-    }
-}
-
+// The triggerPushNotification function is removed as push notifications are no longer used.
 
 export function useNotifications() {
   const { currentUser, isAdmin } = useAuth();
@@ -97,7 +81,7 @@ export function useNotifications() {
       const existing = await getDocs(q);
       if (!existing.empty) {
         console.log("Skipping duplicate reading progress notification.");
-        return existing.docs[0].id; // Return existing ID, but don't re-create or re-send
+        return existing.docs[0].id; // Return existing ID, but don't re-create
       }
     }
     
@@ -116,23 +100,6 @@ export function useNotifications() {
             readBy: [], 
         };
         const docRef = await addDoc(collection(db, NOTIFICATIONS_COLLECTION), dataToSave);
-
-        // After successfully creating the notification, trigger the push
-        const fullNotification: AppNotification = {
-            id: docRef.id,
-            createdAt: new Timestamp(Date.now() / 1000, 0), // Approximate timestamp
-            ...notificationData,
-            readBy: []
-        };
-        
-        if (notificationData.isGlobal) {
-            // For global notifications, we need to respect each user's preference for this type
-            // The logic for this is now handled in the /api/send-push route
-            triggerPushNotification(fullNotification);
-        } else if (notificationData.userId) {
-            // For personal notifications, we already checked the preference
-            triggerPushNotification(fullNotification, [notificationData.userId]);
-        }
         
         return docRef.id;
       } catch(error) {

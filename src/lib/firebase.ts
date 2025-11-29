@@ -1,8 +1,7 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, enableMultiTabIndexedDbPersistence, Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { getFirestore, enableMultiTabIndexedDbPersistence, Timestamp } from 'firebase/firestore';
 import { getAuth } from "firebase/auth";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 // Ensuring this matches the user's latest provided configuration
 const firebaseConfig = {
@@ -39,71 +38,5 @@ const auth = getAuth(app); // Initialize Firebase Auth
 //     });
 // }
 
-// --- Firebase Cloud Messaging (FCM) ---
-export const getMessagingInstance = () => {
-    if (typeof window !== 'undefined' && getApps().length > 0) {
-        return getMessaging(app);
-    }
-    return null;
-};
-
-export const requestNotificationPermission = async (): Promise<string | null> => {
-    if (typeof window === 'undefined') return null;
-
-    const messaging = getMessagingInstance();
-    if (!messaging) return null;
-    
-    console.log("Requesting permission...");
-    const permission = await Notification.requestPermission();
-  
-    if (permission === 'granted') {
-      console.log('Notification permission granted.');
-      try {
-        const currentToken = await getToken(messaging, {
-          vapidKey: 'BF7qvp5haGOiSGySD9iZ1o_HEEdhpHsvVn2bM6wMjxT_3Iw8u5fRhu1aX9URCE110B40Vj718LCEiaVwgV2u84Y',
-        });
-        if (currentToken) {
-          console.log('FCM Token:', currentToken);
-          return currentToken;
-        } else {
-          console.log('No registration token available. Request permission to generate one.');
-          throw new Error('No registration token available.');
-        }
-      } catch (err) {
-        console.error('An error occurred while retrieving token. ', err);
-        throw err;
-      }
-    } else {
-      console.log('Unable to get permission to notify.');
-      throw new Error('Notification permission not granted.');
-    }
-  };
-  
-export const saveTokenToFirestore = async (userId: string, token: string) => {
-    if (!userId || !token) return;
-    const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-        fcmTokens: arrayUnion(token)
-    });
-};
-
-export const removeTokenFromFirestore = async (userId: string, token: string) => {
-    if (!userId || !token) return;
-    const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-        fcmTokens: arrayRemove(token)
-    });
-};
-
-
-// Foreground message handler
-export const onForegroundMessage = () => {
-    const messaging = getMessagingInstance();
-    if (messaging) {
-        onMessage(messaging, (payload) => {
-            console.log('Foreground message received.', payload);
-        });
-    }
-};
 
 export { app, db, auth, Timestamp };
