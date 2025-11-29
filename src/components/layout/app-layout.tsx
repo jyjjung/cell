@@ -67,12 +67,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (eventIdsToFetch.length === 0) return;
 
       try {
-        const eventsQuery = query(collection(db, EVENTS_COLLECTION), where(documentId(), 'in', eventIdsToFetch));
-        const eventSnapshots = await getDocs(eventsQuery);
         const fetchedEvents = new Map<string, AppEvent>();
-        eventSnapshots.forEach(doc => {
-          fetchedEvents.set(doc.id, { id: doc.id, ...doc.data() } as AppEvent);
-        });
+        
+        // Chunk the event IDs to stay within Firestore's 30-item limit for 'in' queries
+        for (let i = 0; i < eventIdsToFetch.length; i += 30) {
+            const chunk = eventIdsToFetch.slice(i, i + 30);
+            const eventsQuery = query(collection(db, EVENTS_COLLECTION), where(documentId(), 'in', chunk));
+            const eventSnapshots = await getDocs(eventsQuery);
+            eventSnapshots.forEach(doc => {
+              fetchedEvents.set(doc.id, { id: doc.id, ...doc.data() } as AppEvent);
+            });
+        }
 
         const today = startOfDay(new Date());
         const notificationsToMarkRead: string[] = [];

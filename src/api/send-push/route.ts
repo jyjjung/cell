@@ -42,16 +42,18 @@ export async function POST(request: NextRequest) {
 
     // If targetUserIds are specified (for non-global notifications), fetch only those users.
     if (targetUserIds && targetUserIds.length > 0) {
-        const usersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', targetUserIds).get();
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data() as UserProfileData;
-            // For targeted notifications, we assume the check was done client-side before calling createNotification
-            // But we can double-check here for safety.
-            const canReceive = userData.notificationPreferences?.[notification.type] ?? true;
-            if (canReceive && userData.fcmTokens && userData.fcmTokens.length > 0) {
-                tokens.push(...userData.fcmTokens);
-            }
-        });
+        // Chunk the user IDs to stay within Firestore's 30-item limit for 'in' queries
+        for (let i = 0; i < targetUserIds.length; i += 30) {
+            const chunk = targetUserIds.slice(i, i + 30);
+            const usersSnapshot = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', chunk).get();
+            usersSnapshot.forEach(doc => {
+                const userData = doc.data() as UserProfileData;
+                const canReceive = userData.notificationPreferences?.[notification.type] ?? true;
+                if (canReceive && userData.fcmTokens && userData.fcmTokens.length > 0) {
+                    tokens.push(...userData.fcmTokens);
+                }
+            });
+        }
     } 
     // If it's a global notification, fetch all users and check their preferences.
     else if (notification.isGlobal) {
@@ -92,7 +94,6 @@ export async function POST(request: NextRequest) {
       const response = await admin.messaging().sendToDevice(uniqueTokens, messagePayload);
 
       // Optional: Clean up invalid tokens from Firestore based on the response
-      const tokensToDelete: Promise<any>[] = [];
       response.results.forEach((result, index) => {
         const error = result.error;
         if (error) {
