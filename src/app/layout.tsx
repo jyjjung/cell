@@ -1,3 +1,4 @@
+
 import { Suspense } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
@@ -33,6 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+       <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <PageLoadingProvider>
