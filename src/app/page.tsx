@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -7,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 import NotificationsWidget from '@/components/dashboard-widgets/notifications-widget';
 import TodayReadingWidget from '@/components/dashboard-widgets/today-reading-widget';
 import UpcomingEventsWidget from '@/components/dashboard-widgets/upcoming-events-widget';
-import NextReadingWidget from '@/components/dashboard-widgets/next-reading-widget';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -15,7 +13,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { motion } from 'framer-motion';
 
 // Reusable WidgetCard component for a consistent look and feel
-const WidgetCard = ({ title, description, footer, children, className }: { title: string, description?: string, footer?: React.ReactNode, children: React.ReactNode, className?: string }) => (
+const WidgetCard = ({ title, description, children, className }: { title: string, description?: string, children: React.ReactNode, className?: string }) => (
   <motion.div
     className={className}
     initial={{ opacity: 0, y: 20 }}
@@ -30,7 +28,6 @@ const WidgetCard = ({ title, description, footer, children, className }: { title
       <CardContent className="p-4 pt-0 flex-grow">
         {children}
       </CardContent>
-      {footer && <CardFooter className="p-4 pt-2 border-t mt-auto">{footer}</CardFooter>}
     </Card>
   </motion.div>
 );
