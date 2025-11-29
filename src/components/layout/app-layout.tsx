@@ -328,11 +328,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 
   if (!hasMounted) {
-    // Render nothing or a skeleton loader until the client-side state is determined
-    // to prevent hydration mismatch.
+    // Render a minimal layout on the server to prevent hydration mismatch.
     return (
         <SidebarProvider defaultOpen={true}>
-            <Sidebar />
+             {/* The actual sidebar is not rendered on the server */}
             <SidebarInset className="min-w-0">
                 <Header />
                 <main role="main" className="flex-1">
@@ -347,7 +346,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-      <Sidebar />
+      {hasMounted && <Sidebar />}
       <SidebarInset className="min-w-0" aria-hidden={isSidebarOpen && hasMounted && window.innerWidth < 768}>
         <Header />
         <main role="main" className="flex-1">
