@@ -62,15 +62,6 @@ export interface SidebarPreferences {
   adminNotifications?: boolean;
 }
 
-export interface NotificationPreferences {
-  admin: boolean;
-  event: boolean;
-  reading_progress: boolean;
-  reminderOnDay: boolean;
-  reminderDayBefore: boolean;
-  reminderWeekBefore: boolean;
-}
-
 export interface DashboardPreferences {
   widgetVisibility: {
     notifications: boolean;
@@ -87,7 +78,6 @@ export interface AppUser extends FirebaseUser {
   displayName: string | null;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
-  notificationPreferences?: NotificationPreferences;
   dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;
@@ -103,7 +93,6 @@ export interface UserProfileData {
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
   sidebar?: Partial<SidebarPreferences>;
-  notificationPreferences?: Partial<NotificationPreferences>;
   dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;

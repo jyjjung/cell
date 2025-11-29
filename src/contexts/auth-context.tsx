@@ -15,7 +15,7 @@ import {
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import type { AppUser, UserProfileData, SidebarPreferences, NotificationPreferences, DashboardPreferences } from '@/types';
+import type { AppUser, UserProfileData, SidebarPreferences, DashboardPreferences } from '@/types';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 
@@ -52,15 +52,6 @@ const defaultSidebarPreferences: SidebarPreferences = {
   adminNotifications: true,
 };
 
-const defaultNotificationPreferences: NotificationPreferences = {
-  admin: true,
-  event: true,
-  reading_progress: true,
-  reminderOnDay: true,
-  reminderDayBefore: true,
-  reminderWeekBefore: true,
-};
-
 const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   notifications: true,
   todayReading: true,
@@ -92,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: profileData.displayName || firebaseUser.displayName, // Prefer Firestore, fallback to Firebase Auth
             showInCommunityProgress: profileData.showInCommunityProgress ?? true,
             sidebar: { ...defaultSidebarPreferences, ...(profileData.sidebar || {}) },
-            notificationPreferences: { ...defaultNotificationPreferences, ...(profileData.notificationPreferences || {}) },
             dashboard: { 
               layouts: profileData.dashboard?.layouts || {},
               widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
@@ -111,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updatedAt: serverTimestamp() as Timestamp,
             showInCommunityProgress: true, // Default to true
             sidebar: defaultSidebarPreferences,
-            notificationPreferences: defaultNotificationPreferences,
             dashboard: {
               widgetVisibility: defaultDashboardPreferences,
               layouts: {}, // Let it be populated on first dashboard use
@@ -128,7 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: newProfileData.displayName,
             showInCommunityProgress: newProfileData.showInCommunityProgress,
             sidebar: newProfileData.sidebar,
-            notificationPreferences: newProfileData.notificationPreferences,
             dashboard: newProfileData.dashboard,
             isAdmin: newProfileData.isAdmin,
           } as AppUser);
@@ -186,7 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: serverTimestamp() as Timestamp,
         showInCommunityProgress: true,
         sidebar: defaultSidebarPreferences,
-        notificationPreferences: defaultNotificationPreferences,
         dashboard: {
           widgetVisibility: defaultDashboardPreferences,
           layouts: {},
@@ -271,7 +258,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: profileData.displayName !== undefined ? profileData.displayName : prevUser.displayName,
           showInCommunityProgress: profileData.showInCommunityProgress !== undefined ? profileData.showInCommunityProgress : prevUser.showInCommunityProgress,
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
-          notificationPreferences: profileData.notificationPreferences !== undefined ? { ...prevUser.notificationPreferences, ...profileData.notificationPreferences } : prevUser.notificationPreferences,
           dashboard: profileData.dashboard !== undefined ? { ...(prevUser.dashboard || { widgetVisibility: {}, layouts: {} }), ...profileData.dashboard } : prevUser.dashboard,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
         };

@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AppEvent, AppNotification } from '@/types';
-import { EventCategory } from '@/types'; // Ensure EventCategory is imported
+import type { AppEvent } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -14,21 +13,15 @@ import {
   onSnapshot,
   query,
   orderBy,
-  where,
-  getDocs,
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { format, parseISO } from 'date-fns';
-import { useNotifications } from './use-notifications'; // Import the notifications hook
-
 
 const EVENTS_COLLECTION = 'events';
 
 export function useEvents() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { createNotification } = useNotifications();
 
   useEffect(() => {
     const q = query(collection(db, EVENTS_COLLECTION), orderBy("date", "asc"));
@@ -64,29 +57,15 @@ export function useEvents() {
         updatedAt: serverTimestamp(),
       };
       const docRef = await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
-      
-      // Create a notification for the new event, except for birthdays which are handled separately
-      if (sendNotification && eventData.category !== EventCategory.Birthday) {
-          const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
-            title: `New ${eventData.category}: ${eventData.title}`,
-            message: `Scheduled for ${format(parseISO(eventData.date), 'MMMM d, yyyy')}.`,
-            type: 'event',
-            isGlobal: true,
-            relatedUrl: `/events#${docRef.id}`
-          };
-          // This will create the in-app notif and trigger the push notif via the API route
-          await createNotification(notificationData);
-      }
-
-      return docRef.id; // Return the new document ID
+      return docRef.id;
     } catch (error: any) {
       console.error("Error adding event to Firestore. Data:", eventData, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
       if (error.code === 'permission-denied') {
         console.error("Firestore permission denied. Check your security rules.");
       }
-      throw error; // Re-throw error
+      throw error;
     }
-  }, [createNotification]);
+  }, []);
 
   const updateEvent = useCallback(async (updatedEvent: AppEvent) => {
     if (!updatedEvent.id) {
