@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, PanelLeft, Shield, Bell } from 'lucide-react';
@@ -69,14 +69,20 @@ export default function SettingsPage() {
   const [fcmToken, setFcmToken] = useLocalStorage<string | null>('fcmToken', null);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isUpdatingPush, setIsUpdatingPush] = useState(false);
+  const [pushSupport, setPushSupport] = useState({ supported: false, isIOS: false, safari: false });
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  // This effect runs once on mount to synchronize the toggle state
   useEffect(() => {
     setIsMounted(true);
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPushEnabled(Notification.permission === 'granted');
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      const supported = ('serviceWorker' in navigator && 'PushManager' in window);
+      setPushSupport({ supported, isIOS, safari: isSafari });
+      if (supported) {
+        setPushEnabled(Notification.permission === 'granted');
+      }
     }
   }, []);
 
@@ -95,7 +101,7 @@ export default function SettingsPage() {
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
   const handlePushNotificationToggle = async (isChecked: boolean) => {
-    if (!currentUser || !isMounted || typeof window === 'undefined' || !('Notification' in window)) return;
+    if (!currentUser || !isMounted || !pushSupport.supported) return;
     
     setIsUpdatingPush(true);
     try {
@@ -105,9 +111,8 @@ export default function SettingsPage() {
           toast({
             variant: "destructive",
             title: "Permission Denied",
-            description: "Notifications are blocked. Please enable them in your browser settings.",
+            description: "Notifications are blocked. Please enable them in your browser or OS settings.",
           });
-          setPushEnabled(false); // Make sure toggle is off
           return;
         }
 
@@ -121,8 +126,7 @@ export default function SettingsPage() {
             description: "You will now receive push notifications on this device.",
           });
         } else {
-          // User closed the prompt without making a choice, permission is 'default'
-          setPushEnabled(false);
+           setPushEnabled(false);
         }
 
       } else {
@@ -131,7 +135,6 @@ export default function SettingsPage() {
           await removeTokenFromFirestore(currentUser.uid, fcmToken);
           setFcmToken(null);
         }
-        // Even if no token, ensure state is off
         setPushEnabled(false);
         toast({
           title: "Notifications Disabled",
@@ -145,8 +148,10 @@ export default function SettingsPage() {
         title: "Operation Failed",
         description: error.message || "Could not update notification settings.",
       });
-       // Revert UI state on any error
-      setPushEnabled(Notification.permission === 'granted');
+      // Revert UI state on any error
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setPushEnabled(Notification.permission === 'granted');
+      }
     } finally {
       setIsUpdatingPush(false);
     }
@@ -193,6 +198,8 @@ export default function SettingsPage() {
   if (!currentUser && isMounted) {
     return null;
   }
+  
+  const showUnsupportedMessage = !pushSupport.supported || (pushSupport.isIOS && !pushSupport.safari);
 
   return (
     <div className="container mx-auto py-8 max-w-2xl space-y-8">
@@ -209,14 +216,19 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
             <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
-                    <Label htmlFor="push-master-switch">Enable Push Notifications</Label>
-                    <p className="text-xs text-muted-foreground">Receive alerts even when the app is closed.</p>
+                    <Label htmlFor="push-master-switch" className={cn(showUnsupportedMessage && "text-muted-foreground")}>Enable Push Notifications</Label>
+                    <p className="text-xs text-muted-foreground">
+                        {showUnsupportedMessage 
+                          ? "Your browser or device does not support push notifications."
+                          : "Receive alerts even when the app is closed."
+                        }
+                    </p>
                 </div>
                 <Switch
                     id="push-master-switch"
                     checked={pushEnabled}
                     onCheckedChange={handlePushNotificationToggle}
-                    disabled={isUpdatingPush}
+                    disabled={isUpdatingPush || showUnsupportedMessage}
                     aria-label="Enable Push Notifications"
                 />
             </div>
@@ -311,5 +323,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
