@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useMemo } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
