@@ -128,11 +128,13 @@ export default function SettingsPage() {
         }
       } catch (error: any) {
         console.error("Error enabling push notifications:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Could not enable notifications.",
-        });
+        if (error.message !== 'Notification permission not granted.') {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: error.message || "Could not enable notifications.",
+            });
+        }
         setPushEnabled(false);
       }
     } else {
