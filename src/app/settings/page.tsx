@@ -69,7 +69,7 @@ export default function SettingsPage() {
   const [fcmToken, setFcmToken] = useLocalStorage<string | null>('fcmToken', null);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isUpdatingPush, setIsUpdatingPush] = useState(false);
-  const [pushSupport, setPushSupport] = useState({ supported: false, isIOS: false, safari: false });
+  const [pushSupport, setPushSupport] = useState({ supported: false, isIOS: false });
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -77,9 +77,8 @@ export default function SettingsPage() {
     setIsMounted(true);
     if (typeof window !== 'undefined' && 'Notification' in window) {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
       const supported = ('serviceWorker' in navigator && 'PushManager' in window);
-      setPushSupport({ supported, isIOS, safari: isSafari });
+      setPushSupport({ supported, isIOS });
       if (supported) {
         setPushEnabled(Notification.permission === 'granted');
       }
@@ -110,7 +109,7 @@ export default function SettingsPage() {
         if (Notification.permission === 'denied') {
           toast({
             variant: "destructive",
-            title: "Permission Denied",
+            title: "Permission Blocked",
             description: "Notifications are blocked. Please enable them in your browser or OS settings.",
           });
           return;
@@ -199,7 +198,7 @@ export default function SettingsPage() {
     return null;
   }
   
-  const showUnsupportedMessage = !pushSupport.supported || (pushSupport.isIOS && !pushSupport.safari);
+  const showUnsupportedMessage = !pushSupport.supported;
 
   return (
     <div className="container mx-auto py-8 max-w-2xl space-y-8">
@@ -232,6 +231,11 @@ export default function SettingsPage() {
                     aria-label="Enable Push Notifications"
                 />
             </div>
+             {pushSupport.isIOS && (
+              <div className="p-3 text-xs text-blue-800 bg-blue-50 rounded-lg dark:bg-blue-900/30 dark:text-blue-200">
+                <p><b>For iPhone/iPad users:</b> To receive notifications, you must first add this app to your Home Screen from the Safari share menu, then enable notifications from the installed app.</p>
+              </div>
+            )}
             
             <div className="space-y-2 pt-4 border-t">
                 <h4 className="text-sm font-medium">Notification Types</h4>
