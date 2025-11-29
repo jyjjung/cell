@@ -60,7 +60,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       console.log('Notification permission granted.');
       try {
         const currentToken = await getToken(messaging, {
-          vapidKey: 'BJEgWAg5YpC4ZJ1XG3dYqX8c9q5z4J3c6k8fE7zJ7yF1gP3nJ9bB2c7kR6', // Replace with your VAPID key
+          vapidKey: 'BF7qvp5haGOiSGySD9iZ1o_HEEdhpHsvVn2bM6wMjxT_3Iw8u5fRhu1aX9URCE110B40Vj718LCEiaVwgV2u84Y',
         });
         if (currentToken) {
           console.log('FCM Token:', currentToken);
