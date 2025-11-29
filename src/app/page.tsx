@@ -8,6 +8,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import TodayReadingWidget from '@/components/dashboard-widgets/today-reading-widget';
+import UpcomingEventsWidget from '@/components/dashboard-widgets/upcoming-events-widget';
+import NotificationsWidget from '@/components/dashboard-widgets/notifications-widget';
+import NextReadingWidget from '@/components/dashboard-widgets/next-reading-widget';
+import { Bell, Calendar, BookOpen, SkipForward } from 'lucide-react';
 
 export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -53,21 +58,45 @@ export default function HomePage() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <div className="lg:col-span-2 xl:col-span-3">
-             <Card className="h-full flex flex-col shadow-md">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="space-y-6">
+            <Card className="shadow-md">
                 <CardHeader>
-                    <CardTitle>Welcome back, {currentUser.displayName || 'user'}!</CardTitle>
-                    <CardDescription>Here's a quick overview of what's happening.</CardDescription>
+                    <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/>Notifications</CardTitle>
+                    <CardDescription>Recent updates and announcements.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow">
-                    <p>More dashboard content coming soon!</p>
+                <CardContent>
+                    <NotificationsWidget />
                 </CardContent>
-                 <CardFooter>
-                    <Button onClick={() => handleLinkClick('/bible-checklist')}>
-                        View My Reading Plan <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </CardFooter>
+            </Card>
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/>Today's Reading</CardTitle>
+                    <CardDescription>Your daily portion of the reading plan.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <TodayReadingWidget />
+                </CardContent>
+            </Card>
+        </div>
+        <div className="space-y-6">
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-primary"/>Upcoming Events</CardTitle>
+                    <CardDescription>What's happening next.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <UpcomingEventsWidget />
+                </CardContent>
+            </Card>
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><SkipForward className="mr-2 h-5 w-5 text-primary"/>Next Reading</CardTitle>
+                    <CardDescription>Keep up with the plan.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <NextReadingWidget />
+                </CardContent>
             </Card>
         </div>
     </div>
