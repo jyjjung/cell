@@ -1,7 +1,7 @@
 
 {
   "name": "nextn",
-  "version": "4.1",
+  "version": "5.2",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
