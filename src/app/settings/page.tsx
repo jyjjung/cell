@@ -72,18 +72,13 @@ export default function SettingsPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
+  // This effect runs once on mount to synchronize the toggle state
   useEffect(() => {
     setIsMounted(true);
-    // This effect now ONLY runs on the client after mount.
-    // It safely checks the notification permission and updates the toggle state.
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'granted' && fcmToken) {
-        setPushEnabled(true);
-      } else {
-        setPushEnabled(false);
-      }
+      setPushEnabled(Notification.permission === 'granted');
     }
-  }, [fcmToken, isMounted]);
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -100,25 +95,20 @@ export default function SettingsPage() {
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
   const handlePushNotificationToggle = async (isChecked: boolean) => {
-    if (!currentUser || !isMounted) return;
-
+    if (!currentUser || !isMounted || typeof window === 'undefined' || !('Notification' in window)) return;
+    
     setIsUpdatingPush(true);
-
     try {
       if (isChecked) {
-        // ---- ENABLE NOTIFICATIONS ----
-        if (typeof window === 'undefined' || !('Notification' in window)) {
-          throw new Error("Push notifications are not supported by this browser.");
-        }
-
+        // --- ENABLE ---
         if (Notification.permission === 'denied') {
           toast({
             variant: "destructive",
             title: "Permission Denied",
-            description: "You have previously blocked notifications. Please enable them in your browser or site settings.",
+            description: "Notifications are blocked. Please enable them in your browser settings.",
           });
-          setPushEnabled(false); // Ensure toggle is off
-          return; 
+          setPushEnabled(false); // Make sure toggle is off
+          return;
         }
 
         const token = await requestNotificationPermission();
@@ -131,39 +121,33 @@ export default function SettingsPage() {
             description: "You will now receive push notifications on this device.",
           });
         } else {
-          // This case happens if the user closes the permission prompt without choosing.
-          // The permission remains 'default', and the toggle should reflect that (off).
+          // User closed the prompt without making a choice, permission is 'default'
           setPushEnabled(false);
         }
 
       } else {
-        // ---- DISABLE NOTIFICATIONS ----
+        // --- DISABLE ---
         if (fcmToken) {
           await removeTokenFromFirestore(currentUser.uid, fcmToken);
           setFcmToken(null);
-          setPushEnabled(false);
-          toast({
-            title: "Notifications Disabled",
-            description: "You will no longer receive push notifications on this device.",
-          });
-        } else {
-          // If no token, just ensure the state is off.
-          setPushEnabled(false);
         }
+        // Even if no token, ensure state is off
+        setPushEnabled(false);
+        toast({
+          title: "Notifications Disabled",
+          description: "You will no longer receive push notifications on this device.",
+        });
       }
     } catch (error: any) {
       console.error("Error handling push notification toggle:", error);
-      if (error.message !== 'Notification permission not granted.') {
-        toast({
-          variant: "destructive",
-          title: "Operation Failed",
-          description: error.message || "Could not update notification settings.",
-        });
-      }
-      // Revert UI state on error
-      setPushEnabled(!!fcmToken); 
+      toast({
+        variant: "destructive",
+        title: "Operation Failed",
+        description: error.message || "Could not update notification settings.",
+      });
+       // Revert UI state on any error
+      setPushEnabled(Notification.permission === 'granted');
     } finally {
-      // This is crucial: always re-enable the switch after the operation.
       setIsUpdatingPush(false);
     }
   };
@@ -327,3 +311,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
