@@ -7,7 +7,12 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  sw: 'firebase-messaging-sw.js',
    runtimeCaching: [
+    {
+      handler: 'NetworkOnly',
+      urlPattern: /^(?!\/(_next|api)\/).*$/,
+    },
     {
       urlPattern: /\.(?:png|gif|jpg|jpeg|svg)$/,
       handler: 'CacheFirst',
