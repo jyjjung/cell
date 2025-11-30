@@ -19,10 +19,7 @@ import {
   Timestamp,
   limit,
   getDocs,
-<<<<<<< HEAD
   writeBatch,
-=======
->>>>>>> c1c5804 (Get rid of push notifications)
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
