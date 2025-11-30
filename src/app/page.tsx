@@ -3,38 +3,16 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Loader2 } from 'lucide-react';
-import NotificationsWidget from '@/components/dashboard-widgets/notifications-widget';
-import TodayReadingWidget from '@/components/dashboard-widgets/today-reading-widget';
-import UpcomingEventsWidget from '@/components/dashboard-widgets/upcoming-events-widget';
-import NextReadingWidget from '@/components/dashboard-widgets/next-reading-widget';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { motion } from 'framer-motion';
-
-// Reusable WidgetCard component for a consistent look and feel
-const WidgetCard = ({ title, description, footer, children, className }: { title: string, description?: string, footer?: React.ReactNode, children: React.ReactNode, className?: string }) => (
-  <motion.div
-    className={className}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-  >
-    <Card className="h-full flex flex-col shadow-md">
-      <CardHeader className="p-4 pb-2">
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
-      </CardHeader>
-      <CardContent className="p-4 pt-0 flex-grow">
-        {children}
-      </CardContent>
-      {footer && <CardFooter className="p-4 pt-2 border-t mt-auto">{footer}</CardFooter>}
-    </Card>
-  </motion.div>
-);
-
+import TodayReadingWidget from '@/components/dashboard-widgets/today-reading-widget';
+import UpcomingEventsWidget from '@/components/dashboard-widgets/upcoming-events-widget';
+import NotificationsWidget from '@/components/dashboard-widgets/notifications-widget';
+import NextReadingWidget from '@/components/dashboard-widgets/next-reading-widget';
+import { Bell, Calendar, BookOpen, SkipForward } from 'lucide-react';
 
 export default function HomePage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -45,6 +23,11 @@ export default function HomePage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleLinkClick = (path: string) => {
+    setIsPageLoading(true);
+    router.push(path);
+  };
 
   if (!isMounted || loadingAuth) {
     return (
@@ -65,8 +48,8 @@ export default function HomePage() {
                 <CardContent>
                     <p className="mb-4 text-muted-foreground">Log in or sign up to get started.</p>
                     <div className="flex justify-center gap-4">
-                        <Button size="lg" onClick={() => { setIsPageLoading(true); router.push('/login'); }}>Log In</Button>
-                        <Button size="lg" variant="outline" onClick={() => { setIsPageLoading(true); router.push('/signup'); }}>Sign Up</Button>
+                        <Button size="lg" onClick={() => handleLinkClick('/login')}>Log In</Button>
+                        <Button size="lg" variant="outline" onClick={() => handleLinkClick('/signup')}>Sign Up</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -75,16 +58,47 @@ export default function HomePage() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <WidgetCard title="Today's Reading" description="Your daily portion of the reading plan." className="lg:col-span-2">
-        <TodayReadingWidget />
-      </WidgetCard>
-      <WidgetCard title="Upcoming Events" description="What's happening next." className="lg:col-span-2">
-        <UpcomingEventsWidget />
-      </WidgetCard>
-      <WidgetCard title="Notifications" description="Recent updates and announcements." className="lg:col-span-4">
-        <NotificationsWidget />
-      </WidgetCard>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="space-y-6">
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5 text-primary"/>Notifications</CardTitle>
+                    <CardDescription>Recent updates and announcements.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <NotificationsWidget />
+                </CardContent>
+            </Card>
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><BookOpen className="mr-2 h-5 w-5 text-primary"/>Today's Reading</CardTitle>
+                    <CardDescription>Your daily portion of the reading plan.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <TodayReadingWidget />
+                </CardContent>
+            </Card>
+        </div>
+        <div className="space-y-6">
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Calendar className="mr-2 h-5 w-5 text-primary"/>Upcoming Events</CardTitle>
+                    <CardDescription>What's happening next.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <UpcomingEventsWidget />
+                </CardContent>
+            </Card>
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center"><SkipForward className="mr-2 h-5 w-5 text-primary"/>Next Reading</CardTitle>
+                    <CardDescription>Keep up with the plan.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <NextReadingWidget />
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }
