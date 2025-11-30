@@ -3,23 +3,13 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-<<<<<<< HEAD
 import { useEffect, useState } from 'react';
-=======
-import { useEffect, useState, useTransition } from 'react';
->>>>>>> c1c5804 (Get rid of push notifications)
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, PanelLeft, Shield } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import type { SidebarPreferences } from '@/types';
 import { Switch } from '@/components/ui/switch';
-<<<<<<< HEAD
-=======
-import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
->>>>>>> c1c5804 (Get rid of push notifications)
 
 type SidebarConfigItem = {
   key: keyof SidebarPreferences;
@@ -52,12 +42,6 @@ export default function SettingsPage() {
   
   const [sidebarPrefs, setSidebarPrefs] = useState<Partial<SidebarPreferences>>(currentUser?.sidebar || {});
   
-<<<<<<< HEAD
-=======
-  const [isPending, startTransition] = useTransition();
-  const { toast } = useToast();
-
->>>>>>> c1c5804 (Get rid of push notifications)
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -75,26 +59,6 @@ export default function SettingsPage() {
     }
   }, [currentUser, loadingAuth, router, setIsPageLoading, isMounted]);
 
-<<<<<<< HEAD
-=======
-  
-  const handleNotifPrefToggle = async (key: keyof NotificationPreferences, isChecked: boolean) => {
-    if (!currentUser || key === 'admin') return; // Prevent changing admin notifications
-    const newPrefs = { ...notifPrefs, [key]: isChecked };
-    setNotifPrefs(newPrefs);
-    
-    startTransition(async () => {
-        try {
-            await updateUserProfile(currentUser.uid, { notificationPreferences: newPrefs });
-        } catch (error) {
-            console.error("Failed to update notification preference:", error);
-            const revertedPrefs = { ...notifPrefs, [key]: !isChecked };
-            setNotifPrefs(revertedPrefs); // Revert on error
-        }
-    });
-  };
-
->>>>>>> c1c5804 (Get rid of push notifications)
   const handleSidebarToggle = async (key: keyof SidebarPreferences, isChecked: boolean) => {
     if (!currentUser) return;
     const newPrefs = { ...sidebarPrefs, [key]: isChecked };
@@ -130,57 +94,6 @@ export default function SettingsPage() {
       
       <Card>
         <CardHeader>
-<<<<<<< HEAD
-=======
-            <CardTitle className="flex items-center"><Bell className="mr-2 h-5 w-5" /> In-App Notifications</CardTitle>
-            <CardDescription>Choose what in-app alerts you receive.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            
-            <div className="space-y-2 pt-4">
-                <h4 className="text-sm font-medium">Notification Types</h4>
-                 {notificationPrefsConfig.map(({key, label, description}) => (
-                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                        <div className="space-y-0.5">
-                            <Label htmlFor={`notif-switch-${key}`} className={cn(key === 'admin' && "text-muted-foreground")}>{label}</Label>
-                            <p className="text-xs text-muted-foreground">{description}</p>
-                        </div>
-                        <Switch
-                            id={`notif-switch-${key}`}
-                            checked={key === 'admin' ? true : notifPrefs[key as keyof typeof notifPrefs] ?? true}
-                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
-                            disabled={isPending || key === 'admin'}
-                            aria-label={label}
-                        />
-                    </div>
-                ))}
-                
-                <Separator className="my-4" />
-
-                <h4 className="text-sm font-medium pt-2">Event Reminders</h4>
-                 {reminderPrefsConfig.map(({key, label, description}) => (
-                    <div key={key} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
-                        <div className="space-y-0.5">
-                            <Label htmlFor={`notif-switch-${key}`} >{label}</Label>
-                            <p className="text-xs text-muted-foreground">{description}</p>
-                        </div>
-                        <Switch
-                            id={`notif-switch-${key}`}
-                            checked={notifPrefs[key as keyof typeof notifPrefs] ?? true}
-                            onCheckedChange={(checked) => handleNotifPrefToggle(key as keyof NotificationPreferences, checked)}
-                            disabled={isPending}
-                            aria-label={label}
-                        />
-                    </div>
-                ))}
-
-            </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
->>>>>>> c1c5804 (Get rid of push notifications)
           <CardTitle className="flex items-center"><PanelLeft className="mr-2 h-5 w-5" /> Sidebar Customization</CardTitle>
           <CardDescription>Choose which items you want to see in the sidebar.</CardDescription>
         </CardHeader>
