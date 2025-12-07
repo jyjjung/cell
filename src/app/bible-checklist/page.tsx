@@ -12,11 +12,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical } from 'lucide-react';
+import { Loader2, LibraryBig, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical, Target } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useToast } from '@/hooks/use-toast';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay, differenceInDays } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
@@ -173,6 +173,34 @@ export default function BibleChecklistPage() {
     return { total, completed, percentage };
   }, [plan, completedPassages, loadingChecklist, isGuest, today]);
 
+  const paceStats = useMemo(() => {
+    if (!plan?.dailyReadings || plan.dailyReadings.length === 0) {
+      return { chaptersLeft: 0, daysLeft: 0, chaptersPerDay: 0 };
+    }
+  
+    const allPassages = plan.dailyReadings.flatMap(day => day.passages || []);
+    const uniqueChaptersInPlan = new Set(allPassages.map(p => `${p.book} ${p.chapter}`));
+    const totalChapters = uniqueChaptersInPlan.size;
+  
+    const completedChapters = new Set<string>();
+    completedPassages.forEach(cp => {
+      const passage = allPassages.find(p => p.displayText === cp);
+      if (passage) {
+        completedChapters.add(`${passage.book} ${passage.chapter}`);
+      }
+    });
+    const completedChapterCount = completedChapters.size;
+  
+    const chaptersLeft = totalChapters - completedChapterCount;
+  
+    const lastReadingDate = parseISO(plan.dailyReadings[plan.dailyReadings.length - 1].date);
+    const daysLeft = differenceInDays(lastReadingDate, today);
+  
+    const chaptersPerDay = (daysLeft > 0 && chaptersLeft > 0) ? parseFloat((chaptersLeft / daysLeft).toFixed(2)) : chaptersLeft;
+  
+    return { chaptersLeft, daysLeft, chaptersPerDay };
+  }, [plan, completedPassages, today]);
+
 
   const currentWeek = useMemo(() => {
     return weeklyProgressData.find(week => week.isCurrent) || null;
@@ -240,6 +268,20 @@ export default function BibleChecklistPage() {
     visible: { opacity: 1, scale: 1 },
     exit: { opacity: 0, scale: 0.98 },
   };
+
+  const StatCard = ({ icon: Icon, title, value, unit }: { icon: React.ElementType, title: string, value: string | number, unit?: string }) => (
+    <Card className="flex-1">
+        <CardContent className="p-3">
+            <div className="flex items-center space-x-3">
+                <Icon className="h-6 w-6 text-primary" />
+                <div>
+                    <p className="text-xs text-muted-foreground">{title}</p>
+                    <p className="text-lg font-bold">{value} {unit && <span className="text-sm font-medium text-muted-foreground">{unit}</span>}</p>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+  );
 
 
   if (!isMounted || loadingAuth) {
@@ -379,17 +421,30 @@ export default function BibleChecklistPage() {
 
                   <motion.div variants={itemVariants}>
                       <Card>
-                          <CardContent className="p-4">
-                              <div className="flex items-center gap-4">
-                                  <Progress value={overallProgress.percentage} className="flex-grow" />
-                                  <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+                          <CardContent className="p-4 space-y-2">
+                              <div>
+                                  <p className="text-sm font-medium text-muted-foreground">Overall Progress</p>
+                                  <div className="flex items-center gap-4">
+                                      <Progress value={overallProgress.percentage} className="flex-grow" />
+                                      <span className="font-semibold text-muted-foreground">{Math.round(overallProgress.percentage)}%</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {isGuest 
+                                        ? `The plan is ${Math.round(overallProgress.percentage)}% complete as of today.`
+                                        : `${overallProgress.completed} of ${overallProgress.total} passages completed.`
+                                    }
+                                  </p>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-2">
-                                  {isGuest 
-                                    ? `The plan is ${Math.round(overallProgress.percentage)}% complete as of today.`
-                                    : `You have completed ${overallProgress.completed} of ${overallProgress.total} total passages.`
-                                  }
-                              </p>
+                              {!isGuest && paceStats.chaptersLeft > 0 && (
+                                <div className="pt-2 border-t">
+                                    <p className="text-sm font-medium text-muted-foreground">Pace to Finish</p>
+                                    <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                                        <StatCard icon={Target} title="Chapters Left" value={paceStats.chaptersLeft} />
+                                        <StatCard icon={CalendarDays} title="Days Left" value={paceStats.daysLeft} />
+                                        <StatCard icon={BookCheck} title="Avg Per Day" value={paceStats.chaptersPerDay} unit="ch" />
+                                    </div>
+                                </div>
+                              )}
                           </CardContent>
                       </Card>
                   </motion.div>
@@ -470,3 +525,5 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    
