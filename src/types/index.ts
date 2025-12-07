@@ -56,6 +56,7 @@ export interface SidebarPreferences {
   checklist: boolean;
   fullPlan: boolean;
   leaderboard: boolean;
+  holidayHomework: boolean;
   adminEvents?: boolean;
   adminMemoryVerses?: boolean;
   adminBiblePlan?: boolean;

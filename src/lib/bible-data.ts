@@ -81,6 +81,8 @@ export const CANONICAL_BIBLE_ORDER = Object.values(BIBLE_BOOKS_DATA)
   .sort((a, b) => a.order - b.order)
   .map(book => book.fullName);
 
+export const NEW_TESTAMENT_ORDER = CANONICAL_BIBLE_ORDER.slice(CANONICAL_BIBLE_ORDER.indexOf('Matthew'));
+
 export const PRESET_CUSTOM_ORDER_STRINGS: string[] = [
   "Genesis 1-50", "Exodus 1-40", "Leviticus 1-27", "Numbers 1-36", "Deuteronomy 1-34",
   "Joshua 1-24", "Judges 1-21", "Ruth 1-4", "1 Samuel 1-31", "2 Samuel 1-24",
@@ -111,4 +113,3 @@ Object.values(BIBLE_BOOKS_DATA).forEach(bookMeta => {
     BOOK_NAME_LOOKUP_MAP.set(bookMeta.fullName.toLowerCase().replace(/\s+/g, ''), bookMeta.fullName); // e.g. "1kings"
 });
 BOOK_NAME_LOOKUP_MAP.set("song of songs", "Song of Solomon"); // Alias
-
