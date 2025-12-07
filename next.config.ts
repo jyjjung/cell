@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version,
   },
+  experimental: {
+    allowedDevOrigins: [
+        "http://localhost:9002",
+        "https://6000-firebase-studio-1747563616638.cluster-ikxjzjhlifcwuroomfkjrx437g.cloudworkstations.dev",
+        "https://9000-firebase-studio-1747563616638.cluster-ikxjzjhlifcwuroomfkjrx437g.cloudworkstations.dev"
+    ]
+  }
 };
 
 export default withPWA(nextConfig);
