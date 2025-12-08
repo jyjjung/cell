@@ -48,6 +48,11 @@ export interface BibleReadingPlan {
   updatedAt?: Timestamp; // Optional: for Firestore server timestamp
 }
 
+export interface HolidayHomeworkPreferences {
+  deadline: 'rejoice' | 'school';
+  readingDays: string[];
+}
+
 export interface SidebarPreferences {
   home: boolean;
   notifications: boolean;
@@ -82,6 +87,7 @@ export interface AppUser extends FirebaseUser {
   dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;
+  holidayHomework?: HolidayHomeworkPreferences;
 }
 
 
@@ -97,6 +103,7 @@ export interface UserProfileData {
   dashboard?: DashboardPreferences;
   fcmTokens?: string[];
   isAdmin?: boolean;
+  holidayHomework?: HolidayHomeworkPreferences;
 }
 
 
@@ -143,3 +150,5 @@ export interface AppNotification {
   readBy: string[]; // Array of user UIDs who have read it
   relatedUrl?: string; // e.g., link to the event or reading plan
 }
+
+    

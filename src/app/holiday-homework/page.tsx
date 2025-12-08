@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useHolidayChecklist } from '@/hooks/use-holiday-checklist';
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { HolidayHomeworkPreferences } from '@/types';
 
 const REJOICE_DEADLINE = new Date('2026-01-16T00:00:00');
 const SCHOOL_DEADLINE = new Date('2026-01-27T00:00:00');
@@ -26,18 +27,47 @@ const totalNewTestamentChapters = NEW_TESTAMENT_ORDER.reduce((acc, bookName) => 
 
 
 export default function HolidayHomeworkPage() {
-    const { currentUser, loadingAuth } = useAuth();
+    const { currentUser, loadingAuth, updateUserProfile } = useAuth();
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const { completedChapters, toggleChapterCompletion, loadingChecklist } = useHolidayChecklist();
-    const [selectedDays, setSelectedDays] = useState<string[]>(['1', '2', '3', '4', '5']); // Default to Mon-Fri
-    const [deadlineOption, setDeadlineOption] = useState('rejoice');
+
+    const [selectedDays, setSelectedDays] = useState<string[]>(currentUser?.holidayHomework?.readingDays ?? ['1', '2', '3', '4', '5']);
+    const [deadlineOption, setDeadlineOption] = useState<'rejoice' | 'school'>(currentUser?.holidayHomework?.deadline ?? 'rejoice');
 
     const DEADLINE = useMemo(() => {
         return deadlineOption === 'rejoice' ? REJOICE_DEADLINE : SCHOOL_DEADLINE;
     }, [deadlineOption]);
 
-    useEffect(() => { setIsMounted(true); }, []);
+    useEffect(() => { 
+        setIsMounted(true); 
+        if (currentUser?.holidayHomework) {
+            setDeadlineOption(currentUser.holidayHomework.deadline);
+            setSelectedDays(currentUser.holidayHomework.readingDays);
+        }
+    }, [currentUser]);
+
+
+    const handlePreferencesChange = useCallback((prefs: Partial<HolidayHomeworkPreferences>) => {
+        if (!currentUser) return;
+        const newPrefs = {
+            deadline: deadlineOption,
+            readingDays: selectedDays,
+            ...prefs
+        };
+        updateUserProfile(currentUser.uid, { holidayHomework: newPrefs });
+    }, [currentUser, deadlineOption, selectedDays, updateUserProfile]);
+
+    const handleDeadlineChange = (value: 'rejoice' | 'school') => {
+        setDeadlineOption(value);
+        handlePreferencesChange({ deadline: value });
+    };
+
+    const handleDaysChange = (value: string[]) => {
+        setSelectedDays(value);
+        handlePreferencesChange({ readingDays: value });
+    };
+
 
     const { daysLeft, isPastDeadline } = useMemo(() => {
         const today = startOfDay(new Date());
@@ -147,7 +177,7 @@ export default function HolidayHomeworkPage() {
                 <CardContent className="space-y-6">
                     <div>
                         <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
-                        <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={setDeadlineOption} className="flex space-x-4">
+                        <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="rejoice" id="rejoice" />
                                 <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
@@ -165,7 +195,7 @@ export default function HolidayHomeworkPage() {
                             type="multiple" 
                             variant="outline" 
                             value={selectedDays} 
-                            onValueChange={(value) => setSelectedDays(value)}
+                            onValueChange={handleDaysChange}
                             className="flex-wrap justify-start"
                          >
                             {DAYS_OF_WEEK.map((day, index) => (
@@ -222,3 +252,5 @@ export default function HolidayHomeworkPage() {
         </div>
     );
 }
+
+    

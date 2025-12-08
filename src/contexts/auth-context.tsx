@@ -15,7 +15,7 @@ import {
   updateProfile as updateFirebaseProfile, // For Firebase built-in displayName
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import type { AppUser, UserProfileData, SidebarPreferences, DashboardPreferences } from '@/types';
+import type { AppUser, UserProfileData, SidebarPreferences, DashboardPreferences, HolidayHomeworkPreferences } from '@/types';
 import { usePageLoading } from '@/contexts/page-loading-context';
 
 
@@ -46,6 +46,7 @@ const defaultSidebarPreferences: SidebarPreferences = {
   checklist: true,
   fullPlan: true,
   leaderboard: true,
+  holidayHomework: true,
   adminEvents: true,
   adminMemoryVerses: true,
   adminBiblePlan: true,
@@ -57,6 +58,11 @@ const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   todayReading: true,
   upcomingEvents: true,
   nextReading: true,
+};
+
+const defaultHolidayHomeworkPreferences: HolidayHomeworkPreferences = {
+    deadline: 'rejoice',
+    readingDays: ['1','2','3','4','5'],
 };
 
 
@@ -88,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
             },
             isAdmin: profileData.isAdmin || false,
+            holidayHomework: { ...defaultHolidayHomeworkPreferences, ...(profileData.holidayHomework || {}) },
           } as AppUser);
           setIsAdmin(profileData.isAdmin || false); // Set admin state from Firestore
         } else {
@@ -106,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               layouts: {}, // Let it be populated on first dashboard use
             },
             isAdmin: false, // Default to not admin
+            holidayHomework: defaultHolidayHomeworkPreferences,
           };
           await setDoc(userDocRef, newProfileData);
           // Also update Firebase Auth profile if possible (for displayName)
@@ -119,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sidebar: newProfileData.sidebar,
             dashboard: newProfileData.dashboard,
             isAdmin: newProfileData.isAdmin,
+            holidayHomework: newProfileData.holidayHomework,
           } as AppUser);
           setIsAdmin(false);
         }
@@ -179,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           layouts: {},
         },
         isAdmin: false,
+        holidayHomework: defaultHolidayHomeworkPreferences,
       };
       await setDoc(userDocRef, newProfileData);
       // Also update Firebase Auth profile if possible (for displayName)
@@ -260,6 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sidebar: profileData.sidebar !== undefined ? { ...prevUser.sidebar, ...profileData.sidebar } : prevUser.sidebar,
           dashboard: profileData.dashboard !== undefined ? { ...(prevUser.dashboard || { widgetVisibility: {}, layouts: {} }), ...profileData.dashboard } : prevUser.dashboard,
           isAdmin: profileData.isAdmin !== undefined ? profileData.isAdmin : prevUser.isAdmin,
+          holidayHomework: profileData.holidayHomework !== undefined ? { ...(prevUser.holidayHomework || defaultHolidayHomeworkPreferences), ...profileData.holidayHomework } : prevUser.holidayHomework,
         };
         return updatedUser;
       });
@@ -301,3 +312,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
