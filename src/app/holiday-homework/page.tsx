@@ -6,15 +6,17 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useHolidayChecklist } from '@/hooks/use-holiday-checklist';
 import { BIBLE_BOOKS_DATA, NEW_TESTAMENT_ORDER } from '@/lib/bible-data';
-import { differenceInDays, isAfter, startOfDay, parseISO } from 'date-fns';
+import { differenceInDays, isAfter, startOfDay, parseISO, eachDayOfInterval, getDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
-const DEADLINE = new Date('2026-01-27T00:00:00');
+const DEADLINE = new Date('2024-12-16T00:00:00');
+const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const totalNewTestamentChapters = NEW_TESTAMENT_ORDER.reduce((acc, bookName) => {
     return acc + (BIBLE_BOOKS_DATA[bookName]?.chapters || 0);
@@ -26,6 +28,7 @@ export default function HolidayHomeworkPage() {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const { completedChapters, toggleChapterCompletion, loadingChecklist } = useHolidayChecklist();
+    const [selectedDays, setSelectedDays] = useState<string[]>(['1', '2', '3', '4', '5']); // Default to Mon-Fri
 
     useEffect(() => { setIsMounted(true); }, []);
 
@@ -44,9 +47,18 @@ export default function HolidayHomeworkPage() {
     }, [completedChapters]);
 
     const chaptersPerDay = useMemo(() => {
-        if (daysLeft === 0 || chaptersLeft === 0) return chaptersLeft;
-        return parseFloat((chaptersLeft / daysLeft).toFixed(2));
-    }, [chaptersLeft, daysLeft]);
+        const today = startOfDay(new Date());
+        if (isPastDeadline || chaptersLeft <= 0 || selectedDays.length === 0) return 0;
+        
+        const readingDaysInRange = eachDayOfInterval({ start: today, end: DEADLINE }).filter(date => {
+            const dayOfWeek = getDay(date); // 0 for Sunday, 1 for Monday, etc.
+            return selectedDays.includes(dayOfWeek.toString());
+        }).length;
+
+        if (readingDaysInRange === 0) return chaptersLeft; // Or handle as infinity/error
+
+        return parseFloat((chaptersLeft / readingDaysInRange).toFixed(2));
+    }, [chaptersLeft, isPastDeadline, selectedDays]);
     
     const overallProgressPercentage = useMemo(() => {
         if (totalNewTestamentChapters === 0) return 0;
@@ -78,20 +90,21 @@ export default function HolidayHomeworkPage() {
                         <CardTitle>Homework Period Over</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">The holiday homework period ended on January 27, 2026.</p>
+                        <p className="text-muted-foreground">The holiday homework period ended on December 16, 2024.</p>
                     </CardContent>
                 </Card>
             </div>
         );
     }
 
-    const StatCard = ({ icon: Icon, title, value, unit }: { icon: React.ElementType, title: string, value: string | number, unit: string }) => (
+    const StatCard = ({ icon: Icon, title, value, unit, description }: { icon: React.ElementType, title: string, value: string | number, unit: string, description?: string }) => (
         <Card className="flex-1">
             <CardContent className="p-4 flex items-center space-x-4">
                 <Icon className="h-8 w-8 text-primary" />
                 <div>
                     <p className="text-sm text-muted-foreground">{title}</p>
                     <p className="text-2xl font-bold">{value} <span className="text-lg font-medium text-muted-foreground">{unit}</span></p>
+                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
                 </div>
             </CardContent>
         </Card>
@@ -110,15 +123,38 @@ export default function HolidayHomeworkPage() {
                 </CardHeader>
                 <CardContent>
                     <Progress value={overallProgressPercentage} className="h-4" />
-                    <p className="text-right text-sm mt-2 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete</p>
+                    <p className="text-right text-sm mt-2 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete ({completedChapters.size}/{totalNewTestamentChapters})</p>
                 </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatCard icon={Target} title="Chapters Left" value={chaptersLeft} unit="chapters" />
                 <StatCard icon={CalendarClock} title="Days Left" value={daysLeft} unit="days" />
-                <StatCard icon={Book} title="Pace" value={chaptersPerDay} unit="chapters/day" />
+                <StatCard icon={Book} title="Custom Pace" value={chaptersPerDay} unit="ch/day" description="Based on selected days"/>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pace Calculator</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
+                     <ToggleGroup 
+                        id="reading-days"
+                        type="multiple" 
+                        variant="outline" 
+                        value={selectedDays} 
+                        onValueChange={(value) => setSelectedDays(value)}
+                        className="flex-wrap justify-start"
+                     >
+                        {DAYS_OF_WEEK.map((day, index) => (
+                             <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
+                                {day}
+                             </ToggleGroupItem>
+                        ))}
+                    </ToggleGroup>
+                </CardContent>
+            </Card>
 
             <Accordion type="multiple" className="w-full space-y-2">
                 {NEW_TESTAMENT_ORDER.map(bookName => {
