@@ -14,8 +14,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const DEADLINE = new Date('2024-12-16T00:00:00');
+const REJOICE_DEADLINE = new Date('2026-01-16T00:00:00');
+const SCHOOL_DEADLINE = new Date('2026-01-27T00:00:00');
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const totalNewTestamentChapters = NEW_TESTAMENT_ORDER.reduce((acc, bookName) => {
@@ -29,6 +31,11 @@ export default function HolidayHomeworkPage() {
     const [isMounted, setIsMounted] = useState(false);
     const { completedChapters, toggleChapterCompletion, loadingChecklist } = useHolidayChecklist();
     const [selectedDays, setSelectedDays] = useState<string[]>(['1', '2', '3', '4', '5']); // Default to Mon-Fri
+    const [deadlineOption, setDeadlineOption] = useState('rejoice');
+
+    const DEADLINE = useMemo(() => {
+        return deadlineOption === 'rejoice' ? REJOICE_DEADLINE : SCHOOL_DEADLINE;
+    }, [deadlineOption]);
 
     useEffect(() => { setIsMounted(true); }, []);
 
@@ -40,7 +47,7 @@ export default function HolidayHomeworkPage() {
             daysLeft: Math.max(0, diff),
             isPastDeadline: isAfter(today, deadlineDay)
         };
-    }, []);
+    }, [DEADLINE]);
 
     const chaptersLeft = useMemo(() => {
         return totalNewTestamentChapters - completedChapters.size;
@@ -58,7 +65,7 @@ export default function HolidayHomeworkPage() {
         if (readingDaysInRange === 0) return chaptersLeft; // Or handle as infinity/error
 
         return parseFloat((chaptersLeft / readingDaysInRange).toFixed(2));
-    }, [chaptersLeft, isPastDeadline, selectedDays]);
+    }, [chaptersLeft, isPastDeadline, selectedDays, DEADLINE]);
     
     const overallProgressPercentage = useMemo(() => {
         if (totalNewTestamentChapters === 0) return 0;
@@ -90,7 +97,7 @@ export default function HolidayHomeworkPage() {
                         <CardTitle>Homework Period Over</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">The holiday homework period ended on December 16, 2024.</p>
+                        <p className="text-muted-foreground">The holiday homework period has ended.</p>
                     </CardContent>
                 </Card>
             </div>
@@ -137,22 +144,37 @@ export default function HolidayHomeworkPage() {
                 <CardHeader>
                     <CardTitle>Pace Calculator</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
-                     <ToggleGroup 
-                        id="reading-days"
-                        type="multiple" 
-                        variant="outline" 
-                        value={selectedDays} 
-                        onValueChange={(value) => setSelectedDays(value)}
-                        className="flex-wrap justify-start"
-                     >
-                        {DAYS_OF_WEEK.map((day, index) => (
-                             <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
-                                {day}
-                             </ToggleGroupItem>
-                        ))}
-                    </ToggleGroup>
+                <CardContent className="space-y-6">
+                    <div>
+                        <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
+                        <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={setDeadlineOption} className="flex space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="rejoice" id="rejoice" />
+                                <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="school" id="school" />
+                                <Label htmlFor="school">Start of School (27/01/26)</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                    <div>
+                        <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
+                         <ToggleGroup 
+                            id="reading-days"
+                            type="multiple" 
+                            variant="outline" 
+                            value={selectedDays} 
+                            onValueChange={(value) => setSelectedDays(value)}
+                            className="flex-wrap justify-start"
+                         >
+                            {DAYS_OF_WEEK.map((day, index) => (
+                                 <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
+                                    {day}
+                                 </ToggleGroupItem>
+                            ))}
+                        </ToggleGroup>
+                    </div>
                 </CardContent>
             </Card>
 
