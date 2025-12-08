@@ -8,7 +8,7 @@ import { useHolidayChecklist } from '@/hooks/use-holiday-checklist';
 import { BIBLE_BOOKS_DATA, NEW_TESTAMENT_ORDER } from '@/lib/bible-data';
 import { differenceInDays, isAfter, startOfDay, parseISO, eachDayOfInterval, getDay, format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass, CheckCircle, ArrowLeft } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -17,7 +17,8 @@ import { Label } from '@/components/ui/label';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import type { HolidayHomeworkPreferences, DailyReading, StructuredPassage } from '@/types';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
 
 const REJOICE_DEADLINE = new Date('2026-01-16T00:00:00');
 const SCHOOL_DEADLINE = new Date('2026-01-27T00:00:00');
@@ -34,6 +35,17 @@ const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMa
 });
 const totalNewTestamentChapters = newTestamentReadingUnits.length;
 
+type HolidayWeek = {
+    weekNumber: number;
+    startDate: Date;
+    endDate: Date;
+    readings: DailyReading[];
+};
+
+type ViewState = 
+  | { view: 'all-weeks' }
+  | { view: 'single-week-details'; week: HolidayWeek };
+
 
 export default function HolidayHomeworkPage() {
     const { currentUser, loadingAuth, updateUserProfile } = useAuth();
@@ -43,6 +55,7 @@ export default function HolidayHomeworkPage() {
 
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [deadlineOption, setDeadlineOption] = useState<'rejoice' | 'school'>('rejoice');
+    const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
 
     const DEADLINE = useMemo(() => {
         return deadlineOption === 'rejoice' ? REJOICE_DEADLINE : SCHOOL_DEADLINE;
@@ -118,7 +131,7 @@ export default function HolidayHomeworkPage() {
         return { dynamicHomeworkPlan: plan, chaptersPerDay: calculatedChaptersPerDay };
     }, [completedChapters, isPastDeadline, selectedDays, DEADLINE]);
     
-    const weeklyHomeworkData = useMemo(() => {
+    const weeklyHomeworkData = useMemo((): HolidayWeek[] => {
         const weeksMap = new Map<string, DailyReading[]>();
         dynamicHomeworkPlan.forEach(reading => {
             const date = parseISO(reading.date);
@@ -188,116 +201,147 @@ export default function HolidayHomeworkPage() {
         visible: { y: 0, opacity: 1 },
     };
 
+    const viewVariants = {
+      hidden: { opacity: 0, scale: 0.98 },
+      visible: { opacity: 1, scale: 1 },
+      exit: { opacity: 0, scale: 0.98 },
+    };
+
     return (
         <div className="container mx-auto py-8 max-w-4xl">
-            <motion.div 
-                className="space-y-8"
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-            >
-                <motion.div variants={itemVariants} className="flex items-center space-x-3 mb-6">
-                    <BookCheck className="h-8 w-8 text-primary" />
-                    <h1 className="text-3xl font-bold tracking-tight">Holiday Homework: New Testament</h1>
-                </motion.div>
+            <AnimatePresence mode="wait">
+                <div key={viewState.view}>
+                    {viewState.view === 'single-week-details' && (
+                        <motion.div 
+                            className="space-y-6"
+                            variants={viewVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            transition={{ duration: 0.2 }}
+                        >
+                            <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="mb-4">
+                                <ArrowLeft className="mr-2 h-4 w-4"/> Back to Plan
+                            </Button>
+                            <h1 className="text-3xl font-bold tracking-tight">Week {viewState.week.weekNumber}: {format(viewState.week.startDate, 'MMM d')} - {format(viewState.week.endDate, 'MMM d')}</h1>
+                            <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={isSameDay(startOfWeek(new Date(), {weekStartsOn: 0}), viewState.week.startDate) ? format(new Date(), 'yyyy-MM-dd') : undefined}>
+                                {viewState.week.readings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()).map(reading => (
+                                    <BiblePlanDisplay
+                                        key={reading.date}
+                                        readingToDisplay={reading}
+                                        currentUser={currentUser}
+                                        completedPassages={Array.from(completedChapters)}
+                                        togglePassageCompletion={toggleChapterCompletion}
+                                        allPassageTextsForDay={reading.passages.map(p => p.displayText)}
+                                        loading={loadingChecklist}
+                                        planAvailable={true}
+                                        hidePlanMeta={true}
+                                        defaultOpen={isSameDay(new Date(), parseISO(reading.date))}
+                                    />
+                                ))}
+                            </Accordion>
+                        </motion.div>
+                    )}
 
-                <motion.div variants={itemVariants}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Pace Calculator</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div>
-                                <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
-                                <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="rejoice" id="rejoice" />
-                                        <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <RadioGroupItem value="school" id="school" />
-                                        <Label htmlFor="school">Start of School (27/01/26)</Label>
-                                    </div>
-                                </RadioGroup>
-                            </div>
-                            <div>
-                                <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
-                                <ToggleGroup 
-                                    id="reading-days"
-                                    type="multiple" 
-                                    variant="outline" 
-                                    value={selectedDays} 
-                                    onValueChange={handleDaysChange}
-                                    className="flex-wrap justify-start"
-                                >
-                                    {DAYS_OF_WEEK.map((day, index) => (
-                                        <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
-                                            {day}
-                                        </ToggleGroupItem>
+                    {viewState.view === 'all-weeks' && (
+                        <motion.div 
+                            className="space-y-8"
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                        >
+                            <motion.div variants={itemVariants} className="flex items-center space-x-3 mb-6">
+                                <BookCheck className="h-8 w-8 text-primary" />
+                                <h1 className="text-3xl font-bold tracking-tight">Holiday Homework: New Testament</h1>
+                            </motion.div>
+
+                            <motion.div variants={itemVariants}>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Pace Calculator</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        <div>
+                                            <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
+                                            <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="rejoice" id="rejoice" />
+                                                    <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <RadioGroupItem value="school" id="school" />
+                                                    <Label htmlFor="school">Start of School (27/01/26)</Label>
+                                                </div>
+                                            </RadioGroup>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
+                                            <ToggleGroup 
+                                                id="reading-days"
+                                                type="multiple" 
+                                                variant="outline" 
+                                                value={selectedDays} 
+                                                onValueChange={handleDaysChange}
+                                                className="flex-wrap justify-start"
+                                            >
+                                                {DAYS_OF_WEEK.map((day, index) => (
+                                                    <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
+                                                        {day}
+                                                    </ToggleGroupItem>
+                                                ))}
+                                            </ToggleGroup>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+
+                            <motion.div variants={itemVariants}>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>My Plan</CardTitle>
+                                        <div className="text-sm text-muted-foreground pt-2">
+                                            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                                                <span><strong className="text-foreground">{chaptersPerDay}</strong> chapters/day</span>
+                                                <span><strong className="text-foreground">{daysLeft}</strong> days left</span>
+                                                <span><strong className="text-foreground">{totalNewTestamentChapters - completedChapters.size}</strong> chapters left</span>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Progress value={overallProgressPercentage} className="h-2" />
+                                        <p className="text-right text-xs mt-1 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete ({completedChapters.size}/{totalNewTestamentChapters})</p>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+
+                            {weeklyHomeworkData.length > 0 ? (
+                                <motion.div variants={itemVariants} className="space-y-4">
+                                     <h2 className="text-2xl font-bold tracking-tight">Weekly Schedule</h2>
+                                    {weeklyHomeworkData.map(week => (
+                                        <Card 
+                                            key={week.weekNumber}
+                                            className="shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:border-primary/50"
+                                            onClick={() => setViewState({ view: 'single-week-details', week })}
+                                        >
+                                            <CardHeader>
+                                                <CardTitle>Week {week.weekNumber}: {format(week.startDate, 'MMM d')} - {format(week.endDate, 'MMM d')}</CardTitle>
+                                            </CardHeader>
+                                        </Card>
                                     ))}
-                                </ToggleGroup>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>My Plan</CardTitle>
-                            <div className="text-sm text-muted-foreground pt-2">
-                                <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                                    <span><strong className="text-foreground">{chaptersPerDay}</strong> chapters/day</span>
-                                    <span><strong className="text-foreground">{daysLeft}</strong> days left</span>
-                                    <span><strong className="text-foreground">{totalNewTestamentChapters - completedChapters.size}</strong> chapters left</span>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Progress value={overallProgressPercentage} className="h-2" />
-                            <p className="text-right text-xs mt-1 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete ({completedChapters.size}/{totalNewTestamentChapters})</p>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {weeklyHomeworkData.length > 0 ? (
-                    <motion.div variants={itemVariants} className="space-y-4">
-                        {weeklyHomeworkData.map(week => (
-                            <Card key={week.weekNumber}>
-                                <CardHeader>
-                                    <CardTitle>Week {week.weekNumber}: {format(week.startDate, 'MMM d')} - {format(week.endDate, 'MMM d')}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                     <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={isSameDay(startOfWeek(new Date(), {weekStartsOn: 0}), week.startDate) ? format(new Date(), 'yyyy-MM-dd') : undefined}>
-                                        {week.readings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()).map(reading => (
-                                            <BiblePlanDisplay
-                                                key={reading.date}
-                                                readingToDisplay={reading}
-                                                currentUser={currentUser}
-                                                completedPassages={Array.from(completedChapters)}
-                                                togglePassageCompletion={toggleChapterCompletion}
-                                                allPassageTextsForDay={reading.passages.map(p => p.displayText)}
-                                                loading={loadingChecklist}
-                                                planAvailable={true}
-                                                hidePlanMeta={true}
-                                                defaultOpen={isSameDay(new Date(), parseISO(reading.date))}
-                                            />
-                                        ))}
-                                    </Accordion>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </motion.div>
-                ) : (
-                    <motion.div variants={itemVariants}>
-                        <Card className="text-center p-8">
-                            <CardContent>
-                                <p className="text-muted-foreground">Your reading plan will appear here once you set your preferences.</p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                )}
-            </motion.div>
+                                </motion.div>
+                            ) : (
+                                <motion.div variants={itemVariants}>
+                                    <Card className="text-center p-8">
+                                        <CardContent>
+                                            <p className="text-muted-foreground">Your reading plan will appear here once you set your preferences.</p>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
+            </AnimatePresence>
         </div>
     );
 }
