@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo, Fragment } from 'react';
@@ -174,8 +175,8 @@ export default function BibleChecklistPage() {
   }, [plan, completedPassages, loadingChecklist, isGuest, today]);
 
   const paceStats = useMemo(() => {
-    if (!plan?.dailyReadings || plan.dailyReadings.length === 0) {
-      return { chaptersLeft: 0, daysLeft: 0, chaptersPerDay: 0 };
+    if (!plan?.dailyReadings || plan.dailyReadings.length === 0 || isGuest) {
+      return { chaptersLeft: 0, daysLeft: 0, chaptersPerDay: 0, chaptersToCatchUp: 0, catchUpPace: 0 };
     }
   
     const allPassages = plan.dailyReadings.flatMap(day => day.passages || []);
@@ -190,16 +191,31 @@ export default function BibleChecklistPage() {
       }
     });
     const completedChapterCount = completedChapters.size;
-  
     const chaptersLeft = totalChapters - completedChapterCount;
   
     const lastReadingDate = parseISO(plan.dailyReadings[plan.dailyReadings.length - 1].date);
-    const daysLeft = differenceInDays(lastReadingDate, today);
-  
+    const daysLeft = isValid(lastReadingDate) ? differenceInDays(lastReadingDate, today) : 0;
     const chaptersPerDay = (daysLeft > 0 && chaptersLeft > 0) ? parseFloat((chaptersLeft / daysLeft).toFixed(2)) : chaptersLeft;
-  
-    return { chaptersLeft, daysLeft, chaptersPerDay };
-  }, [plan, completedPassages, today]);
+
+    // Catch up logic
+    const chaptersToDate = new Set<string>();
+    plan.dailyReadings.forEach(day => {
+        const dayDate = parseISO(day.date);
+        if (isValid(dayDate) && isBefore(dayDate, today)) {
+            (day.passages || []).forEach(p => chaptersToDate.add(`${p.book} ${p.chapter}`));
+        }
+    });
+
+    let chaptersToCatchUp = 0;
+    chaptersToDate.forEach(ch => {
+        if (!completedChapters.has(ch)) {
+            chaptersToCatchUp++;
+        }
+    });
+    const catchUpPace = chaptersToCatchUp > 0 ? parseFloat((chaptersToCatchUp / 7).toFixed(2)) : 0;
+
+    return { chaptersLeft, daysLeft, chaptersPerDay, chaptersToCatchUp, catchUpPace };
+  }, [plan, completedPassages, today, isGuest]);
 
 
   const currentWeek = useMemo(() => {
@@ -269,7 +285,7 @@ export default function BibleChecklistPage() {
     exit: { opacity: 0, scale: 0.98 },
   };
 
-  const StatCard = ({ icon: Icon, title, value, unit }: { icon: React.ElementType, title: string, value: string | number, unit?: string }) => (
+  const StatCard = ({ icon: Icon, title, value, unit, description }: { icon: React.ElementType, title: string, value: string | number, unit?: string, description?: string }) => (
     <Card className="flex-1">
         <CardContent className="p-3">
             <div className="flex items-center space-x-3">
@@ -277,6 +293,7 @@ export default function BibleChecklistPage() {
                 <div>
                     <p className="text-xs text-muted-foreground">{title}</p>
                     <p className="text-lg font-bold">{value} {unit && <span className="text-sm font-medium text-muted-foreground">{unit}</span>}</p>
+                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
                 </div>
             </div>
         </CardContent>
@@ -445,6 +462,20 @@ export default function BibleChecklistPage() {
                                     </div>
                                 </div>
                               )}
+                              {!isGuest && paceStats.catchUpPace > 0 && (
+                                <div className="pt-2 border-t">
+                                    <p className="text-sm font-medium text-muted-foreground">Catch Up</p>
+                                    <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                                        <StatCard 
+                                          icon={BookUp} 
+                                          title="Chapters to Catch Up" 
+                                          value={paceStats.chaptersToCatchUp} 
+                                          unit="ch" 
+                                          description={`~${paceStats.catchUpPace} per day for a week`}
+                                        />
+                                    </div>
+                                </div>
+                              )}
                           </CardContent>
                       </Card>
                   </motion.div>
@@ -525,5 +556,7 @@ export default function BibleChecklistPage() {
     </div>
   );
 }
+
+    
 
     
