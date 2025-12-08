@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered, Settings, Bell, BellRing, ClipboardList } from 'lucide-react';
+import { Home, ListChecks, BookOpen, BrainCircuit, User, LogIn, UserPlus, Shield, LogOut, Calendar, Users, BookMarked, ListOrdered, Settings, Bell, BellRing, BookCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -77,7 +77,7 @@ export default function AppSidebar() {
     { href: '/bible-checklist', label: 'Reading Plan', icon: ListChecks, requiresGuest: true, tooltip: 'Reading Plan', key: 'checklist' },
     { href: '/full-plan', label: 'Full Plan', icon: BookOpen, tooltip: 'Full Plan', key: 'fullPlan' },
     { href: '/leaderboard', label: 'Leaderboard', icon: Users, tooltip: 'Leaderboard', requiresAuth: true, key: 'leaderboard' },
-    { href: '/holiday-homework', label: 'Holiday Homework', icon: ClipboardList, requiresAuth: true, tooltip: 'Holiday Homework', key: 'holidayHomework' },
+    { href: '/holiday-homework', label: 'Holiday Homework', icon: BookCheck, requiresAuth: true, tooltip: 'Holiday Homework', key: 'holidayHomework' },
   ];
   
   const adminNavItems = [

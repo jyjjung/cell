@@ -6,24 +6,33 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useHolidayChecklist } from '@/hooks/use-holiday-checklist';
 import { BIBLE_BOOKS_DATA, NEW_TESTAMENT_ORDER } from '@/lib/bible-data';
-import { differenceInDays, isAfter, startOfDay, parseISO, eachDayOfInterval, getDay } from 'date-fns';
+import { differenceInDays, isAfter, startOfDay, parseISO, eachDayOfInterval, getDay, format, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass } from 'lucide-react';
+import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass, CheckCircle, ArrowLeft } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import type { HolidayHomeworkPreferences } from '@/types';
+import { Label } from '@/components/ui/label';
+import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import type { HolidayHomeworkPreferences, DailyReading, StructuredPassage } from '@/types';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 const REJOICE_DEADLINE = new Date('2026-01-16T00:00:00');
 const SCHOOL_DEADLINE = new Date('2026-01-27T00:00:00');
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const totalNewTestamentChapters = NEW_TESTAMENT_ORDER.reduce((acc, bookName) => {
-    return acc + (BIBLE_BOOKS_DATA[bookName]?.chapters || 0);
-}, 0);
+const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMap(bookName => {
+    const bookData = BIBLE_BOOKS_DATA[bookName];
+    if (!bookData) return [];
+    return Array.from({ length: bookData.chapters }, (_, i) => i + 1).map(chapter => ({
+        book: bookName,
+        chapter,
+        displayText: `${bookName} ${chapter}`
+    }));
+});
+const totalNewTestamentChapters = newTestamentReadingUnits.length;
 
 
 export default function HolidayHomeworkPage() {
@@ -32,8 +41,8 @@ export default function HolidayHomeworkPage() {
     const [isMounted, setIsMounted] = useState(false);
     const { completedChapters, toggleChapterCompletion, loadingChecklist } = useHolidayChecklist();
 
-    const [selectedDays, setSelectedDays] = useState<string[]>(currentUser?.holidayHomework?.readingDays ?? ['1', '2', '3', '4', '5']);
-    const [deadlineOption, setDeadlineOption] = useState<'rejoice' | 'school'>(currentUser?.holidayHomework?.deadline ?? 'rejoice');
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [deadlineOption, setDeadlineOption] = useState<'rejoice' | 'school'>('rejoice');
 
     const DEADLINE = useMemo(() => {
         return deadlineOption === 'rejoice' ? REJOICE_DEADLINE : SCHOOL_DEADLINE;
@@ -42,32 +51,32 @@ export default function HolidayHomeworkPage() {
     useEffect(() => { 
         setIsMounted(true); 
         if (currentUser?.holidayHomework) {
-            setDeadlineOption(currentUser.holidayHomework.deadline);
-            setSelectedDays(currentUser.holidayHomework.readingDays);
+            setDeadlineOption(currentUser.holidayHomework.deadline ?? 'rejoice');
+            setSelectedDays(currentUser.holidayHomework.readingDays ?? ['1', '2', '3', '4', '5']);
         }
     }, [currentUser]);
 
-
     const handlePreferencesChange = useCallback((prefs: Partial<HolidayHomeworkPreferences>) => {
-        if (!currentUser) return;
+        if (!currentUser || loadingAuth) return;
         const newPrefs = {
             deadline: deadlineOption,
             readingDays: selectedDays,
             ...prefs
         };
         updateUserProfile(currentUser.uid, { holidayHomework: newPrefs });
-    }, [currentUser, deadlineOption, selectedDays, updateUserProfile]);
+    }, [currentUser, loadingAuth, deadlineOption, selectedDays, updateUserProfile]);
 
     const handleDeadlineChange = (value: 'rejoice' | 'school') => {
+        if (!value) return;
         setDeadlineOption(value);
         handlePreferencesChange({ deadline: value });
     };
 
     const handleDaysChange = (value: string[]) => {
+        if (value.length === 0) return; // Prevent unselecting all days
         setSelectedDays(value);
         handlePreferencesChange({ readingDays: value });
     };
-
 
     const { daysLeft, isPastDeadline } = useMemo(() => {
         const today = startOfDay(new Date());
@@ -79,24 +88,59 @@ export default function HolidayHomeworkPage() {
         };
     }, [DEADLINE]);
 
-    const chaptersLeft = useMemo(() => {
-        return totalNewTestamentChapters - completedChapters.size;
-    }, [completedChapters]);
-
-    const chaptersPerDay = useMemo(() => {
+    const { dynamicHomeworkPlan, chaptersPerDay } = useMemo(() => {
         const today = startOfDay(new Date());
-        if (isPastDeadline || chaptersLeft <= 0 || selectedDays.length === 0) return 0;
+        if (isPastDeadline || selectedDays.length === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
         
+        const unreadChapters = newTestamentReadingUnits.filter(unit => !completedChapters.has(unit.displayText));
+
         const readingDaysInRange = eachDayOfInterval({ start: today, end: DEADLINE }).filter(date => {
-            const dayOfWeek = getDay(date); // 0 for Sunday, 1 for Monday, etc.
+            const dayOfWeek = getDay(date);
             return selectedDays.includes(dayOfWeek.toString());
         }).length;
 
-        if (readingDaysInRange === 0) return chaptersLeft; // Or handle as infinity/error
-
-        return parseFloat((chaptersLeft / readingDaysInRange).toFixed(2));
-    }, [chaptersLeft, isPastDeadline, selectedDays, DEADLINE]);
+        const calculatedChaptersPerDay = readingDaysInRange > 0 ? Math.ceil(unreadChapters.length / readingDaysInRange) : unreadChapters.length;
+        if (calculatedChaptersPerDay === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
+        
+        let plan: DailyReading[] = [];
+        let chapterIdx = 0;
+        eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
+            const dayOfWeek = getDay(date);
+            if (selectedDays.includes(dayOfWeek.toString()) && chapterIdx < unreadChapters.length) {
+                const passagesForDay = unreadChapters.slice(chapterIdx, chapterIdx + calculatedChaptersPerDay);
+                plan.push({
+                    date: format(date, 'yyyy-MM-dd'),
+                    passages: passagesForDay
+                });
+                chapterIdx += calculatedChaptersPerDay;
+            }
+        });
+        return { dynamicHomeworkPlan: plan, chaptersPerDay: calculatedChaptersPerDay };
+    }, [completedChapters, isPastDeadline, selectedDays, DEADLINE]);
     
+    const weeklyHomeworkData = useMemo(() => {
+        const weeksMap = new Map<string, DailyReading[]>();
+        dynamicHomeworkPlan.forEach(reading => {
+            const date = parseISO(reading.date);
+            const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
+            const weekKey = format(weekStart, 'yyyy-MM-dd');
+            if (!weeksMap.has(weekKey)) {
+                weeksMap.set(weekKey, []);
+            }
+            weeksMap.get(weekKey)!.push(reading);
+        });
+
+        return Array.from(weeksMap.entries()).map(([weekKey, readings], index) => {
+            const weekStartDate = parseISO(weekKey);
+            return {
+                weekNumber: index + 1,
+                startDate: weekStartDate,
+                endDate: endOfWeek(weekStartDate, { weekStartsOn: 0 }),
+                readings,
+            };
+        }).sort((a,b) => a.startDate.getTime() - b.startDate.getTime());
+    }, [dynamicHomeworkPlan]);
+
     const overallProgressPercentage = useMemo(() => {
         if (totalNewTestamentChapters === 0) return 0;
         return (completedChapters.size / totalNewTestamentChapters) * 100;
@@ -133,124 +177,127 @@ export default function HolidayHomeworkPage() {
             </div>
         );
     }
-
-    const StatCard = ({ icon: Icon, title, value, unit, description }: { icon: React.ElementType, title: string, value: string | number, unit: string, description?: string }) => (
-        <Card className="flex-1">
-            <CardContent className="p-4 flex items-center space-x-4">
-                <Icon className="h-8 w-8 text-primary" />
-                <div>
-                    <p className="text-sm text-muted-foreground">{title}</p>
-                    <p className="text-2xl font-bold">{value} <span className="text-lg font-medium text-muted-foreground">{unit}</span></p>
-                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
-                </div>
-            </CardContent>
-        </Card>
-    );
+    
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+    };
+    
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+    };
 
     return (
-        <div className="container mx-auto py-8 max-w-4xl space-y-8">
-             <div className="flex items-center space-x-3 mb-6">
-                <ClipboardList className="h-8 w-8 text-primary" />
-                <h1 className="text-3xl font-bold tracking-tight">Holiday Homework: New Testament</h1>
-            </div>
+        <div className="container mx-auto py-8 max-w-4xl">
+            <motion.div 
+                className="space-y-8"
+                initial="hidden"
+                animate="visible"
+                variants={containerVariants}
+            >
+                <motion.div variants={itemVariants} className="flex items-center space-x-3 mb-6">
+                    <BookCheck className="h-8 w-8 text-primary" />
+                    <h1 className="text-3xl font-bold tracking-tight">Holiday Homework: New Testament</h1>
+                </motion.div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Overall Progress</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Progress value={overallProgressPercentage} className="h-4" />
-                    <p className="text-right text-sm mt-2 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete ({completedChapters.size}/{totalNewTestamentChapters})</p>
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard icon={Target} title="Chapters Left" value={chaptersLeft} unit="chapters" />
-                <StatCard icon={CalendarClock} title="Days Left" value={daysLeft} unit="days" />
-                <StatCard icon={Book} title="Custom Pace" value={chaptersPerDay} unit="ch/day" description="Based on selected days"/>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Pace Calculator</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
-                        <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="rejoice" id="rejoice" />
-                                <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
+                <motion.div variants={itemVariants}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Pace Calculator</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div>
+                                <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
+                                <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="rejoice" id="rejoice" />
+                                        <Label htmlFor="rejoice">Rejoice Conference (16/01/26)</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="school" id="school" />
+                                        <Label htmlFor="school">Start of School (27/01/26)</Label>
+                                    </div>
+                                </RadioGroup>
                             </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="school" id="school" />
-                                <Label htmlFor="school">Start of School (27/01/26)</Label>
+                            <div>
+                                <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
+                                <ToggleGroup 
+                                    id="reading-days"
+                                    type="multiple" 
+                                    variant="outline" 
+                                    value={selectedDays} 
+                                    onValueChange={handleDaysChange}
+                                    className="flex-wrap justify-start"
+                                >
+                                    {DAYS_OF_WEEK.map((day, index) => (
+                                        <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
+                                            {day}
+                                        </ToggleGroupItem>
+                                    ))}
+                                </ToggleGroup>
                             </div>
-                        </RadioGroup>
-                    </div>
-                    <div>
-                        <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
-                         <ToggleGroup 
-                            id="reading-days"
-                            type="multiple" 
-                            variant="outline" 
-                            value={selectedDays} 
-                            onValueChange={handleDaysChange}
-                            className="flex-wrap justify-start"
-                         >
-                            {DAYS_OF_WEEK.map((day, index) => (
-                                 <ToggleGroupItem key={day} value={index.toString()} aria-label={`Toggle ${day}`}>
-                                    {day}
-                                 </ToggleGroupItem>
-                            ))}
-                        </ToggleGroup>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </motion.div>
 
-            <Accordion type="multiple" className="w-full space-y-2">
-                {NEW_TESTAMENT_ORDER.map(bookName => {
-                     const bookData = BIBLE_BOOKS_DATA[bookName];
-                     if (!bookData) return null;
-                     const totalChaptersInBook = bookData.chapters;
-                     const completedInBook = Array.from({ length: totalChaptersInBook }, (_, i) => i + 1)
-                        .filter(ch => completedChapters.has(`${bookName} ${ch}`)).length;
-                     const isBookComplete = completedInBook === totalChaptersInBook;
-
-                     return (
-                        <AccordionItem value={bookName} key={bookName}>
-                             <AccordionTrigger className="p-4 bg-muted/50 rounded-md hover:bg-muted/80 text-lg font-semibold [&[data-state=open]]:rounded-b-none">
-                                <div className="flex justify-between items-center w-full pr-4">
-                                    <span>{bookName}</span>
-                                    <span className="text-sm text-muted-foreground">{completedInBook} / {totalChaptersInBook}</span>
+                <motion.div variants={itemVariants}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Plan</CardTitle>
+                            <div className="text-sm text-muted-foreground pt-2">
+                                <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                                    <span><strong className="text-foreground">{chaptersPerDay}</strong> chapters/day</span>
+                                    <span><strong className="text-foreground">{daysLeft}</strong> days left</span>
+                                    <span><strong className="text-foreground">{totalNewTestamentChapters - completedChapters.size}</strong> chapters left</span>
                                 </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="p-4 border border-t-0 rounded-b-md">
-                                <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                                {Array.from({ length: bookData.chapters }, (_, i) => i + 1).map(chapter => {
-                                    const chapterId = `${bookName} ${chapter}`;
-                                    const isChecked = completedChapters.has(chapterId);
-                                    return (
-                                        <div key={chapterId} className="flex items-center space-x-2">
-                                            <Checkbox 
-                                                id={chapterId} 
-                                                checked={isChecked}
-                                                onCheckedChange={() => toggleChapterCompletion(chapterId)}
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Progress value={overallProgressPercentage} className="h-2" />
+                            <p className="text-right text-xs mt-1 text-muted-foreground">{Math.round(overallProgressPercentage)}% Complete ({completedChapters.size}/{totalNewTestamentChapters})</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {weeklyHomeworkData.length > 0 ? (
+                    <motion.div variants={itemVariants} className="space-y-4">
+                        {weeklyHomeworkData.map(week => (
+                            <Card key={week.weekNumber}>
+                                <CardHeader>
+                                    <CardTitle>Week {week.weekNumber}: {format(week.startDate, 'MMM d')} - {format(week.endDate, 'MMM d')}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                     <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={isSameDay(startOfWeek(new Date(), {weekStartsOn: 0}), week.startDate) ? format(new Date(), 'yyyy-MM-dd') : undefined}>
+                                        {week.readings.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()).map(reading => (
+                                            <BiblePlanDisplay
+                                                key={reading.date}
+                                                readingToDisplay={reading}
+                                                currentUser={currentUser}
+                                                completedPassages={Array.from(completedChapters)}
+                                                togglePassageCompletion={toggleChapterCompletion}
+                                                allPassageTextsForDay={reading.passages.map(p => p.displayText)}
+                                                loading={loadingChecklist}
+                                                planAvailable={true}
+                                                hidePlanMeta={true}
+                                                defaultOpen={isSameDay(new Date(), parseISO(reading.date))}
                                             />
-                                            <Label htmlFor={chapterId} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                                {chapter}
-                                            </Label>
-                                        </div>
-                                    )
-                                })}
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                     )
-                })}
-            </Accordion>
+                                        ))}
+                                    </Accordion>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </motion.div>
+                ) : (
+                    <motion.div variants={itemVariants}>
+                        <Card className="text-center p-8">
+                            <CardContent>
+                                <p className="text-muted-foreground">Your reading plan will appear here once you set your preferences.</p>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+            </motion.div>
         </div>
     );
 }
-
-    
