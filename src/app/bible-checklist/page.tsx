@@ -212,7 +212,7 @@ export default function BibleChecklistPage() {
             chaptersToCatchUp++;
         }
     });
-    const catchUpPace = chaptersToCatchUp > 0 ? parseFloat((chaptersToCatchUp / 7).toFixed(2)) : 0;
+    const catchUpPace = chaptersToCatchUp > 0 ? parseFloat((chaptersToCatchUp / 6).toFixed(2)) : 0;
 
     return { chaptersLeft, daysLeft, chaptersPerDay, chaptersToCatchUp, catchUpPace };
   }, [plan, completedPassages, today, isGuest]);
