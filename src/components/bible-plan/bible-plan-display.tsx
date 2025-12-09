@@ -201,7 +201,7 @@ export default function BiblePlanDisplay({
                       <Checkbox
                         id={passageIdPart}
                         checked={isChecked}
-                        onCheckedChange={() => togglePassageCompletion && togglePassageCompletion(passage.displayText)}
+                        onCheckedChange={() => togglePassageCompletion(passage.displayText)}
                         aria-label={`Mark '${passage.displayText}' as read`}
                         className="h-4 w-4"
                         disabled={!isPassageValid || isTogglingDay}
