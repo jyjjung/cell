@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from '@/components/theme-provider';
 import AppLayout from '@/components/layout/app-layout';
 import { Toaster } from '@/components/ui/toaster';
@@ -49,6 +50,7 @@ export default function RootLayout({
                 </AppLayout>
                 <GlobalPageLoader />
                 <Analytics />
+                <SpeedInsights />
                 <Toaster />
             </AuthProvider>
           </PageLoadingProvider>
