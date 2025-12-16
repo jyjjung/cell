@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-const DEADLINE = new Date('2026-01-16T23:59:59'); // Set to end of day to be inclusive
+const DEADLINE = new Date('2026-01-15T23:59:59'); // Finish BY the 16th, so last day is the 15th.
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMap(bookName => {
@@ -81,7 +81,7 @@ export default function HolidayHomeworkPage() {
         const deadlineDay = startOfDay(DEADLINE);
         const diff = differenceInDays(deadlineDay, today);
         return {
-            daysLeft: Math.max(0, diff + 1), // Add 1 to include the current day
+            daysLeft: Math.max(0, diff),
             isPastDeadline: isAfter(today, deadlineDay)
         };
     }, []);
@@ -107,12 +107,10 @@ export default function HolidayHomeworkPage() {
     
         eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
             const dayOfWeek = getDay(date);
-            if (selectedDays.includes(dayOfWeek.toString())) {
+            if (selectedDays.includes(dayOfWeek.toString()) && chapterIdx < newTestamentReadingUnits.length) {
                 const passagesForDay: StructuredPassage[] = [];
                 let unreadAssignedCount = 0;
 
-                // Loop through all chapters to find the ones for today, even if some are already read
-                // But base the number to assign on the pace of *unread* chapters
                 while(unreadAssignedCount < calculatedChaptersPerDay && chapterIdx < newTestamentReadingUnits.length) {
                     const currentChapter = newTestamentReadingUnits[chapterIdx];
                     passagesForDay.push(currentChapter);
@@ -123,17 +121,15 @@ export default function HolidayHomeworkPage() {
                     chapterIdx++;
                 }
                 
-                // Add any remaining already-read chapters that fall on this day
                 while (chapterIdx < newTestamentReadingUnits.length) {
                     const nextChapter = newTestamentReadingUnits[chapterIdx];
                     if (completedChapters.has(nextChapter.displayText)) {
                         passagesForDay.push(nextChapter);
                         chapterIdx++;
                     } else {
-                        break; // Stop when we hit the next unread chapter
+                        break; 
                     }
                 }
-
 
                 if(passagesForDay.length > 0){
                      plan.push({
@@ -278,7 +274,7 @@ export default function HolidayHomeworkPage() {
                                     </CardHeader>
                                     <CardContent className="space-y-6">
                                         <div className="text-sm text-muted-foreground">
-                                            <p>Deadline: <strong className="text-foreground">{format(DEADLINE, "EEEE, MMMM d, yyyy")}</strong></p>
+                                            <p>Finish By: <strong className="text-foreground">{format(DEADLINE, "EEEE, MMMM d, yyyy")}</strong></p>
                                         </div>
                                         <div>
                                             <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
@@ -351,3 +347,5 @@ export default function HolidayHomeworkPage() {
         </div>
     );
 }
+
+    
