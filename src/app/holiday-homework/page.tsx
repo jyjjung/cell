@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -32,6 +33,8 @@ const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMa
     }));
 });
 const totalNewTestamentChapters = newTestamentReadingUnits.length;
+const originalPlanByDate = new Map<string, StructuredPassage[]>();
+
 
 type HolidayWeek = {
     weekNumber: number;
@@ -63,8 +66,9 @@ export default function HolidayHomeworkPage() {
 
     const handlePreferencesChange = useCallback((prefs: Partial<HolidayHomeworkPreferences>) => {
         if (!currentUser || loadingAuth) return;
-        const newPrefs = {
+        const newPrefs: HolidayHomeworkPreferences = {
             readingDays: selectedDays,
+            ...currentUser.holidayHomework, // Ensure existing prefs are not lost
             ...prefs
         };
         updateUserProfile(currentUser.uid, { holidayHomework: newPrefs });
@@ -89,58 +93,90 @@ export default function HolidayHomeworkPage() {
     const { dynamicHomeworkPlan, chaptersPerDay } = useMemo(() => {
         const today = startOfDay(new Date());
         if (isPastDeadline || selectedDays.length === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
-
+    
         const unreadChapters = newTestamentReadingUnits.filter(unit => !completedChapters.has(unit.displayText));
         const unreadChaptersCount = unreadChapters.length;
-
-        const readingDaysInRange = eachDayOfInterval({ start: today, end: DEADLINE }).filter(date => {
-            const dayOfWeek = getDay(date);
-            return selectedDays.includes(dayOfWeek.toString());
-        }).length;
-
-        const calculatedChaptersPerDay = readingDaysInRange > 0 ? Math.ceil(unreadChaptersCount / readingDaysInRange) : unreadChaptersCount;
-        if (calculatedChaptersPerDay === 0 && unreadChaptersCount > 0) return { dynamicHomeworkPlan: [], chaptersPerDay: unreadChaptersCount };
-        if (unreadChaptersCount === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
-
-        let plan: DailyReading[] = [];
-        let chapterIdx = 0;
     
+        const readingDaysInRange = eachDayOfInterval({ start: today, end: DEADLINE }).filter(date => 
+            selectedDays.includes(getDay(date).toString())
+        ).length;
+    
+        if (readingDaysInRange === 0 && unreadChaptersCount > 0) {
+             return { dynamicHomeworkPlan: [], chaptersPerDay: unreadChaptersCount };
+        }
+        if (unreadChaptersCount === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
+    
+        const calculatedChaptersPerDay = Math.ceil(unreadChaptersCount / readingDaysInRange);
+        
+        let plan: DailyReading[] = [];
+        let unreadChapterIndex = 0;
+        const allChaptersByDate = new Map<string, StructuredPassage[]>();
+    
+        // Distribute only the unread chapters across the available reading days
         eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
             const dayOfWeek = getDay(date);
-            if (selectedDays.includes(dayOfWeek.toString()) && chapterIdx < newTestamentReadingUnits.length) {
-                const passagesForDay: StructuredPassage[] = [];
-                let unreadAssignedCount = 0;
-
-                while(unreadAssignedCount < calculatedChaptersPerDay && chapterIdx < newTestamentReadingUnits.length) {
-                    const currentChapter = newTestamentReadingUnits[chapterIdx];
-                    passagesForDay.push(currentChapter);
-                    
-                    if (!completedChapters.has(currentChapter.displayText)) {
-                        unreadAssignedCount++;
-                    }
-                    chapterIdx++;
-                }
-                
-                while (chapterIdx < newTestamentReadingUnits.length) {
-                    const nextChapter = newTestamentReadingUnits[chapterIdx];
-                    if (completedChapters.has(nextChapter.displayText)) {
-                        passagesForDay.push(nextChapter);
-                        chapterIdx++;
-                    } else {
-                        break; 
-                    }
-                }
-
-                if(passagesForDay.length > 0){
-                     plan.push({
-                        date: format(date, 'yyyy-MM-dd'),
-                        passages: passagesForDay
-                    });
+            const dateString = format(date, 'yyyy-MM-dd');
+            
+            if (selectedDays.includes(dayOfWeek.toString())) {
+                const chaptersForThisDay = unreadChapters.slice(unreadChapterIndex, unreadChapterIndex + calculatedChaptersPerDay);
+                if (chaptersForThisDay.length > 0) {
+                    allChaptersByDate.set(dateString, chaptersForThisDay);
+                    unreadChapterIndex += chaptersForThisDay.length;
                 }
             }
         });
-
+        
+        // Go back and add the already-read chapters to their originally scheduled day
+        // This requires knowing the original full plan distribution. For simplicity,
+        // let's re-calculate the full plan to find where read chapters belong.
+        const fullPace = Math.ceil(totalNewTestamentChapters / eachDayOfInterval({ start: today, end: DEADLINE }).filter(d => selectedDays.includes(getDay(d).toString())).length);
+        const originalSchedule = new Map<string, StructuredPassage[]>();
+         if (fullPace > 0 && Number.isFinite(fullPace)) {
+            let chapterIdx = 0;
+            eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
+                if (selectedDays.includes(getDay(date).toString())) {
+                    const dateString = format(date, 'yyyy-MM-dd');
+                    const chaptersForDay = newTestamentReadingUnits.slice(chapterIdx, chapterIdx + fullPace);
+                    if (chaptersForDay.length > 0) {
+                        originalSchedule.set(dateString, chaptersForDay);
+                        chapterIdx += chaptersForDay.length;
+                    }
+                }
+            });
+        }
+    
+        // Now, combine the scheduled unread chapters with the read chapters
+        originalSchedule.forEach((chapters, dateString) => {
+            const scheduledUnreadForDay = allChaptersByDate.get(dateString) || [];
+            const readChaptersForDay = chapters.filter(c => completedChapters.has(c.displayText));
+            
+            const combinedChaptersForDay = [...new Set([...scheduledUnreadForDay, ...readChaptersForDay])];
+            
+            // Sort them back into canonical order for display
+            combinedChaptersForDay.sort((a,b) => {
+                const bookA = BIBLE_BOOKS_DATA[a.book];
+                const bookB = BIBLE_BOOKS_DATA[b.book];
+                if (bookA.order !== bookB.order) return bookA.order - bookB.order;
+                return a.chapter - b.chapter;
+            });
+    
+            if (combinedChaptersForDay.length > 0) {
+                 allChaptersByDate.set(dateString, combinedChaptersForDay);
+            }
+        });
+    
+    
+        for (const [date, passages] of allChaptersByDate.entries()) {
+            if (passages.length > 0) {
+                plan.push({
+                    date: date,
+                    passages: passages
+                });
+            }
+        }
+    
         return { dynamicHomeworkPlan: plan, chaptersPerDay: calculatedChaptersPerDay };
+    
     }, [completedChapters, isPastDeadline, selectedDays]);
     
     const weeklyHomeworkData = useMemo((): HolidayWeek[] => {
@@ -303,7 +339,7 @@ export default function HolidayHomeworkPage() {
                                         <CardTitle>My Plan</CardTitle>
                                         <div className="text-sm text-muted-foreground pt-2">
                                             <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                                                <span><strong className="text-foreground">{chaptersPerDay}</strong> chapters/day</span>
+                                                <span><strong className="text-foreground">{chaptersPerDay}</strong> unread chapters/day</span>
                                                 <span><strong className="text-foreground">{daysLeft}</strong> days left</span>
                                                 <span><strong className="text-foreground">{totalNewTestamentChapters - completedChapters.size}</strong> chapters left</span>
                                             </div>
@@ -347,5 +383,3 @@ export default function HolidayHomeworkPage() {
         </div>
     );
 }
-
-    
