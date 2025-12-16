@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-const DEADLINE = new Date('2026-01-16T00:00:00');
+const DEADLINE = new Date('2026-01-16T23:59:59'); // Set to end of day to be inclusive
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMap(bookName => {
@@ -81,10 +81,10 @@ export default function HolidayHomeworkPage() {
         const deadlineDay = startOfDay(DEADLINE);
         const diff = differenceInDays(deadlineDay, today);
         return {
-            daysLeft: Math.max(0, diff),
+            daysLeft: Math.max(0, diff + 1), // Add 1 to include the current day
             isPastDeadline: isAfter(today, deadlineDay)
         };
-    }, [DEADLINE]);
+    }, []);
 
     const { dynamicHomeworkPlan, chaptersPerDay } = useMemo(() => {
         const today = startOfDay(new Date());
@@ -104,24 +104,36 @@ export default function HolidayHomeworkPage() {
 
         let plan: DailyReading[] = [];
         let chapterIdx = 0;
-        let unreadChapterCounter = 0; // Tracks unread chapters assigned for the day
     
         eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
             const dayOfWeek = getDay(date);
             if (selectedDays.includes(dayOfWeek.toString())) {
                 const passagesForDay: StructuredPassage[] = [];
-                let assignedCount = 0;
+                let unreadAssignedCount = 0;
 
-                // Find chapters for this day
-                while (assignedCount < calculatedChaptersPerDay && chapterIdx < newTestamentReadingUnits.length) {
+                // Loop through all chapters to find the ones for today, even if some are already read
+                // But base the number to assign on the pace of *unread* chapters
+                while(unreadAssignedCount < calculatedChaptersPerDay && chapterIdx < newTestamentReadingUnits.length) {
                     const currentChapter = newTestamentReadingUnits[chapterIdx];
                     passagesForDay.push(currentChapter);
-
+                    
                     if (!completedChapters.has(currentChapter.displayText)) {
-                        assignedCount++;
+                        unreadAssignedCount++;
                     }
                     chapterIdx++;
                 }
+                
+                // Add any remaining already-read chapters that fall on this day
+                while (chapterIdx < newTestamentReadingUnits.length) {
+                    const nextChapter = newTestamentReadingUnits[chapterIdx];
+                    if (completedChapters.has(nextChapter.displayText)) {
+                        passagesForDay.push(nextChapter);
+                        chapterIdx++;
+                    } else {
+                        break; // Stop when we hit the next unread chapter
+                    }
+                }
+
 
                 if(passagesForDay.length > 0){
                      plan.push({
@@ -133,7 +145,7 @@ export default function HolidayHomeworkPage() {
         });
 
         return { dynamicHomeworkPlan: plan, chaptersPerDay: calculatedChaptersPerDay };
-    }, [completedChapters, isPastDeadline, selectedDays, DEADLINE]);
+    }, [completedChapters, isPastDeadline, selectedDays]);
     
     const weeklyHomeworkData = useMemo((): HolidayWeek[] => {
         const weeksMap = new Map<string, DailyReading[]>();
