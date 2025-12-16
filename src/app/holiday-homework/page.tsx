@@ -10,9 +10,8 @@ import { differenceInDays, isAfter, startOfDay, parseISO, eachDayOfInterval, get
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, BookCheck, ClipboardList, Target, CalendarClock, Book, Hourglass, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, BookCheck, Target, CalendarClock, Book, Hourglass, ArrowLeft } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import type { HolidayHomeworkPreferences, DailyReading, StructuredPassage } from '@/types';
@@ -20,8 +19,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
-const REJOICE_DEADLINE = new Date('2026-01-16T00:00:00');
-const SCHOOL_DEADLINE = new Date('2026-01-27T00:00:00');
+const DEADLINE = new Date('2026-01-16T00:00:00');
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const newTestamentReadingUnits: StructuredPassage[] = NEW_TESTAMENT_ORDER.flatMap(bookName => {
@@ -54,17 +52,11 @@ export default function HolidayHomeworkPage() {
     const { completedChapters, toggleChapterCompletion, loadingChecklist } = useHolidayChecklist();
 
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [deadlineOption, setDeadlineOption] = useState<'rejoice' | 'school'>('rejoice');
     const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
-
-    const DEADLINE = useMemo(() => {
-        return deadlineOption === 'rejoice' ? REJOICE_DEADLINE : SCHOOL_DEADLINE;
-    }, [deadlineOption]);
 
     useEffect(() => { 
         setIsMounted(true); 
         if (currentUser?.holidayHomework) {
-            setDeadlineOption(currentUser.holidayHomework.deadline ?? 'rejoice');
             setSelectedDays(currentUser.holidayHomework.readingDays ?? ['1', '2', '3', '4', '5']);
         }
     }, [currentUser]);
@@ -72,18 +64,11 @@ export default function HolidayHomeworkPage() {
     const handlePreferencesChange = useCallback((prefs: Partial<HolidayHomeworkPreferences>) => {
         if (!currentUser || loadingAuth) return;
         const newPrefs = {
-            deadline: deadlineOption,
             readingDays: selectedDays,
             ...prefs
         };
         updateUserProfile(currentUser.uid, { holidayHomework: newPrefs });
-    }, [currentUser, loadingAuth, deadlineOption, selectedDays, updateUserProfile]);
-
-    const handleDeadlineChange = (value: 'rejoice' | 'school') => {
-        if (!value) return;
-        setDeadlineOption(value);
-        handlePreferencesChange({ deadline: value });
-    };
+    }, [currentUser, loadingAuth, selectedDays, updateUserProfile]);
 
     const handleDaysChange = (value: string[]) => {
         if (value.length === 0) return; // Prevent unselecting all days
@@ -104,63 +89,49 @@ export default function HolidayHomeworkPage() {
     const { dynamicHomeworkPlan, chaptersPerDay } = useMemo(() => {
         const today = startOfDay(new Date());
         if (isPastDeadline || selectedDays.length === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
-    
+
         const unreadChapters = newTestamentReadingUnits.filter(unit => !completedChapters.has(unit.displayText));
         const unreadChaptersCount = unreadChapters.length;
-    
+
         const readingDaysInRange = eachDayOfInterval({ start: today, end: DEADLINE }).filter(date => {
             const dayOfWeek = getDay(date);
             return selectedDays.includes(dayOfWeek.toString());
         }).length;
-    
+
         const calculatedChaptersPerDay = readingDaysInRange > 0 ? Math.ceil(unreadChaptersCount / readingDaysInRange) : unreadChaptersCount;
         if (calculatedChaptersPerDay === 0 && unreadChaptersCount > 0) return { dynamicHomeworkPlan: [], chaptersPerDay: unreadChaptersCount };
         if (unreadChaptersCount === 0) return { dynamicHomeworkPlan: [], chaptersPerDay: 0 };
-    
+
         let plan: DailyReading[] = [];
         let chapterIdx = 0;
+        let unreadChapterCounter = 0; // Tracks unread chapters assigned for the day
     
         eachDayOfInterval({ start: today, end: DEADLINE }).forEach(date => {
             const dayOfWeek = getDay(date);
             if (selectedDays.includes(dayOfWeek.toString())) {
                 const passagesForDay: StructuredPassage[] = [];
-                // Add already read chapters that fall on this day if needed for continuity, but don't count towards the daily goal.
-                // The primary goal is to schedule the unread chapters.
-                
                 let assignedCount = 0;
+
+                // Find chapters for this day
                 while (assignedCount < calculatedChaptersPerDay && chapterIdx < newTestamentReadingUnits.length) {
                     const currentChapter = newTestamentReadingUnits[chapterIdx];
                     passagesForDay.push(currentChapter);
-                    chapterIdx++;
-                    
-                    // Only increment assignedCount for chapters that were actually unread when the plan was calculated.
+
                     if (!completedChapters.has(currentChapter.displayText)) {
                         assignedCount++;
                     }
+                    chapterIdx++;
                 }
-    
-                if (passagesForDay.length > 0) {
-                    plan.push({
+
+                if(passagesForDay.length > 0){
+                     plan.push({
                         date: format(date, 'yyyy-MM-dd'),
                         passages: passagesForDay
                     });
                 }
-            } else if (chapterIdx < newTestamentReadingUnits.length) {
-                 // For non-reading days, we still need to account for chapters that should have been read
-                 // to keep the plan progressing. We will "burn" through the chapters index.
-                 // This ensures the next reading day starts with the correct set of chapters.
-                 let potentialReadsOnThisDay = 0;
-                 while(chapterIdx < newTestamentReadingUnits.length) {
-                    const currentChapter = newTestamentReadingUnits[chapterIdx];
-                    if (!completedChapters.has(currentChapter.displayText)) {
-                        if (potentialReadsOnThisDay >= calculatedChaptersPerDay) break;
-                        potentialReadsOnThisDay++;
-                    }
-                    chapterIdx++;
-                 }
             }
         });
-    
+
         return { dynamicHomeworkPlan: plan, chaptersPerDay: calculatedChaptersPerDay };
     }, [completedChapters, isPastDeadline, selectedDays, DEADLINE]);
     
@@ -294,18 +265,8 @@ export default function HolidayHomeworkPage() {
                                         <CardTitle>Pace Calculator</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-6">
-                                        <div>
-                                            <Label htmlFor="deadline-options" className="mb-2 block font-medium">Select your deadline:</Label>
-                                            <RadioGroup id="deadline-options" value={deadlineOption} onValueChange={handleDeadlineChange} className="flex space-x-4">
-                                                <div className="flex items-center space-x-2">
-                                                    <RadioGroupItem value="rejoice" id="rejoice" />
-                                                    <Label htmlFor="rejoice">Rejoice Conference ({format(REJOICE_DEADLINE, "dd/MM/yy")})</Label>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <RadioGroupItem value="school" id="school" />
-                                                    <Label htmlFor="school">Start of School ({format(SCHOOL_DEADLINE, "dd/MM/yy")})</Label>
-                                                </div>
-                                            </RadioGroup>
+                                        <div className="text-sm text-muted-foreground">
+                                            <p>Deadline: <strong className="text-foreground">{format(DEADLINE, "EEEE, MMMM d, yyyy")}</strong></p>
                                         </div>
                                         <div>
                                             <Label htmlFor="reading-days" className="mb-2 block font-medium">Select your reading days:</Label>
@@ -378,5 +339,3 @@ export default function HolidayHomeworkPage() {
         </div>
     );
 }
-
-    

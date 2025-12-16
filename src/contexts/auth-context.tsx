@@ -61,7 +61,6 @@ const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
 };
 
 const defaultHolidayHomeworkPreferences: HolidayHomeworkPreferences = {
-    deadline: 'rejoice',
     readingDays: ['1','2','3','4','5'],
 };
 
@@ -312,5 +311,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
