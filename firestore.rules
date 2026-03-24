@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAppUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isAppAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.isAdmin == true;
+    }
+
+    function isYouth(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.isYouth == true;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    match /userBibleChecklists/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+    
+    match /roles/{roleId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+
+    match /memoryVerses/{verseId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+    
+    match /qtRosters/{rosterId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+
+    match /cleaningDays/{dayId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+
+    match /cleaningRosters/{rosterId} {
+      allow read: if request.auth != null;
+      allow create, delete: if isAppAdmin(request.auth.uid);
+      allow update: if isAppAdmin(request.auth.uid) ||
+                     (request.auth.uid in resource.data.assignedUserIds &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isCompleted', 'completedBy', 'completedAt']));
+    }
+
+    match /rosterDefinitions/{rosterDefId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+
+      match /entries/{entryId} {
+        allow read: if request.auth != null;
+        allow write: if isAppAdmin(request.auth.uid);
+      }
+    }
+
+    match /notifications/{notifId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if isAppAdmin(request.auth.uid);
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+
+    // Chat Rules
+    match /chats/{chatId} {
+      function isMember() {
+        return request.auth.uid in resource.data.members;
+      }
+
+      function isCreatingMember() {
+        return request.auth.uid in request.resource.data.members;
+      }
+
+      function isChatAdmin() {
+        return request.auth.uid in resource.data.admins;
+      }
+
+      // Admins cannot see all chats; strictly member-only.
+      allow read: if isMember();
+      allow delete: if isMember() || isAppAdmin(request.auth.uid);
+
+      allow create: if isCreatingMember()
+                    && request.resource.data.keys().hasAll(['type', 'members', 'memberInfo', 'createdAt', 'lastMessageText', 'lastMessageSentAt', 'memberSeen'])
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.lastMessageSentAt == request.time
+                    && request.resource.data.memberSeen[request.auth.uid] == request.time
+                    && (
+                        request.resource.data.type == 'private' 
+                        ? (
+                            request.resource.data.members.size() == 2 &&
+                            // Deny if both users are youth.
+                            !(isYouth(request.resource.data.members[0]) && isYouth(request.resource.data.members[1]))
+                          )
+                        : true
+                    )
+                    && (
+                        request.resource.data.type == 'group' 
+                        ? (
+                            request.resource.data.keys().hasAll(['name', 'admins']) 
+                            && request.auth.uid in request.resource.data.admins
+                            // Deny if the creator is youth.
+                            && !isYouth(request.auth.uid)
+                          ) 
+                        : true
+                    );
+
+      allow update: if (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen']))
+                    || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).hasAny(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
+                    || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
+
+      match /messages/{messageId} {
+        allow read: if isMember();
+
+        allow create: if isMember()
+                       && request.auth.uid == request.resource.data.senderId
+                       && request.resource.data.createdAt == request.time
+                       && request.resource.data.seenBy == [request.auth.uid]
+                       && request.resource.data.keys().has('text');
+
+        allow update: if isMember()
+                        && (
+                           // Allow updating 'seenBy' only by adding oneself
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
+                           // Allow updating 'reactions'
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+                        );
+      }
+    }
+  }
+}

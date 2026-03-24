@@ -1,0 +1,39 @@
+
+{
+  "hero-background": {
+    "url": "https://picsum.photos/seed/church-community/1920/1080",
+    "width": 1920,
+    "height": 1080,
+    "alt": "Community gathering background"
+  },
+  "community-vibe": {
+    "url": "https://picsum.photos/seed/bible-reading/800/600",
+    "width": 800,
+    "height": 600,
+    "alt": "People reading together"
+  },
+  "worship-atmosphere": {
+    "url": "https://picsum.photos/seed/worship/1200/800",
+    "width": 1200,
+    "height": 800,
+    "alt": "Atmospheric worship setting"
+  },
+  "shared-meal": {
+    "url": "https://picsum.photos/seed/fellowship-meal/800/600",
+    "width": 800,
+    "height": 600,
+    "alt": "Community sharing a meal"
+  },
+  "bible-study": {
+    "url": "https://picsum.photos/seed/study/1000/1000",
+    "width": 1000,
+    "height": 1000,
+    "alt": "Open Bible on a wooden table"
+  },
+  "service-team": {
+    "url": "https://picsum.photos/seed/service/1000/1000",
+    "width": 1000,
+    "height": 1000,
+    "alt": "Team serving together"
+  }
+}

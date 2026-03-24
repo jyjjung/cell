@@ -1,0 +1,228 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Background — cool blue-tinted white */
+    --background: 210 30% 98%;
+    --foreground: 216 32% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 216 32% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 32% 8%;
+
+    /* Primary — New Dream Church azure blue */
+    --primary: 214 85% 46%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 40% 92%;
+    --secondary-foreground: 214 70% 28%;
+
+    --muted: 210 25% 93%;
+    --muted-foreground: 215 14% 46%;
+
+    --accent: 214 55% 92%;
+    --accent-foreground: 214 70% 28%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 214 22% 88%;
+    --input: 214 22% 88%;
+    --ring: 214 85% 46%;
+
+    --radius: 1rem;
+
+    --chart-1: 214 85% 52%;
+    --chart-2: 175 65% 42%;
+    --chart-3: 197 50% 35%;
+    --chart-4: 43 90% 62%;
+    --chart-5: 15 85% 62%;
+
+    --sidebar-background: 210 28% 97%;
+    --sidebar-foreground: 216 32% 8%;
+    --sidebar-accent: 214 40% 91%;
+    --sidebar-accent-foreground: 214 70% 28%;
+    --sidebar-border: 214 22% 88%;
+    --sidebar-ring: 214 85% 46%;
+  }
+
+  .dark {
+    /* Background — deep blue-navy */
+    --background: 220 38% 6%;
+    --foreground: 210 22% 94%;
+
+    --card: 220 35% 9%;
+    --card-foreground: 210 22% 94%;
+
+    --popover: 220 38% 8%;
+    --popover-foreground: 210 22% 94%;
+
+    /* Primary — bright sky blue */
+    --primary: 210 92% 65%;
+    --primary-foreground: 220 38% 6%;
+
+    --secondary: 220 28% 17%;
+    --secondary-foreground: 210 22% 88%;
+
+    --muted: 220 25% 14%;
+    --muted-foreground: 215 14% 56%;
+
+    --accent: 214 50% 20%;
+    --accent-foreground: 210 92% 75%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 68% 44%;
+    --success-foreground: 220 38% 6%;
+
+    --border: 220 28% 16%;
+    --input: 220 28% 16%;
+    --ring: 210 92% 65%;
+
+    --chart-1: 210 85% 65%;
+    --chart-2: 175 65% 50%;
+    --chart-3: 197 60% 58%;
+    --chart-4: 43 90% 65%;
+    --chart-5: 15 85% 65%;
+
+    --sidebar-background: 220 42% 5%;
+    --sidebar-foreground: 210 22% 92%;
+    --sidebar-accent: 214 40% 16%;
+    --sidebar-accent-foreground: 210 85% 75%;
+    --sidebar-border: 220 28% 13%;
+    --sidebar-ring: 210 92% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Bible reader prose */
+  .prose .esv-text p, .prose-sm .esv-text p {
+    @apply mb-2 leading-relaxed;
+  }
+  .prose .esv-text .verse-num, .prose-sm .esv-text .verse-num,
+  .prose .p .v, .prose-sm .p .v,
+  .prose .verse-num, .prose-sm .verse-num {
+    @apply text-xs font-bold text-muted-foreground align-super mr-0.5;
+  }
+  .prose .esv-text .chapter-num, .prose-sm .esv-text .chapter-num,
+  .prose .chapter-num, .prose-sm .chapter-num {
+    @apply font-bold text-2xl text-primary mr-1 float-left;
+  }
+  .prose .esv-text h2, .prose-sm .esv-text h2,
+  .prose .esv-text h3, .prose-sm .esv-text h3,
+  .prose .esv-text h4, .prose-sm .esv-text h4 {
+    @apply text-lg font-semibold mt-4 mb-2 text-foreground;
+  }
+}
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)), #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes gradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient {
+  animation: gradient 8s ease infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-12px) rotate(1deg); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* GPU acceleration */
+.gpu-accelerated {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* Chat */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.12);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.25);
+}
+
+/* Selection color */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}
+
+/* Glass-morphism cards */
+.glass-card {
+  background: hsla(var(--card), 0.4);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid hsla(var(--border), 0.5);
+  box-shadow: 0 8px 32px 0 hsla(220, 40%, 2%, 0.1);
+}
+
+.dark .glass-card {
+  background: hsla(var(--card), 0.6);
+  border: 1px solid hsla(var(--border), 0.3);
+  box-shadow: 0 8px 32px 0 hsla(220, 40%, 2%, 0.4);
+}
+

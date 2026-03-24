@@ -1,0 +1,30 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        .text-gradient {
+            fill: url(#paint0_linear_1_2);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .bg-rect {
+                fill: black;
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .bg-rect {
+                fill: white;
+            }
+        }
+    </style>
+    <rect class="bg-rect" width="192" height="192" rx="32"/>
+    <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" class="text-gradient" font-family="'Geist', sans-serif" font-size="96" font-weight="bold">
+        em.
+    </text>
+    <defs>
+        <linearGradient id="paint0_linear_1_2" x1="40" y1="96" x2="152" y2="96" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#F87171"/>
+            <stop offset="0.5" stop-color="#A78BFA"/>
+            <stop offset="1" stop-color="#3B82F6"/>
+        </linearGradient>
+    </defs>
+</svg>
