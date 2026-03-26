@@ -20,6 +20,9 @@ export interface AppEvent {
   id: string;
   date: string;
   endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  allDay?: boolean;
   category: EventCategory;
   title: string;
   details?: string;

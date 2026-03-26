@@ -29,6 +29,7 @@ import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
+import DayViewWidget from '@/components/dashboard-widgets/day-view-widget';
 
 interface DashboardPageProps {
   currentUser: AppUser;
@@ -238,6 +239,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             <ChevronRight className="absolute top-4 right-4 h-3 w-3 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
           </button>
         ))}
+      </motion.div>
+
+      {/* ── Today's Schedule (Day View) ── */}
+      <motion.div custom={3.5} variants={fadeUp} initial="hidden" animate="visible">
+        <DayViewWidget events={events} cleaningRoster={cleaningRoster} qtRoster={qtRoster} />
       </motion.div>
 
       {/* ── Alerts ── */}

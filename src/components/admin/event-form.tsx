@@ -14,14 +14,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
   endDate: z.date().optional(),
+  allDay: z.boolean().default(true),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   category: z.nativeEnum(EventCategory),
   details: z.string().optional(),
   summary: z.string().optional(),
@@ -55,11 +60,19 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           ...event, 
           date: parseISO(event.date), 
           endDate: event.endDate ? parseISO(event.endDate) : undefined,
+          allDay: event.allDay ?? true,
+          startTime: event.startTime || '',
+          endTime: event.endTime || '',
           details: event.details || '', 
           summary: event.summary || '' 
         }
-      : { title: '', details: '', summary: '', category: EventCategory.Event, date: new Date(), endDate: undefined },
+      : { 
+          title: '', details: '', summary: '', category: EventCategory.Event, 
+          date: new Date(), endDate: undefined, allDay: true, startTime: '09:00', endTime: '10:00' 
+        },
   });
+
+  const isAllDay = form.watch('allDay');
 
   async function handleSubmit(data: EventFormValues) {
     setIsLoading(true);
@@ -68,6 +81,9 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
       title: data.title,
       date: data.date.toISOString(),
       endDate: data.endDate?.toISOString(),
+      allDay: data.allDay,
+      startTime: data.allDay ? undefined : data.startTime,
+      endTime: data.allDay ? undefined : data.endTime,
       category: data.category,
       details: data.details || '',
       summary: data.summary || '',
@@ -75,7 +91,10 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
     
     onSubmit(processedData);
     if (!event) {
-      form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date(), endDate: undefined });
+      form.reset({ 
+        title: '', details: '', summary: '', category: EventCategory.Event, 
+        date: new Date(), endDate: undefined, allDay: true, startTime: '09:00', endTime: '10:00' 
+      });
     }
     setIsLoading(false);
   }
@@ -192,6 +211,65 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="flex items-center space-x-4 p-4 rounded-2xl bg-muted/30 border border-border/30">
+          <FormField
+            control={form.control}
+            name="allDay"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between gap-4 space-y-0">
+                <FormLabel className="text-base">All Day Event</FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {!isAllDay && (
+            <div className="flex-1 flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs uppercase font-bold text-muted-foreground">Start Time</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input type="time" {...field} className="pl-9" />
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs uppercase font-bold text-muted-foreground">End Time</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input type="time" {...field} className="pl-9" />
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <FormField

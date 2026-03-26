@@ -6,7 +6,7 @@ import { EventCategory } from '@/types';
 import { useEvents } from '@/hooks/use-events';
 import { format, parseISO, isBefore, startOfToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar, Cake, Coffee, Users, CalendarOff, ChevronRight } from 'lucide-react';
+import { Calendar, Cake, Coffee, Users, CalendarOff, ChevronRight, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
@@ -48,11 +48,20 @@ function EventCard({ event, index }: { event: AppEvent; index: number }) {
             <span className={cn("text-[10px] font-bold uppercase tracking-wide", config.color)}>{event.category}</span>
           </div>
           <p className="font-semibold text-sm">{event.title}</p>
-          <p className="text-xs text-muted-foreground">
-            {endDate 
-              ? `${format(eventDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`
-              : format(eventDate, 'EEEE, MMMM do, yyyy')}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-muted-foreground">
+              {endDate 
+                ? `${format(eventDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`
+                : format(eventDate, 'EEEE, MMMM do, yyyy')}
+            </p>
+            {!event.allDay && event.startTime && (
+              <div className="flex items-center gap-1 text-[10px] font-bold text-primary px-1.5 py-0.5 rounded-md bg-primary/5 border border-primary/10">
+                <Clock className="h-2.5 w-2.5" />
+                <span>{event.startTime}{event.endTime ? ` - ${event.endTime}` : ''}</span>
+              </div>
+            )}
+            {event.allDay && <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">All Day</span>}
+          </div>
         </div>
 
         <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>

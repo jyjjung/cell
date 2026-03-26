@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { isBefore, parseISO, startOfToday, isValid, format, compareAsc } from 'date-fns';
-import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info } from 'lucide-react';
+import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info, Clock } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,9 @@ type TimelineItem = {
     id: string;
     date: Date;
     endDate?: Date;
+    startTime?: string;
+    endTime?: string;
+    allDay: boolean;
     title: string;
     type: 'event' | 'cleaning' | 'qt';
     category?: EventCategory;
@@ -56,7 +59,14 @@ const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void 
             className="w-full flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-transparent hover:bg-green-500 transition-all group text-left"
         >
             <div className="flex-grow min-w-0">
-                <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
+                  {!item.allDay && item.startTime && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground group-hover:bg-white/20 group-hover:text-white shrink-0">
+                      {item.startTime}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover:text-white/80">{getLabel()}</p>
             </div>
             <div className="text-right shrink-0">
@@ -101,6 +111,9 @@ export default function UpcomingEventsWidget() {
                     id: event.id, 
                     date, 
                     endDate,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    allDay: event.allDay ?? true,
                     title: event.title, 
                     type: 'event', 
                     category: event.category,
@@ -122,6 +135,7 @@ export default function UpcomingEventsWidget() {
                 items.push({ 
                     id: entry.id, 
                     date, 
+                    allDay: true,
                     title: firstNames || "Church Cleaning", 
                     type: 'cleaning',
                     assignedNames: firstNames,
@@ -137,6 +151,7 @@ export default function UpcomingEventsWidget() {
                 items.push({ 
                     id: entry.id, 
                     date, 
+                    allDay: true,
                     title: entry.personName || "QT Sharing", 
                     type: 'qt',
                     passage: entry.passage,
@@ -228,9 +243,19 @@ export default function UpcomingEventsWidget() {
                         <DialogTitle className="text-2xl font-black tracking-tight">{selectedItem?.title}</DialogTitle>
                         <DialogDescription className="text-xs font-bold uppercase tracking-widest pt-1">
                             {selectedItem && (
-                                selectedItem.endDate 
-                                    ? `${format(selectedItem.date, "MMM d")} - ${format(selectedItem.endDate, "MMM d, yyyy")}`
-                                    : format(selectedItem.date, "EEEE, MMMM do, yyyy")
+                                <div className="flex flex-col gap-1">
+                                    <span>
+                                        {selectedItem.endDate 
+                                            ? `${format(selectedItem.date, "MMM d")} - ${format(selectedItem.endDate, "MMM d, yyyy")}`
+                                            : format(selectedItem.date, "EEEE, MMMM do, yyyy")}
+                                    </span>
+                                    {!selectedItem.allDay && selectedItem.startTime && (
+                                        <span className="flex items-center gap-1.5 text-primary">
+                                            <Clock className="h-3 w-3" />
+                                            {selectedItem.startTime}{selectedItem.endTime ? ` - ${selectedItem.endTime}` : ''}
+                                        </span>
+                                    )}
+                                </div>
                             )}
                         </DialogDescription>
                     </DialogHeader>
