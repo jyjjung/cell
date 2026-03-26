@@ -19,6 +19,7 @@ export enum EventCategory {
 export interface AppEvent {
   id: string;
   date: string;
+  endDate?: string;
   category: EventCategory;
   title: string;
   details?: string;

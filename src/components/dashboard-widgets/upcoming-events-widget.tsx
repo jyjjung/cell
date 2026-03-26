@@ -26,6 +26,7 @@ import {
 type TimelineItem = {
     id: string;
     date: Date;
+    endDate?: Date;
     title: string;
     type: 'event' | 'cleaning' | 'qt';
     category?: EventCategory;
@@ -88,10 +89,18 @@ export default function UpcomingEventsWidget() {
         // Add regular events
         events.forEach(event => {
             const date = parseISO(event.date);
-            if (isValid(date) && !isBefore(date, today)) {
+            const endDate = event.endDate ? parseISO(event.endDate) : undefined;
+            
+            // Check if event is active or upcoming
+            const isActiveOrUpcoming = isValid(date) && (
+                !isBefore(date, today) || (endDate && isValid(endDate) && !isBefore(endDate, today))
+            );
+
+            if (isActiveOrUpcoming) {
                 items.push({ 
                     id: event.id, 
                     date, 
+                    endDate,
                     title: event.title, 
                     type: 'event', 
                     category: event.category,
@@ -218,7 +227,11 @@ export default function UpcomingEventsWidget() {
                         </div>
                         <DialogTitle className="text-2xl font-black tracking-tight">{selectedItem?.title}</DialogTitle>
                         <DialogDescription className="text-xs font-bold uppercase tracking-widest pt-1">
-                            {selectedItem && format(selectedItem.date, "EEEE, MMMM do, yyyy")}
+                            {selectedItem && (
+                                selectedItem.endDate 
+                                    ? `${format(selectedItem.date, "MMM d")} - ${format(selectedItem.endDate, "MMM d, yyyy")}`
+                                    : format(selectedItem.date, "EEEE, MMMM do, yyyy")
+                            )}
                         </DialogDescription>
                     </DialogHeader>
 

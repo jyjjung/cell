@@ -21,9 +21,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const eventFormSchema = z.object({
   title: z.string().min(2, { message: "Title must be at least 2 characters." }),
   date: z.date({ required_error: "A date is required." }),
+  endDate: z.date().optional(),
   category: z.nativeEnum(EventCategory),
   details: z.string().optional(),
   summary: z.string().optional(),
+}).refine(data => {
+  if (data.endDate && data.date) {
+    return data.endDate >= data.date;
+  }
+  return true;
+}, {
+  message: "End date must be on or after start date",
+  path: ["endDate"]
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -42,8 +51,14 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: event
-      ? { ...event, date: parseISO(event.date), details: event.details || '', summary: event.summary || '' }
-      : { title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() },
+      ? { 
+          ...event, 
+          date: parseISO(event.date), 
+          endDate: event.endDate ? parseISO(event.endDate) : undefined,
+          details: event.details || '', 
+          summary: event.summary || '' 
+        }
+      : { title: '', details: '', summary: '', category: EventCategory.Event, date: new Date(), endDate: undefined },
   });
 
   async function handleSubmit(data: EventFormValues) {
@@ -52,6 +67,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
       id: event?.id || '',
       title: data.title,
       date: data.date.toISOString(),
+      endDate: data.endDate?.toISOString(),
       category: data.category,
       details: data.details || '',
       summary: data.summary || '',
@@ -59,7 +75,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
     
     onSubmit(processedData);
     if (!event) {
-      form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date() });
+      form.reset({ title: '', details: '', summary: '', category: EventCategory.Event, date: new Date(), endDate: undefined });
     }
     setIsLoading(false);
   }
@@ -81,13 +97,49 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="date"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Date</FormLabel>
+                <FormLabel>Start Date</FormLabel>
+                <Popover modal={isMobile}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date("1900-01-01")}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>End Date (Optional)</FormLabel>
                 <Popover modal={isMobile}>
                   <PopoverTrigger asChild>
                     <FormControl>

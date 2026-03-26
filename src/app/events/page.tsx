@@ -21,6 +21,7 @@ const categoryConfig: Record<EventCategory, { icon: React.ElementType; color: st
 function EventCard({ event, index }: { event: AppEvent; index: number }) {
   const [open, setOpen] = useState(false);
   const eventDate = parseISO(event.date);
+  const endDate = event.endDate ? parseISO(event.endDate) : null;
   const config = categoryConfig[event.category] || categoryConfig[EventCategory.Event];
   const Icon = config.icon;
 
@@ -47,7 +48,11 @@ function EventCard({ event, index }: { event: AppEvent; index: number }) {
             <span className={cn("text-[10px] font-bold uppercase tracking-wide", config.color)}>{event.category}</span>
           </div>
           <p className="font-semibold text-sm">{event.title}</p>
-          <p className="text-xs text-muted-foreground">{format(eventDate, 'EEEE')}</p>
+          <p className="text-xs text-muted-foreground">
+            {endDate 
+              ? `${format(eventDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`
+              : format(eventDate, 'EEEE, MMMM do, yyyy')}
+          </p>
         </div>
 
         <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>
@@ -99,8 +104,11 @@ export default function EventsPage() {
     [...events].sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date))).forEach(event => {
       try {
         const d = parseISO(event.date);
+        const endD = event.endDate ? parseISO(event.endDate) : d;
         const key = format(d, 'MMMM yyyy');
-        if (isBefore(d, today)) {
+        
+        // If the event hasn't ended yet, it's upcoming/current
+        if (isBefore(endD, today)) {
           if (!past.has(key)) past.set(key, []); past.get(key)!.push(event);
         } else {
           if (!upcoming.has(key)) upcoming.set(key, []); upcoming.get(key)!.push(event);
