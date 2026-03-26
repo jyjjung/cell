@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, Bell, ArrowRight } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useRouter } from 'next/navigation';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 const NotificationItem = ({ notification, onMarkRead }: { notification: any, onMarkRead: () => void }) => (
   <motion.div
@@ -22,7 +23,12 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: any, onM
     <div className="flex items-center justify-between gap-4">
         <div className="flex-grow min-w-0 space-y-0.5">
             <p className="font-bold text-sm tracking-tight truncate text-foreground group-hover:text-white transition-colors">{notification.title}</p>
-            <p className="text-muted-foreground text-xs font-medium truncate group-hover:text-white/80 transition-colors">{notification.message}</p>
+            <LinkifiedText 
+              text={notification.message} 
+              truncate 
+              className="text-muted-foreground text-xs font-medium group-hover:text-white/80 transition-colors"
+              linkClassName="group-hover:text-white group-hover:decoration-white/40"
+            />
         </div>
         <Button 
             variant="ghost" 

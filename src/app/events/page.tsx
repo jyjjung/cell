@@ -10,6 +10,7 @@ import { Calendar, Cake, Coffee, Users, CalendarOff, ChevronRight } from 'lucide
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 const categoryConfig: Record<EventCategory, { icon: React.ElementType; color: string; bg: string }> = {
   [EventCategory.Event]: { icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10 border-blue-500/20' },
@@ -64,8 +65,8 @@ function EventCard({ event, index }: { event: AppEvent; index: number }) {
             className="overflow-hidden"
           >
             <div className="mx-4 mt-1 p-4 rounded-2xl bg-muted/30 border border-border/30 space-y-1">
-              {event.summary && <p className="text-sm text-muted-foreground">{event.summary}</p>}
-              {event.details && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.details}</p>}
+              {event.summary && <LinkifiedText text={event.summary} className="block text-sm text-muted-foreground" />}
+              {event.details && <LinkifiedText text={event.details} className="block text-sm text-muted-foreground" />}
             </div>
           </motion.div>
         )}

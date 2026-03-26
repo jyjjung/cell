@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, Megaphone, ArrowRight, Zap } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useRouter } from 'next/navigation';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 const AnnouncementItem = ({ notification, onMarkRead }: { notification: any, onMarkRead: () => void }) => (
   <motion.div
@@ -25,7 +26,11 @@ const AnnouncementItem = ({ notification, onMarkRead }: { notification: any, onM
                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 group-hover:bg-white animate-pulse" />
                 <p className="font-bold text-sm tracking-tight truncate text-foreground group-hover:text-white uppercase">{notification.title}</p>
             </div>
-            <p className="text-muted-foreground text-xs font-medium truncate group-hover:text-white/80">{notification.message}</p>
+            <LinkifiedText 
+              text={notification.message} 
+              truncate 
+              className="text-muted-foreground text-xs font-medium group-hover:text-white/80" 
+            />
         </div>
         <Button 
             variant="ghost" 

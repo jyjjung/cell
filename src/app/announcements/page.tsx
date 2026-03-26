@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translations } from '@/lib/translations';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notification: any; isRead: boolean; onMarkRead?: () => void; index: number }) {
   return (
@@ -30,7 +31,7 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notific
       <div className={cn("mt-0.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/20" : "bg-orange-500 animate-pulse")} />
       <div className="flex-1 min-w-0 space-y-1">
         <p className={cn("font-semibold text-sm", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
-        <p className="text-sm text-muted-foreground leading-relaxed">{notification.message}</p>
+        <LinkifiedText text={notification.message} className="block text-sm text-muted-foreground leading-relaxed" />
         <p className="text-[11px] text-muted-foreground/40 font-medium">
           {notification.createdAt ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
         </p>

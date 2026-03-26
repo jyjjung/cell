@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -67,9 +68,11 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                       )}
 
                       {message.text && (
-                        <p className="text-[15px] font-normal whitespace-pre-wrap break-words leading-snug">
-                          {message.text}
-                        </p>
+                        <LinkifiedText 
+                          text={message.text} 
+                          isSender={isSender} 
+                          className="text-[15px] font-normal" 
+                        />
                       )}
 
                       {youtubeId && (

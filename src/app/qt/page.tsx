@@ -9,6 +9,7 @@ import { Loader2, User, CalendarOff, BookOpen } from 'lucide-react';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 
 export default function QTRosterPage() {
     const { roster, loading: rosterLoading } = useQTRoster();
@@ -99,9 +100,10 @@ export default function QTRosterPage() {
                             </div>
                         </div>
                         {entry.title && (
-                            <p className="text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed break-words">
-                                {entry.title}
-                            </p>
+                            <LinkifiedText 
+                                text={entry.title} 
+                                className="block text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed" 
+                            />
                         )}
                     </div>
                 </div>
