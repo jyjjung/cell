@@ -15,6 +15,7 @@ import { useCleaningDays } from '@/hooks/useCleaningDays';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc } from 'date-fns';
 import {
@@ -109,8 +110,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     const today = startOfToday();
     const items: TimelineItem[] = [];
     events.forEach(e => {
-      const d = parseISO(e.date);
-      if (isValid(d) && !isBefore(d, today)) items.push({ id: e.id, date: d, title: e.title, type: 'event', category: e.category, details: e.details || e.summary });
+      const next = nextOccurrenceOnOrAfter(e, today);
+      if (!next) return;
+      items.push({ id: e.id, date: next, title: e.title, type: 'event', category: e.category, details: e.details });
     });
     cleaningRoster.forEach(e => {
       const d = parseISO(e.date);

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo } from 'react';
-import { format, parseISO, startOfToday, isSameDay, isValid, parse } from 'date-fns';
+import { format, parseISO, startOfToday, isValid, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Clock, Calendar, ShieldCheck, BookOpenText } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { motion } from 'framer-motion';
+import { eventOccursOnDate } from '@/lib/event-occurrences';
 
 interface DayViewWidgetProps {
   events: AppEvent[];
@@ -29,18 +30,10 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster }: DayV
   const todaysItems = useMemo(() => {
     const items: DayScheduleItem[] = [];
 
-    // Filter events for today
     events.forEach(e => {
       const d = parseISO(e.date);
-      const endD = e.endDate ? parseISO(e.endDate) : d;
-      
-      // Check if today is within [d, endD]
-      if (isValid(d) && isValid(endD) && !isSameDay(d, today) && !isSameDay(endD, today)) {
-          // Check if today falls between
-          if (today < d || today > endD) return;
-      } else if (!isSameDay(d, today) && !isSameDay(endD, today)) {
-          return;
-      }
+      if (!isValid(d)) return;
+      if (!eventOccursOnDate(e, today)) return;
 
       items.push({
         id: e.id,

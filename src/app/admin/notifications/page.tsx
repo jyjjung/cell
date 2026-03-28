@@ -5,42 +5,18 @@ import { useState, useMemo } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
 import NotificationAdminForm from '@/components/admin/notification-admin-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, List, Trash2, Megaphone, Send, ShieldCheck, Zap } from 'lucide-react';
+import { Loader2, Send, Trash2, Megaphone } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
 
 export default function AdminNotificationsPage() {
   const { notifications, loading, deleteNotification } = useNotifications();
   const [isDeletingAll, setIsDeletingAll] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const { toast } = useToast();
 
   const announcements = useMemo(() => notifications.filter(n => n.type === 'announcement'), [notifications]);
-
-  const handleTriggerSync = async () => {
-    setIsSyncing(true);
-    try {
-        const token = await auth.currentUser?.getIdToken(true);
-        const response = await fetch('/api/cron/reminders', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (response.ok) {
-            toast({ title: "Sync Successful", description: data.message });
-        } else {
-            throw new Error(data.error || "Sync failed");
-        }
-    } catch (e: any) {
-        toast({ variant: "destructive", title: "Sync Error", description: e.message });
-    } finally {
-        setIsSyncing(false);
-    }
-  };
 
   const handleDelete = async (notificationId: string) => {
     try {
@@ -74,36 +50,14 @@ export default function AdminNotificationsPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-        <section className="lg:col-span-2 space-y-8">
-            <div className="p-8 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6">
-                <h2 className="text-xl font-black tracking-tight uppercase tracking-widest flex items-center gap-3">
-                    <Send className="h-5 w-5 text-orange-500" /> Dispatch New
-                </h2>
-                <NotificationAdminForm />
-            </div>
-        </section>
-
-        <section className="space-y-8">
-            <div className="p-8 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6">
-                <div className="space-y-1">
-                    <h2 className="text-xl font-black tracking-tight uppercase tracking-widest flex items-center gap-3">
-                        <Zap className="h-5 w-5 text-primary" /> Integrity
-                    </h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">System Maintenance</p>
-                </div>
-                <div className="space-y-4">
-                    <p className="text-xs font-medium text-muted-foreground leading-relaxed">
-                        Manually trigger the background synchronization process to force-delivery of scheduled reminders and duty alerts.
-                    </p>
-                    <Button onClick={handleTriggerSync} disabled={isSyncing} className="w-full h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/10 transition-all">
-                        {isSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
-                        Trigger Manual Sync
-                    </Button>
-                </div>
-            </div>
-        </section>
-      </div>
+      <section className="max-w-2xl space-y-8">
+        <div className="p-8 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6">
+            <h2 className="text-xl font-black tracking-tight uppercase tracking-widest flex items-center gap-3">
+                <Send className="h-5 w-5 text-orange-500" /> Dispatch New
+            </h2>
+            <NotificationAdminForm />
+        </div>
+      </section>
       
       <Separator className="opacity-50" />
 

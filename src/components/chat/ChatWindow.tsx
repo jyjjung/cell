@@ -5,7 +5,8 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, Info } from 'lucide-react';
+import { Loader2, ArrowLeft, Info, WifiOff } from 'lucide-react';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
@@ -29,13 +30,15 @@ function formatMessageDate(date: Date) {
 export default function ChatWindow({ chatId }: { chatId: string }) {
   const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction } = useMessages(chatId);
   const { currentUser } = useAuth();
-  const { allUsers, loading: loadingUsers } = useAllUsers();
+  const { allUsers } = useAllUsers();
+  const online = useOnlineStatus();
   const listRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
 
-  const loading = loadingMessages || loadingUsers;
   const t = translations[currentUser?.preferredLanguage || 'en'];
+  const showOfflineRibbon = !online;
+  const blockingLoad = loadingMessages && messages.length === 0;
 
   useEffect(() => {
     if (chatId) {
@@ -140,7 +143,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     return content;
   }, [messages, chat, allUsers, toggleReaction, lastSeenNamesPerMessage]);
 
-  if (loading) {
+  if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
   }
 
@@ -157,6 +160,13 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
+      {showOfflineRibbon && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
+          <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
+          <span>{t.chatOfflineBanner}</span>
+        </div>
+      )}
+
       <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-white/5 bg-background/50 backdrop-blur-xl z-20">
         <Link href="/chat" className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-all">
             <ArrowLeft className="h-5 w-5" />
@@ -199,7 +209,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       </div>
 
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
-          <MessageInput chatId={chatId} />
+          <MessageInput chatId={chatId} disabled={!online} />
       </div>
       
       {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}

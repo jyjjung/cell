@@ -43,7 +43,10 @@ export function useChats() {
       where('members', 'array-contains', currentUser.uid)
     );
 
-    const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(
+      chatsQuery,
+      { includeMetadataChanges: true },
+      (snapshot) => {
       const chatsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
