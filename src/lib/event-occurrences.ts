@@ -1,0 +1,154 @@
+import { addDays, format, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
+import type { AppEvent, EventRecurrence } from '@/types';
+
+function day(d: Date): Date {
+  return startOfDay(d);
+}
+
+function parseDay(iso: string): Date {
+  const s = iso.includes('T') ? iso : `${iso}T12:00:00`;
+  return day(parseISO(s));
+}
+
+/**
+ * Whether `targetDay` falls on an occurrence of this event (non-recurring span, recurrence, or weekday filter).
+ */
+export function eventOccursOnDate(event: AppEvent, targetDay: Date): boolean {
+  const target = day(targetDay);
+  const recurrence: EventRecurrence = event.recurrence ?? 'none';
+  const start = parseDay(event.date);
+
+  if (isBefore(target, start)) return false;
+
+  if (recurrence === 'daily' || recurrence === 'weekly') {
+    const until = event.recurrenceUntil ? parseDay(event.recurrenceUntil) : start;
+    if (isAfter(target, until)) return false;
+    let weekdays = event.weekdays ?? [];
+    if (recurrence === 'weekly' && weekdays.length === 0) {
+      weekdays = [start.getDay()];
+    }
+    const dow = target.getDay();
+    if (weekdays.length > 0 && !weekdays.includes(dow)) return false;
+    return true;
+  }
+
+  const end = event.endDate ? parseDay(event.endDate) : start;
+  if (isAfter(target, end)) return false;
+  const wds = event.weekdays;
+  if (wds?.length && !wds.includes(target.getDay())) return false;
+  return true;
+}
+
+/** Sorted YYYY-MM-DD occurrence strings from start through end of relevant range (for listing / grouping). */
+export function getOccurrenceDateStrings(
+  event: AppEvent,
+  options?: { listUntil?: Date }
+): string[] {
+  const recurrence: EventRecurrence = event.recurrence ?? 'none';
+  const start = parseDay(event.date);
+  const cap = options?.listUntil ? day(options.listUntil) : null;
+
+  const pushRange = (from: Date, to: Date, weekdays: number[] | undefined) => {
+    const out: string[] = [];
+    let d = from;
+    const end = to;
+    while (!isAfter(d, end)) {
+      if (!weekdays?.length || weekdays.includes(d.getDay())) {
+        out.push(format(d, 'yyyy-MM-dd'));
+      }
+      d = addDays(d, 1);
+    }
+    return out;
+  };
+
+  if (recurrence === 'daily' || recurrence === 'weekly') {
+    const until = event.recurrenceUntil ? parseDay(event.recurrenceUntil) : start;
+    let weekdays = event.weekdays ?? [];
+    if (recurrence === 'weekly' && weekdays.length === 0) {
+      weekdays = [start.getDay()];
+    }
+    const effectiveUntil = cap && isBefore(cap, until) ? cap : until;
+    if (isBefore(effectiveUntil, start)) return [];
+    return pushRange(start, effectiveUntil, recurrence === 'daily' && weekdays.length === 0 ? undefined : weekdays);
+  }
+
+  const end = event.endDate ? parseDay(event.endDate) : start;
+  const effectiveEnd = cap && isBefore(cap, end) ? cap : end;
+  if (isBefore(effectiveEnd, start)) return [];
+  const weekdays = event.weekdays?.length ? event.weekdays : undefined;
+  return pushRange(start, effectiveEnd, weekdays);
+}
+
+export function getLatestOccurrenceDay(event: AppEvent): Date {
+  const recurrence: EventRecurrence = event.recurrence ?? 'none';
+  if (recurrence === 'daily' || recurrence === 'weekly') {
+    return event.recurrenceUntil ? parseDay(event.recurrenceUntil) : parseDay(event.date);
+  }
+  return event.endDate ? parseDay(event.endDate) : parseDay(event.date);
+}
+
+/** Whether any occurrence falls on `fromDay` or later (walks day-by-day; bounded). */
+export function eventHasFutureOccurrence(event: AppEvent, fromDay: Date): boolean {
+  const from = day(fromDay);
+  const last = getLatestOccurrenceDay(event);
+  if (isBefore(last, from)) return false;
+  let d = from;
+  for (let i = 0; i < 800; i++) {
+    if (isAfter(d, last)) break;
+    if (eventOccursOnDate(event, d)) return true;
+    d = addDays(d, 1);
+  }
+  return false;
+}
+
+/** True if there is no occurrence on or after `fromDay`. */
+export function eventIsFullyBefore(event: AppEvent, fromDay: Date): boolean {
+  return !eventHasFutureOccurrence(event, fromDay);
+}
+
+/** First occurrence date on or after `fromDay`, or null. */
+export function nextOccurrenceOnOrAfter(event: AppEvent, fromDay: Date): Date | null {
+  const from = day(fromDay);
+  const last = getLatestOccurrenceDay(event);
+  if (isBefore(last, from)) return null;
+  let d = from;
+  for (let i = 0; i < 800; i++) {
+    if (isAfter(d, last)) break;
+    if (eventOccursOnDate(event, d)) return d;
+    d = addDays(d, 1);
+  }
+  return null;
+}
+
+export type EventOccurrenceRow = {
+  occurrenceKey: string;
+  occurrenceDate: Date;
+  event: AppEvent;
+};
+
+/** Expand stored events into per-day rows for calendars and lists (within optional window). */
+export function expandEventsToOccurrenceRows(
+  events: AppEvent[],
+  options?: { from?: Date; until?: Date }
+): EventOccurrenceRow[] {
+  const from = options?.from ? day(options.from) : undefined;
+  const until = options?.until ? day(options.until) : undefined;
+  const rows: EventOccurrenceRow[] = [];
+
+  for (const event of events) {
+    const listUntil = until ?? addDays(new Date(), 365 * 2);
+    const ymds = getOccurrenceDateStrings(event, { listUntil });
+    for (const ymd of ymds) {
+      const d = parseDay(ymd);
+      if (from && isBefore(d, from)) continue;
+      if (until && isAfter(d, until)) continue;
+      rows.push({
+        occurrenceKey: `${event.id}:${ymd}`,
+        occurrenceDate: d,
+        event,
+      });
+    }
+  }
+
+  return rows.sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());
+}

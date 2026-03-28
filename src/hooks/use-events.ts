@@ -14,10 +14,19 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  deleteField,
+  type DocumentData,
 } from 'firebase/firestore';
 
 const EVENTS_COLLECTION = 'events';
+
+function toIsoString(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  if (typeof v === 'string') return v;
+  if (v instanceof Timestamp) return v.toDate().toISOString();
+  return undefined;
+}
 
 export function useEvents() {
   const [events, setEvents] = useState<AppEvent[]>([]);
@@ -27,14 +36,24 @@ export function useEvents() {
     const q = query(collection(db, EVENTS_COLLECTION), orderBy("date", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const eventsData: AppEvent[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         eventsData.push({
-          ...data,
-          id: doc.id,
-          date: typeof data.date === 'string' ? data.date : (data.date as Timestamp)?.toDate().toISOString(),
-          details: data.details ?? '', // Default to empty string
-          summary: data.summary ?? '', // Default to empty string
+          id: docSnap.id,
+          title: data.title,
+          date: toIsoString(data.date) ?? '',
+          endDate: toIsoString(data.endDate),
+          startTime: data.startTime,
+          endTime: data.endTime,
+          allDay: data.allDay ?? true,
+          category: data.category,
+          details: data.details ?? '',
+          userId: data.userId,
+          recurrence: data.recurrence,
+          recurrenceUntil: toIsoString(data.recurrenceUntil),
+          weekdays: Array.isArray(data.weekdays) ? data.weekdays : undefined,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
         } as AppEvent);
       });
       setEvents(eventsData);
@@ -49,13 +68,34 @@ export function useEvents() {
 
   const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>): Promise<string> => {
     try {
-      const dataToSend = {
-        ...eventData,
+      const dataToSend: Record<string, unknown> = {
+        title: eventData.title,
+        date: eventData.date,
+        category: eventData.category,
         details: eventData.details ?? '',
-        summary: eventData.summary ?? '',
+        allDay: eventData.allDay ?? true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+      if (!eventData.allDay) {
+        if (eventData.startTime) dataToSend.startTime = eventData.startTime;
+        if (eventData.endTime) dataToSend.endTime = eventData.endTime;
+      }
+      if (eventData.userId) dataToSend.userId = eventData.userId;
+
+      if (eventData.recurrence && eventData.recurrence !== 'none') {
+        dataToSend.recurrence = eventData.recurrence;
+        dataToSend.recurrenceUntil = eventData.recurrenceUntil;
+        if (eventData.recurrence === 'weekly') {
+          dataToSend.weekdays = eventData.weekdays?.length ? eventData.weekdays : [];
+        } else if ((eventData.weekdays?.length ?? 0) > 0) {
+          dataToSend.weekdays = eventData.weekdays;
+        }
+      } else {
+        if (eventData.endDate) dataToSend.endDate = eventData.endDate;
+        if (eventData.weekdays?.length) dataToSend.weekdays = eventData.weekdays;
+      }
+
       const docRef = await addDoc(collection(db, EVENTS_COLLECTION), dataToSend);
       return docRef.id;
     } catch (error: any) {
@@ -75,13 +115,41 @@ export function useEvents() {
     const eventDocRef = doc(db, EVENTS_COLLECTION, updatedEvent.id);
     try {
       const { id, ...eventProps } = updatedEvent;
-      const dataToUpdate = {
-        ...eventProps,
+      const dataToUpdate: Record<string, unknown> = {
+        title: eventProps.title,
+        date: eventProps.date,
+        category: eventProps.category,
         details: eventProps.details ?? '',
-        summary: eventProps.summary ?? '',
+        allDay: eventProps.allDay ?? true,
         updatedAt: serverTimestamp(),
       };
-      await updateDoc(eventDocRef, dataToUpdate);
+      if (eventProps.allDay) {
+        dataToUpdate.startTime = deleteField();
+        dataToUpdate.endTime = deleteField();
+      } else {
+        dataToUpdate.startTime = eventProps.startTime || deleteField();
+        dataToUpdate.endTime = eventProps.endTime || deleteField();
+      }
+
+      if (eventProps.recurrence && eventProps.recurrence !== 'none') {
+        dataToUpdate.recurrence = eventProps.recurrence;
+        dataToUpdate.recurrenceUntil = eventProps.recurrenceUntil;
+        dataToUpdate.endDate = deleteField();
+        if (eventProps.recurrence === 'weekly') {
+          dataToUpdate.weekdays = eventProps.weekdays?.length ? eventProps.weekdays : [];
+        } else if ((eventProps.weekdays?.length ?? 0) > 0) {
+          dataToUpdate.weekdays = eventProps.weekdays;
+        } else {
+          dataToUpdate.weekdays = deleteField();
+        }
+      } else {
+        dataToUpdate.recurrence = deleteField();
+        dataToUpdate.recurrenceUntil = deleteField();
+        dataToUpdate.weekdays = eventProps.weekdays?.length ? eventProps.weekdays : deleteField();
+        dataToUpdate.endDate = eventProps.endDate ? eventProps.endDate : deleteField();
+      }
+
+      await updateDoc(eventDocRef, dataToUpdate as DocumentData);
     } catch (error: any) {
       console.error("Error updating event in Firestore. Data:", updatedEvent, "Error:", error, "Error Code:", error.code, "Error Message:", error.message);
       if (error.code === 'permission-denied') {

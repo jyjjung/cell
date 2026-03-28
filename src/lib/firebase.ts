@@ -1,6 +1,14 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getFirestore, enableMultiTabIndexedDbPersistence, Timestamp } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  CACHE_SIZE_UNLIMITED,
+  Timestamp,
+  type Firestore,
+} from 'firebase/firestore';
 import { getAuth } from "firebase/auth";
 import { getMessaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
@@ -22,18 +30,23 @@ if (!getApps().length) {
   app = getApps()[0];
 }
 
-const db = getFirestore(app);
-
-// Enable offline persistence for better performance and "instant" feel
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firestore persistence: Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firestore persistence: The current browser does not support all of the features required to enable persistence.');
-    }
-  });
+function createDb(): Firestore {
+  if (typeof window === 'undefined') {
+    return getFirestore(app);
+  }
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    return getFirestore(app);
+  }
 }
+
+const db = createDb();
 
 const auth = getAuth(app);
 const storage = getStorage(app);

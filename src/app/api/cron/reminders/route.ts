@@ -3,8 +3,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { App as FirebaseAdminApp } from 'firebase-admin/app';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase-admin/firestore';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, startOfDay } from 'date-fns';
 import type { AppEvent, QTRosterEntry, CleaningRosterEntry, AppNotification } from '@/types';
+import { eventOccursOnDate } from '@/lib/event-occurrences';
 
 // --- Firebase Admin Initialization ---
 
@@ -81,28 +82,50 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     const tomorrow = addDays(today, 1);
     const datesToCheck = [format(today, 'yyyy-MM-dd'), format(tomorrow, 'yyyy-MM-dd')];
-    
+    const todayDay = startOfDay(today);
+    const tomorrowDay = startOfDay(tomorrow);
+
     let notificationsCreated = 0;
 
-    // --- 1. Event Reminders (Global) ---
-    const eventsQuery = query(collection(db, 'events'), where('date', 'in', datesToCheck));
-    const eventSnapshots = await getDocs(eventsQuery);
+    const toEventIso = (raw: unknown): string => {
+        if (typeof raw === 'string') return raw;
+        if (raw && typeof raw === 'object' && 'toDate' in (raw as object)) {
+            return (raw as Timestamp).toDate().toISOString();
+        }
+        return '';
+    };
 
-    for (const doc of eventSnapshots.docs) {
-        const event = { id: doc.id, ...doc.data() } as AppEvent;
-        const eventDate = Timestamp.fromMillis(Date.parse(event.date)).toDate();
+    // --- 1. Event Reminders (Global) — includes recurring / multi-day patterns ---
+    const eventSnapshots = await getDocs(collection(db, 'events'));
+
+    for (const docSnap of eventSnapshots.docs) {
+        const d = docSnap.data();
+        const event: AppEvent = {
+            id: docSnap.id,
+            title: d.title,
+            date: toEventIso(d.date),
+            endDate: d.endDate ? toEventIso(d.endDate) : undefined,
+            startTime: d.startTime,
+            endTime: d.endTime,
+            allDay: d.allDay ?? true,
+            category: d.category,
+            details: d.details,
+            recurrence: d.recurrence,
+            recurrenceUntil: d.recurrenceUntil ? toEventIso(d.recurrenceUntil) : undefined,
+            weekdays: Array.isArray(d.weekdays) ? d.weekdays : undefined,
+        };
         let title = '';
 
-        if (isSameDay(eventDate, today)) {
+        if (eventOccursOnDate(event, todayDay)) {
             title = `Today: ${event.title}`;
-        } else if (isSameDay(eventDate, tomorrow)) {
+        } else if (eventOccursOnDate(event, tomorrowDay)) {
             title = `Tomorrow: ${event.title}`;
         } else continue;
         
         // Event reminders are global
         await createNotificationIfNotExists(db, { 
             title, 
-            message: `This event is happening ${isSameDay(eventDate, today) ? 'today' : 'tomorrow'}.`, 
+            message: `This event is happening ${eventOccursOnDate(event, todayDay) ? 'today' : 'tomorrow'}.`, 
             type: 'reminder', 
             isGlobal: true, 
             relatedUrl: `/events#${event.id}` 

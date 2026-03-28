@@ -17,11 +17,12 @@ export function useAllUsers() {
     setLoading(true);
     const usersQuery = query(collection(db, USERS_COLLECTION));
 
-    const unsubscribe = onSnapshot(usersQuery, (querySnapshot) => {
+    const unsubscribe = onSnapshot(
+      usersQuery,
+      { includeMetadataChanges: true },
+      (querySnapshot) => {
       const usersData: UserProfileData[] = [];
       querySnapshot.forEach((doc) => {
-        // We can safely cast here as we assume documents in this collection
-        // conform to UserProfileData
         usersData.push(doc.data() as UserProfileData);
       });
       setAllUsers(usersData);

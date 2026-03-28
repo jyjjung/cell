@@ -16,6 +16,7 @@ import {
   Timestamp,
   startAfter,
   getDocs,
+  getDocsFromCache,
   deleteField,
   getDoc
 } from 'firebase/firestore';
@@ -26,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
-const MESSAGES_PER_PAGE = 100; // Increased limit to keep more in view
+const MESSAGES_PER_PAGE = 200; // Larger window for offline/PWA (IndexedDB cache)
 
 export function useMessages(chatId: string | null) {
   const { currentUser } = useAuth();
@@ -44,11 +45,16 @@ export function useMessages(chatId: string | null) {
       return;
     }
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-    const unsubscribe = onSnapshot(chatDocRef, (doc) => {
-      if (doc.exists()) {
-        setChat({ id: doc.id, ...doc.data() } as Chat);
-      }
-    });
+    const unsubscribe = onSnapshot(
+      chatDocRef,
+      { includeMetadataChanges: true },
+      (snap) => {
+        if (snap.exists()) {
+          setChat({ id: snap.id, ...snap.data() } as Chat);
+        }
+      },
+      () => {}
+    );
     return () => unsubscribe();
   }, [chatId]);
 
@@ -71,18 +77,23 @@ export function useMessages(chatId: string | null) {
       limit(MESSAGES_PER_PAGE)
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      if (snapshot.docs.length < MESSAGES_PER_PAGE) {
-        setHasMore(false);
+    const unsubscribe = onSnapshot(
+      messagesQuery,
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        if (snapshot.docs.length < MESSAGES_PER_PAGE) {
+          setHasMore(false);
+        }
+        lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
+        const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+
+        setMessages(newMessages);
+        setLoading(false);
+      },
+      () => {
+        setLoading(false);
       }
-      lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-      const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-      
-      // We overwrite state here because onSnapshot provides the entire current window
-      // once loaded, previously fetched "load more" pages stay in state via appending logic below.
-      setMessages(newMessages);
-      setLoading(false);
-    });
+    );
 
     return () => unsubscribe();
   }, [chatId]);
@@ -99,17 +110,31 @@ export function useMessages(chatId: string | null) {
       limit(MESSAGES_PER_PAGE)
     );
 
-    const snapshot = await getDocs(moreMessagesQuery);
+    let snapshot;
+    try {
+      snapshot = await getDocs(moreMessagesQuery);
+    } catch {
+      try {
+        snapshot = await getDocsFromCache(moreMessagesQuery);
+      } catch {
+        setLoadingMore(false);
+        toast({
+          variant: 'destructive',
+          title: 'Could not load older messages',
+          description: 'Connect to the internet to load more history, or use messages already saved on this device.',
+        });
+        return;
+      }
+    }
     if (snapshot.empty || snapshot.docs.length < MESSAGES_PER_PAGE) {
       setHasMore(false);
     }
     lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
     const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-    
-    // Append to existing list so they never "hide"
+
     setMessages(prev => [...prev, ...newMessages]);
     setLoadingMore(false);
-  }, [chatId, hasMore, loadingMore]);
+  }, [chatId, hasMore, loadingMore, toast]);
 
 
   const sendMessage = useCallback((text: string) => {

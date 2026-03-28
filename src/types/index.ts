@@ -16,6 +16,9 @@ export enum EventCategory {
   Snack = "Snack",
 }
 
+/** none: single or multi-day span. daily/weekly: repeats until recurrenceUntil. */
+export type EventRecurrence = 'none' | 'daily' | 'weekly';
+
 export interface AppEvent {
   id: string;
   date: string;
@@ -26,8 +29,13 @@ export interface AppEvent {
   category: EventCategory;
   title: string;
   details?: string;
-  summary?: string;
   userId?: string;
+  /** Repeating pattern; omit or 'none' for one-off / date-span only. */
+  recurrence?: EventRecurrence;
+  /** ISO date — last day the recurrence can occur (required when recurrence is daily or weekly). */
+  recurrenceUntil?: string;
+  /** 0–6 Sun–Sat. Multi-day span: limit to these weekdays in range. Recurring weekly: repeat on these days (default: start date’s weekday). Recurring daily: optional; empty = every day. */
+  weekdays?: number[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }

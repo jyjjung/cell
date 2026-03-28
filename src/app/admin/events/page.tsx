@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Calendar } from 'lucide-react';
-import { startOfDay, parseISO, format, isBefore } from 'date-fns';
+import { startOfDay, parseISO, format } from 'date-fns';
+import { eventIsFullyBefore } from '@/lib/event-occurrences';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 
@@ -29,7 +30,7 @@ export default function AdminEventsPage() {
     const past: AppEvent[] = [];
     events.forEach(event => {
       try {
-        if (isBefore(parseISO(event.date), today)) {
+        if (eventIsFullyBefore(event, today)) {
           past.push(event);
         } else {
           upcoming.push(event);
@@ -161,7 +162,7 @@ export default function AdminEventsPage() {
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
             </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
                 <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
             </DialogHeader>
@@ -236,7 +237,7 @@ export default function AdminEventsPage() {
                 </AlertDialogContent>
                 </AlertDialog>
                 <p className="text-xs text-muted-foreground">
-                This will remove all events whose date is before today.
+                This removes events that have no occurrences on or after today (including finished recurring series).
                 </p>
             </div>
         </div>

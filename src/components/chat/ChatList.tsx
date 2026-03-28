@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { useChats } from "@/hooks/useChats";
@@ -21,12 +21,16 @@ import type { Chat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
 import { formatDistanceToNow } from "date-fns";
-
+import { db } from "@/lib/firebase";
+import { prefetchChatMessagesCache } from "@/lib/prefetch-chat-cache";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 export default function ChatList() {
   const { chats, loading: loadingChats } = useChats();
-  const { allUsers, loading: loadingUsers } = useAllUsers();
+  const { allUsers } = useAllUsers();
   const { currentUser } = useAuth();
+  const online = useOnlineStatus();
+  const prefetchedIdsRef = useRef<string>('');
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
   
@@ -34,8 +38,16 @@ export default function ChatList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "private" | "group">("all");
   
-  const loading = loadingChats || loadingUsers;
+  const loading = loadingChats && chats.length === 0;
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  useEffect(() => {
+    if (!online || !chats.length) return;
+    const key = chats.map((c) => c.id).sort().join(',');
+    if (key === prefetchedIdsRef.current) return;
+    prefetchedIdsRef.current = key;
+    prefetchChatMessagesCache(db, chats.map((c) => c.id));
+  }, [online, chats]);
 
   const getChatDetails = (chat: Chat) => {
     if (!currentUser) return null;
@@ -103,6 +115,10 @@ export default function ChatList() {
           </Button>
         }
       />
+
+      {!online && chats.length > 0 && (
+        <p className="text-xs font-medium text-amber-600 dark:text-amber-400/90 px-1">{t.chatOfflineBanner}</p>
+      )}
 
       {/* Search & Tabs */}
       <div className="space-y-4">

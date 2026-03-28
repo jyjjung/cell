@@ -98,6 +98,8 @@ export const translations = {
     seenBy: "Seen by",
     reactedBy: "Reacted by",
     messagePlaceholder: "Message",
+    chatOfflineBanner: "You're offline — showing messages saved on this device.",
+    chatOfflinePlaceholder: "You're offline. Messages send when you're back online.",
     lastMessageBy: "Last message sent by",
     at: "at",
     
@@ -264,6 +266,8 @@ export const translations = {
     seenBy: "읽음:",
     reactedBy: "반응한 사람:",
     messagePlaceholder: "메시지",
+    chatOfflineBanner: "오프라인입니다 — 이 기기에 저장된 메시지를 표시합니다.",
+    chatOfflinePlaceholder: "오프라인입니다. 온라인이 되면 메시지가 전송됩니다.",
     lastMessageBy: "마지막 메시지:",
     at: "",
 

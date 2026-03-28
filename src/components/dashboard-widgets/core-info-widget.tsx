@@ -13,6 +13,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, compareAsc, startOfToday } from 'date-fns';
+import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { 
   Calendar, 
   BookOpen, 
@@ -201,8 +202,9 @@ export default function CoreInfoWidget() {
     const today = startOfToday();
     const items: InternalTimelineItem[] = [];
     events.forEach(e => {
-        const d = parseISO(e.date);
-        if (isValid(d) && !isBefore(d, today)) items.push({ id: e.id, date: d, title: e.title, type: 'event', category: e.category, details: e.details || e.summary });
+        const next = nextOccurrenceOnOrAfter(e, today);
+        if (!next) return;
+        items.push({ id: e.id, date: next, title: e.title, type: 'event', category: e.category, details: e.details });
     });
     cleaningRoster.forEach(e => {
         const d = parseISO(e.date);
