@@ -134,7 +134,7 @@ export default function BatchEventImportForm() {
           date: date.toISOString(),
           category: finalCategory,
           details: finalCategory === EventCategory.Birthday ? `Happy Birthday ${title}!` : '',
-          summary: '',
+          allDay: true,
           userId: finalCategory === EventCategory.Birthday ? findUserIdForName(title) : undefined,
         });
       }
@@ -157,7 +157,7 @@ export default function BatchEventImportForm() {
                     date: date.toISOString(),
                     category: EventCategory.Birthday,
                     details: `Happy Birthday ${name}!`,
-                    summary: '',
+                    allDay: true,
                     userId: findUserIdForName(name),
                 });
             } else {
@@ -229,8 +229,8 @@ export default function BatchEventImportForm() {
           title: name, 
           date: currentDate.toISOString(),
           category: EventCategory.Snack,
-          details: name, 
-          summary: '', 
+          details: name,
+          allDay: true,
         };
         try {
           await addEvent(snackEvent);

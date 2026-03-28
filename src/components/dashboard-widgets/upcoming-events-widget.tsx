@@ -9,7 +9,8 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { isBefore, parseISO, startOfToday, isValid, format, compareAsc } from 'date-fns';
+import { parseISO, startOfToday, isValid, format, compareAsc, isBefore } from 'date-fns';
+import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info, Clock } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
@@ -96,30 +97,25 @@ export default function UpcomingEventsWidget() {
         const today = startOfToday();
         const items: TimelineItem[] = [];
 
-        // Add regular events
         events.forEach(event => {
-            const date = parseISO(event.date);
+            const next = nextOccurrenceOnOrAfter(event, today);
+            if (!next) return;
+            const start = parseISO(event.date);
             const endDate = event.endDate ? parseISO(event.endDate) : undefined;
-            
-            // Check if event is active or upcoming
-            const isActiveOrUpcoming = isValid(date) && (
-                !isBefore(date, today) || (endDate && isValid(endDate) && !isBefore(endDate, today))
-            );
+            if (!isValid(start)) return;
 
-            if (isActiveOrUpcoming) {
-                items.push({ 
-                    id: event.id, 
-                    date, 
-                    endDate,
-                    startTime: event.startTime,
-                    endTime: event.endTime,
-                    allDay: event.allDay ?? true,
-                    title: event.title, 
-                    type: 'event', 
-                    category: event.category,
-                    details: event.details || event.summary 
-                });
-            }
+            items.push({
+                id: event.id,
+                date: next,
+                endDate,
+                startTime: event.startTime,
+                endTime: event.endTime,
+                allDay: event.allDay ?? true,
+                title: event.title,
+                type: 'event',
+                category: event.category,
+                details: event.details,
+            });
         });
 
         // Add cleaning duties
