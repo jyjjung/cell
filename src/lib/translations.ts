@@ -102,6 +102,8 @@ export const translations = {
     chatOfflinePlaceholder: "You're offline. Messages send when you're back online.",
     lastMessageBy: "Last message sent by",
     at: "at",
+    uploadingImage: "Uploading Image...",
+    image: "Image",
     
     // Rosters & Community
     qtTitle: "QT Roster.",
@@ -270,6 +272,8 @@ export const translations = {
     chatOfflinePlaceholder: "오프라인입니다. 온라인이 되면 메시지가 전송됩니다.",
     lastMessageBy: "마지막 메시지:",
     at: "",
+    uploadingImage: "이미지 업로드 중...",
+    image: "이미지",
 
     // Rosters & Community
     qtTitle: "QT 순서.",

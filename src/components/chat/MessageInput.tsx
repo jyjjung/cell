@@ -1,22 +1,29 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useMessages } from '@/hooks/useMessages';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
+import { ref, uploadBytesResumable, getDownloadURL, StorageError, UploadTaskSnapshot } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MessageInput({ chatId, disabled = false }: { chatId: string; disabled?: boolean }) {
-  const { sendMessage, updateTypingStatus } = useMessages(chatId);
+  const { sendMessage, sendImageMessage, updateTypingStatus } = useMessages(chatId);
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [text, setText] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const handleSend = () => {
     const trimmedText = text.trim();
-    if (!trimmedText || disabled) return;
+    if (!trimmedText || disabled || isUploading) return;
 
     sendMessage(trimmedText);
     setText('');
@@ -30,17 +37,117 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
     }
   };
 
+  const handleImageClick = () => {
+    if (disabled || isUploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !chatId || !currentUser) {
+        console.log("Upload aborted: Missing file, chatId, or user", { file: !!file, chatId, user: !!currentUser });
+        return;
+    }
+
+    // Only allow images
+    if (!file.type.startsWith('image/')) {
+        toast({
+            variant: "destructive",
+            title: "Invalid file type",
+            description: "Please select an image file."
+        });
+        return;
+    }
+
+    console.log("Starting image upload...", file.name, file.size, file.type);
+
+    try {
+        setIsUploading(true);
+        const storagePath = `chats/${chatId}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed', 
+            (snapshot: UploadTaskSnapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log(`Upload is ${progress}% done`);
+            }, 
+            (error: StorageError) => {
+                console.error("Upload task error:", error);
+                setIsUploading(false);
+                toast({
+                    variant: "destructive",
+                    title: "Upload failed",
+                    description: error.message || "There was an error uploading your image."
+                });
+            }, 
+            async () => {
+                try {
+                    console.log("Upload complete, getting download URL...");
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    console.log("Download URL obtained:", downloadURL);
+                    
+                    sendImageMessage(downloadURL);
+                    
+                    // Reset file input
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    console.log("Image message sent successfully");
+                } catch (urlError) {
+                    console.error("Error getting download URL:", urlError);
+                    toast({
+                        variant: "destructive",
+                        title: "Download URL error",
+                        description: "Image uploaded but could not retrieve access link."
+                    });
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+        );
+
+    } catch (error) {
+        console.error("Initial upload setup error:", error);
+        toast({
+            variant: "destructive",
+            title: "Upload failed",
+            description: "Could not start the upload process."
+        });
+        setIsUploading(false);
+    }
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto px-4">
       <div className="relative group flex items-center gap-2">
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImageChange} 
+            accept="image/*" 
+            className="hidden" 
+        />
+        
+        <button 
+            type="button"
+            onClick={handleImageClick}
+            disabled={disabled || isUploading}
+            className={cn(
+                "h-9 w-9 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 bg-white/5 border border-white/5 text-muted-foreground hover:text-white hover:bg-white/10",
+                isUploading && "animate-pulse"
+            )}
+        >
+            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImageIcon className="h-5 w-5" />}
+        </button>
+
         <div className="flex-1 flex items-center bg-[#3B3B3D]/40 backdrop-blur-3xl px-4 py-1 rounded-full border border-white/5 focus-within:bg-[#3B3B3D]/60 transition-all shadow-inner overflow-hidden">
           <input
               type="text"
-              placeholder={disabled ? (t.chatOfflinePlaceholder || t.messagePlaceholder) : (t.messagePlaceholder || "Message")}
+              placeholder={isUploading ? (t.uploadingImage || "Uploading Image...") : (disabled ? (t.chatOfflinePlaceholder || t.messagePlaceholder) : (t.messagePlaceholder || "Message"))}
               value={text}
-              disabled={disabled}
+              disabled={disabled || isUploading}
               onChange={(e) => setText(e.target.value)}
-              onFocus={() => !disabled && updateTypingStatus(true)}
+              onFocus={() => !disabled && !isUploading && updateTypingStatus(true)}
               onBlur={() => updateTypingStatus(false)}
               onKeyDown={handleKeyDown}
               style={{ fontSize: '16px' }}
@@ -50,7 +157,7 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
           <button 
               type="button"
               onClick={handleSend} 
-              disabled={disabled || text.trim() === ''}
+              disabled={disabled || text.trim() === '' || isUploading}
               className={cn(
                   "h-7 w-7 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0",
                   !disabled && text.trim() ? "bg-[#007AFF] text-white shadow-lg" : "bg-white/10 text-muted-foreground opacity-20"
@@ -63,3 +170,4 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
     </div>
   );
 }
+

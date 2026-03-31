@@ -67,6 +67,21 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                           <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
                       )}
 
+                      {message.imageUrl && (
+                        <div className={cn(
+                          "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5",
+                          !message.text && "mb-0"
+                        )}>
+                          <img 
+                            src={message.imageUrl} 
+                            alt={t.image || "Image"} 
+                            className="max-w-full h-auto object-cover max-h-[300px] w-full"
+                            style={{ minWidth: '150px' }}
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
+
                       {message.text && (
                         <LinkifiedText 
                           text={message.text} 
