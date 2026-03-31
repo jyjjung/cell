@@ -6,14 +6,15 @@ import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn } from '@/lib/utils';
-import { SmilePlus } from 'lucide-react';
+import { SmilePlus, Download } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
+import { Button } from '@/components/ui/button';
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -46,6 +47,21 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
     return match ? match[1] : null;
   }, [message.text]);
 
+  const handleDownload = async (url: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `msg-img-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={0}>
       <motion.div 
@@ -67,7 +83,7 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                       {!isSender && isGroup && senderName && (
                           <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
                       )}
-
+ 
                       {message.imageUrl && (
                         <Dialog>
                           <DialogTrigger asChild>
@@ -89,11 +105,23 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                             </motion.div>
                           </DialogTrigger>
                           <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-transparent flex items-center justify-center overflow-hidden">
-                            <img 
-                                src={message.imageUrl} 
-                                alt={t.image || "Image Preview"} 
-                                className="w-full h-full object-contain rounded-lg shadow-2xl"
-                            />
+                            <div className="relative group/modal w-full h-full flex items-center justify-center">
+                                <img 
+                                    src={message.imageUrl} 
+                                    alt={t.image || "Image Preview"} 
+                                    className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                                />
+                                <div className="absolute top-4 right-12 flex gap-2">
+                                    <Button
+                                        size="icon"
+                                        variant="outline"
+                                        onClick={(e) => { e.stopPropagation(); handleDownload(message.imageUrl!); }}
+                                        className="h-9 w-9 rounded-full bg-black/50 backdrop-blur-md border-white/10 text-white hover:bg-black/70 hover:scale-105 transition-all shadow-xl"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
                           </DialogContent>
                         </Dialog>
                       )}
