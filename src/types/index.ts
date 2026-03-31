@@ -261,6 +261,7 @@ export interface ChatMessage {
   id: string;
   senderId: string;
   text?: string;
+  imageUrl?: string;
   createdAt: Timestamp;
   seenBy: string[];
   reactions?: { [key: string]: string[] };

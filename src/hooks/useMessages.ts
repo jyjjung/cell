@@ -137,15 +137,19 @@ export function useMessages(chatId: string | null) {
   }, [chatId, hasMore, loadingMore, toast]);
 
 
-  const sendMessage = useCallback((text: string) => {
-    if (!currentUser || !chatId || !text.trim()) return;
+  const sendMessage = useCallback((text?: string, imageUrl?: string) => {
+    if (!currentUser || !chatId) return;
+    if (!text?.trim() && !imageUrl) return;
 
-    const messageData: Omit<ChatMessage, 'id'> = {
+    const trimmedText = text?.trim();
+    const messageData: any = {
       senderId: currentUser.uid,
-      text: text.trim(),
-      createdAt: serverTimestamp() as Timestamp,
+      createdAt: serverTimestamp(),
       seenBy: [currentUser.uid],
     };
+
+    if (trimmedText) messageData.text = trimmedText;
+    if (imageUrl) messageData.imageUrl = imageUrl;
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
@@ -154,8 +158,10 @@ export function useMessages(chatId: string | null) {
         console.error("Failed to store message:", error);
     });
 
+    const lastText = trimmedText || "📷 Image";
+
     updateDoc(chatDocRef, {
-      lastMessageText: text.trim(),
+      lastMessageText: lastText,
       lastMessageSentAt: serverTimestamp(),
       lastMessageSenderId: currentUser.uid,
       [`typing.${currentUser.uid}`]: deleteField(),
@@ -166,12 +172,16 @@ export function useMessages(chatId: string | null) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             chatId, 
-            text: text.trim(), 
+            text: lastText, 
             senderId: currentUser.uid 
         }),
     }).catch(error => console.error("Push notification dispatch failed:", error));
 
   }, [currentUser, chatId]);
+
+  const sendImageMessage = useCallback((imageUrl: string) => {
+    sendMessage(undefined, imageUrl);
+  }, [sendMessage]);
 
   const markAsSeen = useCallback((messageId: string) => {
     if (!currentUser || !chatId) return;
@@ -222,6 +232,7 @@ export function useMessages(chatId: string | null) {
     hasMore,
     loadMoreMessages,
     sendMessage, 
+    sendImageMessage,
     markAsSeen,
     updateTypingStatus,
     updateSeenTimestamp,
