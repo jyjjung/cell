@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
@@ -10,6 +10,7 @@ import { SmilePlus } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
@@ -68,18 +69,33 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                       )}
 
                       {message.imageUrl && (
-                        <div className={cn(
-                          "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5",
-                          !message.text && "mb-0"
-                        )}>
-                          <img 
-                            src={message.imageUrl} 
-                            alt={t.image || "Image"} 
-                            className="max-w-full h-auto object-cover max-h-[300px] w-full"
-                            style={{ minWidth: '150px' }}
-                            loading="lazy"
-                          />
-                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <motion.div 
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={cn(
+                                  "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
+                                  !message.text && "mb-0"
+                                )}
+                            >
+                              <img 
+                                src={message.imageUrl} 
+                                alt={t.image || "Image"} 
+                                className="max-w-full h-auto object-cover max-h-[300px] w-full"
+                                style={{ minWidth: '150px' }}
+                                loading="lazy"
+                              />
+                            </motion.div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-transparent flex items-center justify-center overflow-hidden">
+                            <img 
+                                src={message.imageUrl} 
+                                alt={t.image || "Image Preview"} 
+                                className="w-full h-full object-contain rounded-lg shadow-2xl"
+                            />
+                          </DialogContent>
+                        </Dialog>
                       )}
 
                       {message.text && (
