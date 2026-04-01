@@ -18,6 +18,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { translations } from '@/lib/translations';
+import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import BackToTopButton from '@/components/ui/back-to-top-button';
+
+import { RosterCard } from '@/components/ui/roster-card';
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
@@ -56,123 +60,122 @@ export default function CleaningRosterPage() {
         return { upcoming: upcomingEntries, past: pastEntries };
     }, [roster]);
 
-    const RosterEntry = ({ entry }: { entry: CleaningRosterEntry }) => {
-        const dayName = daysMap.get(entry.dayId) || 'Unknown Day';
-        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
-        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-        
-        const isUserAssigned = currentUser ? entry.assignedUserIds.includes(currentUser.uid) : false;
-        const canToggle = isUserAssigned && (!entry.isCompleted || (entry.isCompleted && entry.completedBy === currentUser?.uid));
-        
-        const handleToggle = () => {
-            if (canToggle) {
-                toggleCompletion(entry.date, entry.isCompleted);
-            }
-        };
+    if (!isMounted) return null;
 
-        return (
-            <div 
-                onClick={handleToggle}
-                className={cn(
-                    "p-4 rounded-lg border bg-card/50 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 transition-colors",
-                    canToggle && "cursor-pointer hover:bg-muted/50",
-                    entry.isCompleted && "bg-green-500/10 border-green-500/30"
-                )}
-            >
-                <div className="flex items-center gap-4 flex-grow min-w-0">
-                    <div className="text-center w-12 shrink-0">
-                        <p className="text-xs text-muted-foreground">{format(parseISO(entry.date), 'EEE')}</p>
-                        <p className="text-2xl font-bold">{format(parseISO(entry.date), 'd')}</p>
-                    </div>
-                    <div className="flex-grow space-y-2">
-                        <p className="font-semibold">{dayName}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            {assignedUsers.map(user => (
-                                <div key={user.uid} className="flex items-center gap-2">
-                                    <div className="h-6 w-6 rounded-full overflow-hidden bg-muted">
-                                        <PixelAvatar avatar={user.avatar} />
-                                    </div>
-                                    <span className="text-sm font-medium">{user.firstName} {user.lastName}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3 justify-end sm:justify-center sm:pt-1">
-                    {entry.isCompleted && (
-                        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                             <Check className="h-5 w-5" />
-                             <span>{t.done}</span>
-                             {completer && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                             <div className="h-6 w-6 rounded-full overflow-hidden bg-muted border-2">
-                                                <PixelAvatar avatar={completer.avatar} />
-                                             </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{t.completedBy} {completer.firstName}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-    
-    const RosterMonthGroup = ({ month, entries }: { month: string, entries: CleaningRosterEntry[] }) => (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">{month}</h2>
-            <div className="space-y-3">
-                {entries.map(entry => <RosterEntry key={entry.id} entry={entry} />)}
-            </div>
-        </div>
-    );
-    
-    if (!isMounted || rosterLoading || daysLoading || usersLoading) {
-        return (
-             <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-             </div>
-        );
-    }
-    
-    const upcomingByMonth = upcoming.reduce((acc, entry) => {
-        const month = format(parseISO(entry.date), 'MMMM yyyy');
-        if (!acc[month]) acc[month] = [];
-        acc[month].push(entry);
-        return acc;
-    }, {} as Record<string, CleaningRosterEntry[]>);
+    let globalIdx = 0;
 
     return (
-        <div className="space-y-12">
-            <header>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t.cleaningRosterTitle}</h1>
-            </header>
+        <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+            <PageHeader 
+                title={t.cleaningRosterTitle} 
+                subtitle="Facility Integrity Management"
+                icon={ListTodo}
+                accentColor="text-emerald-500"
+                iconBgColor="bg-emerald-500/20"
+            />
             
-            {roster.length > 0 ? (
-                Object.entries(upcomingByMonth).length > 0 ? (
-                    Object.entries(upcomingByMonth).map(([month, entries]) => (
-                        <RosterMonthGroup key={`upcoming-${month}`} month={month} entries={entries} />
-                    ))
-                ) : (
-                    <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-60">
-                        <ShieldCheck className="h-10 w-10 text-muted-foreground mb-3" />
-                        <h3 className="font-semibold">{t.allClean}</h3>
-                        <p className="text-muted-foreground text-sm">{t.noUpcomingCleaning}</p>
-                    </div>
-                )
+            {(rosterLoading || daysLoading || usersLoading) ? (
+                 <div className="flex flex-col items-center justify-center py-32 gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-500/20" />
+                    <p className="text-micro-label text-emerald-500/40 !opacity-100">Coordinating Purge Sequence...</p>
+                 </div>
             ) : (
-                <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-60">
-                    <ListTodo className="h-10 w-10 text-muted-foreground mb-3" />
-                    <h3 className="font-semibold">{t.rosterNotSet}</h3>
-                    <p className="text-muted-foreground text-sm">{t.rosterNotCreated}</p>
+                <div className="space-y-20">
+                    {roster.length > 0 ? (
+                        <>
+                        {upcoming.length > 0 ? (
+                            <div className="space-y-12">
+                                <div className="flex items-center gap-4">
+                                    <h2 className="text-section-title text-foreground/80">Upcoming Schedule</h2>
+                                    <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
+                                </div>
+                                <div className="flex flex-col gap-4">
+                                    {upcoming.map((entry) => {
+                                        const dayName = daysMap.get(entry.dayId) || 'Unknown Day';
+                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+                                        const isUserAssigned = currentUser ? entry.assignedUserIds.includes(currentUser.uid) : false;
+                                        const canToggle = isUserAssigned && (!entry.isCompleted || (entry.isCompleted && entry.completedBy === currentUser?.uid));
+                                        
+                                        const currentIndex = globalIdx++;
+
+                                        return (
+                                            <RosterCard 
+                                                key={entry.id}
+                                                index={currentIndex}
+                                                date={parseISO(entry.date)}
+                                                title={dayName}
+                                                subtitle={(
+                                                    <div className="flex flex-wrap items-center gap-x-2">
+                                                        {assignedUsers.map((user, uidx) => (
+                                                            <span key={user.uid} className="text-xs font-medium text-muted-foreground/70">
+                                                                {user.firstName}{uidx < assignedUsers.length - 1 ? ',' : ''}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                users={assignedUsers}
+                                                accentColor="text-emerald-500"
+                                                accentBg="bg-emerald-500/20"
+                                                isCompleted={entry.isCompleted}
+                                                completedBy={completer ? { firstName: completer.firstName, avatar: completer.avatar } : undefined}
+                                                onClick={canToggle ? () => toggleCompletion(entry.date, entry.isCompleted) : undefined}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyState 
+                                icon={ShieldCheck} 
+                                title={t.allClean} 
+                                description={t.noUpcomingCleaning}
+                            />
+                        )}
+
+                        {past.length > 0 && (
+                            <div className="space-y-12 opacity-80 pt-10">
+                                <div className="flex items-center gap-4">
+                                    <h2 className="text-section-title text-foreground/40 italic">Historical Log</h2>
+                                    <div className="h-px bg-gradient-to-r from-white/5 to-transparent flex-grow" />
+                                </div>
+                                <div className="flex flex-col gap-4">
+                                    {past.slice(0, 10).map((entry) => {
+                                        const dayName = daysMap.get(entry.dayId) || 'Unknown Day';
+                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+                                        
+                                        const currentIndex = globalIdx++;
+
+                                        return (
+                                            <RosterCard 
+                                                key={entry.id}
+                                                index={currentIndex}
+                                                date={parseISO(entry.date)}
+                                                title={dayName}
+                                                users={assignedUsers}
+                                                accentColor="text-emerald-500/40"
+                                                accentBg="bg-emerald-500/5"
+                                                isCompleted={entry.isCompleted}
+                                                completedBy={completer ? { firstName: completer.firstName, avatar: completer.avatar } : undefined}
+                                                animate={false}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        </>
+                    ) : (
+                        <EmptyState 
+                            icon={ListTodo} 
+                            title={t.rosterNotSet} 
+                            description={t.rosterNotCreated}
+                        />
+                    )}
                 </div>
             )}
+            <BackToTopButton />
         </div>
-    )
+    );
 }

@@ -8,12 +8,13 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { DailyReading, WeeklyProgress } from '@/types';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Loader2, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical, Target } from 'lucide-react';
+import { Loader2, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical, Target, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay, differenceInDays } from 'date-fns';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
+import ReadingHeatmap from '@/components/dashboard-widgets/reading-heatmap';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { translations } from '@/lib/translations';
+import { PageHeader } from '@/components/ui/page-layout';
 
 
 type ViewState = 
@@ -261,12 +263,10 @@ export default function BibleChecklistPage() {
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
     return (
       <div className="space-y-12">
-        <header>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t.readingPlan}</h1>
-        </header>
+        <PageHeader title={t.readingPlan} subtitle="Bible Journey" icon={BookOpen} accentColor="text-primary" iconBgColor="bg-primary/10" />
         <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-60">
             <Info className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="font-semibold">{t.noPlanAvailable}</h3>
+            <h3 className="font-semibold text-section-title">{t.noPlanAvailable}</h3>
         </div>
       </div>
     );
@@ -274,19 +274,21 @@ export default function BibleChecklistPage() {
 
   return (
     <>
-    <div>
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
         {viewState.view === 'single-week-details' && (
            <div className="space-y-8">
-            <header className="space-y-4 pb-4 border-b border-border/50">
-                <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="rounded-lg font-bold text-xs text-muted-foreground hover:bg-muted/50 -ml-4 mb-1">
-                    <ArrowLeft className="mr-2 h-4 w-4"/> {t.backToAllWeeks}
-                </Button>
-                <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Journey Log</p>
-                    <h1 className="text-3xl font-bold tracking-tight">{t.week} {viewState.week.weekNumber}</h1>
-                    <p className="text-sm font-medium text-muted-foreground">{`${format(viewState.week.startDate, 'MMMM d')} - ${format(viewState.week.endDate, 'MMMM d, yyyy')}`}</p>
-                </div>
-            </header>
+            <PageHeader 
+                title={`${t.week} ${viewState.week.weekNumber}`}
+                subtitle={`${format(viewState.week.startDate, 'MMMM d')} - ${format(viewState.week.endDate, 'MMMM d, yyyy')}`}
+                icon={BookOpen}
+                accentColor="text-primary"
+                iconBgColor="bg-primary/10"
+                action={
+                    <Button variant="ghost" size="sm" onClick={() => setViewState({ view: 'all-weeks' })} className="rounded-xl font-bold text-xs text-primary">
+                        <ArrowLeft className="mr-2 h-4 w-4"/> {t.backToAllWeeks}
+                    </Button>
+                }
+            />
             
             <div className="space-y-4">
                 {viewState.week.readings
@@ -312,12 +314,18 @@ export default function BibleChecklistPage() {
 
         {viewState.view === 'completed-weeks-list' && (
           <div className="space-y-8">
-              <header className="space-y-4">
-                <Button variant="ghost" onClick={() => setViewState({ view: 'all-weeks' })} className="text-muted-foreground hover:text-foreground -ml-4">
-                    <ArrowLeft className="mr-2 h-4 w-4"/> {t.backToAllWeeks}
-                </Button>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t.completed} {t.allWeeks}</h1>
-              </header>
+              <PageHeader 
+                title={`${t.completed} ${t.allWeeks}`}
+                subtitle="Milestone Archive"
+                icon={BookOpen}
+                accentColor="text-primary"
+                iconBgColor="bg-primary/10"
+                action={
+                    <Button variant="ghost" size="sm" onClick={() => setViewState({ view: 'all-weeks' })} className="rounded-xl font-bold text-xs text-primary">
+                        <ArrowLeft className="mr-2 h-4 w-4"/> {t.backToAllWeeks}
+                    </Button>
+                }
+              />
               <div 
                 className="space-y-3"
               >
@@ -345,40 +353,42 @@ export default function BibleChecklistPage() {
 
         {viewState.view === 'all-weeks' && (
               <div className="space-y-12">
-                  <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-4">
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold uppercase tracking-wider text-primary/80">Directory</p>
-                        <h1 className="text-3xl font-bold tracking-tight">{isGuest ? t.readingPlan : t.myReadingPlan}</h1>
-                      </div>
-
-                      <div className="flex gap-2 self-start sm:self-center">
-                          {currentWeek && (
-                              <Button onClick={handleJumpToCurrentWeek} variant="outline" className="rounded-xl font-bold text-xs bg-background/50 backdrop-blur shadow-sm hover:shadow-md transition-all h-10 px-4">
-                                  <LocateFixed className="mr-2 h-4 w-4" /> {t.currentWeek}
-                              </Button>
-                          )}
-                          {!isGuest && (
-                              <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="icon" className="rounded-2xl bg-background/50 backdrop-blur shadow-sm hover:shadow-md transition-all active:scale-95 h-12 w-12">
-                                          <MoreVertical className="h-5 w-5" />
-                                          <span className="sr-only">More options</span>
-                                      </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="rounded-2xl p-2 shadow-2xl border-border/50">
-                                      <DropdownMenuItem className="rounded-xl font-black text-[10px] uppercase tracking-widest h-10 px-4" onSelect={() => setIsMarkRangeDialogOpen(true)}>
-                                          <BookUp className="mr-2 h-4 w-4 text-primary" />
-                                          {t.markRangeRead}
-                                      </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                              </DropdownMenu>
-                          )}
-                      </div>
-                  </header>
+                  <PageHeader 
+                    title={isGuest ? "Reading Plan" : "My Readings"}
+                    subtitle="Spiritual Roadmap"
+                    icon={BookOpen}
+                    accentColor="text-primary"
+                    iconBgColor="bg-primary/10"
+                    action={
+                        <div className="flex gap-2">
+                             {currentWeek && (
+                                <Button onClick={handleJumpToCurrentWeek} variant="outline" size="sm" className="rounded-xl font-bold text-xs">
+                                    <LocateFixed className="mr-2 h-4 w-4" /> {t.currentWeek}
+                                </Button>
+                            )}
+                            {!isGuest && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                                            <MoreVertical className="h-4 w-4" />
+                                            <span className="sr-only">More options</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="rounded-2xl p-2 shadow-2xl border-border/50">
+                                        <DropdownMenuItem className="rounded-xl font-black text-micro-label h-10 px-4" onSelect={() => setIsMarkRangeDialogOpen(true)}>
+                                            <BookUp className="mr-2 h-4 w-4 text-primary" />
+                                            {t.markRangeRead}
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+                    }
+                  />
 
                   <section className="space-y-4">
                       <div className="space-y-1 pl-1">
-                        <h2 className="text-lg md:text-xl font-bold tracking-tight">{t.overallProgress}</h2>
+                        <h2 className="text-section-title">Overall Progress</h2>
                       </div>
                       <div className="p-6 bg-card/40 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-md space-y-6 relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-2xl -z-10 translate-x-1/2 -translate-y-1/2" />
@@ -407,11 +417,14 @@ export default function BibleChecklistPage() {
                             </div>
                           )}
                       </div>
+                      <div className="mt-4">
+                        <ReadingHeatmap dailyReadings={plan.dailyReadings} completedPassages={completedPassages} />
+                      </div>
                   </section>
                   
                   <section className="space-y-4">
                       <div className="space-y-1 pl-1">
-                        <h2 className="text-lg md:text-xl font-bold tracking-tight">{t.weeklyBreakdown}</h2>
+                        <h2 className="text-section-title">Weekly Breakdown</h2>
                       </div>
                       <div className="space-y-3">
                         {completedWeeks.length > 0 && (

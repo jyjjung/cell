@@ -4,17 +4,19 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn } from '@/lib/utils';
 import { SmilePlus, Download } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageLightbox } from './ImageLightbox';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Button } from '@/components/ui/button';
+import { CornerUpLeft } from 'lucide-react';
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -24,9 +26,12 @@ interface MessageBubbleProps {
   sender: ChatMemberInfo | null;
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
+  onReply?: () => void;
+  parentMessage?: ChatMessage;
+  parentSenderName?: string;
 }
 
-const MessageBubble = React.memo(function MessageBubble({ message, chat, sender, toggleReaction, lastSeenNames = [] }: MessageBubbleProps) {
+const MessageBubble = React.memo(function MessageBubble({ message, chat, sender, toggleReaction, lastSeenNames = [], onReply, parentMessage, parentSenderName }: MessageBubbleProps) {
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
@@ -80,13 +85,24 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                           : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5'
                       )}
                   >
+                      {/* Parent message quote block */}
+                      {parentMessage && (
+                          <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
+                             <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
+                             <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
+                          </div>
+                      )}
+
                       {!isSender && isGroup && senderName && (
                           <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
                       )}
  
                       {message.imageUrl && (
-                        <Dialog>
-                          <DialogTrigger asChild>
+                        <ImageLightbox
+                          imageUrl={message.imageUrl}
+                          altText={t.image || "Image"}
+                          onDownload={handleDownload}
+                          trigger={
                             <motion.div 
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.98 }}
@@ -103,27 +119,8 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                                 loading="lazy"
                               />
                             </motion.div>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-transparent flex items-center justify-center overflow-hidden">
-                            <div className="relative group/modal w-full h-full flex items-center justify-center">
-                                <img 
-                                    src={message.imageUrl} 
-                                    alt={t.image || "Image Preview"} 
-                                    className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-                                />
-                                <div className="absolute top-4 right-12 flex gap-2">
-                                    <Button
-                                        size="icon"
-                                        variant="outline"
-                                        onClick={(e) => { e.stopPropagation(); handleDownload(message.imageUrl!); }}
-                                        className="h-9 w-9 rounded-full bg-black/50 backdrop-blur-md border-white/10 text-white hover:bg-black/70 hover:scale-105 transition-all shadow-xl"
-                                    >
-                                        <Download className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                          }
+                        />
                       )}
 
                       {message.text && (
@@ -191,26 +188,36 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                   )}
               </div>
 
-              <Popover>
-                  <PopoverTrigger asChild>
-                      <button className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:bg-muted/20 shrink-0">
-                          <SmilePlus className="h-3 w-3"/>
-                      </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-1 rounded-2xl bg-[#3B3B3D]/95 backdrop-blur-2xl border-white/5 shadow-2xl">
-                      <div className="flex gap-1">
-                          {standardReactions.map(emoji => (
-                              <button
-                                  key={emoji}
-                                  onClick={() => toggleReaction(message.id, emoji)}
-                                  className="p-2 rounded-xl hover:bg-white/10 text-lg transition-all active:scale-90"
-                              >
-                                  {emoji}
-                              </button>
-                          ))}
-                      </div>
-                  </PopoverContent>
-              </Popover>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <button className="p-1 rounded-full text-muted-foreground hover:bg-muted/30 shrink-0">
+                              <SmilePlus className="h-4 w-4"/>
+                          </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-1 rounded-2xl bg-[#3B3B3D]/95 backdrop-blur-2xl border-white/5 shadow-2xl flex flex-col gap-1">
+                          <div className="flex gap-1">
+                              {standardReactions.map(emoji => (
+                                  <button
+                                      key={emoji}
+                                      onClick={() => toggleReaction(message.id, emoji)}
+                                      className="p-2 rounded-xl hover:bg-white/10 text-lg transition-all active:scale-90"
+                                  >
+                                      {emoji}
+                                  </button>
+                              ))}
+                          </div>
+                      </PopoverContent>
+                  </Popover>
+
+                  <button 
+                      onClick={onReply}
+                      className="p-1 rounded-full text-muted-foreground hover:bg-muted/30 shrink-0"
+                      title="Reply in thread"
+                  >
+                      <CornerUpLeft className="h-4 w-4"/>
+                  </button>
+              </div>
           </div>
           
           {seenByNamesString && (
@@ -221,9 +228,51 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
               {t.seenBy} {seenByNamesString}
             </div>
           )}
+
+          {message.replyCount ? (
+              <InlineThreadPreview 
+                  chatId={chat.id} 
+                  parentMessageId={message.id} 
+                  isSender={isSender} 
+                  onReply={onReply} 
+              />
+          ) : null}
       </motion.div>
     </TooltipProvider>
   );
 });
+
+function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void }) {
+    const { messages } = useThreadMessages(chatId, parentMessageId);
+    const { allUsers } = useAllUsers();
+
+    if (!messages || messages.length === 0) return null;
+
+    const reversedMessages = [...messages].reverse();
+
+    return (
+        <div className={cn("flex flex-col gap-0.5 w-full mt-1 mb-2", isSender ? "items-end" : "items-start")}>
+            <div className={cn("flex flex-col gap-0.5 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
+                {reversedMessages.map(reply => {
+                    const sender = allUsers.find(u => u.uid === reply.senderId);
+                    const senderName = sender?.firstName || 'Someone';
+                    return (
+                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-white/5 rounded transition-colors text-white", isSender ? "text-right" : "text-left")}>
+                            <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
+                            <span className="opacity-80 text-[11px] break-words line-clamp-2">{reply.text || (reply.imageUrl ? '📸 Image' : '')}</span>
+                        </div>
+                    );
+                })}
+            </div>
+            
+            <button 
+                onClick={onReply}
+                className={cn("text-[9px] font-bold text-[#007AFF] hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
+            >
+                Open thread
+            </button>
+        </div>
+    );
+}
 
 export default MessageBubble;

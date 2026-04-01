@@ -13,10 +13,10 @@ export const translations = {
     alerts: "Alerts",
     admin: "Admin",
     profile: "Profile Settings",
-    signOut: "Terminate Session",
+    signOut: "Log out",
     signIn: "Member Sign In",
     register: "Register",
-    
+
     // Submenus
     readingPlan: "Reading Plan",
     fullPlan: "Full Plan",
@@ -24,14 +24,16 @@ export const translations = {
     events: "Events",
     qtRoster: "QT Roster",
     cleaningRoster: "Cleaning Roster",
-    otherRosters: "Other Rosters",
     communityProgress: "Community Progress",
     announcements: "Announcements",
     notifications: "Notifications",
     members: "Members",
-    
-    // Dashboard
-    dashboard: "Dashboard",
+    searchPrompt: "Type a command or search...",
+    noResults: "No results found.",
+    navigation: "Navigation/Portal",
+    system: "System & Core",
+    biblePlan: "Reading Journey",
+    dashboard: "Command Center",
     sessionPulse: "Session Pulse",
     hello: "Hello",
     communityPulse: "Community Pulse",
@@ -69,7 +71,7 @@ export const translations = {
     loading: "Synchronizing...",
 
     // Bible Plan / Checklist
-    myReadingPlan: "My Reading Plan",
+    myReadingPlan: "My Readings",
     overallProgress: "Overall Progress",
     weeklyBreakdown: "Weekly Breakdown",
     chaptersLeft: "Chapters Left",
@@ -86,7 +88,7 @@ export const translations = {
     allWeeks: "All Weeks",
     backToAllWeeks: "Back to All Weeks",
     overdue: "Overdue",
-    
+
     // Chat
     startNewCircle: "Start New Circle",
     establishNewCircle: "Establish New Circle",
@@ -104,9 +106,9 @@ export const translations = {
     at: "at",
     uploadingImage: "Uploading Image...",
     image: "Image",
-    
+
     // Rosters & Community
-    qtTitle: "QT Roster.",
+    qtTitle: "QT Roster",
     spiritualTimelineSync: "Spiritual Timeline Synchronization",
     syncingSpiritualMatrix: "Syncing Spiritual Matrix...",
     horizonIsClear: "Current Horizon is Clear",
@@ -125,7 +127,7 @@ export const translations = {
     searchMembers: "Search members...",
     noMembersFound: "No members match your search.",
     memberCount: "{count} members active",
-    
+
     // Profile
     myProfile: "My Profile",
     personalInfo: "Personal Info",
@@ -149,7 +151,7 @@ export const translations = {
     testPush: "Send Test Notification",
     significantDates: "Significant Dates",
     yourBirthday: "Your Birthday",
-    
+
     // Auth
     welcomeBack: "Welcome Back",
     signInTitle: "Sign in to continue to your dashboard.",
@@ -186,7 +188,7 @@ export const translations = {
     signOut: "로그아웃",
     signIn: "로그인",
     register: "회원가입",
-    
+
     // Submenus
     readingPlan: "읽기 계획",
     fullPlan: "전체 계획",
@@ -194,13 +196,15 @@ export const translations = {
     events: "이벤트",
     qtRoster: "QT 순서",
     cleaningRoster: "청소 당번",
-    otherRosters: "기타 명단",
     communityProgress: "공동체 진도",
     announcements: "공지사항",
     notifications: "알림",
     members: "멤버",
-    
-    // Dashboard
+    searchPrompt: "명령어를 입력하거나 검색하세요...",
+    noResults: "결과를 찾을 수 없습니다.",
+    navigation: "내비게이션",
+    system: "시스템 및 설정",
+    biblePlan: "성경 읽기",
     dashboard: "대시보드",
     sessionPulse: "세션 상태",
     hello: "안녕하세요",
@@ -276,7 +280,7 @@ export const translations = {
     image: "이미지",
 
     // Rosters & Community
-    qtTitle: "QT 순서.",
+    qtTitle: "QT 순서",
     spiritualTimelineSync: "영적 타임라인 동기화",
     syncingSpiritualMatrix: "영적 매트릭스 동기화 중...",
     horizonIsClear: "현재 예정된 일정이 없습니다",

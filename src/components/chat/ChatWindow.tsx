@@ -13,6 +13,7 @@ import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import { Button } from '../ui/button';
 import GroupSettingsDialog from './GroupSettingsDialog';
@@ -35,6 +36,8 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const listRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
@@ -113,7 +116,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       const senderProfile = allUsers.find(u => u.uid === msg.senderId);
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
       const senderForBubble: ChatMemberInfo | null = senderProfile 
-          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar! }
+          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
           : senderInfoFromChat;
 
       content.push(
@@ -124,6 +127,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           sender={senderForBubble} 
           toggleReaction={toggleReaction} 
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
+          onReply={() => setActiveThreadId(msg.id)}
+          parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
+          parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
         />
       );
 
@@ -209,10 +215,24 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       </div>
 
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
-          <MessageInput chatId={chatId} disabled={!online} />
+          <MessageInput 
+              chatId={chatId} 
+              disabled={!online} 
+              replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
+              onCancelReply={() => setReplyToId(null)} 
+          />
       </div>
       
       {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
+
+      {activeThreadId && chat && (
+          <ThreadWindow
+              chatId={chatId}
+              parentMessageId={activeThreadId}
+              chat={chat}
+              onClose={() => setActiveThreadId(null)}
+          />
+      )}
     </div>
   );
 }

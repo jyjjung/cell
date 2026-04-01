@@ -14,12 +14,13 @@ const routeLabels: Record<string, string> = {
   '/events': 'Events',
   '/qt': 'QT Roster',
   '/cleaning-roster': 'Cleaning Roster',
-  '/rosters': 'Rosters',
   '/leaderboard': 'Community Progress',
   '/announcements': 'Announcements',
   '/notifications': 'Notifications',
   '/profile': 'Profile',
   '/admin': 'Admin',
+  '/worship': 'Worship Portal',
+  '/media': 'Media Library',
 };
 
 export default function Header() {
@@ -31,7 +32,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full md:hidden">
-      <div className="flex h-14 items-center gap-3 px-4 bg-background/60 backdrop-blur-xl border-b border-border/30">
+      <div className="flex h-14 items-center gap-3 px-4 bg-background/60 backdrop-blur-md border-b border-border/30">
         <SidebarTrigger className="h-9 w-9 rounded-xl" />
         {label && (
           <motion.p

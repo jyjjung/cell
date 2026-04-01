@@ -9,7 +9,7 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { parseISO, startOfToday, isValid, format, compareAsc, isBefore } from 'date-fns';
+import { parseISO, startOfToday, isValid, format, compareAsc, isBefore, addDays, isAfter } from 'date-fns';
 import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info, Clock } from 'lucide-react';
 import type { AppEvent } from '@/types';
@@ -57,18 +57,18 @@ const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void 
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-transparent hover:bg-green-500 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-transparent hover:bg-primary transition-all group text-left"
         >
             <div className="flex-grow min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
-                  {!item.allDay && item.startTime && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground group-hover:bg-white/20 group-hover:text-white shrink-0">
+                   {!item.allDay && item.startTime && (
+                    <span className="text-micro-label !opacity-100 px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground group-hover:bg-white/20 group-hover:text-white shrink-0 !tracking-tight">
                       {item.startTime}
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 group-hover:text-white/80">{getLabel()}</p>
+                <p className="text-micro-label !opacity-100 text-muted-foreground/60 group-hover:text-white/80 !tracking-widest">{getLabel()}</p>
             </div>
             <div className="text-right shrink-0">
                 <p className="text-[10px] font-black uppercase text-foreground leading-none group-hover:text-white">{format(item.date, "MMM d")}</p>
@@ -98,7 +98,7 @@ export default function UpcomingEventsWidget() {
         const items: TimelineItem[] = [];
 
         events.forEach(event => {
-            const next = nextOccurrenceOnOrAfter(event, today);
+            const next = nextOccurrenceOnOrAfter(event, addDays(today, 1));
             if (!next) return;
             const start = parseISO(event.date);
             const endDate = event.endDate ? parseISO(event.endDate) : undefined;
@@ -121,7 +121,7 @@ export default function UpcomingEventsWidget() {
         // Add cleaning duties
         cleaningRoster.forEach(entry => {
             const date = parseISO(entry.date);
-            if (isValid(date) && !isBefore(date, today)) {
+            if (isValid(date) && isAfter(date, today)) {
                 const firstNames = entry.assignedUserIds
                     .map(uid => usersMap.get(uid))
                     .filter(Boolean)
@@ -143,7 +143,7 @@ export default function UpcomingEventsWidget() {
         // Add QT assignments
         qtRoster.forEach(entry => {
             const date = parseISO(entry.date);
-            if (isValid(date) && !isBefore(date, today)) {
+            if (isValid(date) && isAfter(date, today)) {
                 items.push({ 
                     id: entry.id, 
                     date, 
@@ -171,10 +171,10 @@ export default function UpcomingEventsWidget() {
             <div className="relative p-6 md:p-8 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
                 <div className="flex items-center justify-between mb-6">
                     <div className="min-w-0">
-                        <h3 className="text-lg font-black tracking-tight">Timeline</h3>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Community Schedule</p>
+                        <h3 className="text-base font-bold tracking-tight">Timeline</h3>
+                        <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Community Schedule</p>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500 shadow-inner">
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner">
                         <Calendar className="h-5 w-5" />
                     </div>
                 </div>
@@ -210,7 +210,8 @@ export default function UpcomingEventsWidget() {
                 <div className="mt-8">
                     <Button 
                         variant="outline" 
-                        className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-green-500 hover:text-white transition-all shadow-none group" 
+                        size="sm"
+                        className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest bg-background/50 border-border/50 hover:bg-primary hover:text-white transition-all shadow-none group" 
                         onClick={handleGoToEvents}
                     >
                         Schedule View

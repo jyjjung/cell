@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -30,6 +30,8 @@ export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { signUpUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get('invite') || undefined;
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -46,7 +48,7 @@ export default function SignupForm() {
     setIsLoading(true);
     form.clearErrors();
     try {
-      await signUpUser(data.email, data.password, data.firstName, data.lastName);
+      await signUpUser(data.email, data.password, data.firstName, data.lastName, inviteCode);
       router.push('/');
     } catch (error: any) {
       setIsLoading(false);

@@ -15,6 +15,7 @@ import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-contex
 import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { GlobalBibleReader } from '@/components/bible/global-bible-reader';
+import { CommandMenu } from '@/components/layout/command-menu';
 
 
 export const metadata: Metadata = {

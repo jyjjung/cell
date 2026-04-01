@@ -24,7 +24,11 @@ import {
   ShieldCheck, 
   Clock,
   Shield,
-  Fingerprint
+  Fingerprint,
+  CheckSquare,
+  Square,
+  Link as LinkIcon,
+  Copy
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,15 +36,18 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRoles } from '@/hooks/use-roles';
 import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-layout';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -58,10 +65,18 @@ export default function AdminUsersPage() {
 
   const [editingUser, setEditingUser] = useState<UserProfileData | null>(null);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteRoles, setInviteRoles] = useState<string[]>([]);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState('');
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Bulk Selection
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
@@ -115,7 +130,7 @@ export default function AdminUsersPage() {
         roleIds: data.roleIds || [],
         isApproved: data.isApproved,
       });
-      toast({ title: "Identity Re-Synced", description: `${data.firstName} ${data.lastName} updated.` });
+      toast({ title: "User Updated", description: `${data.firstName} ${data.lastName} updated.` });
       setIsEditUserOpen(false);
       setEditingUser(null);
     } catch (error: any) {
@@ -132,13 +147,54 @@ export default function AdminUsersPage() {
             isApproved: true,
             roleIds: user.roleIds || [] 
         });
-        toast({ title: "Identity Authorized", description: `${user.firstName} can now access community sectors.` });
+        toast({ title: "User Approved", description: `${user.firstName} has been approved.` });
     } catch (error: any) {
         toast({ variant: "destructive", title: "Approval Failed", description: error.message });
     } finally {
         setIsApproving(null);
     }
-  }
+  };
+
+  const pendingUsers = useMemo(() => filteredUsers.filter(u => !u.isApproved && !u.isAdmin), [filteredUsers]);
+  
+  const handleBulkApprove = async () => {
+    if (selectedUserIds.size === 0) return;
+    setIsBulkApproving(true);
+    try {
+      const promises = Array.from(selectedUserIds).map(uid => {
+        const user = allUsers.find(u => u.uid === uid);
+        if (user) {
+           return adminUpdateUserProfile(uid, { isApproved: true, roleIds: user.roleIds || [] });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(promises);
+      toast({ title: "Users Approved", description: `${selectedUserIds.size} users have been approved.` });
+      setSelectedUserIds(new Set());
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Bulk Approval Failed", description: error.message });
+    } finally {
+        setIsBulkApproving(false);
+    }
+  };
+
+  const handleGenerateInvite = async () => {
+      setIsGeneratingInvite(true);
+      try {
+          const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+          const inviteDoc = doc(db, 'invites', code);
+          await setDoc(inviteDoc, {
+              roles: inviteRoles,
+              createdAt: serverTimestamp(),
+          });
+          const origin = window.location.origin;
+          setGeneratedInviteLink(`${origin}/register?invite=${code}`);
+      } catch (error: any) {
+          toast({ variant: "destructive", title: "Invite Generation Failed", description: error.message });
+      } finally {
+          setIsGeneratingInvite(false);
+      }
+  };
 
   const handleDeleteUser = async (user: UserProfileData) => {
     setIsDeleting(true);
@@ -160,7 +216,7 @@ export default function AdminUsersPage() {
             throw new Error(errorData.error || "Termination failed.");
         }
 
-        toast({ title: "Account Terminated", description: `Record for ${user.email} purged.` });
+        toast({ title: "User Deleted", description: `User ${user.email} deleted.` });
 
     } catch (error: any) {
       toast({ variant: "destructive", title: "Purge Failed", description: error.message });
@@ -178,38 +234,38 @@ export default function AdminUsersPage() {
   const loading = usersLoading || rolesLoading;
 
   const UserActions = ({ user, size = "icon" }: { user: UserProfileData, size?: "icon" | "sm" }) => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-end gap-1.5">
       {!(user.isApproved || user.isAdmin) && (
         <Button 
             variant="default" 
             size="sm" 
-            className="h-10 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl shadow-primary/10"
+            className="h-8 rounded-lg font-bold text-xs shadow-sm"
             onClick={() => handleApprove(user)}
             disabled={isApproving === user.uid}
         >
             {isApproving === user.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : "Approve"}
         </Button>
       )}
-      <Button variant="outline" size={size} className={cn("h-10 rounded-xl hover:bg-primary hover:text-white transition-all", size === "sm" && "px-4")} onClick={() => openEditDialog(user)}>
-          {size === "icon" ? <Edit className="h-4 w-4" /> : "Edit Profile"}
+      <Button variant="outline" size={size} className={cn("h-8 rounded-lg hover:bg-primary hover:text-white transition-all", size === "icon" ? "w-8 p-0" : "px-3 text-xs")} onClick={() => openEditDialog(user)}>
+          {size === "icon" ? <Edit className="h-4 w-4" /> : "Edit"}
       </Button>
       <AlertDialog>
           <AlertDialogTrigger asChild>
-          <Button variant="destructive" size={size} className={cn("h-10 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity", size === "sm" && "px-4")} disabled={isDeleting}>
-              {size === "icon" ? <Trash2 className="h-4 w-4" /> : "Purge Record"}
+          <Button variant="destructive" size={size} className={cn("h-8 rounded-lg opacity-50 hover:opacity-100 transition-opacity", size === "icon" ? "w-8 p-0" : "px-3 text-xs")} disabled={isDeleting}>
+              {size === "icon" ? <Trash2 className="h-4 w-4" /> : "Delete"}
           </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="rounded-[2.5rem]">
           <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-black tracking-tighter">Terminate Identity?</AlertDialogTitle>
+              <AlertDialogTitle className="text-2xl font-black tracking-tighter">Delete User?</AlertDialogTitle>
               <AlertDialogDescription className="font-medium">
-              Purging <strong>{user.email}</strong> is irreversible.
+              Deleting <strong>{user.email}</strong> is irreversible.
               </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-2xl h-12 font-bold">Abort</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-2xl h-12 font-bold">Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={() => handleDeleteUser(user)} disabled={isDeleting} className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90">
-              {isDeleting ? 'Purging...' : 'Execute Termination'}
+              {isDeleting ? 'Deleting...' : 'Delete User'}
               </AlertDialogAction>
           </AlertDialogFooter>
           </AlertDialogContent>
@@ -223,72 +279,55 @@ export default function AdminUsersPage() {
 
     return (
       <div className={cn(
-        "p-6 rounded-[2rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6",
+        "p-4 rounded-2xl bg-card/20 backdrop-blur-md border border-white/5 space-y-4",
         isDuplicate && "bg-orange-500/[0.03] border-orange-500/20"
       )}>
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shrink-0">
-            <PixelAvatar avatar={user.avatar} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-black tracking-tight text-xl leading-none">{user.firstName} {user.lastName}</p>
-              {isDuplicate && (
-                <AlertCircle className="h-4 w-4 text-orange-500 animate-pulse" />
-              )}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted/20 border border-white/10 shrink-0">
+              <PixelAvatar avatar={user.avatar} />
             </div>
-            <p className="text-xs font-medium text-muted-foreground truncate mt-1">{user.email}</p>
-          </div>
-        </div>
-
-        <div className="space-y-4 pt-4 border-t border-white/5">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Authorization Status</span>
-              {isApproved ? (
-                <Badge variant="outline" className="w-fit h-6 px-3 rounded-lg border-green-500/30 bg-green-500/5 text-green-500 font-black text-[9px] uppercase tracking-widest">
-                  <ShieldCheck className="h-3 w-3 mr-1.5" /> Authorized
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="w-fit h-6 px-3 rounded-lg border-orange-500/30 bg-orange-500/5 text-orange-500 font-black text-[9px] uppercase tracking-widest animate-pulse">
-                  <Clock className="h-3 w-3 mr-1.5" /> Pending Approval
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Assigned Roles</span>
-              <div className="flex flex-wrap gap-1.5">
-                {user.roleIds && user.roleIds.length > 0 ? (
-                  user.roleIds.map(roleId => (
-                    <Badge key={roleId} variant="outline" className="h-6 px-3 rounded-lg border-primary/20 bg-primary/5 text-primary font-black text-[9px] uppercase tracking-widest">
-                      {rolesMap.get(roleId) || 'Unknown'}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">Standard Member</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-bold tracking-tight text-sm leading-none truncate">{user.firstName} {user.lastName}</p>
+                {isDuplicate && (
+                  <AlertCircle className="h-3.5 w-3.5 text-orange-500 animate-pulse shrink-0" />
                 )}
               </div>
+              <p className="text-xs font-medium text-muted-foreground truncate mt-1">{user.email}</p>
             </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Account Tier</span>
-              {user.isAdmin ? (
-                <div className="flex items-center gap-1.5 text-primary">
-                  <ShieldAlert className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Administrator</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-muted-foreground/60">
-                  <BadgeCheck className="h-3.5 w-3.5" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Community Member</span>
-                </div>
-              )}
-            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {isApproved ? (
+              <Badge variant="outline" className="h-5 px-1.5 rounded border-green-500/30 bg-green-500/5 text-green-500 font-bold text-[10px]">
+                <ShieldCheck className="h-3 w-3 mr-1" /> Auth
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="h-5 px-1.5 rounded border-orange-500/30 bg-orange-500/5 text-orange-500 font-bold text-[10px] animate-pulse">
+                <Clock className="h-3 w-3 mr-1" /> Pending
+              </Badge>
+            )}
+            {user.isAdmin ? (
+               <div className="flex items-center gap-1 tex-xs text-primary font-semibold">
+                 <ShieldAlert className="h-3 w-3" />
+                 <span className="text-[10px]">Admin</span>
+               </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="pt-6 border-t border-white/5 flex justify-end">
+        <div className="flex items-center justify-between border-t border-white/5 pt-3">
+          <div className="flex flex-wrap gap-1">
+            {user.roleIds && user.roleIds.length > 0 ? (
+              user.roleIds.map(roleId => (
+                <Badge key={roleId} variant="outline" className="h-5 px-1.5 rounded border-primary/20 bg-primary/5 text-primary text-[10px] font-medium">
+                  {rolesMap.get(roleId) || 'Unknown'}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-[10px] text-muted-foreground">Standard</span>
+            )}
+          </div>
           <UserActions user={user} size="sm" />
         </div>
       </div>
@@ -296,32 +335,34 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-16 pb-24 px-4">
+    <div className="relative space-y-16 pb-24 max-w-6xl mx-auto px-4 md:px-8 mt-12">
       <header className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-                <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase">Identity Hub.</h1>
-                <div className="flex items-center gap-2 text-primary">
-                    <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                    <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Administrative Directory</p>
-                </div>
-            </div>
-            <Link href="/admin">
-                <Button variant="outline" className="rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-[10px] bg-card/20 backdrop-blur-md border-white/5 group">
-                    <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                    Back to ADMIN
-                </Button>
-            </Link>
-        </div>
+        <PageHeader 
+          title="Users"
+          icon={Users}
+          accentColor="text-primary"
+          iconBgColor="bg-primary/10"
+        />
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search identities..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-11 h-14 rounded-2xl bg-card/20 backdrop-blur-xl border-white/5 focus:border-primary/30 transition-all text-lg font-bold tracking-tight"
-          />
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-10 rounded-lg bg-card/20 backdrop-blur-xl border-white/5 focus:border-primary/30 transition-all text-sm font-medium"
+            />
+          </div>
+          <Button onClick={() => setIsInviteOpen(true)} className="h-10 rounded-lg px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold whitespace-nowrap shrink-0">
+             <LinkIcon className="mr-2 h-4 w-4" /> Generate Invite
+          </Button>
+          {selectedUserIds.size > 0 && (
+              <Button onClick={handleBulkApprove} disabled={isBulkApproving} className="h-10 rounded-lg px-4 bg-green-500 hover:bg-green-600 text-white font-semibold whitespace-nowrap shrink-0">
+                  {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
+                  Approve ({selectedUserIds.size})
+              </Button>
+          )}
         </div>
       </header>
 
@@ -329,7 +370,7 @@ export default function AdminUsersPage() {
         <Alert className="rounded-[2rem] border-orange-500/20 bg-orange-500/5 p-6 shadow-xl">
           <AlertTriangle className="h-5 w-5 text-orange-500" />
           <div className="ml-2">
-            <AlertTitle className="text-lg font-black tracking-tight uppercase">Duplicate Identities Detected</AlertTitle>
+            <AlertTitle className="text-lg font-black tracking-tight uppercase">Duplicate Users Detected</AlertTitle>
             <AlertDescription className="text-sm font-medium opacity-70 mt-1 leading-relaxed">
               Potential duplicates: <strong className="text-foreground">{Array.from(duplicateNameSet).join(', ')}</strong>. 
             </AlertDescription>
@@ -341,12 +382,12 @@ export default function AdminUsersPage() {
         {loading ? (
             <div className="h-60 flex flex-col items-center justify-center gap-4 opacity-30">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Scanning Network</p>
+                <p className="text-[10px] font-black uppercase tracking-widest">Loading Users</p>
             </div>
         ) : filteredUsers.length === 0 ? (
             <div className="py-24 text-center border-2 border-dashed border-border/50 rounded-[3rem] opacity-30">
                 <Users className="h-12 w-12 mx-auto mb-6" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">No Identities Detected</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.4em]">No Users Found</p>
             </div>
         ) : (
           <>
@@ -355,79 +396,107 @@ export default function AdminUsersPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] min-w-[200px]">Identification</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] min-w-[120px]">Authorization</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] min-w-[150px]">Roles</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] min-w-[100px]">Tier</TableHead>
-                    <TableHead className="text-right font-black uppercase tracking-widest text-[10px] min-w-[120px]">Actions</TableHead>
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={pendingUsers.length > 0 && selectedUserIds.size === pendingUsers.length}
+                        onCheckedChange={(checked) => {
+                            if (checked) {
+                                setSelectedUserIds(new Set(pendingUsers.map(u => u.uid)));
+                            } else {
+                                setSelectedUserIds(new Set());
+                            }
+                        }}
+                        disabled={pendingUsers.length === 0}
+                      />
+                    </TableHead>
+                    <TableHead className="font-bold text-xs min-w-[200px]">User</TableHead>
+                    <TableHead className="font-bold text-xs min-w-[120px]">Authorization</TableHead>
+                    <TableHead className="font-bold text-xs min-w-[150px]">Roles</TableHead>
+                    <TableHead className="font-bold text-xs min-w-[100px]">Tier</TableHead>
+                    <TableHead className="text-right font-bold text-xs min-w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
+                  {filteredUsers.map((user) => {
+                    const isPending = !user.isApproved && !user.isAdmin;
+                    return (
                     <TableRow key={user.uid} className={cn(
                       "border-white/5 transition-colors group hover:bg-white/5",
                       duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && "bg-orange-500/[0.03]"
                     )}>
-                      <TableCell className="py-6">
-                          <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted/20 border border-white/10 shrink-0">
+                      <TableCell>
+                         {isPending && (
+                            <Checkbox 
+                                checked={selectedUserIds.has(user.uid)}
+                                onCheckedChange={(checked) => {
+                                    const newSet = new Set(selectedUserIds);
+                                    if (checked) newSet.add(user.uid);
+                                    else newSet.delete(user.uid);
+                                    setSelectedUserIds(newSet);
+                                }}
+                            />
+                         )}
+                      </TableCell>
+                      <TableCell className="py-2">
+                          <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted/20 border border-white/10 shrink-0">
                                   <PixelAvatar avatar={user.avatar} />
                               </div>
                               <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-black tracking-tight text-base">{user.firstName} {user.lastName}</p>
+                                    <p className="font-bold tracking-tight text-sm">{user.firstName} {user.lastName}</p>
                                     {duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && (
-                                      <Badge variant="outline" className="h-4 px-1.5 border-orange-500/30 bg-orange-500/10 text-orange-500 font-black text-[7px] uppercase tracking-widest animate-pulse">
+                                      <Badge variant="outline" className="h-4 px-1.5 border-orange-500/30 bg-orange-500/10 text-orange-500 font-bold text-[9px] animate-pulse">
                                         Duplicate
                                       </Badge>
                                     )}
                                   </div>
-                                  <p className="text-[10px] font-medium text-muted-foreground truncate mt-1">{user.email}</p>
+                                  <p className="text-xs font-medium text-muted-foreground truncate">{user.email}</p>
                               </div>
                           </div>
                       </TableCell>
-                      <TableCell className="py-6">
+                      <TableCell className="py-2">
                           {(user.isApproved || user.isAdmin) ? (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-green-500/30 bg-green-500/5 text-green-500 font-black text-[8px] uppercase tracking-widest">
-                                <ShieldCheck className="h-2 w-2 mr-1" /> Authorized
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-green-500/30 bg-green-500/5 text-green-500 font-bold text-[10px]">
+                                <ShieldCheck className="h-3 w-3 mr-1" /> Authorized
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-orange-500/30 bg-orange-500/5 text-orange-500 font-black text-[8px] uppercase tracking-widest animate-pulse">
-                                <Clock className="h-2 w-2 mr-1" /> Pending
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-orange-500/30 bg-orange-500/5 text-orange-500 font-bold text-[10px] animate-pulse">
+                                <Clock className="h-3 w-3 mr-1" /> Pending
                             </Badge>
                           )}
                       </TableCell>
-                      <TableCell className="py-6">
+                      <TableCell className="py-2">
                           <div className="flex flex-wrap gap-1 max-w-[180px]">
                               {user.roleIds && user.roleIds.length > 0 ? (
                                 user.roleIds.map(roleId => (
-                                  <Badge key={roleId} variant="outline" className="h-5 px-2 rounded-lg border-primary/20 bg-primary/5 text-primary font-black text-[8px] uppercase tracking-widest">
+                                  <Badge key={roleId} variant="outline" className="h-5 px-1.5 rounded border-primary/20 bg-primary/5 text-primary font-medium text-[10px]">
                                     {rolesMap.get(roleId) || 'Unknown'}
                                   </Badge>
                                 ))
                               ) : (
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-40">Standard</span>
+                                <span className="text-xs font-medium text-muted-foreground">Standard</span>
                               )}
                           </div>
                       </TableCell>
-                      <TableCell className="py-6">
+                      <TableCell className="py-2">
                         {user.isAdmin ? (
                             <div className="flex items-center gap-1.5 text-primary">
                                 <ShieldAlert className="h-3 w-3" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Admin</span>
+                                <span className="text-xs font-semibold">Admin</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5 text-muted-foreground/60">
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <BadgeCheck className="h-3 w-3" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Member</span>
+                                <span className="text-xs font-medium">Member</span>
                             </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-right py-6">
+                      <TableCell className="text-right py-2">
                         <UserActions user={user} />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );})}
                 </TableBody>
               </Table>
             </div>
@@ -446,9 +515,9 @@ export default function AdminUsersPage() {
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
         <DialogContent className="rounded-[2.5rem] shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tighter">Modify Credentials</DialogTitle>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Edit User</DialogTitle>
             <DialogDescription className="font-medium">
-              Updating parameters for {editingUser?.email}.
+              Update details for {editingUser?.email}.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -473,7 +542,7 @@ export default function AdminUsersPage() {
               </div>
               <FormField control={form.control} name="roleIds" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Authorization Roles</FormLabel>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Roles</FormLabel>
                     <FormControl>
                       <MultiSelect options={roleOptions} selected={field.value || []} onChange={field.onChange} placeholder="Select permissions..." />
                     </FormControl>
@@ -484,11 +553,53 @@ export default function AdminUsersPage() {
               <DialogFooter className="pt-4 flex gap-2">
                 <Button type="button" variant="outline" className="rounded-2xl h-12 font-bold px-8 flex-grow" onClick={() => setIsEditUserOpen(false)}>Cancel</Button>
                 <Button type="submit" disabled={isSaving} className="rounded-2xl h-12 font-black px-8 flex-grow">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Commit Sync"}
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Link Generation Dialog */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="rounded-[2.5rem] shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Generate Invite</DialogTitle>
+            <DialogDescription className="font-medium">
+              Create a registration link that pre-assigns roles and auto-approves the user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+             <div className="space-y-2">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-configured Roles</label>
+                 <MultiSelect 
+                    options={roleOptions} 
+                    selected={inviteRoles} 
+                    onChange={setInviteRoles} 
+                    placeholder="Select roles for new user..." 
+                 />
+             </div>
+             
+             {generatedInviteLink && (
+                 <div className="p-4 rounded-xl bg-card border border-white/10 flex items-center justify-between gap-4">
+                     <span className="text-sm font-mono truncate">{generatedInviteLink}</span>
+                     <Button size="icon" variant="outline" onClick={() => {
+                         navigator.clipboard.writeText(generatedInviteLink);
+                         toast({ title: "Link Copied", description: "Invite link copied to clipboard." });
+                     }}>
+                         <Copy className="h-4 w-4" />
+                     </Button>
+                 </div>
+             )}
+
+             <DialogFooter className="pt-4 flex gap-2">
+                <Button variant="outline" className="rounded-2xl h-12 font-bold px-8 flex-grow" onClick={() => setIsInviteOpen(false)}>Close</Button>
+                <Button onClick={handleGenerateInvite} disabled={isGeneratingInvite} className="rounded-2xl h-12 font-black px-8 flex-grow">
+                  {isGeneratingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generate Link"}
+                </Button>
+             </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

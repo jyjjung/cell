@@ -5,7 +5,7 @@ import Link from 'next/link';
 import SignupForm from '@/components/auth/signup-form';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
 
@@ -39,10 +39,11 @@ export default function SignupPage() {
       >
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tighter text-foreground">{t.createAccount}</h1>
-          <p className="mt-2 text-muted-foreground">{t.getStartedTracking}</p>
         </div>
 
-        <SignupForm />
+        <Suspense fallback={<div>Loading...</div>}>
+          <SignupForm />
+        </Suspense>
 
         <p className="text-center text-sm text-muted-foreground">
           {t.hasAccount}{' '}

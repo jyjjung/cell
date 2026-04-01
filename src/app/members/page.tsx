@@ -53,11 +53,13 @@ export default function MembersPage() {
   if (!isMounted || usersLoading || rolesLoading || eventsLoading) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-24">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <PageHeader
         title={t.members}
-        subtitle={t.memberCount.replace('{count}', filteredUsers.length.toString())}
+        description={t.memberCount.replace('{count}', filteredUsers.length.toString())}
+        icon={Users}
         accentColor="text-primary"
+        iconBgColor="bg-primary/10"
       />
 
       {/* Search */}

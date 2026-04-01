@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type FormEvent, useEffect } from 'react';
@@ -7,23 +6,27 @@ import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  Lock, 
-  Shield, 
-  Zap, 
-  Users, 
-  Calendar, 
-  BookOpen, 
-  MessageCircle, 
-  Megaphone, 
+import {
+  Lock,
+  Shield,
+  Zap,
+  Users,
+  Calendar,
+  BookOpen,
+  Megaphone,
   ArrowRight,
   ShieldCheck,
   ListTodo,
   Layers,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-layout';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useQTRoster } from '@/hooks/useQTRoster';
+import { useNotifications } from '@/hooks/use-notifications';
+import { isSameMonth, parseISO } from 'date-fns';
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState('');
@@ -33,15 +36,32 @@ export default function AdminHubPage() {
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
 
+  // --- LIVE DATA SUBSCRIPTIONS ---
+  const { allUsers } = useAllUsers();
+  const { roster } = useQTRoster();
+  const { notifications } = useNotifications();
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const pendingApprovals = allUsers.filter(u => !u.isApproved && !u.isAdmin).length;
+  
+  const currentMonth = new Date();
+  const unassignedRosterDays = roster.filter(r => {
+      // Assuming r.date is 'YYYY-MM-DD'
+      if (!isSameMonth(parseISO(r.date), currentMonth)) return false;
+      return !r.personName || !r.userId;
+  }).length;
+
+  const scheduledNotifs = notifications.filter(n => n.scheduledFor && n.scheduledFor.toDate() > new Date()).length;
+
 
   const handleAdminAuth = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     const success = await adminPasswordLogin(password);
-    if (!success) setError('Invalid Escalation Key.');
+    if (!success) setError('Invalid Access Key.');
   };
 
   const handleLaunch = (path: string) => {
@@ -61,40 +81,39 @@ export default function AdminHubPage() {
           className="w-full max-w-md space-y-12"
         >
           <div className="text-center space-y-4">
-              <div className="inline-flex p-4 bg-primary/5 rounded-3xl border border-primary/10 mb-4">
-                <Zap className="h-8 w-8 text-primary animate-pulse" />
-              </div>
-              <h1 className="text-2xl sm:text-2xl font-black tracking-tighter text-foreground leading-none uppercase">Admin.</h1>
-              <p className="text-muted-foreground font-medium italic">Identification required for <span className="text-foreground font-bold">{currentUser?.email || 'Unauthorized User'}</span></p>
+            <div className="inline-flex p-4 bg-primary/10 rounded-3xl border border-primary/20 mb-4 backdrop-blur-xl">
+              <Shield className="h-8 w-8 text-primary animate-pulse" />
+            </div>
+            <h1 className="text-page-title">Admin.</h1>
           </div>
-          
+
           {currentUser ? (
             <form onSubmit={handleAdminAuth} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="password" title="Access Key" className="sr-only">Access Key</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Escalation Key"
-                    className="h-16 text-center text-xl font-black rounded-3xl bg-muted/20 border-2 focus:border-primary transition-all"
-                  />
-                </div>
-                {error && (
-                    <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-xs font-black uppercase tracking-widest text-destructive text-center">
-                        Access Denied: {error}
-                    </motion.p>
-                )}
-                <Button type="submit" className="w-full h-16 rounded-full text-lg font-black shadow-xl shadow-primary/10 active:scale-95 transition-all">
-                  <Lock className="mr-2 h-5 w-5" />
-                  Establish Override
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="password" title="Access Key" className="sr-only">Access Key</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Enter Access Key"
+                  className="h-16 text-center text-xl font-black rounded-3xl bg-card/40 backdrop-blur-md border-2 border-primary/10 focus:border-primary transition-all"
+                />
+              </div>
+              {error && (
+                <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-micro-label text-destructive text-center p-3 bg-destructive/10 rounded-2xl border border-destructive/20 !opacity-100 italic">
+                  {error}
+                </motion.p>
+              )}
+              <Button type="submit" size="hero" className="w-full">
+                <Lock className="mr-2 h-5 w-5" />
+                Authenticate
+              </Button>
             </form>
           ) : (
             <Button onClick={() => handleLaunch('/login')} className="w-full h-16 rounded-full text-lg font-black">
-                Sign In to Portal
+              Sign In to Portal
             </Button>
           )}
         </motion.div>
@@ -102,131 +121,118 @@ export default function AdminHubPage() {
     );
   }
 
-  // --- COMMAND CENTER HUB ---
-  const NavCard = ({ icon: Icon, title, desc, href, color }: any) => (
+  // --- COMPACT COMMAND HUB ---
+  const NavCard = ({ icon: Icon, title, desc, href, indicator }: any) => (
     <button
-        onClick={() => handleLaunch(href)}
-        className="group relative flex flex-col items-start p-8 rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/5 hover:border-primary/20 transition-all text-left overflow-hidden"
+      onClick={() => handleLaunch(href)}
+      className="group relative flex flex-col p-5 rounded-2xl bg-card/10 hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all text-left w-full h-full"
     >
-        <div className={`p-3 rounded-2xl ${color} bg-opacity-10 mb-6 group-hover:scale-110 transition-transform`}>
-            <Icon className={`h-6 w-6 ${color.replace('bg-', 'text-')}`} />
-        </div>
-        <h3 className="text-xl font-black tracking-tight mb-2 uppercase">{title}</h3>
-        <p className="text-xs font-medium text-muted-foreground leading-relaxed line-clamp-2">{desc}</p>
-        
-        <div className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary opacity-40 group-hover:opacity-100 transition-opacity">
-            Access Terminal <ArrowRight className="h-3 w-3" />
-        </div>
-
-        {/* Backdrop visual */}
-        <div className="absolute -bottom-4 -right-4 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity rotate-12">
-            <Icon className="h-32 w-32" />
-        </div>
+      <div className="flex items-center gap-3 w-full mb-3">
+          <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <h3 className="font-bold tracking-tight text-base flex-1">{title}</h3>
+          <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary/60" />
+      </div>
+      <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2">{desc}</p>
+      
     </button>
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-24 pb-24 px-4">
-      <header className="space-y-6">
-        <div className="space-y-2">
-            <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase">Admin.</h1>
-            <div className="flex items-center gap-2 text-primary">
-                <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Unified Management Engine</p>
-            </div>
-        </div>
-      </header>
+    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <PageHeader 
+        title="Admin Hub" 
+        description="Unified Management Suite"
+        icon={Zap}
+        accentColor="text-primary"
+        iconBgColor="bg-primary/10"
+      />
 
-      {/* Sector 1: Identity & Access */}
-      <section className="space-y-10">
+      {/* Sector 1: Users & Access */}
+      <section className="space-y-6">
         <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black tracking-tighter uppercase">Identity & Access</h2>
-            <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
+          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Users & Access</h2>
+          <div className="h-px bg-border/50 flex-grow" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <NavCard 
-                icon={Users} 
-                title="Users" 
-                desc="Manage identities, roles, and authorize new members." 
-                href="/admin/users" 
-                color="bg-primary" 
-            />
-            <NavCard 
-                icon={ShieldCheck} 
-                title="Roles" 
-                desc="Configure permission tiers and role-linked messaging." 
-                href="/admin/groups" 
-                color="bg-blue-500" 
-            />
-            <NavCard 
-                icon={Megaphone} 
-                title="Announcements" 
-                desc="Send urgent community messages and system alerts." 
-                href="/admin/notifications" 
-                color="bg-orange-500" 
-            />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <NavCard
+            icon={Users}
+            title="Users"
+            desc="Manage users, roles, and authorize new community members."
+            href="/admin/users"
+            color="bg-primary"
+            indicator={pendingApprovals}
+          />
+          <NavCard
+            icon={ShieldCheck}
+            title="Roles"
+            desc="Configure permission tiers and role-linked messaging groups."
+            href="/admin/groups"
+            color="bg-blue-500"
+          />
+          <NavCard
+            icon={Megaphone}
+            title="Announcements"
+            desc="Send urgent community messages and system-wide alerts."
+            href="/admin/notifications"
+            color="bg-orange-500"
+            indicator={scheduledNotifs}
+          />
         </div>
       </section>
 
       {/* Sector 2: Schedules & Sync */}
-      <section className="space-y-10">
+      <section className="space-y-6">
         <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black tracking-tighter uppercase">Schedules & Sync</h2>
-            <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
+          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Schedules & Sync</h2>
+          <div className="h-px bg-border/50 flex-grow" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <NavCard 
-                icon={Calendar} 
-                title="Events" 
-                desc="Orchestrate the community calendar and import schedules." 
-                href="/admin/events" 
-                color="bg-green-500" 
-            />
-            <NavCard 
-                icon={Layers} 
-                title="QT Roster" 
-                desc="Assign spiritual sharing duties to members." 
-                href="/admin/qt-roster" 
-                color="bg-purple-500" 
-            />
-            <NavCard 
-                icon={ListTodo} 
-                title="Service Rota" 
-                desc="Manage cleaning teams and maintenance modules." 
-                href="/admin/cleaning-roster" 
-                color="bg-emerald-500" 
-            />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <NavCard
+            icon={Calendar}
+            title="Events"
+            desc="Orchestrate the community calendar and sync schedules."
+            href="/admin/events"
+            color="bg-green-500"
+          />
+          <NavCard
+            icon={Layers}
+            title="QT Roster"
+            desc="Assign spiritual sharing duties and sharing rotations."
+            href="/admin/qt-roster"
+            color="bg-purple-500"
+            indicator={unassignedRosterDays}
+          />
+          <NavCard
+            icon={ListTodo}
+            title="Service Rota"
+            desc="Manage cleaning teams and facility maintenance rotations."
+            href="/admin/cleaning-roster"
+            color="bg-emerald-500"
+          />
         </div>
       </section>
 
       {/* Sector 3: Spiritual Growth */}
-      <section className="space-y-10">
+      <section className="space-y-6">
         <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black tracking-tighter uppercase">Spiritual Growth</h2>
-            <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
+          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Spiritual Core</h2>
+          <div className="h-px bg-border/50 flex-grow" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <NavCard 
-                icon={BookOpen} 
-                title="Bible Plan" 
-                desc="Configure the global reading sequence and milestones." 
-                href="/admin/bible-plan" 
-                color="bg-red-500" 
-            />
-            <NavCard 
-                icon={Lock} 
-                title="Memory Verses" 
-                desc="Curate scripture portions for community memorization." 
-                href="/admin/memory-verses" 
-                color="bg-amber-500" 
-            />
-            <NavCard 
-                icon={MessageCircle} 
-                title="Other Rosters" 
-                desc="Create custom rosters for specific ministry teams." 
-                href="/admin/rosters" 
-                color="bg-cyan-500" 
-            />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <NavCard
+            icon={BookOpen}
+            title="Bible Plan"
+            desc="Configure the global reading sequence and milestones."
+            href="/admin/bible-plan"
+            color="bg-red-500"
+          />
+          <NavCard
+            icon={Lock}
+            title="Memorization"
+            desc="Curate scripture portions for community study tracks."
+            href="/admin/memory-verses"
+            color="bg-amber-500"
+          />
         </div>
       </section>
     </div>

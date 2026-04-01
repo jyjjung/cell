@@ -3,6 +3,7 @@
 
 import { useState, useRef } from 'react';
 import { useMessages } from '@/hooks/useMessages';
+import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { ArrowUp, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -10,9 +11,29 @@ import { translations } from '@/lib/translations';
 import { ref, uploadBytesResumable, getDownloadURL, StorageError, UploadTaskSnapshot } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import type { ChatMessage } from '@/types';
+import { X } from 'lucide-react';
 
-export default function MessageInput({ chatId, disabled = false }: { chatId: string; disabled?: boolean }) {
-  const { sendMessage, sendImageMessage, updateTypingStatus } = useMessages(chatId);
+export default function MessageInput({ 
+  chatId, 
+  disabled = false, 
+  replyToMessage, 
+  onCancelReply,
+  parentMessageId 
+}: { 
+  chatId: string; 
+  disabled?: boolean; 
+  replyToMessage?: ChatMessage; 
+  onCancelReply?: () => void;
+  parentMessageId?: string;
+}) {
+  const mainChat = useMessages(parentMessageId ? null : chatId);
+  const threadChat = useThreadMessages(chatId, parentMessageId || null);
+  
+  const sendMessage = parentMessageId ? threadChat.sendMessage : mainChat.sendMessage;
+  const sendImageMessage = parentMessageId ? threadChat.sendImageMessage : mainChat.sendImageMessage;
+  const updateTypingStatus = parentMessageId ? () => {} : mainChat.updateTypingStatus;
+
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [text, setText] = useState('');
@@ -25,9 +46,10 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
     const trimmedText = text.trim();
     if (!trimmedText || disabled || isUploading) return;
 
-    sendMessage(trimmedText);
+    sendMessage(trimmedText, undefined, replyToMessage?.id);
     setText('');
     updateTypingStatus(false);
+    if (onCancelReply) onCancelReply();
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -88,7 +110,7 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     console.log("Download URL obtained:", downloadURL);
                     
-                    sendImageMessage(downloadURL);
+                    sendImageMessage(downloadURL, replyToMessage?.id);
                     
                     // Reset file input
                     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -118,7 +140,18 @@ export default function MessageInput({ chatId, disabled = false }: { chatId: str
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4">
+    <div className="w-full max-w-md mx-auto px-4 flex flex-col gap-2">
+      {replyToMessage && (
+        <div className="flex items-center justify-between bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs">
+          <div className="flex items-center gap-2 truncate opacity-70">
+            <span className="font-bold">Replying to message:</span>
+            <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
+          </div>
+          <button onClick={onCancelReply} className="opacity-50 hover:opacity-100 transition-opacity">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <div className="relative group flex items-center gap-2">
         <input 
             type="file" 

@@ -5,7 +5,7 @@ import { useMemoryVerses } from '@/hooks/use-memory-verses';
 import type { MemoryVerse } from '@/types';
 import VerseDisplayDialog from '@/components/memorize/verse-display-dialog';
 import BackToTopButton from '@/components/ui/back-to-top-button';
-import { BookMarked, BookOpen } from 'lucide-react';
+import { BookMarked, BookOpen, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
@@ -22,8 +22,8 @@ export default function MemorizePage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-24">
-      <PageHeader title="Memory Verses" subtitle={`${memoryVerses.length} verse${memoryVerses.length !== 1 ? 's' : ''}`} accentColor="text-primary" />
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <PageHeader title="Memory Verses" description={`${memoryVerses.length} verse${memoryVerses.length !== 1 ? 's' : ''}`} icon={Brain} accentColor="text-primary" iconBgColor="bg-primary/10" />
 
       {memoryVerses.length === 0 ? (
         <EmptyState icon={BookOpen} title="No memory verses yet" description="Check back after the admin adds some." />

@@ -15,6 +15,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { useNotifications } from '@/hooks/use-notifications';
 
 const CLEANING_ROSTERS_COLLECTION = 'cleaningRosters';
 
@@ -45,8 +46,14 @@ export function useCleaningRoster() {
     return () => unsubscribe();
   }, [currentUser]);
 
+  const { createNotification } = useNotifications();
+
   const upsertEntry = useCallback(async (entryData: Omit<CleaningRosterEntry, 'id' | 'updatedAt' | 'isCompleted' | 'completedAt' | 'completedBy'>) => {
     const docRef = doc(db, CLEANING_ROSTERS_COLLECTION, entryData.date);
+
+    // Smart Notification: Check if this is a new assignment for any of the users
+    const existingEntry = roster.find(r => r.date === entryData.date);
+    const newUsers = entryData.assignedUserIds.filter(uid => !existingEntry?.assignedUserIds.includes(uid));
 
     await setDoc(docRef, {
       ...entryData,
@@ -55,7 +62,21 @@ export function useCleaningRoster() {
       completedBy: null,
       updatedAt: serverTimestamp(),
     }, { merge: true });
-  }, []);
+
+    // Trigger notifications for newly assigned users
+    if (newUsers.length > 0) {
+      for (const uid of newUsers) {
+        createNotification({
+          title: "New Cleaning Assignment",
+          message: `You've been added to the cleaning roster for ${entryData.date}.`,
+          type: 'reminder',
+          isGlobal: false,
+          userId: uid,
+          relatedUrl: '/cleaning-roster'
+        });
+      }
+    }
+  }, [roster, createNotification]);
   
   const deleteEntry = useCallback(async (date: string) => {
     const docRef = doc(db, CLEANING_ROSTERS_COLLECTION, date);

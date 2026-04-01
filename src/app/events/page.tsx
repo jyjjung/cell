@@ -38,46 +38,49 @@ function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm hover:bg-card hover:shadow-md hover:border-border/70 transition-all text-left group"
+        className="w-full flex items-center gap-4 p-5 sm:p-6 rounded-[2rem] bg-card/20 backdrop-blur-xl border border-white/5 hover:border-primary/20 transition-all text-left group shadow-lg shadow-black/5 relative overflow-hidden"
       >
-        <div className={cn("w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border", config.bg)}>
-          <span className={cn("text-[10px] font-bold uppercase tracking-wider", config.color)}>{format(eventDate, 'MMM')}</span>
-          <span className={cn("text-2xl font-black leading-none", config.color)}>{format(eventDate, 'd')}</span>
+        <div className={cn("w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border shadow-inner", config.bg)}>
+          <span className={cn("text-[9px] font-black uppercase tracking-widest leading-none", config.color)}>{format(eventDate, 'MMM')}</span>
+          <span className={cn("text-2xl font-black leading-tight", config.color)}>{format(eventDate, 'd')}</span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <Icon className={cn("h-3.5 w-3.5 shrink-0", config.color)} />
-            <span className={cn("text-[10px] font-bold uppercase tracking-wide", config.color)}>{event.category}</span>
+            <span className={cn("text-[10px] font-black uppercase tracking-widest", config.color)}>{event.category}</span>
             {isRecurring && (
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 border border-border/40 rounded-md px-1.5 py-0.5">
-                {event.recurrence === 'daily' ? 'Daily' : 'Weekly'}
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 border border-white/5 rounded-md px-1.5 py-0.5">
+                {event.recurrence === 'daily' ? 'DAILY' : 'WEEKLY'}
               </span>
             )}
           </div>
-          <p className="font-semibold text-sm">{event.title}</p>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-xs text-muted-foreground">
+          <p className="font-bold text-sm text-foreground tracking-tight">{event.title}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-[10px] font-medium text-muted-foreground/60">
               {format(eventDate, 'EEEE, MMMM do, yyyy')}
             </p>
             {!isRecurring && rangeEnd && format(rangeStart, 'yyyy-MM-dd') !== format(rangeEnd, 'yyyy-MM-dd') && (
-              <span className="text-[10px] text-muted-foreground/70">
+              <span className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-tighter">
                 ({format(rangeStart, 'MMM d')} – {format(rangeEnd, 'MMM d, yyyy')})
               </span>
             )}
             {!event.allDay && event.startTime && (
-              <div className="flex items-center gap-1 text-[10px] font-bold text-primary px-1.5 py-0.5 rounded-md bg-primary/5 border border-primary/10">
+              <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-primary px-2 py-0.5 rounded-lg bg-primary/10 border border-primary/10">
                 <Clock className="h-2.5 w-2.5" />
                 <span>{event.startTime}{event.endTime ? ` - ${event.endTime}` : ''}</span>
               </div>
             )}
-            {event.allDay && <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">All Day</span>}
+            {event.allDay && <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">All Day</span>}
           </div>
         </div>
 
         <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors shrink-0" />
         </motion.div>
+
+        {/* Decorative background blob */}
+        <div className={cn("absolute -bottom-8 -right-8 w-24 h-24 blur-3xl opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity", config.bg.split(' ')[0])} />
       </button>
 
       <AnimatePresence>
@@ -89,8 +92,8 @@ function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="mx-4 mt-1 p-4 rounded-2xl bg-muted/30 border border-border/30">
-              <LinkifiedText text={event.details} className="block text-sm text-muted-foreground" />
+            <div className="mx-6 mt-2 p-5 rounded-[1.5rem] bg-muted/20 border border-white/5 backdrop-blur-md">
+              <LinkifiedText text={event.details} className="block text-sm text-muted-foreground leading-relaxed" />
             </div>
           </motion.div>
         )}
@@ -102,7 +105,7 @@ function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 px-1 mb-3">{month}</p>
+      <p className="text-micro-label !opacity-100 text-muted-foreground/60 px-1 mb-3">{month}</p>
       {rows.map((row, i) => (
         <EventCard key={row.occurrenceKey} row={row} index={i} />
       ))}
@@ -159,8 +162,14 @@ export default function EventsPage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-24">
-      <PageHeader title="Events" subtitle="Community Schedule" accentColor="text-blue-500" />
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <PageHeader 
+        title="Events" 
+        description="View and manage upcoming community events and schedules." 
+        icon={Calendar} 
+        accentColor="text-blue-500" 
+        iconBgColor="bg-blue-500/10" 
+      />
 
       <Tabs defaultValue="upcoming" className="w-full">
         <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-muted/30 border border-border/30 h-11">

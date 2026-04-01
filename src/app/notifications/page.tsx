@@ -64,10 +64,12 @@ export default function NotificationsPage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-24">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <PageHeader
         title={t.notifications}
-        subtitle="Activity Feed"
+        description="Activity Feed"
+        icon={Bell}
+        iconBgColor="bg-primary/10"
         accentColor="text-primary"
         action={
           unread.length > 0 ? (

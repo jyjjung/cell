@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -12,7 +12,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { onMessage } from 'firebase/messaging';
 import { cn } from '@/lib/utils';
 import { ImmersiveBackground } from './immersive-background';
-import { motion, useSpring, useMotionValue } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from './footer';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -33,14 +33,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { notifications } = useNotifications();
   const { chats } = useChats();
   
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollProgress = useMotionValue(0);
-  const scaleX = useSpring(scrollProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-
   const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
 
   useEffect(() => {
@@ -91,48 +83,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       updateNativeBadge(totalUnreadCount);
     }
   }, [totalUnreadCount, currentUser, hasMounted, updateNativeBadge]);
-
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || isIndividualChat) {
-        scrollProgress.set(0);
-        return;
-    }
-
-    let ticking = false;
-    const updateScroll = () => {
-      const totalHeight = el.scrollHeight - el.clientHeight;
-      if (totalHeight > 0) {
-        const currentProgress = el.scrollTop / totalHeight;
-        scrollProgress.set(currentProgress);
-      } else {
-        scrollProgress.set(0);
-      }
-      ticking = false;
-    };
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(updateScroll);
-        ticking = true;
-      }
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    updateScroll();
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [pathname, currentUser, scrollProgress, isIndividualChat]);
-
-  useEffect(() => {
-    const getInitialSidebarState = () => {
-      if (typeof document === 'undefined') return true;
-      const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('sidebar_state='))
-        ?.split('=')[1];
-      return cookieValue ? cookieValue === 'true' : true;
-    };
-    setIsSidebarOpen(getInitialSidebarState());
+    setIsSidebarOpen(true);
     setHasMounted(true);
   }, []);
 
@@ -191,34 +143,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
   if (!currentUser) {
     return (
       <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col">
         <ImmersiveBackground />
-        <motion.div className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left" style={{ scaleX }} />
-        <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
             <div className="flex-grow flex flex-col">{children}</div>
             <Footer />
         </div>
       </main>
     );
   }
-
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <ChunkErrorListener />
+      <ImmersiveBackground />
       <Sidebar />
       <SidebarInset className="min-w-0 bg-transparent h-svh overflow-hidden flex flex-col">
-        <ImmersiveBackground />
-        <motion.div className="fixed top-0 left-0 right-0 h-1 bg-primary z-[100] origin-left" style={{ scaleX }} />
         
         <div className="flex-1 flex flex-col min-h-0 relative z-10">
             <Header />
             
             <div className="flex-1 flex flex-col min-h-0 relative">
                 <div 
-                    ref={scrollRef} 
                     className={cn(
                         "flex-1 relative min-h-0", 
                         !isIndividualChat ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"
