@@ -8,7 +8,7 @@ import {
   Music, Plus, ListMusic, BookOpen, ChevronRight, ChevronLeft,
   Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
   Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
-  Users, UserPlus, Link2, UserCheck, UserX, Shield
+  Users, UserPlus, Link2, UserCheck, UserX, Shield, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -47,6 +47,23 @@ const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] } }),
 };
+
+async function downloadImage(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+}
 
 // ── KeyBadge ─────────────────────────────────────────────────────────────────
 function KeyBadge({ keyName, accent = false }: { keyName: ChordKey; accent?: boolean }) {
@@ -299,9 +316,19 @@ function FullScreenViewer({
               </div>
             </div>
           </div>
-          <span className="text-white/40 text-xs font-bold shrink-0">
-            {idx + 1} / {slides.length}
-          </span>
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="text-white/40 text-xs font-bold">
+              {idx + 1} / {slides.length}
+            </span>
+            <button
+              onClick={() => {
+                downloadImage(slide.imageUrl, `${slide.songTitle} - Key ${slide.key}${slide.totalPages > 1 ? ` (Pg ${slide.page})` : ''}.png`);
+              }}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              title="Download Chord Sheet">
+              <Download className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Image — fills all remaining space, no buttons overlap */}
@@ -467,12 +494,23 @@ function SongDetailView({
                   <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted/10 aspect-[3/4]">
                     <img src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
                       <button onClick={() => setViewSheet(sheet)}
+                        title="View sheet"
                         className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
                         <Eye className="h-3.5 w-3.5" />
                       </button>
+                      <button
+                        title="Download sheet"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadImage(sheet.imageUrl, `${song.title} - Key ${key} (Pg ${idx + 1}).png`);
+                        }}
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                        <Download className="h-3.5 w-3.5" />
+                      </button>
                       <button onClick={() => handleDelete(sheet)}
+                        title="Delete sheet"
                         disabled={deleting === sheet.id}
                         className="p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors">
                         {deleting === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -1049,23 +1087,44 @@ function SetlistDetailView({
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!reorderMode && sheetsForKey.length > 0 && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-rose-500 hover:bg-rose-500/10"
-                      onClick={() => openSheets(ps)}>
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {!reorderMode && libSong && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-rose-500 hover:bg-rose-500/10"
-                      title="Add chord sheet"
-                      onClick={() => setAddSheetFor(libSong)}>
-                      <Upload className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                <div className="flex items-center gap-1">
                   {!reorderMode && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-red-500 hover:bg-red-500/10"
-                      onClick={() => handleRemove(ps.songId)} disabled={removing === ps.songId}>
+                    <>
+                      {sheetsForKey.length > 0 && (
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                          title="Download sheet(s)"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sheetsForKey.forEach((sheet, i) => {
+                              setTimeout(() => {
+                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${sheetsForKey.length > 1 ? ` (Pg ${i + 1})` : ''}.png`);
+                              }, i * 300);
+                            });
+                          }}>
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {libSong && (
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                          title="Add chord sheet"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddSheetFor(libSong);
+                          }}>
+                          <Upload className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {reorderMode && (
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 pointer-events-auto"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleRemove(ps.songId);
+                      }} 
+                      disabled={removing === ps.songId}>
                       {removing === ps.songId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                     </Button>
                   )}

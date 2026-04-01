@@ -163,12 +163,12 @@ export default function EventsPage() {
 
   return (
     <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <PageHeader 
-        title="Events" 
-        description="View and manage upcoming community events and schedules." 
-        icon={Calendar} 
-        accentColor="text-blue-500" 
-        iconBgColor="bg-blue-500/10" 
+      <PageHeader
+        title="Events"
+        description="View and manage upcoming community events and schedules."
+        icon={Calendar}
+        accentColor="text-blue-500"
+        iconBgColor="bg-blue-500/10"
       />
 
       <Tabs defaultValue="upcoming" className="w-full">

@@ -166,7 +166,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             <div className="absolute top-0 right-0 p-8 opacity-5">
               {type === 'cleaning' ? <ShieldCheck className="w-24 h-24" /> : <BookOpenText className="w-24 h-24" />}
             </div>
-            
+
             <div className={cn("p-4 rounded-2xl shrink-0 animate-pulse-subtle", type === 'cleaning' ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/20 text-primary")}>
               {type === 'cleaning' ? <ShieldCheck className="h-8 w-8" /> : <BookOpenText className="h-8 w-8" />}
             </div>
@@ -177,13 +177,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 {isToday ? "You're on duty today!" : "Duty Reminder: Tomorrow"}
               </h1>
               <p className="text-sm font-medium text-muted-foreground/80">
-                {type === 'cleaning' 
-                  ? `You are assigned to the Church Cleaning team ${isToday ? 'today' : 'tomorrow'}.` 
+                {type === 'cleaning'
+                  ? `You are assigned to the Church Cleaning team ${isToday ? 'today' : 'tomorrow'}.`
                   : `You're scheduled for the QT sharing ${isToday ? 'today' : 'tomorrow'}.`}
               </p>
             </div>
 
-            <Button className="rounded-2xl h-12 px-8 font-black text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 active:scale-95 transition-all" 
+            <Button className="rounded-2xl h-12 px-8 font-black text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 active:scale-95 transition-all"
               onClick={() => go(type === 'cleaning' ? '/cleaning-roster' : '/qt')}>
               View Details <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -310,7 +310,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-section-title text-emerald-600 dark:text-emerald-400">Community Calendar</h2>
-            <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">View all <ArrowRight className="ml-1 h-3 w-3"/></Button>
+            <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">View all <ArrowRight className="ml-1 h-3 w-3" /></Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {upcomingItems.map(item => (
@@ -360,8 +360,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             <div className="flex items-center gap-3">
               <div className={cn("p-2.5 rounded-xl border", selectedEvent ? typeBg(selectedEvent.type) : '')}>
                 {selectedEvent?.type === 'cleaning' ? <ShieldCheck className={cn("h-5 w-5", typeColor('cleaning'))} /> :
-                 selectedEvent?.type === 'qt' ? <BookOpenText className={cn("h-5 w-5", typeColor('qt'))} /> :
-                 <Calendar className={cn("h-5 w-5", typeColor('event'))} />}
+                  selectedEvent?.type === 'qt' ? <BookOpenText className={cn("h-5 w-5", typeColor('qt'))} /> :
+                    <Calendar className={cn("h-5 w-5", typeColor('event'))} />}
               </div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{selectedEvent ? typeLabel(selectedEvent) : ''}</p>
             </div>

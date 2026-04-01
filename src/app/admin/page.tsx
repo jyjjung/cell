@@ -46,12 +46,12 @@ export default function AdminHubPage() {
   }, []);
 
   const pendingApprovals = allUsers.filter(u => !u.isApproved && !u.isAdmin).length;
-  
+
   const currentMonth = new Date();
   const unassignedRosterDays = roster.filter(r => {
-      // Assuming r.date is 'YYYY-MM-DD'
-      if (!isSameMonth(parseISO(r.date), currentMonth)) return false;
-      return !r.personName || !r.userId;
+    // Assuming r.date is 'YYYY-MM-DD'
+    if (!isSameMonth(parseISO(r.date), currentMonth)) return false;
+    return !r.personName || !r.userId;
   }).length;
 
   const scheduledNotifs = notifications.filter(n => n.scheduledFor && n.scheduledFor.toDate() > new Date()).length;
@@ -128,19 +128,19 @@ export default function AdminHubPage() {
       className="group relative flex flex-col p-5 rounded-2xl bg-card/10 hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all text-left w-full h-full"
     >
       <div className="flex items-center gap-3 w-full mb-3">
-          <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-          <h3 className="font-bold tracking-tight text-base flex-1">{title}</h3>
-          <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary/60" />
+        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <h3 className="font-bold tracking-tight text-base flex-1">{title}</h3>
+        <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary/60" />
       </div>
       <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2">{desc}</p>
-      
+
     </button>
   );
 
   return (
     <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <PageHeader 
-        title="Admin Hub" 
+      <PageHeader
+        title="Admin Hub"
         description="Unified Management Suite"
         icon={Zap}
         accentColor="text-primary"

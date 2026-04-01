@@ -13,10 +13,10 @@ import {
 import { AvatarData } from '@/types';
 
 interface RosterUser {
-    uid: string;
-    firstName: string;
-    lastName: string;
-    avatar?: AvatarData;
+  uid: string;
+  firstName: string;
+  lastName: string;
+  avatar?: AvatarData;
 }
 
 interface RosterCardProps {
@@ -53,7 +53,7 @@ export function RosterCard({
   hideAvatars = false
 }: RosterCardProps) {
   const content = (
-    <div 
+    <div
       onClick={onClick}
       className={cn(
         "group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-5 sm:p-6 rounded-[2rem] bg-card/20 backdrop-blur-xl border border-white/5 transition-all overflow-hidden",
@@ -76,28 +76,28 @@ export function RosterCard({
       <div className="flex items-start gap-4 flex-grow min-w-0 w-full">
         {/* Avatars Stack or Single */}
         {!hideAvatars && (
-            <div className="flex -space-x-3 shrink-0">
-                {users.length > 0 ? (
-                    users.slice(0, 3).map((user, idx) => (
-                        <div 
-                            key={user.uid} 
-                            className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shadow-lg group-hover:scale-105 transition-transform duration-500 relative"
-                            style={{ zIndex: 10 - idx }}
-                        >
-                            <PixelAvatar avatar={user.avatar} />
-                        </div>
-                    ))
-                ) : (
-                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shrink-0 shadow-lg flex items-center justify-center">
-                        <User className="h-6 w-6 text-muted-foreground/40" />
-                    </div>
-                )}
-                {users.length > 3 && (
-                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-muted border border-white/10 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-lg">
-                        +{users.length - 3}
-                    </div>
-                )}
-            </div>
+          <div className="flex -space-x-3 shrink-0">
+            {users.length > 0 ? (
+              users.slice(0, 3).map((user, idx) => (
+                <div
+                  key={user.uid}
+                  className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shadow-lg group-hover:scale-105 transition-transform duration-500 relative"
+                  style={{ zIndex: 10 - idx }}
+                >
+                  <PixelAvatar avatar={user.avatar} />
+                </div>
+              ))
+            ) : (
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shrink-0 shadow-lg flex items-center justify-center">
+                <User className="h-6 w-6 text-muted-foreground/40" />
+              </div>
+            )}
+            {users.length > 3 && (
+              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-muted border border-white/10 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-lg">
+                +{users.length - 3}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="flex-grow min-w-0">
@@ -123,7 +123,7 @@ export function RosterCard({
       {/* Right Element (Desktop) & Completion Status */}
       <div className="hidden sm:flex items-center gap-4 shrink-0 ml-auto">
         {rightElement}
-        
+
         {isCompleted && (
           <div className="flex items-center gap-2">
             {completedBy ? (
@@ -131,7 +131,7 @@ export function RosterCard({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="h-8 w-8 rounded-full overflow-hidden bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                       {completedBy.avatar ? <PixelAvatar avatar={completedBy.avatar} /> : <Check className="h-4 w-4 text-green-500" />}
+                      {completedBy.avatar ? <PixelAvatar avatar={completedBy.avatar} /> : <Check className="h-4 w-4 text-green-500" />}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -147,12 +147,12 @@ export function RosterCard({
           </div>
         )}
       </div>
-      
+
       {/* Mobile Completion Mark */}
       {isCompleted && !rightElement && (
-         <div className="sm:hidden absolute top-4 right-4 p-1.5 rounded-full bg-green-500/20 text-green-500">
-            <Check className="h-3 w-3" />
-         </div>
+        <div className="sm:hidden absolute top-4 right-4 p-1.5 rounded-full bg-green-500/20 text-green-500">
+          <Check className="h-3 w-3" />
+        </div>
       )}
 
       {/* Background decoration */}
@@ -163,12 +163,12 @@ export function RosterCard({
   if (!animate) return content;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
     >
-        {content}
+      {content}
     </motion.div>
   );
 }
