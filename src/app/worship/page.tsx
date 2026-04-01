@@ -304,8 +304,8 @@ function FullScreenViewer({
           </span>
         </div>
 
-        {/* Image — fills remaining space */}
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden px-2 pb-2">
+        {/* Image — fills all remaining space, no buttons overlap */}
+        <div className="flex-1 flex items-center justify-center overflow-hidden px-4 py-2">
           <motion.img
             key={slide.imageUrl}
             initial={{ opacity: 0, x: 20 }}
@@ -317,39 +317,39 @@ function FullScreenViewer({
             className="max-w-full max-h-full object-contain rounded-2xl select-none"
             draggable={false}
           />
-
-          {/* Side nav arrows */}
-          {idx > 0 && (
-            <button
-              onClick={() => setIdx(i => i - 1)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-sm">
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-          )}
-          {idx < slides.length - 1 && (
-            <button
-              onClick={() => setIdx(i => i + 1)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-sm">
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          )}
         </div>
 
-        {/* Dot indicators */}
-        {slides.length > 1 && (
-          <div className="flex items-center justify-center gap-1.5 pb-6 pt-2 shrink-0 flex-wrap px-8">
-            {slides.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                className={cn(
-                  'rounded-full transition-all',
-                  i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50'
-                )}
-              />
-            ))}
-          </div>
-        )}
+        {/* Bottom bar — prev/next buttons + dot indicators, always below image */}
+        <div className="shrink-0 flex items-center justify-center gap-4 pb-8 pt-2 px-6">
+          <button
+            onClick={() => setIdx(i => Math.max(i - 1, 0))}
+            disabled={idx === 0}
+            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white transition-colors backdrop-blur-sm">
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+
+          {slides.length > 1 && (
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {slides.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => setIdx(i)}
+                  className={cn(
+                    'rounded-full transition-all',
+                    i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50'
+                  )}
+                />
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))}
+            disabled={idx === slides.length - 1}
+            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white transition-colors backdrop-blur-sm">
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
@@ -1027,8 +1027,17 @@ function SetlistDetailView({
                 <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
                   <span className="text-xs font-black text-rose-500">{i + 1}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{ps.title}</p>
+                <div
+                  className={cn(
+                    'flex-1 min-w-0',
+                    !reorderMode && sheetsForKey.length > 0 && 'cursor-pointer'
+                  )}
+                  onClick={!reorderMode && sheetsForKey.length > 0 ? () => openSheets(ps) : undefined}
+                >
+                  <p className={cn(
+                    'font-bold text-sm truncate transition-colors',
+                    !reorderMode && sheetsForKey.length > 0 && 'group-hover:text-rose-500'
+                  )}>{ps.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <KeyBadge keyName={ps.key} accent />
                     {sheetsForKey.length > 0 ? (

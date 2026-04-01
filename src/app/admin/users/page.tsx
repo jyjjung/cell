@@ -26,9 +26,7 @@ import {
   Shield,
   Fingerprint,
   CheckSquare,
-  Square,
-  Link as LinkIcon,
-  Copy
+  Square
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,7 +40,7 @@ import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select'
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
@@ -65,10 +63,7 @@ export default function AdminUsersPage() {
 
   const [editingUser, setEditingUser] = useState<UserProfileData | null>(null);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [inviteRoles, setInviteRoles] = useState<string[]>([]);
-  const [generatedInviteLink, setGeneratedInviteLink] = useState('');
-  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isApproving, setIsApproving] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -178,23 +173,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleGenerateInvite = async () => {
-      setIsGeneratingInvite(true);
-      try {
-          const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-          const inviteDoc = doc(db, 'invites', code);
-          await setDoc(inviteDoc, {
-              roles: inviteRoles,
-              createdAt: serverTimestamp(),
-          });
-          const origin = window.location.origin;
-          setGeneratedInviteLink(`${origin}/register?invite=${code}`);
-      } catch (error: any) {
-          toast({ variant: "destructive", title: "Invite Generation Failed", description: error.message });
-      } finally {
-          setIsGeneratingInvite(false);
-      }
-  };
+
 
   const handleDeleteUser = async (user: UserProfileData) => {
     setIsDeleting(true);
@@ -354,9 +333,7 @@ export default function AdminUsersPage() {
               className="pl-9 h-10 rounded-lg bg-card/20 backdrop-blur-xl border-white/5 focus:border-primary/30 transition-all text-sm font-medium"
             />
           </div>
-          <Button onClick={() => setIsInviteOpen(true)} className="h-10 rounded-lg px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold whitespace-nowrap shrink-0">
-             <LinkIcon className="mr-2 h-4 w-4" /> Generate Invite
-          </Button>
+
           {selectedUserIds.size > 0 && (
               <Button onClick={handleBulkApprove} disabled={isBulkApproving} className="h-10 rounded-lg px-4 bg-green-500 hover:bg-green-600 text-white font-semibold whitespace-nowrap shrink-0">
                   {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
@@ -561,47 +538,7 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invite Link Generation Dialog */}
-      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="rounded-[2.5rem] shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tighter">Generate Invite</DialogTitle>
-            <DialogDescription className="font-medium">
-              Create a registration link that pre-assigns roles and auto-approves the user.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 pt-4">
-             <div className="space-y-2">
-                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pre-configured Roles</label>
-                 <MultiSelect 
-                    options={roleOptions} 
-                    selected={inviteRoles} 
-                    onChange={setInviteRoles} 
-                    placeholder="Select roles for new user..." 
-                 />
-             </div>
-             
-             {generatedInviteLink && (
-                 <div className="p-4 rounded-xl bg-card border border-white/10 flex items-center justify-between gap-4">
-                     <span className="text-sm font-mono truncate">{generatedInviteLink}</span>
-                     <Button size="icon" variant="outline" onClick={() => {
-                         navigator.clipboard.writeText(generatedInviteLink);
-                         toast({ title: "Link Copied", description: "Invite link copied to clipboard." });
-                     }}>
-                         <Copy className="h-4 w-4" />
-                     </Button>
-                 </div>
-             )}
 
-             <DialogFooter className="pt-4 flex gap-2">
-                <Button variant="outline" className="rounded-2xl h-12 font-bold px-8 flex-grow" onClick={() => setIsInviteOpen(false)}>Close</Button>
-                <Button onClick={handleGenerateInvite} disabled={isGeneratingInvite} className="rounded-2xl h-12 font-black px-8 flex-grow">
-                  {isGeneratingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generate Link"}
-                </Button>
-             </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
