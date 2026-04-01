@@ -16,6 +16,7 @@ import GlobalPageLoader from '@/components/layout/global-page-loader';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { GlobalBibleReader } from '@/components/bible/global-bible-reader';
 import { CommandMenu } from '@/components/layout/command-menu';
+import { OfflineBanner } from '@/components/layout/offline-banner';
 
 
 export const metadata: Metadata = {
@@ -49,6 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+        <OfflineBanner />
         <ChunkErrorListener />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <PageLoadingProvider>

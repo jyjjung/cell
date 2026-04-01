@@ -21,15 +21,15 @@ import { CoreInfoSkeleton } from './core-info-skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CoreInfoWidget() {
-  const { 
-    currentUser, 
-    bibleStats, 
-    todaysReading, 
-    nextUnreadReading, 
-    unreadAnnouncements, 
-    recentChats, 
-    timelineItems, 
-    usersMap 
+  const {
+    currentUser,
+    bibleStats,
+    todaysReading,
+    nextUnreadReading,
+    unreadAnnouncements,
+    recentChats,
+    timelineItems,
+    usersMap
   } = useDashboardData();
 
   const { markAsRead } = useNotifications();
@@ -58,10 +58,10 @@ export default function CoreInfoWidget() {
   if (!bibleStats) return <CoreInfoSkeleton />;
 
   return (
-    <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative w-full bg-card/10 backdrop-blur-3xl border border-white/5 p-8 md:p-12 rounded-[3.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.4)] overflow-hidden space-y-24"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="relative w-full bg-card/10 backdrop-blur-3xl border border-white/5 p-8 md:p-12 rounded-[3.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.4)] overflow-hidden space-y-24"
     >
       {/* Decorative radial gradient for depth */}
       <div className="absolute top-0 right-[-20%] w-[80%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full -z-10" />
@@ -70,73 +70,73 @@ export default function CoreInfoWidget() {
       {/* 1. Header & Greeting */}
       <section className="space-y-6">
         <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30 leading-none">Perspective Session</p>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tighter leading-none text-white/95 uppercase tracking-[-0.04em]">
-                {t.hello}, {currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}
-            </h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30 leading-none">Perspective Session</p>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tighter leading-none text-white/95 uppercase tracking-[-0.04em]">
+            {t.hello}, {currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}
+          </h2>
         </div>
         <div className="h-1 w-24 bg-primary/40 rounded-full" />
       </section>
 
       {/* Modularized Components with Sequential Animations */}
       <div className="space-y-24">
-        <BroadcastSection 
-            unreadAnnouncements={unreadAnnouncements} 
-            t={t} 
-            markAsRead={markAsRead} 
-            handleLink={handleLink} 
+        <BroadcastSection
+          unreadAnnouncements={unreadAnnouncements}
+          t={t}
+          markAsRead={markAsRead}
+          handleLink={handleLink}
         />
 
-        <ScriptureProgressionSection 
-            bibleStats={bibleStats} 
-            t={t} 
+        <ScriptureProgressionSection
+          bibleStats={bibleStats}
+          t={t}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
-            <ReadingSection 
-                title={{ labelKey: 'dailyBread', titleKey: 'todaysReading' }} 
-                reading={todaysReading} 
-                completedPassages={completedPassages} 
-                togglePassageCompletion={togglePassageCompletion} 
-                handlePassageClick={handlePassageClick} 
-                t={t} 
-                handleLink={handleLink} 
-                emptyMsg="sabbathRest"
-                showArchiveLink={true}
-            />
+          <ReadingSection
+            title={{ labelKey: 'dailyBread', titleKey: 'todaysReading' }}
+            reading={todaysReading}
+            completedPassages={completedPassages}
+            togglePassageCompletion={togglePassageCompletion}
+            handlePassageClick={handlePassageClick}
+            t={t}
+            handleLink={handleLink}
+            emptyMsg="sabbathRest"
+            showArchiveLink={true}
+          />
 
-            <ReadingSection 
-                title={{ labelKey: 'spiritualHorizon', titleKey: 'nextMilestone' }} 
-                reading={nextUnreadReading} 
-                completedPassages={completedPassages} 
-                togglePassageCompletion={togglePassageCompletion} 
-                handlePassageClick={handlePassageClick} 
-                t={t} 
-                handleLink={handleLink} 
-                emptyMsg="confirm"
-            />
+          <ReadingSection
+            title={{ labelKey: 'spiritualHorizon', titleKey: 'nextMilestone' }}
+            reading={nextUnreadReading}
+            completedPassages={completedPassages}
+            togglePassageCompletion={togglePassageCompletion}
+            handlePassageClick={handlePassageClick}
+            t={t}
+            handleLink={handleLink}
+            emptyMsg="confirm"
+          />
         </div>
 
-        <ActiveCircles 
-            recentChats={recentChats} 
-            currentUser={currentUser} 
-            usersMap={usersMap} 
-            t={t} 
-            handleLink={handleLink} 
+        <ActiveCircles
+          recentChats={recentChats}
+          currentUser={currentUser}
+          usersMap={usersMap}
+          t={t}
+          handleLink={handleLink}
         />
 
-        <CommunityTimeline 
-            timelineItems={timelineItems} 
-            t={t} 
-            handleLink={handleLink} 
-            onItemSelect={setSelectedTimelineItem} 
+        <CommunityTimeline
+          timelineItems={timelineItems}
+          t={t}
+          handleLink={handleLink}
+          onItemSelect={setSelectedTimelineItem}
         />
       </div>
 
-      <TimelineDetailsDialog 
-        item={selectedTimelineItem} 
-        onClose={() => setSelectedTimelineItem(null)} 
-        t={t} 
+      <TimelineDetailsDialog
+        item={selectedTimelineItem}
+        onClose={() => setSelectedTimelineItem(null)}
+        t={t}
       />
     </motion.div>
   );

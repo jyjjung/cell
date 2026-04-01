@@ -57,16 +57,16 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
   const lastSeenNamesPerMessage = useMemo(() => {
     if (!chat?.memberSeen || !messages.length || !allUsers.length) return {};
-    
+
     const map: Record<string, string[]> = {};
     const activeMemberIds = new Set(chat.members);
-    
+
     Object.entries(chat.memberSeen).forEach(([uid, lastSeenTimestamp]) => {
       if (uid === currentUser?.uid) return;
       if (!activeMemberIds.has(uid)) return;
       if (!lastSeenTimestamp) return;
 
-      const lastReadMessage = messages.find(m => 
+      const lastReadMessage = messages.find(m =>
         m.createdAt && m.createdAt.toMillis() <= lastSeenTimestamp.toMillis()
       );
 
@@ -79,7 +79,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         }
       }
     });
-    
+
     return map;
   }, [chat?.memberSeen, chat?.members, messages, allUsers, currentUser]);
 
@@ -91,7 +91,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
       const peerProfile = allUsers.find(u => u.uid === peerId);
       const peerInfoFromChat = chat.memberInfo[peerId];
-      
+
       let name = 'Private Chat';
       if (peerProfile && peerProfile.firstName) {
         name = `${peerProfile.firstName} ${peerProfile.lastName || ''}`.trim();
@@ -115,17 +115,17 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
       const senderProfile = allUsers.find(u => u.uid === msg.senderId);
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
-      const senderForBubble: ChatMemberInfo | null = senderProfile 
-          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
-          : senderInfoFromChat;
+      const senderForBubble: ChatMemberInfo | null = senderProfile
+        ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
+        : senderInfoFromChat;
 
       content.push(
-        <MessageBubble 
-          key={msg.id} 
-          message={msg} 
-          chat={chat as Chat} 
-          sender={senderForBubble} 
-          toggleReaction={toggleReaction} 
+        <MessageBubble
+          key={msg.id}
+          message={msg}
+          chat={chat as Chat}
+          sender={senderForBubble}
+          toggleReaction={toggleReaction}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
           onReply={() => setActiveThreadId(msg.id)}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
@@ -175,19 +175,19 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
       <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-white/5 bg-background/50 backdrop-blur-xl z-20">
         <Link href="/chat" className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-all">
-            <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        
+
         <div className="flex flex-col items-center gap-1 min-w-0">
-            <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-white/10 shadow-sm">
-                <PixelAvatar avatar={chatDetails.avatar} />
-            </div>
-            <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>
+          <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-white/10 shadow-sm">
+            <PixelAvatar avatar={chatDetails.avatar} />
+          </div>
+          <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setSettingsOpen(true)}
           className="h-10 w-10 rounded-full bg-muted/20 hover:bg-muted/40"
         >
@@ -196,42 +196,42 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       </header>
 
       <div className="flex-1 min-h-0 relative">
-        <div 
-            ref={listRef} 
-            className="absolute inset-0 overflow-y-auto px-4 py-4 flex flex-col-reverse custom-scrollbar"
+        <div
+          ref={listRef}
+          className="absolute inset-0 overflow-y-auto px-4 py-4 flex flex-col-reverse custom-scrollbar"
         >
-            <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full">
-                {renderContent()}
+          <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full">
+            {renderContent()}
+          </div>
+          {hasMore && (
+            <div className="text-center py-6">
+              <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Load more
+              </Button>
             </div>
-            {hasMore && (
-                <div className="text-center py-6">
-                    <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
-                        {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Load more
-                    </Button>
-                </div>
-            )}
+          )}
         </div>
       </div>
 
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
-          <MessageInput 
-              chatId={chatId} 
-              disabled={!online} 
-              replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
-              onCancelReply={() => setReplyToId(null)} 
-          />
+        <MessageInput
+          chatId={chatId}
+          disabled={!online}
+          replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
+          onCancelReply={() => setReplyToId(null)}
+        />
       </div>
-      
+
       {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
 
       {activeThreadId && chat && (
-          <ThreadWindow
-              chatId={chatId}
-              parentMessageId={activeThreadId}
-              chat={chat}
-              onClose={() => setActiveThreadId(null)}
-          />
+        <ThreadWindow
+          chatId={chatId}
+          parentMessageId={activeThreadId}
+          chat={chat}
+          onClose={() => setActiveThreadId(null)}
+        />
       )}
     </div>
   );

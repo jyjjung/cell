@@ -21,8 +21,24 @@ export function useWorshipSongs() {
     if (!currentUser) { setSongs([]); setLoading(false); return; }
     const q = query(collection(db, SONGS_COLLECTION), orderBy('title', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
-      setSongs(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong)));
+      const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
+      setSongs(loaded);
       setLoading(false);
+
+      // ── Cache-prime chord sheet images into the SW CacheFirst cache ────────
+      // This runs silently in the background. Once fetched, the service worker
+      // intercepts all subsequent requests and serves from cache — enabling true
+      // offline access to chord sheets without any extra UI work.
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        for (const song of loaded) {
+          for (const sheet of song.chordSheets) {
+            if (sheet.imageUrl) {
+              // Fire-and-forget — do not await, errors are silently ignored
+              fetch(sheet.imageUrl, { mode: 'no-cors', cache: 'force-cache' }).catch(() => {});
+            }
+          }
+        }
+      }
     }, () => setLoading(false));
     return unsub;
   }, [currentUser]);
