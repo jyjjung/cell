@@ -49,7 +49,7 @@ type NavItem = {
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, isAdmin, signOutUser, loadingAuth } = useAuth();
+  const { currentUser, isAdmin, isWorshipTeam, signOutUser, loadingAuth } = useAuth();
   const { setOpenMobile } = useSidebar();
   const [isMounted, setIsMounted] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
@@ -116,8 +116,9 @@ export default function AppSidebar() {
         { href: '/events', label: t.events },
         { href: '/qt', label: t.qtRoster },
         { href: '/cleaning-roster', label: t.cleaningRoster },
-        { href: '/rosters', label: t.otherRosters },
         { href: '/leaderboard', label: t.communityProgress, requiresAuth: true },
+        ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal' }] : []),
+        { href: '/media', label: 'Links' },
       ]
     },
     {

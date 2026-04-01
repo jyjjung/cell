@@ -12,10 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Loader2, Send } from 'lucide-react';
 import type { AppNotification } from '@/types';
+import { Timestamp } from 'firebase/firestore';
 
 const notificationFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
   message: z.string().min(5, "Message must be at least 5 characters").max(2000, "Message is too long"),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
 });
 
 type NotificationFormValues = z.infer<typeof notificationFormSchema>;
@@ -29,17 +32,26 @@ export default function NotificationAdminForm() {
     defaultValues: {
       title: '',
       message: '',
+      scheduledDate: '',
+      scheduledTime: '',
     },
   });
 
   async function onSubmit(data: NotificationFormValues) {
     setIsLoading(true);
     try {
+      let scheduledFor: Timestamp | null = null;
+      if (data.scheduledDate && data.scheduledTime) {
+          const dateStr = `${data.scheduledDate}T${data.scheduledTime}`;
+          scheduledFor = Timestamp.fromDate(new Date(dateStr));
+      }
+
       const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {
         title: data.title,
         message: data.message,
         type: 'announcement',
         isGlobal: true, 
+        scheduledFor,
       };
       
       await createNotification(notificationData);
@@ -85,6 +97,34 @@ export default function NotificationAdminForm() {
             </FormItem>
           )}
         />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="scheduledDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Scheduled Date (Optional)</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} className="h-12 rounded-xl bg-muted/30" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="scheduledTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Scheduled Time (Optional)</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} className="h-12 rounded-xl bg-muted/30" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <div className="pt-4">
             <Button type="submit" className="w-full h-14 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/10 transition-all active:scale-95" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}

@@ -9,6 +9,9 @@ import type { DailyReading } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+
+import { RosterCard } from '@/components/ui/roster-card';
 
 export default function FullBiblePlanPage() {
   const { plan, loading: planLoading } = useBiblePlan();
@@ -46,7 +49,6 @@ export default function FullBiblePlanPage() {
             if (chapters.length === 0) return '';
             chapters.sort((a, b) => a - b);
             if (chapters.length === 1) return `${book} ${chapters[0]}`;
-            // Simple range for now, can be improved for non-consecutive
             return `${book} ${chapters[0]}-${chapters[chapters.length - 1]}`;
         })
         .filter(summary => summary)
@@ -73,53 +75,53 @@ export default function FullBiblePlanPage() {
     }
   };
 
-
-  if (!isMounted || planLoading) {
-    return null;
-  }
-
-  if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
-    return (
-        <div className="space-y-12">
-            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Full Reading Plan</h1>
-                </div>
-            </header>
-            <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-60">
-                <Info className="h-10 w-10 text-muted-foreground mb-3" />
-                <h3 className="font-semibold">No Plan Available</h3>
-                <p className="text-muted-foreground text-sm">No Bible reading plan has been set by the admin.</p>
-            </div>
-        </div>
-    );
-  }
+  if (!isMounted) return null;
 
   return (
-    <div className="space-y-12">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Full Reading Plan</h1>
-          </div>
-          <Button variant="outline" onClick={handleCopyToClipboard} disabled={!planAsText} className="w-full sm:w-auto">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <PageHeader 
+        title="Full Plan" 
+        subtitle="Complete Spiritual Roadmap"
+        icon={BookOpen}
+        accentColor="text-sky-500"
+        iconBgColor="bg-sky-500/10"
+        action={
+          <Button variant="outline" size="sm" onClick={handleCopyToClipboard} disabled={!planAsText || planLoading} className="rounded-xl font-bold">
             <Copy className="mr-2 h-4 w-4" />
             Copy to Clipboard
           </Button>
-      </header>
+        }
+      />
 
-      <section className="space-y-2">
-        {sortedReadings?.map(reading => (
-           <div 
-              key={reading.date}
-              className="p-4 border-b"
-           >
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground">{format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}</p>
-                <p className="text-lg font-medium text-foreground">{generatePassageSummary(reading)}</p>
-              </div>
-           </div>
-        ))}
-      </section>
+      {planLoading ? (
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-sky-500/20" />
+              <p className="text-micro-label text-sky-500/40 !opacity-100">Downloading Sacred Data...</p>
+          </div>
+      ) : (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) ? (
+          <EmptyState 
+              icon={Info} 
+              title="No Plan Available" 
+              description="No Bible reading plan has been set by the admin." 
+          />
+      ) : (
+          <section className="space-y-4">
+            {sortedReadings?.map((reading, idx) => (
+                <RosterCard 
+                    key={reading.date}
+                    index={idx}
+                    date={parseISO(reading.date)}
+                    title={generatePassageSummary(reading)}
+                    subtitle={format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
+                    accentColor="text-sky-500"
+                    accentBg="bg-sky-500/20"
+                    showLine={false}
+                    hideAvatars={true}
+                    rightElement={<BookOpen className="h-5 w-5 text-sky-500/40" />}
+                />
+            ))}
+          </section>
+      )}
       <BackToTopButton />
     </div>
   );

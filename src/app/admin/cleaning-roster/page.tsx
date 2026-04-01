@@ -24,6 +24,7 @@ import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import { PageHeader } from '@/components/ui/page-layout';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
@@ -68,7 +69,6 @@ function ManageCleaningDays() {
         <section className="space-y-8">
             <div className="space-y-1">
                 <h2 className="text-2xl font-black tracking-tighter uppercase">Duty Modules.</h2>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Classification Types</p>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -218,15 +218,15 @@ export default function AdminCleaningRosterPage() {
   const loading = rosterLoading || usersLoading || daysLoading;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-24 pb-24">
+    <div className="relative space-y-24 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <header className="space-y-6">
-        <div className="space-y-2">
-            <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase italic">Service Rota.</h1>
-            <div className="flex items-center gap-2 text-green-500">
-                <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Sanctuary Maintenance Command</p>
-            </div>
-        </div>
+        <PageHeader
+          title="Service Rota"
+          description="Sanctuary Maintenance Command"
+          icon={ListTodo}
+          accentColor="text-emerald-500"
+          iconBgColor="bg-emerald-500/10"
+        />
       </header>
 
       <ManageCleaningDays />
@@ -238,7 +238,6 @@ export default function AdminCleaningRosterPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-8">
                 <div className="space-y-1">
                     <h2 className="text-2xl font-black tracking-tighter uppercase">Timeline View.</h2>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Schedule Orchestration</p>
                 </div>
                 <div className="flex items-center gap-4 bg-muted/20 p-1.5 rounded-2xl border border-white/5">
                     <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>

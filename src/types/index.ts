@@ -233,6 +233,7 @@ export interface AppNotification {
   createdAt: Timestamp;
   readBy: string[];
   relatedUrl?: string;
+  scheduledFor?: Timestamp | null;
 }
 
 export interface ChatMemberInfo {
@@ -265,4 +266,114 @@ export interface ChatMessage {
   createdAt: Timestamp;
   seenBy: string[];
   reactions?: { [key: string]: string[] };
+  replyToId?: string;
+  replyCount?: number;
+  latestReplySenderId?: string;
+  latestReplyText?: string;
+  latestReplyImageUrl?: string;
 }
+
+// ── Worship Portal ──────────────────────────────────────────────────────────
+
+export type ChordKey =
+  | 'numbers'
+  | 'C' | 'C#' | 'Db' | 'D' | 'D#' | 'Eb' | 'E' | 'F'
+  | 'F#' | 'Gb' | 'G' | 'G#' | 'Ab' | 'A' | 'A#' | 'Bb' | 'B';
+
+export interface SongChordSheet {
+  /** Unique id within the song's chordSheets array */
+  id: string;
+  key: ChordKey;
+  imageUrl: string;
+  storagePath: string;
+  uploadedAt: Timestamp;
+}
+
+export interface WorshipSong {
+  id: string;
+  title: string;
+  artist?: string;
+  chordSheets: SongChordSheet[];
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface SetlistSong {
+  songId: string;
+  title: string;
+  key: ChordKey;
+  order: number;
+}
+
+export interface WorshipSetlist {
+  id: string;
+  name: string;
+  date: string;  // ISO yyyy-MM-dd
+  songs: SetlistSong[];
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  rosterId?: string; // linked worship roster
+}
+
+// ── Worship Roster ───────────────────────────────────────────────────────────
+
+export type WorshipRole =
+  | 'Lead'
+  | 'Drums'
+  | 'Keys 1'
+  | 'Keys 2'
+  | 'Bass'
+  | 'Vox 1'
+  | 'Vox 2'
+  | 'Vox 3'
+  | 'E/G 1'
+  | 'E/G 2'
+  | 'A/G'
+  | 'PPT'
+  | 'Sound';
+
+export const WORSHIP_ROLES: WorshipRole[] = [
+  'Lead', 'Drums', 'Keys 1', 'Keys 2', 'Bass',
+  'Vox 1', 'Vox 2', 'Vox 3', 'E/G 1', 'E/G 2',
+  'A/G', 'PPT', 'Sound',
+];
+
+export interface WorshipRosterMember {
+  /** uid of the site user, or null for guests */
+  userId: string | null;
+  /** Display name – required for guests, optional override for site users */
+  displayName: string;
+}
+
+export interface WorshipRosterSlot {
+  role: WorshipRole;
+  members: WorshipRosterMember[];
+  order: number;
+}
+
+export interface WorshipRoster {
+  id: string;
+  name: string;
+  /** ISO yyyy-MM-dd – used to auto-link with setlists on the same date */
+  date: string;
+  /** Optional explicit link to a setlist id */
+  setlistId?: string | null;
+  slots: WorshipRosterSlot[];
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+
+export interface CommunityLink {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  createdBy: string;
+  createdAt: Timestamp;
+}
+

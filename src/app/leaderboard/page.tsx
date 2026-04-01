@@ -14,6 +14,7 @@ import { translations } from '@/lib/translations';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 
 interface UserProgressDisplay {
   userId: string;
@@ -26,9 +27,9 @@ interface UserProgressDisplay {
 }
 
 const rankConfig = [
-  { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/30' },
-  { icon: Medal, color: 'text-slate-400', bg: 'bg-slate-400/10 border-slate-400/30' },
-  { icon: Award, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/30' },
+  { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/30', border: 'border-yellow-500/30' },
+  { icon: Medal, color: 'text-slate-400', bg: 'bg-slate-400/10 border-slate-400/30', border: 'border-slate-400/30' },
+  { icon: Award, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/30', border: 'border-orange-400/30' },
 ];
 
 export default function LeaderboardPage() {
@@ -69,15 +70,16 @@ export default function LeaderboardPage() {
   if (!isMounted || planLoading || checklistsLoading || usersLoading) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-24">
-      <PageHeader title={t.communityProgressTitle} subtitle="Reading Leaderboard" accentColor="text-yellow-500" />
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <PageHeader 
+        title={t.communityProgressTitle} 
+        description="See how the community is progressing in the reading plan." 
+        icon={Trophy} 
+        accentColor="text-yellow-500" 
+        iconBgColor="bg-yellow-500/10" 
+      />
 
-      {totalPassagesToDate > 0 && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="text-sm text-muted-foreground">
-          {t.progressBasedOn.replace('{count}', totalPassagesToDate.toString())}
-        </motion.p>
-      )}
+
 
       {userProgressData.length === 0 ? (
         <EmptyState icon={Users} title={t.noProgressYet} description="No reading data yet." />
@@ -87,43 +89,99 @@ export default function LeaderboardPage() {
             const rank = rankConfig[i];
             const RankIcon = rank?.icon;
             return (
-              <motion.div
-                key={item.userId}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl border transition-all",
-                  item.isCurrentUser
-                    ? "bg-primary/5 border-primary/30 shadow-sm"
-                    : "bg-card/50 border-border/40 backdrop-blur-sm hover:shadow-sm"
-                )}
-              >
-                {/* Rank */}
-                <div className={cn("w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border", rank ? rank.bg : 'bg-muted/30 border-border/20')}>
-                  {RankIcon ? <RankIcon className={cn("h-5 w-5", rank.color)} /> : <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}
-                </div>
+              <Dialog key={item.userId}>
+                <DialogTrigger asChild>
+                  <motion.div
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer",
+                      item.isCurrentUser
+                        ? "bg-primary/5 border-primary/30 shadow-sm"
+                        : "bg-card/50 border-border/40 backdrop-blur-sm hover:shadow-md hover:bg-card/80"
+                    )}
+                  >
+                    {/* Rank */}
+                    <div className={cn("w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border", rank ? rank.bg : 'bg-muted/30 border-border/20')}>
+                      {RankIcon ? <RankIcon className={cn("h-5 w-5", rank.color)} /> : <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}
+                    </div>
 
-                {/* Avatar */}
-                <div className="h-10 w-10 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0">
-                  <PixelAvatar avatar={item.avatar} />
-                </div>
+                    {/* Avatar */}
+                    <div className="h-10 w-10 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0">
+                      <PixelAvatar avatar={item.avatar} />
+                    </div>
 
-                {/* Name + progress */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <p className="font-semibold text-sm truncate">{item.displayName}</p>
-                    {item.isCurrentUser && <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">You</span>}
-                  </div>
-                  <Progress value={Math.min(item.progressPercentage, 100)} className="h-1.5" />
-                </div>
+                    {/* Name + progress */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <p className="font-semibold text-sm truncate">{item.displayName}</p>
+                        {item.isCurrentUser && <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">You</span>}
+                      </div>
+                      <Progress value={Math.min(item.progressPercentage, 100)} className="h-1.5" />
+                    </div>
 
-                {/* Stats */}
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-sm">{item.completedCount}</p>
-                  <p className="text-[11px] text-muted-foreground">{Math.round(item.progressPercentage)}%</p>
-                </div>
-              </motion.div>
+                    {/* Stats */}
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-sm">{item.completedCount}</p>
+                      <p className="text-[11px] text-muted-foreground">{Math.round(item.progressPercentage)}%</p>
+                    </div>
+                  </motion.div>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl shadow-2xl">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="relative">
+                            <div className="w-24 h-24 rounded-[2rem] overflow-hidden bg-muted border-4 border-background shadow-xl">
+                                <PixelAvatar avatar={item.avatar} />
+                            </div>
+                            {rank && (
+                                <div className={cn("absolute -bottom-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center bg-background border-2 shadow-lg", rank.border)}>
+                                    <RankIcon className={cn("w-5 h-5", rank.color)} />
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight">{item.displayName}</h2>
+                            <p className="text-muted-foreground font-medium text-sm mt-1">
+                                {item.isCurrentUser ? "Your Profile" : "Community Member"}
+                            </p>
+                        </div>
+
+                        <div className="w-full grid grid-cols-2 gap-4 mt-4">
+                            <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-1">Passages Read</p>
+                                <p className="text-2xl font-black">{item.completedCount}</p>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                                <p className="text-[10px] uppercase font-black text-primary/80 tracking-widest mb-1">Completion</p>
+                                <p className="text-2xl font-black text-primary">{Math.round(item.progressPercentage)}%</p>
+                            </div>
+                        </div>
+
+                        <div className="w-full text-left space-y-3 mt-6">
+                            <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest">Earned Badges</h3>
+                            <div className="flex gap-2 flex-wrap">
+                                {item.progressPercentage >= 100 ? (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                        <Trophy className="w-3.5 h-3.5" /> 100% Master
+                                    </div>
+                                ) : item.completedCount > 50 ? (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                                        <Award className="w-3.5 h-3.5" /> Dedicated Reader
+                                    </div>
+                                ) : item.completedCount > 0 ? (
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-bold">
+                                        <Medal className="w-3.5 h-3.5" /> Journey Begun
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic">No badges earned yet.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+              </Dialog>
             );
           })}
         </div>

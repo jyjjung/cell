@@ -65,17 +65,12 @@ export default function ForgotPasswordPage() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="w-full max-w-md space-y-8"
       >
-        <div className="text-center">
+          <div className="text-center">
             <div className="inline-block p-3 mb-4 bg-primary/10 rounded-full">
               <KeyRound className="h-7 w-7 text-primary" />
             </div>
             <h1 className="text-3xl font-bold tracking-tighter text-foreground">Forgot Password?</h1>
-            <p className="mt-2 text-muted-foreground">
-              {isSubmitted
-                ? "If an account exists, you'll receive a link to reset your password."
-                : "No problem. Enter your email and we'll send you a reset link."}
-            </p>
-        </div>
+          </div>
 
         {isSubmitted ? (
             <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">

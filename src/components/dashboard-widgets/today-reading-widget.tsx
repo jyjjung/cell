@@ -61,10 +61,10 @@ export default function TodayReadingWidget() {
         <div className="flex items-center justify-between mb-6">
             <div className="min-w-0">
                 <h3 className={cn(
-                    "text-lg font-black tracking-tight",
+                    "text-base font-bold tracking-tight",
                     isAllComplete ? "text-success" : "text-foreground"
                 )}>Daily Bread</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Today's Journey</p>
+                <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Today's Journey</p>
             </div>
             <div className={cn(
                 "p-2.5 rounded-xl transition-all shadow-inner",
@@ -81,7 +81,7 @@ export default function TodayReadingWidget() {
                 </div>
             ) : !todaysReading ? (
                 <div className="flex flex-col items-start gap-2 opacity-40 py-4">
-                    <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Sabbath Rest</p>
+                    <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Sabbath Rest</p>
                     <p className="text-xs font-medium text-muted-foreground">No assigned readings for today.</p>
                 </div>
             ) : isAllComplete ? (
@@ -92,7 +92,7 @@ export default function TodayReadingWidget() {
                 >
                     <CheckCircle className="h-10 w-10 mb-2" />
                     <p className="text-2xl font-black tracking-tight leading-none italic">Sustained.</p>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Daily readings complete</p>
+                    <p className="text-micro-label !opacity-100 !tracking-widest opacity-70">Daily readings complete</p>
                 </motion.div>
             ) : (
                 <div className="space-y-2">
@@ -136,7 +136,8 @@ export default function TodayReadingWidget() {
         <div className="mt-8">
             <Button 
                 variant="outline" 
-                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-primary hover:text-primary-foreground transition-all shadow-none group" 
+                size="sm"
+                className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest bg-background/50 border-border/50 hover:bg-primary hover:text-primary-foreground transition-all shadow-none group" 
                 onClick={handleGoToPlan}
             >
                 Reading Archive

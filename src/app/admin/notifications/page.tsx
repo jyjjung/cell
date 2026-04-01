@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
+import { PageHeader } from '@/components/ui/page-layout';
 
 export default function AdminNotificationsPage() {
   const { notifications, loading, deleteNotification } = useNotifications();
@@ -39,15 +40,15 @@ export default function AdminNotificationsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-16 pb-24">
+    <div className="relative space-y-16 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <header className="space-y-6">
-        <div className="space-y-2">
-            <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase">Announcements.</h1>
-            <div className="flex items-center gap-2 text-orange-500">
-                <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Community Communication Console</p>
-            </div>
-        </div>
+        <PageHeader
+          title="Announcements"
+          description="Community Communication Console"
+          icon={Megaphone}
+          accentColor="text-orange-500"
+          iconBgColor="bg-orange-500/10"
+        />
       </header>
 
       <section className="max-w-2xl space-y-8">
@@ -65,7 +66,6 @@ export default function AdminNotificationsPage() {
         <div className="flex justify-between items-center px-4">
             <div className="space-y-1">
                 <h2 className="text-2xl font-black tracking-tighter uppercase">Announcements Archive</h2>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Sent History</p>
             </div>
             <AlertDialog>
                 <AlertDialogTrigger asChild>

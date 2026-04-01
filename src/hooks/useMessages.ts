@@ -137,7 +137,7 @@ export function useMessages(chatId: string | null) {
   }, [chatId, hasMore, loadingMore, toast]);
 
 
-  const sendMessage = useCallback((text?: string, imageUrl?: string) => {
+  const sendMessage = useCallback((text?: string, imageUrl?: string, replyToId?: string) => {
     if (!currentUser || !chatId) return;
     if (!text?.trim() && !imageUrl) return;
 
@@ -150,6 +150,7 @@ export function useMessages(chatId: string | null) {
 
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
+    if (replyToId) messageData.replyToId = replyToId;
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
@@ -179,8 +180,8 @@ export function useMessages(chatId: string | null) {
 
   }, [currentUser, chatId]);
 
-  const sendImageMessage = useCallback((imageUrl: string) => {
-    sendMessage(undefined, imageUrl);
+  const sendImageMessage = useCallback((imageUrl: string, replyToId?: string) => {
+    sendMessage(undefined, imageUrl, replyToId);
   }, [sendMessage]);
 
   const markAsSeen = useCallback((messageId: string) => {

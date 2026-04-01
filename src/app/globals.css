@@ -3,8 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 @layer base {
   :root {
     /* Background — cool blue-tinted white */
@@ -117,14 +115,28 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-transparent text-foreground;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     min-height: 100vh;
   }
 
-  h1, h2, h3, h4 {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-foreground/90;
     letter-spacing: -0.02em;
+  }
+
+  h1 { @apply text-4xl md:text-6xl; }
+  h2 { @apply text-3xl md:text-5xl; }
+  h3 { @apply text-2xl md:text-4xl; }
+  h4 { @apply text-xl md:text-2xl; }
+
+  p {
+    @apply text-base font-medium leading-relaxed text-muted-foreground/90;
+  }
+
+  small {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground/70;
   }
 
   /* Bible reader prose */
@@ -144,6 +156,50 @@
   .prose .esv-text h3, .prose-sm .esv-text h3,
   .prose .esv-text h4, .prose-sm .esv-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
+  }
+}
+
+@layer components {
+  /* Personal Assistant / Premium Typography System */
+  .text-hero {
+    @apply text-4xl md:text-6xl font-black tracking-tighter leading-[1.1] uppercase italic;
+  }
+
+  .text-page-title {
+    @apply text-3xl font-black tracking-tighter leading-none uppercase italic;
+  }
+
+  .text-section-title {
+    @apply text-xl font-black tracking-tighter uppercase italic;
+  }
+
+  .text-micro-label {
+    @apply text-[10px] font-black tracking-[0.4em] uppercase text-muted-foreground/40;
+  }
+
+  .text-body-hero {
+    @apply text-sm md:text-base font-medium text-muted-foreground/80 leading-relaxed;
+  }
+
+  /* Glassmorphism improvements */
+  .glass-card {
+    @apply backdrop-blur-2xl bg-card/40 border border-white/10 shadow-2xl shadow-black/5;
+  }
+  
+  .glass-thick {
+    @apply backdrop-blur-3xl bg-card/80 border border-white/20 shadow-2xl shadow-black/10;
+  }
+
+  .glass-thin {
+    @apply backdrop-blur-md bg-card/20 border border-white/5;
+  }
+  
+  .dark .glass-card {
+    @apply bg-card/60 border-white/5;
+  }
+  
+  .dark .glass-thick {
+    @apply bg-card/80 border-white/10;
   }
 }
 
@@ -170,6 +226,32 @@
 }
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes glow-orbit {
+  0% { transform: translate(-50%, -50%) rotate(0deg) translateX(40px) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg) translateX(40px) rotate(-360deg); }
+}
+.animate-glow-orbit {
+  animation: glow-orbit 20s linear infinite;
+}
+
+@keyframes ambient-drift {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33% { transform: translate(10vw, -10vh) scale(1.1) rotate(5deg); }
+  66% { transform: translate(-5vw, 15vh) scale(0.9) rotate(-3deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+.animate-ambient-drift {
+  animation: ambient-drift 30s ease-in-out infinite;
 }
 
 /* GPU acceleration */

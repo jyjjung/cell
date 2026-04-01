@@ -100,10 +100,11 @@ export default function ChatList() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-32 px-4 sm:px-6 lg:px-8">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <PageHeader 
         title="Messages"
         subtitle="Private & Group Archive"
+        icon={MessageCircle}
         accentColor="text-primary"
         action={
           <Button 

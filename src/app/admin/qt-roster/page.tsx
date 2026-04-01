@@ -15,13 +15,15 @@ import UserSelector from '@/components/chat/UserSelector';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PageHeader } from '@/components/ui/page-layout';
 
 export default function AdminQTRosterPage() {
   const { roster, loading: rosterLoading, upsertEntry, deleteEntry } = useQTRoster();
   const { allUsers, loading: usersLoading } = useAllUsers();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [localChanges, setLocalChanges] = useState<Record<string, Partial<QTRosterEntry>>>({});
-  const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
   
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export default function AdminQTRosterPage() {
         [date]: { 
             ...prev[date], 
             personName: cleanName, 
-            userId: matchedUser ? matchedUser.uid : null 
+            userId: matchedUser ? matchedUser.uid : undefined 
         },
     }));
   };
@@ -89,40 +91,49 @@ export default function AdminQTRosterPage() {
     setEditingDate(null);
   };
 
-  const handleSave = async (date: string) => {
-    setSavingStates(prev => ({ ...prev, [date]: true }));
-    const existingEntry = rosterMap.get(date) || {};
-    const changes = localChanges[date] || {};
-
-    const resolvedUserId = changes.userId !== undefined ? changes.userId : (existingEntry.userId || null);
-
-    const dataToSave: Omit<QTRosterEntry, 'id'> = {
-        date: date,
-        userId: resolvedUserId,
-        personName: changes.personName !== undefined ? changes.personName : (existingEntry.personName || ''),
-        title: changes.title !== undefined ? changes.title : (existingEntry.title || ''),
-        passage: changes.passage !== undefined ? changes.passage : (existingEntry.passage || ''),
-    };
+  const handleBulkSave = async () => {
+    const datesWithChanges = Object.keys(localChanges);
+    if (datesWithChanges.length === 0) return;
     
-    if (!dataToSave.personName) {
-       toast({ variant: "destructive", title: "Missing Person", description: `Please enter or select a person for ${format(new Date(date), "MMM d")}` });
-       setSavingStates(prev => ({ ...prev, [date]: false }));
-       return;
-    }
-
+    setIsSavingAll(true);
+    let errorCount = 0;
+    
     try {
-      await upsertEntry(dataToSave);
-      setLocalChanges(prev => {
-        const newChanges = { ...prev };
-        delete newChanges[date];
-        return newChanges;
-      });
-      toast({ title: "Sync Successful", description: `Roster for ${format(new Date(date), "MMM d")} updated.` });
+        const promises = datesWithChanges.map(async (date) => {
+            const existingEntry = (rosterMap.get(date) || {}) as Partial<QTRosterEntry>;
+            const changes = localChanges[date] || {};
+            const resolvedUserId = changes.userId !== undefined ? changes.userId : (existingEntry.userId || undefined);
+
+            const dataToSave: Omit<QTRosterEntry, 'id'> = {
+                date: date,
+                userId: resolvedUserId,
+                personName: changes.personName !== undefined ? changes.personName : (existingEntry.personName || ''),
+                title: changes.title !== undefined ? changes.title : (existingEntry.title || ''),
+                passage: changes.passage !== undefined ? changes.passage : (existingEntry.passage || ''),
+            };
+
+            if (!dataToSave.personName) {
+                toast({ variant: "destructive", title: "Missing Person", description: `Please enter or select a person for ${format(new Date(date), "MMM d")}` });
+                errorCount++;
+                return Promise.resolve();
+            }
+
+            return upsertEntry(dataToSave);
+        });
+
+        await Promise.all(promises);
+        
+        if (errorCount === 0) {
+            setLocalChanges({});
+            toast({ title: "Sync Successful", description: `All roster drafts committed.` });
+        } else {
+            toast({ variant: "destructive", title: "Partial Sync", description: `Some drafts failed to sync due to missing data.` });
+        }
     } catch (error) {
-      console.error("Failed to save roster entry", error);
-      toast({ variant: "destructive", title: "Sync Failed", description: "Database rejected the transmission." });
+        console.error("Failed to save roster entry", error);
+        toast({ variant: "destructive", title: "Sync Failed", description: "Database rejected the transmission." });
     } finally {
-      setSavingStates(prev => ({ ...prev, [date]: false }));
+        setIsSavingAll(false);
     }
   };
 
@@ -140,27 +151,39 @@ export default function AdminQTRosterPage() {
   const loading = rosterLoading || usersLoading;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-16 pb-24">
+    <div className="relative space-y-16 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <header className="space-y-6">
-        <div className="space-y-2">
-            <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase italic">QT Rota.</h1>
-            <div className="flex items-center gap-2 text-primary">
-                <div className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                <p className="text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Spiritual Timeline Management</p>
-            </div>
-        </div>
+        <PageHeader
+          title="QT Rota"
+          description="Spiritual Timeline Management"
+          icon={Calendar}
+          accentColor="text-primary"
+          iconBgColor="bg-primary/10"
+        />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-8 border-y border-white/5">
-            <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
-                <ChevronsLeft className="mr-2 h-4 w-4" /> Previous Phase
-            </Button>
+            <div className="flex items-center gap-4">
+                <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+                    <ChevronsLeft className="mr-2 h-4 w-4" /> Prev Phase
+                </Button>
+                <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setViewMode(viewMode === 'timeline' ? 'grid' : 'timeline')}>
+                    {viewMode === 'timeline' ? 'Switch to Grid' : 'Switch to Timeline'}
+                </Button>
+            </div>
             <div className="text-center">
                 <h2 className="text-2xl font-black tracking-tighter uppercase">{monthLabel}</h2>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.4em] mt-1">Current Chronos</p>
             </div>
-            <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-                Next Phase <ChevronsRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-4">
+                {Object.keys(localChanges).length > 0 && (
+                    <Button onClick={handleBulkSave} disabled={isSavingAll} className="h-14 rounded-2xl px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-black whitespace-nowrap shadow-xl shadow-primary/20">
+                        {isSavingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Sync Hub ({Object.keys(localChanges).length} Drafts)
+                    </Button>
+                )}
+                <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                    Next Phase <ChevronsRight className="ml-2 h-4 w-4" />
+                </Button>
+            </div>
         </div>
       </header>
 
@@ -169,6 +192,79 @@ export default function AdminQTRosterPage() {
           <Loader2 className="h-8 w-8 animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-widest">Scanning Matrix</p>
         </div>
+      ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {monthDates.map(dateObj => {
+                const dateStr = format(dateObj, 'yyyy-MM-dd');
+                const entry = rosterMap.get(dateStr);
+                const localData = localChanges[dateStr] || {};
+                
+                const displayData = {
+                  personName: localData.personName ?? entry?.personName ?? '',
+                  title: localData.title ?? entry?.title ?? '',
+                  passage: localData.passage ?? entry?.passage ?? '',
+                };
+
+                const isDirty = !!localChanges[dateStr];
+                const isLinked = !!(localChanges[dateStr]?.userId ?? entry?.userId);
+
+                return (
+                    <div key={dateStr} className={cn("p-6 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-4", isDirty && "ring-2 ring-primary bg-primary/5")}>
+                         <div className="flex justify-between items-center">
+                             <div className="flex flex-col">
+                                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{format(dateObj, 'EEE')}</span>
+                                 <span className="text-xl font-black tracking-tighter">{format(dateObj, 'MMM d')}</span>
+                             </div>
+                             <Button 
+                                size="icon" 
+                                variant="destructive" 
+                                onClick={() => handleDelete(dateStr)} 
+                                disabled={!entry}
+                                className="h-8 w-8 rounded-lg opacity-20 hover:opacity-100 transition-opacity"
+                             >
+                                <Trash2 className="h-3 w-3" />
+                             </Button>
+                         </div>
+                         <div className="space-y-3">
+                             <div className="relative w-full">
+                               <Input
+                                 value={displayData.personName}
+                                 onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
+                                 placeholder="Identity..."
+                                 className={cn(
+                                     "h-10 rounded-xl bg-muted/20 border-white/5 transition-all text-xs",
+                                     isLinked && "pr-8 border-success/30 focus-visible:ring-success/30"
+                                 )}
+                               />
+                               <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    setEditingDate(dateStr);
+                                    setIsSelectorOpen(true);
+                                  }}
+                                >
+                                  <Users className="h-3 w-3" />
+                                </Button>
+                             </div>
+                             <Input
+                                value={displayData.title}
+                                onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
+                                placeholder="Message Theme"
+                                className="h-10 rounded-xl bg-muted/20 border-white/5 text-xs"
+                             />
+                             <Input
+                                value={displayData.passage}
+                                onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
+                                placeholder="Passage"
+                                className="h-10 rounded-xl bg-muted/20 border-white/5 font-mono text-[10px] uppercase tracking-widest"
+                             />
+                         </div>
+                    </div>
+                );
+              })}
+          </div>
       ) : (
         <div className="border border-white/5 rounded-[2.5rem] overflow-hidden bg-card/20 backdrop-blur-md">
           <Table>
@@ -194,7 +290,6 @@ export default function AdminQTRosterPage() {
                 };
 
                 const isDirty = !!localChanges[dateStr];
-                const isSaving = savingStates[dateStr];
                 const isLinked = !!(localChanges[dateStr]?.userId ?? entry?.userId);
 
                 return (
@@ -256,15 +351,6 @@ export default function AdminQTRosterPage() {
                     </TableCell>
                     <TableCell className="text-right py-6">
                        <div className="flex justify-end gap-2">
-                        <Button 
-                            size="icon" 
-                            variant={isDirty ? "default" : "outline"} 
-                            onClick={() => handleSave(dateStr)} 
-                            disabled={isSaving}
-                            className="h-12 w-12 rounded-xl"
-                        >
-                            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        </Button>
                         <Button 
                             size="icon" 
                             variant="destructive" 

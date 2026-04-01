@@ -17,6 +17,7 @@ import { startOfDay, parseISO, format } from 'date-fns';
 import { eventIsFullyBefore } from '@/lib/event-occurrences';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
+import { PageHeader } from '@/components/ui/page-layout';
 
 export default function AdminEventsPage() {
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();
@@ -151,11 +152,15 @@ export default function AdminEventsPage() {
 
 
   return (
-    <div className="space-y-12">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Manage Events</h1>
-        </div>
+    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <PageHeader 
+          title="Manage Events" 
+          description="Orchestrate the community calendar and sync schedules."
+          icon={Calendar}
+          accentColor="text-green-500"
+          iconBgColor="bg-green-500/10"
+        />
         <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
             <DialogTrigger asChild>
             <Button onClick={openAddModal}>

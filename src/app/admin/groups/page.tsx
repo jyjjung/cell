@@ -14,9 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, PlusCircle, Edit, Trash2, Users, Check, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { AppRole } from '@/types';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from '@/components/ui/page-layout';
+import { ShieldCheck } from 'lucide-react';
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters."),
@@ -101,11 +102,15 @@ export default function AdminRolesPage() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Manage Roles & Chats</h1>
-        </div>
+        <PageHeader 
+          title="Manage Roles & Chats" 
+          description="Configure permission tiers and role-linked messaging groups."
+          icon={ShieldCheck}
+          accentColor="text-blue-500"
+          iconBgColor="bg-blue-500/10"
+        />
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
