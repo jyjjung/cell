@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     ],
     shortcut: "/icon.svg",
     apple: [
-      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-192x192-v2.png', sizes: '192x192', type: 'image/png' },
     ],
   },
 };
