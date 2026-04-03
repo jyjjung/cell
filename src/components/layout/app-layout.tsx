@@ -36,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { notifications } = useNotifications();
   const { chats } = useChats();
   
-  const { registerToken, requestPermission } = useFCMToken();
+  const { requestPermission } = useFCMToken();
   const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
@@ -146,79 +146,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, loadingAuth, hasMounted, pathname, router]);
   
+  // ─── Foreground Notification Handler ───────────────────────────────────────
+  // onMessage fires when a push arrives and the app is in the FOREGROUND.
+  // Background/closed is handled by firebase-messaging-sw.js.
   useEffect(() => {
-    // Only proceed if window is available, serviceWorker is supported, messaging is initialized, and user is logged in
-    const isBrowser = typeof window !== 'undefined';
-    const hasSW = isBrowser && 'serviceWorker' in navigator;
-    
-    if (hasSW && messaging && currentUser) {
-      // Use our manual Master Worker for 100% reliability
-      // This bypasses the brittle auto-generated sw.js from next-pwa
-      const initPush = async () => {
-        try {
-          await navigator.serviceWorker.register('/sw-master.js', { scope: '/' });
-          console.log('[AppLayout] Master Worker registered successfully');
-        } catch (error) {
-          console.error('[AppLayout] Master Worker registration failed:', error);
-        }
-      };
-      initPush();
+    if (!currentUser || !messaging) return;
 
-      const unsubscribe = onMessage(messaging as any, (payload) => {
-        const title = payload.data?.title || 'New Sync Notification';
-        const body = payload.data?.body || '';
-        const link = payload.data?.link || '/';
-        const tag = payload.data?.tag || 'community-update';
+    const unsubscribe = onMessage(messaging as any, (payload) => {
+      const title = payload.data?.title || payload.notification?.title || 'New Notification';
+      const body = payload.data?.body || payload.notification?.body || '';
+      const link = payload.data?.link || '/';
+      const tag = payload.data?.tag || 'community-update';
 
-        // Logic for avoiding redundant notifications when user is already in the chat
-        const isCurrentlyViewingThisChat = pathname === link;
-        if (isCurrentlyViewingThisChat && link.startsWith('/chat/')) {
-            return; // Skip notification
-        }
+      // Skip banner if user is already viewing the target chat
+      const isCurrentlyViewing = pathname === link && link.startsWith('/chat/');
+      if (isCurrentlyViewing) return;
 
-        if (Notification.permission === 'granted' && title) {
-          // Use the Service Worker registration to show the notification
-          // This is more robust for PWAs and ensures it feels like a "device push"
-          navigator.serviceWorker.ready.then((registration) => {
-            registration.showNotification(title, {
-              body,
-              icon: payload.data?.icon || '/apple-touch-icon-v3.png',
-              tag,
-              data: { link },
-              badge: '/icon-192x192-v3.png', // High-fidelity detail for Android/Chrome
-            });
-          });
-        }
-
-        // --- IN-APP TOAST ---
-        // Only show if not already viewing the exact target
-        if (!isCurrentlyViewingThisChat) {
-            toast({
-                title: title,
-                description: body,
-                className: "cursor-pointer hover:bg-muted/50 transition-colors",
-                onClick: () => {
-                   router.push(link);
-                }
-            });
-        }
+      // Show an in-app toast so the user doesn't miss the message
+      toast({
+        title,
+        description: body,
+        className: "cursor-pointer hover:bg-muted/50 transition-colors",
+        onClick: () => router.push(link),
       });
+    });
 
-      return () => unsubscribe();
-    }
+    return () => unsubscribe();
   }, [currentUser, router, pathname, toast]);
-  
-  // Foreground Heartbeat: Re-register token on visibility change to catch iOS rotations
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && currentUser) {
-        console.log('[AppLayout] Foreground Heartbeat: Refreshing push registration');
-        registerToken(true); // Forced refresh
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUser, registerToken]);
   
   if (loadingAuth || !hasMounted) {
     return (
