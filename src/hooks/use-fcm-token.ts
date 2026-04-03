@@ -1,136 +1,138 @@
 
 "use client";
 
-import { useEffect, useCallback, useRef } from 'react';
-import { getToken, onMessage } from 'firebase/messaging';
+import { useEffect, useCallback } from 'react';
+import { getToken } from 'firebase/messaging';
 import { messaging } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
 
-const SW_PATH = '/firebase-messaging-sw.js';
-const SW_SCOPE = '/';
+// ─── Module-level singleton ───────────────────────────────────────────────────
+// The SW is registered ONCE per page load, not once per hook mount.
+// This prevents race conditions and eliminates repeated SW registrations
+// that were causing pages to refresh (via skipWaiting + clients.claim cycles).
 
-/**
- * Ensures the Firebase Messaging service worker is registered and returns its
- * registration. Idempotent — safe to call multiple times.
- */
-async function ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+const SW_PATH  = '/firebase-messaging-sw.js';
+// A dedicated scope that does NOT overlap with Next.js / Workbox sw.js (scope '/').
+// This SW only needs to receive push events — it never needs to control a page.
+const SW_SCOPE = '/firebase-cloud-messaging-push-scope';
 
-  try {
-    // Check for an existing registration first (avoids duplicate installs)
-    const existing = await navigator.serviceWorker.getRegistration(SW_SCOPE);
-    if (existing?.active?.scriptURL?.endsWith(SW_PATH)) {
-      return existing;
-    }
+let _swRegistrationPromise: Promise<ServiceWorkerRegistration | null> | null = null;
 
-    // Register (or re-register) with the correct scope
-    const registration = await navigator.serviceWorker.register(SW_PATH, {
-      scope: SW_SCOPE,
-      updateViaCache: 'none', // Always check for SW updates
-    });
+function getOrRegisterSW(): Promise<ServiceWorkerRegistration | null> {
+  if (_swRegistrationPromise) return _swRegistrationPromise;
 
-    // Wait for the SW to become active
-    if (registration.installing || registration.waiting) {
-      await new Promise<void>((resolve) => {
-        const sw = registration.installing ?? registration.waiting!;
-        sw.addEventListener('statechange', function handler() {
-          if (this.state === 'activated') {
-            sw.removeEventListener('statechange', handler);
-            resolve();
-          }
-        });
-        // If it's already activated by the time we attach the listener
-        if (registration.active) resolve();
+  _swRegistrationPromise = (async () => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
+
+    try {
+      // Re-use an existing registration if it's already healthy
+      const existing = await navigator.serviceWorker.getRegistration(SW_SCOPE);
+      if (existing?.active) {
+        existing.update().catch(() => {}); // Check for SW updates silently
+        return existing;
+      }
+
+      const reg = await navigator.serviceWorker.register(SW_PATH, {
+        scope: SW_SCOPE,
+        updateViaCache: 'none',
       });
-    }
 
-    return registration;
-  } catch (error) {
-    console.error('[useFCMToken] Service worker registration failed:', error);
-    return null;
-  }
+      // Wait until the SW is active (handles installing → waiting → activated)
+      if (!reg.active) {
+        await new Promise<void>((resolve) => {
+          const sw = reg.installing ?? reg.waiting;
+          if (!sw) { resolve(); return; }
+          sw.addEventListener('statechange', function onState() {
+            if (sw.state === 'activated') {
+              sw.removeEventListener('statechange', onState);
+              resolve();
+            }
+          });
+          // Guard: already activated by the time listener attached
+          if (reg.active) resolve();
+        });
+      }
+
+      return reg;
+    } catch (err) {
+      console.error('[useFCMToken] SW registration failed:', err);
+      _swRegistrationPromise = null; // Allow retry on next call
+      return null;
+    }
+  })();
+
+  return _swRegistrationPromise;
 }
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useFCMToken() {
   const { currentUser, updateUserProfile } = useAuth();
-  const registering = useRef(false);
 
   const registerToken = useCallback(async () => {
     if (!messaging || !currentUser) return;
-    if (registering.current) return; // Prevent concurrent calls
-    registering.current = true;
+    if (Notification.permission !== 'granted') return;
+
+    const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
+    if (!vapidKey) {
+      console.warn('[useFCMToken] Missing NEXT_PUBLIC_FCM_VAPID_KEY.');
+      return;
+    }
 
     try {
-      // iOS Safari PWA requires notification permission to be 'granted'
-      if (Notification.permission !== 'granted') return;
-
-      const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
-      if (!vapidKey) {
-        console.warn('[useFCMToken] Missing NEXT_PUBLIC_FCM_VAPID_KEY.');
-        return;
-      }
-
-      const registration = await ensureServiceWorker();
+      const registration = await getOrRegisterSW();
       if (!registration) {
-        console.warn('[useFCMToken] No service worker registration available.');
+        console.warn('[useFCMToken] No SW registration — push unavailable.');
         return;
       }
 
-      const token = await getToken(messaging, {
-        vapidKey,
-        serviceWorkerRegistration: registration,
-      });
+      const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
 
-      if (token) {
-        const currentTokens: string[] = currentUser.fcmTokens || [];
-
-        if (currentTokens[0] !== token) {
-          console.log('[useFCMToken] Syncing FCM token.');
-          const filtered = currentTokens.filter((t) => t !== token);
-          const newList = [token, ...filtered].slice(0, 5);
-          await updateUserProfile(currentUser.uid, { fcmTokens: newList });
-        }
-      } else {
-        console.warn('[useFCMToken] FCM returned no token. Push notifications may not work on this device/browser.');
+      if (!token) {
+        console.warn('[useFCMToken] FCM returned no token.');
+        return;
       }
-    } catch (error) {
-      console.error('[useFCMToken] Token registration failed:', error);
-    } finally {
-      registering.current = false;
+
+      const currentTokens: string[] = currentUser.fcmTokens || [];
+      if (currentTokens[0] !== token) {
+        console.log('[useFCMToken] Syncing FCM token.');
+        const deduped = currentTokens.filter((t) => t !== token);
+        await updateUserProfile(currentUser.uid, { fcmTokens: [token, ...deduped].slice(0, 5) });
+      }
+    } catch (err) {
+      console.error('[useFCMToken] Token registration error:', err);
     }
   }, [currentUser, updateUserProfile]);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!('Notification' in window)) return false;
     try {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
         await registerToken();
         return true;
       }
-    } catch (error) {
-      console.error('[useFCMToken] Permission request failed:', error);
+    } catch (err) {
+      console.error('[useFCMToken] Permission request failed:', err);
     }
     return false;
   }, [registerToken]);
 
-  // On mount and whenever the user changes, try to register the token
+  // Register token once on login
   useEffect(() => {
     if (currentUser && typeof window !== 'undefined') {
       registerToken();
     }
   }, [currentUser, registerToken]);
 
-  // Re-register on visibility change (catches iOS PWA token rotation after sleep)
+  // Refresh token when user returns to the tab (iOS PWA token rotation)
   useEffect(() => {
     if (!currentUser) return;
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        registerToken();
-      }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') registerToken();
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [currentUser, registerToken]);
 
   return { registerToken, requestPermission };
