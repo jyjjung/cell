@@ -83,20 +83,17 @@ async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore)
 
 async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Firestore, adminMessaging: Messaging, origin: string) {
     const senderId = message.senderId;
-    const allRecipientIds = chat.members.filter(uid => uid !== senderId);
+    
+    // Identity Sanitization: Handle both plain string UIDs and Member objects.
+    // This is the most critical fix for "Real" chats failing vs "Tests".
+    const recipientIds = chat.members
+        .map(m => (typeof m === 'string' ? m : (m as any).uid))
+        .filter(uid => typeof uid === 'string' && uid !== senderId);
 
-    if (allRecipientIds.length === 0) {
+    if (recipientIds.length === 0) {
         return { success: 0, failure: 0, reason: "No recipients for this message." };
     }
     
-    // Send to all members except the sender, even if they are active
-    const recipientIds = allRecipientIds;
-
-    // Safety Guard: Firestore 'in' query crashes on empty array.
-    if (recipientIds.length === 0) {
-        return { success: 0, failure: 0, reason: "No eligible recipients found after filtering." };
-    }
-
     // Get FCM tokens for the recipients
     const usersSnapshot = await adminDb.collection('users').where(FieldPath.documentId(), 'in', recipientIds).get();
     
@@ -119,18 +116,25 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         return { success: 0, failure: 0, reason: "No registered push clients for recipients." };
     }
     
-    const senderName = await getSenderDisplayName(message.senderId, chat, adminDb);
+    let senderName = 'Someone';
+    try {
+        senderName = await getSenderDisplayName(message.senderId, chat, adminDb);
+    } catch (e) {
+        console.error('[sendNotifications] Error fetching sender display name:', e);
+    }
+
     const messageText = message.text ?? 'Sent a file';
+    const cleanMessageText = messageText.trim() === '' ? 'Sent a file' : messageText;
 
     let title: string;
     let body: string;
 
     if (chat.type === 'group') {
         title = chat.name || 'Group Chat';
-        body = `${senderName}: ${messageText}`;
+        body = `${senderName}: ${cleanMessageText}`;
     } else { 
         title = senderName;
-        body = messageText;
+        body = cleanMessageText;
     }
 
 
@@ -190,7 +194,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const { chatId } = body;
+    const { chatId, messageId } = body;
     if (!chatId) {
         return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
     }
@@ -208,15 +212,29 @@ export async function POST(request: NextRequest) {
         }
         const chat = { id: chatDoc.id, ...chatDoc.data() } as Chat;
 
-        const messagesQuery = chatDocRef.collection('messages').orderBy('createdAt', 'desc').limit(1);
-        const messagesSnapshot = await messagesQuery.get();
-
-        if (messagesSnapshot.empty) {
-            return NextResponse.json({ success: true, delivered: 0, message: 'No messages in chat to notify for.' });
+        // Targeted Message Fetching: Use specific message if provided to avoid race conditions.
+        let targetMessage: ChatMessage | null = null;
+        if (messageId) {
+            const messageDoc = await chatDocRef.collection('messages').doc(messageId).get();
+            if (messageDoc.exists) {
+                targetMessage = { id: messageDoc.id, ...messageDoc.data() } as ChatMessage;
+            }
         }
-        const latestMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
 
-        const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging, request.nextUrl.origin);
+        // Fallback to latest message if specific ID is missing or not found
+        if (!targetMessage) {
+            const messagesQuery = chatDocRef.collection('messages').orderBy('createdAt', 'desc').limit(1);
+            const messagesSnapshot = await messagesQuery.get();
+            if (!messagesSnapshot.empty) {
+                targetMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
+            }
+        }
+
+        if (!targetMessage) {
+            return NextResponse.json({ success: true, delivered: 0, message: 'No message context found to notify for.' });
+        }
+
+        const result = await sendNotifications(chat, targetMessage, adminDb, adminMessaging, request.nextUrl.origin);
         
         if (result.reason) {
             console.log(`[PushSkip] Notification skipped: ${result.reason}`);
