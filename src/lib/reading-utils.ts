@@ -1,13 +1,13 @@
-
 import type { DailyReading, StructuredPassage } from '@/types';
-import { parseISO, isToday, isAfter, startOfDay, isSameDay, isValid } from 'date-fns';
+import { isValid, isSameDay, startOfDay } from 'date-fns';
+import { parseDay } from './event-occurrences';
 
 export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
   const today = startOfDay(new Date());
   return dailyReadings.find(reading => {
     try {
-      const readingDate = parseISO(reading.date);
+      const readingDate = parseDay(reading.date);
       // Ensure the date is valid before comparison
       return isValid(readingDate) && isSameDay(readingDate, today);
     } catch (e) {
@@ -26,8 +26,8 @@ export function findNextUnreadReading(
   // Sort readings chronologically
   const sortedReadings = [...dailyReadings].sort((a, b) => {
     try {
-      const dateA = parseISO(a.date);
-      const dateB = parseISO(b.date);
+      const dateA = parseDay(a.date);
+      const dateB = parseDay(b.date);
       if (!isValid(dateA) || !isValid(dateB)) return 0; // Handle invalid dates in sort
       return dateA.getTime() - dateB.getTime();
     } catch (e) {

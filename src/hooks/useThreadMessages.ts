@@ -136,9 +136,17 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   }, [chatId, parentMessageId, hasMore, loadingMore, toast]);
 
 
-  const sendMessage = useCallback((text?: string, imageUrl?: string, replyToId?: string) => {
+  const sendMessage = useCallback((
+    text?: string, 
+    imageUrl?: string, 
+    replyToId?: string,
+    invitationId?: string,
+    eventId?: string,
+    setlistId?: string,
+    rosterId?: string
+  ) => {
     if (!currentUser || !chatId || !parentMessageId) return;
-    if (!text?.trim() && !imageUrl) return;
+    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -149,6 +157,10 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
+    if (invitationId) messageData.invitationId = invitationId;
+    if (eventId) messageData.eventId = eventId;
+    if (setlistId) messageData.setlistId = setlistId;
+    if (rosterId) messageData.rosterId = rosterId;
 
     const parentDocRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
     const threadColRef = collection(parentDocRef, THREAD_SUBCOLLECTION);
@@ -161,6 +173,10 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         };
         if (messageData.text) parentUpdate.latestReplyText = messageData.text;
         if (messageData.imageUrl) parentUpdate.latestReplyImageUrl = messageData.imageUrl;
+        if (invitationId) parentUpdate.latestReplyText = "📩 Invitation";
+        if (eventId) parentUpdate.latestReplyText = "📅 Event";
+        if (setlistId) parentUpdate.latestReplyText = "🎵 Setlist";
+        if (rosterId) parentUpdate.latestReplyText = "📋 Roster";
 
         updateDoc(parentDocRef, parentUpdate).catch(e => console.error("Failed to increment replyCount", e));
     }).catch(error => {

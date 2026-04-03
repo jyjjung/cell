@@ -4,7 +4,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
 import type { QTRosterEntry, UserProfileData } from '@/types';
-import { format, parseISO, isBefore, startOfToday, compareAsc } from 'date-fns';
+import { format, isBefore, startOfToday, compareAsc } from 'date-fns';
+import { parseDay } from '@/lib/event-occurrences';
 import { Loader2, User, CalendarOff, BookOpen, Calendar } from 'lucide-react';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,11 +34,11 @@ export default function QTRosterPage() {
         const upcoming = new Map<string, QTRosterEntry[]>();
         const past = new Map<string, QTRosterEntry[]>();
         
-        const sortedRoster = [...roster].sort((a,b) => compareAsc(parseISO(a.date), parseISO(b.date)));
+        const sortedRoster = [...roster].sort((a,b) => compareAsc(parseDay(a.date), parseDay(b.date)));
 
         for(const entry of sortedRoster) {
             try {
-                const entryDate = parseISO(entry.date);
+                const entryDate = parseDay(entry.date);
                 const monthYearKey = format(entryDate, 'MMMM yyyy');
 
                 if(isBefore(entryDate, today)) {
@@ -69,7 +70,7 @@ export default function QTRosterPage() {
                 {entries.map((entry, idx) => {
                     const user = entry.userId ? usersMap.get(entry.userId) : undefined;
                     const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
-                    const entryDate = parseISO(entry.date);
+                    const entryDate = parseDay(entry.date);
 
                     return (
                         <RosterCard 
@@ -135,7 +136,7 @@ export default function QTRosterPage() {
                                         {entries.map((entry) => {
                                             const user = entry.userId ? usersMap.get(entry.userId) : undefined;
                                             const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
-                                            const entryDate = parseISO(entry.date);
+                                            const entryDate = parseDay(entry.date);
                                             const currentIndex = globalIdx++;
 
                                             return (

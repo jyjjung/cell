@@ -5,7 +5,7 @@ function day(d: Date): Date {
   return startOfDay(d);
 }
 
-function parseDay(iso: string): Date {
+export function parseDay(iso: string): Date {
   const s = iso.includes('T') ? iso : `${iso}T12:00:00`;
   return day(parseISO(s));
 }

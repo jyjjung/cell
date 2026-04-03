@@ -23,7 +23,14 @@ const notificationFormSchema = z.object({
 
 type NotificationFormValues = z.infer<typeof notificationFormSchema>;
 
-export default function NotificationAdminForm() {
+
+interface NotificationAdminFormProps {
+  onSuccess?: (data: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>) => void;
+  onCancel?: () => void;
+  submitButtonText?: string;
+}
+
+export default function NotificationAdminForm({ onSuccess, onCancel, submitButtonText = "Dispatch Announcement" }: NotificationAdminFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { createNotification } = useNotifications();
 
@@ -56,6 +63,9 @@ export default function NotificationAdminForm() {
       
       await createNotification(notificationData);
 
+      if (onSuccess) {
+        onSuccess(notificationData);
+      }
       form.reset();
     } catch (error: any) {
       console.error("Error Sending Announcement", error);
@@ -72,9 +82,9 @@ export default function NotificationAdminForm() {
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Announcement Title</FormLabel>
+              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Announcement Title</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Important Community Update" {...field} className="h-12 rounded-xl bg-muted/30" />
+                <Input placeholder="e.g., Important Community Update" {...field} className="h-12 rounded-xl bg-white/5 border-white/5" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -85,12 +95,12 @@ export default function NotificationAdminForm() {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Message Content</FormLabel>
+              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Message Content</FormLabel>
               <FormControl>
                 <Textarea 
                   placeholder="Enter the announcement message... Paragraphs are supported." 
                   {...field} 
-                  className="min-h-[200px] rounded-2xl bg-muted/30 resize-y p-4"
+                  className="min-h-[160px] rounded-2xl bg-white/5 border-white/5 resize-y p-4 text-sm"
                 />
               </FormControl>
               <FormMessage />
@@ -103,9 +113,9 @@ export default function NotificationAdminForm() {
             name="scheduledDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Scheduled Date (Optional)</FormLabel>
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Scheduled Date</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} className="h-12 rounded-xl bg-muted/30" />
+                  <Input type="date" {...field} className="h-10 rounded-xl bg-white/5 border-white/5" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,19 +126,22 @@ export default function NotificationAdminForm() {
             name="scheduledTime"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Scheduled Time (Optional)</FormLabel>
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Scheduled Time</FormLabel>
                 <FormControl>
-                  <Input type="time" {...field} className="h-12 rounded-xl bg-muted/30" />
+                  <Input type="time" {...field} className="h-10 rounded-xl bg-white/5 border-white/5" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <div className="pt-4">
-            <Button type="submit" className="w-full h-14 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/10 transition-all active:scale-95" disabled={isLoading}>
+        <div className="pt-4 flex items-center justify-end gap-4">
+            {onCancel && (
+                <Button type="button" variant="ghost" onClick={onCancel} className="h-12 px-6 rounded-xl">Cancel</Button>
+            )}
+            <Button type="submit" className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold text-xs uppercase tracking-widest transition-all" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Dispatch Announcement
+                {submitButtonText}
             </Button>
         </div>
       </form>

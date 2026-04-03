@@ -16,11 +16,11 @@ import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, addDays, isAfter, isSameDay } from 'date-fns';
 import {
   BookOpen, Bell, MessageCircle, Calendar, CheckCircle, ChevronRight,
-  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, X, Flame
+  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, X, Flame, Clock, MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +30,8 @@ import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
-import DayViewWidget from '@/components/dashboard-widgets/day-view-widget';
+import CalendarWidget from '@/components/dashboard-widgets/calendar-widget';
+import AgendaView from '@/components/dashboard-widgets/agenda-view';
 
 interface DashboardPageProps {
   currentUser: AppUser;
@@ -70,6 +71,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
   const [selectedEvent, setSelectedEvent] = useState<TimelineItem | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
 
   const go = useCallback((path: string) => { setIsPageLoading(true); router.push(path); }, [router, setIsPageLoading]);
   const readPassage = useCallback((text: string) => {
@@ -84,8 +86,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const nextUnread = useMemo(() => plan?.dailyReadings ? findNextUnreadReading(plan.dailyReadings, completedPassages) : null, [plan, completedPassages]);
 
   const todayPassages = useMemo(() => todaysReading?.passages.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [], [todaysReading]);
-  const todayDone = useMemo(() => todayPassages.filter(p => completedPassages.includes(p.displayText)).length, [todayPassages, completedPassages]);
-  const isTodayComplete = todayPassages.length > 0 && todayDone === todayPassages.length;
+  const todayDoneCount = useMemo(() => todayPassages.filter(p => completedPassages.includes(p.displayText)).length, [todayPassages, completedPassages]);
+  const isTodayComplete = todayPassages.length > 0 && todayDoneCount === todayPassages.length;
 
   const overallPct = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
@@ -106,10 +108,19 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return ms(c.lastMessageSentAt) > ms(c.memberSeen[currentUser.uid]);
   }).length, [chats, currentUser.uid]);
 
+  const filteredEvents = useMemo(() => {
+    return (events || []).filter(e => {
+      if (currentUser?.isAdmin) return true;
+      if (!e.allowedRoleIds || e.allowedRoleIds.length === 0) return true;
+      const userRoles = currentUser?.roleIds || [];
+      return e.allowedRoleIds.some(rid => userRoles.includes(rid));
+    });
+  }, [events, currentUser]);
+
   const upcomingItems = useMemo(() => {
     const today = startOfToday();
     const items: TimelineItem[] = [];
-    events.forEach(e => {
+    filteredEvents.forEach(e => {
       const next = nextOccurrenceOnOrAfter(e, addDays(today, 1));
       if (!next) return;
       items.push({ id: e.id, date: next, title: e.title, type: 'event', category: e.category, details: e.details });
@@ -142,6 +153,27 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           <span className="gradient-text">{currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}</span>
         </h1>
       </motion.div>
+      
+      {/* ── Alerts ── */}
+      {unreadAlerts.length > 0 && (
+        <motion.section custom={0.2} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-section-title text-orange-500">Alerts</h2>
+            <Button variant="ghost" size="sm" onClick={() => go('/announcements')} className="text-xs rounded-xl font-bold text-primary">All <ArrowRight className="ml-1 h-3 w-3" /></Button>
+          </div>
+          {unreadAlerts.slice(0, 2).map(n => (
+            <div key={n.id} className="flex items-center gap-4 p-4 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 backdrop-blur-xl">
+              <div className="flex-1 min-w-0 px-1">
+                <p className="font-bold text-sm truncate">{n.title}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => markAsRead(n.id)} className="h-9 w-9 rounded-2xl hover:bg-orange-500 hover:text-white shrink-0 transition-colors">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </motion.section>
+      )}
 
       {/* ── Smart Roster Assistant ── */}
       {(() => {
@@ -191,72 +223,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         );
       })()}
 
-      {/* ── Today's Reading ── */}
-      <motion.section custom={1} variants={fadeUp} initial="hidden" animate="visible"
-        className={cn(
-          "relative p-6 md:p-8 rounded-[2.5rem] border shadow-lg overflow-hidden transition-all duration-500",
-          isTodayComplete ? "bg-emerald-500/5 border-emerald-500/20" : "bg-card/50 border-border/50 backdrop-blur-xl"
-        )}>
-        {/* Decorative blob */}
-        <div className={cn("absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-30",
-          isTodayComplete ? "bg-emerald-400" : "bg-primary/40")} />
-
-        <div className="relative">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2.5 rounded-xl shadow-inner", isTodayComplete ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/10 text-primary")}>
-                <BookOpen className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-micro-label !opacity-100 text-muted-foreground/50">Daily Bread</p>
-                <h2 className="text-base font-bold truncate">{t.todaysReading || "Today's Reading"}</h2>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => go('/bible-checklist')} className="text-xs rounded-xl text-primary font-bold">
-              Full plan <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </div>
-
-          {isTodayComplete ? (
-            <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-4 py-2">
-              <CheckCircle className="h-8 w-8 text-emerald-500" />
-              <div>
-                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">All done!</p>
-                <p className="text-xs text-muted-foreground">Come back tomorrow for the next reading.</p>
-              </div>
-            </motion.div>
-          ) : todayPassages.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">No reading assigned — Sabbath rest day.</p>
-          ) : (
-            <div className="space-y-2">
-              <AnimatePresence mode="popLayout">
-                {todayPassages.map(p => {
-                  const done = completedPassages.includes(p.displayText);
-                  return (
-                    <motion.div key={p.displayText} layout transition={spring}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer",
-                        done ? "opacity-50 bg-muted/20 border-transparent" : "bg-muted/30 border-border/30 hover:bg-primary hover:border-primary hover:text-primary-foreground"
-                      )}
-                    >
-                      <Checkbox
-                        checked={done}
-                        onCheckedChange={() => togglePassageCompletion(p.displayText)}
-                        className="h-5 w-5 rounded-lg shrink-0"
-                      />
-                      <button onClick={() => readPassage(p.displayText)} className={cn("flex-1 text-left text-sm font-semibold truncate transition-colors", done && "line-through")}>
-                        {p.displayText}
-                      </button>
-                      {!done && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />}
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </motion.section>
-
       {/* ── Stats Row ── */}
       <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -280,78 +246,136 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         ))}
       </motion.div>
 
-      <motion.div custom={3.5} variants={fadeUp} initial="hidden" animate="visible">
-        <DayViewWidget events={events} cleaningRoster={cleaningRoster} qtRoster={qtRoster} allUsers={allUsers} cleaningDays={cleaningDays} />
-      </motion.div>
+      {/* ── Bible Reading Hub ── */}
+      <motion.section custom={1} variants={fadeUp} initial="hidden" animate="visible"
+        className={cn(
+          "relative p-6 md:p-8 rounded-[2.5rem] border shadow-lg overflow-hidden transition-all duration-500 bg-card/50 border-border/50 backdrop-blur-xl",
+          isTodayComplete && "bg-emerald-500/5 border-emerald-500/20"
+        )}>
+        {/* Decorative blob */}
+        <div className={cn("absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-30",
+          isTodayComplete ? "bg-emerald-400" : "bg-primary/40")} />
 
-      {/* ── Alerts ── */}
-      {unreadAlerts.length > 0 && (
-        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-section-title text-orange-500">Alerts</h2>
-            <Button variant="ghost" size="sm" onClick={() => go('/announcements')} className="text-xs rounded-xl font-bold text-primary">All <ArrowRight className="ml-1 h-3 w-3" /></Button>
-          </div>
-          {unreadAlerts.slice(0, 2).map(n => (
-            <div key={n.id} className="flex items-center gap-4 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/20">
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate">{n.title}</p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
+        <div className="relative">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2.5 rounded-xl shadow-inner", isTodayComplete ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/10 text-primary")}>
+                <BookOpen className="h-5 w-5" />
               </div>
-              <Button variant="ghost" size="icon" onClick={() => markAsRead(n.id)} className="h-8 w-8 rounded-xl hover:bg-orange-500 hover:text-white shrink-0 transition-colors">
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="min-w-0">
+                <p className="text-micro-label !opacity-100 text-muted-foreground/50">Daily Path</p>
+                <h2 className="text-base font-bold truncate">Bible Reading</h2>
+              </div>
             </div>
-          ))}
-        </motion.section>
-      )}
+            <Button variant="ghost" size="sm" onClick={() => go('/bible-checklist')} className="text-xs rounded-xl text-primary font-bold">
+              Full plan <ArrowRight className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
 
-      {/* ── Community Timeline ── */}
-      {upcomingItems.length > 0 && (
-        <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-section-title text-emerald-600 dark:text-emerald-400">Community Calendar</h2>
-            <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">View all <ArrowRight className="ml-1 h-3 w-3" /></Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {upcomingItems.map(item => (
-              <button key={item.id} onClick={() => setSelectedEvent(item)}
-                className="flex items-center gap-4 p-4 rounded-[2rem] bg-card/20 backdrop-blur-xl border border-white/5 hover:border-primary/20 transition-all text-left group shadow-lg shadow-black/5">
-                <div className={cn("w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-center shadow-inner", typeBg(item.type))}>
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest leading-none", typeColor(item.type))}>{format(item.date, 'MMM')}</span>
-                  <span className={cn("text-xl font-black leading-tight", typeColor(item.type))}>{format(item.date, 'd')}</span>
+          <div className="space-y-4">
+            {/* Today's Section */}
+            {todayPassages.length > 0 ? (
+                <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2">Today's assigned</p>
+                    <AnimatePresence mode="popLayout">
+                        {todayPassages.map(p => {
+                            const done = completedPassages.includes(p.displayText);
+                            return (
+                                <motion.div key={p.displayText} layout transition={spring}
+                                    className={cn(
+                                        "flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer",
+                                        done ? "opacity-50 bg-muted/20 border-transparent shadow-none" : "bg-card border-border/40 hover:bg-primary shadow-sm hover:border-primary hover:text-white"
+                                    )}
+                                >
+                                    <Checkbox
+                                        checked={done}
+                                        onCheckedChange={() => togglePassageCompletion(p.displayText)}
+                                        className="h-5 w-5 rounded-lg shrink-0 border-primary/20"
+                                    />
+                                    <button onClick={() => readPassage(p.displayText)} className={cn("flex-1 text-left text-sm font-semibold truncate transition-colors", done && "line-through")}>
+                                        {p.displayText}
+                                    </button>
+                                    {!done && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />}
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-foreground truncate tracking-tight">{item.title}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mt-0.5">{typeLabel(item)} · {format(item.date, 'EEE')}</p>
+            ) : (
+                <div className="py-2">
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rest Day — No reading assigned for today.</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-all group-hover:translate-x-0.5" />
-              </button>
-            ))}
-          </div>
-        </motion.section>
-      )}
+            )}
 
-      {/* ── Next Unread Reading ── */}
-      {nextUnread && !isTodayComplete && (
-        <motion.section custom={5} variants={fadeUp} initial="hidden" animate="visible">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/60">Up Next</h2>
+            {/* Next Up / Integrated Section */}
+            {nextUnread && (
+                <div className={cn(
+                    "mt-6 pt-6 border-t border-border/20",
+                    isTodayComplete && "mt-2 border-t-0 p-4 rounded-3xl bg-emerald-500/10 border-emerald-500/20"
+                )}>
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                {isTodayComplete && <Sparkles className="h-3 w-3 text-emerald-500" />}
+                                <p className={cn(
+                                    "text-[10px] font-black uppercase tracking-widest",
+                                    isTodayComplete ? "text-emerald-600 dark:text-emerald-400" : "text-primary/60"
+                                )}>
+                                    {isTodayComplete ? "All done! Next available reading" : "Coming up next"}
+                                </p>
+                            </div>
+                            <p className="font-bold text-base truncate opacity-90">{nextUnread.passages?.[0]?.displayText}</p>
+                        </div>
+                        <Button 
+                            onClick={() => nextUnread.passages?.[0] && readPassage(nextUnread.passages?.[0].displayText)}
+                            className={cn(
+                                "rounded-2xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0 active:scale-95 transition-all",
+                                isTodayComplete ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary shadow-primary/20"
+                            )}>
+                            Read Now
+                        </Button>
+                    </div>
+                </div>
+            )}
           </div>
-          <div className="p-5 rounded-2xl border border-border/40 bg-card/30 backdrop-blur-sm flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 shrink-0">
-              <BookOpenText className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Next passage</p>
-              <p className="font-bold text-sm truncate">{nextUnread.passages?.[0]?.displayText}</p>
-            </div>
-            <Button size="sm" className="rounded-xl font-bold text-xs shrink-0 active:scale-95" onClick={() => {
-              const p = nextUnread.passages?.[0];
-              if (p) readPassage(p.displayText);
-            }}>Read</Button>
+        </div>
+      </motion.section>
+
+      {/* ── Community Schedule Hub ── */}
+      <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-section-title text-emerald-600 dark:text-emerald-400">Community Schedule</h2>
+          <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">
+            Full View <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left: The Visual Calendar */}
+          <div className="lg:col-span-5 xl:col-span-4">
+            <CalendarWidget 
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              events={filteredEvents}
+              cleaningRoster={cleaningRoster}
+              qtRoster={qtRoster}
+            />
           </div>
-        </motion.section>
-      )}
+
+          {/* Right: The Agenda for selected day */}
+          <div className="lg:col-span-7 xl:col-span-8">
+            <AgendaView 
+              selectedDate={selectedDate}
+              events={filteredEvents}
+              cleaningRoster={cleaningRoster}
+              qtRoster={qtRoster}
+              allUsers={allUsers}
+              cleaningDays={cleaningDays}
+              onItemClick={(item) => setSelectedEvent(item as any)}
+            />
+          </div>
+        </div>
+      </motion.section>
 
       {/* ── Event Detail Dialog ── */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>

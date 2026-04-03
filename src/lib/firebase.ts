@@ -10,7 +10,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { getAuth } from "firebase/auth";
-import { getMessaging } from 'firebase/messaging';
+import { getMessaging, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -51,7 +51,7 @@ const db = createDb();
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-let messaging = null;
+let messaging: Messaging | null = null;
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     try {
         messaging = getMessaging(app);

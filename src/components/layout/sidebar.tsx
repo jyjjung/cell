@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Bell, Shield, LogOut, User,
   LogIn, UserPlus, MessageCircle, ChevronDown, ChevronRight,
+  CalendarCheck, Music, Link2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -66,12 +67,33 @@ export default function AppSidebar() {
     return allNotifications.filter(n => Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
   }, [allNotifications, currentUser]);
 
+  const unreadAnnouncements = useMemo(() => {
+    if (!currentUser || !allNotifications) return 0;
+    return allNotifications.filter(n => n.type === 'announcement' && Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
+  }, [allNotifications, currentUser]);
+
+  const unreadGeneralAlerts = useMemo(() => {
+    if (!currentUser || !allNotifications) return 0;
+    return allNotifications.filter(n => n.type !== 'announcement' && Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
+  }, [allNotifications, currentUser]);
+
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
     return chats.filter(chat => {
-      if (!chat.lastMessageSentAt || !chat.memberSeen?.[currentUser.uid] || chat.lastMessageSenderId === currentUser.uid) return false;
-      const ms = (ts: any) => ts?.toMillis?.() || (ts instanceof Date ? ts.getTime() : ts?._seconds ? ts._seconds * 1000 : 0);
-      return ms(chat.lastMessageSentAt) > ms(chat.memberSeen[currentUser.uid]);
+      if (!chat.lastMessageSentAt || chat.lastMessageSenderId === currentUser.uid) return false;
+      
+      const ms = (ts: any) => {
+          if (!ts) return 0;
+          if (typeof ts.toMillis === 'function') return ts.toMillis();
+          if (ts instanceof Date) return ts.getTime();
+          if (ts._seconds) return ts._seconds * 1000 + (ts._nanoseconds / 1000000);
+          return 0;
+      };
+
+      const lastSeen = chat.memberSeen?.[currentUser.uid];
+      if (!lastSeen) return true;
+
+      return ms(chat.lastMessageSentAt) > ms(lastSeen);
     }).length;
   }, [chats, currentUser]);
 
@@ -99,7 +121,13 @@ export default function AppSidebar() {
 
   const navItems: NavItem[] = [
     { href: '/', label: t.home, icon: Home },
-    { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
+    {
+      label: t.alerts, icon: Bell, badge: unreadAlerts,
+      children: [
+        { href: '/announcements', label: t.announcements, badge: unreadAnnouncements },
+        { href: '/notifications', label: t.notifications, badge: unreadGeneralAlerts },
+      ]
+    },
     {
       label: t.scripture, icon: BookOpen,
       children: [
@@ -107,27 +135,22 @@ export default function AppSidebar() {
         { href: '/bible-checklist', label: t.readingPlan, requiresGuest: true },
         { href: '/full-plan', label: t.fullPlan },
         { href: '/memorize', label: t.memoryVerses },
+        { href: '/leaderboard', label: t.communityProgress, requiresAuth: true },
       ]
     },
+    { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
     {
-      label: t.fellowship, icon: Users,
+      label: t.datesAndRosters, icon: CalendarCheck,
       children: [
-        { href: '/members', label: t.members },
         { href: '/events', label: t.events },
+        { href: '/rsvp', label: 'RSVP', requiresAuth: true },
         { href: '/qt', label: t.qtRoster },
         { href: '/cleaning-roster', label: t.cleaningRoster },
-        { href: '/leaderboard', label: t.communityProgress, requiresAuth: true },
-        ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal' }] : []),
-        { href: '/media', label: 'Links' },
       ]
     },
-    {
-      label: t.alerts, icon: Bell, badge: unreadAlerts,
-      children: [
-        { href: '/announcements', label: t.announcements },
-        { href: '/notifications', label: t.notifications },
-      ]
-    },
+    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
+    { href: '/media', label: 'Links', icon: Link2 },
+    { href: '/members', label: t.members, icon: Users },
   ];
 
   const isVisible = (item: { requiresAuth?: boolean; requiresGuest?: boolean }) =>
@@ -233,7 +256,12 @@ export default function AppSidebar() {
                                     : "text-foreground/60 hover:text-foreground hover:bg-muted/50 font-medium"
                                 )}
                               >
-                                {child.label}
+                                <span className="flex-1 truncate">{child.label}</span>
+                                {typeof child.badge === 'number' && child.badge > 0 && (
+                                  <span className="text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none shrink-0 ml-2">
+                                    {child.badge}
+                                  </span>
+                                )}
                               </button>
                             );
                           })}

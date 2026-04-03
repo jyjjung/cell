@@ -48,6 +48,8 @@ export function useEvents() {
           allDay: data.allDay ?? true,
           category: data.category,
           details: data.details ?? '',
+          location: data.location,
+          allowedRoleIds: data.allowedRoleIds,
           userId: data.userId,
           recurrence: data.recurrence,
           recurrenceUntil: toIsoString(data.recurrenceUntil),
@@ -82,6 +84,8 @@ export function useEvents() {
         if (eventData.endTime) dataToSend.endTime = eventData.endTime;
       }
       if (eventData.userId) dataToSend.userId = eventData.userId;
+      if (eventData.location) dataToSend.location = eventData.location;
+      if (eventData.allowedRoleIds) dataToSend.allowedRoleIds = eventData.allowedRoleIds;
 
       if (eventData.recurrence && eventData.recurrence !== 'none') {
         dataToSend.recurrence = eventData.recurrence;
@@ -131,6 +135,13 @@ export function useEvents() {
         dataToUpdate.endTime = eventProps.endTime || deleteField();
       }
 
+      if (eventProps.location !== undefined) {
+        dataToUpdate.location = eventProps.location || deleteField();
+      }
+      if (eventProps.allowedRoleIds !== undefined) {
+        dataToUpdate.allowedRoleIds = eventProps.allowedRoleIds || deleteField();
+      }
+
       if (eventProps.recurrence && eventProps.recurrence !== 'none') {
         dataToUpdate.recurrence = eventProps.recurrence;
         dataToUpdate.recurrenceUntil = eventProps.recurrenceUntil;
@@ -171,6 +182,5 @@ export function useEvents() {
       throw error;
     }
   }, []);
-
   return { events, addEvent, updateEvent, deleteEvent, loading };
 }

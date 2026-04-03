@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit, Trash2, ListOrdered, Loader2, Calendar } from 'lucide-react';
-import { startOfDay, parseISO, format } from 'date-fns';
-import { eventIsFullyBefore } from '@/lib/event-occurrences';
+import { startOfDay, format } from 'date-fns';
+import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -40,7 +40,7 @@ export default function AdminEventsPage() {
         console.error("Error parsing event date for filtering:", event.date, e);
       }
     });
-    return { upcomingEvents: upcoming, pastEvents: past.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()) };
+    return { upcomingEvents: upcoming, pastEvents: past.sort((a,b) => parseDay(b.date).getTime() - parseDay(a.date).getTime()) };
   }, [events]);
 
 
@@ -107,7 +107,7 @@ export default function AdminEventsPage() {
             {eventsToDisplay.map((event) => (
                 <TableRow key={event.id}>
                 <TableCell className="font-medium">{event.title}</TableCell>
-                <TableCell>{format(parseISO(event.date), "dd/MM/yyyy")}</TableCell>
+                <TableCell>{format(parseDay(event.date), "dd/MM/yyyy")}</TableCell>
                 <TableCell>{event.category}</TableCell>
                 <TableCell className="text-right space-x-2">
                     <Button variant="outline" size="icon" onClick={() => openEditModal(event)} aria-label="Edit event">

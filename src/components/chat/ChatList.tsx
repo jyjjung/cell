@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { getMemberFullName } from "@/lib/chat-utils";
 
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, MessageCircle, ArrowRight, Plus, Search } from "lucide-react";
+import { Loader2, Users, MessageCircle, ArrowRight, Plus, Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PageHeader, EmptyState } from "@/components/ui/page-layout";
 import CreateChatDialog from "./CreateChatDialog";
@@ -28,7 +28,7 @@ import { useOnlineStatus } from "@/hooks/use-online-status";
 export default function ChatList() {
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const online = useOnlineStatus();
   const prefetchedIdsRef = useRef<string>('');
   const pathname = usePathname();
@@ -172,6 +172,62 @@ export default function ChatList() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
+              {isAdmin && (activeTab === 'all' || activeTab === 'group') && (
+                <motion.div
+                    key="system-assistant"
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0 }}
+                    className="w-full"
+                >
+                    <Link
+                      href={`/chat/system`}
+                      onClick={() => handleLinkClick(`/chat/system`)}
+                      className={cn(
+                        "group relative flex items-center gap-4 p-5 rounded-2xl border transition-all w-full overflow-hidden",
+                        pathname === '/chat/system'
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10 border-primary"
+                          : "bg-card/50 border-border/40 backdrop-blur-sm hover:bg-card hover:border-border/60 hover:shadow-md"
+                      )}
+                    >
+                      <div className="relative h-12 w-12 shrink-0">
+                        <div className={cn(
+                          "h-full w-full rounded-xl flex items-center justify-center border transition-all duration-300",
+                          pathname === '/chat/system' ? "border-primary-foreground/30 bg-primary-foreground/10" : "border-border/40 bg-primary/5"
+                        )}>
+                            <Sparkles className={cn("h-5 w-5", pathname === '/chat/system' ? "text-primary-foreground" : "text-primary/60")} />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center justify-between gap-3 mb-1">
+                          <p className={cn(
+                            "font-bold truncate text-sm leading-none",
+                            pathname === '/chat/system' ? "text-primary-foreground" : "text-foreground"
+                          )}>
+                            System Assistant
+                          </p>
+                          <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest opacity-40 italic px-2 py-0.5 rounded-full",
+                              pathname === '/chat/system' ? "bg-primary-foreground/10 text-primary-foreground" : "bg-primary/10 text-primary"
+                          )}>
+                            Admin Tool
+                          </span>
+                        </div>
+                        <p className={cn(
+                          "text-xs truncate leading-relaxed font-medium opacity-50",
+                          pathname === '/chat/system' ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}>
+                          Launch creation wizard
+                        </p>
+                      </div>
+
+                      <ArrowRight className={cn("h-4 w-4 transition-all", pathname === '/chat/system' ? "text-primary-foreground/40" : "text-muted-foreground/20 group-hover:text-primary")} />
+                    </Link>
+                </motion.div>
+              )}
+
               {filteredChats.map((chat, i) => {
                 const details = getChatDetails(chat);
                 if (!details) return null;

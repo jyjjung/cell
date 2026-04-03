@@ -1790,8 +1790,23 @@ function RostersTab({ onOpenPlaylist }: { onOpenPlaylist: (setlistId: string) =>
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WorshipPortalPage() {
   const { isAdmin, isWorshipTeam, loadingAuth } = useAuth();
-  const [tab, setTab] = useState<'playlists' | 'songs' | 'rosters'>('rosters');
-  const [pendingSetlistId, setPendingSetlistId] = useState<string | null>(null);
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialTab = searchParams?.get('tab') as 'playlists' | 'songs' | 'rosters' | null;
+  const initialId = searchParams?.get('id');
+
+  const [tab, setTab] = useState<'playlists' | 'songs' | 'rosters'>(initialTab || 'rosters');
+  const [pendingSetlistId, setPendingSetlistId] = useState<string | null>(tab === 'playlists' ? (initialId || null) : null);
+  const [pendingRosterId, setPendingRosterId] = useState<string | null>(tab === 'rosters' ? (initialId || null) : null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setTab(initialTab);
+      if (initialId) {
+        if (initialTab === 'playlists') setPendingSetlistId(initialId);
+        if (initialTab === 'rosters') setPendingRosterId(initialId);
+      }
+    }
+  }, [initialTab, initialId]);
 
   const handleOpenPlaylist = (setlistId: string) => {
     setPendingSetlistId(setlistId);
