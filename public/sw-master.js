@@ -1,17 +1,35 @@
 /**
- * @fileOverview sw-master.js — Legacy shim / no-op
- *
- * The real push notification service worker is now firebase-messaging-sw.js.
- * This file is kept to avoid 404 errors from any cached registrations but does
- * nothing except forward lifecycle events.
- *
- * Active SW: /firebase-messaging-sw.js (registered by use-fcm-token.ts)
+ * @fileOverview Master Service Worker
+ * Manually manages all the PWA's worker logic to ensure 100% reliability.
+ * Bypasses brittle auto-generation from build tools.
  */
 
-self.addEventListener('install', () => {
+// 1. Import our hardened Firebase Messaging logic (The most important part)
+importScripts('/firebase-messaging-sw.js');
+
+// 2. Lifecycle events for immediate activation
+self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
+
+// Note: Runtime caching is currently handled by the Next.js app itself, 
+// but we prioritize notification delivery above all else.
+function getBadgeCount() {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('badgeDB', 1);
+      request.onsuccess = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('badgeStore')) return resolve(0);
+        const tx = db.transaction('badgeStore', 'readonly');
+        const store = tx.objectStore('badgeStore');
+        const getReq = store.get('count');
+        getReq.onsuccess = () => resolve(getReq.result || 0);
+        getReq.onerror = () => resolve(0);
+      };
+      request.onerror = () => resolve(0);
+    });
+}

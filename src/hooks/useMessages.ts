@@ -185,7 +185,7 @@ export function useMessages(chatId: string | null) {
     try {
         // --- STAGE 1: PERSISTENCE ---
         // Await these writes strictly to prevent the Push API from 404ing on the message if it's too fast
-        const newMessageRef = await addDoc(messagesColRef, messageData);
+        await addDoc(messagesColRef, messageData);
         await updateDoc(chatDocRef, {
             lastMessageText: lastText,
             lastMessageSentAt: serverTimestamp(),
@@ -194,13 +194,14 @@ export function useMessages(chatId: string | null) {
         });
 
         // --- STAGE 2: NOTIFICATION ---
-        // Pass the exact messageId so the push API doesn't need a fallback query
+        // Fire and forget push dispatch
         fetch('/api/send-chat-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 chatId, 
-                messageId: newMessageRef.id,
+                text: lastText, 
+                senderId: currentUser.uid 
             }),
         }).catch(error => console.error("Push notification dispatch failed:", error));
     } catch (error) {
