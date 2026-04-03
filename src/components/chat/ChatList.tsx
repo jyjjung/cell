@@ -100,7 +100,7 @@ export default function ChatList() {
   };
 
   return (
-    <div className="relative space-y-8 pb-32">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       <PageHeader
         title="Messages"
         subtitle="Private & Group Archive"

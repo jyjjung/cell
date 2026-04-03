@@ -150,23 +150,10 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const safeData = toSafeStringMap(rawData);
     const messagePayload: MulticastMessage = {
       tokens: uniqueTokens,
-      // Mandatory 'notification' block to ensure iOS wakes up when the app is closed.
-      notification: {
-          title: title,
-          body: body,
-      },
       data: safeData,
-      webpush: {
-          notification: {
-              title: title,
-              body: body,
-              icon: `${origin}/icon-192x192-v3.png`,
-              tag: String(message.id),
-          },
-          fcmOptions: {
-              link: `/chat/${chat.id}`,
-          }
-      }
+      // We explicitly DO NOT include 'notification' or 'webpush' blocks.
+      // This ensures only our Service Worker's custom 'push' listener handles the display,
+      // eliminating "Double Notifications" and providing a consistent experience on iOS Safari.
     };
     
     assertStringMap(messagePayload.data!);
