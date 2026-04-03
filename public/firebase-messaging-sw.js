@@ -65,42 +65,39 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Explicit native push listener for guaranteed badging updates on iOS Safari
-// Ensures the OS waits for indexedDB resolution before closing the service worker
-self.addEventListener('push', (event) => {
-  event.waitUntil(
-    (async () => {
-      if (self.navigator && 'setAppBadge' in self.navigator) {
-        try {
-          const currentCount = await getBadgeCount();
-          const nextCount = currentCount + 1;
-          await setBadgeCount(nextCount);
-          if (self.navigator.setAppBadge) {
-            await self.navigator.setAppBadge(nextCount);
-          }
-        } catch (e) {
-          console.error('[firebase-messaging-sw.js] Error setting app badge:', e);
-        }
-      }
-    })()
-  );
-});
+// Explicitly removing the standalone 'push' listener to prevent "Silent Push" violations in Safari.
+// All badge updates now happen concurrently with the notification logic below.
 
 // Handle background messages for fallback data-only notification rendering
 messaging.onBackgroundMessage(async (payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
+
+  // Synchronously update the badge as part of this notification event
+  if (self.navigator && 'setAppBadge' in self.navigator) {
+    try {
+      const currentCount = await getBadgeCount();
+      const nextCount = currentCount + 1;
+      await setBadgeCount(nextCount);
+      if (self.navigator.setAppBadge) {
+        await self.navigator.setAppBadge(nextCount);
+      }
+    } catch (e) {
+      console.error('[firebase-messaging-sw.js] Background badge error:', e);
+    }
+  }
 
   // If the payload has a 'notification' field, FirebaseSDK automatically displays it.
   // We ONLY show a notification manually if it's a data-only fallback.
   if (!payload.notification) {
     const notificationTitle = payload.data?.title || 'New Message';
     const notificationOptions = {
-      body: payload.data?.body || 'You have a new update.',
-      icon: payload.data?.icon || '/icon-192x192-v2.png',
-      tag: payload.data?.tag || 'default-tag',
-      data: {
-          link: payload.data?.link || '/'
-      }
+        body: payload.data?.body || 'You have a new update.',
+        icon: payload.data?.icon || '/icon-192x192-v3.png',
+        tag: payload.data?.tag || 'community-update',
+        badge: '/icon-192x192-v3.png',
+        data: {
+            link: payload.data?.link || '/'
+        }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
