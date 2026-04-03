@@ -1,133 +1,129 @@
-
 /**
- * @fileOverview Firebase Cloud Messaging Service Worker
- *
- * Registered with scope '/firebase-cloud-messaging-push-scope' so it
- * does NOT conflict with the Next.js / Workbox service worker (sw.js),
- * which controls the page. This SW only handles push delivery, badge
- * updates, and notification clicks.
- *
- * NO skipWaiting / clients.claim — we never need to control any page.
+ * @fileOverview Pure Native Web Push Service Worker.
+ * Handles background push notifications when the app is closed or in the background.
+ * Bypasses Firebase SDK to avoid conflicts and guarantee iOS/Desktop constraints are met.
  */
 
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
-
-// ─── Firebase Init ────────────────────────────────────────────────────────────
-
-firebase.initializeApp({
-  apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
-  authDomain: "cell-abca4.firebaseapp.com",
-  projectId: "cell-abca4",
-  storageBucket: "cell-abca4.firebasestorage.app",
-  messagingSenderId: "942477536312",
-  appId: "1:942477536312:web:9487c6359a19a4c0e7cacd",
-});
-
-const messaging = firebase.messaging();
-
-// ─── IndexedDB Badge Helpers ──────────────────────────────────────────────────
-
-function openBadgeDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('badgeDB', 1);
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore('badgeStore');
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = () => reject(req.error);
+function getBadgeCount() {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('badgeDB', 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore('badgeStore');
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('badgeStore')) {
+        return resolve(0);
+      }
+      const tx = db.transaction('badgeStore', 'readonly');
+      const store = tx.objectStore('badgeStore');
+      const getReq = store.get('count');
+      getReq.onsuccess = () => resolve(getReq.result || 0);
+      getReq.onerror = () => resolve(0);
+    };
+    request.onerror = () => resolve(0);
   });
 }
 
-async function getBadgeCount() {
-  try {
-    const db = await openBadgeDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction('badgeStore', 'readonly');
-      const req = tx.objectStore('badgeStore').get('count');
-      req.onsuccess = () => resolve(req.result || 0);
-      req.onerror = () => resolve(0);
-    });
-  } catch { return 0; }
-}
-
-async function setBadgeCount(count) {
-  try {
-    const db = await openBadgeDB();
-    await new Promise((resolve) => {
+function setBadgeCount(count) {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('badgeDB', 1);
+    request.onupgradeneeded = (e) => {
+      e.target.result.createObjectStore('badgeStore');
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
       const tx = db.transaction('badgeStore', 'readwrite');
       tx.objectStore('badgeStore').put(count, 'count');
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
-    });
-  } catch { /* badge is cosmetic */ }
+      tx.oncomplete = () => resolve();
+    };
+    request.onerror = () => resolve();
+  });
 }
-
-async function incrementAndSetBadge() {
-  const next = (await getBadgeCount()) + 1;
-  await setBadgeCount(next);
-  if (self.navigator && 'setAppBadge' in self.navigator) {
-    self.navigator.setAppBadge(next).catch(() => {});
-  }
-}
-
-// ─── SYNC_BADGE from main thread ─────────────────────────────────────────────
 
 self.addEventListener('message', (event) => {
-  if (event.data?.type !== 'SYNC_BADGE') return;
-  event.waitUntil((async () => {
-    const count = event.data.count ?? 0;
-    await setBadgeCount(count);
-    if (self.navigator && 'setAppBadge' in self.navigator) {
-      if (count > 0) self.navigator.setAppBadge(count).catch(() => {});
-      else           self.navigator.clearAppBadge().catch(() => {});
-    }
-  })());
+  if (event.data && event.data.type === 'SYNC_BADGE') {
+    event.waitUntil(setBadgeCount(event.data.count));
+  }
 });
 
-// ─── Background Push Handler ──────────────────────────────────────────────────
-// Called by the Firebase SDK for every push when the app is backgrounded/closed.
-// We MUST show a notification here — returning without one gets penalised by
-// Safari's silent-push blacklist.
+self.addEventListener('push', (event) => {
+    // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
+    event.waitUntil(
+        (async () => {
+            let title = 'New Message';
+            let options = {
+                body: 'You have a new update.',
+                icon: '/apple-touch-icon-v3.png',
+                tag: 'community-update',
+                badge: '/icon-192x192-v3.png',
+                data: { link: '/' }
+            };
 
-messaging.onBackgroundMessage((payload) => {
-  const data = payload.data || {};
-  const title = data.title || payload.notification?.title || 'New Message';
-  const body  = data.body  || payload.notification?.body  || 'You have a new update.';
-  const link  = data.link  || '/';
-  const tag   = data.tag   || 'community-update';
+            try {
+                // 2. Parse standard Web Push (FCM) JSON payload
+                if (event.data) {
+                    const payload = event.data.json();
+                    const data = payload.data || {};
+                    const notification = payload.notification || {};
+                    
+                    title = notification.title || data.title || title;
+                    options.body = notification.body || data.body || options.body;
+                    options.icon = notification.icon || data.icon || options.icon;
+                    options.tag = notification.tag || data.tag || options.tag;
+                    options.data = payload.data || options.data;
+                    
+                    if (data.link) {
+                        options.data.link = data.link;
+                    }
 
-  return (async () => {
-    await incrementAndSetBadge();
-    // Always show — the tag deduplicates if Firebase SDK already showed one.
-    await self.registration.showNotification(title, {
-      body,
-      icon:  '/icon-192x192-v3.png',
-      badge: '/icon-192x192-v3.png',
-      tag,
-      data: { link },
-      renotify: false,
-    });
-  })();
+                    // 3. Update the app badge natively and via IndexedDB
+                    const currentCount = await getBadgeCount();
+                    const nextCount = currentCount + 1;
+                    await setBadgeCount(nextCount);
+                    if (self.navigator && 'setAppBadge' in self.navigator) {
+                        await self.navigator.setAppBadge(nextCount);
+                    }
+                    
+                    // 4. Broadcast to clients so they can show an in-app toast if focused
+                    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+                    for (const client of clientList) {
+                        client.postMessage({
+                            type: 'FOREGROUND_PUSH',
+                            payload: { title, body: options.body, link: options.data.link, tag: options.tag, icon: options.icon }
+                        });
+                    }
+
+                }
+            } catch (e) {
+                console.error('[firebase-messaging-sw.js] Payload parsing or badge error:', e);
+            }
+
+            // 5. Final Handshake: Always show a notification to satisfy OS constraints (mainly iOS)
+            return self.registration.showNotification(title, options);
+        })()
+    );
 });
-
-// ─── Notification Click ───────────────────────────────────────────────────────
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const link = event.notification.data?.link || '/';
+    event.notification.close();
+    
+    // Safely extract the deep link, fallback to home
+    const linkToOpen = event.notification.data?.link || '/';
 
-  event.waitUntil(
-    // includeUncontrolled: true → finds windows even if Workbox SW controls them
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((list) => {
-        for (const client of list) {
-          if ('focus' in client) {
-            client.focus();
-            if ('navigate' in client) client.navigate(link);
-            return;
-          }
-        }
-        return self.clients.openWindow(link);
-      })
-  );
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            // If there is already an open window, focus it and redirect
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.postMessage({ type: 'NAVIGATE', link: linkToOpen });
+                    return client.focus();
+                }
+            }
+            // If no window is open, open a new one
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(linkToOpen);
+            }
+        })
+    );
 });
