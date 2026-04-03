@@ -58,13 +58,13 @@ export default function NotificationsPage() {
 
   const relevant = useMemo(() => notifications.filter(n => n.type !== 'announcement'), [notifications]);
   const uid = currentUser?.uid || '';
-  const unread = relevant.filter(n => !n.readBy.includes(uid));
-  const read = relevant.filter(n => n.readBy.includes(uid));
+  const unread = relevant.filter(n => !(n.readBy || []).includes(uid));
+  const read = relevant.filter(n => (n.readBy || []).includes(uid));
 
   if (!isMounted || loading) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="relative space-y-8 pb-32">
       <PageHeader
         title={t.notifications}
         description="Activity Feed"

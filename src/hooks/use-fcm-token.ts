@@ -10,14 +10,13 @@ import { useToast } from '@/hooks/use-toast';
 export function useFCMToken() {
   const { currentUser, updateUserProfile } = useAuth();
   const { toast } = useToast();
-  const registrationAttempted = useRef(false);
+  const hasSynced = useRef(false);
 
   const registerToken = useCallback(async (isManual = false) => {
-    if (!messaging || !currentUser) return;
+    if (!messaging || !currentUser || hasSynced.current) return;
     
-    // Forced Sync: We always attempt to sync the token on mount/manual call 
-    // to ensure our backend has the absolute freshest credentials.
-    // registrationAttempted.current = true;
+    // Lock to prevent infinite re-render loops
+    hasSynced.current = true;
 
     try {
       // Check current permission state

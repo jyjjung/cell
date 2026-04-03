@@ -62,7 +62,7 @@ export function useNotifications() {
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
       const allRecentNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
-      const relevantNotifs = allRecentNotifs.filter(n => n.isGlobal || n.userId === currentUser.uid);
+      const relevantNotifs = allRecentNotifs.filter(n => n.isGlobal || n.userId === currentUser.uid || n.type === 'announcement');
       setNotifications(relevantNotifs);
       setLoading(false);
     }, (error) => {
