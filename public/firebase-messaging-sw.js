@@ -80,31 +80,31 @@ self.addEventListener('push', (event) => {
             };
 
             try {
-                // 1b. Smart Deduplication: If the FCM message already contains a top-level 
-                // 'notification' block, the browser (or the SDK) will show it automatically.
-                // We SKIP the manual showNotification to prevent "Double Banners".
+                // 1b. Payload Extraction: We use the FCM notification block as our source of truth.
+                // We DON'T return here—on iOS Safari PWAs, the Service Worker MUST 
+                // manually show the banner even if the payload has a 'notification' block.
                 if (event.data) {
-                    const json = event.data.json();
-                    if (json && (json.notification || json.webpush?.notification)) {
-                        console.log('[firebase-messaging-sw.js] Browser is handling the banner. Skipping manual display.');
-                        return; // Exit silently
-                    }
-                }
-
-                // 2. Attempt to parse rich data for manual display (only if above check passed)
-                if (event.data) {
-                    const text = event.data.text();
                     try {
-                        const payload = JSON.parse(text);
-                        const data = payload.data || {};
+                        const json = event.data.json();
+                        // Extract from FCM standard 'notification' block if present
+                        const fcmNotif = json.notification || (json.data && json.data.notification ? JSON.parse(json.data.notification) : null);
+                        
+                        if (fcmNotif) {
+                            title = fcmNotif.title || title;
+                            options.body = fcmNotif.body || options.body;
+                        }
+
+                        // Extract from custom 'data' block for app logic
+                        const data = json.data || {};
                         title = data.title || title;
                         options.body = data.body || options.body;
                         options.tag = data.tag || options.tag;
                         if (data.link) {
                             options.data = { link: data.link };
                         }
-                    } catch (jsonErr) {
-                        // Not JSON, but could be plain text
+                    } catch (err) {
+                        // Not JSON, fallback to plain text
+                        const text = event.data.text();
                         options.body = text || options.body;
                     }
                 }
