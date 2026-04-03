@@ -223,7 +223,7 @@ const MessageBubble = React.memo(function MessageBubble({
 
               <div className={cn(
                   "absolute flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10",
-                  isSender ? "right-[calc(100%+0.1rem)] bottom-0" : "left-[calc(100%+0.1rem)] bottom-0"
+                  isSender ? "right-[calc(100%)] bottom-0" : "left-[calc(100%)] bottom-0"
               )}>
                   <Popover>
                       <PopoverTrigger asChild>
