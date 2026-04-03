@@ -288,10 +288,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   Later
                 </button>
                 <button 
-                  onClick={handleEnablePush}
+                  onClick={() => {
+                    setShowPermissionBanner(false);
+                    router.push('/profile');
+                  }}
                   className="bg-white text-primary px-4 py-1.5 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
                 >
-                  Enable
+                  Set Up
                 </button>
               </div>
             </motion.div>
