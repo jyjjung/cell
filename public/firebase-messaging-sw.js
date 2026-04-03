@@ -5,13 +5,8 @@
  */
 
 // Import and configure the Firebase SDK
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
+// Lifecycle events (install/activate) are handled by the main sw.js file.
+// We only include the messaging logic here.
 
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
