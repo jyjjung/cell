@@ -23,9 +23,9 @@ firebase.initializeApp({
 
 
 // Robust 'Failsafe' push listener for iOS reliability
-// We MUST call showNotification() within event.waitUntil() to avoid 
-// Safari's "Silent Push" blacklist penalty.
 self.addEventListener('push', (event) => {
+    console.log('[SW] Push received:', event);
+
     // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
     event.waitUntil(
         (async () => {
@@ -33,15 +33,20 @@ self.addEventListener('push', (event) => {
             let title = 'New Message';
             let options = {
                 body: 'You have a new update in your Sync chat.',
-                icon: `${origin}/apple-touch-icon-v3.png`,
+                icon: `${origin}/icon-192x192-v3.png`,
                 tag: 'community-update',
                 badge: `${origin}/icon-192x192-v3.png`,
             };
 
             try {
                 if (event.data) {
+                    const payload = event.data.text();
+                    console.log('[SW] Raw payload:', payload);
+
                     try {
                         const json = event.data.json();
+                        console.log('[SW] JSON parsed:', json);
+
                         // 2. Extract from standard notification block
                         const fcmNotif = json.notification || (json.data && json.data.notification ? JSON.parse(json.data.notification) : null);
                         
@@ -63,20 +68,24 @@ self.addEventListener('push', (event) => {
                         // 4. Server-Side Badging: Set the app icon badge directly from the signal
                         if (data.badge && self.navigator && 'setAppBadge' in self.navigator) {
                             const count = parseInt(data.badge, 10);
+                            console.log('[SW] Setting App Badge:', count);
                             if (!isNaN(count)) {
                                 await self.navigator.setAppBadge(count);
                             }
                         }
                     } catch (err) {
-                        const text = event.data.text();
-                        options.body = text || options.body;
+                        console.warn('[SW] JSON parse failed, using text fallback');
+                        options.body = payload || options.body;
                     }
+                } else {
+                    console.warn('[SW] No data in push event');
                 }
             } catch (e) {
-                console.error('[firebase-messaging-sw.js] Failsafe parsing error:', e);
+                console.error('[SW] Failsafe parsing error:', e);
             }
 
             // 5. Final Handshake: Always show a notification
+            console.log('[SW] Showing notification:', title, options);
             return self.registration.showNotification(title, options);
         })()
     );

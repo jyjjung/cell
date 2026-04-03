@@ -111,6 +111,35 @@ export default function ProfilePage() {
     return events.find(e => e.category === 'Birthday' && e.userId === currentUser.uid);
   }, [events, currentUser]);
 
+  const handleRepairPush = useCallback(async () => {
+    if (!currentUser) return;
+    setIsSubscriptionLoading(true);
+    try {
+        // 1. Forcefully unregister all service workers to clear the "Handshake"
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const reg of regs) {
+                await reg.unregister();
+            }
+        }
+        
+        // 2. Clear local storage for FCM
+        localStorage.removeItem('fcm_token_synced');
+        
+        toast({
+            title: "Repairing Handshake...",
+            description: "Refreshing the app to finish the repair.",
+        });
+
+        // 3. Reload to trigger fresh registration
+        setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+        console.error('Repair failed:', err);
+        setIsSubscriptionLoading(false);
+    }
+  }, [currentUser, toast]);
+
+
   const handleEnableNotifications = useCallback(async () => {
     if (!currentUser || !messaging) return;
     
@@ -129,8 +158,10 @@ export default function ProfilePage() {
             
             if (currentToken) {
                 const existingTokens = currentUser.fcmTokens || [];
+                // CRITICAL FIX: Merge tokens instead of overwriting the whole list
                 if (!existingTokens.includes(currentToken)) {
-                    await updateUserProfile(currentUser.uid, { fcmTokens: [currentToken] });
+                    const newList = [currentToken, ...existingTokens].slice(0, 3);
+                    await updateUserProfile(currentUser.uid, { fcmTokens: newList });
                     toast({
                         title: "Notifications Enabled",
                         description: "You will now receive push notifications on this device.",
@@ -369,9 +400,14 @@ export default function ProfilePage() {
             {renderNotificationButton}
           </div>
           {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
-            <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl h-9 text-sm">
-              {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
-            </Button>
+            <div className="space-y-2">
+                <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl h-9 text-sm">
+                  {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
+                </Button>
+                <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" className="w-full rounded-xl h-9 text-xs text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
+                  {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} Repair Push Notifications
+                </Button>
+            </div>
           )}
           {pushSupport === 'NEEDS_PWA_INSTALL' && (
             <Alert variant="default">

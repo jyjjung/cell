@@ -208,6 +208,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                               title: title,
                               body: body,
                               icon: `${originUrl}/icon-192x192-v3.png`,
+                              badge: `${originUrl}/icon-192x192-v3.png`,
                               tag: String(message.id),
                           },
                           fcmOptions: {
@@ -218,7 +219,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                           payload: {
                               aps: {
                                   badge: Number(badgeCount),
-                                  sound: 'default'
+                                  sound: 'default',
+                                  'content-available': 1
                               }
                           }
                       }
