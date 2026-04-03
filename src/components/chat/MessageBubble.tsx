@@ -86,7 +86,7 @@ const MessageBubble = React.memo(function MessageBubble({
           className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
-              <div className={cn("flex flex-col min-w-0 max-w-[80%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
+              <div className={cn("flex flex-col min-w-0 max-w-[75%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
                   {(() => {
                       const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
                       return (
@@ -223,7 +223,7 @@ const MessageBubble = React.memo(function MessageBubble({
 
               <div className={cn(
                   "absolute flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10",
-                  isSender ? "right-[calc(100%+0.4rem)] bottom-0" : "left-[calc(100%+0.4rem)] bottom-0"
+                  isSender ? "right-[calc(100%+0.2rem)] bottom-0" : "left-[calc(100%+0.2rem)] bottom-0"
               )}>
                   <Popover>
                       <PopoverTrigger asChild>
