@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
       },
       webpush: {
           notification: {
+              title: notification.title || 'New Notification',
+              body: notification.message || '',
               icon: '/icon-192x192.png',
               tag: notification.id,
           },

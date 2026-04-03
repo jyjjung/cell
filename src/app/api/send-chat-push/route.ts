@@ -136,7 +136,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
       title: title,
       body: body,
       icon: '/icon-192x192.png',
-      tag: String(chat.id),
+      tag: String(message.id),
       link: `/chat/${chat.id}`,
     };
 
@@ -149,8 +149,10 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
       },
       webpush: {
           notification: {
+              title: title,
+              body: body,
               icon: '/icon-192x192.png',
-              tag: String(chat.id),
+              tag: String(message.id),
           },
           fcmOptions: {
               link: `/chat/${chat.id}`
