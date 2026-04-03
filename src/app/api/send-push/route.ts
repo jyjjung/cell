@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
                               title,
                               body,
                               icon: `${originUrl}/icon-192x192-v3.png`,
+                              badge: `${originUrl}/icon-192x192-v3.png`,
                               tag: notification.id,
                           },
                           fcmOptions: {
@@ -138,7 +139,8 @@ export async function POST(request: NextRequest) {
                           payload: {
                               aps: {
                                   badge: Number(badgeCount),
-                                  sound: 'default'
+                                  sound: 'default',
+                                  'content-available': 1
                               }
                           }
                       }
