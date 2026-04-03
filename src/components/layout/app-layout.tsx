@@ -132,13 +132,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     
     if (hasSW && messaging && currentUser) {
       const initPush = async () => {
-        if (Notification.permission === 'default') {
-          const p = await Notification.requestPermission();
-          if (p === 'granted') {
+        try {
+          await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          
+          if (Notification.permission === 'default') {
+            const p = await Notification.requestPermission();
+            if (p === 'granted') {
+                registerToken();
+            }
+          } else if (Notification.permission === 'granted') {
               registerToken();
           }
-        } else if (Notification.permission === 'granted') {
-            registerToken();
+        } catch (error) {
+          console.error('[AppLayout] Failed to register service worker:', error);
         }
       };
       
