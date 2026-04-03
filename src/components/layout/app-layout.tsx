@@ -173,10 +173,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           navigator.serviceWorker.ready.then((registration) => {
             registration.showNotification(title, {
               body,
-              icon: payload.data?.icon || '/icon.svg',
+              icon: payload.data?.icon || '/apple-touch-icon-v3.png',
               tag,
               data: { link },
-              badge: '/icon.svg', // High-fidelity detail for Android/Chrome
+              badge: '/icon-192x192-v3.png', // High-fidelity detail for Android/Chrome
             });
           });
         }
