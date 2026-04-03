@@ -1,8 +1,26 @@
+
 /**
- * @fileOverview Pure Native Web Push Service Worker.
+ * @fileOverview Firebase Messaging Service Worker.
  * Handles background push notifications when the app is closed or in the background.
- * Bypasses Firebase SDK to avoid conflicts and guarantee iOS/Desktop constraints are met.
  */
+
+// Import and configure the Firebase SDK
+// Lifecycle events (install/activate) are handled by the main sw.js file.
+// We only include the messaging logic here.
+
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
+  authDomain: "cell-abca4.firebaseapp.com",
+  projectId: "cell-abca4",
+  storageBucket: "cell-abca4.firebasestorage.app",
+  messagingSenderId: "942477536312",
+  appId: "1:942477536312:web:9487c6359a19a4c0e7cacd",
+});
+
+const messaging = firebase.messaging();
 
 function getBadgeCount() {
   return new Promise((resolve) => {
@@ -47,83 +65,50 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Robust 'Failsafe' push listener for iOS reliability
+// We MUST call showNotification() within event.waitUntil() to avoid 
+// Safari's "Silent Push" blacklist penalty.
 self.addEventListener('push', (event) => {
     // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
     event.waitUntil(
         (async () => {
             let title = 'New Message';
             let options = {
-                body: 'You have a new update.',
+                body: 'You have a new update in your Sync chat.',
                 icon: '/apple-touch-icon-v3.png',
-                tag: 'community-update',
+                tag: 'community-update', // Default tag to prevent flooding
                 badge: '/icon-192x192-v3.png',
-                data: { link: '/' }
             };
 
             try {
-                // 2. Parse standard Web Push (FCM) JSON payload
+                // 2. Attempt to parse rich data if available
                 if (event.data) {
                     const payload = event.data.json();
                     const data = payload.data || {};
-                    const notification = payload.notification || {};
-                    
-                    title = notification.title || data.title || title;
-                    options.body = notification.body || data.body || options.body;
-                    options.icon = notification.icon || data.icon || options.icon;
-                    options.tag = notification.tag || data.tag || options.tag;
-                    options.data = payload.data || options.data;
-                    
+                    title = data.title || title;
+                    options.body = data.body || options.body;
+                    options.tag = data.tag || options.tag;
                     if (data.link) {
-                        options.data.link = data.link;
+                        options.data = { link: data.link };
                     }
+                }
 
-                    // 3. Update the app badge natively and via IndexedDB
-                    const currentCount = await getBadgeCount();
-                    const nextCount = currentCount + 1;
-                    await setBadgeCount(nextCount);
-                    if (self.navigator && 'setAppBadge' in self.navigator) {
-                        await self.navigator.setAppBadge(nextCount);
-                    }
-                    
-                    // 4. Broadcast to clients so they can show an in-app toast if focused
-                    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-                    for (const client of clientList) {
-                        client.postMessage({
-                            type: 'FOREGROUND_PUSH',
-                            payload: { title, body: options.body, link: options.data.link, tag: options.tag, icon: options.icon }
-                        });
-                    }
-
+                // 3. Update the app badge silently
+                const currentCount = await getBadgeCount();
+                const nextCount = currentCount + 1;
+                await setBadgeCount(nextCount);
+                if (self.navigator && 'setAppBadge' in self.navigator) {
+                    await self.navigator.setAppBadge(nextCount);
                 }
             } catch (e) {
-                console.error('[firebase-messaging-sw.js] Payload parsing or badge error:', e);
+                console.error('[firebase-messaging-sw.js] Failsafe parsing error:', e);
+                // We continue anyway—showing the default 'New Message' is better 
+                // than showing nothing and getting blacklisted by Safari.
             }
 
-            // 5. Final Handshake: Always show a notification to satisfy OS constraints (mainly iOS)
+            // 4. Final Handshake: Always show a notification
             return self.registration.showNotification(title, options);
         })()
     );
 });
 
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    
-    // Safely extract the deep link, fallback to home
-    const linkToOpen = event.notification.data?.link || '/';
-
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // If there is already an open window, focus it and redirect
-            for (const client of clientList) {
-                if ('focus' in client) {
-                    client.postMessage({ type: 'NAVIGATE', link: linkToOpen });
-                    return client.focus();
-                }
-            }
-            // If no window is open, open a new one
-            if (self.clients.openWindow) {
-                return self.clients.openWindow(linkToOpen);
-            }
-        })
-    );
-});
