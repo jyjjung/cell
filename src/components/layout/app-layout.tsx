@@ -21,6 +21,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
+import { useFCMToken } from '@/hooks/use-fcm-token';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,6 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { notifications } = useNotifications();
   const { chats } = useChats();
   
+  const { registerToken } = useFCMToken();
   const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
 
   useEffect(() => {
@@ -129,16 +131,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const hasSW = isBrowser && 'serviceWorker' in navigator;
     
     if (hasSW && messaging && currentUser) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-        .then((registration) => {
-          console.log('[AppLayout] SW registered:', registration.scope);
-          // Request notification permission if it's currently 'default'
-          if (Notification.permission === 'default') {
-            Notification.requestPermission();
+      const initPush = async () => {
+        if (Notification.permission === 'default') {
+          const p = await Notification.requestPermission();
+          if (p === 'granted') {
+              registerToken();
           }
-        }).catch((err) => {
-          console.error('[AppLayout] SW registration failed:', err);
-        });
+        } else if (Notification.permission === 'granted') {
+            registerToken();
+        }
+      };
+      
+      initPush();
 
       const unsubscribe = onMessage(messaging as any, (payload) => {
         const title = payload.data?.title || 'New Sync Notification';

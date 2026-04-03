@@ -62,6 +62,19 @@ export async function POST(request: NextRequest) {
     
     const message = {
       tokens: uniqueTokens,
+      notification: {
+        title: notification.title || 'New Notification',
+        body: notification.message || '',
+      },
+      webpush: {
+          notification: {
+              icon: '/icon.svg',
+              tag: notification.id,
+          },
+          fcmOptions: {
+              link: notification.relatedUrl || '/',
+          }
+      },
       data: toSafeStringMap({
         title: notification.title || 'New Notification',
         body: notification.message || '',

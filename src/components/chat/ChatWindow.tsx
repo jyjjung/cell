@@ -17,9 +17,18 @@ import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import { Button } from '../ui/button';
 import GroupSettingsDialog from './GroupSettingsDialog';
-import type { Chat, ChatMemberInfo } from '@/types';
+import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
+import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
+import { 
+  NewSongDialog, 
+  NewSetlistDialog, 
+  NewRosterDialog, 
+  AddChordSheetDialog 
+} from '../worship/WorshipDialogs';
 
 function formatMessageDate(date: Date) {
   if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
@@ -29,7 +38,7 @@ function formatMessageDate(date: Date) {
 }
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
-  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction } = useMessages(chatId);
+  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction, sendMessage } = useMessages(chatId);
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const online = useOnlineStatus();
@@ -38,6 +47,18 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  
+  // Worship Modal Viewer
+  const [worshipViewer, setWorshipViewer] = useState<{ setlistId: string; songId?: string } | null>(null);
+  
+  // Worship Creation Dialogs
+  const [showNewSong, setShowNewSong] = useState(false);
+  const [showNewSetlist, setShowNewSetlist] = useState(false);
+  const [showNewRoster, setShowNewRoster] = useState(false);
+  const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
+  
+  const { setlists } = useWorshipSetlists();
+  const { songs } = useWorshipSongs();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
@@ -128,6 +149,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           toggleReaction={toggleReaction}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
           onReply={() => setActiveThreadId(msg.id)}
+          onOpenWorshipViewer={(setlistId, songId) => setWorshipViewer({ setlistId, songId })}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
           parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
         />
@@ -137,8 +159,8 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
         if (diff > 3600000) {
           content.push(
-            <div key={`time-${msg.id}`} className="py-6 flex justify-center w-full">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+            <div key={`time-${msg.id}`} className="py-3 flex justify-center w-full">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
                 {formatMessageDate(msg.createdAt.toDate())}
               </span>
             </div>
@@ -198,9 +220,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       <div className="flex-1 min-h-0 relative">
         <div
           ref={listRef}
-          className="absolute inset-0 overflow-y-auto px-4 py-4 flex flex-col-reverse custom-scrollbar"
+          className="absolute inset-0 overflow-y-auto px-4 py-2 flex flex-col-reverse custom-scrollbar"
         >
-          <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full">
+          <div className="flex flex-col-reverse gap-0.5 max-w-3xl mx-auto w-full">
             {renderContent()}
           </div>
           {hasMore && (
@@ -214,14 +236,96 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         </div>
       </div>
 
+      {/* Worship Viewer Modal logic constructed from state */}
+      {(() => {
+        if (!worshipViewer) return null;
+        const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
+        if (!setlist) return null;
+
+        // Build flat slide array across all ordered songs
+        const orderedSongs = [...setlist.songs].sort((a, b) => a.order - b.order);
+        const slides: ViewerSlide[] = [];
+        for (const ps of orderedSongs) {
+          const libSong = songs.find(s => s.id === ps.songId);
+          if (!libSong) continue;
+          const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
+          forKey.forEach((sheet, i) => {
+            slides.push({
+              imageUrl: sheet.imageUrl,
+              songTitle: ps.title,
+              key: ps.key,
+              page: i + 1,
+              totalPages: forKey.length,
+            });
+          });
+        }
+
+        if (slides.length === 0) return null;
+
+        let startIndex = 0;
+        if (worshipViewer.songId) {
+          const ps = setlist.songs.find(s => s.songId === worshipViewer.songId);
+          if (ps) {
+            const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
+            if (foundIdx !== -1) startIndex = foundIdx;
+          }
+        }
+
+        return (
+          <FullScreenViewer 
+            slides={slides} 
+            startIndex={startIndex} 
+            onClose={() => setWorshipViewer(null)} 
+          />
+        );
+      })()}
+
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
         <MessageInput
           chatId={chatId}
           disabled={!online}
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
+          onOpenWorshipCreate={(type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => {
+            if (type === 'song') setShowNewSong(true);
+            if (type === 'setlist') setShowNewSetlist(true);
+            if (type === 'roster') setShowNewRoster(true);
+            if (type === 'chords' && songId) {
+              const song = songs.find(s => s.id === songId);
+              if (song) setAddSheetSong(song);
+            }
+          }}
         />
       </div>
+
+      <NewSongDialog 
+        open={showNewSong} 
+        onClose={() => setShowNewSong(false)} 
+        onCreated={(id) => {
+          // Could optionally send a message about the new song
+        }} 
+      />
+      <NewSetlistDialog 
+        open={showNewSetlist} 
+        onClose={() => setShowNewSetlist(false)} 
+        onCreated={(id) => {
+          // Automatically share the new setlist in chat
+          sendMessage(undefined, undefined, undefined, undefined, undefined, id);
+        }} 
+      />
+      <NewRosterDialog 
+        open={showNewRoster} 
+        onClose={() => setShowNewRoster(false)} 
+        onCreated={(id) => {
+          // Automatically share the new roster in chat
+          sendMessage(undefined, undefined, undefined, undefined, undefined, undefined, id);
+        }} 
+      />
+      <AddChordSheetDialog 
+        open={!!addSheetSong} 
+        song={addSheetSong} 
+        onClose={() => setAddSheetSong(null)} 
+      />
 
       {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
 

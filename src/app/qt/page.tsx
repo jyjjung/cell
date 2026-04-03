@@ -18,10 +18,25 @@ export default function QTRosterPage() {
     const { roster, loading: rosterLoading } = useQTRoster();
     const { allUsers, loading: usersLoading } = useAllUsers();
     const [isMounted, setIsMounted] = useState(false);
+    const [searchParams] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null);
+    const targetDate = searchParams?.get('date');
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (isMounted && !rosterLoading && targetDate) {
+            const element = document.getElementById(`date-${targetDate}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+                }, 3000);
+            }
+        }
+    }, [isMounted, rosterLoading, targetDate]);
     
     const usersMap = useMemo(() => {
         const map = new Map<string, UserProfileData>();
@@ -140,28 +155,30 @@ export default function QTRosterPage() {
                                             const currentIndex = globalIdx++;
 
                                             return (
-                                                <RosterCard 
-                                                    key={entry.id}
-                                                    index={currentIndex}
-                                                    date={entryDate}
-                                                    title={displayName}
-                                                    subtitle={entry.title && (
-                                                        <LinkifiedText 
-                                                            text={entry.title} 
-                                                            className="block text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed" 
-                                                        />
-                                                    )}
-                                                    users={user ? [user] : []}
-                                                    rightElement={(
-                                                        <div className="shrink-0">
-                                                            <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
-                                                                <p className="text-micro-label text-primary font-mono whitespace-nowrap !opacity-100 tracking-tight">
-                                                                    {entry.passage}
-                                                                </p>
+                                                <div id={`date-${entry.date}`} className="scroll-mt-24 transition-all duration-700">
+                                                    <RosterCard 
+                                                        key={entry.id}
+                                                        index={currentIndex}
+                                                        date={entryDate}
+                                                        title={displayName}
+                                                        subtitle={entry.title && (
+                                                            <LinkifiedText 
+                                                                text={entry.title} 
+                                                                className="block text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed" 
+                                                            />
+                                                        )}
+                                                        users={user ? [user] : []}
+                                                        rightElement={(
+                                                            <div className="shrink-0">
+                                                                <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
+                                                                    <p className="text-micro-label text-primary font-mono whitespace-nowrap !opacity-100 tracking-tight">
+                                                                        {entry.passage}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                />
+                                                        )}
+                                                    />
+                                                </div>
                                             );
                                         })}
                                     </div>

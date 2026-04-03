@@ -31,8 +31,23 @@ export default function CleaningRosterPage() {
     const { allUsers, loading: usersLoading } = useAllUsers();
     const [isMounted, setIsMounted] = useState(false);
     const t = translations[currentUser?.preferredLanguage || 'en'];
+    const [searchParams] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null);
+    const targetDate = searchParams?.get('date');
 
     useEffect(() => { setIsMounted(true); }, []);
+
+    useEffect(() => {
+        if (isMounted && !rosterLoading && targetDate) {
+            const element = document.getElementById(`date-${targetDate}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-4', 'ring-offset-background');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-4', 'ring-offset-background');
+                }, 3000);
+            }
+        }
+    }, [isMounted, rosterLoading, targetDate]);
     
     const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
     const daysMap = useMemo(() => new Map(cleaningDays.map(d => [d.id, d.name])), [cleaningDays]);
@@ -101,27 +116,29 @@ export default function CleaningRosterPage() {
                                         const currentIndex = globalIdx++;
 
                                         return (
-                                            <RosterCard 
-                                                key={entry.id}
-                                                index={currentIndex}
-                                                date={parseDay(entry.date)}
-                                                title={dayName}
-                                                subtitle={(
-                                                    <div className="flex flex-wrap items-center gap-x-2">
-                                                        {assignedUsers.map((user, uidx) => (
-                                                            <span key={user.uid} className="text-xs font-medium text-muted-foreground/70">
-                                                                {user.firstName}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                users={assignedUsers}
-                                                accentColor="text-emerald-500"
-                                                accentBg="bg-emerald-500/20"
-                                                isCompleted={entry.isCompleted}
-                                                completedBy={completer ? { firstName: completer.firstName, avatar: completer.avatar } : undefined}
-                                                onClick={canToggle ? () => toggleCompletion(entry.date, entry.isCompleted) : undefined}
-                                            />
+                                            <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-24 transition-all duration-700">
+                                                <RosterCard 
+                                                    key={entry.id}
+                                                    index={currentIndex}
+                                                    date={parseDay(entry.date)}
+                                                    title={dayName}
+                                                    subtitle={(
+                                                        <div className="flex flex-wrap items-center gap-x-2">
+                                                            {assignedUsers.map((user, uidx) => (
+                                                                <span key={user.uid} className="text-xs font-medium text-muted-foreground/70">
+                                                                    {user.firstName}{uidx < assignedUsers.length - 1 ? ',' : ''}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    users={assignedUsers}
+                                                    accentColor="text-emerald-500"
+                                                    accentBg="bg-emerald-500/20"
+                                                    isCompleted={entry.isCompleted}
+                                                    completedBy={completer ? { firstName: completer.firstName, avatar: completer.avatar } : undefined}
+                                                    onClick={canToggle ? () => toggleCompletion(entry.date, entry.isCompleted) : undefined}
+                                                />
+                                            </div>
                                         );
                                     })}
                                 </div>

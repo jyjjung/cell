@@ -12,15 +12,17 @@ import {
 import { cn } from '@/lib/utils';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { format, parseISO, isValid } from 'date-fns';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface SetlistSummaryProps {
   setlistId: string;
   isSender: boolean;
+  onOpenViewer?: (songId?: string) => void;
 }
 
-export default function SetlistSummary({ setlistId, isSender }: SetlistSummaryProps) {
+export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: SetlistSummaryProps) {
   const { setlists } = useWorshipSetlists();
+  const router = useRouter();
   
   const setlist = useMemo(() => 
     setlists.find(s => s.id === setlistId), 
@@ -47,8 +49,19 @@ export default function SetlistSummary({ setlistId, isSender }: SetlistSummaryPr
 
   const dateText = formatDateText(setlist.date);
 
+  const firstSongId = songs[0]?.songId;
+
   return (
-    <Link href={`/worship?tab=playlists&id=${setlistId}`} className="block transition-transform active:scale-95">
+    <div 
+      onClick={() => {
+        if (onOpenViewer) {
+          onOpenViewer(firstSongId);
+        } else {
+          router.push(`/worship?tab=playlists&id=${setlistId}${firstSongId ? `&songId=${firstSongId}` : ''}`);
+        }
+      }}
+      className="block transition-transform active:scale-95 cursor-pointer"
+    >
       <div className={cn(
         "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full min-w-[280px] sm:min-w-[320px]",
         isSender 
@@ -63,7 +76,7 @@ export default function SetlistSummary({ setlistId, isSender }: SetlistSummaryPr
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">Worship Setlist</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2">{setlist.name}</h3>
+            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{setlist.name}</h3>
             <p className="text-[11px] font-bold opacity-50 tracking-widest uppercase">{dateText}</p>
           </div>
           <div className="h-10 w-10 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center shrink-0">
@@ -74,7 +87,18 @@ export default function SetlistSummary({ setlistId, isSender }: SetlistSummaryPr
         {/* List of songs */}
         <div className="flex flex-col gap-2 pt-2">
            {songs.map((song, i) => (
-             <div key={song.songId} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
+             <div 
+               key={song.songId} 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 if (onOpenViewer) {
+                   onOpenViewer(song.songId);
+                 } else {
+                   router.push(`/worship?tab=playlists&id=${setlistId}&songId=${song.songId}`);
+                 }
+               }}
+               className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors pointer-events-auto"
+             >
                 <div className="flex items-center gap-3 min-w-0">
                    <span className="text-[10px] font-black opacity-30 w-4">{i + 1}</span>
                    <p className="text-[13px] font-bold truncate">{song.title}</p>
@@ -91,6 +115,6 @@ export default function SetlistSummary({ setlistId, isSender }: SetlistSummaryPr
           <ChevronRight className="w-4 h-4 text-[#007AFF] opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
