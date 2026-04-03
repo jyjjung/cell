@@ -152,14 +152,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const hasSW = isBrowser && 'serviceWorker' in navigator;
     
     if (hasSW && messaging && currentUser) {
-      const initPush = async () => {
-        try {
-          await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        } catch (error) {
-          console.error('[AppLayout] Failed to register service worker:', error);
-        }
-      };
-      initPush();
+      // Use the existing registration provided by the PWA system
+      // Standardizes on the auto-generated sw.js from next.config.js
 
       const unsubscribe = onMessage(messaging as any, (payload) => {
         const title = payload.data?.title || 'New Sync Notification';
