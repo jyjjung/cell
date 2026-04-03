@@ -136,7 +136,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const rawData = {
       title: title,
       body: body,
-      icon: `${origin}/icon-192x192.png`,
+      icon: `${origin}/icon-192x192-v2.png`,
       tag: String(message.id),
       link: `/chat/${chat.id}`,
     };
@@ -152,7 +152,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
           notification: {
               title: title,
               body: body,
-              icon: `${origin}/icon-192x192.png`,
+              icon: `${origin}/icon-192x192-v2.png`,
               tag: String(message.id),
           },
           fcmOptions: {
