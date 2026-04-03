@@ -85,10 +85,12 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const senderId = message.senderId;
     
     // Identity Sanitization: Handle both plain string UIDs and Member objects.
-    // This is the most critical fix for "Real" chats failing vs "Tests".
     const recipientIds = chat.members
         .map(m => (typeof m === 'string' ? m : (m as any).uid))
         .filter(uid => typeof uid === 'string' && uid !== senderId);
+
+    // Identity Tracking: Print IDs to verify the signal isn't "missing" the target.
+    console.log(`[Identity] Sender: ${senderId}, Recipients: [${recipientIds.join(', ')}]`);
 
     if (recipientIds.length === 0) {
         return { success: 0, failure: 0, reason: "No recipients for this message." };
@@ -102,8 +104,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         const doc = usersSnapshot.docs[i];
         const user = doc.data() as UserProfileData;
         if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
-            // Only take the 5 most recent tokens to prevent "Graveyards" 
-            // of dead tokens from slowing down multicast.
+            // Take the 5 most recent tokens.
             allTokens.push(...user.fcmTokens.slice(0, 5));
         }
     }
@@ -141,7 +142,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const rawData = {
       title: title,
       body: body,
-      icon: `${origin}/icon-192x192-v3.png`,
+      icon: '/icon-192x192-v3.png',
       tag: String(message.id),
       link: `/chat/${chat.id}`,
     };
@@ -159,11 +160,11 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
           notification: {
               title: title,
               body: body,
-              icon: `${origin}/apple-touch-icon-v3.png`,
+              icon: `${origin}/icon-192x192-v3.png`,
               tag: String(message.id),
           },
           fcmOptions: {
-              link: `/chat/${chat.id}`
+              link: `/chat/${chat.id}`,
           }
       }
     };
@@ -171,12 +172,15 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     assertStringMap(messagePayload.data!);
     const response = await adminMessaging.sendEachForMulticast(messagePayload);
     
-    // --- Automatic Token Cleanup ---
-    // If a token is unregistered or invalid, remove it from the User document.
-    const tokensToRemove: { [uid: string]: string[] } = {};
-
+    // --- Detailed Diagnostics ---
     if (response.failureCount > 0) {
         console.warn(`[sendNotifications] Delivered: ${response.successCount}, Failed: ${response.failureCount}.`);
+        // Log detailed error codes for each token to find "Zombie" tokens.
+        response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+                console.warn(`[FCM-Diagnostic] Token ${idx} failed: ${resp.error?.code} - ${resp.error?.message}`);
+            }
+        });
     }
 
     return { 
