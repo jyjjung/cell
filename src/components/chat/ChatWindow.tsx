@@ -220,7 +220,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       <div className="flex-1 min-h-0 relative">
         <div
           ref={listRef}
-          className="absolute inset-0 overflow-y-auto px-4 py-2 flex flex-col-reverse custom-scrollbar"
+          className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar"
         >
           <div className="flex flex-col-reverse gap-0.5 max-w-3xl mx-auto w-full">
             {renderContent()}
