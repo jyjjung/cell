@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import type { AppNotification, UserProfileData, Chat } from '@/types';
 import { FieldPath, type Firestore } from 'firebase-admin/firestore';
-import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
+import { type Messaging } from 'firebase-admin/messaging';
 
 /**
  * Forcefully converts all values in a record to strings to create a safe FCM data payload.
@@ -34,7 +34,11 @@ function getMillis(timestamp: any): number {
  */
 async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
     try {
-        const notificationsSnapshot = await db.collection('notifications').get();
+        const notificationsSnapshot = await db.collection('notifications')
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .get();
+            
         let unreadAlerts = 0;
         notificationsSnapshot.forEach(doc => {
             const data = doc.data();
@@ -103,44 +107,49 @@ export async function POST(request: NextRequest) {
             const badgeCount = await calculateTotalUnread(userId, adminDb);
             const title = notification.title || 'New Notification';
             const body = notification.message || '';
-            const origin = request.nextUrl.origin;
+            const originUrl = 'https://ndcem.vercel.app';
 
-            const payload: MulticastMessage = {
-              tokens: userTokens,
-              notification: { title, body },
-              data: toSafeStringMap({
-                title,
-                body,
-                icon: `${origin}/icon-192x192-v3.png`,
-                tag: notification.id,
-                link: notification.relatedUrl || '/',
-                badge: String(badgeCount),
-              }),
-              webpush: {
-                  notification: {
-                      title,
-                      body,
-                      icon: `${origin}/icon-192x192-v3.png`,
-                      tag: notification.id,
-                      badge: `${origin}/icon-192x192-v3.png`,
-                  },
-                  fcmOptions: {
-                      link: notification.relatedUrl || '/',
-                  }
-              },
-              apns: {
-                  payload: {
-                      aps: {
-                          badge: Number(badgeCount),
-                          sound: 'default'
+            for (const token of userTokens) {
+                try {
+                    const payload = {
+                      token: token,
+                      notification: { title, body },
+                      data: toSafeStringMap({
+                        title,
+                        body,
+                        icon: `${originUrl}/icon-192x192-v3.png`,
+                        tag: notification.id,
+                        link: notification.relatedUrl || '/',
+                        badge: String(badgeCount),
+                      }),
+                      webpush: {
+                          notification: {
+                              title,
+                              body,
+                              icon: `${originUrl}/icon-192x192-v3.png`,
+                              tag: notification.id,
+                          },
+                          fcmOptions: {
+                              link: notification.relatedUrl || '/',
+                          }
+                      },
+                      apns: {
+                          payload: {
+                              aps: {
+                                  badge: Number(badgeCount),
+                                  sound: 'default'
+                              }
+                          }
                       }
-                  }
-              }
-            };
+                    };
 
-            const response = await adminMessaging.sendEachForMulticast(payload);
-            totalSuccess += response.successCount;
-            totalFailure += response.failureCount;
+                    await adminMessaging.send(payload);
+                    totalSuccess++;
+                } catch (tokenErr) {
+                    console.warn(`[send-push] Token failed for user ${userId}:`, tokenErr);
+                    totalFailure++;
+                }
+            }
         } catch (err) {
             console.error(`[send-push] Failed for user ${userId}:`, err);
             totalFailure++;
