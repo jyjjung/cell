@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
             const title = notification.title || 'New Notification';
             const body = notification.message || '';
             const originUrl = 'https://ndcem.vercel.app';
+            console.log(`[FCM] User ${userId} has ${userTokens.length} tokens. Badge: ${badgeCount}`);
 
             for (const token of userTokens) {
                 try {
@@ -145,8 +146,23 @@ export async function POST(request: NextRequest) {
 
                     await adminMessaging.send(payload);
                     totalSuccess++;
-                } catch (tokenErr) {
-                    console.warn(`[send-push] Token failed for user ${userId}:`, tokenErr);
+                } catch (tokenErr: any) {
+                    console.warn(`[FCM Fail] Token failed for user ${userId}:`, tokenErr.code || tokenErr.message);
+                    
+                    // Auto-Prune Stale Tokens
+                    if (tokenErr.code === 'messaging/registration-token-not-registered' || 
+                        tokenErr.code === 'messaging/invalid-registration-token') {
+                        console.log(`[FCM Prune] Removing stale token for user ${userId}`);
+                        try {
+                            // Import FieldValue dynamically if needed or use from adminDb
+                            const { FieldValue } = require('firebase-admin/firestore');
+                            await adminDb.collection('users').doc(userId).update({
+                                fcmTokens: FieldValue.arrayRemove(token)
+                            });
+                        } catch (pruneErr) {
+                            console.error(`[FCM Prune Fail] Failed to remove token for ${userId}:`, pruneErr);
+                        }
+                    }
                     totalFailure++;
                 }
             }

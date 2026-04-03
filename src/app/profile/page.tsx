@@ -121,7 +121,11 @@ export default function ProfilePage() {
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
-            const currentToken = await getToken(messaging, { vapidKey });
+            const registration = await navigator.serviceWorker.ready;
+            const currentToken = await getToken(messaging, { 
+                vapidKey,
+                serviceWorkerRegistration: registration 
+            });
             
             if (currentToken) {
                 const existingTokens = currentUser.fcmTokens || [];
