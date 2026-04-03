@@ -144,7 +144,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const typeLabel = (item: TimelineItem) => item.type === 'cleaning' ? 'Cleaning Roster' : item.type === 'qt' ? 'QT Roster' : item.category || 'Event';
 
   return (
-    <div className="relative space-y-8 pb-32">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
 
       {/* ── Greeting ── */}
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">

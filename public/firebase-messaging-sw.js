@@ -80,7 +80,18 @@ self.addEventListener('push', (event) => {
             };
 
             try {
-                // 2. Attempt to parse rich data if available
+                // 1b. Smart Deduplication: If the FCM message already contains a top-level 
+                // 'notification' block, the browser (or the SDK) will show it automatically.
+                // We SKIP the manual showNotification to prevent "Double Banners".
+                if (event.data) {
+                    const json = event.data.json();
+                    if (json && (json.notification || json.webpush?.notification)) {
+                        console.log('[firebase-messaging-sw.js] Browser is handling the banner. Skipping manual display.');
+                        return; // Exit silently
+                    }
+                }
+
+                // 2. Attempt to parse rich data for manual display (only if above check passed)
                 if (event.data) {
                     const text = event.data.text();
                     try {
