@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       },
       webpush: {
           notification: {
-              icon: '/icon.svg',
+              icon: '/icon-192x192.png',
               tag: notification.id,
           },
           fcmOptions: {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       data: toSafeStringMap({
         title: notification.title || 'New Notification',
         body: notification.message || '',
-        icon: '/icon.svg',
+        icon: '/icon-192x192.png',
         tag: notification.id,
         link: notification.relatedUrl || '/',
       }),
