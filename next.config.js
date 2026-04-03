@@ -5,11 +5,10 @@ const pwa = require("@ducanh2912/next-pwa");
 
 const withPWA = pwa.default({
   dest: "public",
-  register: true,
+  register: false,
   skipWaiting: true,
   disable: false,
-  // Firebase messaging SW — included as a separate import  
-  importScripts: ["/firebase-messaging-sw.js"],
+  // Removing importScripts from here as we'll now use sw-master.js
   // Workbox runtime caching strategy
   workboxOptions: {
     // Use GenerateSW mode (default) with our custom runtime caching rules
