@@ -122,14 +122,21 @@ export async function POST(request: NextRequest) {
                       body,
                       icon: `${origin}/icon-192x192-v3.png`,
                       tag: notification.id,
+                      badge: `${origin}/icon-192x192-v3.png`,
                   },
                   fcmOptions: {
                       link: notification.relatedUrl || '/',
                   }
+              },
+              apns: {
+                  payload: {
+                      aps: {
+                          badge: Number(badgeCount),
+                          sound: 'default'
+                      }
+                  }
               }
             };
-            
-            if (payload.notification) (payload.notification as any).badge = badgeCount;
 
             const response = await adminMessaging.sendEachForMulticast(payload);
             totalSuccess += response.successCount;

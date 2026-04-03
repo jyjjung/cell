@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
     // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
     event.waitUntil(
         (async () => {
-            const origin = 'https://ndcem.vercel.app';
+            const origin = self.location.origin;
             let title = 'New Message';
             let options = {
                 body: 'You have a new update in your Sync chat.',

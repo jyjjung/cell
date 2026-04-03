@@ -206,16 +206,21 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                       body: body,
                       icon: `${origin}/icon-192x192-v3.png`,
                       tag: String(message.id),
-                      badge: `${origin}/icon-192x192-v3.png`,
+                      badge: `${origin}/icon-192x192-v3.png`, // Webpush badge is an icon URL
                   },
                   fcmOptions: {
                       link: `/chat/${chat.id}`,
                   }
+              },
+              apns: {
+                  payload: {
+                      aps: {
+                          badge: Number(badgeCount),
+                          sound: 'default'
+                      }
+                  }
               }
             };
-
-            // Set badge in specialized blocks if supported
-            if (payload.notification) (payload.notification as any).badge = badgeString;
 
             const response = await adminMessaging.sendEachForMulticast(payload);
             totalSuccess += response.successCount;
