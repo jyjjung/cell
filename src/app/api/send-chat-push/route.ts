@@ -168,44 +168,14 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     // If a token is unregistered or invalid, remove it from the User document.
     const tokensToRemove: { [uid: string]: string[] } = {};
 
-    response.responses.forEach((resp, idx) => {
-        if (!resp.success && resp.error) {
-            const error = resp.error;
-            const isInvalidToken = 
-                error.code === 'messaging/registration-token-not-registered' || 
-                error.code === 'messaging/invalid-registration-token';
-
-            if (isInvalidToken) {
-                const token = uniqueTokens[idx];
-                // Find which uid this token belongs to
-                // Efficiency: We'll bucket these and remove in batches if many fail
-                usersSnapshot.docs.forEach(uDoc => {
-                    const uData = uDoc.data() as UserProfileData;
-                    if (uData.fcmTokens?.includes(token)) {
-                        if (!tokensToRemove[uDoc.id]) tokensToRemove[uDoc.id] = [];
-                        tokensToRemove[uDoc.id].push(token);
-                    }
-                });
-            }
-        }
-    });
-
-    // Fire-and-forget cleanup updates to Firestore
-    Object.keys(tokensToRemove).forEach(uid => {
-        adminDb.collection('users').doc(uid).update({
-            fcmTokens: FieldValue.arrayRemove(...tokensToRemove[uid])
-        }).catch(err => console.error(`[TokenCleanup] Failed to remove stale tokens for ${uid}:`, err));
-    });
-
     if (response.failureCount > 0) {
-        console.warn(`[sendNotifications] Delivered: ${response.successCount}, Failed: ${response.failureCount}. Cleaned ${Object.keys(tokensToRemove).length} users.`);
+        console.warn(`[sendNotifications] Delivered: ${response.successCount}, Failed: ${response.failureCount}.`);
     }
 
     return { 
         success: response.successCount, 
         failure: response.failureCount, 
-        tokensAttempted: uniqueTokens.length,
-        cleanedUserCount: Object.keys(tokensToRemove).length
+        tokensAttempted: uniqueTokens.length
     };
 }
 
@@ -254,8 +224,7 @@ export async function POST(request: NextRequest) {
             delivered: result.success,
             reason: result.reason,
             diagnostics: {
-                tokens: result.tokensAttempted || 0,
-                cleaned: result.cleanedUserCount || 0
+                tokens: result.tokensAttempted || 0
             }
         });
 
