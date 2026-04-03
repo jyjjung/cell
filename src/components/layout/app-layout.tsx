@@ -152,8 +152,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const hasSW = isBrowser && 'serviceWorker' in navigator;
     
     if (hasSW && messaging && currentUser) {
-      // Use the existing registration provided by the PWA system
-      // Standardizes on the auto-generated sw.js from next.config.js
+      // Use our manual Master Worker for 100% reliability
+      // This bypasses the brittle auto-generated sw.js from next-pwa
+      const initPush = async () => {
+        try {
+          await navigator.serviceWorker.register('/sw-master.js', { scope: '/' });
+          console.log('[AppLayout] Master Worker registered successfully');
+        } catch (error) {
+          console.error('[AppLayout] Master Worker registration failed:', error);
+        }
+      };
+      initPush();
 
       const unsubscribe = onMessage(messaging as any, (payload) => {
         const title = payload.data?.title || 'New Sync Notification';
