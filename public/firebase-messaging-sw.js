@@ -65,29 +65,47 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Explicit 'Silent Sync' push listener for iOS reliability
-// Now that the backend sends a 'notification' block (to wake up iOS),
-// this worker focuses on updating the app icon badge in the background.
+// Explicit 'Harmonized Handshake' push listener for iOS reliability
+// Even with a backend-level 'notification' block, the Service Worker MUST 
+// call showNotification to avoid "Silent Push" revocation in Safari.
 self.addEventListener('push', (event) => {
-    // All background tasks MUST be wrapped in event.waitUntil
-    event.waitUntil(
-        (async () => {
-            // 1. Update the app badge
-            try {
+    if (!event.data) return;
+
+    try {
+        const payload = event.data.json();
+        
+        // All background tasks MUST be wrapped in event.waitUntil
+        event.waitUntil(
+            (async () => {
+                // 1. Update the app badge
                 const currentCount = await getBadgeCount();
                 const nextCount = currentCount + 1;
                 await setBadgeCount(nextCount);
                 if (self.navigator && 'setAppBadge' in self.navigator) {
                     await self.navigator.setAppBadge(nextCount);
                 }
-            } catch (e) {
-                console.error('[firebase-messaging-sw.js] Badge sync error:', e);
-            }
 
-            // Note: We do NOT manually call showNotification here because 
-            // the backend now sends a 'notification' object, which Safari 
-            // displays automatically. This prevents duplicate banners.
-        })()
-    );
+                // 2. Extract detail
+                const data = payload.data || {};
+                const title = data.title || 'New Message';
+                const body = data.body || 'You have a new update.';
+                const tag = data.tag || 'community-update';
+
+                // 3. Show the notification MANUALLY (Safari REQUIRED)
+                // Using the SAME 'tag' as the backend ensures they merge instead of duplicating.
+                await self.registration.showNotification(title, {
+                    body: body,
+                    icon: '/apple-touch-icon-v3.png',
+                    tag: tag,
+                    badge: '/icon-192x192-v3.png',
+                    data: {
+                        link: data.link || '/'
+                    }
+                });
+            })()
+        );
+    } catch (e) {
+        console.error('[firebase-messaging-sw.js] Handshake error:', e);
+    }
 });
 
