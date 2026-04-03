@@ -22,11 +22,13 @@ import {
   generateReadingUnitsForCanonical, 
   generateReadingUnitsForCustomPreset, 
   scheduleReadings,
+  scheduleFixedDayReadings,
   type ReadingUnit
 } from '@/lib/plan-generator';
+import { MCHEYNE_PLAN_DATA } from '@/lib/mcheyne-data';
 
 const adminPlanFormSchema = z.object({
-  planType: z.enum(['canonical', 'custom'], { required_error: "Please select a plan type." }),
+  planType: z.enum(['canonical', 'custom', 'mcheyne'], { required_error: "Please select a plan type." }),
   startBook: z.string().optional(),
   startDate: z.date({ required_error: "A start date is required." }),
   readingsPerDay: z.coerce.number().int().min(1, "Must have at least 1 reading per day.").max(10, "Cannot have more than 10 readings per day."),
@@ -107,15 +109,22 @@ export default function BiblePlanAdminForm() {
       } else if (data.planType === 'custom') {
         readingUnits = generateReadingUnitsForCustomPreset();
         planDescription = "Preset Custom Chronological Order";
+      } else if (data.planType === 'mcheyne') {
+        planDescription = "M'Cheyne Bible Reading Plan";
       }
 
-      if (readingUnits.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-      
       const numericReadingDays = data.readingDays.map(d => parseInt(d, 10));
-      const dailyReadings: DailyReading[] = scheduleReadings(readingUnits, data.startDate, data.readingsPerDay, numericReadingDays);
+      let dailyReadings: DailyReading[] = [];
+
+      if (data.planType === 'mcheyne') {
+        dailyReadings = scheduleFixedDayReadings(MCHEYNE_PLAN_DATA, data.startDate, numericReadingDays);
+      } else {
+        if (readingUnits.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+        dailyReadings = scheduleReadings(readingUnits, data.startDate, data.readingsPerDay, numericReadingDays);
+      }
 
       if (dailyReadings.length === 0) {
         setIsLoading(false);
@@ -165,6 +174,11 @@ export default function BiblePlanAdminForm() {
                     <SelectItem value="custom">
                         <div className="flex items-center">
                             <BookOpen className="mr-2 h-4 w-4" /> Preset Custom List
+                        </div>
+                    </SelectItem>
+                    <SelectItem value="mcheyne">
+                        <div className="flex items-center">
+                            <BookOpen className="mr-2 h-4 w-4" /> M'Cheyne Reading Plan (365 days)
                         </div>
                     </SelectItem>
                     </SelectContent>

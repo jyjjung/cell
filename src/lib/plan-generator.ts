@@ -2,6 +2,7 @@
 import { format as formatDateFns, addDays, getDay, startOfDay } from 'date-fns';
 import type { DailyReading, StructuredPassage } from '@/types';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, PRESET_CUSTOM_ORDER_STRINGS, BOOK_NAME_LOOKUP_MAP } from './bible-data';
+import { MCHEYNE_PLAN_DATA } from './mcheyne-data';
 
 // ReadingUnit now directly matches StructuredPassage for internal consistency
 export type ReadingUnit = StructuredPassage;
@@ -201,6 +202,12 @@ export function generateReadingUnitsForCustomPreset(): ReadingUnit[] {
   return allUnits;
 }
 
+export function generateReadingUnitsForMcheyne(): ReadingUnit[] {
+  // Flatten the 365 days of readings into a single sequence of units.
+  // Each day in MCHEYNE_PLAN_DATA is an array of StructuredPassage.
+  return MCHEYNE_PLAN_DATA.flat();
+}
+
 export function scheduleReadings(units: ReadingUnit[], startDateInput: Date, readingsPerDay: number, readingDays: number[]): DailyReading[] {
   const plan: DailyReading[] = [];
   if (units.length === 0) return plan;
@@ -233,6 +240,46 @@ export function scheduleReadings(units: ReadingUnit[], startDateInput: Date, rea
         passages: dailyPassagesUnits,
       });
     }
+    currentDate = addDays(currentDate, 1);
+  }
+  return plan;
+}
+
+/**
+ * Schedules readings that are already grouped by 'day' (like M'Cheyne).
+ * It maps each day's group of readings to the next available reading day.
+ */
+export function scheduleFixedDayReadings(
+  groupedUnits: ReadingUnit[][], 
+  startDateInput: Date, 
+  readingDays: number[]
+): DailyReading[] {
+  const plan: DailyReading[] = [];
+  if (groupedUnits.length === 0) return plan;
+
+  const readingDaysSet = new Set(readingDays);
+  let currentDate = startOfDay(startDateInput);
+  let dayIndex = 0;
+
+  while (dayIndex < groupedUnits.length) {
+    if (!readingDaysSet.has(getDay(currentDate))) {
+      currentDate = addDays(currentDate, 1);
+      continue;
+    }
+
+    const dailyPassages = groupedUnits[dayIndex];
+    if (dailyPassages && dailyPassages.length > 0) {
+      plan.push({
+        date: formatDateFns(currentDate, 'yyyy-MM-dd'),
+        passages: dailyPassages.map(unit => ({
+          ...unit,
+          // Ensure display text is set if missing
+          displayText: unit.displayText || `${unit.book} ${unit.chapter}`
+        })),
+      });
+    }
+    
+    dayIndex++;
     currentDate = addDays(currentDate, 1);
   }
   return plan;
