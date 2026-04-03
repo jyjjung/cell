@@ -133,7 +133,7 @@ export interface DailyReading {
   originalDateKey?: string;
 }
 
-export type PlanType = 'canonical' | 'custom';
+export type PlanType = 'canonical' | 'custom' | 'mcheyne';
 
 export interface BibleReadingPlan {
   id?: string;

@@ -61,46 +61,50 @@ function setBadgeCount(count) {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SYNC_BADGE') {
-    setBadgeCount(event.data.count);
+    event.waitUntil(setBadgeCount(event.data.count));
   }
 });
 
-// Explicitly removing the standalone 'push' listener to prevent "Silent Push" violations in Safari.
-// All badge updates now happen concurrently with the notification logic below.
+// Explicit 'Hard Handshake' push listener for iOS reliability
+// We manually parse the data, update the badge, and show the notification.
+// This ensures that the OS keeps the worker alive until the alert is shown.
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
 
-// Handle background messages for fallback data-only notification rendering
-messaging.onBackgroundMessage(async (payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
-  // Synchronously update the badge as part of this notification event
-  if (self.navigator && 'setAppBadge' in self.navigator) {
     try {
-      const currentCount = await getBadgeCount();
-      const nextCount = currentCount + 1;
-      await setBadgeCount(nextCount);
-      if (self.navigator.setAppBadge) {
-        await self.navigator.setAppBadge(nextCount);
-      }
-    } catch (e) {
-      console.error('[firebase-messaging-sw.js] Background badge error:', e);
+        const payload = event.data.json();
+        console.log('[firebase-messaging-sw.js] Manual Push received:', payload);
+
+        // All asynchronous tasks MUST be wrapped in event.waitUntil
+        event.waitUntil(
+            (async () => {
+                // 1. Update the app badge
+                const currentCount = await getBadgeCount();
+                const nextCount = currentCount + 1;
+                await setBadgeCount(nextCount);
+                if (self.navigator && 'setAppBadge' in self.navigator) {
+                    await self.navigator.setAppBadge(nextCount);
+                }
+
+                // 2. Extract notification details from the 'data' payload
+                const data = payload.data || {};
+                const title = data.title || 'New Message';
+                const notificationOptions = {
+                    body: data.body || 'You have a new update.',
+                    icon: data.icon || '/apple-touch-icon-v3.png', // Fallback to v3 solid png
+                    tag: data.tag || 'community-update',
+                    badge: '/icon-192x192-v3.png',
+                    data: {
+                        link: data.link || '/'
+                    }
+                };
+
+                // 3. Show the notification (Safari REQUIRED - must show for background survival)
+                await self.registration.showNotification(title, notificationOptions);
+            })()
+        );
+    } catch (err) {
+        console.error('[firebase-messaging-sw.js] Push Processing Error:', err);
     }
-  }
-
-  // If the payload has a 'notification' field, FirebaseSDK automatically displays it.
-  // We ONLY show a notification manually if it's a data-only fallback.
-  if (!payload.notification) {
-    const notificationTitle = payload.data?.title || 'New Message';
-    const notificationOptions = {
-        body: payload.data?.body || 'You have a new update.',
-        icon: payload.data?.icon || '/icon-192x192-v3.png',
-        tag: payload.data?.tag || 'community-update',
-        badge: '/icon-192x192-v3.png',
-        data: {
-            link: payload.data?.link || '/'
-        }
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  }
 });
 

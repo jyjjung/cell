@@ -111,7 +111,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
     const uniqueTokens = [...new Set(allTokens)].filter(Boolean);
 
-    console.log(`[sendNotifications] Sending to ${uniqueTokens.length} unique tokens for ${recipientIds.length} inactive recipients.`);
+    console.log(`[sendNotifications] Sending to ${uniqueTokens.length} unique tokens for ${recipientIds.length} recipients.`);
 
     if (uniqueTokens.length === 0) {
         return { success: 0, failure: 0, reason: "No registered push clients for recipients." };
@@ -143,22 +143,16 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const safeData = toSafeStringMap(rawData);
     const messagePayload: MulticastMessage = {
       tokens: uniqueTokens,
-      notification: {
-          title: title,
-          body: body,
-      },
+      // No top-level 'notification' block. This is a DATA-ONLY push.
+      // This forces the Service Worker to manually handle 'showNotification' 
+      // inside a proper event.waitUntil(), which is the only way to 
+      // achieve 100% reliability on iOS Safari.
+      data: safeData,
       webpush: {
-          notification: {
-              title: title,
-              body: body,
-              icon: `${origin}/icon-192x192-v3.png`,
-              tag: String(message.id),
-          },
           fcmOptions: {
               link: `/chat/${chat.id}`
           }
-      },
-      data: safeData
+      }
     };
     
     assertStringMap(messagePayload.data!);
