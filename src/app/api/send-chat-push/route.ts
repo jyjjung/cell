@@ -175,13 +175,17 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
             const user = userDoc.data() as UserProfileData;
             const userTokens = (user.fcmTokens || []).slice(0, 3).filter(Boolean);
             
-            if (userTokens.length === 0) continue;
+            if (userTokens.length === 0) {
+                console.log(`[FCM] User ${userId} has 0 tokens. Skipping.`);
+                continue;
+            }
 
             // Calculate individualized unread count
             const badgeCount = await calculateTotalUnread(userId, adminDb);
             const badgeString = String(badgeCount);
+            const originUrl = 'https://ndcem.vercel.app';
 
-            const originUrl = 'https://ndcem.vercel.app'; // Stick to hardcoded for reliability while we debug
+            console.log(`[FCM] User ${userId} has ${userTokens.length} tokens. Badge: ${badgeCount}`);
 
             for (const token of userTokens) {
                 try {
@@ -222,8 +226,21 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
                     await adminMessaging.send(payload);
                     totalSuccess++;
-                } catch (tokenErr) {
-                    console.warn(`[sendNotifications] Token failed for user ${userId}:`, tokenErr);
+                } catch (tokenErr: any) {
+                    console.warn(`[FCM Fail] Token failed for user ${userId}:`, tokenErr.code || tokenErr.message);
+                    
+                    // Auto-Prune Stale Tokens
+                    if (tokenErr.code === 'messaging/registration-token-not-registered' || 
+                        tokenErr.code === 'messaging/invalid-registration-token') {
+                        console.log(`[FCM Prune] Removing stale token for user ${userId}`);
+                        try {
+                            await adminDb.collection('users').doc(userId).update({
+                                fcmTokens: FieldValue.arrayRemove(token)
+                            });
+                        } catch (pruneErr) {
+                            console.error(`[FCM Prune Fail] Failed to remove token for ${userId}:`, pruneErr);
+                        }
+                    }
                     totalFailure++;
                 }
             }
