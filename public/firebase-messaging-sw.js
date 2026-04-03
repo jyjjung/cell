@@ -65,46 +65,29 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Explicit 'Hard Handshake' push listener for iOS reliability
-// We manually parse the data, update the badge, and show the notification.
-// This ensures that the OS keeps the worker alive until the alert is shown.
+// Explicit 'Silent Sync' push listener for iOS reliability
+// Now that the backend sends a 'notification' block (to wake up iOS),
+// this worker focuses on updating the app icon badge in the background.
 self.addEventListener('push', (event) => {
-    if (!event.data) return;
-
-    try {
-        const payload = event.data.json();
-        console.log('[firebase-messaging-sw.js] Manual Push received:', payload);
-
-        // All asynchronous tasks MUST be wrapped in event.waitUntil
-        event.waitUntil(
-            (async () => {
-                // 1. Update the app badge
+    // All background tasks MUST be wrapped in event.waitUntil
+    event.waitUntil(
+        (async () => {
+            // 1. Update the app badge
+            try {
                 const currentCount = await getBadgeCount();
                 const nextCount = currentCount + 1;
                 await setBadgeCount(nextCount);
                 if (self.navigator && 'setAppBadge' in self.navigator) {
                     await self.navigator.setAppBadge(nextCount);
                 }
+            } catch (e) {
+                console.error('[firebase-messaging-sw.js] Badge sync error:', e);
+            }
 
-                // 2. Extract notification details from the 'data' payload
-                const data = payload.data || {};
-                const title = data.title || 'New Message';
-                const notificationOptions = {
-                    body: data.body || 'You have a new update.',
-                    icon: data.icon || '/apple-touch-icon-v3.png', // Fallback to v3 solid png
-                    tag: data.tag || 'community-update',
-                    badge: '/icon-192x192-v3.png',
-                    data: {
-                        link: data.link || '/'
-                    }
-                };
-
-                // 3. Show the notification (Safari REQUIRED - must show for background survival)
-                await self.registration.showNotification(title, notificationOptions);
-            })()
-        );
-    } catch (err) {
-        console.error('[firebase-messaging-sw.js] Push Processing Error:', err);
-    }
+            // Note: We do NOT manually call showNotification here because 
+            // the backend now sends a 'notification' object, which Safari 
+            // displays automatically. This prevents duplicate banners.
+        })()
+    );
 });
 

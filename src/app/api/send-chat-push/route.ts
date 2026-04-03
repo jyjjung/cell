@@ -145,12 +145,19 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const safeData = toSafeStringMap(rawData);
     const messagePayload: MulticastMessage = {
       tokens: uniqueTokens,
-      // No top-level 'notification' block. This is a DATA-ONLY push.
-      // This forces the Service Worker to manually handle 'showNotification' 
-      // inside a proper event.waitUntil(), which is the only way to 
-      // achieve 100% reliability on iOS Safari.
+      // Mandatory 'notification' block to ensure iOS wakes up when the app is closed.
+      notification: {
+          title: title,
+          body: body,
+      },
       data: safeData,
       webpush: {
+          notification: {
+              title: title,
+              body: body,
+              icon: `${origin}/apple-touch-icon-v3.png`,
+              tag: String(message.id),
+          },
           fcmOptions: {
               link: `/chat/${chat.id}`
           }
