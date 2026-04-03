@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           notification: {
               title: notification.title || 'New Notification',
               body: notification.message || '',
-              icon: `${request.nextUrl.origin}/icon-192x192-v2.png`,
+              icon: `${request.nextUrl.origin}/icon-192x192-v3.png`,
               tag: notification.id,
           },
           fcmOptions: {

@@ -12,11 +12,11 @@ export function useFCMToken() {
   const { toast } = useToast();
   const registrationAttempted = useRef(false);
 
-  const registerToken = useCallback(async () => {
+  const registerToken = useCallback(async (isManual = false) => {
     if (!messaging || !currentUser) return;
     
-    // Only attempt once per session/mount to avoid spamming
-    if (registrationAttempted.current) return;
+    // Auto-attempts are throttled, manual ones are always permitted
+    if (!isManual && registrationAttempted.current) return;
     registrationAttempted.current = true;
 
     try {
@@ -46,11 +46,24 @@ export function useFCMToken() {
     }
   }, [currentUser, updateUserProfile]);
 
+  const requestPermission = useCallback(async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        registerToken(true);
+        return true;
+      }
+    } catch (error) {
+      console.error('[useFCMToken] Permission request failed:', error);
+    }
+    return false;
+  }, [registerToken]);
+
   useEffect(() => {
     if (currentUser && typeof window !== 'undefined') {
        registerToken();
     }
   }, [currentUser, registerToken]);
 
-  return { registerToken };
+  return { registerToken, requestPermission };
 }
