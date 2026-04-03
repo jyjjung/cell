@@ -17,7 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from './footer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
@@ -36,12 +36,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { notifications } = useNotifications();
   const { chats } = useChats();
   
-  const { registerToken } = useFCMToken();
+  const { registerToken, requestPermission } = useFCMToken();
   const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
+
+  const [showPermissionBanner, setShowPermissionBanner] = useState(false);
 
   useEffect(() => {
     setIsPageLoading(false);
   }, [pathname, setIsPageLoading]);
+
+  useEffect(() => {
+    if (currentUser && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        setShowPermissionBanner(true);
+      }
+    }
+  }, [currentUser]);
+
+  const handleEnablePush = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      setShowPermissionBanner(false);
+      toast({
+        title: "Notifications Enabled",
+        description: "You're all set to receive updates!",
+      });
+    }
+  };
 
   const totalUnreadCount = useMemo(() => {
     if (!currentUser) return 0;
@@ -134,20 +155,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const initPush = async () => {
         try {
           await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-          
-          if (Notification.permission === 'default') {
-            const p = await Notification.requestPermission();
-            if (p === 'granted') {
-                registerToken();
-            }
-          } else if (Notification.permission === 'granted') {
-              registerToken();
-          }
         } catch (error) {
           console.error('[AppLayout] Failed to register service worker:', error);
         }
       };
-      
       initPush();
 
       const unsubscribe = onMessage(messaging as any, (payload) => {
@@ -251,6 +262,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
         </div>
         <PWAInstallPrompt />
+        
+        {/* User Gesture Notification Prompt */}
+        {showPermissionBanner && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
+            <motion.div 
+               initial={{ y: 100, opacity: 0 }}
+               animate={{ y: 0, opacity: 1 }}
+               className="bg-primary p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 border border-white/20"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <Bell className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Stay Updated</p>
+                  <p className="text-white/80 text-xs">Enable push notifications.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowPermissionBanner(false)}
+                  className="px-3 py-1.5 text-xs text-white/60 hover:text-white font-medium transition-colors"
+                >
+                  Later
+                </button>
+                <button 
+                  onClick={handleEnablePush}
+                  className="bg-white text-primary px-4 py-1.5 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+                >
+                  Enable
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </SidebarInset>
     </SidebarProvider>
   );
