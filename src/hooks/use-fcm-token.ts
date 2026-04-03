@@ -15,9 +15,9 @@ export function useFCMToken() {
   const registerToken = useCallback(async (isManual = false) => {
     if (!messaging || !currentUser) return;
     
-    // Auto-attempts are throttled, manual ones are always permitted
-    if (!isManual && registrationAttempted.current) return;
-    registrationAttempted.current = true;
+    // Forced Sync: We always attempt to sync the token on mount/manual call 
+    // to ensure our backend has the absolute freshest credentials.
+    // registrationAttempted.current = true;
 
     try {
       // Check current permission state

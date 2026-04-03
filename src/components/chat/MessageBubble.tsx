@@ -86,7 +86,7 @@ const MessageBubble = React.memo(function MessageBubble({
           className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
-              <div className={cn("flex flex-col min-w-0 max-w-[75%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
+              <div className={cn("flex flex-col min-w-0 max-w-[62%] md:max-w-[75%]", isSender ? "items-end" : "items-start")}>
                   {(() => {
                       const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
                       return (

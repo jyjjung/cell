@@ -65,47 +65,50 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Explicit 'Harmonized Handshake' push listener for iOS reliability
-// Even with a backend-level 'notification' block, the Service Worker MUST 
-// call showNotification to avoid "Silent Push" revocation in Safari.
+// Robust 'Failsafe' push listener for iOS reliability
+// We MUST call showNotification() within event.waitUntil() to avoid 
+// Safari's "Silent Push" blacklist penalty.
 self.addEventListener('push', (event) => {
-    if (!event.data) return;
+    // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
+    event.waitUntil(
+        (async () => {
+            let title = 'New Message';
+            let options = {
+                body: 'You have a new update in your Sync chat.',
+                icon: '/apple-touch-icon-v3.png',
+                tag: 'community-update', // Default tag to prevent flooding
+                badge: '/icon-192x192-v3.png',
+            };
 
-    try {
-        const payload = event.data.json();
-        
-        // All background tasks MUST be wrapped in event.waitUntil
-        event.waitUntil(
-            (async () => {
-                // 1. Update the app badge
+            try {
+                // 2. Attempt to parse rich data if available
+                if (event.data) {
+                    const payload = event.data.json();
+                    const data = payload.data || {};
+                    title = data.title || title;
+                    options.body = data.body || options.body;
+                    options.tag = data.tag || options.tag;
+                    if (data.link) {
+                        options.data = { link: data.link };
+                    }
+                }
+
+                // 3. Update the app badge silently
                 const currentCount = await getBadgeCount();
                 const nextCount = currentCount + 1;
                 await setBadgeCount(nextCount);
                 if (self.navigator && 'setAppBadge' in self.navigator) {
                     await self.navigator.setAppBadge(nextCount);
                 }
+            } catch (e) {
+                console.error('[firebase-messaging-sw.js] Failsafe parsing error:', e);
+                // We continue anyway—showing the default 'New Message' is better 
+                // than showing nothing and getting blacklisted by Safari.
+            }
 
-                // 2. Extract detail
-                const data = payload.data || {};
-                const title = data.title || 'New Message';
-                const body = data.body || 'You have a new update.';
-                const tag = data.tag || 'community-update';
-
-                // 3. Show the notification MANUALLY (Safari REQUIRED)
-                // Using the SAME 'tag' as the backend ensures they merge instead of duplicating.
-                await self.registration.showNotification(title, {
-                    body: body,
-                    icon: '/apple-touch-icon-v3.png',
-                    tag: tag,
-                    badge: '/icon-192x192-v3.png',
-                    data: {
-                        link: data.link || '/'
-                    }
-                });
-            })()
-        );
-    } catch (e) {
-        console.error('[firebase-messaging-sw.js] Handshake error:', e);
-    }
+            // 4. Final Handshake: Always show a notification
+            return self.registration.showNotification(title, options);
+        })()
+    );
 });
 
