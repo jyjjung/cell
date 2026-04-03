@@ -1,7 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
-import { FieldPath, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
 import type { UserProfileData, Chat, ChatMessage } from '@/types';
 
@@ -100,6 +100,11 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         return { success: 0, failure: 0, reason: "All recipients are currently active." };
     }
 
+    // Safety Guard: Firestore 'in' query crashes on empty array.
+    if (recipientIds.length === 0) {
+        return { success: 0, failure: 0, reason: "No eligible recipients found after filtering." };
+    }
+
     // Get FCM tokens for the recipients
     const usersSnapshot = await adminDb.collection('users').where(FieldPath.documentId(), 'in', recipientIds).get();
     
@@ -113,6 +118,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     }
 
     const uniqueTokens = [...new Set(allTokens)].filter(Boolean);
+
+    console.log(`[sendNotifications] Sending to ${uniqueTokens.length} unique tokens for ${recipientIds.length} inactive recipients.`);
 
     if (uniqueTokens.length === 0) {
         return { success: 0, failure: 0, reason: "No registered push clients for recipients." };
@@ -165,7 +172,49 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     assertStringMap(messagePayload.data!);
     const response = await adminMessaging.sendEachForMulticast(messagePayload);
     
-    return { success: response.successCount, failure: response.failureCount };
+    // --- Automatic Token Cleanup ---
+    // If a token is unregistered or invalid, remove it from the User document.
+    const tokensToRemove: { [uid: string]: string[] } = {};
+
+    response.responses.forEach((resp, idx) => {
+        if (!resp.success && resp.error) {
+            const error = resp.error;
+            const isInvalidToken = 
+                error.code === 'messaging/registration-token-not-registered' || 
+                error.code === 'messaging/invalid-registration-token';
+
+            if (isInvalidToken) {
+                const token = uniqueTokens[idx];
+                // Find which uid this token belongs to
+                // Efficiency: We'll bucket these and remove in batches if many fail
+                usersSnapshot.docs.forEach(uDoc => {
+                    const uData = uDoc.data() as UserProfileData;
+                    if (uData.fcmTokens?.includes(token)) {
+                        if (!tokensToRemove[uDoc.id]) tokensToRemove[uDoc.id] = [];
+                        tokensToRemove[uDoc.id].push(token);
+                    }
+                });
+            }
+        }
+    });
+
+    // Fire-and-forget cleanup updates to Firestore
+    Object.keys(tokensToRemove).forEach(uid => {
+        adminDb.collection('users').doc(uid).update({
+            fcmTokens: FieldValue.arrayRemove(...tokensToRemove[uid])
+        }).catch(err => console.error(`[TokenCleanup] Failed to remove stale tokens for ${uid}:`, err));
+    });
+
+    if (response.failureCount > 0) {
+        console.warn(`[sendNotifications] Delivered: ${response.successCount}, Failed: ${response.failureCount}. Cleaned ${Object.keys(tokensToRemove).length} users.`);
+    }
+
+    return { 
+        success: response.successCount, 
+        failure: response.failureCount, 
+        tokensAttempted: uniqueTokens.length,
+        cleanedUserCount: Object.keys(tokensToRemove).length
+    };
 }
 
 export async function POST(request: NextRequest) {
@@ -203,7 +252,20 @@ export async function POST(request: NextRequest) {
         const latestMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
 
         const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging, request.nextUrl.origin);
-        return NextResponse.json({ success: true, delivered: result.success });
+        
+        if (result.reason) {
+            console.log(`[PushSkip] Notification skipped: ${result.reason}`);
+        }
+
+        return NextResponse.json({ 
+            success: true, 
+            delivered: result.success,
+            reason: result.reason,
+            diagnostics: {
+                tokens: result.tokensAttempted || 0,
+                cleaned: result.cleanedUserCount || 0
+            }
+        });
 
     } catch (error: any) {
         console.error('Error sending chat push notification:', error);
