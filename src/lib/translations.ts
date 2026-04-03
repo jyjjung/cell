@@ -8,9 +8,10 @@ export const translations = {
     // Navigation
     home: "Home",
     chat: "Chat",
-    scripture: "Scripture",
+    scripture: "Bible Reading",
     fellowship: "Community",
     alerts: "Alerts",
+    datesAndRosters: "Dates & Rosters",
     admin: "Admin",
     profile: "Profile Settings",
     signOut: "Log out",
@@ -180,9 +181,10 @@ export const translations = {
     // Navigation
     home: "홈",
     chat: "채팅",
-    scripture: "성경",
+    scripture: "성경 읽기",
     fellowship: "공동체",
     alerts: "알림",
+    datesAndRosters: "일정 및 명단",
     admin: "관리자",
     profile: "프로필 설정",
     signOut: "로그아웃",

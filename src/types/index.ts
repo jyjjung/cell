@@ -19,6 +19,28 @@ export enum EventCategory {
 /** none: single or multi-day span. daily/weekly: repeats until recurrenceUntil. */
 export type EventRecurrence = 'none' | 'daily' | 'weekly';
 
+export type RSVPStatus = 'accept' | 'maybe' | 'decline';
+
+export interface InvitationResponse {
+  uid: string;
+  status: RSVPStatus;
+  selectedDates: string[]; // ISO strings from dateOptions
+  updatedAt: Timestamp;
+}
+
+export interface AppInvitation {
+  id: string;
+  title: string;
+  description: string;
+  location?: string;
+  dateOptions: string[]; // ISO strings
+  allowedRoleIds: string[];
+  responses: { [uid: string]: InvitationResponse };
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 export interface AppEvent {
   id: string;
   date: string;
@@ -26,10 +48,13 @@ export interface AppEvent {
   startTime?: string;
   endTime?: string;
   allDay?: boolean;
-  category: EventCategory;
+  category: string; // "Event", "Birthday", "Snack", or anything custom
   title: string;
   details?: string;
+  location?: string;
   userId?: string;
+  /** Targeted roles: if empty/undefined, everyone can see. */
+  allowedRoleIds?: string[];
   /** Repeating pattern; omit or 'none' for one-off / date-span only. */
   recurrence?: EventRecurrence;
   /** ISO date — last day the recurrence can occur (required when recurrence is daily or weekly). */
@@ -271,6 +296,10 @@ export interface ChatMessage {
   latestReplySenderId?: string;
   latestReplyText?: string;
   latestReplyImageUrl?: string;
+  invitationId?: string;
+  eventId?: string;
+  setlistId?: string;
+  rosterId?: string;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

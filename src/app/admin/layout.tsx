@@ -55,8 +55,8 @@ export default function AdminLayout({
   return (
     <>
       {isSubPage && (
-          <div className="fixed top-20 right-4 md:right-8 z-50">
-            <Link href="/admin" className="flex items-center gap-2 px-4 py-2 h-10 rounded-full bg-card/40 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-black uppercase tracking-widest text-[10px] text-foreground/80 shadow-2xl hover:text-foreground">
+          <div className="fixed top-6 right-4 md:right-8 z-50">
+            <Link href="/admin" className="flex items-center gap-2 px-4 py-2 h-10 rounded-full bg-card/60 backdrop-blur-3xl border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all font-black uppercase tracking-widest text-[10px] text-foreground shadow-2xl shadow-black/50 group">
                 <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
                 Return to Hub
             </Link>

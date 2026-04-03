@@ -3,14 +3,16 @@
 import { useMemo, useState, useEffect } from 'react';
 import { EventCategory } from '@/types';
 import { useEvents } from '@/hooks/use-events';
-import { format, parseISO, isBefore, startOfToday, compareAsc, subYears, addYears } from 'date-fns';
+import { format, isBefore, startOfToday, compareAsc, subYears, addYears } from 'date-fns';
+import { parseDay } from '@/lib/event-occurrences';
 import { cn } from '@/lib/utils';
-import { Calendar, Cake, Coffee, Users, CalendarOff, ChevronRight, Clock } from 'lucide-react';
+import { Calendar, Cake, Coffee, Users, CalendarOff, ChevronRight, Clock, MapPin, CheckCircle2, HelpCircle, XCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
+import { useAuth } from '@/contexts/auth-context';
 
 const categoryConfig: Record<EventCategory, { icon: React.ElementType; color: string; bg: string }> = {
   [EventCategory.Event]: { icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10 border-blue-500/20' },
@@ -18,12 +20,12 @@ const categoryConfig: Record<EventCategory, { icon: React.ElementType; color: st
   [EventCategory.Birthday]: { icon: Cake, color: 'text-pink-500', bg: 'bg-pink-500/10 border-pink-500/20' },
 };
 
-function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
+function EventCard({ row, index, currentUser }: { row: EventOccurrenceRow; index: number; currentUser: any }) {
   const [open, setOpen] = useState(false);
   const { event, occurrenceDate } = row;
   const eventDate = occurrenceDate;
-  const rangeStart = parseISO(event.date);
-  const rangeEnd = event.endDate ? parseISO(event.endDate) : null;
+  const rangeStart = parseDay(event.date);
+  const rangeEnd = event.endDate ? parseDay(event.endDate) : null;
   const config = categoryConfig[event.category] || categoryConfig[EventCategory.Event];
   const Icon = config.icon;
   const isRecurring = event.recurrence && event.recurrence !== 'none';
@@ -72,6 +74,12 @@ function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
               </div>
             )}
             {event.allDay && <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">All Day</span>}
+            {event.location && (
+              <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/40">
+                <MapPin className="h-2.5 w-2.5" />
+                <span>{event.location}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -102,12 +110,12 @@ function EventCard({ row, index }: { row: EventOccurrenceRow; index: number }) {
   );
 }
 
-function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
+function MonthGroup({ month, rows, currentUser }: { month: string; rows: EventOccurrenceRow[]; currentUser: any }) {
   return (
     <div className="space-y-2">
       <p className="text-micro-label !opacity-100 text-muted-foreground/60 px-1 mb-3">{month}</p>
       {rows.map((row, i) => (
-        <EventCard key={row.occurrenceKey} row={row} index={i} />
+        <EventCard key={row.occurrenceKey} row={row} index={i} currentUser={currentUser} />
       ))}
     </div>
   );
@@ -115,6 +123,7 @@ function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[]
 
 export default function EventsPage() {
   const { events, loading } = useEvents();
+  const { currentUser, isAdmin } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -122,7 +131,14 @@ export default function EventsPage() {
     const today = startOfToday();
     if (!events?.length) return { upcomingEventsByMonth: [] as [string, EventOccurrenceRow[]][], pastEventsByMonth: [] as [string, EventOccurrenceRow[]][] };
 
-    const rows = expandEventsToOccurrenceRows(events, {
+    const filteredEvents = (events || []).filter(e => {
+      if (isAdmin) return true;
+      if (!e.allowedRoleIds || e.allowedRoleIds.length === 0) return true;
+      const userRoles = currentUser?.roleIds || [];
+      return e.allowedRoleIds.some(rid => userRoles.includes(rid));
+    });
+
+    const rows = expandEventsToOccurrenceRows(filteredEvents, {
       from: subYears(today, 5),
       until: addYears(today, 4),
     });
@@ -179,13 +195,13 @@ export default function EventsPage() {
 
         <TabsContent value="upcoming" className="mt-6 space-y-8">
           {upcomingEventsByMonth.length > 0
-            ? upcomingEventsByMonth.map(([month, evs]) => <MonthGroup key={`up-${month}`} month={month} rows={evs} />)
+            ? upcomingEventsByMonth.map(([month, evs]) => <MonthGroup key={`up-${month}`} month={month} rows={evs} currentUser={currentUser} />)
             : <EmptyState icon={CalendarOff} title="No upcoming events" description="Check back later." />}
         </TabsContent>
 
         <TabsContent value="past" className="mt-6 space-y-8 opacity-80">
           {pastEventsByMonth.length > 0
-            ? pastEventsByMonth.map(([month, evs]) => <MonthGroup key={`past-${month}`} month={month} rows={evs} />)
+            ? pastEventsByMonth.map(([month, evs]) => <MonthGroup key={`past-${month}`} month={month} rows={evs} currentUser={currentUser} />)
             : <EmptyState icon={CalendarOff} title="No past events" />}
         </TabsContent>
       </Tabs>

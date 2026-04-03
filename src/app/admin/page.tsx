@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   ListTodo,
   Layers,
+  MailOpen,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePageLoading } from '@/contexts/page-loading-context';
@@ -147,6 +149,31 @@ export default function AdminHubPage() {
         iconBgColor="bg-primary/10"
       />
 
+       {/* Sector 0: Creation Wizard */}
+       <section className="space-y-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-[10px] font-black tracking-widest uppercase text-primary">Creation Portal</h2>
+          <div className="h-px bg-primary/20 flex-grow" />
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          <button
+            onClick={() => handleLaunch('/chat/system')}
+            className="group relative flex flex-col p-8 rounded-3xl bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 transition-all text-left w-full h-full shadow-2xl shadow-primary/5"
+          >
+            <div className="flex items-center gap-4 w-full mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/20 group-hover:scale-110 transition-transform">
+                <MessageSquarePlus className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black tracking-tighter text-xl uppercase">Chat</h3>
+              </div>
+              <ArrowRight className="h-5 w-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />
+            </div>
+            <p className="text-base text-foreground/80 leading-relaxed font-medium">Create events, invitations, and announcements through a guided conversation. No AI, just a clear, step-by-step process.</p>
+          </button>
+        </div>
+      </section>
+
       {/* Sector 1: Users & Access */}
       <section className="space-y-6">
         <div className="flex items-center gap-4">
@@ -208,6 +235,13 @@ export default function AdminHubPage() {
             desc="Manage cleaning teams and facility maintenance rotations."
             href="/admin/cleaning-roster"
             color="bg-emerald-500"
+          />
+          <NavCard
+            icon={MailOpen}
+            title="Invitations"
+            desc="Create standalone scheduling invites and track responder date preferences."
+            href="/admin/invitations"
+            color="bg-blue-500"
           />
         </div>
       </section>

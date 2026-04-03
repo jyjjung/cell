@@ -18,6 +18,7 @@ import Footer from './footer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const { notifications } = useNotifications();
   const { chats } = useChats();
@@ -42,25 +44,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const totalUnreadCount = useMemo(() => {
     if (!currentUser) return 0;
     
+    // 1. Unread Notifications (Alerts/Announcements)
     const unreadAlerts = notifications.filter(n => {
         const readBy = Array.isArray(n.readBy) ? n.readBy : [];
         return !readBy.includes(currentUser.uid);
     }).length;
 
+    // 2. Unread Chats
     const unreadChats = chats.filter(chat => {
-      if (!chat.lastMessageSentAt || !chat.memberSeen || !chat.memberSeen[currentUser.uid] || !chat.lastMessageSenderId) return false;
+      // Basic validation
+      if (!chat.lastMessageSentAt || !chat.lastMessageSenderId) return false;
+      
+      // Don't count if we were the last sender
       if (chat.lastMessageSenderId === currentUser.uid) return false;
       
-      const lastSeen = chat.memberSeen[currentUser.uid];
+      // Robust unread check: if we haven't seen it, or if most recent message is after our last seen
+      const lastSeen = chat.memberSeen?.[currentUser.uid];
       const lastSent = chat.lastMessageSentAt;
 
       const getMs = (ts: any) => {
           if (!ts) return 0;
           if (typeof ts.toMillis === 'function') return ts.toMillis();
           if (ts instanceof Date) return ts.getTime();
-          if (ts._seconds) return ts._seconds * 1000;
+          if (ts._seconds) return ts._seconds * 1000 + (ts._nanoseconds / 1000000);
           return 0;
       };
+
+      // If we've never seen the chat (no lastSeen), it's unread if there's a message from someone else
+      if (!lastSeen) return true;
 
       return getMs(lastSent) > getMs(lastSeen);
     }).length;
@@ -76,11 +87,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         (navigator as any).clearAppBadge().catch((e: any) => console.warn('App Badge API Error:', e));
       }
     }
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SYNC_BADGE', count });
+    }
   }, []);
 
   useEffect(() => {
     if (hasMounted && currentUser) {
       updateNativeBadge(totalUnreadCount);
+      
+      const baseTitle = "em.";
+      if (totalUnreadCount > 0) {
+        document.title = `(${totalUnreadCount}) ${baseTitle}`;
+      } else {
+        document.title = baseTitle;
+      }
     }
   }, [totalUnreadCount, currentUser, hasMounted, updateNativeBadge]);
   useEffect(() => {
@@ -103,38 +124,65 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [currentUser, loadingAuth, hasMounted, pathname, router]);
   
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging && currentUser) {
+    // Only proceed if window is available, serviceWorker is supported, messaging is initialized, and user is logged in
+    const isBrowser = typeof window !== 'undefined';
+    const hasSW = isBrowser && 'serviceWorker' in navigator;
+    
+    if (hasSW && messaging && currentUser) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
         .then((registration) => {
           console.log('[AppLayout] SW registered:', registration.scope);
+          // Request notification permission if it's currently 'default'
+          if (Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
         }).catch((err) => {
           console.error('[AppLayout] SW registration failed:', err);
         });
 
-      const unsubscribe = onMessage(messaging, (payload) => {
-        const notificationTitle = payload.data?.title || 'New Community Sync';
+      const unsubscribe = onMessage(messaging as any, (payload) => {
+        const title = payload.data?.title || 'New Sync Notification';
+        const body = payload.data?.body || '';
         const link = payload.data?.link || '/';
-        const notificationOptions = {
-          body: payload.data?.body,
-          icon: payload.data?.icon || '/icon.svg',
-          data: { link },
-          tag: payload.data?.tag || 'community-update'
-        };
+        const tag = payload.data?.tag || 'community-update';
 
-        if (Notification.permission === 'granted' && notificationTitle) {
-          const notification = new Notification(notificationTitle, notificationOptions);
-          notification.onclick = (event) => {
-            event.preventDefault();
-            router.push(link);
-            window.focus();
-            notification.close();
-          };
+        // Logic for avoiding redundant notifications when user is already in the chat
+        const isCurrentlyViewingThisChat = pathname === link;
+        if (isCurrentlyViewingThisChat && link.startsWith('/chat/')) {
+            return; // Skip notification
+        }
+
+        if (Notification.permission === 'granted' && title) {
+          // Use the Service Worker registration to show the notification
+          // This is more robust for PWAs and ensures it feels like a "device push"
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              body,
+              icon: payload.data?.icon || '/icon.svg',
+              tag,
+              data: { link },
+              badge: '/icon.svg', // High-fidelity detail for Android/Chrome
+            });
+          });
+        }
+
+        // --- IN-APP TOAST ---
+        // Only show if not already viewing the exact target
+        if (!isCurrentlyViewingThisChat) {
+            toast({
+                title: title,
+                description: body,
+                className: "cursor-pointer hover:bg-muted/50 transition-colors",
+                onClick: () => {
+                   router.push(link);
+                }
+            });
         }
       });
 
       return () => unsubscribe();
     }
-  }, [currentUser, router, pathname]);
+  }, [currentUser, router, pathname, toast]);
   
   if (loadingAuth || !hasMounted) {
     return (
@@ -179,9 +227,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         {isIndividualChat ? children : (
                             <motion.div
                                 key={pathname}
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
+                                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                             >
                                 {children}
                             </motion.div>

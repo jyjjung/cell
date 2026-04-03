@@ -10,7 +10,8 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Loader2, Info, BookCheck, ArrowLeft, CalendarDays, BookUp, CheckCircle, LocateFixed, MoreVertical, Target, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay, differenceInDays } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay, differenceInDays } from 'date-fns';
+import { parseDay } from '@/lib/event-occurrences';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
@@ -83,7 +84,7 @@ export default function BibleChecklistPage() {
 
     for (const reading of plan.dailyReadings) {
       try {
-        const date = parseISO(reading.date);
+        const date = parseDay(reading.date);
         if (!isValid(date)) continue;
         const weekStart = startOfWeek(date, { weekStartsOn: 0 }); // Sunday
         const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -99,7 +100,7 @@ export default function BibleChecklistPage() {
     
     return Array.from(weeksMap.entries())
       .map(([weekKey, readings], index) => {
-        const weekStartDate = parseISO(weekKey);
+        const weekStartDate = parseDay(weekKey);
         const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
 
         let totalCount = 0;
@@ -111,7 +112,7 @@ export default function BibleChecklistPage() {
             totalCount += numValidPassages;
             
             if (isGuest) {
-              const readingDate = parseISO(reading.date);
+              const readingDate = parseDay(reading.date);
               if (isValid(readingDate) && isBefore(readingDate, today)) {
                   completedCount += numValidPassages;
               }
@@ -153,7 +154,7 @@ export default function BibleChecklistPage() {
     let completed = 0;
     if (isGuest) {
        plan.dailyReadings.forEach(day => {
-         const dayDate = parseISO(day.date);
+         const dayDate = parseDay(day.date);
          if (isValid(dayDate) && isBefore(dayDate, today)) {
            completed += day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0;
          }
@@ -185,13 +186,13 @@ export default function BibleChecklistPage() {
     const completedChapterCount = completedChapters.size;
     const chaptersLeft = totalChapters - completedChapterCount;
   
-    const lastReadingDate = parseISO(plan.dailyReadings[plan.dailyReadings.length - 1].date);
+    const lastReadingDate = parseDay(plan.dailyReadings[plan.dailyReadings.length - 1].date);
     const daysLeft = isValid(lastReadingDate) ? differenceInDays(lastReadingDate, today) : 0;
     const chaptersPerDay = (daysLeft > 0 && chaptersLeft > 0) ? parseFloat((chaptersLeft / daysLeft).toFixed(2)) : 0;
 
     const chaptersToDate = new Set<string>();
     plan.dailyReadings.forEach(day => {
-        const dayDate = parseISO(day.date);
+        const dayDate = parseDay(day.date);
         if (isValid(dayDate) && isBefore(dayDate, today)) {
             (day.passages || []).forEach(p => chaptersToDate.add(`${p.book} ${p.chapter}`));
         }
@@ -292,7 +293,7 @@ export default function BibleChecklistPage() {
             
             <div className="space-y-4">
                 {viewState.week.readings
-                    .sort((a,b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+                    .sort((a,b) => parseDay(a.date).getTime() - parseDay(b.date).getTime())
                     .map(reading => (
                       <BiblePlanDisplay
                         key={reading.date}

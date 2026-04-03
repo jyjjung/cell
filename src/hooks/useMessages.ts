@@ -137,9 +137,17 @@ export function useMessages(chatId: string | null) {
   }, [chatId, hasMore, loadingMore, toast]);
 
 
-  const sendMessage = useCallback((text?: string, imageUrl?: string, replyToId?: string) => {
+  const sendMessage = useCallback(async (
+    text?: string, 
+    imageUrl?: string, 
+    replyToId?: string,
+    invitationId?: string,
+    eventId?: string,
+    setlistId?: string,
+    rosterId?: string
+  ) => {
     if (!currentUser || !chatId) return;
-    if (!text?.trim() && !imageUrl) return;
+    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -151,32 +159,45 @@ export function useMessages(chatId: string | null) {
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
     if (replyToId) messageData.replyToId = replyToId;
+    if (invitationId) messageData.invitationId = invitationId;
+    if (eventId) messageData.eventId = eventId;
+    if (setlistId) messageData.setlistId = setlistId;
+    if (rosterId) messageData.rosterId = rosterId;
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
 
-    addDoc(messagesColRef, messageData).catch(error => {
-        console.error("Failed to store message:", error);
-    });
+    let lastText = trimmedText || "📷 Image";
+    if (invitationId) lastText = "📩 Invitation";
+    if (eventId) lastText = "📅 Event";
+    if (setlistId) lastText = "🎵 Setlist";
+    if (rosterId) lastText = "📋 Roster";
 
-    const lastText = trimmedText || "📷 Image";
+    try {
+        // --- STAGE 1: PERSISTENCE ---
+        // Await these writes strictly to prevent the Push API from 404ing on the message if it's too fast
+        await addDoc(messagesColRef, messageData);
+        await updateDoc(chatDocRef, {
+            lastMessageText: lastText,
+            lastMessageSentAt: serverTimestamp(),
+            lastMessageSenderId: currentUser.uid,
+            [`typing.${currentUser.uid}`]: deleteField(),
+        });
 
-    updateDoc(chatDocRef, {
-      lastMessageText: lastText,
-      lastMessageSentAt: serverTimestamp(),
-      lastMessageSenderId: currentUser.uid,
-      [`typing.${currentUser.uid}`]: deleteField(),
-    }).catch(error => console.error("Failed to update chat metadata:", error));
-
-    fetch('/api/send-chat-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            chatId, 
-            text: lastText, 
-            senderId: currentUser.uid 
-        }),
-    }).catch(error => console.error("Push notification dispatch failed:", error));
+        // --- STAGE 2: NOTIFICATION ---
+        // Fire and forget push dispatch
+        fetch('/api/send-chat-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                chatId, 
+                text: lastText, 
+                senderId: currentUser.uid 
+            }),
+        }).catch(error => console.error("Push notification dispatch failed:", error));
+    } catch (error) {
+        console.error("Message lifecycle failure:", error);
+    }
 
   }, [currentUser, chatId]);
 

@@ -6,7 +6,8 @@ import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useCleaningDays } from '@/hooks/useCleaningDays';
 import { useAllUsers } from '@/hooks/use-all-users';
 import type { CleaningRosterEntry, UserProfileData } from '@/types';
-import { format, parseISO, isBefore, startOfToday, compareAsc } from 'date-fns';
+import { startOfToday, format, compareAsc, isBefore } from 'date-fns';
+import { parseDay } from '@/lib/event-occurrences';
 import { Loader2, Check, ListTodo, ShieldCheck } from 'lucide-react';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { useAuth } from '@/contexts/auth-context';
@@ -41,11 +42,11 @@ export default function CleaningRosterPage() {
         const upcomingEntries: CleaningRosterEntry[] = [];
         const pastEntries: CleaningRosterEntry[] = [];
         
-        const sortedRoster = [...roster].sort((a,b) => compareAsc(parseISO(a.date), parseISO(b.date)));
+        const sortedRoster = [...roster].sort((a,b) => compareAsc(parseDay(a.date), parseDay(b.date)));
 
         for(const entry of sortedRoster) {
             try {
-                if(isBefore(parseISO(entry.date), today)) {
+                if(isBefore(parseDay(entry.date), today)) {
                     pastEntries.push(entry);
                 } else {
                     upcomingEntries.push(entry);
@@ -103,7 +104,7 @@ export default function CleaningRosterPage() {
                                             <RosterCard 
                                                 key={entry.id}
                                                 index={currentIndex}
-                                                date={parseISO(entry.date)}
+                                                date={parseDay(entry.date)}
                                                 title={dayName}
                                                 subtitle={(
                                                     <div className="flex flex-wrap items-center gap-x-2">
@@ -151,7 +152,7 @@ export default function CleaningRosterPage() {
                                             <RosterCard 
                                                 key={entry.id}
                                                 index={currentIndex}
-                                                date={parseISO(entry.date)}
+                                                date={parseDay(entry.date)}
                                                 title={dayName}
                                                 users={assignedUsers}
                                                 accentColor="text-emerald-500/40"

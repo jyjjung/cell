@@ -13,7 +13,6 @@ import { useChats } from '@/hooks/useChats';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { 
   format, 
-  parseISO, 
   isValid, 
   differenceInDays, 
   startOfDay, 
@@ -21,7 +20,7 @@ import {
   compareAsc, 
   startOfToday 
 } from 'date-fns';
-import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
+import { nextOccurrenceOnOrAfter, parseDay } from '@/lib/event-occurrences';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 
 export type InternalTimelineItem = {
@@ -63,7 +62,7 @@ export function useDashboardData() {
       if (passage) completedChapters.add(`${passage.book} ${passage.chapter}`);
     });
     const chaptersLeft = Math.max(0, uniqueChaptersInPlan.size - completedChapters.size);
-    const lastReadingDate = parseISO(plan.dailyReadings[plan.dailyReadings.length - 1].date);
+    const lastReadingDate = parseDay(plan.dailyReadings[plan.dailyReadings.length - 1].date);
     const daysLeft = isValid(lastReadingDate) ? Math.max(0, differenceInDays(lastReadingDate, today)) : 0;
     return { chaptersLeft, daysLeft };
   }, [plan, completedPassages]);
@@ -88,7 +87,7 @@ export function useDashboardData() {
     });
     
     cleaningRoster.forEach(e => {
-        const d = parseISO(e.date);
+        const d = parseDay(e.date);
         if (isValid(d) && !isBefore(d, today)) {
             const names = e.assignedUserIds.map(uid => usersMap.get(uid)?.firstName).filter(Boolean).join(', ');
             items.push({ id: e.id, date: d, title: names || "Cleaning", type: 'cleaning', assignedNames: names, dayName: cleaningDaysMap.get(e.dayId) });
@@ -96,7 +95,7 @@ export function useDashboardData() {
     });
     
     qtRoster.forEach(e => {
-        const d = parseISO(e.date);
+        const d = parseDay(e.date);
         if (isValid(d) && !isBefore(d, today)) items.push({ id: e.id, date: d, title: e.personName || "QT", type: 'qt', passage: e.passage, qtTitle: e.title });
     });
     

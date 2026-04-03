@@ -1,12 +1,12 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { parseDay } from '@/lib/event-occurrences';
 import { Loader2, Info, BookOpen, Copy } from 'lucide-react';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import type { DailyReading } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
@@ -58,7 +58,7 @@ export default function FullBiblePlanPage() {
   const planAsText = useMemo(() => {
     if (!sortedReadings) return '';
     return sortedReadings.map(reading => {
-      const date = format(parseISO(reading.date), "EEEE, MMMM d, yyyy");
+      const date = format(parseDay(reading.date), "EEEE, MMMM d, yyyy");
       const summary = generatePassageSummary(reading);
       return `${date}\n${summary}`;
     }).join('\n\n');
@@ -110,9 +110,9 @@ export default function FullBiblePlanPage() {
                 <RosterCard 
                     key={reading.date}
                     index={idx}
-                    date={parseISO(reading.date)}
+                    date={parseDay(reading.date)}
                     title={generatePassageSummary(reading)}
-                    subtitle={format(parseISO(reading.date), "EEEE, MMMM d, yyyy")}
+                    subtitle={format(parseDay(reading.date), "EEEE, MMMM d, yyyy")}
                     accentColor="text-sky-500"
                     accentBg="bg-sky-500/20"
                     showLine={false}

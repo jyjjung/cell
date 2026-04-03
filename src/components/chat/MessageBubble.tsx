@@ -17,6 +17,10 @@ import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Button } from '@/components/ui/button';
 import { CornerUpLeft } from 'lucide-react';
+import InvitationSummary from './summaries/InvitationSummary';
+import EventSummary from './summaries/EventSummary';
+import SetlistSummary from './summaries/SetlistSummary';
+import RosterSummary from './summaries/RosterSummary';
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -76,146 +80,149 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
               <div className={cn("flex flex-col min-w-0 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
-                  <div
-                      className={cn(
-                      'relative rounded-[1.25rem] px-3 py-1.5 transition-all w-fit min-w-[40px]',
-                      youtubeId && "w-full sm:min-w-[300px] max-w-full",
-                      isSender
-                          ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm'
-                          : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5'
-                      )}
-                  >
-                      {/* Parent message quote block */}
-                      {parentMessage && (
-                          <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
-                             <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
-                             <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
-                          </div>
-                      )}
+                  {(() => {
+                      const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId);
+                      return (
+                        <div
+                            className={cn(
+                            'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
+                            youtubeId && "w-full sm:min-w-[300px] max-w-full",
+                            !isSpecialContent && (
+                                isSender
+                                ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-3 py-1.5'
+                                : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-3 py-1.5'
+                            ),
+                            isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
+                            )}
+                        >
+                          {/* Parent message quote block */}
+                          {parentMessage && (
+                              <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
+                                 <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
+                                 <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
+                              </div>
+                          )}
 
-                      {!isSender && isGroup && senderName && (
-                          <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
-                      )}
- 
-                      {message.imageUrl && (
-                        <ImageLightbox
-                          imageUrl={message.imageUrl}
-                          altText={t.image || "Image"}
-                          onDownload={handleDownload}
-                          trigger={
-                            <motion.div 
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.98 }}
-                                className={cn(
-                                  "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
-                                  !message.text && "mb-0"
-                                )}
-                            >
-                              <img 
-                                src={message.imageUrl} 
-                                alt={t.image || "Image"} 
-                                className="max-w-full h-auto object-cover max-h-[300px] w-full"
-                                style={{ minWidth: '150px' }}
-                                loading="lazy"
-                              />
-                            </motion.div>
-                          }
-                        />
-                      )}
+                          {!isSender && isGroup && senderName && (
+                              <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
+                          )}
+    
+                          {message.imageUrl && (
+                            <ImageLightbox
+                              imageUrl={message.imageUrl}
+                              altText={t.image || "Image"}
+                              onDownload={handleDownload}
+                              trigger={
+                                <motion.div 
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className={cn(
+                                      "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
+                                      !message.text && "mb-0"
+                                    )}
+                                >
+                                  <img 
+                                    src={message.imageUrl} 
+                                    alt={t.image || "Image"} 
+                                    className="max-w-full h-auto object-cover max-h-[300px] w-full"
+                                    style={{ minWidth: '150px' }}
+                                    loading="lazy"
+                                  />
+                                </motion.div>
+                              }
+                            />
+                          )}
 
-                      {message.text && (
-                        <LinkifiedText 
-                          text={message.text} 
-                          isSender={isSender} 
-                          className="text-[15px] font-normal" 
-                        />
-                      )}
+                          {message.text && (
+                            <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
+                                <LinkifiedText 
+                                  text={message.text} 
+                                  isSender={isSender} 
+                                  className="text-[15px] font-normal" 
+                                />
+                            </div>
+                          )}
 
-                      {youtubeId && (
-                        <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            src={`https://www.youtube.com/embed/${youtubeId}`}
-                            title="YouTube video player"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            allowFullScreen
-                            className="w-full h-full"
-                          />
+                          {message.invitationId && (
+                            <InvitationSummary invitationId={message.invitationId} isSender={isSender} />
+                          )}
+
+                          {message.eventId && (
+                            <EventSummary eventId={message.eventId} isSender={isSender} />
+                          )}
+
+                          {message.setlistId && (
+                            <SetlistSummary setlistId={message.setlistId} isSender={isSender} />
+                          )}
+
+                          {message.rosterId && (
+                            <RosterSummary rosterId={message.rosterId} isSender={isSender} />
+                          )}
                         </div>
-                      )}
-                  </div>
-                  
-                  {reactionEntries.length > 0 && (
-                      <div className={cn("flex flex-wrap gap-1 mt-1 px-1", isSender ? "justify-end" : "justify-start")}>
-                          {reactionEntries.map(([emoji, uids]) => {
-                              const userHasReacted = uids.includes(currentUser!.uid);
-                              const reactorNames = uids
-                                .map(uid => {
-                                  const user = allUsers.find(u => u.uid === uid);
-                                  return user ? user.firstName : 'Someone';
-                                })
-                                .filter(Boolean)
-                                .join(', ');
+                      );
+                  })()}
 
-                              return (
-                                  <Tooltip key={emoji}>
-                                    <TooltipTrigger asChild>
-                                      <motion.button 
-                                          whileTap={{ scale: 0.9 }}
-                                          onClick={() => toggleReaction(message.id, emoji)}
-                                          className={cn(
-                                              "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-all border shadow-sm",
-                                              userHasReacted 
-                                                  ? "bg-[#007AFF] text-white border-white/20" 
-                                                  : "bg-[#3B3B3D] text-white border-white/5"
-                                          )}
-                                      >
-                                          <span>{emoji}</span>
-                                          <span className="opacity-60">{uids.length}</span>
-                                      </motion.button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="rounded-xl border-white/5 bg-card/90 backdrop-blur-2xl shadow-xl p-2 border">
-                                      <p className="text-[9px] font-bold tracking-tight text-foreground">
-                                          {reactorNames}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                              )
-                          })}
+                  {youtubeId && (
+                    <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${youtubeId}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  )}
+
+                  {/* Reactions */}
+                  {reactionEntries.length > 0 && (
+                      <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
+                          {reactionEntries.map(([emoji, uids]) => (
+                              <button
+                                  key={emoji}
+                                  onClick={() => toggleReaction(message.id, emoji)}
+                                  className={cn(
+                                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
+                                      uids.includes(currentUser?.uid || '')
+                                          ? "bg-[#007AFF]/20 border border-[#007AFF]/30 text-[#007AFF]"
+                                          : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
+                                  )}
+                              >
+                                  <span>{emoji}</span>
+                                  <span className="font-bold text-[10px]">{uids.length}</span>
+                              </button>
+                          ))}
                       </div>
                   )}
               </div>
 
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Popover>
                       <PopoverTrigger asChild>
-                          <button className="p-1 rounded-full text-muted-foreground hover:bg-muted/30 shrink-0">
-                              <SmilePlus className="h-4 w-4"/>
+                          <button className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                              <SmilePlus className="h-3.5 w-3.5 text-white/40" />
                           </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-1 rounded-2xl bg-[#3B3B3D]/95 backdrop-blur-2xl border-white/5 shadow-2xl flex flex-col gap-1">
-                          <div className="flex gap-1">
-                              {standardReactions.map(emoji => (
-                                  <button
-                                      key={emoji}
-                                      onClick={() => toggleReaction(message.id, emoji)}
-                                      className="p-2 rounded-xl hover:bg-white/10 text-lg transition-all active:scale-90"
-                                  >
-                                      {emoji}
-                                  </button>
-                              ))}
-                          </div>
+                      <PopoverContent className="w-fit p-1 bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/10 rounded-full flex gap-0.5 shadow-2xl">
+                          {standardReactions.map(emoji => (
+                              <button
+                                  key={emoji}
+                                  onClick={() => toggleReaction(message.id, emoji)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-transform hover:scale-125"
+                              >
+                                  <span className="text-lg">{emoji}</span>
+                              </button>
+                          ))}
                       </PopoverContent>
                   </Popover>
 
                   <button 
                       onClick={onReply}
-                      className="p-1 rounded-full text-muted-foreground hover:bg-muted/30 shrink-0"
-                      title="Reply in thread"
+                      className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
-                      <CornerUpLeft className="h-4 w-4"/>
+                      <CornerUpLeft className="h-3.5 w-3.5 text-white/40" />
                   </button>
               </div>
           </div>
