@@ -105,7 +105,9 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         const doc = usersSnapshot.docs[i];
         const user = doc.data() as UserProfileData;
         if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
-            allTokens.push(...user.fcmTokens);
+            // Only take the 5 most recent tokens to prevent "Graveyards" 
+            // of dead tokens from slowing down multicast.
+            allTokens.push(...user.fcmTokens.slice(0, 5));
         }
     }
 

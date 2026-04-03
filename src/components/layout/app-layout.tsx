@@ -199,6 +199,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, router, pathname, toast]);
   
+  // Foreground Heartbeat: Re-register token on visibility change to catch iOS rotations
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && currentUser) {
+        console.log('[AppLayout] Foreground Heartbeat: Refreshing push registration');
+        registerToken(true); // Forced refresh
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser, registerToken]);
+  
   if (loadingAuth || !hasMounted) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">

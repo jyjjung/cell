@@ -34,10 +34,15 @@ export function useFCMToken() {
         const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
         
         if (token) {
-          const existingTokens = currentUser.fcmTokens || [];
-          if (!existingTokens.includes(token)) {
-            console.log('[useFCMToken] Registering new push token');
-            await updateUserProfile(currentUser.uid, { fcmTokens: [token] });
+          const currentTokens = currentUser.fcmTokens || [];
+          
+          // If the current token is not at the front of the list, update user profile.
+          // We truncate to the 3 most recent tokens to prevent "Graveyards" of stale endpoints.
+          if (currentTokens[0] !== token) {
+            console.log('[useFCMToken] Syncing push tokens (pruning old ones)');
+            const filtered = currentTokens.filter(t => t !== token);
+            const newList = [token, ...filtered].slice(0, 3);
+            await updateUserProfile(currentUser.uid, { fcmTokens: newList });
           }
         }
       }
