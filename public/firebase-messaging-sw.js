@@ -21,48 +21,6 @@ firebase.initializeApp({
   appId: "1:942477536312:web:9487c6359a19a4c0e7cacd",
 });
 
-function getBadgeCount() {
-  return new Promise((resolve) => {
-    const request = indexedDB.open('badgeDB', 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore('badgeStore');
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('badgeStore')) {
-        return resolve(0);
-      }
-      const tx = db.transaction('badgeStore', 'readonly');
-      const store = tx.objectStore('badgeStore');
-      const getReq = store.get('count');
-      getReq.onsuccess = () => resolve(getReq.result || 0);
-      getReq.onerror = () => resolve(0);
-    };
-    request.onerror = () => resolve(0);
-  });
-}
-
-function setBadgeCount(count) {
-  return new Promise((resolve) => {
-    const request = indexedDB.open('badgeDB', 1);
-    request.onupgradeneeded = (e) => {
-      e.target.result.createObjectStore('badgeStore');
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      const tx = db.transaction('badgeStore', 'readwrite');
-      tx.objectStore('badgeStore').put(count, 'count');
-      tx.oncomplete = () => resolve();
-    };
-    request.onerror = () => resolve();
-  });
-}
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SYNC_BADGE') {
-    event.waitUntil(setBadgeCount(event.data.count));
-  }
-});
 
 // Robust 'Failsafe' push listener for iOS reliability
 // We MUST call showNotification() within event.waitUntil() to avoid 
@@ -71,22 +29,20 @@ self.addEventListener('push', (event) => {
     // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
     event.waitUntil(
         (async () => {
+            const origin = 'https://ndcem.vercel.app';
             let title = 'New Message';
             let options = {
                 body: 'You have a new update in your Sync chat.',
-                icon: '/apple-touch-icon-v3.png',
-                tag: 'community-update', // Default tag to prevent flooding
-                badge: '/icon-192x192-v3.png',
+                icon: `${origin}/apple-touch-icon-v3.png`,
+                tag: 'community-update',
+                badge: `${origin}/icon-192x192-v3.png`,
             };
 
             try {
-                // 1b. Payload Extraction: We use the FCM notification block as our source of truth.
-                // We DON'T return here—on iOS Safari PWAs, the Service Worker MUST 
-                // manually show the banner even if the payload has a 'notification' block.
                 if (event.data) {
                     try {
                         const json = event.data.json();
-                        // Extract from FCM standard 'notification' block if present
+                        // 2. Extract from standard notification block
                         const fcmNotif = json.notification || (json.data && json.data.notification ? JSON.parse(json.data.notification) : null);
                         
                         if (fcmNotif) {
@@ -94,35 +50,33 @@ self.addEventListener('push', (event) => {
                             options.body = fcmNotif.body || options.body;
                         }
 
-                        // Extract from custom 'data' block for app logic
+                        // 3. Extract from custom data block (Badge & Link)
                         const data = json.data || {};
                         title = data.title || title;
                         options.body = data.body || options.body;
                         options.tag = data.tag || options.tag;
+                        
                         if (data.link) {
                             options.data = { link: data.link };
                         }
+
+                        // 4. Server-Side Badging: Set the app icon badge directly from the signal
+                        if (data.badge && self.navigator && 'setAppBadge' in self.navigator) {
+                            const count = parseInt(data.badge, 10);
+                            if (!isNaN(count)) {
+                                await self.navigator.setAppBadge(count);
+                            }
+                        }
                     } catch (err) {
-                        // Not JSON, fallback to plain text
                         const text = event.data.text();
                         options.body = text || options.body;
                     }
                 }
-
-                // 3. Update the app badge silently
-                const currentCount = await getBadgeCount();
-                const nextCount = currentCount + 1;
-                await setBadgeCount(nextCount);
-                if (self.navigator && 'setAppBadge' in self.navigator) {
-                    await self.navigator.setAppBadge(nextCount);
-                }
             } catch (e) {
                 console.error('[firebase-messaging-sw.js] Failsafe parsing error:', e);
-                // We continue anyway—showing the default 'New Message' is better 
-                // than showing nothing and getting blacklisted by Safari.
             }
 
-            // 4. Final Handshake: Always show a notification
+            // 5. Final Handshake: Always show a notification
             return self.registration.showNotification(title, options);
         })()
     );

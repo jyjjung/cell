@@ -1,7 +1,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
-import type { AppNotification, UserProfileData } from '@/types';
+import type { AppNotification, UserProfileData, Chat } from '@/types';
+import { FieldPath, type Firestore } from 'firebase-admin/firestore';
+import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
 
 /**
  * Forcefully converts all values in a record to strings to create a safe FCM data payload.
@@ -12,6 +14,49 @@ function toSafeStringMap(input: Record<string, unknown>): Record<string, string>
     out[key] = String(value ?? '');
   }
   return out;
+}
+
+/**
+ * Robustly converts any timestamp-like value to milliseconds.
+ */
+function getMillis(timestamp: any): number {
+    if (!timestamp) return 0;
+    if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
+    if (timestamp instanceof Date) return timestamp.getTime();
+    if (typeof timestamp === 'number') return timestamp;
+    if (typeof timestamp === 'string') return new Date(timestamp).getTime();
+    if (timestamp._seconds) return timestamp._seconds * 1000 + (timestamp._nanoseconds / 1000000);
+    return 0;
+}
+
+/**
+ * Server-side calculation of a user's total unread count (Chats + Alerts).
+ */
+async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
+    try {
+        const notificationsSnapshot = await db.collection('notifications').get();
+        let unreadAlerts = 0;
+        notificationsSnapshot.forEach(doc => {
+            const data = doc.data();
+            const readBy = Array.isArray(data.readBy) ? data.readBy : [];
+            if (!readBy.includes(userId)) unreadAlerts++;
+        });
+
+        const chatsSnapshot = await db.collection('chats').where('members', 'array-contains', userId).get();
+        let unreadChats = 0;
+        chatsSnapshot.forEach(doc => {
+            const chat = doc.data() as Chat;
+            if (!chat.lastMessageSentAt || !chat.lastMessageSenderId) return;
+            if (chat.lastMessageSenderId === userId) return;
+            const lastSeen = chat.memberSeen?.[userId];
+            if (getMillis(chat.lastMessageSentAt) > getMillis(lastSeen)) unreadChats++;
+        });
+
+        return unreadAlerts + unreadChats;
+    } catch (error) {
+        console.error(`[calculateTotalUnread] Error for user ${userId}:`, error);
+        return 0;
+    }
 }
 
 export async function POST(request: NextRequest) {
@@ -34,60 +79,68 @@ export async function POST(request: NextRequest) {
     }
     const notification = { id: notifDoc.id, ...notifDoc.data() } as AppNotification;
 
-    let targetTokens: string[] = [];
+    let targetUserIds: string[] = [];
     if (notification.isGlobal) {
-      // Optimization: Fetch all users and filter locally to avoid complex index requirements for prototype
       const usersSnapshot = await adminDb.collection('users').get();
-      usersSnapshot.forEach(doc => {
-        const user = doc.data() as UserProfileData;
-        if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
-          targetTokens.push(...user.fcmTokens);
-        }
-      });
+      targetUserIds = usersSnapshot.docs.map(doc => doc.id);
     } else if (notification.userId) {
-      const userDoc = await adminDb.collection('users').doc(notification.userId).get();
-      if (userDoc.exists) {
-        const user = userDoc.data() as UserProfileData;
-        if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
-          targetTokens = user.fcmTokens;
+      targetUserIds = [notification.userId];
+    }
+
+    let totalSuccess = 0;
+    let totalFailure = 0;
+
+    for (const userId of targetUserIds) {
+        try {
+            const userDoc = await adminDb.collection('users').doc(userId).get();
+            if (!userDoc.exists) continue;
+            
+            const user = userDoc.data() as UserProfileData;
+            const userTokens = (user.fcmTokens || []).slice(0, 3).filter(Boolean);
+            
+            if (userTokens.length === 0) continue;
+
+            const badgeCount = await calculateTotalUnread(userId, adminDb);
+            const title = notification.title || 'New Notification';
+            const body = notification.message || '';
+            const origin = request.nextUrl.origin;
+
+            const payload: MulticastMessage = {
+              tokens: userTokens,
+              notification: { title, body },
+              data: toSafeStringMap({
+                title,
+                body,
+                icon: `${origin}/icon-192x192-v3.png`,
+                tag: notification.id,
+                link: notification.relatedUrl || '/',
+                badge: String(badgeCount),
+              }),
+              webpush: {
+                  notification: {
+                      title,
+                      body,
+                      icon: `${origin}/icon-192x192-v3.png`,
+                      tag: notification.id,
+                  },
+                  fcmOptions: {
+                      link: notification.relatedUrl || '/',
+                  }
+              }
+            };
+            
+            if (payload.notification) (payload.notification as any).badge = badgeCount;
+
+            const response = await adminMessaging.sendEachForMulticast(payload);
+            totalSuccess += response.successCount;
+            totalFailure += response.failureCount;
+        } catch (err) {
+            console.error(`[send-push] Failed for user ${userId}:`, err);
+            totalFailure++;
         }
-      }
-    }
-
-    const uniqueTokens = [...new Set(targetTokens)].filter(Boolean);
-
-    if (uniqueTokens.length === 0) {
-      return NextResponse.json({ success: true, delivered: 0 });
     }
     
-    const message = {
-      tokens: uniqueTokens,
-      notification: {
-        title: notification.title || 'New Notification',
-        body: notification.message || '',
-      },
-      webpush: {
-          notification: {
-              title: notification.title || 'New Notification',
-              body: notification.message || '',
-              icon: `${request.nextUrl.origin}/icon-192x192-v3.png`,
-              tag: notification.id,
-          },
-          fcmOptions: {
-              link: notification.relatedUrl || '/',
-          }
-      },
-      data: toSafeStringMap({
-        title: notification.title || 'New Notification',
-        body: notification.message || '',
-        icon: '/icon-192x192-v3.png',
-        tag: notification.id,
-        link: notification.relatedUrl || '/',
-      }),
-    };
-    
-    const response = await adminMessaging.sendEachForMulticast(message);
-    return NextResponse.json({ success: true, delivered: response.successCount });
+    return NextResponse.json({ success: true, delivered: totalSuccess, failed: totalFailure });
 
   } catch (error: any) {
     console.error('Error sending push notification:', error);

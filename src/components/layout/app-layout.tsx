@@ -110,9 +110,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         (navigator as any).clearAppBadge().catch((e: any) => console.warn('App Badge API Error:', e));
       }
     }
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SYNC_BADGE', count });
-    }
   }, []);
 
   useEffect(() => {
