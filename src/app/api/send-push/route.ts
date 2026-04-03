@@ -62,6 +62,21 @@ export async function POST(request: NextRequest) {
     
     const message = {
       tokens: uniqueTokens,
+      notification: {
+        title: notification.title || 'New Notification',
+        body: notification.message || '',
+      },
+      webpush: {
+          notification: {
+              title: notification.title || 'New Notification',
+              body: notification.message || '',
+              icon: `${request.nextUrl.origin}/icon-192x192-v3.png`,
+              tag: notification.id,
+          },
+          fcmOptions: {
+              link: notification.relatedUrl || '/',
+          }
+      },
       data: toSafeStringMap({
         title: notification.title || 'New Notification',
         body: notification.message || '',
@@ -69,9 +84,6 @@ export async function POST(request: NextRequest) {
         tag: notification.id,
         link: notification.relatedUrl || '/',
       }),
-      // We explicitly DO NOT include 'notification' or 'webpush' blocks.
-      // This ensures only our Service Worker's custom 'push' listener handles the display,
-      // eliminating "Double Notifications" and providing 100% reliability on iOS Safari.
     };
     
     const response = await adminMessaging.sendEachForMulticast(message);
