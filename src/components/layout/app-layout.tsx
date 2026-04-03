@@ -152,14 +152,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const hasSW = isBrowser && 'serviceWorker' in navigator;
     
     if (hasSW && messaging && currentUser) {
-      // Use our manual Master Worker for 100% reliability
-      // This bypasses the brittle auto-generated sw.js from next-pwa
+      // Standardize on '/firebase-messaging-sw.js' for 100% Firebase & custom Push compatibility.
       const initPush = async () => {
         try {
-          await navigator.serviceWorker.register('/sw-master.js', { scope: '/' });
+          await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
           console.log('[AppLayout] Master Worker registered successfully');
         } catch (error) {
-          console.error('[AppLayout] Master Worker registration failed:', error);
+          console.log('[AppLayout] Service worker registration failed:', error);
         }
       };
       initPush();
@@ -248,35 +247,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-h-0 relative z-10">
             <Header />
             
-            <div className="flex-1 flex flex-col min-h-0 relative">
                 <div 
                     className={cn(
                         "flex-1 relative min-h-0", 
-                        !isIndividualChat ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"
+                        !isIndividualChat ? "overflow-y-auto overflow-x-hidden p-0" : "overflow-hidden"
                     )}
                 >
                     <main role="main" className={cn("flex flex-col", isIndividualChat ? "h-full" : "min-h-full")}>
                         <div className={cn(
                             "flex-1 flex flex-col min-h-0",
-                            isIndividualChat ? "w-full h-full p-0" : "container mx-auto px-6 md:px-12 lg:px-20 py-10 md:py-16"
+                            isIndividualChat ? "w-full h-full p-0" : "container mx-auto px-4 md:px-8 py-6 md:py-10"
                         )}>
                         {isIndividualChat ? children : (
                             <motion.div
                                 key={pathname}
-                                initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
-                                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                initial={{ opacity: 0, scale: 0.98 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
                             >
                                 {children}
                             </motion.div>
                         )}
                         </div>
                     </main>
-                </div>
                 <Footer />
             </div>
-        </div>
-        <PWAInstallPrompt />
+            </div>
+            <PWAInstallPrompt />
         
         {/* User Gesture Notification Prompt */}
         {showPermissionBanner && (

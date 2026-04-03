@@ -83,13 +83,19 @@ self.addEventListener('push', (event) => {
             try {
                 // 2. Attempt to parse rich data if available
                 if (event.data) {
-                    const payload = event.data.json();
-                    const data = payload.data || {};
-                    title = data.title || title;
-                    options.body = data.body || options.body;
-                    options.tag = data.tag || options.tag;
-                    if (data.link) {
-                        options.data = { link: data.link };
+                    const text = event.data.text();
+                    try {
+                        const payload = JSON.parse(text);
+                        const data = payload.data || {};
+                        title = data.title || title;
+                        options.body = data.body || options.body;
+                        options.tag = data.tag || options.tag;
+                        if (data.link) {
+                            options.data = { link: data.link };
+                        }
+                    } catch (jsonErr) {
+                        // Not JSON, but could be plain text
+                        options.body = text || options.body;
                     }
                 }
 
