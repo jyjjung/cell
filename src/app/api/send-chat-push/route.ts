@@ -79,6 +79,52 @@ async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore)
 }
 
 
+/**
+ * Server-side calculation of a user's total unread count (Chats + Alerts).
+ * This ensures the PWA badge is accurate even when the app is backgrounded.
+ */
+async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
+    try {
+        // 1. Unread Notifications (Announcements/Alerts)
+        const notificationsSnapshot = await db.collection('notifications').get();
+        let unreadAlerts = 0;
+        notificationsSnapshot.forEach(doc => {
+            const data = doc.data();
+            const readBy = Array.isArray(data.readBy) ? data.readBy : [];
+            if (!readBy.includes(userId)) {
+                unreadAlerts++;
+            }
+        });
+
+        // 2. Unread Chats
+        // Fetch all chats where the user is a member
+        const chatsSnapshot = await db.collection('chats').where('members', 'array-contains', userId).get();
+        let unreadChats = 0;
+        
+        chatsSnapshot.forEach(doc => {
+            const chat = doc.data() as Chat;
+            if (!chat.lastMessageSentAt || !chat.lastMessageSenderId) return;
+            if (chat.lastMessageSenderId === userId) return;
+
+            const lastSeen = chat.memberSeen?.[userId];
+            const lastSent = chat.lastMessageSentAt;
+
+            const lastSeenMs = getMillis(lastSeen);
+            const lastSentMs = getMillis(lastSent);
+
+            if (lastSentMs > lastSeenMs) {
+                unreadChats++;
+            }
+        });
+
+        return unreadAlerts + unreadChats;
+    } catch (error) {
+        console.error(`[calculateTotalUnread] Error for user ${userId}:`, error);
+        return 0; // Fallback to no badge on error
+    }
+}
+
+
 // --- API Route Logic ---
 
 async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Firestore, adminMessaging: Messaging, origin: string) {
@@ -94,27 +140,6 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
     if (recipientIds.length === 0) {
         return { success: 0, failure: 0, reason: "No recipients for this message." };
-    }
-    
-    // Get FCM tokens for the recipients
-    const usersSnapshot = await adminDb.collection('users').where(FieldPath.documentId(), 'in', recipientIds).get();
-    
-    const allTokens: string[] = [];
-    for (let i = 0; i < usersSnapshot.docs.length; i++) {
-        const doc = usersSnapshot.docs[i];
-        const user = doc.data() as UserProfileData;
-        if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
-            // Take the 5 most recent tokens.
-            allTokens.push(...user.fcmTokens.slice(0, 5));
-        }
-    }
-
-    const uniqueTokens = [...new Set(allTokens)].filter(Boolean);
-
-    console.log(`[sendNotifications] Sending to ${uniqueTokens.length} unique tokens for ${recipientIds.length} recipients.`);
-
-    if (uniqueTokens.length === 0) {
-        return { success: 0, failure: 0, reason: "No registered push clients for recipients." };
     }
     
     let senderName = 'Someone';
@@ -138,54 +163,77 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         body = cleanMessageText;
     }
 
+    // 4. Send Individual Notifications to each recipient with their specific unread count
+    let totalSuccess = 0;
+    let totalFailure = 0;
 
-    const rawData = {
-      title: title,
-      body: body,
-      icon: '/icon-192x192-v3.png',
-      tag: String(message.id),
-      link: `/chat/${chat.id}`,
-    };
+    for (const userId of recipientIds) {
+        try {
+            // Get user tokens
+            const userDoc = await adminDb.collection('users').doc(userId).get();
+            if (!userDoc.exists) continue;
+            
+            const user = userDoc.data() as UserProfileData;
+            const userTokens = (user.fcmTokens || []).slice(0, 3).filter(Boolean); // Top 3 tokens
+            
+            if (userTokens.length === 0) continue;
 
-    const safeData = toSafeStringMap(rawData);
-    const messagePayload: MulticastMessage = {
-      tokens: uniqueTokens,
-      notification: {
-          title: title,
-          body: body,
-      },
-      data: safeData,
-      webpush: {
-          notification: {
+            // Calculate individualized unread count
+            const badgeCount = await calculateTotalUnread(userId, adminDb);
+            const badgeString = String(badgeCount);
+
+            const rawData = {
               title: title,
               body: body,
               icon: `${origin}/icon-192x192-v3.png`,
               tag: String(message.id),
-          },
-          fcmOptions: {
               link: `/chat/${chat.id}`,
-          }
-      }
-    };
-    
-    assertStringMap(messagePayload.data!);
-    const response = await adminMessaging.sendEachForMulticast(messagePayload);
-    
-    // --- Detailed Diagnostics ---
-    if (response.failureCount > 0) {
-        console.warn(`[sendNotifications] Delivered: ${response.successCount}, Failed: ${response.failureCount}.`);
-        // Log detailed error codes for each token to find "Zombie" tokens.
-        response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-                console.warn(`[FCM-Diagnostic] Token ${idx} failed: ${resp.error?.code} - ${resp.error?.message}`);
+              badge: badgeString,
+            };
+
+            const safeData = toSafeStringMap(rawData);
+            
+            const payload: MulticastMessage = {
+              tokens: userTokens,
+              notification: {
+                  title: title,
+                  body: body,
+              },
+              data: safeData,
+              webpush: {
+                  notification: {
+                      title: title,
+                      body: body,
+                      icon: `${origin}/icon-192x192-v3.png`,
+                      tag: String(message.id),
+                      badge: `${origin}/icon-192x192-v3.png`,
+                  },
+                  fcmOptions: {
+                      link: `/chat/${chat.id}`,
+                  }
+              }
+            };
+
+            // Set badge in specialized blocks if supported
+            if (payload.notification) (payload.notification as any).badge = badgeString;
+
+            const response = await adminMessaging.sendEachForMulticast(payload);
+            totalSuccess += response.successCount;
+            totalFailure += response.failureCount;
+
+            if (response.failureCount > 0) {
+                console.warn(`[sendNotifications] Tokens failed for user ${userId}:`, response.responses.map(r => r.error?.code).filter(Boolean));
             }
-        });
+        } catch (err) {
+            console.error(`[sendNotifications] Failed for user ${userId}:`, err);
+            totalFailure++;
+        }
     }
 
     return { 
-        success: response.successCount, 
-        failure: response.failureCount, 
-        tokensAttempted: uniqueTokens.length
+        success: totalSuccess, 
+        failure: totalFailure, 
+        recipientsProcessed: recipientIds.length
     };
 }
 
@@ -248,7 +296,7 @@ export async function POST(request: NextRequest) {
             delivered: result.success,
             reason: result.reason,
             diagnostics: {
-                tokens: result.tokensAttempted || 0
+                recipients: result.recipientsProcessed || 0
             }
         });
 
