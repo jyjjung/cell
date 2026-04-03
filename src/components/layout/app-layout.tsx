@@ -9,6 +9,7 @@ import Header from './header';
 import { useAuth } from '@/contexts/auth-context';
 import { messaging } from '@/lib/firebase';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { onMessage } from 'firebase/messaging';
 import { cn } from '@/lib/utils';
 import { ImmersiveBackground } from './immersive-background';
 import { motion } from 'framer-motion';
@@ -163,42 +164,47 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       };
       initPush();
 
-      const handleSWMessage = (event: MessageEvent) => {
-        if (!event.data) return;
+      const unsubscribe = onMessage(messaging as any, (payload) => {
+        const title = payload.data?.title || 'New Sync Notification';
+        const body = payload.data?.body || '';
+        const link = payload.data?.link || '/';
+        const tag = payload.data?.tag || 'community-update';
 
-        // Handle navigation deep links from closed notification clicks
-        if (event.data.type === 'NAVIGATE' && event.data.link) {
-            router.push(event.data.link);
-            return;
+        // Logic for avoiding redundant notifications when user is already in the chat
+        const isCurrentlyViewingThisChat = pathname === link;
+        if (isCurrentlyViewingThisChat && link.startsWith('/chat/')) {
+            return; // Skip notification
         }
 
-        // Handle foreground notifications (while app is open)
-        if (event.data.type === 'FOREGROUND_PUSH' && event.data.payload) {
-            const { title, body, link } = event.data.payload;
+        if (Notification.permission === 'granted' && title) {
+          // Use the Service Worker registration to show the notification
+          // This is more robust for PWAs and ensures it feels like a "device push"
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              body,
+              icon: payload.data?.icon || '/apple-touch-icon-v3.png',
+              tag,
+              data: { link },
+              badge: '/icon-192x192-v3.png', // High-fidelity detail for Android/Chrome
+            });
+          });
+        }
 
-            // Logic for avoiding redundant notifications when user is already in the chat
-            const isCurrentlyViewingThisChat = pathname === link;
-            if (isCurrentlyViewingThisChat && link && link.startsWith('/chat/')) {
-                return; // Skip notification
-            }
-
-            // --- IN-APP TOAST ---
+        // --- IN-APP TOAST ---
+        // Only show if not already viewing the exact target
+        if (!isCurrentlyViewingThisChat) {
             toast({
-                title: title || 'New Notification',
+                title: title,
                 description: body,
                 className: "cursor-pointer hover:bg-muted/50 transition-colors",
                 onClick: () => {
-                   if (link) router.push(link);
+                   router.push(link);
                 }
             });
         }
-      };
+      });
 
-      navigator.serviceWorker.addEventListener('message', handleSWMessage);
-
-      return () => {
-          navigator.serviceWorker.removeEventListener('message', handleSWMessage);
-      };
+      return () => unsubscribe();
     }
   }, [currentUser, router, pathname, toast]);
   
