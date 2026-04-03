@@ -89,16 +89,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         return { success: 0, failure: 0, reason: "No recipients for this message." };
     }
     
-    // Check if recipients are active in the chat to avoid redundant pushes
-    const tenSecondsAgo = Date.now() - 10000;
-    const recipientIds = allRecipientIds.filter(uid => {
-        const lastSeen = chat.memberSeen?.[uid];
-        return !lastSeen || getMillis(lastSeen) < tenSecondsAgo;
-    });
-
-    if (recipientIds.length === 0) {
-        return { success: 0, failure: 0, reason: "All recipients are currently active." };
-    }
+    // Send to all members except the sender, even if they are active
+    const recipientIds = allRecipientIds;
 
     // Safety Guard: Firestore 'in' query crashes on empty array.
     if (recipientIds.length === 0) {
