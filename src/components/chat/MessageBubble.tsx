@@ -21,6 +21,9 @@ import InvitationSummary from './summaries/InvitationSummary';
 import EventSummary from './summaries/EventSummary';
 import SetlistSummary from './summaries/SetlistSummary';
 import RosterSummary from './summaries/RosterSummary';
+import QTSummary from './summaries/QTSummary';
+import CleaningSummary from './summaries/CleaningSummary';
+import SongSummary from './summaries/SongSummary';
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -31,11 +34,15 @@ interface MessageBubbleProps {
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
   onReply?: () => void;
+  onOpenWorshipViewer?: (setlistId: string, songId?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
 }
 
-const MessageBubble = React.memo(function MessageBubble({ message, chat, sender, toggleReaction, lastSeenNames = [], onReply, parentMessage, parentSenderName }: MessageBubbleProps) {
+const MessageBubble = React.memo(function MessageBubble({ 
+  message, chat, sender, toggleReaction, lastSeenNames = [], 
+  onReply, onOpenWorshipViewer, parentMessage, parentSenderName 
+}: MessageBubbleProps) {
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
@@ -76,12 +83,12 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
       <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className={cn('flex w-full relative py-0.5 flex-col group', isSender ? 'items-end' : 'items-start')}
+          className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
               <div className={cn("flex flex-col min-w-0 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
                   {(() => {
-                      const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId);
+                      const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
                       return (
                         <div
                             className={cn(
@@ -89,8 +96,8 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                             youtubeId && "w-full sm:min-w-[300px] max-w-full",
                             !isSpecialContent && (
                                 isSender
-                                ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-3 py-1.5'
-                                : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-3 py-1.5'
+                                ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-2.5 py-1'
+                                : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-2.5 py-1'
                             ),
                             isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                             )}
@@ -152,11 +159,27 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                           )}
 
                           {message.setlistId && (
-                            <SetlistSummary setlistId={message.setlistId} isSender={isSender} />
+                            <SetlistSummary 
+                              setlistId={message.setlistId} 
+                              isSender={isSender} 
+                              onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
+                            />
                           )}
 
                           {message.rosterId && (
                             <RosterSummary rosterId={message.rosterId} isSender={isSender} />
+                          )}
+                          
+                          {message.qtDate && (
+                            <QTSummary date={message.qtDate} isSender={isSender} />
+                          )}
+                          
+                          {message.cleaningDate && (
+                            <CleaningSummary date={message.cleaningDate} isSender={isSender} />
+                          )}
+                          
+                          {message.songId && (
+                            <SongSummary songId={message.songId} isSender={isSender} />
                           )}
                         </div>
                       );
@@ -198,11 +221,14 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
                   )}
               </div>
 
-              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className={cn(
+                  "absolute flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10",
+                  isSender ? "right-[calc(100%+0.75rem)] bottom-0" : "left-[calc(100%+0.75rem)] bottom-0"
+              )}>
                   <Popover>
                       <PopoverTrigger asChild>
-                          <button className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                              <SmilePlus className="h-3.5 w-3.5 text-white/40" />
+                          <button className="p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                              <SmilePlus className="h-3 w-3 text-white/40" />
                           </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-fit p-1 bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/10 rounded-full flex gap-0.5 shadow-2xl">
@@ -220,9 +246,9 @@ const MessageBubble = React.memo(function MessageBubble({ message, chat, sender,
 
                   <button 
                       onClick={onReply}
-                      className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                      className="p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
-                      <CornerUpLeft className="h-3.5 w-3.5 text-white/40" />
+                      <CornerUpLeft className="h-3 w-3 text-white/40" />
                   </button>
               </div>
           </div>

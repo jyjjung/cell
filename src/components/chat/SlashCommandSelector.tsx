@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, 
@@ -8,19 +8,26 @@ import {
   Music, 
   ClipboardList,
   Search,
-  ChevronRight
+  ChevronRight,
+  BookOpen,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEvents } from '@/hooks/use-events';
 import { useInvitations } from '@/hooks/use-invitations';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
+import { useQTRoster } from '@/hooks/useQTRoster';
+import { useCleaningRoster } from '@/hooks/useCleaningRoster';
+import { useCleaningDays } from '@/hooks/useCleaningDays';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { format } from 'date-fns';
 
 interface SlashCommandSelectorProps {
   inputValue: string;
-  onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster', id: string) => void;
+  onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster', id: string) => void;
   onClose: () => void;
+  showWorshipCreation?: boolean;
 }
 
 const COMMANDS = [
@@ -28,9 +35,21 @@ const COMMANDS = [
   { id: 'event', label: '/event', icon: Calendar, description: 'Share an event' },
   { id: 'setlist', label: '/setlist', icon: Music, description: 'Share a worship setlist' },
   { id: 'roster', label: '/roster', icon: ClipboardList, description: 'Share a worship roster' },
+  { id: 'qt', label: '/qt', icon: BookOpen, description: 'Share a QT roster entry' },
+  { id: 'cleaning', label: '/cleaning', icon: ClipboardList, description: 'Share a cleaning roster session' },
+  { id: 'song', label: '/song', icon: Music, description: 'Share a song' },
+  { id: 'chords', label: '/chords', icon: Upload, description: 'Upload a chord sheet' },
+  { id: 'new-song', label: '/new-song', icon: Music, description: 'Create a new song', isWorshipCreation: true },
+  { id: 'new-setlist', label: '/new-setlist', icon: Music, description: 'Create a new setlist', isWorshipCreation: true },
+  { id: 'new-roster', label: '/new-roster', icon: ClipboardList, description: 'Create a new roster', isWorshipCreation: true },
 ];
 
-export default function SlashCommandSelector({ inputValue, onSelect, onClose }: SlashCommandSelectorProps) {
+export default function SlashCommandSelector({ 
+  inputValue, 
+  onSelect, 
+  onClose,
+  showWorshipCreation = false 
+}: SlashCommandSelectorProps) {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -38,6 +57,10 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
   const { invitations } = useInvitations();
   const { setlists } = useWorshipSetlists();
   const { rosters } = useWorshipRosters();
+  const { roster: qtRoster } = useQTRoster();
+  const { roster: cleaningRoster } = useCleaningRoster();
+  const { cleaningDays } = useCleaningDays();
+  const { songs } = useWorshipSongs();
 
   useEffect(() => {
     const trimmed = inputValue.trim();
@@ -53,6 +76,18 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
     } else if (trimmed.startsWith('/roster')) {
       setActiveCommand('roster');
       setSearchTerm(trimmed.replace('/roster', '').trim());
+    } else if (trimmed.startsWith('/qt')) {
+      setActiveCommand('qt');
+      setSearchTerm(trimmed.replace('/qt', '').trim());
+    } else if (trimmed.startsWith('/cleaning')) {
+      setActiveCommand('cleaning');
+      setSearchTerm(trimmed.replace('/cleaning', '').trim());
+    } else if (trimmed.startsWith('/song')) {
+      setActiveCommand('song');
+      setSearchTerm(trimmed.replace('/song', '').trim());
+    } else if (trimmed.startsWith('/chords')) {
+      setActiveCommand('chords');
+      setSearchTerm(trimmed.replace('/chords', '').trim());
     } else if (trimmed === '/') {
       setActiveCommand(null);
       setSearchTerm('');
@@ -61,7 +96,7 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
     }
   }, [inputValue, onClose]);
 
-  const filteredItems = React.useMemo(() => {
+  const filteredItems = useMemo(() => {
     if (!activeCommand) return [];
     
     const search = searchTerm.toLowerCase();
@@ -90,8 +125,35 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
         .slice(0, 5)
         .map(r => ({ id: r.id, title: r.name, subtitle: `${r.slots?.length || 0} roles`, date: r.date, type: 'roster' }));
     }
+    if (activeCommand === 'qt') {
+      return qtRoster
+        .filter(r => r.passage.toLowerCase().includes(search) || r.personName.toLowerCase().includes(search))
+        .slice(0, 10)
+        .map(r => ({ id: r.date, title: r.passage, subtitle: r.personName, date: r.date, type: 'qt' }));
+    }
+    if (activeCommand === 'cleaning') {
+      return cleaningRoster
+        .filter(r => r.date.toLowerCase().includes(search))
+        .slice(0, 10)
+        .map(r => {
+          const day = cleaningDays.find(d => d.id === r.dayId);
+          return { id: r.date, title: day?.name || 'Cleaning Session', subtitle: `${r.assignedUserIds.length} members`, date: r.date, type: 'cleaning' };
+        });
+    }
+    if (activeCommand === 'song' || activeCommand === 'chords') {
+      return songs
+        .filter(s => s.title.toLowerCase().includes(search) || (s.artist?.toLowerCase().includes(search)))
+        .slice(0, 10)
+        .map(s => ({ 
+          id: s.id, 
+          title: s.title, 
+          subtitle: s.artist || 'Unknown Artist', 
+          date: null, 
+          type: activeCommand 
+        }));
+    }
     return [];
-  }, [activeCommand, searchTerm, invitations, events, setlists, rosters]);
+  }, [activeCommand, searchTerm, invitations, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs]);
 
   if (!inputValue.startsWith('/')) return null;
 
@@ -107,8 +169,8 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
             <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
                 {activeCommand ? (
                     (() => {
-                        const Icon = COMMANDS.find(c => c.id === activeCommand)?.icon;
-                        return Icon ? <Icon className="w-3.5 h-3.5 text-primary" /> : null;
+                        const Icon = COMMANDS.find(c => c.id === activeCommand)?.icon || Search;
+                        return <Icon className="w-3.5 h-3.5 text-primary" />;
                     })()
                 ) : (
                     <Search className="w-3.5 h-3.5 text-primary" />
@@ -131,11 +193,22 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
       <div className="max-h-[280px] overflow-y-auto py-2 custom-scrollbar">
         {!activeCommand ? (
           <div className="flex flex-col px-2">
-            {COMMANDS.map((cmd) => (
+            {COMMANDS
+              .filter(cmd => !cmd.isWorshipCreation || showWorshipCreation)
+              .map((cmd) => (
               <button
                 key={cmd.id}
-                onClick={() => setActiveCommand(cmd.id)}
-                className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group"
+                onClick={() => {
+                  if (cmd.isWorshipCreation) {
+                    onSelect(cmd.id as any, '');
+                  } else {
+                    setActiveCommand(cmd.id);
+                  }
+                }}
+                className={cn(
+                  "flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group",
+                  cmd.isWorshipCreation ? "border-l-2 border-primary/40 bg-primary/5" : ""
+                )}
               >
                 <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <cmd.icon className="w-5 h-5 text-foreground/70" />
@@ -151,10 +224,10 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
         ) : (
           <div className="flex flex-col px-2">
             {filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
+              filteredItems.map((item: any) => (
                 <button
                   key={item.id}
-                  onClick={() => onSelect(item.type as any, item.id)}
+                  onClick={() => onSelect(item.type, item.id)}
                   className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group"
                 >
                   <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0 overflow-hidden">
@@ -163,7 +236,6 @@ export default function SlashCommandSelector({ inputValue, onSelect, onClose }: 
                         if (!item.date) throw new Error();
                         const date = new Date(item.date);
                         if (isNaN(date.getTime())) {
-                            // If it's a raw string like "Saturday, Aug 12th", just show the first letter of first word or something
                             return <Calendar className="w-5 h-5 text-primary/40" />;
                         }
                         return (

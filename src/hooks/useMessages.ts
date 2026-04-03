@@ -144,10 +144,13 @@ export function useMessages(chatId: string | null) {
     invitationId?: string,
     eventId?: string,
     setlistId?: string,
-    rosterId?: string
+    rosterId?: string,
+    qtDate?: string,
+    cleaningDate?: string,
+    songId?: string
   ) => {
     if (!currentUser || !chatId) return;
-    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId) return;
+    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -163,6 +166,9 @@ export function useMessages(chatId: string | null) {
     if (eventId) messageData.eventId = eventId;
     if (setlistId) messageData.setlistId = setlistId;
     if (rosterId) messageData.rosterId = rosterId;
+    if (qtDate) messageData.qtDate = qtDate;
+    if (cleaningDate) messageData.cleaningDate = cleaningDate;
+    if (songId) messageData.songId = songId;
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
@@ -172,6 +178,9 @@ export function useMessages(chatId: string | null) {
     if (eventId) lastText = "📅 Event";
     if (setlistId) lastText = "🎵 Setlist";
     if (rosterId) lastText = "📋 Roster";
+    if (qtDate) lastText = "📖 QT Roster";
+    if (cleaningDate) lastText = "🧹 Cleaning Roster";
+    if (songId) lastText = "🎵 Song";
 
     try {
         // --- STAGE 1: PERSISTENCE ---

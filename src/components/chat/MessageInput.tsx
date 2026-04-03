@@ -19,12 +19,14 @@ export default function MessageInput({
   disabled = false, 
   replyToMessage, 
   onCancelReply,
+  onOpenWorshipCreate,
   parentMessageId 
 }: { 
   chatId: string; 
   disabled?: boolean; 
   replyToMessage?: ChatMessage; 
   onCancelReply?: () => void;
+  onOpenWorshipCreate?: (type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => void;
   parentMessageId?: string;
 }) {
   const mainChat = useMessages(parentMessageId ? null : chatId);
@@ -55,13 +57,42 @@ export default function MessageInput({
     if (onCancelReply) onCancelReply();
   };
 
-  const handleSlashSelect = (type: 'invitation' | 'event' | 'setlist' | 'roster', id: string) => {
-    const args: [string?, string?, string?, string?, string?, string?, string?] = [undefined, undefined, replyToMessage?.id];
+  const handleSlashSelect = (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster', id: string) => {
+    // Check if it's a creation command
+    if (type === 'new-song') {
+      onOpenWorshipCreate?.('song');
+      setText('');
+      setShowSlashCommands(false);
+      return;
+    }
+    if (type === 'new-setlist') {
+      onOpenWorshipCreate?.('setlist');
+      setText('');
+      setShowSlashCommands(false);
+      return;
+    }
+    if (type === 'new-roster') {
+      onOpenWorshipCreate?.('roster');
+      setText('');
+      setShowSlashCommands(false);
+      return;
+    }
+    if (type === 'chords') {
+      onOpenWorshipCreate?.('chords', id);
+      setText('');
+      setShowSlashCommands(false);
+      return;
+    }
+
+    const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [undefined, undefined, replyToMessage?.id];
     
     if (type === 'invitation') args[3] = id;
     else if (type === 'event') args[4] = id;
     else if (type === 'setlist') args[5] = id;
     else if (type === 'roster') args[6] = id;
+    else if (type === 'qt') args[7] = id;
+    else if (type === 'cleaning') args[8] = id;
+    else if (type === 'song') args[9] = id; 
 
     sendMessage(...args);
     setText('');
@@ -167,6 +198,7 @@ export default function MessageInput({
                   inputValue={text} 
                   onSelect={handleSlashSelect} 
                   onClose={() => setShowSlashCommands(false)} 
+                  showWorshipCreation={!!onOpenWorshipCreate}
               />
           )}
         </AnimatePresence>

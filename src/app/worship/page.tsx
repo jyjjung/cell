@@ -22,12 +22,16 @@ import type {
   WorshipSong, WorshipSetlist, ChordKey, SongChordSheet,
   WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole
 } from '@/types';
+import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog 
+} from '@/components/worship/WorshipDialogs';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -79,308 +83,11 @@ function KeyBadge({ keyName, accent = false }: { keyName: ChordKey; accent?: boo
   );
 }
 
-// ── NewSongDialog ─────────────────────────────────────────────────────────────
-function NewSongDialog({
-  open, onClose, onCreated,
-}: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const { addSong } = useWorshipSongs();
-  const { toast } = useToast();
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!title.trim()) return;
-    setSaving(true);
-    try {
-      const id = await addSong(title, artist || undefined);
-      toast({ title: 'Song created', description: `"${title}" has been added to the library.` });
-      setTitle(''); setArtist('');
-      onCreated(id);
-      onClose();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Song</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Add a song to the worship library. You can add chord sheets after.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="song-title">Song Title <span className="text-rose-500">*</span></Label>
-            <Input id="song-title" placeholder="e.g. Way Maker" value={title} onChange={e => setTitle(e.target.value)}
-              className="rounded-xl" onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="song-artist">Artist / Original Artist</Label>
-            <Input id="song-artist" placeholder="e.g. Sinach" value={artist} onChange={e => setArtist(e.target.value)}
-              className="rounded-xl" />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
-              disabled={!title.trim() || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create Song
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── AddChordSheetDialog ───────────────────────────────────────────────────────
-function AddChordSheetDialog({
-  open, song, onClose,
-}: { open: boolean; song: WorshipSong | null; onClose: () => void }) {
-  const { addChordSheet } = useWorshipSongs();
-  const { toast } = useToast();
-  const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = (f: File) => {
-    setFile(f);
-    const url = URL.createObjectURL(f);
-    setPreview(url);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) handleFile(f);
-  };
-
-  const handleUpload = async () => {
-    if (!song || !file) return;
-    setUploading(true);
-    try {
-      await addChordSheet(song.id, file, selectedKey);
-      toast({ title: 'Chord sheet added', description: `Added in key ${selectedKey === 'numbers' ? 'Numbers' : selectedKey}.` });
-      setFile(null); setPreview(null); setSelectedKey('numbers');
-      onClose();
-    } catch (e: any) {
-      toast({ title: 'Upload failed', description: e.message, variant: 'destructive' });
-    } finally { setUploading(false); }
-  };
-
-  const reset = () => { setFile(null); setPreview(null); setSelectedKey('numbers'); };
-
-  return (
-    <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">
-            Add Chord Sheet
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            {song?.title} — Upload an image of the chord chart for a specific key.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-5 mt-4">
-          {/* Key selector */}
-          <div className="space-y-2">
-            <Label>Key / Notation</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_KEYS.map(k => (
-                <button key={k} onClick={() => setSelectedKey(k)}
-                  className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all',
-                    selectedKey === k
-                      ? 'bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-500/20'
-                      : 'bg-muted/30 border-border/40 text-muted-foreground hover:border-rose-500/40'
-                  )}>
-                  {k === 'numbers' ? 'Numbers (#)' : k}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Image drop zone */}
-          <div className="space-y-2">
-            <Label>Chord Sheet Image</Label>
-            {preview ? (
-              <div className="relative rounded-2xl overflow-hidden border border-border/50">
-                <img src={preview} alt="preview" className="w-full max-h-64 object-contain bg-muted/20" />
-                <button onClick={() => { setFile(null); setPreview(null); }}
-                  className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 border border-border/50 hover:bg-destructive hover:text-white transition-colors">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <label
-                onDragOver={e => e.preventDefault()}
-                onDrop={handleDrop}
-                className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed border-border/50 hover:border-rose-500/50 transition-colors cursor-pointer bg-muted/10 hover:bg-rose-500/5">
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500">
-                  <Upload className="h-6 w-6" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold">Drop image here or click to browse</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG supported</p>
-                </div>
-              </label>
-            )}
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600"
-              onClick={handleUpload} disabled={!file || uploading}>
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
-              Upload
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Dialogs are now imported from '@/components/worship/WorshipDialogs'
 
 // ── FullScreenViewer ─────────────────────────────────────────────────────────
-interface ViewerSlide {
-  imageUrl: string;
-  songTitle: string;
-  key: ChordKey;
-  page: number;   // 1-based within this song+key group
-  totalPages: number;
-}
+// (ViewerSlide removed, imported from components/worship/FullScreenViewer)
 
-function FullScreenViewer({
-  slides, startIndex = 0, onClose,
-}: { slides: ViewerSlide[]; startIndex?: number; onClose: () => void }) {
-  const [idx, setIdx] = useState(startIndex);
-  const touchStartX = useRef<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd   = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(dx) < 40) return;
-    if (dx < 0) setIdx(i => Math.min(i + 1, slides.length - 1));
-    else         setIdx(i => Math.max(i - 1, 0));
-  };
-
-  // Keyboard listener
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') setIdx(i => Math.min(i + 1, slides.length - 1));
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   setIdx(i => Math.max(i - 1, 0));
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [slides.length, onClose]);
-
-  const slide = slides[idx];
-  if (!slide) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] bg-black flex flex-col"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <button onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0">
-              <X className="h-5 w-5" />
-            </button>
-            <div className="min-w-0">
-              <p className="text-white font-bold text-sm truncate">{slide.songTitle}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <KeyBadge keyName={slide.key} accent />
-                {slide.totalPages > 1 && (
-                  <span className="text-white/40 text-[11px] font-bold">
-                    pg {slide.page}/{slide.totalPages}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 shrink-0">
-            <span className="text-white/40 text-xs font-bold">
-              {idx + 1} / {slides.length}
-            </span>
-            <button
-              onClick={() => {
-                downloadImage(slide.imageUrl, `${slide.songTitle} - Key ${slide.key}${slide.totalPages > 1 ? ` (Pg ${slide.page})` : ''}.png`);
-              }}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-              title="Download Chord Sheet">
-              <Download className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Image — fills all remaining space, no buttons overlap */}
-        <div className="flex-1 flex items-center justify-center overflow-hidden px-4 py-2">
-          <motion.img
-            key={slide.imageUrl}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.18 }}
-            src={slide.imageUrl}
-            alt="chord sheet"
-            className="max-w-full max-h-full object-contain rounded-2xl select-none"
-            draggable={false}
-          />
-        </div>
-
-        {/* Bottom bar — prev/next buttons + dot indicators, always below image */}
-        <div className="shrink-0 flex items-center justify-center gap-4 pb-8 pt-2 px-6">
-          <button
-            onClick={() => setIdx(i => Math.max(i - 1, 0))}
-            disabled={idx === 0}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white transition-colors backdrop-blur-sm">
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-
-          {slides.length > 1 && (
-            <div className="flex items-center gap-1.5 flex-wrap justify-center">
-              {slides.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIdx(i)}
-                  className={cn(
-                    'rounded-full transition-all',
-                    i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50'
-                  )}
-                />
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))}
-            disabled={idx === slides.length - 1}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white transition-colors backdrop-blur-sm">
-            <ChevronRight className="h-6 w-6" />
-          </button>
-        </div>
-      </motion.div>
-    </AnimatePresence>
-  );
-}
 
 
 
@@ -668,7 +375,7 @@ function SongsLibraryTab() {
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
                 <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Delete
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4" />} Delete
                 </Button>
               </div>
             </DialogContent>
@@ -676,60 +383,6 @@ function SongsLibraryTab() {
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-// ── NewSetlistDialog ─────────────────────────────────────────────────────────
-function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const { createSetlist } = useWorshipSetlists();
-  const { toast } = useToast();
-  const [name, setName] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!name.trim() || !date) return;
-    setSaving(true);
-    try {
-      const id = await createSetlist(name, date);
-      toast({ title: 'Setlist created', description: `"${name}" is ready.` });
-      setName(''); setDate(format(new Date(), 'yyyy-MM-dd'));
-      onCreated(id);
-      onClose();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Setlist</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Create a setlist for a worship service.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="pl-name">Service Name <span className="text-rose-500">*</span></Label>
-            <Input id="pl-name" placeholder="e.g. Sunday Morning Service" value={name} onChange={e => setName(e.target.value)}
-              className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pl-date">Date <span className="text-rose-500">*</span></Label>
-            <Input id="pl-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="rounded-xl" />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
-              disabled={!name.trim() || !date || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -892,8 +545,8 @@ function AddSongToSetlistDialog({
 
 // ── SetlistDetailView ────────────────────────────────────────────────────────
 function SetlistDetailView({
-  playlist, onBack,
-}: { playlist: WorshipSetlist; onBack: () => void }) {
+  playlist, onBack, initialSongId
+}: { playlist: WorshipSetlist; onBack: () => void; initialSongId?: string | null }) {
   const { removeSongFromSetlist, reorderSetlistSongs } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
   const { toast } = useToast();
@@ -910,6 +563,7 @@ function SetlistDetailView({
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
+
 
   // Keep orderedSongs in sync when playlist updates from Firestore (only if not in reorder mode)
   const prevPlaylistRef = useRef(playlist);
@@ -980,6 +634,21 @@ function SetlistDetailView({
     }
     return slides;
   }, [orderedSongs, songs]);
+
+  // Auto-open song if initialSongId is provided
+  const didInitSong = useRef(false);
+  useEffect(() => {
+    if (!didInitSong.current && initialSongId && songs.length > 0 && allSlides.length > 0) {
+      const ps = playlist.songs.find(s => s.songId === initialSongId);
+      if (ps) {
+        const firstSheetIdx = allSlides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
+        if (firstSheetIdx !== -1) {
+          setViewerStart(firstSheetIdx);
+        }
+      }
+      didInitSong.current = true;
+    }
+  }, [initialSongId, songs, playlist.songs, allSlides]);
 
   const openSheets = (ps: (typeof playlist.songs)[0]) => {
     const libSong = songs.find(s => s.id === ps.songId);
@@ -1186,7 +855,9 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
         <SetlistDetailView
           key="detail"
           playlist={playlists.find(p => p.id === detail.id) || detail}
-          onBack={() => setDetail(null)} />
+          onBack={() => setDetail(null)}
+          initialSongId={typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('songId')) : undefined}
+        />
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
           <div className="flex justify-end">
@@ -1261,105 +932,17 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
 
 // ── Worship Roster Components ─────────────────────────────────────────────────
 
-// Colour per role category
 function roleBadgeClass(role: WorshipRole) {
   if (role === 'Lead') return 'bg-rose-500/15 border-rose-500/30 text-rose-500';
   if (role === 'Drums') return 'bg-orange-500/15 border-orange-500/30 text-orange-500';
   if (role.startsWith('Keys')) return 'bg-amber-500/15 border-amber-500/30 text-amber-500';
   if (role === 'Bass') return 'bg-yellow-500/15 border-yellow-500/30 text-yellow-500';
-  if (role.startsWith('Vox')) return 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500';
+  if (role.startsWith('Vox')) return 'bg-emerald-500/15 border-emerald-500/20 text-emerald-600 dark:text-emerald-400';
   if (role.startsWith('E/G')) return 'bg-sky-500/15 border-sky-500/30 text-sky-500';
   if (role === 'A/G') return 'bg-blue-500/15 border-blue-500/30 text-blue-500';
   if (role === 'PPT') return 'bg-violet-500/15 border-violet-500/30 text-violet-500';
   if (role === 'Sound') return 'bg-pink-500/15 border-pink-500/30 text-pink-500';
   return 'bg-muted/40 border-border/40 text-muted-foreground';
-}
-
-// ── NewRosterDialog ────────────────────────────────────────────────────────────
-function NewRosterDialog({
-  open, onClose, onCreated, playlists,
-}: {
-  open: boolean; onClose: () => void;
-  onCreated: (id: string) => void;
-  playlists: WorshipSetlist[];
-}) {
-  const { createRoster } = useWorshipRosters();
-  const { toast } = useToast();
-  const [name, setName] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [setlistId, setSetlistId] = useState<string>('');
-  const [saving, setSaving] = useState(false);
-
-  // Auto-fill name from setlist
-  const selectedSetlist = playlists.find(p => p.id === setlistId);
-  useEffect(() => {
-    if (selectedSetlist && !name) setName(selectedSetlist.name);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSetlist]);
-
-  const handleSubmit = async () => {
-    if (!name.trim() || !date) return;
-    setSaving(true);
-    try {
-      const id = await createRoster(name, date, setlistId || null);
-      toast({ title: 'Roster created' });
-      setName(''); setDate(format(new Date(), 'yyyy-MM-dd')); setSetlistId('');
-      onCreated(id);
-      onClose();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' });
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Roster</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Create a worship team roster for a service.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="r-name">Roster Name <span className="text-rose-500">*</span></Label>
-            <Input id="r-name" placeholder="e.g. Sunday Morning" value={name} onChange={e => setName(e.target.value)} className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="r-date">Date <span className="text-rose-500">*</span></Label>
-            <Input id="r-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="r-playlist">Link to Setlist <span className="text-muted-foreground text-xs font-normal">(optional)</span></Label>
-            <select
-              id="r-playlist"
-              value={setlistId}
-              onChange={e => {
-                setSetlistId(e.target.value);
-                const sl = playlists.find(p => p.id === e.target.value);
-                if (sl) { setName(sl.name); setDate(sl.date); }
-              }}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40"
-            >
-              <option value="">None</option>
-              {playlists.map(pl => (
-                <option key={pl.id} value={pl.id}>
-                  {format(parseISO(pl.date), 'MMM d')} — {pl.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
-              disabled={!name.trim() || !date || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 // ── RosterDetailView ────────────────────────────────────────────────────────────
@@ -1671,7 +1254,7 @@ function RosterDetailView({
 }
 
 // ── RostersTab ────────────────────────────────────────────────────────────────
-function RostersTab({ onOpenPlaylist }: { onOpenPlaylist: (setlistId: string) => void }) {
+function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setlistId: string) => void; initialRosterId?: string | null }) {
   const { rosters, loading, deleteRoster } = useWorshipRosters();
   const { setlists: playlists } = useWorshipSetlists();
   const [newOpen, setNewOpen] = useState(false);
@@ -1679,6 +1262,16 @@ function RostersTab({ onOpenPlaylist }: { onOpenPlaylist: (setlistId: string) =>
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipRoster | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
+
+  // Auto-open a roster when navigated from chat
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (!didInit.current && initialRosterId && rosters.length > 0) {
+      const r = rosters.find(x => x.id === initialRosterId);
+      if (r) setDetail(r);
+      didInit.current = true;
+    }
+  }, [initialRosterId, rosters]);
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
@@ -1764,8 +1357,7 @@ function RostersTab({ onOpenPlaylist }: { onOpenPlaylist: (setlistId: string) =>
           )}
 
           <NewRosterDialog open={newOpen} onClose={() => setNewOpen(false)}
-            onCreated={id => { const r = rosters.find(x => x.id === id); if (r) setDetail(r); }}
-            playlists={playlists} />
+            onCreated={id => { const r = rosters.find(x => x.id === id); if (r) setDetail(r); }} />
 
           <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
             <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
@@ -1793,6 +1385,7 @@ export default function WorshipPortalPage() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialTab = searchParams?.get('tab') as 'playlists' | 'songs' | 'rosters' | null;
   const initialId = searchParams?.get('id');
+  const { toast } = useToast();
 
   const [tab, setTab] = useState<'playlists' | 'songs' | 'rosters'>(initialTab || 'rosters');
   const [pendingSetlistId, setPendingSetlistId] = useState<string | null>(tab === 'playlists' ? (initialId || null) : null);
@@ -1840,7 +1433,7 @@ export default function WorshipPortalPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Worship Portal"
-          description="Build setlists, manage your song library, and access chord sheets for any key."
+          description="Build setlists and manage your library. Tip: Type '/' in any chat to share songs, setlists, and rosters with your team."
           icon={Music}
           accentColor="text-rose-500"
           iconBgColor="bg-rose-500/20"
@@ -1873,7 +1466,7 @@ export default function WorshipPortalPage() {
         <AnimatePresence mode="wait">
           {tab === 'playlists' && <SetlistsTab key="playlists" initialSetlistId={pendingSetlistId} />}
           {tab === 'songs' && <SongsLibraryTab key="songs" />}
-          {tab === 'rosters' && <RostersTab key="rosters" onOpenPlaylist={handleOpenPlaylist} />}
+          {tab === 'rosters' && <RostersTab key="rosters" onOpenPlaylist={handleOpenPlaylist} initialRosterId={pendingRosterId} />}
         </AnimatePresence>
       </motion.div>
     </div>

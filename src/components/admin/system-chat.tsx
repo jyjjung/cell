@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -12,8 +13,10 @@ import {
   User,
   Loader2,
   Edit,
-  MessageSquarePlus
+  MessageSquarePlus,
+  ArrowLeft
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
@@ -22,12 +25,19 @@ import { useInvitations } from '@/hooks/use-invitations';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useToast } from '@/hooks/use-toast';
 import { parse, isValid, format } from 'date-fns';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useWorshipRosters } from '@/hooks/useWorshipRosters';
+import { Music, ListMusic, ClipboardList } from 'lucide-react';
 
 type WizardState = 
   | 'IDLE'
   | 'EVENT_TITLE' | 'EVENT_CATEGORY' | 'EVENT_START_DATE' | 'EVENT_END_DATE' | 'EVENT_START_TIME' | 'EVENT_END_TIME' | 'EVENT_LOCATION' | 'EVENT_CONFIRM'
   | 'INVITE_TITLE' | 'INVITE_DESC' | 'INVITE_DATE' | 'INVITE_START_TIME' | 'INVITE_END_TIME' | 'INVITE_LOCATION' | 'INVITE_CONFIRM'
-  | 'ANN_TITLE' | 'ANN_MSG' | 'ANN_CONFIRM';
+  | 'ANN_TITLE' | 'ANN_MSG' | 'ANN_CONFIRM'
+  | 'SONG_TITLE' | 'SONG_ARTIST' | 'SONG_CONFIRM'
+  | 'SETLIST_NAME' | 'SETLIST_DATE' | 'SETLIST_CONFIRM'
+  | 'ROSTER_NAME' | 'ROSTER_DATE' | 'ROSTER_CONFIRM';
 
 type Message = {
   id: string;
@@ -42,7 +52,11 @@ export default function SystemChat() {
   const { addEvent } = useEvents();
   const { addInvitation } = useInvitations();
   const { createNotification } = useNotifications();
+  const { addSong } = useWorshipSongs();
+  const { createSetlist } = useWorshipSetlists();
+  const { createRoster } = useWorshipRosters();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [wizardState, setWizardState] = useState<WizardState>('IDLE');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -95,7 +109,7 @@ export default function SystemChat() {
   useEffect(() => {
     if (messages.length === 0 && currentUser) {
         const timeout = setTimeout(() => {
-            systemSay(`Hi ${currentUser.firstName || 'there'}! I'm the creation wizard. What would you like to create today? Click an option below or type your choice.`);
+            systemSay(`Hi ${currentUser.firstName || 'there'}! I'm the creation wizard. You can manage **Events**, **Invites**, **Songs**, **Setlists**, or **Rosters** here. To share these items in any chat, just type **'/'** at any time!`);
         }, 1000);
         return () => clearTimeout(timeout);
     }
@@ -124,6 +138,24 @@ export default function SystemChat() {
     setFormData({});
     systemSay("Copy that. Let's draft an **Announcement**. What's the **headline**?");
   };
+  
+  const startSongFlow = () => {
+    setWizardState('SONG_TITLE');
+    setFormData({});
+    systemSay("Nice! Let's catalog a **New Song**. What is the **title**?");
+  };
+
+  const startSetlistFlow = () => {
+    setWizardState('SETLIST_NAME');
+    setFormData({});
+    systemSay("Understood. Let's build a **Setlist**. What should we **name** it? (e.g. Sunday Service)");
+  };
+
+  const startRosterFlow = () => {
+    setWizardState('ROSTER_NAME');
+    setFormData({});
+    systemSay("Copy. Let's create a **Worship Roster**. What is the **name** for this roster?");
+  };
 
   const handleUserInput = (val: string) => {
     const text = val.trim();
@@ -148,7 +180,10 @@ export default function SystemChat() {
         if (lower.includes('event')) startEventFlow();
         else if (lower.includes('invite')) startInviteFlow();
         else if (lower.includes('announcement')) startAnnouncementFlow();
-        else systemSay("I didn't quite get that. Would you like to create an **Event**, an **Invite**, or an **Announcement**?");
+        else if (lower.includes('song')) startSongFlow();
+        else if (lower.includes('setlist')) startSetlistFlow();
+        else if (lower.includes('roster')) startRosterFlow();
+        else systemSay("I didn't quite get that. Would you like to create an **Event**, an **Invite**, a **Song**, a **Setlist**, or a **Roster**?");
         return;
     }
 
@@ -275,30 +310,103 @@ export default function SystemChat() {
             setWizardState('IDLE');
         }
     }
+
+    // SONG FLOW
+    else if (wizardState === 'SONG_TITLE') {
+        setFormData({ ...formData, title: text });
+        setWizardState('SONG_ARTIST');
+        systemSay("Who is the **artist**? Enter to skip.");
+    } else if (wizardState === 'SONG_ARTIST') {
+        setFormData({ ...formData, artist: text || 'Unknown Artist' });
+        setWizardState('SONG_CONFIRM');
+        systemSay(`Save **${formData.title}** by **${text || 'Unknown Artist'}** to the library? (Yes/No)`);
+    } else if (wizardState === 'SONG_CONFIRM') {
+        if (text.toLowerCase().includes('yes')) {
+            addSong(formData.title, formData.artist).then(() => {
+                systemSay(`Song **${formData.title}** has been added.`);
+                setWizardState('IDLE');
+                toast({ title: "Song Added" });
+            });
+        } else {
+            systemSay("Cancelled.");
+            setWizardState('IDLE');
+        }
+    }
+
+    // SETLIST FLOW
+    else if (wizardState === 'SETLIST_NAME') {
+        setFormData({ ...formData, name: text });
+        setWizardState('SETLIST_DATE');
+        systemSay("What is the **Date**? YYYY-MM-DD (e.g. 2024-07-28)");
+    } else if (wizardState === 'SETLIST_DATE') {
+        setFormData({ ...formData, date: text });
+        setWizardState('SETLIST_CONFIRM');
+        systemSay(`Create setlist **${formData.name}** for **${text}**? (Yes/No)`);
+    } else if (wizardState === 'SETLIST_CONFIRM') {
+        if (text.toLowerCase().includes('yes')) {
+            createSetlist(formData.name, formData.date).then(() => {
+                systemSay("Setlist created.");
+                setWizardState('IDLE');
+                toast({ title: "Setlist Created" });
+            });
+        } else {
+            systemSay("Discarded.");
+            setWizardState('IDLE');
+        }
+    }
+
+    // ROSTER FLOW
+    else if (wizardState === 'ROSTER_NAME') {
+        setFormData({ ...formData, name: text });
+        setWizardState('ROSTER_DATE');
+        systemSay("What's the **Date**? YYYY-MM-DD (e.g. 2024-07-28)");
+    } else if (wizardState === 'ROSTER_DATE') {
+        setFormData({ ...formData, date: text });
+        setWizardState('ROSTER_CONFIRM');
+        systemSay(`Generate roster **${formData.name}** for **${text}**? (Yes/No)`);
+    } else if (wizardState === 'ROSTER_CONFIRM') {
+        if (text.toLowerCase().includes('yes')) {
+            createRoster(formData.name, formData.date).then(() => {
+                systemSay("Worship roster is ready.");
+                setWizardState('IDLE');
+                toast({ title: "Roster Created" });
+            });
+        } else {
+            systemSay("Cancelled.");
+            setWizardState('IDLE');
+        }
+    }
   };
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
+      <header className="flex-shrink-0 flex items-center justify-between py-6 px-12 z-20">
+        <button 
+          onClick={() => router.back()}
+          className="h-10 w-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+        >
+          <ArrowLeft className="h-5 w-5 text-white" />
+        </button>
+        <div className="flex flex-col items-center gap-1 opacity-40">
+           <MessageSquarePlus className="h-4 w-4 text-white" />
+           <h2 className="text-[9px] font-black uppercase tracking-[0.3em] font-inter text-white">Creation Assistant</h2>
+        </div>
+        <div className="w-10" /> {/* Spacer */}
+      </header>
+
       {/* Scrollable Message Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-12 hide-scrollbar relative"
+        className="flex-1 overflow-y-auto px-4 py-6 hide-scrollbar relative"
       >
-        <div className="max-w-3xl mx-auto w-full flex flex-col gap-8 pb-32">
-            <div className="flex flex-col items-center justify-center mb-12 opacity-30">
-                <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-                    <MessageSquarePlus className="h-6 w-6" />
-                </div>
-                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-foreground/80 font-inter">Creation Assistant</h2>
-            </div>
-
+        <div className="max-w-3xl mx-auto w-full flex flex-col pb-32">
             {messages.map((msg) => (
             <motion.div 
                 key={msg.id}
                 initial={{ opacity: 0, y: 15, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 className={cn(
-                    "flex gap-4 w-full",
+                    "flex gap-4 w-full mb-8",
                     msg.sender === 'user' ? "flex-row-reverse" : "flex-row"
                 )}
             >
@@ -372,6 +480,31 @@ export default function SystemChat() {
                     >
                         <Bell className="mr-2 h-3.5 w-3.5 text-primary" />
                         Broadcast
+                    </Button>
+                    <div className="w-full h-px bg-white/5 my-2" />
+                    <Button 
+                        onClick={startSongFlow}
+                        variant="outline"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <Music className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        New Song
+                    </Button>
+                    <Button 
+                        onClick={startSetlistFlow}
+                        variant="outline"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <ListMusic className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        Setlist
+                    </Button>
+                    <Button 
+                        onClick={startRosterFlow}
+                        variant="outline"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                    >
+                        <ClipboardList className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        Team Roster
                     </Button>
                 </motion.div>
             )}

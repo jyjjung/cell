@@ -24,13 +24,12 @@ export const metadata: Metadata = {
   title: "em.",
   description: "A simple app for community and faith.",
   icons: {
-    icon: { url: "/icon.svg", type: "image/svg+xml" },
-    shortcut: { url: "/icon.svg", type: "image/svg+xml" },
+    icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
     apple: [
-      { url: '/icon.svg' },
-      { url: '/icon.svg', sizes: '180x180', type: 'image/svg+xml' },
-      { url: '/icon.svg', sizes: '167x167', type: 'image/svg+xml' },
-      { url: '/icon.svg', sizes: '152x152', type: 'image/svg+xml' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
   },
 };

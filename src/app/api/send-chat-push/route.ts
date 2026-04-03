@@ -1,10 +1,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import type { App as FirebaseAdminApp } from 'firebase-admin/app';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore, FieldPath, type Firestore } from 'firebase-admin/firestore';
-import { getMessaging, type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
-import type { UserProfileData, Chat, ChatMessage, ChatMemberInfo } from '@/types';
+import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
+import { FieldPath, type Firestore } from 'firebase-admin/firestore';
+import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
+import type { UserProfileData, Chat, ChatMessage } from '@/types';
 
 // --- Strict FCM Payload Utilities ---
 
@@ -51,34 +50,13 @@ function assertStringMap(data: Record<string, string>) {
 }
 
 
-// --- Firebase Admin Initialization ---
-
-function initializeAdminApp(): FirebaseAdminApp {
-  const existingApp = getApps().find(app => app.name === 'firebase-admin-app-chat-push');
-  if (existingApp) {
-    return existingApp;
-  }
-
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccountKey) {
-    throw new Error('[Admin Init] CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY is not defined.');
-  }
-
-  try {
-    const credential = cert(JSON.parse(serviceAccountKey));
-    return initializeApp({ credential }, 'firebase-admin-app-chat-push');
-  } catch (e: any) {
-    throw new Error(`[Admin Init] CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY or initialize app. Error: ${e.message}`);
-  }
-}
-
 // --- Helper Functions ---
 async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore): Promise<string> {
     try {
         const userDocRef = db.collection('users').doc(senderId);
         const userDoc = await userDocRef.get();
 
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
             const userProfile = userDoc.data() as UserProfileData;
             if (userProfile.firstName) {
                 const fullName = `${userProfile.firstName} ${userProfile.lastName || ''}`.trim();
@@ -165,6 +143,19 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     const safeData = toSafeStringMap(rawData);
     const messagePayload: MulticastMessage = {
       tokens: uniqueTokens,
+      notification: {
+          title: title,
+          body: body,
+      },
+      webpush: {
+          notification: {
+              icon: '/icon.svg',
+              tag: String(chat.id),
+          },
+          fcmOptions: {
+              link: `/chat/${chat.id}`
+          }
+      },
       data: safeData
     };
     
@@ -175,16 +166,22 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 }
 
 export async function POST(request: NextRequest) {
-    const body = await request.json();
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
+
     const { chatId } = body;
     if (!chatId) {
         return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
     }
 
     try {
-        const adminApp = initializeAdminApp();
-        const adminDb = getFirestore(adminApp);
-        const adminMessaging = getMessaging(adminApp);
+        const adminApp = getAdminApp();
+        const adminDb = getAdminDb(adminApp);
+        const adminMessaging = getAdminMessaging(adminApp);
 
         const chatDocRef = adminDb.collection('chats').doc(chatId);
         const chatDoc = await chatDocRef.get();

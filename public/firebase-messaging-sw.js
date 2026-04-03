@@ -12,7 +12,7 @@ firebase.initializeApp({
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
   authDomain: "cell-abca4.firebaseapp.com",
   projectId: "cell-abca4",
-  storageBucket: "cell-abca4.appspot.com",
+  storageBucket: "cell-abca4.firebasestorage.app",
   messagingSenderId: "942477536312",
   appId: "1:942477536312:web:9487c6359a19a4c0e7cacd",
 });
@@ -62,52 +62,45 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Handle background messages
-messaging.onBackgroundMessage(async (payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  if (self.navigator && 'setAppBadge' in self.navigator) {
-    try {
-      const currentCount = await getBadgeCount();
-      const nextCount = currentCount + 1;
-      await setBadgeCount(nextCount);
-      self.navigator.setAppBadge(nextCount);
-    } catch (e) {
-      console.error('[firebase-messaging-sw.js] Error setting app badge:', e);
-    }
-  }
-
-  const notificationTitle = payload.data?.title || 'New Message';
-  const notificationOptions = {
-    body: payload.data?.body || 'You have a new update.',
-    icon: payload.data?.icon || '/icon.svg',
-    tag: payload.data?.tag || 'default-tag',
-    data: {
-        link: payload.data?.link || '/'
-    }
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  
-  const link = event.notification.data?.link || '/';
-  
+// Explicit native push listener for guaranteed badging updates on iOS Safari
+// Ensures the OS waits for indexedDB resolution before closing the service worker
+self.addEventListener('push', (event) => {
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Try to find an existing window and focus it
-      for (const client of clientList) {
-        if (client.url === link && 'focus' in client) {
-          return client.focus();
+    (async () => {
+      if (self.navigator && 'setAppBadge' in self.navigator) {
+        try {
+          const currentCount = await getBadgeCount();
+          const nextCount = currentCount + 1;
+          await setBadgeCount(nextCount);
+          if (self.navigator.setAppBadge) {
+            await self.navigator.setAppBadge(nextCount);
+          }
+        } catch (e) {
+          console.error('[firebase-messaging-sw.js] Error setting app badge:', e);
         }
       }
-      // If no window found, open a new one
-      if (clients.openWindow) {
-        return clients.openWindow(link);
-      }
-    })
+    })()
   );
 });
+
+// Handle background messages for fallback data-only notification rendering
+messaging.onBackgroundMessage(async (payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+
+  // If the payload has a 'notification' field, FirebaseSDK automatically displays it.
+  // We ONLY show a notification manually if it's a data-only fallback.
+  if (!payload.notification) {
+    const notificationTitle = payload.data?.title || 'New Message';
+    const notificationOptions = {
+      body: payload.data?.body || 'You have a new update.',
+      icon: payload.data?.icon || '/icon.svg',
+      tag: payload.data?.tag || 'default-tag',
+      data: {
+          link: payload.data?.link || '/'
+      }
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  }
+});
+

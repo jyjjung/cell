@@ -300,6 +300,9 @@ export interface ChatMessage {
   eventId?: string;
   setlistId?: string;
   rosterId?: string;
+  qtDate?: string;
+  cleaningDate?: string;
+  songId?: string;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────
