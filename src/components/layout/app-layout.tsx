@@ -176,17 +176,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
 
         if (Notification.permission === 'granted' && title) {
-          // Use the Service Worker registration to show the notification
-          // This is more robust for PWAs and ensures it feels like a "device push"
-          navigator.serviceWorker.ready.then((registration) => {
-            registration.showNotification(title, {
-              body,
-              icon: payload.data?.icon || '/apple-touch-icon-v3.png',
-              tag,
-              data: { link },
-              badge: '/icon-192x192-v3.png', // High-fidelity detail for Android/Chrome
-            });
-          });
+          // Foreground: We rely on the toast below and the native browser behavior.
+          // We DO NOT manually call showNotification here to prevent "Double Notifications"
+          // while the app is active. The Service Worker handles the background banners.
         }
 
         // --- IN-APP TOAST ---
@@ -256,7 +248,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <main role="main" className={cn("flex flex-col", isIndividualChat ? "h-full" : "min-h-full")}>
                         <div className={cn(
                             "flex-1 flex flex-col min-h-0",
-                            isIndividualChat ? "w-full h-full p-0" : "container mx-auto px-4 md:px-8 py-6 md:py-10"
+                            isIndividualChat ? "w-full h-full p-0" : ""
                         )}>
                         {isIndividualChat ? children : (
                             <motion.div

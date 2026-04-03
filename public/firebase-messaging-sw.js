@@ -11,6 +11,7 @@
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
+// Initialize Firebase app for common background logic (badge/storage)
 firebase.initializeApp({
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
   authDomain: "cell-abca4.firebaseapp.com",
@@ -19,8 +20,6 @@ firebase.initializeApp({
   messagingSenderId: "942477536312",
   appId: "1:942477536312:web:9487c6359a19a4c0e7cacd",
 });
-
-const messaging = firebase.messaging();
 
 function getBadgeCount() {
   return new Promise((resolve) => {
