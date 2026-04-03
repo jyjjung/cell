@@ -81,7 +81,7 @@ async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore)
 
 // --- API Route Logic ---
 
-async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Firestore, adminMessaging: Messaging) {
+async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Firestore, adminMessaging: Messaging, origin: string) {
     const senderId = message.senderId;
     const allRecipientIds = chat.members.filter(uid => uid !== senderId);
 
@@ -132,10 +132,11 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         body = messageText;
     }
 
+
     const rawData = {
       title: title,
       body: body,
-      icon: '/icon-192x192.png',
+      icon: `${origin}/icon-192x192.png`,
       tag: String(message.id),
       link: `/chat/${chat.id}`,
     };
@@ -151,7 +152,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
           notification: {
               title: title,
               body: body,
-              icon: '/icon-192x192.png',
+              icon: `${origin}/icon-192x192.png`,
               tag: String(message.id),
           },
           fcmOptions: {
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
         }
         const latestMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
 
-        const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging);
+        const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging, request.nextUrl.origin);
         return NextResponse.json({ success: true, delivered: result.success });
 
     } catch (error: any) {
