@@ -100,7 +100,8 @@ export default function SlashCommandSelector({
     } else if (trimmed === '/') {
       setActiveCommand(null);
       setSearchTerm('');
-    } else if (!trimmed.startsWith('/')) {
+    } else if (trimmed.length > 0 && !trimmed.startsWith('/')) {
+      // Only auto-close if the user typed something that isn't a command
       onClose();
     }
   }, [inputValue, onClose]);
@@ -163,8 +164,6 @@ export default function SlashCommandSelector({
     }
     return [];
   }, [activeCommand, searchTerm, invitations, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs]);
-
-  if (!inputValue.startsWith('/')) return null;
 
   return (
     <motion.div 
