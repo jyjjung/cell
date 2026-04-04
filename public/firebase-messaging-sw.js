@@ -22,58 +22,40 @@ firebase.initializeApp({
 });
 
 
-// Robust 'Master' push listener for all platforms
-self.addEventListener('push', (event) => {
-    console.log('[SW] Push signal received');
+const messaging = firebase.messaging();
 
-    event.waitUntil(
-        (async () => {
-            const origin = self.location.origin;
-            let title = 'em.';
-            let options = {
-                body: 'New update received.',
-                icon: `${origin}/icon-192x192-v3.png`,
-                badge: `${origin}/icon-192x192-v3.png`,
-                tag: 'em-notification-sync',
-                data: { link: '/' },
-            };
+/**
+ * Official Firebase Background Message Handler.
+ * This is triggered for 'data' messages or when the app is in the background.
+ */
+messaging.setBackgroundMessageHandler((payload) => {
+    console.log('[SW] Background Message received:', payload);
 
-            try {
-                if (!event.data) throw new Error("No data in push event");
-                
-                const json = event.data.json();
-                console.log('[SW] Payload:', json);
+    const origin = self.location.origin;
+    const data = payload.data || {};
+    
+    const title = data.title || 'em.';
+    const options = {
+        body: data.body || 'New update received.',
+        icon: `${origin}/icon-192x192-v3.png`,
+        badge: `${origin}/icon-192x192-v3.png`,
+        tag: data.tag || 'em-notification-sync',
+        data: { link: data.link || '/' },
+    };
 
-                // 1. Extract content from multiple potential FCM blocks
-                const data = json.data || {};
-                const notification = json.notification || {};
+    // 1. OS-Level Badging (Chrome 116+, Safari 16.4+)
+    if (data.badge && 'setAppBadge' in self.navigator) {
+        const count = parseInt(data.badge, 10);
+        if (!isNaN(count)) {
+            console.log('[SW] Updating OS badge:', count);
+            self.navigator.setAppBadge(count).catch(e => console.warn('Badge Error:', e));
+        }
+    }
 
-                title = data.title || notification.title || title;
-                options.body = data.body || notification.body || options.body;
-                options.tag = data.tag || options.tag;
-                
-                if (data.link) options.data.link = data.link;
-
-                // 2. Core Feature: OS-Level Badging
-                // This must happen in the waitUntil block to guarantee execution on iOS/Safari
-                if (data.badge && 'setAppBadge' in self.navigator) {
-                    const count = parseInt(data.badge, 10);
-                    if (!isNaN(count)) {
-                        console.log('[SW] Updating OS badge:', count);
-                        await self.navigator.setAppBadge(count);
-                    }
-                }
-            } catch (err) {
-                console.warn('[SW] Parsing failed or partial data:', err.message);
-            }
-
-            // 3. Final Display: Always show a notification to satisfy browser background contracts
-            // We use the 'tag' to ensure that if the browser natively showed an FCM notification, 
-            // our custom one replaces it with the correct localized content and links.
-            return self.registration.showNotification(title, options);
-        })()
-    );
+    // 2. Show the Notification
+    return self.registration.showNotification(title, options);
 });
+
 
 /**
  * Handle Notification Click: 
