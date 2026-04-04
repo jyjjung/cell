@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
                         tag: notification.id,
                         link: notification.relatedUrl || '/',
                         badge: String(badgeCount),
+                        timestamp: String(Date.now()),
+
                       }),
                       notification: { 
                           title, 

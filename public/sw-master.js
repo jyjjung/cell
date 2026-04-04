@@ -13,12 +13,15 @@ importScripts('/sw.js');
 
 // 2. Lifecycle events for immediate activation
 self.addEventListener('install', (event) => {
+  console.log('[SW Master] Install event');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+  console.log('[SW Master] Activate event');
   event.waitUntil(self.clients.claim());
 });
+
 
 // Note: Runtime caching is currently handled by the Next.js app itself, 
 // but we prioritize notification delivery above all else.

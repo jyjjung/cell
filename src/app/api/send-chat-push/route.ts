@@ -183,6 +183,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                         tag: String(message.id),
                         link: `/chat/${chat.id}`,
                         badge: badgeString,
+                        timestamp: String(Date.now()),
+
                       }),
                       // Standard notification block for foreground/system handling
                       notification: {
