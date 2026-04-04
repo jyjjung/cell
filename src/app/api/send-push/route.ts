@@ -4,6 +4,7 @@ import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin
 import type { AppNotification, UserProfileData, Chat } from '@/types';
 import { FieldPath, type Firestore } from 'firebase-admin/firestore';
 import { type Messaging } from 'firebase-admin/messaging';
+import { getMillis, isChatUnread } from '@/lib/notification-utils';
 
 /**
  * Forcefully converts all values in a record to strings to create a safe FCM data payload.
@@ -16,18 +17,6 @@ function toSafeStringMap(input: Record<string, unknown>): Record<string, string>
   return out;
 }
 
-/**
- * Robustly converts any timestamp-like value to milliseconds.
- */
-function getMillis(timestamp: any): number {
-    if (!timestamp) return 0;
-    if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
-    if (timestamp instanceof Date) return timestamp.getTime();
-    if (typeof timestamp === 'number') return timestamp;
-    if (typeof timestamp === 'string') return new Date(timestamp).getTime();
-    if (timestamp._seconds) return timestamp._seconds * 1000 + (timestamp._nanoseconds / 1000000);
-    return 0;
-}
 
 /**
  * Server-side calculation of a user's total unread count (Chats + Alerts).
@@ -50,10 +39,7 @@ async function calculateTotalUnread(userId: string, db: Firestore): Promise<numb
         let unreadChats = 0;
         chatsSnapshot.forEach(doc => {
             const chat = doc.data() as Chat;
-            if (!chat.lastMessageSentAt || !chat.lastMessageSenderId) return;
-            if (chat.lastMessageSenderId === userId) return;
-            const lastSeen = chat.memberSeen?.[userId];
-            if (getMillis(chat.lastMessageSentAt) > getMillis(lastSeen)) unreadChats++;
+            if (isChatUnread(chat, userId)) unreadChats++;
         });
 
         return unreadAlerts + unreadChats;

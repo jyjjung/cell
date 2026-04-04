@@ -10,9 +10,10 @@ import { Loader2 } from 'lucide-react';
 interface SongSummaryProps {
   songId: string;
   isSender: boolean;
+  onOpenViewer?: (songId?: string) => void;
 }
 
-export default function SongSummary({ songId, isSender }: SongSummaryProps) {
+export default function SongSummary({ songId, isSender, onOpenViewer }: SongSummaryProps) {
   const { songs, loading } = useWorshipSongs();
   const song = songs.find(s => s.id === songId);
 
@@ -47,8 +48,9 @@ export default function SongSummary({ songId, isSender }: SongSummaryProps) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      onClick={() => onOpenViewer?.(songId)}
       className={cn(
-        "group relative flex flex-col p-4 rounded-3xl border transition-all max-w-[280px] min-w-[240px] overflow-hidden",
+        "group relative flex flex-col p-4 rounded-3xl border transition-all max-w-[280px] min-w-[240px] overflow-hidden cursor-pointer active:scale-[0.98]",
         isSender 
           ? "bg-primary shadow-lg shadow-primary/20 border-primary" 
           : "bg-[#1C1C1E]/95 backdrop-blur-2xl border-white/10 shadow-xl"

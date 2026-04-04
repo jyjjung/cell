@@ -303,6 +303,8 @@ export interface ChatMessage {
   qtDate?: string;
   cleaningDate?: string;
   songId?: string;
+  songTitle?: string;
+  sheetKey?: string;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

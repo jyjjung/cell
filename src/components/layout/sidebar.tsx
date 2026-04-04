@@ -30,6 +30,7 @@ import { PixelAvatar } from '../avatar/PixelAvatar';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { translations } from '@/lib/translations';
+import { getMillis, isChatUnread } from '@/lib/notification-utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -79,22 +80,7 @@ export default function AppSidebar() {
 
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
-    return chats.filter(chat => {
-      if (!chat.lastMessageSentAt || chat.lastMessageSenderId === currentUser.uid) return false;
-      
-      const ms = (ts: any) => {
-          if (!ts) return 0;
-          if (typeof ts.toMillis === 'function') return ts.toMillis();
-          if (ts instanceof Date) return ts.getTime();
-          if (ts._seconds) return ts._seconds * 1000 + (ts._nanoseconds / 1000000);
-          return 0;
-      };
-
-      const lastSeen = chat.memberSeen?.[currentUser.uid];
-      if (!lastSeen) return true;
-
-      return ms(chat.lastMessageSentAt) > ms(lastSeen);
-    }).length;
+    return chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
   }, [chats, currentUser]);
 
   const navigate = (path: string) => {

@@ -14,7 +14,7 @@ export interface ViewerSlide {
   totalPages: number;
 }
 
-async function downloadImage(url: string, filename: string) {
+async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
     const blob = await res.blob();
@@ -107,7 +107,9 @@ export function FullScreenViewer({
             </span>
             <button
               onClick={() => {
-                downloadImage(slide.imageUrl, `${slide.songTitle} - Key ${slide.key}${slide.totalPages > 1 ? ` (Pg ${slide.page})` : ''}.png`);
+                const isPdf = slide.imageUrl.toLowerCase().includes('.pdf');
+                const ext = isPdf ? '.pdf' : '.png';
+                downloadFile(slide.imageUrl, `${slide.songTitle} - Key ${slide.key}${slide.totalPages > 1 ? ` (Pg ${slide.page})` : ''}${ext}`);
               }}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
               title="Download Chord Sheet">
@@ -117,17 +119,26 @@ export function FullScreenViewer({
         </div>
 
         <div className="flex-1 flex items-center justify-center overflow-hidden px-4 py-2">
-          <motion.img
-            key={slide.imageUrl}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.18 }}
-            src={slide.imageUrl}
-            alt="chord sheet"
-            className="max-w-full max-h-full object-contain rounded-2xl select-none"
-            draggable={false}
-          />
+          {slide.imageUrl.toLowerCase().includes('.pdf') ? (
+            <iframe
+              src={`${slide.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+              className="w-full h-full rounded-2xl border-none bg-white/5 shadow-2xl"
+              title="PDF Chord Sheet"
+              style={{ minHeight: '60vh' }}
+            />
+          ) : (
+            <motion.img
+              key={slide.imageUrl}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.18 }}
+              src={slide.imageUrl}
+              alt="chord sheet"
+              className="max-w-full max-h-full object-contain rounded-2xl select-none"
+              draggable={false}
+            />
+          )}
         </div>
 
         <div className="shrink-0 flex items-center justify-center gap-4 pb-8 pt-2 px-6">

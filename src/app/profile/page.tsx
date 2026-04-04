@@ -25,6 +25,7 @@ import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
 import { format, parseISO } from 'date-fns';
 import { motion } from 'framer-motion';
+import { PageHeader } from '@/components/ui/page-layout';
 
 
 
@@ -283,15 +284,14 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-24">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t.myProfile}</h1>
-      </motion.header>
+      <PageHeader
+        title={t.myProfile}
+        icon={UserIcon}
+        accentColor="text-primary"
+        iconBgColor="bg-primary/10"
+      />
 
       {/* Avatar + Name Card */}
       <motion.div

@@ -7,7 +7,7 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn } from '@/lib/utils';
-import { SmilePlus, Download, Music } from 'lucide-react';
+import { SmilePlus, Download, Music, Maximize } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -34,7 +34,7 @@ interface MessageBubbleProps {
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
   onReply?: () => void;
-  onOpenWorshipViewer?: (setlistId: string, songId?: string) => void;
+  onOpenWorshipViewer?: (setlistId?: string, songId?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
 }
@@ -141,34 +141,50 @@ const MessageBubble = React.memo(function MessageBubble({
                         )}
 
                         {message.songId && message.imageUrl && (
-                          <div className="flex flex-col gap-0 mb-2 group/sheet">
-                             <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl">
+                          <div 
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                if (onOpenWorshipViewer) {
+                                  onOpenWorshipViewer(message.setlistId, message.songId);
+                                }
+                            }}
+                            className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
+                          >
+                             <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-white/10 transition-colors">
                                 <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
                                     <Music className="w-4 h-4 text-primary" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h4 className="text-[13px] font-black text-white truncate leading-tight">Shared Chord Sheet</h4>
-                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate">Click to Expand</p>
+                                    <h4 className="text-[13px] font-black text-white truncate leading-tight">
+                                        {message.songTitle || 'Shared Chord Sheet'}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate">
+                                        {message.sheetKey ? `${message.sheetKey} Chart • ` : ''}Click to Expand
+                                    </p>
                                 </div>
                              </div>
-                             <ImageLightbox
-                                imageUrl={message.imageUrl}
-                                altText="Chord Sheet"
-                                onDownload={handleDownload}
-                                trigger={
-                                    <div className="relative border border-white/5 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-black/40 cursor-zoom-in group-hover/sheet:border-primary/30 transition-colors">
-                                        <img 
-                                            src={message.imageUrl} 
-                                            alt="Chord Sheet" 
-                                            className="w-full h-auto object-cover max-h-[350px]"
+                             <div className="relative border border-white/5 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-black/40 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
+                                {message.imageUrl.toLowerCase().includes('.pdf') ? (
+                                    <div className="w-full h-full pointer-events-none origin-top overflow-hidden">
+                                        <iframe 
+                                            src={`${message.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
+                                            className="w-full h-[300%] border-none opacity-80"
+                                            title="PDF Preview"
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover/sheet:opacity-100 transition-opacity" />
-                                        <div className="absolute bottom-2 right-2 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-widest">
-                                           Full View
-                                        </div>
                                     </div>
-                                }
-                             />
+                                ) : (
+                                    <img 
+                                        src={message.imageUrl} 
+                                        alt="Chord Sheet" 
+                                        className="w-full h-auto object-cover max-h-[350px]"
+                                    />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
+                                <div className="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 translate-y-1 opacity-0 group-hover/sheet:translate-y-0 group-hover/sheet:opacity-100 transition-all">
+                                   <Maximize className="w-3 h-3" />
+                                   Full View
+                                </div>
+                             </div>
                           </div>
                         )}
 
@@ -211,7 +227,11 @@ const MessageBubble = React.memo(function MessageBubble({
                         )}
                         
                         {message.songId && !message.imageUrl && (
-                          <SongSummary songId={message.songId} isSender={isSender} />
+                          <SongSummary 
+                            songId={message.songId} 
+                            isSender={isSender} 
+                            onOpenViewer={(songId) => onOpenWorshipViewer?.(undefined, songId)}
+                          />
                         )}
                   </div>
 

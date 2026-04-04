@@ -147,7 +147,9 @@ export function useMessages(chatId: string | null) {
     rosterId?: string,
     qtDate?: string,
     cleaningDate?: string,
-    songId?: string
+    songId?: string,
+    songTitle?: string,
+    sheetKey?: string
   ) => {
     if (!currentUser || !chatId) return;
     if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId) return;
@@ -169,6 +171,8 @@ export function useMessages(chatId: string | null) {
     if (qtDate) messageData.qtDate = qtDate;
     if (cleaningDate) messageData.cleaningDate = cleaningDate;
     if (songId) messageData.songId = songId;
+    if (songTitle) messageData.songTitle = songTitle;
+    if (sheetKey) messageData.sheetKey = sheetKey;
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
@@ -180,12 +184,12 @@ export function useMessages(chatId: string | null) {
     if (rosterId) lastText = "📋 Roster";
     if (qtDate) lastText = "📖 QT Roster";
     if (cleaningDate) lastText = "🧹 Cleaning Roster";
-    if (songId) lastText = "🎵 Song";
+    if (songId) lastText = `🎵 Chord Sheet: ${songTitle || 'Song'} (${sheetKey || ''})`;
 
     try {
         // --- STAGE 1: PERSISTENCE ---
         // Await these writes strictly to prevent the Push API from 404ing on the message if it's too fast
-        await addDoc(messagesColRef, messageData);
+        const docRef = await addDoc(messagesColRef, messageData);
         await updateDoc(chatDocRef, {
             lastMessageText: lastText,
             lastMessageSentAt: serverTimestamp(),
@@ -194,12 +198,13 @@ export function useMessages(chatId: string | null) {
         });
 
         // --- STAGE 2: NOTIFICATION ---
-        // Fire and forget push dispatch
+        // Fire and forget push dispatch — now passing the specific messageId
         fetch('/api/send-chat-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 chatId, 
+                messageId: docRef.id,
                 text: lastText, 
                 senderId: currentUser.uid 
             }),

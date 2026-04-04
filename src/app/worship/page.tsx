@@ -199,8 +199,15 @@ function SongDetailView({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {sheets.map((sheet, idx) => (
                   <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted/10 aspect-[3/4]">
-                    <img src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    {sheet.imageUrl.toLowerCase().includes('.pdf') ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors">
+                        <BookOpen className="h-10 w-10 text-rose-500/40" />
+                        <span className="text-[10px] font-black text-rose-500/60 mt-2">PDF DOCUMENT</span>
+                      </div>
+                    ) : (
+                      <img src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
+                        className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
                       <button onClick={() => setViewSheet(sheet)}
                         title="View sheet"
