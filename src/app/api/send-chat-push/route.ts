@@ -161,22 +161,21 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
             }
 
             // Calculate individualized unread count
+            console.log(`[FCM Debug] Calculating unread for user: ${userId}`);
             const badgeCount = await calculateTotalUnread(userId, adminDb);
             const badgeString = String(badgeCount);
             const originUrl = 'https://ndcem.vercel.app';
 
-            console.log(`[FCM] User ${userId} has ${userTokens.length} tokens. Badge: ${badgeCount}`);
+            console.log(`[FCM Debug] Dispatching to ${userTokens.length} tokens for user ${userId}. Total unread: ${badgeCount}`);
 
             for (const token of userTokens) {
                 try {
-                    console.log(`[FCM] Sending to token: ${token.substring(0, 10)}... VAPID: ${process.env.NEXT_PUBLIC_FCM_VAPID_KEY ? 'Present' : 'MISSING'}`);
+                    console.log(`[FCM Debug] Target token: ${token.substring(0, 10)}...`);
                     
                     const payload = {
                       token: token,
-                      notification: {
-                          title: title,
-                          body: body,
-                      },
+                      // We provide a 'data' block to ensure the Service Worker 'push' event fires reliably.
+                      // Some browsers ignore the 'push' event if only the top-level 'notification' block is present.
                       data: toSafeStringMap({
                         title: title,
                         body: body,
@@ -185,6 +184,11 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                         link: `/chat/${chat.id}`,
                         badge: badgeString,
                       }),
+                      // Standard notification block for foreground/system handling
+                      notification: {
+                          title: title,
+                          body: body,
+                      },
                       webpush: {
                           notification: {
                               title: title,
@@ -208,7 +212,9 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                       }
                     };
 
-                    await adminMessaging.send(payload);
+                    console.log(`[FCM Debug] Payload constructed. Sending via adminMessaging...`);
+                    const response = await adminMessaging.send(payload);
+                    console.log(`[FCM Debug] FCM Response: ${response}`);
                     totalSuccess++;
                 } catch (tokenErr: any) {
                     console.warn(`[FCM Fail] Token failed for user ${userId}:`, tokenErr.code || tokenErr.message);
@@ -305,7 +311,12 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error('Error sending chat push notification:', error);
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        console.error('[FCM Fatal] Error sending chat push notification:', error);
+        return NextResponse.json({ 
+            error: 'Internal Server Error', 
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        }, { status: 500 });
     }
 }

@@ -102,10 +102,7 @@ export async function POST(request: NextRequest) {
                     
                     const payload = {
                       token: token,
-                      notification: { 
-                          title, 
-                          body,
-                      },
+                      // Data-first payload ensures the 'push' event listener in the SW is always triggered.
                       data: toSafeStringMap({
                         title,
                         body,
@@ -114,6 +111,10 @@ export async function POST(request: NextRequest) {
                         link: notification.relatedUrl || '/',
                         badge: String(badgeCount),
                       }),
+                      notification: { 
+                          title, 
+                          body,
+                      },
                       webpush: {
                           notification: {
                               title,
@@ -137,7 +138,9 @@ export async function POST(request: NextRequest) {
                       }
                     };
 
-                    await adminMessaging.send(payload);
+                    console.log(`[FCM Debug] Dispatching system notification to ${token.substring(0, 10)}...`);
+                    const response = await adminMessaging.send(payload);
+                    console.log(`[FCM Debug] FCM Response: ${response}`);
                     totalSuccess++;
                 } catch (tokenErr: any) {
                     console.warn(`[FCM Fail] Token failed for user ${userId}:`, tokenErr.code || tokenErr.message);
@@ -168,7 +171,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, delivered: totalSuccess, failed: totalFailure });
 
   } catch (error: any) {
-    console.error('Error sending push notification:', error);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    console.error('[FCM Fatal] Error sending system push notification:', error);
+    return NextResponse.json({ 
+        error: 'Internal Server Error', 
+        message: error.message,
+        stack: error.stack
+    }, { status: 500 });
   }
 }
