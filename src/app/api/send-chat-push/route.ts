@@ -189,11 +189,15 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
             for (const token of userTokens) {
                 try {
+                    console.log(`[FCM] Sending to token: ${token.substring(0, 10)}... VAPID: ${process.env.NEXT_PUBLIC_FCM_VAPID_KEY ? 'Present' : 'MISSING'}`);
+                    
                     const payload = {
                       token: token,
                       notification: {
                           title: title,
                           body: body,
+                          // TOP-LEVEL BADGE (Maximum Redundancy)
+                          notificationBadge: Number(badgeCount),
                       },
                       data: toSafeStringMap({
                         title: title,
