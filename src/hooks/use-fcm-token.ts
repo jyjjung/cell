@@ -25,7 +25,7 @@ export function useFCMToken() {
       if (permission === 'granted') {
         const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
         if (!vapidKey) {
-            console.warn('[useFCMToken] Missing VAPID key in environment.');
+            console.error('[useFCMToken] FATAL: Missing NEXT_PUBLIC_FCM_VAPID_KEY in environment.');
             return;
         }
 

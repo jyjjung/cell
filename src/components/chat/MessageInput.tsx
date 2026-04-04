@@ -106,9 +106,9 @@ export default function MessageInput({
         // If we have an image URL for the specific key, use it as the main image
         if (metadata?.imageUrl) {
             args[1] = metadata.imageUrl;
-            // Optionally update text to include the key for clarity
-            // args[0] = `Chord Sheet: ${metadata.songTitle} (${metadata.sheetKey})`;
         }
+        if (metadata?.songTitle) args[10] = metadata.songTitle;
+        if (metadata?.sheetKey) args[11] = metadata.sheetKey;
     }
 
     sendMessage(...args);

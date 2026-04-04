@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { useFCMToken } from '@/hooks/use-fcm-token';
+import { getMillis, isChatUnread } from '@/lib/notification-utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -74,30 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }).length;
 
     // 2. Unread Chats
-    const unreadChats = chats.filter(chat => {
-      // Basic validation
-      if (!chat.lastMessageSentAt || !chat.lastMessageSenderId) return false;
-      
-      // Don't count if we were the last sender
-      if (chat.lastMessageSenderId === currentUser.uid) return false;
-      
-      // Robust unread check: if we haven't seen it, or if most recent message is after our last seen
-      const lastSeen = chat.memberSeen?.[currentUser.uid];
-      const lastSent = chat.lastMessageSentAt;
-
-      const getMs = (ts: any) => {
-          if (!ts) return 0;
-          if (typeof ts.toMillis === 'function') return ts.toMillis();
-          if (ts instanceof Date) return ts.getTime();
-          if (ts._seconds) return ts._seconds * 1000 + (ts._nanoseconds / 1000000);
-          return 0;
-      };
-
-      // If we've never seen the chat (no lastSeen), it's unread if there's a message from someone else
-      if (!lastSeen) return true;
-
-      return getMs(lastSent) > getMs(lastSeen);
-    }).length;
+    const unreadChats = chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
     
     return unreadAlerts + unreadChats;
   }, [notifications, chats, currentUser]);
@@ -152,7 +130,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       // Standardize on '/firebase-messaging-sw.js' for 100% Firebase & custom Push compatibility.
       const initPush = async () => {
         try {
-          await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+          
+          // Ensure we update the SW immediately when a new one is available
+          registration.onupdatefound = () => {
+              const installingWorker = registration.installing;
+              if (installingWorker) {
+                  installingWorker.onstatechange = () => {
+                      if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                          console.log('[AppLayout] New SW version available. Refresh suggested.');
+                      }
+                  };
+              }
+          };
+          
           console.log('[AppLayout] Master Worker registered successfully');
         } catch (error) {
           console.log('[AppLayout] Service worker registration failed:', error);

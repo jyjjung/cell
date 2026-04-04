@@ -251,13 +251,13 @@ export function AddChordSheetDialog({
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Upload Chart</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Add a chord sheet image for {song?.title}.
+            Add a chord sheet image or PDF for {song?.title}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="cs-file">Image File <span className="text-rose-500">*</span></Label>
-            <Input id="cs-file" type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
+            <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-rose-500">*</span></Label>
+            <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cs-key">Musical Key</Label>

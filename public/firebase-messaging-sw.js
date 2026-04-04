@@ -91,3 +91,32 @@ self.addEventListener('push', (event) => {
     );
 });
 
+/**
+ * Handle Notification Click: 
+ * Opens the app or focuses an existing window and navigates to the target link.
+ */
+self.addEventListener('notificationclick', (event) => {
+    console.log('[SW] Notification clicked:', event.notification.tag);
+    event.notification.close();
+
+    const urlToOpen = event.notification.data?.link || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // 1. If a window is already open at this origin, focus it and navigate
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+                    return client.focus().then((focusedClient) => {
+                        return focusedClient.navigate(urlToOpen);
+                    });
+                }
+            }
+            // 2. If no window is open, open a new one
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
+});
+

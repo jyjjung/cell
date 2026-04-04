@@ -49,7 +49,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   
   // Worship Modal Viewer
-  const [worshipViewer, setWorshipViewer] = useState<{ setlistId: string; songId?: string } | null>(null);
+  const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string } | null>(null);
   
   // Worship Creation Dialogs
   const [showNewSong, setShowNewSong] = useState(false);
@@ -239,22 +239,41 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       {/* Worship Viewer Modal logic constructed from state */}
       {(() => {
         if (!worshipViewer) return null;
-        const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
-        if (!setlist) return null;
-
-        // Build flat slide array across all ordered songs
-        const orderedSongs = [...setlist.songs].sort((a, b) => a.order - b.order);
         const slides: ViewerSlide[] = [];
-        for (const ps of orderedSongs) {
-          const libSong = songs.find(s => s.id === ps.songId);
-          if (!libSong) continue;
-          const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-          forKey.forEach((sheet, i) => {
+        
+        if (worshipViewer.setlistId) {
+          const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
+          if (!setlist) return null;
+
+          const orderedSongs = [...setlist.songs].sort((a, b) => a.order - b.order);
+          for (const ps of orderedSongs) {
+            const libSong = songs.find(s => s.id === ps.songId);
+            if (!libSong) continue;
+            const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
+            forKey.forEach((sheet, i) => {
+              slides.push({
+                imageUrl: sheet.imageUrl,
+                songTitle: ps.title,
+                key: ps.key,
+                page: i + 1,
+                totalPages: forKey.length,
+              });
+            });
+          }
+        } else if (worshipViewer.songId) {
+          const libSong = songs.find(s => s.id === worshipViewer.songId);
+          if (!libSong) return null;
+          
+          libSong.chordSheets.forEach((sheet) => {
+            // Group by key to get proper paging if multiple sheets for one key
+            const forKey = libSong.chordSheets.filter(s => s.key === sheet.key);
+            const page = forKey.findIndex(s => s.id === sheet.id) + 1;
+            
             slides.push({
               imageUrl: sheet.imageUrl,
-              songTitle: ps.title,
-              key: ps.key,
-              page: i + 1,
+              songTitle: libSong.title,
+              key: sheet.key,
+              page,
               totalPages: forKey.length,
             });
           });
@@ -263,8 +282,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         if (slides.length === 0) return null;
 
         let startIndex = 0;
-        if (worshipViewer.songId) {
-          const ps = setlist.songs.find(s => s.songId === worshipViewer.songId);
+        if (worshipViewer.setlistId && worshipViewer.songId) {
+          const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
+          const ps = setlist?.songs.find((s: any) => s.songId === worshipViewer.songId);
           if (ps) {
             const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
             if (foundIdx !== -1) startIndex = foundIdx;
