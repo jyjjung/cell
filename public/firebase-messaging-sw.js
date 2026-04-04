@@ -22,70 +22,54 @@ firebase.initializeApp({
 });
 
 
-// Robust 'Failsafe' push listener for iOS reliability
+// Robust 'Master' push listener for all platforms
 self.addEventListener('push', (event) => {
-    console.log('[SW] Push received:', event);
+    console.log('[SW] Push signal received');
 
-    // 1. Immediately wrap in waitUntil to satisfy Safari's background contract
     event.waitUntil(
         (async () => {
             const origin = self.location.origin;
-            let title = 'New Message';
+            let title = 'em.';
             let options = {
-                body: 'You have a new update in your Sync chat.',
+                body: 'New update received.',
                 icon: `${origin}/icon-192x192-v3.png`,
-                tag: 'community-update',
                 badge: `${origin}/icon-192x192-v3.png`,
+                tag: 'em-notification-sync',
+                data: { link: '/' },
             };
 
             try {
-                if (event.data) {
-                    const payload = event.data.text();
-                    console.log('[SW] Raw payload:', payload);
+                if (!event.data) throw new Error("No data in push event");
+                
+                const json = event.data.json();
+                console.log('[SW] Payload:', json);
 
-                    try {
-                        const json = event.data.json();
-                        console.log('[SW] JSON parsed:', json);
+                // 1. Extract content from multiple potential FCM blocks
+                const data = json.data || {};
+                const notification = json.notification || {};
 
-                        // 2. Extract from standard notification block
-                        const fcmNotif = json.notification || (json.data && json.data.notification ? JSON.parse(json.data.notification) : null);
-                        
-                        if (fcmNotif) {
-                            title = fcmNotif.title || title;
-                            options.body = fcmNotif.body || options.body;
-                        }
+                title = data.title || notification.title || title;
+                options.body = data.body || notification.body || options.body;
+                options.tag = data.tag || options.tag;
+                
+                if (data.link) options.data.link = data.link;
 
-                        // 3. Extract from custom data block (Badge & Link)
-                        const data = json.data || {};
-                        title = data.title || title;
-                        options.body = data.body || options.body;
-                        options.tag = data.tag || options.tag;
-                        
-                        if (data.link) {
-                            options.data = { link: data.link };
-                        }
-
-                        // 4. Server-Side Badging: Set the app icon badge directly from the signal
-                        if (data.badge && self.navigator && 'setAppBadge' in self.navigator) {
-                            const count = parseInt(data.badge, 10);
-                            console.log('[SW] Setting App Badge:', count);
-                            if (!isNaN(count)) {
-                                await self.navigator.setAppBadge(count);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('[SW] JSON parse failed, using text fallback');
-                        options.body = payload || options.body;
+                // 2. Core Feature: OS-Level Badging
+                // This must happen in the waitUntil block to guarantee execution on iOS/Safari
+                if (data.badge && 'setAppBadge' in self.navigator) {
+                    const count = parseInt(data.badge, 10);
+                    if (!isNaN(count)) {
+                        console.log('[SW] Updating OS badge:', count);
+                        await self.navigator.setAppBadge(count);
                     }
-                } else {
-                    console.warn('[SW] No data in push event');
                 }
-            } catch (e) {
-                console.error('[SW] Failsafe parsing error:', e);
+            } catch (err) {
+                console.warn('[SW] Parsing failed or partial data:', err.message);
             }
 
-            // 5. Final Handshake: Always show a notification
-            console.log('[SW] Showing notification:', title, options);
+            // 3. Final Display: Always show a notification to satisfy browser background contracts
+            // We use the 'tag' to ensure that if the browser natively showed an FCM notification, 
+            // our custom one replaces it with the correct localized content and links.
             return self.registration.showNotification(title, options);
         })()
     );
