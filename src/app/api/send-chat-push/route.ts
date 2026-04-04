@@ -164,7 +164,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
             console.log(`[FCM Debug] Calculating unread for user: ${userId}`);
             const badgeCount = await calculateTotalUnread(userId, adminDb);
             const badgeString = String(badgeCount);
-            const originUrl = 'https://ndcem.vercel.app';
+            const originUrl = origin;
 
             console.log(`[FCM Debug] Dispatching to ${userTokens.length} tokens for user ${userId}. Total unread: ${badgeCount}`);
 
@@ -195,6 +195,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                               body: body,
                               icon: `${originUrl}/icon-192x192-v3.png`,
                               badge: `${originUrl}/icon-192x192-v3.png`,
+
                               tag: String(message.id),
                           },
                           fcmOptions: {

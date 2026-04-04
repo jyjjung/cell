@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
             const badgeCount = await calculateTotalUnread(userId, adminDb);
             const title = notification.title || 'New Notification';
             const body = notification.message || '';
-            const originUrl = 'https://ndcem.vercel.app';
+            const originUrl = request.nextUrl.origin;
             console.log(`[FCM] User ${userId} has ${userTokens.length} tokens. Badge: ${badgeCount}`);
 
             for (const token of userTokens) {
@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
                               body,
                               icon: `${originUrl}/icon-192x192-v3.png`,
                               badge: `${originUrl}/icon-192x192-v3.png`,
+
                               tag: notification.id,
                           },
                           fcmOptions: {

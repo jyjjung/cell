@@ -127,10 +127,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const hasSW = isBrowser && 'serviceWorker' in navigator;
     
     if (hasSW && messaging && currentUser) {
-      // Standardize on '/firebase-messaging-sw.js' for 100% Firebase & custom Push compatibility.
+      // Standardize on '/sw-master.js' as the unified entry point for BOTH Workbox and Messaging.
       const initPush = async () => {
         try {
-          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+          const registration = await navigator.serviceWorker.register('/sw-master.js', { scope: '/' });
           
           // Ensure we update the SW immediately when a new one is available
           registration.onupdatefound = () => {
@@ -145,6 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           };
           
           console.log('[AppLayout] Master Worker registered successfully');
+
         } catch (error) {
           console.log('[AppLayout] Service worker registration failed:', error);
         }
