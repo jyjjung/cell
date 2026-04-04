@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMessages } from '@/hooks/useMessages';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
-import { ArrowUp, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { ArrowUp, Image as ImageIcon, Loader2, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
@@ -57,8 +57,17 @@ export default function MessageInput({
     if (onCancelReply) onCancelReply();
   };
 
-  const handleSlashSelect = (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster', id: string) => {
+  const handleSlashSelect = (
+    type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', 
+    id: string,
+    metadata?: any
+  ) => {
     // Check if it's a creation command
+    if (type === 'image') {
+       handleImageClick();
+       setShowSlashCommands(false);
+       return;
+    }
     if (type === 'new-song') {
       onOpenWorshipCreate?.('song');
       setText('');
@@ -92,7 +101,15 @@ export default function MessageInput({
     else if (type === 'roster') args[6] = id;
     else if (type === 'qt') args[7] = id;
     else if (type === 'cleaning') args[8] = id;
-    else if (type === 'song') args[9] = id; 
+    else if (type === 'song') {
+        args[9] = id;
+        // If we have an image URL for the specific key, use it as the main image
+        if (metadata?.imageUrl) {
+            args[1] = metadata.imageUrl;
+            // Optionally update text to include the key for clarity
+            // args[0] = `Chord Sheet: ${metadata.songTitle} (${metadata.sheetKey})`;
+        }
+    }
 
     sendMessage(...args);
     setText('');
@@ -158,11 +175,15 @@ export default function MessageInput({
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
         <button 
             type="button" 
-            onClick={handleImageClick} 
+            onClick={() => setShowSlashCommands(!showSlashCommands)} 
             disabled={disabled || isUploading}
-            className={cn("h-9 w-9 flex items-center justify-center rounded-full bg-white/5 border border-white/5 text-muted-foreground", isUploading && "animate-pulse")}
+            className={cn(
+                "h-9 w-9 flex items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-primary transition-all active:scale-90", 
+                showSlashCommands && "bg-primary text-white rotate-45",
+                isUploading && "animate-pulse"
+            )}
         >
-            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImageIcon className="h-5 w-5" />}
+            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
         </button>
 
         <div className="flex-1 flex items-center bg-[#3B3B3D]/40 backdrop-blur-3xl px-4 py-1 rounded-full border border-white/5 overflow-hidden">
@@ -174,7 +195,12 @@ export default function MessageInput({
               onChange={(e) => {
                   const val = e.target.value;
                   setText(val);
-                  setShowSlashCommands(val.startsWith('/'));
+                  if (val.startsWith('/')) {
+                    setShowSlashCommands(true);
+                  } else if (val === '' && !showSlashCommands) {
+                    // Stay closed if we backspaced the slash
+                    setShowSlashCommands(false);
+                  }
               }}
               onFocus={() => !disabled && !isUploading && updateTypingStatus(true)}
               onBlur={() => updateTypingStatus(false)}

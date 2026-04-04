@@ -10,7 +10,9 @@ import {
   Search,
   ChevronRight,
   BookOpen,
-  Upload
+  Upload,
+  Image as ImageIcon,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEvents } from '@/hooks/use-events';
@@ -25,12 +27,13 @@ import { format } from 'date-fns';
 
 interface SlashCommandSelectorProps {
   inputValue: string;
-  onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster', id: string) => void;
+  onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', id: string, metadata?: any) => void;
   onClose: () => void;
   showWorshipCreation?: boolean;
 }
 
 const COMMANDS = [
+  { id: 'image', label: 'Attach Image', icon: ImageIcon, description: 'Share a photo with the group' },
   { id: 'invite', label: '/invite', icon: Mail, description: 'Share an invitation' },
   { id: 'event', label: '/event', icon: Calendar, description: 'Share an event' },
   { id: 'setlist', label: '/setlist', icon: Music, description: 'Share a worship setlist' },
@@ -52,6 +55,7 @@ export default function SlashCommandSelector({
 }: SlashCommandSelectorProps) {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   
   const { events } = useEvents();
   const { invitations } = useInvitations();
@@ -61,6 +65,11 @@ export default function SlashCommandSelector({
   const { roster: cleaningRoster } = useCleaningRoster();
   const { cleaningDays } = useCleaningDays();
   const { songs } = useWorshipSongs();
+
+  const selectedSong = useMemo(() => 
+    selectedSongId ? songs.find(s => s.id === selectedSongId) : null,
+    [songs, selectedSongId]
+  );
 
   useEffect(() => {
     const trimmed = inputValue.trim();
@@ -177,12 +186,15 @@ export default function SlashCommandSelector({
                 )}
             </div>
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">
-                {activeCommand ? `Shared ${activeCommand}` : "Quick Actions"}
+                {selectedSong ? "Pick Key" : (activeCommand ? `Shared ${activeCommand}` : "Quick Actions")}
             </span>
         </div>
-        {activeCommand && (
+        {(activeCommand || selectedSong) && (
             <button 
-                onClick={() => setActiveCommand(null)}
+                onClick={() => {
+                    if (selectedSong) setSelectedSongId(null);
+                    else setActiveCommand(null);
+                }}
                 className="text-[9px] font-bold text-primary hover:underline transition-all"
             >
                 Back
@@ -191,7 +203,36 @@ export default function SlashCommandSelector({
       </div>
 
       <div className="max-h-[280px] overflow-y-auto py-2 custom-scrollbar">
-        {!activeCommand ? (
+        {selectedSong ? (
+          <div className="p-4">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Available Keys</p>
+            <div className="grid grid-cols-4 gap-2">
+                {selectedSong.chordSheets.length > 0 ? (
+                    selectedSong.chordSheets.map((sheet) => (
+                        <button
+                            key={sheet.id}
+                            onClick={() => {
+                                onSelect('song', selectedSong.id, { 
+                                    imageUrl: sheet.imageUrl,
+                                    sheetKey: sheet.key,
+                                    songTitle: selectedSong.title,
+                                    artist: selectedSong.artist
+                                });
+                                onClose();
+                            }}
+                            className="h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-[13px] font-black hover:bg-primary hover:text-white transition-all active:scale-95"
+                        >
+                            {sheet.key}
+                        </button>
+                    ))
+                ) : (
+                    <div className="col-span-4 p-8 text-center bg-white/5 rounded-2xl border border-dashed border-white/10">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-rose-500">No Sheets Uploaded</p>
+                    </div>
+                )}
+            </div>
+          </div>
+        ) : !activeCommand ? (
           <div className="flex flex-col px-2">
             {COMMANDS
               .filter(cmd => !cmd.isWorshipCreation || showWorshipCreation)
@@ -199,7 +240,9 @@ export default function SlashCommandSelector({
               <button
                 key={cmd.id}
                 onClick={() => {
-                  if (cmd.isWorshipCreation) {
+                   if (cmd.id === 'image') {
+                    onSelect('image', '');
+                  } else if (cmd.isWorshipCreation) {
                     onSelect(cmd.id as any, '');
                   } else {
                     setActiveCommand(cmd.id);
@@ -207,14 +250,18 @@ export default function SlashCommandSelector({
                 }}
                 className={cn(
                   "flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group",
-                  cmd.isWorshipCreation ? "border-l-2 border-primary/40 bg-primary/5" : ""
+                  cmd.isWorshipCreation ? "border-l-2 border-primary/40 bg-primary/5" : "",
+                  cmd.id === 'image' ? "bg-primary/5 border border-primary/10 mb-2" : ""
                 )}
               >
-                <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <cmd.icon className="w-5 h-5 text-foreground/70" />
+                <div className={cn(
+                    "h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform",
+                    cmd.id === 'image' ? "bg-primary/10" : ""
+                )}>
+                  <cmd.icon className={cn("w-5 h-5 text-foreground/70", cmd.id === 'image' ? "text-primary" : "")} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-white group-hover:text-primary transition-colors">{cmd.label}</p>
+                  <p className={cn("text-[13px] font-bold text-white group-hover:text-primary transition-colors", cmd.id === 'image' ? "text-primary/90" : "")}>{cmd.label}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{cmd.description}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
@@ -227,7 +274,14 @@ export default function SlashCommandSelector({
               filteredItems.map((item: any) => (
                 <button
                   key={item.id}
-                  onClick={() => onSelect(item.type, item.id)}
+                  onClick={() => {
+                    if (item.type === 'song') {
+                        // For song type, we enter the key selector
+                        setSelectedSongId(item.id);
+                    } else {
+                        onSelect(item.type, item.id);
+                    }
+                  }}
                   className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group"
                 >
                   <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0 overflow-hidden">
