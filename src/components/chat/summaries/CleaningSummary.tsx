@@ -62,7 +62,7 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
       className="block transition-transform active:scale-95 cursor-pointer"
     >
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full min-w-[280px]",
+        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
         isSender 
           ? "bg-emerald-500/10 border-emerald-500/20 text-white" 
           : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"

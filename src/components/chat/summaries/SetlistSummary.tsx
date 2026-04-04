@@ -63,7 +63,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
       className="block transition-transform active:scale-95 cursor-pointer"
     >
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full min-w-[280px] sm:min-w-[320px]",
+        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
         isSender 
           ? "bg-[#007AFF]/10 border-[#007AFF]/20 text-white" 
           : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"

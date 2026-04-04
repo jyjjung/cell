@@ -112,9 +112,14 @@ export async function POST(request: NextRequest) {
 
             for (const token of userTokens) {
                 try {
+                    console.log(`[FCM] Test Push to token: ${token.substring(0, 10)}... VAPID: ${process.env.NEXT_PUBLIC_FCM_VAPID_KEY ? 'Present' : 'MISSING'}`);
+                    
                     const payload = {
                       token: token,
-                      notification: { title, body },
+                      notification: { 
+                          title, 
+                          body,
+                      },
                       data: toSafeStringMap({
                         title,
                         body,

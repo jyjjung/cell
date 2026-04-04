@@ -49,11 +49,10 @@ const MessageBubble = React.memo(function MessageBubble({
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
+  const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
   const senderName = getMemberFullName(sender);
-
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
-
   const seenByNamesString = lastSeenNames.length > 0 ? lastSeenNames.join(', ') : "";
 
   const youtubeId = useMemo(() => {
@@ -86,104 +85,103 @@ const MessageBubble = React.memo(function MessageBubble({
           className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
-              <div className={cn("flex flex-col min-w-0 max-w-[62%] md:max-w-[75%]", isSender ? "items-end" : "items-start")}>
-                  {(() => {
-                      const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
-                      return (
-                        <div
-                            className={cn(
-                            'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
-                            youtubeId && "w-full sm:min-w-[300px] max-w-full",
-                            !isSpecialContent && (
-                                isSender
-                                ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-2.5 py-1'
-                                : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-2.5 py-1'
-                            ),
-                            isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
-                            )}
-                        >
-                          {/* Parent message quote block */}
-                          {parentMessage && (
-                              <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
-                                 <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
-                                 <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
-                              </div>
-                          )}
-
-                          {!isSender && isGroup && senderName && (
-                              <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
-                          )}
-    
-                          {message.imageUrl && (
-                            <ImageLightbox
-                              imageUrl={message.imageUrl}
-                              altText={t.image || "Image"}
-                              onDownload={handleDownload}
-                              trigger={
-                                <motion.div 
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className={cn(
-                                      "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
-                                      !message.text && "mb-0"
-                                    )}
-                                >
-                                  <img 
-                                    src={message.imageUrl} 
-                                    alt={t.image || "Image"} 
-                                    className="max-w-full h-auto object-cover max-h-[300px] w-full"
-                                    style={{ minWidth: '150px' }}
-                                    loading="lazy"
-                                  />
-                                </motion.div>
-                              }
-                            />
-                          )}
-
-                          {message.text && (
-                            <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
-                                <LinkifiedText 
-                                  text={message.text} 
-                                  isSender={isSender} 
-                                  className="text-[15px] font-normal" 
-                                />
+              <div className={cn(
+                  "flex flex-col min-w-0 transition-all duration-300", 
+                  isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
+                  isSender ? "items-end" : "items-start"
+              )}>
+                  <div
+                      className={cn(
+                      'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
+                      youtubeId && "w-full sm:min-w-[300px] max-w-full",
+                      !isSpecialContent && (
+                          isSender
+                          ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-2.5 py-1'
+                          : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-2.5 py-1'
+                      ),
+                      isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
+                      )}
+                  >
+                        {/* Parent message quote block */}
+                        {parentMessage && (
+                            <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
+                                <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
+                                <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
                             </div>
-                          )}
+                        )}
 
-                          {message.invitationId && (
-                            <InvitationSummary invitationId={message.invitationId} isSender={isSender} />
-                          )}
+                        {!isSender && isGroup && senderName && (
+                            <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
+                        )}
+  
+                        {message.imageUrl && (
+                          <ImageLightbox
+                            imageUrl={message.imageUrl}
+                            altText={t.image || "Image"}
+                            onDownload={handleDownload}
+                            trigger={
+                              <motion.div 
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  className={cn(
+                                    "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
+                                    !message.text && "mb-0"
+                                  )}
+                              >
+                                <img 
+                                  src={message.imageUrl} 
+                                  alt={t.image || "Image"} 
+                                  className="max-w-full h-auto object-cover max-h-[300px] w-full"
+                                  style={{ minWidth: '150px' }}
+                                  loading="lazy"
+                                />
+                              </motion.div>
+                            }
+                          />
+                        )}
 
-                          {message.eventId && (
-                            <EventSummary eventId={message.eventId} isSender={isSender} />
-                          )}
+                        {message.text && (
+                          <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
+                              <LinkifiedText 
+                                text={message.text} 
+                                isSender={isSender} 
+                                className="text-[15px] font-normal" 
+                              />
+                          </div>
+                        )}
 
-                          {message.setlistId && (
-                            <SetlistSummary 
-                              setlistId={message.setlistId} 
-                              isSender={isSender} 
-                              onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
-                            />
-                          )}
+                        {message.invitationId && (
+                          <InvitationSummary invitationId={message.invitationId} isSender={isSender} />
+                        )}
 
-                          {message.rosterId && (
-                            <RosterSummary rosterId={message.rosterId} isSender={isSender} />
-                          )}
-                          
-                          {message.qtDate && (
-                            <QTSummary date={message.qtDate} isSender={isSender} />
-                          )}
-                          
-                          {message.cleaningDate && (
-                            <CleaningSummary date={message.cleaningDate} isSender={isSender} />
-                          )}
-                          
-                          {message.songId && (
-                            <SongSummary songId={message.songId} isSender={isSender} />
-                          )}
-                        </div>
-                      );
-                  })()}
+                        {message.eventId && (
+                          <EventSummary eventId={message.eventId} isSender={isSender} />
+                        )}
+
+                        {message.setlistId && (
+                          <SetlistSummary 
+                            setlistId={message.setlistId} 
+                            isSender={isSender} 
+                            onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
+                          />
+                        )}
+
+                        {message.rosterId && (
+                          <RosterSummary rosterId={message.rosterId} isSender={isSender} />
+                        )}
+                        
+                        {message.qtDate && (
+                          <QTSummary date={message.qtDate} isSender={isSender} />
+                        )}
+                        
+                        {message.cleaningDate && (
+                          <CleaningSummary date={message.cleaningDate} isSender={isSender} />
+                        )}
+                        
+                        {message.songId && (
+                          <SongSummary songId={message.songId} isSender={isSender} />
+                        )}
+                  </div>
 
                   {youtubeId && (
                     <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
