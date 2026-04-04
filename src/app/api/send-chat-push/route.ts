@@ -176,8 +176,6 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                       notification: {
                           title: title,
                           body: body,
-                          // TOP-LEVEL BADGE (Maximum Redundancy)
-                          notificationBadge: Number(badgeCount),
                       },
                       data: toSafeStringMap({
                         title: title,
