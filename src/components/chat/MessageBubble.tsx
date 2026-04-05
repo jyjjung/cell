@@ -167,7 +167,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                 {message.imageUrl.toLowerCase().includes('.pdf') ? (
                                     <div className="w-full h-full pointer-events-none origin-top overflow-hidden">
                                         <iframe 
-                                            src={`${message.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
+                                            src={`${message.imageUrl}#toolbar=0&navpanes=0`} 
                                             className="w-full h-[300%] border-none opacity-80"
                                             title="PDF Preview"
                                         />

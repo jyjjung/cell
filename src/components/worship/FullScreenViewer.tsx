@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Download, ChevronLeft, ChevronRight, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 
@@ -115,16 +115,29 @@ export function FullScreenViewer({
               title="Download Chord Sheet">
               <Download className="h-5 w-5" />
             </button>
+            {slide.imageUrl.toLowerCase().includes('.pdf') && (
+              <button
+                onClick={() => window.open(slide.imageUrl, '_blank')}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Open PDF in New Tab">
+                <Maximize className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center overflow-hidden px-4 py-2">
+        <div className={cn(
+          "flex-1 flex px-4 py-2",
+          slide.imageUrl.toLowerCase().includes('.pdf') 
+            ? "overflow-y-auto block" 
+            : "items-center justify-center overflow-hidden"
+        )}>
           {slide.imageUrl.toLowerCase().includes('.pdf') ? (
             <iframe
-              src={`${slide.imageUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+              src={`${slide.imageUrl}#toolbar=0&navpanes=0`}
               className="w-full h-full rounded-2xl border-none bg-white/5 shadow-2xl"
               title="PDF Chord Sheet"
-              style={{ minHeight: '60vh' }}
+              style={{ minHeight: '80vh' }}
             />
           ) : (
             <motion.img
