@@ -8,7 +8,8 @@ import {
   Music, Plus, ListMusic, BookOpen, ChevronRight, ChevronLeft,
   Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
   Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
-  Users, UserPlus, Link2, UserCheck, UserX, Shield, Download
+  Users, UserPlus, Link2, UserCheck, UserX, Shield, Download,
+  ChevronUp, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -435,7 +436,7 @@ function AddSongToSetlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md">
+      <DialogContent className="rounded-3xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Add Song</DialogTitle>
           <DialogDescription>Choose a song from the library and select the key for this service.</DialogDescription>
@@ -612,6 +613,18 @@ function SetlistDetailView({
     setReorderMode(false);
   };
 
+  const handleMove = (idx: number, direction: 'up' | 'down') => {
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= orderedSongs.length) return;
+    
+    const reordered = [...orderedSongs];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(newIdx, 0, moved);
+    
+    setOrderedSongs(reordered.map((s, i) => ({ ...s, order: i })));
+    setReorderDirty(true);
+  };
+
   const handleRemove = async (songId: string) => {
     setRemoving(songId);
     try {
@@ -714,7 +727,9 @@ function SetlistDetailView({
         <div className="space-y-2">
           {reorderMode && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-semibold">
-              <GripVertical className="h-3.5 w-3.5" /> Drag songs to reorder, then click Save.
+              <GripVertical className="h-3.5 w-3.5" /> 
+              <span className="hidden sm:inline">Drag songs to reorder, then click Save.</span>
+              <span className="sm:hidden">Use arrows to reorder, then click Save.</span>
             </div>
           )}
           {orderedSongs.map((ps, i) => {
@@ -729,14 +744,14 @@ function SetlistDetailView({
                 onDragOver={reorderMode ? e => e.preventDefault() : undefined}
                 onDragEnd={reorderMode ? handleDragEnd : undefined}
                 className={cn(
-                  'flex items-center gap-3 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm group transition-all',
+                  'flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm group transition-all',
                   reorderMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-default hover:border-rose-500/20',
                   dragging && dragIdx.current === i ? 'opacity-40 scale-[0.98]' : ''
                 )}>
                 {reorderMode ? (
-                  <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                  <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0 hidden sm:block" />
                 ) : (
-                  <div className="w-4 shrink-0" />
+                  <div className="w-4 shrink-0 hidden sm:block" />
                 )}
                 <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
                   <span className="text-xs font-black text-rose-500">{i + 1}</span>
@@ -793,16 +808,38 @@ function SetlistDetailView({
                     </>
                   )}
                   {reorderMode && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 pointer-events-auto"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleRemove(ps.songId);
-                      }} 
-                      disabled={removing === ps.songId}>
-                      {removing === ps.songId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <div className="flex flex-col gap-1 mr-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-20"
+                          onClick={() => handleMove(i, 'up')}
+                          disabled={i === 0}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-20"
+                          onClick={() => handleMove(i, 'down')}
+                          disabled={i === orderedSongs.length - 1}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 pointer-events-auto"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleRemove(ps.songId);
+                        }} 
+                        disabled={removing === ps.songId}>
+                        {removing === ps.songId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

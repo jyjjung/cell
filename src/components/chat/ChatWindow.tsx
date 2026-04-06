@@ -38,7 +38,7 @@ function formatMessageDate(date: Date) {
 }
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
-  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction, sendMessage } = useMessages(chatId);
+  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction, sendMessage, deleteMessage } = useMessages(chatId);
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const online = useOnlineStatus();
@@ -49,7 +49,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   
   // Worship Modal Viewer
-  const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string } | null>(null);
+  const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string; imageUrl?: string } | null>(null);
   
   // Worship Creation Dialogs
   const [showNewSong, setShowNewSong] = useState(false);
@@ -149,7 +149,8 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           toggleReaction={toggleReaction}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
           onReply={() => setActiveThreadId(msg.id)}
-          onOpenWorshipViewer={(setlistId, songId) => setWorshipViewer({ setlistId, songId })}
+          onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
+          onDelete={deleteMessage}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
           parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
         />
@@ -289,6 +290,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
             const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
             if (foundIdx !== -1) startIndex = foundIdx;
           }
+        } else if (worshipViewer.imageUrl) {
+          const foundIdx = slides.findIndex(sl => sl.imageUrl === worshipViewer.imageUrl);
+          if (foundIdx !== -1) startIndex = foundIdx;
         }
 
         return (
@@ -355,6 +359,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           parentMessageId={activeThreadId}
           chat={chat}
           onClose={() => setActiveThreadId(null)}
+          onDeleteParentMessage={deleteMessage}
         />
       )}
     </div>

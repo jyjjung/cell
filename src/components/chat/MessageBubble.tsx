@@ -6,8 +6,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
-import { cn } from '@/lib/utils';
-import { SmilePlus, Download, Music, Maximize } from 'lucide-react';
+import { cn, isPdfUrl } from '@/lib/utils';
+import { SmilePlus, Download, Music, Maximize, FileText, Trash2 } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -34,16 +34,17 @@ interface MessageBubbleProps {
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
   onReply?: () => void;
-  onOpenWorshipViewer?: (setlistId?: string, songId?: string) => void;
+  onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
+  onDelete?: (messageId: string) => void;
 }
 
 const MessageBubble = React.memo(function MessageBubble({ 
   message, chat, sender, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenWorshipViewer, parentMessage, parentSenderName 
+  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete 
 }: MessageBubbleProps) {
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
@@ -145,7 +146,7 @@ const MessageBubble = React.memo(function MessageBubble({
                             onClick={async (e) => {
                                 e.stopPropagation();
                                 if (onOpenWorshipViewer) {
-                                  onOpenWorshipViewer(message.setlistId, message.songId);
+                                  onOpenWorshipViewer(message.setlistId, message.songId, message.imageUrl);
                                 }
                             }}
                             className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
@@ -164,13 +165,15 @@ const MessageBubble = React.memo(function MessageBubble({
                                 </div>
                              </div>
                              <div className="relative border border-white/5 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-black/40 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
-                                {message.imageUrl.toLowerCase().includes('.pdf') ? (
-                                    <div className="w-full h-full pointer-events-none origin-top overflow-hidden">
-                                        <iframe 
-                                            src={`${message.imageUrl}#toolbar=0&navpanes=0`} 
-                                            className="w-full h-[300%] border-none opacity-80"
-                                            title="PDF Preview"
-                                        />
+                                {isPdfUrl(message.imageUrl) ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-500/10 to-rose-600/20 p-6 gap-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center shadow-inner">
+                                            <FileText className="h-8 w-8 text-rose-500" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-white text-sm font-bold tracking-tight">PDF Chord Sheet</p>
+                                            <p className="text-white/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">Click to view in high quality</p>
+                                        </div>
                                     </div>
                                 ) : (
                                     <img 
@@ -271,10 +274,10 @@ const MessageBubble = React.memo(function MessageBubble({
                   )}
               </div>
 
-              <div className={cn(
-                  "absolute flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10",
-                  isSender ? "right-[calc(100%)] bottom-0" : "left-[calc(100%)] bottom-0"
-              )}>
+                  <div className={cn(
+                      "flex flex-row gap-2 mt-1.5 transition-all duration-200 z-10",
+                      isSender ? "justify-end mr-1" : "justify-start ml-1"
+                  )}>
                   <Popover>
                       <PopoverTrigger asChild>
                           <button className="p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
@@ -300,6 +303,29 @@ const MessageBubble = React.memo(function MessageBubble({
                   >
                       <CornerUpLeft className="h-3 w-3 text-white/40" />
                   </button>
+
+                  {isSender && onDelete && (
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <button className="p-1 rounded-full bg-white/5 hover:bg-rose-500/20 group/del transition-colors">
+                                  <Trash2 className="h-3 w-3 text-white/40 group-hover/del:text-rose-500" />
+                              </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-3 bg-[#1C1C1E] border border-white/10 rounded-2xl shadow-2xl">
+                              <p className="text-[11px] font-bold text-white mb-3 uppercase tracking-wider">Delete Message?</p>
+                              <div className="flex gap-2">
+                                  <Button 
+                                      variant="destructive" 
+                                      size="sm" 
+                                      className="flex-1 h-8 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                      onClick={() => onDelete(message.id)}
+                                  >
+                                      Delete
+                                  </Button>
+                              </div>
+                          </PopoverContent>
+                      </Popover>
+                  )}
               </div>
           </div>
           

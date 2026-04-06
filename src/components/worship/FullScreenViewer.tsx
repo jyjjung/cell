@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight, Maximize } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { X, Download, ChevronLeft, ChevronRight, Maximize, FileText } from 'lucide-react';
+import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 
 export interface ViewerSlide {
@@ -107,7 +107,7 @@ export function FullScreenViewer({
             </span>
             <button
               onClick={() => {
-                const isPdf = slide.imageUrl.toLowerCase().includes('.pdf');
+                const isPdf = isPdfUrl(slide.imageUrl);
                 const ext = isPdf ? '.pdf' : '.png';
                 downloadFile(slide.imageUrl, `${slide.songTitle} - Key ${slide.key}${slide.totalPages > 1 ? ` (Pg ${slide.page})` : ''}${ext}`);
               }}
@@ -115,7 +115,7 @@ export function FullScreenViewer({
               title="Download Chord Sheet">
               <Download className="h-5 w-5" />
             </button>
-            {slide.imageUrl.toLowerCase().includes('.pdf') && (
+            {isPdfUrl(slide.imageUrl) && (
               <button
                 onClick={() => window.open(slide.imageUrl, '_blank')}
                 className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -127,18 +127,37 @@ export function FullScreenViewer({
         </div>
 
         <div className={cn(
-          "flex-1 flex px-4 py-2",
-          slide.imageUrl.toLowerCase().includes('.pdf') 
-            ? "overflow-y-auto block" 
+          "flex-1 flex flex-col px-0 sm:px-4 py-2 min-h-0 relative", // Remove side padding on mobile for full-width PDF
+          isPdfUrl(slide.imageUrl) 
+            ? "overflow-hidden" 
             : "items-center justify-center overflow-hidden"
         )}>
-          {slide.imageUrl.toLowerCase().includes('.pdf') ? (
-            <iframe
-              src={`${slide.imageUrl}#toolbar=0&navpanes=0`}
-              className="w-full h-full rounded-2xl border-none bg-white/5 shadow-2xl"
-              title="PDF Chord Sheet"
-              style={{ minHeight: '80vh' }}
-            />
+          {isPdfUrl(slide.imageUrl) ? (
+            <div className="w-full h-full flex flex-col">
+              <iframe
+                src={`${slide.imageUrl}#toolbar=0&navpanes=0`}
+                className="w-full flex-1 rounded-none sm:rounded-2xl border-none bg-white/5 shadow-2xl"
+                title="PDF Chord Sheet"
+                key={slide.imageUrl}
+              />
+              
+              {/* Intelligent Mobile Fallback: Visible if iframe fails or on small screens */}
+              <div className="flex flex-col items-center justify-center py-10 px-6 bg-black/20 border-t border-white/5 sm:hidden shrink-0">
+                <FileText className="h-10 w-10 text-rose-500/50 mb-3" />
+                <p className="text-white/80 text-sm font-bold text-center mb-1">
+                  Viewing on Mobile?
+                </p>
+                <p className="text-white/40 text-xs text-center mb-5">
+                  Some mobile browsers block embedded PDFs.
+                </p>
+                <button
+                  onClick={() => window.open(slide.imageUrl, '_blank')}
+                  className="w-full py-4 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-rose-500/20"
+                >
+                  <Maximize className="h-5 w-5" /> OPEN HIGH-RES PDF
+                </button>
+              </div>
+            </div>
           ) : (
             <motion.img
               key={slide.imageUrl}

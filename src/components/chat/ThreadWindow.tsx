@@ -23,14 +23,16 @@ export default function ThreadWindow({
   chatId, 
   parentMessageId,
   chat,
-  onClose
+  onClose,
+  onDeleteParentMessage
 }: { 
   chatId: string; 
   parentMessageId: string;
   chat: Chat;
   onClose: () => void;
+  onDeleteParentMessage?: (id: string) => void;
 }) {
-  const { messages, parentMessage, loading, loadMoreMessages, hasMore, loadingMore, toggleReaction } = useThreadMessages(chatId, parentMessageId);
+  const { messages, parentMessage, loading, loadMoreMessages, hasMore, loadingMore, toggleReaction, deleteMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const listRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,7 @@ export default function ThreadWindow({
           chat={chat as Chat} 
           sender={senderForBubble} 
           toggleReaction={toggleReaction} 
+          onDelete={deleteMessage}
         />
       );
 
@@ -112,6 +115,10 @@ export default function ThreadWindow({
                           chat={chat}
                           sender={parentSenderForBubble!}
                           toggleReaction={toggleReaction}
+                          onDelete={(id) => {
+                             onDeleteParentMessage?.(id);
+                             onClose(); // Close thread if parent is deleted
+                          }}
                         />
                       </div>
                       <div className="flex items-center gap-4 mt-6 mb-4">

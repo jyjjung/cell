@@ -18,7 +18,8 @@ import {
   getDocs,
   getDocsFromCache,
   deleteField,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage, Chat } from '@/types';
@@ -259,6 +260,17 @@ export function useMessages(chatId: string | null) {
     } catch (error) {}
   }, [currentUser, chatId]);
 
+  const deleteMessage = useCallback(async (messageId: string) => {
+    if (!chatId) return;
+    const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
+    try {
+      await deleteDoc(messageRef);
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
+    }
+  }, [chatId, toast]);
+
 
   return { 
     messages, 
@@ -273,5 +285,6 @@ export function useMessages(chatId: string | null) {
     updateTypingStatus,
     updateSeenTimestamp,
     toggleReaction,
+    deleteMessage,
   };
 }

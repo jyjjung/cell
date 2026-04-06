@@ -71,10 +71,14 @@ export function useWorshipSongs() {
     key: ChordKey,
   ): Promise<SongChordSheet> => {
     if (!currentUser) throw new Error('Not authenticated');
-    const sheetId = crypto.randomUUID();
-    const storagePath = `worshipChordSheets/${songId}/${sheetId}`;
+    const sheetId = (typeof window !== 'undefined' && window.crypto?.randomUUID) 
+      ? window.crypto.randomUUID() 
+      : crypto.randomUUID();
+    const lastDotIndex = file.name.lastIndexOf('.');
+    const extension = lastDotIndex !== -1 ? file.name.slice(lastDotIndex).toLowerCase() : '';
+    const storagePath = `worshipChordSheets/${songId}/${sheetId}${extension}`;
     const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, file, { contentType: file.type });
+    await uploadBytes(storageRef, file, { contentType: file.type || 'application/octet-stream' });
     const imageUrl = await getDownloadURL(storageRef);
     const sheet: SongChordSheet = {
       id: sheetId,
