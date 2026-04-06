@@ -122,36 +122,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [currentUser, loadingAuth, hasMounted, pathname, router]);
   
   useEffect(() => {
-    // Only proceed if window is available, serviceWorker is supported, messaging is initialized, and user is logged in
-    const isBrowser = typeof window !== 'undefined';
-    const hasSW = isBrowser && 'serviceWorker' in navigator;
-    
-    if (hasSW && messaging && currentUser) {
-      // Standardize on '/sw-master.js' as the unified entry point for BOTH Workbox and Messaging.
-      const initPush = async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw-master.js', { scope: '/' });
-          
-          // Ensure we update the SW immediately when a new one is available
-          registration.onupdatefound = () => {
-              const installingWorker = registration.installing;
-              if (installingWorker) {
-                  installingWorker.onstatechange = () => {
-                      if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                          console.log('[AppLayout] New SW version available. Refresh suggested.');
-                      }
-                  };
-              }
-          };
-          
-          console.log('[AppLayout] Master Worker registered successfully');
-
-        } catch (error) {
-          console.log('[AppLayout] Service worker registration failed:', error);
-        }
-      };
-      initPush();
-
+    // foreground messaging handle
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging && currentUser) {
       const unsubscribe = onMessage(messaging as any, (payload) => {
         const title = payload.data?.title || 'New Sync Notification';
         const body = payload.data?.body || '';
@@ -162,12 +134,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const isCurrentlyViewingThisChat = pathname === link;
         if (isCurrentlyViewingThisChat && link.startsWith('/chat/')) {
             return; // Skip notification
-        }
-
-        if (Notification.permission === 'granted' && title) {
-          // Foreground: We rely on the toast below and the native browser behavior.
-          // We DO NOT manually call showNotification here to prevent "Double Notifications"
-          // while the app is active. The Service Worker handles the background banners.
         }
 
         // --- IN-APP TOAST ---
@@ -181,6 +147,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                    router.push(link);
                 }
             });
+        }
+        
+        // --- BROWSER NOTIFICATION (Native) ---
+        if (Notification.permission === 'granted' && title && !isCurrentlyViewingThisChat) {
+             const notificationOptions = {
+                 body: body,
+                 icon: payload.data?.icon || '/icon.svg',
+                 data: { link },
+                 tag: tag
+             };
+             const notification = new Notification(title, notificationOptions);
+             notification.onclick = (event) => {
+                 event.preventDefault();
+                 router.push(link);
+                 window.focus();
+                 notification.close();
+             };
         }
       });
 

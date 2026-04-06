@@ -151,7 +151,7 @@ const MessageBubble = React.memo(function MessageBubble({
                             }}
                             className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
                           >
-                             <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-white/10 transition-colors">
+                             <div className="flex items-center gap-3 p-3 bg-foreground/5 border border-border/10 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-foreground/10 transition-colors">
                                 <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
                                     <Music className="w-4 h-4 text-primary" />
                                 </div>
@@ -164,7 +164,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                     </p>
                                 </div>
                              </div>
-                             <div className="relative border border-white/5 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-black/40 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
+                             <div className="relative border border-border/10 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-foreground/5 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
                                 {isPdfUrl(message.imageUrl) ? (
                                     <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-500/10 to-rose-600/20 p-6 gap-4">
                                         <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center shadow-inner">
@@ -262,8 +262,8 @@ const MessageBubble = React.memo(function MessageBubble({
                                   className={cn(
                                       "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
                                       uids.includes(currentUser?.uid || '')
-                                          ? "bg-[#007AFF]/20 border border-[#007AFF]/30 text-[#007AFF]"
-                                          : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10"
+                                          ? "bg-primary/20 border border-primary/30 text-primary"
+                                          : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
                                   )}
                               >
                                   <span>{emoji}</span>
@@ -280,16 +280,16 @@ const MessageBubble = React.memo(function MessageBubble({
                   )}>
                   <Popover>
                       <PopoverTrigger asChild>
-                          <button className="p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                              <SmilePlus className="h-3 w-3 text-white/40" />
+                          <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                              <SmilePlus className="h-3 w-3 text-foreground/40" />
                           </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-fit p-1 bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/10 rounded-full flex gap-0.5 shadow-2xl">
+                      <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
                           {standardReactions.map(emoji => (
                               <button
                                   key={emoji}
                                   onClick={() => toggleReaction(message.id, emoji)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-transform hover:scale-125"
+                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
                               >
                                   <span className="text-lg">{emoji}</span>
                               </button>
@@ -299,20 +299,20 @@ const MessageBubble = React.memo(function MessageBubble({
 
                   <button 
                       onClick={onReply}
-                      className="p-1 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                      className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
                   >
-                      <CornerUpLeft className="h-3 w-3 text-white/40" />
+                      <CornerUpLeft className="h-3 w-3 text-foreground/40" />
                   </button>
 
                   {isSender && onDelete && (
                       <Popover>
                           <PopoverTrigger asChild>
-                              <button className="p-1 rounded-full bg-white/5 hover:bg-rose-500/20 group/del transition-colors">
-                                  <Trash2 className="h-3 w-3 text-white/40 group-hover/del:text-rose-500" />
+                              <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
+                                  <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
                               </button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-48 p-3 bg-[#1C1C1E] border border-white/10 rounded-2xl shadow-2xl">
-                              <p className="text-[11px] font-bold text-white mb-3 uppercase tracking-wider">Delete Message?</p>
+                          <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
+                              <p className="text-[11px] font-bold text-foreground mb-3 uppercase tracking-wider">Delete Message?</p>
                               <div className="flex gap-2">
                                   <Button 
                                       variant="destructive" 

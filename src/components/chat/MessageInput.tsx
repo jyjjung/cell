@@ -40,17 +40,51 @@ export default function MessageInput({
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [showSlashCommands, setShowSlashCommands] = useState(false);
+  const [stagedCommand, setStagedCommand] = useState<{
+    type: string;
+    id: string;
+    label: string;
+    metadata?: any;
+  } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const handleSend = () => {
     const trimmedText = text.trim();
-    if (!trimmedText || disabled || isUploading) return;
+    if (!trimmedText && !stagedCommand && !isUploading) return;
     if (showSlashCommands) return;
 
-    sendMessage(trimmedText, undefined, replyToMessage?.id);
+    if (stagedCommand) {
+      // Send with metadata
+      const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [
+        trimmedText || undefined, 
+        stagedCommand.metadata?.imageUrl, 
+        replyToMessage?.id
+      ];
+      
+      const { type, id, metadata } = stagedCommand;
+      if (type === 'invitation') args[3] = id;
+      else if (type === 'event') args[4] = id;
+      else if (type === 'setlist') args[5] = id;
+      else if (type === 'roster') args[6] = id;
+      else if (type === 'qt') args[7] = id;
+      else if (type === 'cleaning') args[8] = id;
+      else if (type === 'song') {
+          args[9] = id;
+          if (metadata?.songTitle) args[10] = metadata.songTitle;
+          if (metadata?.sheetKey) args[11] = metadata.sheetKey;
+      }
+
+      sendMessage(...args);
+      setStagedCommand(null);
+    } else {
+      // Plain text message
+      sendMessage(trimmedText, undefined, replyToMessage?.id);
+    }
+
     setText('');
     updateTypingStatus(false);
     setShowSlashCommands(false);
@@ -93,28 +127,28 @@ export default function MessageInput({
       return;
     }
 
-    const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [undefined, undefined, replyToMessage?.id];
+    // If it's a shared item, stage it
+    setStagedCommand({
+        type,
+        id,
+        label: metadata?.label || type,
+        metadata
+    });
     
-    if (type === 'invitation') args[3] = id;
-    else if (type === 'event') args[4] = id;
-    else if (type === 'setlist') args[5] = id;
-    else if (type === 'roster') args[6] = id;
-    else if (type === 'qt') args[7] = id;
-    else if (type === 'cleaning') args[8] = id;
-    else if (type === 'song') {
-        args[9] = id;
-        // If we have an image URL for the specific key, use it as the main image
-        if (metadata?.imageUrl) {
-            args[1] = metadata.imageUrl;
-        }
-        if (metadata?.songTitle) args[10] = metadata.songTitle;
-        if (metadata?.sheetKey) args[11] = metadata.sheetKey;
+    // Smart replacement: Replace the portion from triggerIndex to current selection
+    if (triggerIndex !== null) {
+        const before = text.substring(0, triggerIndex);
+        // We find the end of the "command" part which likely ends at current length or space
+        // For simplicity, we'll just clear from the triggerIndex onwards if it was just a command
+        // But a better way is to keep anything typed AFTER the cursor if we were in the middle
+        const after = text.substring(text.indexOf(' ', triggerIndex) === -1 ? text.length : text.indexOf(' ', triggerIndex));
+        setText(before.trim() + (after ? ' ' + after.trim() : ''));
+    } else if (text.startsWith('/')) {
+        setText('');
     }
-
-    sendMessage(...args);
-    setText('');
+    
+    setTriggerIndex(null);
     setShowSlashCommands(false);
-    if (onCancelReply) onCancelReply();
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -186,20 +220,36 @@ export default function MessageInput({
             {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
         </button>
 
-        <div className="flex-1 flex items-center bg-[#3B3B3D]/40 backdrop-blur-3xl px-4 py-1 rounded-full border border-white/5 overflow-hidden">
+        <div className="flex-1 flex items-center bg-[#3B3B3D]/40 backdrop-blur-3xl px-3 py-1 rounded-[1.25rem] border border-white/5 overflow-hidden">
+          {stagedCommand && (
+            <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-lg px-2 py-1 mr-2 shrink-0 max-w-[120px]">
+               <span className="text-[10px] font-black uppercase text-primary truncate">{stagedCommand.label}</span>
+               <button onClick={() => setStagedCommand(null)} className="text-primary/60 hover:text-primary">
+                 <X className="w-3 h-3" />
+               </button>
+            </div>
+          )}
           <input
               type="text"
-              placeholder={isUploading ? "Uploading..." : "Message"}
+              placeholder={stagedCommand ? "" : (isUploading ? "Uploading..." : "Message")}
               value={text}
               disabled={disabled || isUploading}
               onChange={(e) => {
                   const val = e.target.value;
+                  const cursor = e.target.selectionStart || 0;
                   setText(val);
-                  if (val.startsWith('/')) {
-                    setShowSlashCommands(true);
-                  } else if (val === '' && !showSlashCommands) {
-                    // Stay closed if we backspaced the slash
-                    setShowSlashCommands(false);
+                  
+                  // Global slash trigger logic
+                  const lastSlash = val.lastIndexOf('/', cursor - 1);
+                  if (lastSlash !== -1) {
+                      // Check if there's a space before the slash or it's at start
+                      if (lastSlash === 0 || val[lastSlash - 1] === ' ') {
+                          setShowSlashCommands(true);
+                          setTriggerIndex(lastSlash);
+                      }
+                  } else if (val === '' || !val.includes('/')) {
+                      setShowSlashCommands(false);
+                      setTriggerIndex(null);
                   }
               }}
               onFocus={() => !disabled && !isUploading && updateTypingStatus(true)}
@@ -211,8 +261,8 @@ export default function MessageInput({
           <button 
               type="button" 
               onClick={handleSend} 
-              disabled={disabled || text.trim() === '' || isUploading}
-              className={cn("h-7 w-7 flex items-center justify-center rounded-full", !disabled && text.trim() ? "bg-[#007AFF] text-white" : "bg-white/10 text-muted-foreground opacity-20")}
+              disabled={disabled || (!text.trim() && !stagedCommand) || isUploading}
+              className={cn("h-7 w-7 flex items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-[#007AFF] text-white" : "bg-white/10 text-muted-foreground opacity-20")}
           >
               <ArrowUp className="h-4 w-4" strokeWidth={3} />
           </button>
@@ -221,9 +271,20 @@ export default function MessageInput({
         <AnimatePresence>
           {showSlashCommands && (
               <SlashCommandSelector 
-                  inputValue={text} 
+                  inputValue={triggerIndex !== null ? text.substring(triggerIndex) : text} 
                   onSelect={handleSlashSelect} 
-                  onClose={() => setShowSlashCommands(false)} 
+                  onClose={() => {
+                    setShowSlashCommands(false);
+                    setTriggerIndex(null);
+                  }} 
+                  onCategoryClick={(cat) => {
+                    if (triggerIndex !== null) {
+                        const before = text.substring(0, triggerIndex);
+                        setText(`${before}/${cat} `);
+                    } else {
+                        setText(`/${cat} `);
+                    }
+                  }}
                   showWorshipCreation={!!onOpenWorshipCreate}
               />
           )}
