@@ -4,6 +4,7 @@ import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin
 import { FieldPath, type Firestore } from 'firebase-admin/firestore';
 import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
 import type { UserProfileData, Chat, ChatMessage } from '@/types';
+import { getMillis, isChatUnread } from '@/lib/notification-utils';
 
 /**
  * Forcefully converts all values in a record to strings to create a safe FCM data payload.
@@ -17,16 +18,43 @@ function toSafeStringMap(input: Record<string, unknown>): Record<string, string>
 }
 
 /**
- * Robustly converts any timestamp-like value to milliseconds.
+ * Calculates the total unread count for a given user across all chats and notifications.
  */
-function getMillis(timestamp: any): number {
-    if (!timestamp) return 0;
-    if (typeof timestamp.toMillis === 'function') return timestamp.toMillis();
-    if (timestamp instanceof Date) return timestamp.getTime();
-    if (typeof timestamp === 'number') return timestamp;
-    if (typeof timestamp === 'string') return new Date(timestamp).getTime();
-    if (timestamp._seconds) return timestamp._seconds * 1000 + (timestamp._nanoseconds / 1000000);
-    return 0;
+async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
+    try {
+        // 1. Unread System Notifications (Checking readBy array, limited to last 30 days for performance)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const notificationsSnapshot = await db.collection('notifications')
+            .where('createdAt', '>=', thirtyDaysAgo)
+            .get();
+            
+        let unreadNotifications = 0;
+        notificationsSnapshot.forEach((doc: any) => {
+            const data = doc.data();
+            const readBy = Array.isArray(data.readBy) ? data.readBy : [];
+            const isTargetUser = data.isGlobal || data.userId === userId || data.type === 'announcement';
+            if (isTargetUser && !readBy.includes(userId)) {
+                unreadNotifications++;
+            }
+        });
+
+        // 2. Unread Chats (using memberSeen)
+        const chatsSnapshot = await db.collection('chats').where('members', 'array-contains', userId).get();
+        let unreadChats = 0;
+        chatsSnapshot.forEach((doc: any) => {
+            const chat = { id: doc.id, ...doc.data() } as Chat;
+            if (isChatUnread(chat, userId)) {
+                unreadChats++;
+            }
+        });
+
+        return unreadNotifications + unreadChats;
+    } catch (error) {
+        console.error(`[calculateTotalUnread] Error for ${userId}:`, error);
+        return 0; // Default to 0 on error
+    }
 }
 
 async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore): Promise<string> {
@@ -82,48 +110,80 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     // Get FCM tokens for the recipients
     const usersSnapshot = await adminDb.collection('users').where(FieldPath.documentId(), 'in', recipientIds).get();
     
-    const allTokens: string[] = [];
-    for (let i = 0; i < usersSnapshot.docs.length; i++) {
-        const docSnapshot = usersSnapshot.docs[i];
-        const user = docSnapshot.data() as UserProfileData;
-        if (user.fcmTokens && Array.isArray(user.fcmTokens)) {
-            allTokens.push(...user.fcmTokens);
-        }
-    }
-
-    const uniqueTokens = [...new Set(allTokens)].filter(Boolean);
-
-    if (uniqueTokens.length === 0) {
-        return { success: 0, failure: 0, reason: "No registered push clients for recipients." };
-    }
-    
     const senderName = await getSenderDisplayName(message.senderId, chat, adminDb);
     const messageText = message.text ?? 'Sent a file';
 
     let title: string;
-    let body: string;
+    let bodyText: string;
 
     if (chat.type === 'group') {
         title = chat.name || 'Group Chat';
-        body = `${senderName}: ${messageText}`;
+        bodyText = `${senderName}: ${messageText}`;
     } else { 
         title = senderName;
-        body = messageText;
+        bodyText = messageText;
     }
 
-    const payload: MulticastMessage = {
-      tokens: uniqueTokens,
-      data: toSafeStringMap({
-        title: title,
-        body: body,
-        icon: '/icon.svg',
-        tag: String(chat.id),
-        link: `/chat/${chat.id}`,
-      }),
-    };
-    
-    const response = await adminMessaging.sendEachForMulticast(payload);
-    return { success: response.successCount, failure: response.failureCount };
+    let totalSuccessCount = 0;
+    let totalFailureCount = 0;
+
+    // Send individualized notifications to support correct unread counts (badges)
+    for (let i = 0; i < usersSnapshot.docs.length; i++) {
+        const docSnapshot = usersSnapshot.docs[i];
+        const userId = docSnapshot.id;
+        const user = docSnapshot.data() as UserProfileData;
+        
+        if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
+            console.log(`[send-chat-push] Calculating unread for user: ${userId}`);
+            const badgeCount = await calculateTotalUnread(userId, adminDb);
+            const tokensSet = [...new Set(user.fcmTokens)].filter(Boolean);
+            
+            console.log(`[send-chat-push] Sending to ${tokensSet.length} tokens. Badge: ${badgeCount}`);
+
+            const payload = {
+              tokens: tokensSet,
+              notification: {
+                title: title,
+                body: bodyText,
+              },
+              data: toSafeStringMap({
+                title: title,
+                body: bodyText,
+                icon: '/icon.svg',
+                tag: String(chat.id),
+                link: `/chat/${chat.id}`,
+              }),
+              apns: {
+                payload: {
+                  aps: {
+                     badge: badgeCount,
+                     sound: 'default'
+                  }
+                }
+              },
+              webpush: {
+                notification: {
+                  icon: '/icon.svg',
+                  badge: '/icon.svg',
+                  tag: String(chat.id),
+                  data: {
+                    link: `/chat/${chat.id}`
+                  }
+                },
+                fcm_options: {
+                  link: `/chat/${chat.id}`
+                }
+              }
+            };
+            
+            const response = await adminMessaging.sendEachForMulticast(payload as any);
+            console.log(`[send-chat-push] Result for ${userId}: ${response.successCount} success, ${response.failureCount} failure`);
+            totalSuccessCount += response.successCount;
+            totalFailureCount += response.failureCount;
+        }
+    }
+
+    return { success: totalSuccessCount, failure: totalFailureCount };
 }
 
 export async function POST(request: NextRequest) {
