@@ -25,3 +25,15 @@ export const categoryBorderColors: { [key in EventCategory]: string } = {
   [EventCategory.Birthday]: 'hsl(var(--birthday-border-color, 340, 82%, 69%))',
   [EventCategory.Snack]: 'hsl(var(--snack-border-color, 38, 92%, 50%))',
 };
+
+export function isPdfUrl(url?: string): boolean {
+  if (!url) return false;
+  try {
+    const urlObj = new URL(url);
+    const pathAndQuery = (urlObj.pathname + urlObj.search).toLowerCase();
+    // Check for .pdf extension before query or as part of the path
+    return /\.pdf($|\?)/i.test(pathAndQuery) || pathAndQuery.includes('.pdf');
+  } catch (e) {
+    return url.toLowerCase().includes('.pdf');
+  }
+}

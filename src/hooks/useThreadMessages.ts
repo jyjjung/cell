@@ -19,7 +19,8 @@ import {
   getDocsFromCache,
   deleteField,
   getDoc,
-  increment
+  increment,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage, Chat } from '@/types';
@@ -210,6 +211,19 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     } catch (error) {}
   }, [currentUser, chatId, parentMessageId]);
 
+  const deleteMessage = useCallback(async (messageId: string) => {
+    if (!chatId || !parentMessageId) return;
+    const parentRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
+    const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
+    try {
+      await deleteDoc(messageRef);
+      await updateDoc(parentRef, { replyCount: increment(-1) });
+    } catch (error) {
+      console.error("Failed to delete thread message:", error);
+      toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
+    }
+  }, [chatId, parentMessageId, toast]);
+
   return { 
     messages, 
     parentMessage,
@@ -220,5 +234,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     sendMessage, 
     sendImageMessage,
     toggleReaction,
+    deleteMessage,
   };
 }
