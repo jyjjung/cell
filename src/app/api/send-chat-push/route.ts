@@ -136,12 +136,16 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         if (user.fcmTokens && Array.isArray(user.fcmTokens) && user.fcmTokens.length > 0) {
             console.log(`[send-chat-push] Calculating unread for user: ${userId}`);
             const badgeCount = await calculateTotalUnread(userId, adminDb);
-            const tokensSet = [...new Set(user.fcmTokens)].filter(Boolean);
+
+            // Prune tokens to the most recent 5 to prevent stale delivery attempts (logs showed 85+ tokens for some users)
+            const rawTokens = Array.isArray(user.fcmTokens) ? user.fcmTokens : [];
+            const tokensSet = [...new Set(rawTokens)].filter(Boolean);
+            const prunedTokens = tokensSet.slice(0, 5);
             
-            console.log(`[send-chat-push] Sending to ${tokensSet.length} tokens. Badge: ${badgeCount}`);
+            console.log(`[send-chat-push] Sending to ${prunedTokens.length} tokens (pruned from ${tokensSet.length}). Badge: ${badgeCount}`);
 
             const payload = {
-              tokens: tokensSet,
+              tokens: prunedTokens,
               notification: {
                 title: title,
                 body: bodyText,
@@ -154,10 +158,15 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                 link: `/chat/${chat.id}`,
               }),
               apns: {
+                headers: {
+                  'apns-priority': '10', // Required for background delivery and badge updates
+                },
                 payload: {
                   aps: {
                      badge: badgeCount,
-                     sound: 'default'
+                     sound: 'default',
+                     'mutable-content': 1, // Allows the system to process the notification
+                     'content-available': 1 // Wakes up the app's background processor
                   }
                 }
               },
