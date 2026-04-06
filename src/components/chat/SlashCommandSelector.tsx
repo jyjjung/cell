@@ -29,6 +29,7 @@ interface SlashCommandSelectorProps {
   inputValue: string;
   onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', id: string, metadata?: any) => void;
   onClose: () => void;
+  onCategoryClick?: (category: string) => void;
   showWorshipCreation?: boolean;
 }
 
@@ -51,10 +52,12 @@ export default function SlashCommandSelector({
   inputValue, 
   onSelect, 
   onClose,
+  onCategoryClick,
   showWorshipCreation = false 
 }: SlashCommandSelectorProps) {
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   
   const { events } = useEvents();
@@ -73,6 +76,8 @@ export default function SlashCommandSelector({
 
   useEffect(() => {
     const trimmed = inputValue.trim();
+    
+    // Pattern matching for slash commands
     if (trimmed.startsWith('/invite')) {
       setActiveCommand('invite');
       setSearchTerm(trimmed.replace('/invite', '').trim());
@@ -97,54 +102,70 @@ export default function SlashCommandSelector({
     } else if (trimmed.startsWith('/chords')) {
       setActiveCommand('chords');
       setSearchTerm(trimmed.replace('/chords', '').trim());
-    } else if (trimmed === '/') {
+    } else if (trimmed.startsWith('/')) {
+      // Partial command pattern (e.g., '/s')
       setActiveCommand(null);
-      setSearchTerm('');
+      setSearchTerm(trimmed.substring(1).trim());
     } else if (trimmed.length > 0 && !trimmed.startsWith('/')) {
-      // Only auto-close if the user typed something that isn't a command
-      onClose();
+      if (activeCommand) {
+        setSearchTerm(trimmed);
+      } else {
+        onClose();
+      }
+    } else if (trimmed === '') {
+      // If input is totally empty, we might have been triggered by the '+' button
+      // In this case, keep the activeCommand if it exists
+      setSearchTerm('');
     }
-  }, [inputValue, onClose]);
+    setSelectedIndex(0);
+  }, [inputValue, onClose]); 
+
+  // Reset selected index when search term changes or active command changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchTerm, activeCommand]);
 
   const filteredItems = useMemo(() => {
-    if (!activeCommand) return [];
-    
     const search = searchTerm.toLowerCase();
+
+    if (!activeCommand) {
+        return COMMANDS
+            .filter(cmd => !cmd.isWorshipCreation || showWorshipCreation)
+            .filter(cmd => 
+                cmd.label.toLowerCase().includes(search) || 
+                cmd.description.toLowerCase().includes(search) ||
+                cmd.id.toLowerCase().includes(search)
+            );
+    }
     
     if (activeCommand === 'invite') {
       return invitations
         .filter(i => i.title.toLowerCase().includes(search))
-        .slice(0, 5)
         .map(i => ({ id: i.id, title: i.title, subtitle: i.description, date: i.dateOptions[0], type: 'invitation' }));
     }
     if (activeCommand === 'event') {
       return events
         .filter(e => e.title.toLowerCase().includes(search))
-        .slice(0, 5)
         .map(e => ({ id: e.id, title: e.title, subtitle: e.category, date: e.date, type: 'event' }));
     }
     if (activeCommand === 'setlist') {
       return setlists
         .filter(s => s.name.toLowerCase().includes(search))
-        .slice(0, 5)
         .map(s => ({ id: s.id, title: s.name, subtitle: `${s.songs?.length || 0} songs`, date: s.date, type: 'setlist' }));
     }
     if (activeCommand === 'roster') {
       return rosters
         .filter(r => r.name.toLowerCase().includes(search))
-        .slice(0, 5)
         .map(r => ({ id: r.id, title: r.name, subtitle: `${r.slots?.length || 0} roles`, date: r.date, type: 'roster' }));
     }
     if (activeCommand === 'qt') {
       return qtRoster
         .filter(r => r.passage.toLowerCase().includes(search) || r.personName.toLowerCase().includes(search))
-        .slice(0, 10)
         .map(r => ({ id: r.date, title: r.passage, subtitle: r.personName, date: r.date, type: 'qt' }));
     }
     if (activeCommand === 'cleaning') {
       return cleaningRoster
         .filter(r => r.date.toLowerCase().includes(search))
-        .slice(0, 10)
         .map(r => {
           const day = cleaningDays.find(d => d.id === r.dayId);
           return { id: r.date, title: day?.name || 'Cleaning Session', subtitle: `${r.assignedUserIds.length} members`, date: r.date, type: 'cleaning' };
@@ -153,7 +174,6 @@ export default function SlashCommandSelector({
     if (activeCommand === 'song' || activeCommand === 'chords') {
       return songs
         .filter(s => s.title.toLowerCase().includes(search) || (s.artist?.toLowerCase().includes(search)))
-        .slice(0, 10)
         .map(s => ({ 
           id: s.id, 
           title: s.title, 
@@ -163,16 +183,62 @@ export default function SlashCommandSelector({
         }));
     }
     return [];
-  }, [activeCommand, searchTerm, invitations, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs]);
+  }, [activeCommand, searchTerm, invitations, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs, showWorshipCreation]);
+
+  const handleKeyboardSelect = (index: number) => {
+    const items = filteredItems;
+    if (!items[index]) return;
+
+    if (!activeCommand) {
+        const cmd = items[index] as any;
+        if (cmd.id === 'image') {
+            onSelect('image', '');
+        } else if (cmd.isWorshipCreation) {
+            onSelect(cmd.id as any, '');
+        } else {
+            setActiveCommand(cmd.id);
+            if (onCategoryClick) onCategoryClick(cmd.id);
+        }
+    } else {
+        const item = items[index] as any;
+        if (item.type === 'song') {
+            setSelectedSongId(item.id);
+        } else {
+            onSelect(item.type, item.id, { label: item.title });
+        }
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        const items = filteredItems;
+        if (items.length === 0 && !selectedSong) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev + 1) % items.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev - 1 + items.length) % items.length);
+        } else if (e.key === 'Enter') {
+            if (selectedSong) return; // Song key selector doesn't use the filteredItems list
+            e.preventDefault();
+            handleKeyboardSelect(selectedIndex);
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredItems, selectedIndex, activeCommand, selectedSong]);
 
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      className="absolute bottom-full left-0 right-0 mb-4 w-full bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden z-[100] flex flex-col"
+      className="absolute bottom-full left-0 right-0 mb-4 w-full bg-popover/90 backdrop-blur-2xl border border-border/20 rounded-[2rem] shadow-2xl overflow-hidden z-[100] flex flex-col"
     >
-      <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+      <div className="p-4 border-b border-border/10 bg-foreground/5 flex items-center justify-between">
         <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
                 {activeCommand ? (
@@ -215,11 +281,12 @@ export default function SlashCommandSelector({
                                     imageUrl: sheet.imageUrl,
                                     sheetKey: sheet.key,
                                     songTitle: selectedSong.title,
-                                    artist: selectedSong.artist
+                                    artist: selectedSong.artist,
+                                    label: `${selectedSong.title} (${sheet.key})`
                                 });
                                 onClose();
                             }}
-                            className="h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-[13px] font-black hover:bg-primary hover:text-white transition-all active:scale-95"
+                            className="h-12 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-center text-[13px] font-black hover:bg-primary hover:text-white transition-all active:scale-95"
                         >
                             {sheet.key}
                         </button>
@@ -245,22 +312,24 @@ export default function SlashCommandSelector({
                     onSelect(cmd.id as any, '');
                   } else {
                     setActiveCommand(cmd.id);
+                    if (onCategoryClick) onCategoryClick(cmd.id);
                   }
                 }}
                 className={cn(
-                  "flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group",
+                  "flex items-center gap-4 p-3 rounded-2xl hover:bg-foreground/5 transition-all text-left group",
                   cmd.isWorshipCreation ? "border-l-2 border-primary/40 bg-primary/5" : "",
-                  cmd.id === 'image' ? "bg-primary/5 border border-primary/10 mb-2" : ""
+                  cmd.id === 'image' ? "bg-primary/5 border border-primary/10 mb-2" : "",
+                  !activeCommand && selectedIndex === COMMANDS.indexOf(cmd) && "bg-foreground/10"
                 )}
               >
                 <div className={cn(
-                    "h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center group-hover:scale-110 transition-transform",
+                    "h-10 w-10 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-center group-hover:scale-110 transition-transform",
                     cmd.id === 'image' ? "bg-primary/10" : ""
                 )}>
                   <cmd.icon className={cn("w-5 h-5 text-foreground/70", cmd.id === 'image' ? "text-primary" : "")} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-[13px] font-bold text-white group-hover:text-primary transition-colors", cmd.id === 'image' ? "text-primary/90" : "")}>{cmd.label}</p>
+                  <p className={cn("text-[13px] font-bold text-foreground group-hover:text-primary transition-colors", cmd.id === 'image' ? "text-primary/90" : "")}>{cmd.label}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{cmd.description}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
@@ -278,12 +347,15 @@ export default function SlashCommandSelector({
                         // For song type, we enter the key selector
                         setSelectedSongId(item.id);
                     } else {
-                        onSelect(item.type, item.id);
+                        onSelect(item.type, item.id, { label: item.title });
                     }
                   }}
-                  className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-all text-left group"
+                  className={cn(
+                    "flex items-center gap-4 p-3 rounded-2xl hover:bg-foreground/5 transition-all text-left group",
+                    activeCommand && selectedIndex === filteredItems.indexOf(item) && "bg-foreground/10"
+                  )}
                 >
-                  <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0 overflow-hidden">
+                  <div className="h-10 w-10 rounded-xl bg-foreground/5 border border-border/10 flex flex-col items-center justify-center shrink-0 overflow-hidden">
                     {(() => {
                       try {
                         if (!item.date) throw new Error();
@@ -296,7 +368,7 @@ export default function SlashCommandSelector({
                             <span className="text-[10px] font-black text-primary uppercase leading-none">
                               {format(date, 'MMM')}
                             </span>
-                            <span className="text-[14px] font-black text-white leading-none mt-0.5">
+                            <span className="text-[14px] font-black text-foreground leading-none mt-0.5">
                               {format(date, 'd')}
                             </span>
                           </>
@@ -307,7 +379,7 @@ export default function SlashCommandSelector({
                     })()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-white truncate group-hover:text-primary transition-colors">{item.title}</p>
+                    <p className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors">{item.title}</p>
                     <p className="text-[10px] text-muted-foreground truncate opacity-70">{item.subtitle}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground/30" />

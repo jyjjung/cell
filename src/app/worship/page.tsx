@@ -110,7 +110,7 @@ function SongDetailView({
     if (!editTitle.trim()) return;
     setSaving(true);
     try {
-      await updateSong(song.id, { title: editTitle.trim(), artist: editArtist.trim() || undefined });
+      await updateSong(song.id, { title: editTitle.trim(), artist: editArtist.trim() || null });
       toast({ title: 'Song updated' });
       setEditing(false);
     } catch (e: any) {

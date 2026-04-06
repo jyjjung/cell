@@ -57,11 +57,13 @@ export function useWorshipSongs() {
   }, [currentUser]);
 
   /** Update song metadata (title/artist) */
-  const updateSong = useCallback(async (songId: string, data: { title?: string; artist?: string }) => {
-    await updateDoc(doc(db, SONGS_COLLECTION, songId), {
-      ...data,
-      updatedAt: serverTimestamp(),
-    });
+  const updateSong = useCallback(async (songId: string, data: { title?: string; artist?: string | null }) => {
+    const updateData: any = { ...data, updatedAt: serverTimestamp() };
+    // Remove undefined values to avoid Firebase error
+    if (updateData.title === undefined) delete updateData.title;
+    if (updateData.artist === undefined) delete updateData.artist;
+
+    await updateDoc(doc(db, SONGS_COLLECTION, songId), updateData);
   }, []);
 
   /** Upload a chord sheet image and add it to the song */
