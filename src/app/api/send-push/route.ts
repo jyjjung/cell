@@ -105,12 +105,16 @@ export async function POST(request: NextRequest) {
     for (const targetUser of usersToNotify) {
         console.log(`[send-push] Calculating unread for user: ${targetUser.userId}`);
         const badgeCount = await calculateTotalUnread(targetUser.userId, adminDb);
-        const uniqueTokens = [...new Set(targetUser.tokens)].filter(Boolean);
         
-        console.log(`[send-push] Sending push to ${uniqueTokens.length} tokens. Badge: ${badgeCount}`);
+        // Prune tokens to the most recent 5 to prevent stale delivery attempts (logs showed 85+ tokens for some users)
+        const rawTokens = Array.isArray(targetUser.tokens) ? targetUser.tokens : [];
+        const uniqueTokens = [...new Set(rawTokens)].filter(Boolean);
+        const prunedTokens = uniqueTokens.slice(0, 5);
+        
+        console.log(`[send-push] Sending push to ${prunedTokens.length} tokens (pruned from ${uniqueTokens.length}). Badge: ${badgeCount}`);
 
         const message = {
-          tokens: uniqueTokens,
+          tokens: prunedTokens,
           notification: {
             title: notification.title || 'New Notification',
             body: notification.message || '',
@@ -123,10 +127,15 @@ export async function POST(request: NextRequest) {
             link: notification.relatedUrl || '/',
           }),
           apns: {
+            headers: {
+              'apns-priority': '10', // Required for background delivery and badge updates
+            },
             payload: {
               aps: {
                 badge: badgeCount,
-                sound: 'default'
+                sound: 'default',
+                'mutable-content': 1, // Allows the system to process the notification
+                'content-available': 1 // Wakes up the app's background processor
               }
             }
           },
