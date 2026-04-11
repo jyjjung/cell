@@ -180,6 +180,21 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         if (rosterId) parentUpdate.latestReplyText = "📋 Roster";
 
         updateDoc(parentDocRef, parentUpdate).catch(e => console.error("Failed to increment replyCount", e));
+
+        // Fire-and-forget push notification — pass sender/text overrides so the
+        // notification shows the thread replier's name, not the original message author.
+        const notifText = messageData.text
+            || (messageData.imageUrl ? '📷 Image' : null)
+            || (invitationId ? '📩 Invitation' : null)
+            || (eventId ? '📅 Event' : null)
+            || (setlistId ? '🎵 Setlist' : null)
+            || (rosterId ? '📋 Roster' : null)
+            || 'Replied in thread';
+        fetch('/api/send-chat-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatId, senderId: currentUser.uid, text: notifText }),
+        }).catch(error => console.error("Thread push notification dispatch failed:", error));
     }).catch(error => {
         console.error("Failed to store thread message:", error);
     });
