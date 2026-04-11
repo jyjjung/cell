@@ -175,14 +175,10 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                 }
               },
               webpush: {
-                notification: {
-                  icon: '/icon.svg',
-                  badge: '/icon.svg',
-                  tag: String(chat.id),
-                  data: {
-                    link: `/chat/${chat.id}`
-                  }
-                },
+                // No webpush.notification here — our firebase-messaging-sw.js
+                // onBackgroundMessage handler controls display. Including
+                // webpush.notification causes FCM to show a second generic
+                // notification ("em." / "from em.") alongside ours.
                 fcm_options: {
                   link: `/chat/${chat.id}`
                 }
