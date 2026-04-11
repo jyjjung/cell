@@ -49,7 +49,7 @@ export default function ProfilePage() {
   const [pushSupport, setPushSupport] = useState<PushSupportState>('LOADING');
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
 
-  const { createNotification } = useNotifications();
+
   
   const t = translations[preferredLanguage || 'en'];
 
