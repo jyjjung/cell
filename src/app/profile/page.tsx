@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Palette, LogOut, BellRing, BellOff, AlertTriangle, Download, User as UserIcon, Languages, Cake } from 'lucide-react';
+import { Loader2, Palette, LogOut, BellRing, BellOff, AlertTriangle, Download, Send, User as UserIcon, Languages, Cake } from 'lucide-react';
 import type { UserProfileData, AvatarData, AppEvent } from '@/types';
 import { Switch } from '@/components/ui/switch';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
@@ -18,7 +18,7 @@ import { messaging, db } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
+import { useNotifications } from '@/hooks/use-notifications';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,8 +48,8 @@ export default function ProfilePage() {
   
   const [pushSupport, setPushSupport] = useState<PushSupportState>('LOADING');
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
-
-
+  const [isTestingPush, setIsTestingPush] = useState(false);
+  const { createNotification } = useNotifications();
   
   const t = translations[preferredLanguage || 'en'];
 
@@ -191,6 +191,30 @@ export default function ProfilePage() {
         setPushSupport(getPushSupportState());
     }
   }, [currentUser, toast, getPushSupportState]);
+
+  const handleTestPush = async () => {
+    if (!currentUser) return;
+    setIsTestingPush(true);
+    try {
+      await createNotification({
+        title: "Test Notification",
+        message: "If you received this, push notifications are working!",
+        type: 'admin',
+        isGlobal: false,
+        userId: currentUser.uid,
+        relatedUrl: '/profile'
+      });
+    } catch (error: any) {
+      console.error("Failed to send test push notification", error);
+      toast({
+        variant: "destructive",
+        title: "Push Dispatch Failed",
+        description: error.message || "An unknown error occurred.",
+      });
+    } finally {
+      setIsTestingPush(false);
+    }
+  };
 
 
   const handleSignOut = async () => { await signOutUser(); };
@@ -372,9 +396,14 @@ export default function ProfilePage() {
             {renderNotificationButton}
           </div>
           {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
-            <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" className="w-full rounded-xl h-9 text-xs text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
-              {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} Repair Push Notifications
-            </Button>
+            <div className="space-y-2">
+                <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl h-9 text-sm">
+                  {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
+                </Button>
+                <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" className="w-full rounded-xl h-9 text-xs text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
+                  {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} Repair Push Notifications
+                </Button>
+            </div>
           )}
           {pushSupport === 'NEEDS_PWA_INSTALL' && (
             <Alert variant="default">
