@@ -3,64 +3,84 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { getToken } from 'firebase/messaging';
-import { messaging } from '@/lib/firebase';
+import { messaging, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
+import { doc, updateDoc } from 'firebase/firestore';
+
+/**
+ * Explicitly registers firebase-messaging-sw.js and returns its registration.
+ * 
+ * CRITICAL: We CANNOT use navigator.serviceWorker.ready here — that returns
+ * whatever SW is active (e.g. sw.js from next-pwa). Push subscriptions are
+ * BOUND to the SW that registers them, so if sw.js registers the subscription,
+ * FCM pushes go to sw.js which has no Firebase messaging code, and
+ * onBackgroundMessage is NEVER called.
+ */
+async function getFCMRegistration(): Promise<ServiceWorkerRegistration> {
+  const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+    scope: '/',
+  });
+  // If the SW is still installing, wait for it to activate
+  if (registration.installing) {
+    await new Promise<void>((resolve) => {
+      registration.installing!.addEventListener('statechange', function () {
+        if (this.state === 'activated') resolve();
+      });
+    });
+  }
+  return registration;
+}
 
 export function useFCMToken() {
-  const { currentUser, updateUserProfile } = useAuth();
+  const { currentUser } = useAuth();
   const hasSynced = useRef(false);
 
   const registerToken = useCallback(async (isManual = false) => {
     if (!messaging || !currentUser) return;
     
-    // The hasSynced lock prevents redundant auto-registrations on re-renders.
-    // isManual=true (from heartbeat / permission grant) always bypasses it so
-    // the token can be refreshed after an iOS rotation or service-worker update.
     if (!isManual && hasSynced.current) return;
-
-    // For manual calls, reset the lock so the next auto-sync can also run once.
     if (isManual) hasSynced.current = false;
     hasSynced.current = true;
 
     try {
-      // Check current permission state
       const permission = Notification.permission;
       
       if (permission === 'granted') {
         const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
         if (!vapidKey) {
-            console.error('[useFCMToken] FATAL: Missing NEXT_PUBLIC_FCM_VAPID_KEY in environment.');
-            return;
+          console.error('[useFCMToken] FATAL: Missing NEXT_PUBLIC_FCM_VAPID_KEY.');
+          return;
         }
 
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await getFCMRegistration();
         const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
         
         if (token) {
           const currentTokens = currentUser.fcmTokens || [];
           
-          // Always keep the freshest token at index 0.
-          // Truncate to the 3 most recent to prevent stale token graveyards.
           if (currentTokens[0] !== token) {
-            console.log('[useFCMToken] Syncing push tokens (token rotated)');
+            console.log('[useFCMToken] New token — updating (direct SET to avoid arrayUnion accumulation)');
             const filtered = currentTokens.filter(t => t !== token);
             const newList = [token, ...filtered].slice(0, 3);
-            await updateUserProfile(currentUser.uid, { fcmTokens: newList });
+            
+            // CRITICAL: Use direct updateDoc (SET) instead of updateUserProfile.
+            // updateUserProfile uses arrayUnion which ADDS to the existing list,
+            // causing tokens to accumulate to 84+ over time rather than trimming to 3.
+            await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: newList });
           }
         }
       }
     } catch (error) {
-      // Reset the lock on failure so it can retry next time
       hasSynced.current = false;
       console.error('[useFCMToken] Token registration failed:', error);
     }
-  }, [currentUser, updateUserProfile]);
+  }, [currentUser]);
 
   const requestPermission = useCallback(async () => {
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        registerToken(true);
+        await registerToken(true);
         return true;
       }
     } catch (error) {
@@ -71,7 +91,7 @@ export function useFCMToken() {
 
   useEffect(() => {
     if (currentUser && typeof window !== 'undefined') {
-       registerToken();
+      registerToken();
     }
   }, [currentUser, registerToken]);
 
