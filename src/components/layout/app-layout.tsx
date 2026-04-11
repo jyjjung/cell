@@ -122,53 +122,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [currentUser, loadingAuth, hasMounted, pathname, router]);
   
   useEffect(() => {
-    // foreground messaging handle
+    // Foreground messaging: show native notification via SW (not toast).
+    // This fires when the app is OPEN. When closed, onBackgroundMessage in
+    // firebase-messaging-sw.js handles it.
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging && currentUser) {
       const unsubscribe = onMessage(messaging as any, (payload) => {
-        const title = payload.data?.title || 'New Sync Notification';
+        const title = payload.data?.title || 'New Notification';
         const body = payload.data?.body || '';
         const link = payload.data?.link || '/';
         const tag = payload.data?.tag || 'community-update';
 
-        // Logic for avoiding redundant notifications when user is already in the chat
-        const isCurrentlyViewingThisChat = pathname === link;
-        if (isCurrentlyViewingThisChat && link.startsWith('/chat/')) {
-            return; // Skip notification
-        }
+        // Suppress if the user is already viewing this exact chat
+        const isCurrentlyViewingThisChat = pathname === link && link.startsWith('/chat/');
+        if (isCurrentlyViewingThisChat) return;
 
-        // --- IN-APP TOAST ---
-        // Only show if not already viewing the exact target
-        if (!isCurrentlyViewingThisChat) {
-            toast({
-                title: title,
-                description: body,
-                className: "cursor-pointer hover:bg-muted/50 transition-colors",
-                onClick: () => {
-                   router.push(link);
-                }
+        // Show native notification via service worker (works on iOS PWA + all browsers)
+        // new Notification() is silently blocked in SW-controlled pages
+        if (Notification.permission === 'granted') {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              body,
+              icon: payload.data?.icon || '/icon.svg',
+              tag,
+              data: { link },
             });
-        }
-        
-        // --- BROWSER NOTIFICATION (Native) ---
-        // IMPORTANT: new Notification() is silently ignored on iOS PWA and blocked
-        // in service-worker-controlled pages. Always use registration.showNotification().
-        if (Notification.permission === 'granted' && title && !isCurrentlyViewingThisChat) {
-            navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(title, {
-                    body: body,
-                    icon: payload.data?.icon || '/icon.svg',
-                    data: { link },
-                    tag: tag,
-                });
-            }).catch(() => {
-                // Fallback for browsers without service worker support
-            });
+          }).catch(() => {});
         }
       });
 
       return () => unsubscribe();
     }
-  }, [currentUser, router, pathname, toast]);
+  }, [currentUser, pathname]);
   
   // Foreground Heartbeat: Re-register token on visibility change to catch iOS rotations
   useEffect(() => {

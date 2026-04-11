@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AvatarEditor } from '@/components/avatar/AvatarEditor';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { getToken } from 'firebase/messaging';
-import { messaging } from '@/lib/firebase';
+import { messaging, db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -151,28 +152,23 @@ export default function ProfilePage() {
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
-            const registration = await navigator.serviceWorker.ready;
+            // CRITICAL: Explicitly register firebase-messaging-sw.js.
+            // Cannot use navigator.serviceWorker.ready — that may return sw.js (next-pwa),
+            // which doesn't have Firebase Messaging code, breaking onBackgroundMessage.
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
             const currentToken = await getToken(messaging, { 
                 vapidKey,
                 serviceWorkerRegistration: registration 
             });
             
             if (currentToken) {
-                const existingTokens = currentUser.fcmTokens || [];
-                // CRITICAL FIX: Merge tokens instead of overwriting the whole list
-                if (!existingTokens.includes(currentToken)) {
-                    const newList = [currentToken, ...existingTokens].slice(0, 3);
-                    await updateUserProfile(currentUser.uid, { fcmTokens: newList });
-                    toast({
-                        title: "Notifications Enabled",
-                        description: "You will now receive push notifications on this device.",
-                    });
-                } else {
-                     toast({
-                        title: "Already Subscribed",
-                        description: "Notifications are already enabled on this device.",
-                    });
-                }
+                // SET (not union) to aggressively clear all 84+ accumulated stale tokens.
+                // Other devices will re-add themselves via use-fcm-token on next open.
+                await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: [currentToken] });
+                toast({
+                    title: "Notifications Enabled",
+                    description: "You will now receive push notifications on this device.",
+                });
             } else {
                 throw new Error("Could not get push token.");
             }
@@ -194,7 +190,7 @@ export default function ProfilePage() {
         setIsSubscriptionLoading(false);
         setPushSupport(getPushSupportState());
     }
-  }, [currentUser, updateUserProfile, toast, getPushSupportState]);
+  }, [currentUser, toast, getPushSupportState]);
 
   const handleTestPush = async () => {
     if (!currentUser) return;
