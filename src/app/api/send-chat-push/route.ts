@@ -155,6 +155,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
                 icon: '/icon.svg',
                 tag: String(chat.id),
                 link: `/chat/${chat.id}`,
+                badge: String(badgeCount), // Used by SW to update home screen badge when app is closed
               }),
               apns: {
                 headers: {

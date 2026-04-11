@@ -22,7 +22,20 @@ const messaging = firebase.messaging();
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
+
+  // --- UPDATE APP BADGE ---
+  // This is the ONLY way to update the home screen badge when the app is closed.
+  // navigator.setAppBadge is available in service worker scope (iOS 16.4+ PWA, Chrome).
+  const badgeCount = parseInt(payload.data?.badge || '0', 10);
+  if ('setAppBadge' in navigator) {
+    if (badgeCount > 0) {
+      navigator.setAppBadge(badgeCount).catch(() => {});
+    } else {
+      navigator.clearAppBadge().catch(() => {});
+    }
+  }
+
+  // --- SHOW NOTIFICATION ---
   const notificationTitle = payload.data?.title || 'New Message';
   const notificationOptions = {
     body: payload.data?.body || 'You have a new update.',

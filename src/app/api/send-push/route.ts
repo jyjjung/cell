@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
             icon: '/icon.svg',
             tag: notification.id,
             link: notification.relatedUrl || '/',
+            badge: String(badgeCount), // Used by SW to update home screen badge when app is closed
           }),
           apns: {
             headers: {
