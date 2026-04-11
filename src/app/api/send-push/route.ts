@@ -1,6 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import type { AppNotification, UserProfileData, Chat } from '@/types';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
 
@@ -106,10 +107,10 @@ export async function POST(request: NextRequest) {
         console.log(`[send-push] Calculating unread for user: ${targetUser.userId}`);
         const badgeCount = await calculateTotalUnread(targetUser.userId, adminDb);
         
-        // Prune tokens to the most recent 5 to prevent stale delivery attempts (logs showed 85+ tokens for some users)
+        // Prune tokens to the most recent 3, matching the client-side limit.
         const rawTokens = Array.isArray(targetUser.tokens) ? targetUser.tokens : [];
         const uniqueTokens = [...new Set(rawTokens)].filter(Boolean);
-        const prunedTokens = uniqueTokens.slice(0, 5);
+        const prunedTokens = uniqueTokens.slice(0, 3);
         
         console.log(`[send-push] Sending push to ${prunedTokens.length} tokens (pruned from ${uniqueTokens.length}). Badge: ${badgeCount}`);
 
@@ -154,6 +155,30 @@ export async function POST(request: NextRequest) {
         const response = await adminMessaging.sendEachForMulticast(message as any);
         console.log(`[send-push] Result for ${targetUser.userId}: ${response.successCount} success, ${response.failureCount} failure`);
         totalSuccess += response.successCount;
+
+        // --- Stale Token Cleanup ---
+        // Remove any tokens FCM reports as invalid to prevent ever-growing zombie lists.
+        if (response.failureCount > 0) {
+            const staleTokens: string[] = [];
+            response.responses.forEach((res, idx) => {
+                if (!res.success) {
+                    const code = res.error?.code || '';
+                    if (
+                        code === 'messaging/registration-token-not-registered' ||
+                        code === 'messaging/invalid-registration-token' ||
+                        code === 'messaging/invalid-argument'
+                    ) {
+                        staleTokens.push(prunedTokens[idx]);
+                    }
+                }
+            });
+            if (staleTokens.length > 0) {
+                console.log(`[send-push] Pruning ${staleTokens.length} stale tokens for user ${targetUser.userId}`);
+                await adminDb.collection('users').doc(targetUser.userId).update({
+                    fcmTokens: FieldValue.arrayRemove(...staleTokens)
+                });
+            }
+        }
     }
 
     return NextResponse.json({ success: true, delivered: totalSuccess });

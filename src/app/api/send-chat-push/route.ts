@@ -1,7 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
-import { FieldPath, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
 import type { UserProfileData, Chat, ChatMessage } from '@/types';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
@@ -137,10 +137,10 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
             console.log(`[send-chat-push] Calculating unread for user: ${userId}`);
             const badgeCount = await calculateTotalUnread(userId, adminDb);
 
-            // Prune tokens to the most recent 5 to prevent stale delivery attempts (logs showed 85+ tokens for some users)
+            // Prune tokens to the most recent 3, matching the client-side limit.
             const rawTokens = Array.isArray(user.fcmTokens) ? user.fcmTokens : [];
             const tokensSet = [...new Set(rawTokens)].filter(Boolean);
-            const prunedTokens = tokensSet.slice(0, 5);
+            const prunedTokens = tokensSet.slice(0, 3);
             
             console.log(`[send-chat-push] Sending to ${prunedTokens.length} tokens (pruned from ${tokensSet.length}). Badge: ${badgeCount}`);
 
@@ -189,6 +189,30 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
             console.log(`[send-chat-push] Result for ${userId}: ${response.successCount} success, ${response.failureCount} failure`);
             totalSuccessCount += response.successCount;
             totalFailureCount += response.failureCount;
+
+            // --- Stale Token Cleanup ---
+            // Remove any tokens FCM reports as invalid to prevent ever-growing zombie lists.
+            if (response.failureCount > 0) {
+                const staleTokens: string[] = [];
+                response.responses.forEach((res, idx) => {
+                    if (!res.success) {
+                        const code = res.error?.code || '';
+                        if (
+                            code === 'messaging/registration-token-not-registered' ||
+                            code === 'messaging/invalid-registration-token' ||
+                            code === 'messaging/invalid-argument'
+                        ) {
+                            staleTokens.push(prunedTokens[idx]);
+                        }
+                    }
+                });
+                if (staleTokens.length > 0) {
+                    console.log(`[send-chat-push] Pruning ${staleTokens.length} stale tokens for user ${userId}`);
+                    await adminDb.collection('users').doc(userId).update({
+                        fcmTokens: FieldValue.arrayRemove(...staleTokens)
+                    });
+                }
+            }
         }
     }
 
@@ -203,7 +227,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const { chatId } = body;
+    const { chatId, senderId: senderIdOverride, text: textOverride } = body;
     if (!chatId) {
         return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
     }
@@ -228,6 +252,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, delivered: 0, message: 'No messages in chat to notify for.' });
         }
         const latestMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
+        
+        // Allow callers (e.g. thread replies) to override sender/text so the notification
+        // is correctly attributed instead of showing the original message author.
+        if (senderIdOverride) (latestMessage as any).senderId = senderIdOverride;
+        if (textOverride) (latestMessage as any).text = textOverride;
 
         const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging);
         return NextResponse.json({ success: true, delivered: result.success });
