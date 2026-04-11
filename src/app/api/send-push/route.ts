@@ -144,11 +144,8 @@ export async function POST(request: NextRequest) {
             }
           },
           webpush: {
-            notification: {
-              icon: '/icon.svg',
-              badge: '/icon.svg',
-              tag: notification.id,
-            },
+            // No webpush.notification — SW onBackgroundMessage controls display.
+            // webpush.notification triggers a second generic notification from FCM.
             fcm_options: {
               link: notification.relatedUrl || '/'
             }
