@@ -150,20 +150,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         // --- BROWSER NOTIFICATION (Native) ---
+        // IMPORTANT: new Notification() is silently ignored on iOS PWA and blocked
+        // in service-worker-controlled pages. Always use registration.showNotification().
         if (Notification.permission === 'granted' && title && !isCurrentlyViewingThisChat) {
-             const notificationOptions = {
-                 body: body,
-                 icon: payload.data?.icon || '/icon.svg',
-                 data: { link },
-                 tag: tag
-             };
-             const notification = new Notification(title, notificationOptions);
-             notification.onclick = (event) => {
-                 event.preventDefault();
-                 router.push(link);
-                 window.focus();
-                 notification.close();
-             };
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: payload.data?.icon || '/icon.svg',
+                    data: { link },
+                    tag: tag,
+                });
+            }).catch(() => {
+                // Fallback for browsers without service worker support
+            });
         }
       });
 

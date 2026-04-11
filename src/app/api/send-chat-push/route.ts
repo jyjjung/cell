@@ -146,10 +146,9 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
             const payload = {
               tokens: prunedTokens,
-              notification: {
-                title: title,
-                body: bodyText,
-              },
+              // DATA-ONLY: omitting top-level `notification` so Firebase SDK does NOT
+              // auto-handle it and skips our onBackgroundMessage handler in the SW.
+              // All display is controlled by the SW via the data fields below.
               data: toSafeStringMap({
                 title: title,
                 body: bodyText,
@@ -159,14 +158,18 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
               }),
               apns: {
                 headers: {
-                  'apns-priority': '10', // Required for background delivery and badge updates
+                  'apns-priority': '10',
                 },
                 payload: {
                   aps: {
+                     alert: {
+                       title: title,
+                       body: bodyText,
+                     },
                      badge: badgeCount,
                      sound: 'default',
-                     'mutable-content': 1, // Allows the system to process the notification
-                     'content-available': 1 // Wakes up the app's background processor
+                     'mutable-content': 1,
+                     'content-available': 1
                   }
                 }
               },
