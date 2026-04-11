@@ -116,10 +116,8 @@ export async function POST(request: NextRequest) {
 
         const message = {
           tokens: prunedTokens,
-          notification: {
-            title: notification.title || 'New Notification',
-            body: notification.message || '',
-          },
+          // DATA-ONLY: omitting top-level `notification` so Firebase's auto-handling
+          // is skipped and our onBackgroundMessage SW handler always fires.
           data: toSafeStringMap({
             title: notification.title || 'New Notification',
             body: notification.message || '',
@@ -129,14 +127,18 @@ export async function POST(request: NextRequest) {
           }),
           apns: {
             headers: {
-              'apns-priority': '10', // Required for background delivery and badge updates
+              'apns-priority': '10',
             },
             payload: {
               aps: {
+                alert: {
+                  title: notification.title || 'New Notification',
+                  body: notification.message || '',
+                },
                 badge: badgeCount,
                 sound: 'default',
-                'mutable-content': 1, // Allows the system to process the notification
-                'content-available': 1 // Wakes up the app's background processor
+                'mutable-content': 1,
+                'content-available': 1
               }
             }
           },

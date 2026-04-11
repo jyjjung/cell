@@ -41,18 +41,20 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
   const link = event.notification.data?.link || '/';
+  const fullUrl = self.location.origin + link;
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Try to find an existing window and focus it
+      // Try to find an existing window on the same origin and navigate it
       for (const client of clientList) {
-        if (client.url === link && 'focus' in client) {
-          return client.focus();
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.focus();
+          return client.navigate(fullUrl);
         }
       }
       // If no window found, open a new one
       if (clients.openWindow) {
-        return clients.openWindow(link);
+        return clients.openWindow(fullUrl);
       }
     })
   );
