@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home, Users, BookOpen, Bell, Shield, LogOut, User,
+  Home, Users, BookOpen, Shield, LogOut, User,
   LogIn, UserPlus, MessageCircle, ChevronDown, ChevronRight,
   CalendarCheck, Music, Library
 } from 'lucide-react';
@@ -26,7 +26,7 @@ import {
 import { Skeleton } from '../ui/skeleton';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { PixelAvatar } from '../avatar/PixelAvatar';
-import { useNotifications } from '@/hooks/use-notifications';
+
 import { useChats } from '@/hooks/useChats';
 import { translations } from '@/lib/translations';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
@@ -55,27 +55,13 @@ export default function AppSidebar() {
   const [isMounted, setIsMounted] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const { setIsPageLoading } = usePageLoading();
-  const { notifications: allNotifications } = useNotifications();
+
   const { chats } = useChats();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  const unreadAlerts = useMemo(() => {
-    if (!currentUser || !allNotifications) return 0;
-    return allNotifications.filter(n => Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
-  }, [allNotifications, currentUser]);
-
-  const unreadAnnouncements = useMemo(() => {
-    if (!currentUser || !allNotifications) return 0;
-    return allNotifications.filter(n => n.type === 'announcement' && Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
-  }, [allNotifications, currentUser]);
-
-  const unreadGeneralAlerts = useMemo(() => {
-    if (!currentUser || !allNotifications) return 0;
-    return allNotifications.filter(n => n.type !== 'announcement' && Array.isArray(n.readBy) && !n.readBy.includes(currentUser.uid)).length;
-  }, [allNotifications, currentUser]);
 
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
@@ -106,13 +92,7 @@ export default function AppSidebar() {
 
   const navItems: NavItem[] = [
     { href: '/', label: t.home, icon: Home },
-    {
-      label: t.alerts, icon: Bell, badge: unreadAlerts,
-      children: [
-        { href: '/announcements', label: t.announcements, badge: unreadAnnouncements },
-        { href: '/notifications', label: t.notifications, badge: unreadGeneralAlerts },
-      ]
-    },
+
     {
       label: t.scripture, icon: BookOpen,
       children: [
