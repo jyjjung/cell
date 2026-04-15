@@ -99,7 +99,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">
           <SidebarTrigger className="h-9 w-9 rounded-xl shrink-0 hover:bg-muted/70 transition-colors" />
-          <div className="hidden sm:block overflow-hidden">
+          <div className="overflow-hidden min-w-0 pr-1 truncate">
             <Breadcrumbs />
           </div>
         </div>
