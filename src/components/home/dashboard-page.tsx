@@ -6,7 +6,6 @@ import { translations } from '@/lib/translations';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
-import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useQTRoster } from '@/hooks/useQTRoster';
@@ -19,8 +18,8 @@ import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, addDays, isAfter, isSameDay } from 'date-fns';
 import {
-  BookOpen, Bell, MessageCircle, Calendar, CheckCircle, ChevronRight,
-  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, X, Flame, Clock, MapPin
+  BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
+  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -61,7 +60,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const { plan, loading: planLoading } = useBiblePlan();
   const { completedPassages, togglePassageCompletion, loadingChecklist } = useUserBibleChecklist();
   const { events, loading: eventsLoading } = useEvents();
-  const { notifications, markAsRead } = useNotifications();
   const { chats } = useChats();
   const { roster: cleaningRoster } = useCleaningRoster();
   const { roster: qtRoster } = useQTRoster();
@@ -108,8 +106,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return isValid(last) ? Math.max(0, differenceInDays(last, startOfDay(new Date()))) : null;
   }, [plan]);
 
-  const unreadAlerts = useMemo(() => notifications.filter(n => n.type === 'announcement' && !n.readBy?.includes(currentUser.uid)), [notifications, currentUser.uid]);
-  const totalAlerts = useMemo(() => notifications.filter(n => n.type === 'announcement'), [notifications]);
   const unreadChatCount = useMemo(() => chats.filter(c => {
     if (!c.lastMessageSentAt || !c.memberSeen?.[currentUser.uid] || c.lastMessageSenderId === currentUser.uid) return false;
     const ms = (ts: any) => ts?.toMillis?.() || (ts instanceof Date ? ts.getTime() : ts?._seconds ? ts._seconds * 1000 : 0);
@@ -163,27 +159,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         </h1>
       </motion.div>
       
-      {/* ── Alerts ── */}
-      {unreadAlerts.length > 0 && (
-        <motion.section custom={0.2} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-section-title text-orange-500">Alerts</h2>
-            <Button variant="ghost" size="sm" onClick={() => go('/announcements')} className="text-xs rounded-xl font-bold text-primary">All <ArrowRight className="ml-1 h-3 w-3" /></Button>
-          </div>
-          {unreadAlerts.slice(0, 2).map(n => (
-            <div key={n.id} className="flex items-center gap-4 p-4 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 backdrop-blur-xl">
-              <div className="flex-1 min-w-0 px-1">
-                <p className="font-bold text-sm truncate">{n.title}</p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => markAsRead(n.id)} className="h-9 w-9 rounded-2xl hover:bg-orange-500 hover:text-white shrink-0 transition-colors">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </motion.section>
-      )}
-
       {/* ── Smart Roster Assistant ── */}
       {(() => {
         const today = startOfToday();
@@ -233,10 +208,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       })()}
 
       {/* ── Stats Row ── */}
-      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: 'Progress', value: `${overallPct}%`, sub: `${daysLeft ?? '—'} days left`, color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', icon: Flame, onClick: () => go('/bible-checklist') },
-          { label: 'Alerts', value: totalAlerts.length, sub: unreadAlerts.length > 0 ? `${unreadAlerts.length} unread` : 'All read ✓', color: unreadAlerts.length > 0 ? 'text-primary' : 'text-muted-foreground/40', bg: 'bg-primary/10 border-primary/20', icon: Bell, onClick: () => go('/announcements') },
           { label: 'Messages', value: unreadChatCount, sub: unreadChatCount > 0 ? 'Unread' : 'All caught up', color: unreadChatCount > 0 ? 'text-indigo-500' : 'text-muted-foreground/40', bg: 'bg-indigo-500/10 border-indigo-500/20', icon: MessageCircle, onClick: () => go('/chat') },
           { label: 'Next Up', value: upcomingItems[0] ? format(upcomingItems[0].date, 'MMM d') : '—', sub: upcomingItems[0]?.title || 'Clear schedule', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: Calendar, onClick: () => go('/events') },
         ].map((card, i) => (
