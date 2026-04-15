@@ -3,7 +3,7 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
-import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight, MessageCircle } from "lucide-react";
+import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useChats } from "@/hooks/useChats";
 import { useAuth } from "@/contexts/auth-context";
@@ -25,7 +25,6 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
   const { chats } = useChats();
   const [mounted, setMounted] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'announcements' | 'messages'>('announcements');
   const panelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -53,8 +52,8 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
 
   const uid = currentUser?.uid || "";
 
-  const announcements = useMemo(
-    () => notifications.filter(n => n.type === "announcement")
+  const headerNotifications = useMemo(
+    () => notifications.filter(n => n.type !== "announcement")
       .sort((a, b) => {
         const ta = a.createdAt?.toMillis?.() ?? 0;
         const tb = b.createdAt?.toMillis?.() ?? 0;
@@ -63,28 +62,20 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
     [notifications]
   );
 
-  const unreadAnnouncements = useMemo(
-    () => announcements.filter(n => !(n.readBy || []).includes(uid)),
-    [announcements, uid]
+  const unreadHeaderNotifications = useMemo(
+    () => headerNotifications.filter(n => !(n.readBy || []).includes(uid)),
+    [headerNotifications, uid]
   );
-
-  const unreadChatsCount = useMemo(() => {
-    if (!currentUser || !mounted) return 0;
-    return chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
-  }, [chats, currentUser, mounted]);
-
-  const recentChats = useMemo(() => {
-    if (!mounted) return [];
-    return [...chats].sort((a, b) => {
-      const ms = (ts: any) => ts?.toMillis?.() || (ts instanceof Date ? ts.getTime() : ts?._seconds ? ts._seconds * 1000 : 0);
-      return ms(b.lastMessageSentAt) - ms(a.lastMessageSentAt);
-    }).slice(0, 8);
-  }, [chats, mounted]);
 
   const totalUnread = useMemo(() => {
     if (!currentUser || !mounted) return 0;
-    return unreadAnnouncements.length + unreadChatsCount;
-  }, [unreadAnnouncements, unreadChatsCount, currentUser, mounted]);
+    const unreadAlerts = notifications.filter(n => {
+      const readBy = Array.isArray(n.readBy) ? n.readBy : [];
+      return !readBy.includes(currentUser.uid) && n.type !== "announcement";
+    }).length;
+    const unreadChats = chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
+    return unreadAlerts + unreadChats;
+  }, [notifications, chats, currentUser, mounted]);
 
   return (
     <header className="sticky top-0 z-40 w-full">
@@ -121,7 +112,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
               <button
                 id="header-notification-bell"
                 onClick={() => setPanelOpen(v => !v)}
-                aria-label={`Announcements${unreadAnnouncements.length > 0 ? ` (${unreadAnnouncements.length} unread)` : ""}`}
+                aria-label={`Notifications${unreadHeaderNotifications.length > 0 ? ` (${unreadHeaderNotifications.length} unread)` : ""}`}
                 aria-expanded={panelOpen}
                 className={cn(
                   "h-9 w-9 rounded-xl flex items-center justify-center transition-colors",
@@ -155,156 +146,112 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                     transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     className="absolute right-0 top-full mt-2 w-[340px] sm:w-[380px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-black/10 overflow-hidden z-50"
                     role="dialog"
-                    aria-label="Announcements panel"
+                    aria-label="Notifications panel"
                   >
-                    {/* Panel Tabs */}
-                    <div className="flex items-center p-1.5 border-b border-border/30 gap-1 bg-muted/10">
-                      <button onClick={() => setActiveTab('announcements')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'announcements' ? "bg-background text-foreground shadow-sm shadow-black/5" : "text-muted-foreground hover:bg-muted/50")}>
-                        <Megaphone className={cn("h-3.5 w-3.5", activeTab === 'announcements' && "text-orange-500")} /> Announcements
-                        {unreadAnnouncements.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'announcements' ? "bg-orange-500 text-white" : "bg-muted-foreground/20 text-foreground")}>{unreadAnnouncements.length}</span>}
-                      </button>
-                      <button onClick={() => setActiveTab('messages')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'messages' ? "bg-background text-foreground shadow-sm shadow-black/5" : "text-muted-foreground hover:bg-muted/50")}>
-                        <MessageCircle className={cn("h-3.5 w-3.5", activeTab === 'messages' && "text-indigo-500")} /> Messages
-                        {unreadChatsCount > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'messages' ? "bg-indigo-500 text-white" : "bg-muted-foreground/20 text-foreground")}>{unreadChatsCount}</span>}
-                      </button>
+                    {/* Panel header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg bg-primary/10">
+                          <Bell className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <span className="text-sm font-bold">Notifications</span>
+                        {unreadHeaderNotifications.length > 0 && (
+                          <span className="text-[10px] font-black bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none">
+                            {unreadHeaderNotifications.length}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {unreadHeaderNotifications.length > 0 && (
+                          <button
+                            onClick={() => markAllAsRead(unreadHeaderNotifications.map(n => n.id))}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                            title="Mark all as read"
+                          >
+                            <CheckCheck className="h-3.5 w-3.5" />
+                            All read
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Announcement Specific Sub-header */}
-                    {activeTab === 'announcements' && unreadAnnouncements.length > 0 && (
-                      <div className="flex justify-end px-4 py-1.5 border-b border-border/20 bg-muted/5">
-                        <button
-                          onClick={() => markAllAsRead(unreadAnnouncements.map(n => n.id))}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors uppercase tracking-widest"
-                        >
-                          <CheckCheck className="h-3 w-3" />
-                          Mark all read
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Content List */}
+                    {/* Notification list */}
                     <div className="max-h-[420px] overflow-y-auto overscroll-contain">
-                      {activeTab === 'announcements' ? (
-                        announcements.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                              <div className="p-3 rounded-xl bg-muted/40">
-                                <Megaphone className="h-6 w-6 text-muted-foreground/30" />
-                              </div>
-                              <p className="text-sm font-semibold text-foreground">No announcements yet</p>
-                              <p className="text-xs text-muted-foreground">Community updates will appear here.</p>
-                            </div>
-                        ) : (
-                          <AnimatePresence initial={false}>
-                            {announcements.slice(0, 8).map((n, i) => {
-                              const isRead = (n.readBy || []).includes(uid);
-                              return (
-                                <motion.div
-                                  key={n.id}
-                                  layout
-                                  initial={{ opacity: 0, y: 6 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, x: 20 }}
-                                  transition={{ delay: i * 0.03, duration: 0.2 }}
-                                  className={cn(
-                                    "flex items-start gap-3 px-4 py-3.5 border-b border-border/20 last:border-0 transition-colors cursor-pointer",
-                                    isRead ? "opacity-60 hover:opacity-100" : "hover:bg-muted/30"
-                                  )}
-                                  onClick={() => { setPanelOpen(false); router.push("/announcements"); }}
-                                >
-                                  {/* Unread dot */}
-                                  <div className={cn(
-                                    "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                                    isRead ? "bg-muted-foreground/20" : "bg-orange-500 animate-pulse"
-                                  )} />
-
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0 space-y-0.5">
-                                    <p className={cn("text-sm font-bold leading-snug truncate", isRead ? "text-muted-foreground" : "text-foreground")}>
-                                      {n.title}
-                                    </p>
-                                    <LinkifiedText
-                                      text={n.message}
-                                      className="block text-xs text-muted-foreground leading-relaxed line-clamp-2"
-                                    />
-                                    <p className="text-[10px] text-muted-foreground/50 font-semibold pt-1">
-                                      {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() || new Date(n.createdAt), { addSuffix: true }) : "Just now"}
-                                    </p>
-                                  </div>
-
-                                  {/* Dismiss button */}
-                                  {!isRead && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
-                                      className="mt-0.5 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/40 hover:text-orange-500 hover:bg-orange-500/10 transition-colors shrink-0"
-                                    >
-                                      <X className="h-3.5 w-3.5" />
-                                    </button>
-                                  )}
-                                </motion.div>
-                              );
-                            })}
-                          </AnimatePresence>
-                        )
+                      {headerNotifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
+                          <div className="p-3 rounded-xl bg-muted/40">
+                            <Bell className="h-6 w-6 text-muted-foreground/30" />
+                          </div>
+                          <p className="text-sm font-semibold text-muted-foreground">No notifications yet</p>
+                          <p className="text-xs text-muted-foreground/50">Your activity feed will appear here.</p>
+                        </div>
                       ) : (
-                        recentChats.length === 0 ? (
-                           <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                              <div className="p-3 rounded-xl bg-muted/40">
-                                <MessageCircle className="h-6 w-6 text-muted-foreground/30" />
-                              </div>
-                              <p className="text-sm font-semibold text-foreground">No recent messages</p>
-                              <p className="text-xs text-muted-foreground">Start a conversation from the chat tab.</p>
-                            </div>
-                        ) : (
-                          <AnimatePresence initial={false}>
-                            {recentChats.map((c: any, i: number) => {
-                              const isUnread = isChatUnread(c, uid);
-                              return (
-                                <motion.div
-                                  key={c.id}
-                                  initial={{ opacity: 0, y: 6 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: i * 0.03, duration: 0.2 }}
-                                  className={cn(
-                                    "flex items-start gap-3 px-4 py-3.5 border-b border-border/20 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer group",
-                                    !isUnread && "opacity-70 hover:opacity-100"
-                                  )}
-                                  onClick={() => { setPanelOpen(false); router.push(`/chat?id=${c.id}`); }}
-                                >
-                                  {/* Unread dot */}
-                                  <div className={cn(
-                                    "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                                    isUnread ? "bg-indigo-500 animate-pulse" : "bg-muted-foreground/20"
-                                  )} />
+                        <AnimatePresence initial={false}>
+                          {headerNotifications.slice(0, 8).map((n, i) => {
+                            const isRead = (n.readBy || []).includes(uid);
+                            return (
+                              <motion.div
+                                key={n.id}
+                                layout
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ delay: i * 0.03, duration: 0.2 }}
+                                className={cn(
+                                  "flex items-start gap-3 px-4 py-3.5 border-b border-border/20 last:border-0 transition-colors cursor-pointer",
+                                  isRead ? "opacity-50 hover:opacity-100" : "hover:bg-muted/30"
+                                )}
+                                onClick={() => { setPanelOpen(false); router.push("/notifications"); }}
+                              >
+                                {/* Unread dot */}
+                                <div className={cn(
+                                  "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                                  isRead ? "bg-muted-foreground/20" : "bg-primary animate-pulse"
+                                )} />
 
-                                  {/* Content */}
-                                  <div className="flex-1 min-w-0 space-y-0.5">
-                                    <p className={cn("text-sm font-bold leading-snug truncate", isUnread ? "text-foreground" : "text-muted-foreground")}>
-                                      {c.isGroup ? c.name || "Group Chat" : "Direct Message"}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground line-clamp-1">{c.lastMessageText || c.lastMessage?.text || "Started a chat"}</p>
-                                    <p className="text-[10px] text-muted-foreground/50 font-semibold pt-1">
-                                      {c.lastMessageSentAt ? formatDistanceToNow(c.lastMessageSentAt?.toDate?.() || new Date(c.lastMessageSentAt), { addSuffix: true }) : "Just now"}
-                                    </p>
-                                  </div>
-                                  <ArrowRight className="h-3 w-3 mt-1 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </motion.div>
-                              );
-                            })}
-                          </AnimatePresence>
-                        )
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 space-y-0.5">
+                                  <p className={cn("text-sm font-semibold leading-snug truncate", isRead ? "text-muted-foreground" : "text-foreground")}>
+                                    {n.title}
+                                  </p>
+                                  <LinkifiedText
+                                    text={n.message}
+                                    className="block text-xs text-muted-foreground leading-relaxed line-clamp-2"
+                                  />
+                                  <p className="text-[10px] text-muted-foreground/40 font-medium pt-0.5">
+                                    {n.createdAt ? formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true }) : "Just now"}
+                                  </p>
+                                </div>
+
+                                {/* Dismiss button */}
+                                {!isRead && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                                    className="mt-0.5 h-7 w-7 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                                    title="Mark as read"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
                       )}
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-border/30 px-3 py-2 bg-muted/5">
-                      <button
-                        onClick={() => { setPanelOpen(false); router.push(activeTab === 'announcements' ? "/announcements" : "/chat"); }}
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
-                      >
-                        {activeTab === 'announcements' ? "View all announcements" : "View all messages"}
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    {headerNotifications.length > 0 && (
+                      <div className="border-t border-border/30 px-4 py-2.5">
+                        <button
+                          onClick={() => { setPanelOpen(false); router.push("/notifications"); }}
+                          className="w-full flex items-center justify-center gap-2 py-1.5 rounded-xl text-xs font-bold text-primary hover:bg-primary/5 transition-colors"
+                        >
+                          View all notifications
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
