@@ -4,53 +4,54 @@
 
 @layer base {
   :root {
-    /* Background — Minimal sleek white with a hyper-subtle cool tint */
-    --background: 210 25% 98%;
-    --foreground: 224 35% 8%;
+    /* Background — Crisp cool-white with real depth */
+    --background: 216 33% 97%;
+    --foreground: 222 47% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 35% 8%;
+    --card-foreground: 222 47% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 35% 8%;
+    --popover-foreground: 222 47% 9%;
 
-    /* Primary — Brilliant Azure */
-    --primary: 214 95% 55%;
+    /* Primary — Deep, saturated azure */
+    --primary: 214 90% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 30% 94%;
-    --secondary-foreground: 214 70% 28%;
+    --secondary: 214 40% 90%;
+    --secondary-foreground: 214 70% 22%;
 
-    --muted: 214 25% 94%;
-    --muted-foreground: 215 16% 40%;
+    --muted: 214 30% 92%;
+    --muted-foreground: 215 18% 38%;
 
-    --accent: 214 55% 92%;
-    --accent-foreground: 214 70% 28%;
+    --accent: 214 60% 88%;
+    --accent-foreground: 214 75% 22%;
 
-    --destructive: 350 82% 58%;
+    --destructive: 350 82% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 72% 38%;
+    --success: 142 72% 34%;
     --success-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 214 95% 55%;
+    /* Borders — clearly visible in light mode */
+    --border: 214 22% 82%;
+    --input: 214 22% 85%;
+    --ring: 214 90% 52%;
 
     --radius: 1.25rem;
 
-    --chart-1: 214 95% 55%;
-    --chart-2: 175 65% 42%;
-    --chart-3: 197 50% 35%;
-    --chart-4: 43 90% 62%;
-    --chart-5: 15 85% 62%;
+    --chart-1: 214 90% 52%;
+    --chart-2: 175 65% 38%;
+    --chart-3: 197 55% 32%;
+    --chart-4: 43 90% 56%;
+    --chart-5: 15 85% 56%;
 
-    --sidebar-background: 210 25% 98%;
-    --sidebar-foreground: 224 35% 8%;
-    --sidebar-accent: 214 40% 92%;
-    --sidebar-accent-foreground: 214 70% 28%;
-    --sidebar-border: 214 20% 88%;
-    --sidebar-ring: 214 95% 55%;
+    --sidebar-background: 216 33% 97%;
+    --sidebar-foreground: 222 47% 9%;
+    --sidebar-accent: 214 45% 90%;
+    --sidebar-accent-foreground: 214 75% 22%;
+    --sidebar-border: 214 22% 82%;
+    --sidebar-ring: 214 90% 52%;
   }
 
   .dark {
@@ -225,7 +226,7 @@
 
 /* Gradient text utility */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(var(--primary)), #0ea5e9);
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(190, 95%, 45%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -376,13 +377,14 @@
 
 /* Advanced Glass-morphism classes with dual-layer techniques */
 .glass-card {
-  background: hsla(var(--card), 0.65);
-  backdrop-filter: blur(32px) saturate(190%) contrast(110%);
-  -webkit-backdrop-filter: blur(32px) saturate(190%) contrast(110%);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(32px) saturate(180%) contrast(108%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%) contrast(108%);
   box-shadow: 
-    0 4px 24px -4px hsla(220, 50%, 0%, 0.1),
-    inset 0 1px 1px 0 hsla(0, 0%, 100%, 0.6);
-  border: 1px solid hsla(var(--border), 0.5);
+    0 4px 24px -4px hsla(220, 40%, 10%, 0.08),
+    0 1px 4px -1px hsla(220, 40%, 10%, 0.06),
+    inset 0 1px 1px 0 hsla(0, 0%, 100%, 0.9);
+  border: 1px solid hsla(214, 30%, 78%, 0.8);
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -398,8 +400,10 @@
 .glass-card:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 16px 32px -8px hsla(var(--primary), 0.15),
-    inset 0 1px 1px 0 hsla(0, 0%, 100%, 0.8);
+    0 12px 28px -6px hsla(214, 80%, 50%, 0.12),
+    0 2px 6px -1px hsla(220, 40%, 10%, 0.06),
+    inset 0 1px 1px 0 hsla(0, 0%, 100%, 1);
+  border-color: hsla(214, 50%, 70%, 0.9);
 }
 
 .dark .glass-card:hover {

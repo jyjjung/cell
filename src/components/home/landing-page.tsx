@@ -77,7 +77,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                         className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-3 group"
                     >
                         <span className="w-8 h-px bg-border group-hover:w-12 group-hover:bg-primary transition-all" />
-                        Platform Intelligence
+                        How It Works
                         <span className="w-8 h-px bg-border group-hover:w-12 group-hover:bg-primary transition-all" />
                     </Link>
                 </motion.div>
@@ -116,7 +116,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                     <div className="p-2 bg-primary/10 rounded-lg">
                         <Layout className="h-5 w-5 text-primary" />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight uppercase tracking-[0.1em]">Website Infrastructure</h2>
+                    <h2 className="text-2xl font-black tracking-tight uppercase tracking-[0.1em]">Built for our Community</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-4">
@@ -138,7 +138,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                             By leveraging standard Hobby and Spark plans, the portal operates at zero cost while maintaining high reliability for the community.
                         </p>
                         <Link href="/features" className="inline-flex items-center text-primary text-[10px] font-black uppercase tracking-[0.2em] hover:underline pt-2">
-                            View Technical Analysis <ArrowRight className="ml-2 h-3 w-3" />
+                            Learn More <ArrowRight className="ml-2 h-3 w-3" />
                         </Link>
                     </div>
                 </div>

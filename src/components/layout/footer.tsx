@@ -7,11 +7,15 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
 
-  // Explicitly hide footer on individual chat routes to prevent covering UI elements
-  // This allows the ChatWindow to have full-height presence.
-  if (pathname.startsWith('/chat/') && pathname !== '/chat') {
-    return null;
-  }
+  // Only show footer on public-facing pages
+  const publicRoutes = ['/', '/login', '/signup', '/features', '/privacy', '/forgot-password', '/pending-approval'];
+  const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'));
+
+  // Always hide on individual chat routes
+  if (pathname.startsWith('/chat/') && pathname !== '/chat') return null;
+
+  // Hide inside the authenticated app
+  if (!isPublic) return null;
 
   return (
     <footer className="py-6 border-t border-border/50 bg-background/5 backdrop-blur-2xl mt-auto shrink-0 w-full relative z-10">
@@ -25,7 +29,7 @@ export default function Footer() {
             href="/features" 
             className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors"
           >
-            Platform Intelligence
+            How It Works
           </Link>
 
           <Link 

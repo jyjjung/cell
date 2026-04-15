@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, ChevronLeft, ChevronRight, Maximize, FileText } from 'lucide-react';
 import { cn, isPdfUrl } from '@/lib/utils';
@@ -73,13 +74,14 @@ export function FullScreenViewer({
   const slide = slides[idx];
   if (!slide) return null;
 
-  return (
+  const viewerContent = (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[300] bg-black flex flex-col"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -206,4 +208,7 @@ export function FullScreenViewer({
       </motion.div>
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(viewerContent, document.body);
 }

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, MessageCircle, ArrowRight, Plus, Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { PageHeader, EmptyState } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import CreateChatDialog from "./CreateChatDialog";
 import { PixelAvatar } from "../avatar/PixelAvatar";
 import type { Chat } from "@/types";
@@ -159,9 +160,19 @@ export default function ChatList() {
       {/* Content Section */}
       <div className="relative">
         {loading ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-4 opacity-30">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-[10px] font-bold uppercase tracking-widest leading-none">{t.loading}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-5 rounded-2xl border border-border/30 bg-card/30">
+                <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-32 rounded-lg" />
+                    <Skeleton className="h-3 w-16 rounded-lg" />
+                  </div>
+                  <Skeleton className="h-3 w-48 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredChats.length === 0 ? (
           <EmptyState

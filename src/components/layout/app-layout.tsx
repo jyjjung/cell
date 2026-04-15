@@ -23,6 +23,29 @@ import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { useFCMToken } from '@/hooks/use-fcm-token';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
+import { useLoadingVerse } from '@/hooks/use-loading-verse';
+import { CommandMenu } from './command-menu';
+
+function InitialLoadingVerse() {
+  const loadingVerse = useLoadingVerse(true);
+  
+  if (!loadingVerse) return null;
+  return (
+    <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-4 max-w-2xl px-6"
+    >
+        <p className="text-xl md:text-2xl font-black tracking-tight leading-tight italic opacity-80">
+            "{loadingVerse.text}"
+        </p>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">
+            — {loadingVerse.reference}
+        </p>
+    </motion.div>
+  );
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -41,6 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
 
   useEffect(() => {
     setIsPageLoading(false);
@@ -49,7 +73,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (currentUser && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
-        setShowPermissionBanner(true);
+        // Only show if user hasn't permanently dismissed it
+        const dismissed = localStorage.getItem('pushBannerDismissed');
+        if (!dismissed) {
+          // Delay 10 seconds so user settles in first
+          const timer = setTimeout(() => setShowPermissionBanner(true), 10000);
+          return () => clearTimeout(timer);
+        }
       }
     }
   }, [currentUser]);
@@ -58,11 +88,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const granted = await requestPermission();
     if (granted) {
       setShowPermissionBanner(false);
+      localStorage.setItem('pushBannerDismissed', 'true');
       toast({
         title: "Notifications Enabled",
         description: "You're all set to receive updates!",
       });
     }
+  };
+
+  const handleDismissBanner = () => {
+    setShowPermissionBanner(false);
+    localStorage.setItem('pushBannerDismissed', 'true');
   };
 
   const totalUnreadCount = useMemo(() => {
@@ -168,8 +204,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   
   if (loadingAuth || !hasMounted) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen flex-col items-center justify-center bg-background px-8 text-center space-y-12">
         <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
+        <InitialLoadingVerse />
       </div>
     );
   }
@@ -192,7 +229,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset className="min-w-0 bg-transparent h-svh overflow-hidden flex flex-col">
         
         <div className="flex-1 flex flex-col min-h-0 relative z-10">
-            <Header />
+        <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />
+        <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
             
                 <div 
                     className={cn(
@@ -241,7 +279,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => setShowPermissionBanner(false)}
+                  onClick={() => handleDismissBanner()}
                   className="px-3 py-1.5 text-xs text-white/60 hover:text-white font-medium transition-colors"
                 >
                   Later

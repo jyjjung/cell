@@ -7,11 +7,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Bell, Shield, LogOut, User,
   LogIn, UserPlus, MessageCircle, ChevronDown, ChevronRight,
-  CalendarCheck, Music, Link2
+  CalendarCheck, Music, Library
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
-import { ThemeToggle } from './theme-toggle';
 import {
   Sidebar,
   SidebarContent,
@@ -135,7 +134,7 @@ export default function AppSidebar() {
       ]
     },
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
-    { href: '/media', label: 'Links', icon: Link2 },
+    { href: '/media', label: 'Resources', icon: Library },
     { href: '/members', label: t.members, icon: Users },
   ];
 
@@ -200,12 +199,25 @@ export default function AppSidebar() {
               if (visibleChildren.length === 0) return null;
 
               return (
-                <SidebarMenuItem key={item.label} className="group-data-[collapsible=icon]:hidden">
-                  {/* Group header — only shown when sidebar is expanded */}
+                <SidebarMenuItem key={item.label}>
+                  {/* Icon-only collapsed fallback — visible only when sidebar is icon-only */}
+                  <SidebarMenuButton
+                    isActive={hasActiveChild}
+                    tooltip={item.label}
+                    onClick={() => navigate(visibleChildren[0].href)}
+                    className={cn(
+                      "h-10 rounded-xl px-3 text-sm font-medium transition-all gap-3 hidden group-data-[collapsible=icon]:flex",
+                      hasActiveChild ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
+                    )}
+                  >
+                    {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
+                  </SidebarMenuButton>
+
+                  {/* Expanded group header — hidden in icon-only mode */}
                   <button
                     onClick={() => toggleGroup(item.label)}
                     className={cn(
-                      "w-full flex items-center gap-3 h-10 px-3 rounded-xl text-sm font-medium transition-all",
+                      "w-full flex items-center gap-3 h-10 px-3 rounded-xl text-sm font-medium transition-all group-data-[collapsible=icon]:hidden",
                       hasActiveChild ? "text-primary" : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
                     )}
                   >
@@ -347,9 +359,6 @@ export default function AppSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <div className="shrink-0 group-data-[collapsible=icon]:hidden">
-            <ThemeToggle />
-          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
