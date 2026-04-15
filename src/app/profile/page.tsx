@@ -301,7 +301,7 @@ export default function ProfilePage() {
           </div>
           <Dialog open={isAvatarEditorOpen} onOpenChange={setIsAvatarEditorOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-xl p-0 shadow-md opacity-0 group-hover:opacity-100 transition-all">
+              <Button variant="outline" size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-xl p-0 shadow-md transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100">
                 <Palette className="h-3.5 w-3.5" />
               </Button>
             </DialogTrigger>

@@ -58,9 +58,9 @@ type TimelineItem = {
 
 export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const t = translations[currentUser.preferredLanguage || 'en'];
-  const { plan } = useBiblePlan();
-  const { completedPassages, togglePassageCompletion } = useUserBibleChecklist();
-  const { events } = useEvents();
+  const { plan, loading: planLoading } = useBiblePlan();
+  const { completedPassages, togglePassageCompletion, loadingChecklist } = useUserBibleChecklist();
+  const { events, loading: eventsLoading } = useEvents();
   const { notifications, markAsRead } = useNotifications();
   const { chats } = useChats();
   const { roster: cleaningRoster } = useCleaningRoster();
@@ -73,7 +73,14 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const [selectedEvent, setSelectedEvent] = useState<TimelineItem | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
 
-  const go = useCallback((path: string) => { setIsPageLoading(true); router.push(path); }, [router, setIsPageLoading]);
+  const isLoading = planLoading || eventsLoading || loadingChecklist;
+
+  // Hooks moved above early return
+  const go = useCallback((path: string) => { 
+    setIsPageLoading(true); 
+    router.push(path); 
+  }, [router, setIsPageLoading]);
+
   const readPassage = useCallback((text: string) => {
     const parsed = parsePassageReferenceForNavigation(text);
     if (parsed) openBibleReader(parsed.book, parsed.chapter);
@@ -102,6 +109,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [plan]);
 
   const unreadAlerts = useMemo(() => notifications.filter(n => n.type === 'announcement' && !n.readBy?.includes(currentUser.uid)), [notifications, currentUser.uid]);
+  const totalAlerts = useMemo(() => notifications.filter(n => n.type === 'announcement'), [notifications]);
   const unreadChatCount = useMemo(() => chats.filter(c => {
     if (!c.lastMessageSentAt || !c.memberSeen?.[currentUser.uid] || c.lastMessageSenderId === currentUser.uid) return false;
     const ms = (ts: any) => ts?.toMillis?.() || (ts instanceof Date ? ts.getTime() : ts?._seconds ? ts._seconds * 1000 : 0);
@@ -139,6 +147,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 4);
   }, [events, cleaningRoster, qtRoster, usersMap, cleaningDaysMap]);
 
+
   const typeColor = (type: string) => type === 'cleaning' ? 'text-emerald-500' : type === 'qt' ? 'text-primary' : 'text-orange-500';
   const typeBg = (type: string) => type === 'cleaning' ? 'bg-emerald-500/10 border-emerald-500/20' : type === 'qt' ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20';
   const typeLabel = (item: TimelineItem) => item.type === 'cleaning' ? 'Cleaning Roster' : item.type === 'qt' ? 'QT Roster' : item.category || 'Event';
@@ -147,8 +156,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
 
       {/* ── Greeting ── */}
-      <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
-        <h1 className="text-hero normal-case not-italic">
+      <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="space-y-1">
+        <h1 className="text-4xl md:text-hero normal-case not-italic leading-tight md:leading-none">
           {getGreeting(currentUser.preferredLanguage || 'en')},<br />
           <span className="gradient-text">{currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}</span>
         </h1>
@@ -227,8 +236,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Progress', value: `${overallPct}%`, sub: `${daysLeft ?? '—'} days left`, color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', icon: Flame, onClick: () => go('/bible-checklist') },
-          { label: 'Alerts', value: unreadAlerts.length > 0 ? unreadAlerts.length : '—', sub: unreadAlerts.length > 0 ? 'Unread' : 'All clear', color: 'text-primary', bg: 'bg-primary/10 border-primary/20', icon: Bell, onClick: () => go('/announcements') },
-          { label: 'Messages', value: unreadChatCount > 0 ? unreadChatCount : '—', sub: unreadChatCount > 0 ? 'Unread' : 'No new', color: 'text-indigo-500', bg: 'bg-indigo-500/10 border-indigo-500/20', icon: MessageCircle, onClick: () => go('/chat') },
+          { label: 'Alerts', value: totalAlerts.length, sub: unreadAlerts.length > 0 ? `${unreadAlerts.length} unread` : 'All read ✓', color: unreadAlerts.length > 0 ? 'text-primary' : 'text-muted-foreground/40', bg: 'bg-primary/10 border-primary/20', icon: Bell, onClick: () => go('/announcements') },
+          { label: 'Messages', value: unreadChatCount, sub: unreadChatCount > 0 ? 'Unread' : 'All caught up', color: unreadChatCount > 0 ? 'text-indigo-500' : 'text-muted-foreground/40', bg: 'bg-indigo-500/10 border-indigo-500/20', icon: MessageCircle, onClick: () => go('/chat') },
           { label: 'Next Up', value: upcomingItems[0] ? format(upcomingItems[0].date, 'MMM d') : '—', sub: upcomingItems[0]?.title || 'Clear schedule', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: Calendar, onClick: () => go('/events') },
         ].map((card, i) => (
           <button key={card.label} onClick={card.onClick}

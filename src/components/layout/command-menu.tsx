@@ -1,132 +1,266 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { 
-  CommandDialog, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList, 
-  CommandSeparator 
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator
 } from "@/components/ui/command";
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  Calendar, 
-  MessageSquare, 
-  Bell, 
-  Settings, 
-  User, 
-  Search, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  Calendar,
+  MessageSquare,
+  Bell,
+  User,
+  Search,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Users
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { useAllUsers } from "@/hooks/use-all-users";
 import { usePageLoading } from "@/contexts/page-loading-context";
+import { useChats } from "@/hooks/useChats";
+import { useAllUsers } from "@/hooks/use-all-users";
 import { translations } from "@/lib/translations";
 import { PixelAvatar } from "@/components/avatar/PixelAvatar";
 
-export function CommandMenu() {
-  const [open, setOpen] = useState(false);
+interface CommandMenuProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function CommandMenu({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: CommandMenuProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser } = useAuth();
-  const { allUsers } = useAllUsers();
   const { setIsPageLoading } = usePageLoading();
+  const { chats } = useChats();
+  const { allUsers } = useAllUsers();
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        setOpen(!open);
       }
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [open, setOpen]);
 
-  const runCommand = useCallback((command: () => void) => {
-    setOpen(false);
-    command();
-  }, []);
-
-  const handleNavigate = useCallback((path: string) => {
-    runCommand(() => {
-      setIsPageLoading(true);
+  const handleNavigate = useCallback(
+    (path: string) => {
+      setOpen(false);
+      // Trigger the global loader immediately for better UX
+      if (pathname !== path) {
+        setIsPageLoading(true);
+      }
       router.push(path);
+    },
+    [router, setOpen, pathname, setIsPageLoading]
+  );
+
+  const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
+
+  const chatItems = useMemo(() => {
+    if (!currentUser) return [];
+    return chats.slice(0, 8).map(chat => {
+      if (chat.type === 'private') {
+        const peerId = chat.members.find(id => id !== currentUser.uid);
+        const peer = peerId ? usersMap.get(peerId) : null;
+        const peerInfo = peerId ? chat.memberInfo?.[peerId] : null;
+        const name = peer
+          ? `${peer.firstName} ${peer.lastName || ''}`.trim()
+          : peerInfo
+            ? `${peerInfo.firstName || ''} ${peerInfo.lastName || ''}`.trim()
+            : 'Private Chat';
+        return {
+          id: chat.id,
+          name,
+          preview: chat.lastMessageText || '',
+          avatarData: peer?.avatar ?? peerInfo?.avatar ?? null,
+          isGroup: false,
+        };
+      }
+      return {
+        id: chat.id,
+        name: chat.name || 'Group Chat',
+        preview: chat.lastMessageText || '',
+        avatarData: null,
+        isGroup: true,
+      };
     });
-  }, [router, setIsPageLoading, runCommand]);
+  }, [chats, currentUser, usersMap]);
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder={t.searchPrompt || "Type a command or search..."} />
       <CommandList className="max-h-[70vh]">
-        <CommandEmpty>{t.noResults || "No results found."}</CommandEmpty>
-        
+        <CommandEmpty>
+          <Search className="h-8 w-8 text-black/10 dark:text-white/10 mb-1" />
+          <span>{t.noResults || "No results found."}</span>
+        </CommandEmpty>
+
         <CommandGroup heading={t.navigation || "Navigation"}>
-          <CommandItem onSelect={() => handleNavigate("/")} className="gap-3 p-3">
-            <LayoutDashboard className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.dashboard}</span>
+          <CommandItem 
+            value="dashboard home" 
+            onSelect={() => handleNavigate("/")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <LayoutDashboard className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.dashboard}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
-          <CommandItem onSelect={() => handleNavigate("/bible-checklist")} className="gap-3 p-3">
-            <BookOpen className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.biblePlan}</span>
+          
+          <CommandItem 
+            value="bible reading plan checklist scroll" 
+            onSelect={() => handleNavigate("/bible-checklist")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/bible-checklist"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <BookOpen className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.biblePlan}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
-          <CommandItem onSelect={() => handleNavigate("/events")} className="gap-3 p-3">
-            <Calendar className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.calendar}</span>
+
+          <CommandItem 
+            value="calendar events schedule" 
+            onSelect={() => handleNavigate("/events")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/events"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <Calendar className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.calendar}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
-          <CommandItem onSelect={() => handleNavigate("/chat")} className="gap-3 p-3">
-            <MessageSquare className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.messenger}</span>
+
+          <CommandItem 
+            value="chat messenger messages" 
+            onSelect={() => handleNavigate("/chat")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/chat"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <MessageSquare className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.messenger}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
         </CommandGroup>
 
         <CommandSeparator />
 
-        <CommandGroup heading={t.members || "Community Members"}>
-          {allUsers.filter(u => u.uid !== currentUser?.uid).slice(0, 10).map(user => (
+        {chatItems.length > 0 && (
+          <CommandGroup heading="Recent Chats">
+            {chatItems.map(chat => (
+              <CommandItem
+                key={chat.id}
+                value={`${chat.name} ${chat.preview} ${chat.id}`.toLowerCase().trim()}
+                onSelect={() => handleNavigate(`/chat/${chat.id}`)}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate(`/chat/${chat.id}`); }}
+                className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+              >
+                {/* Avatar */}
+                <div className="relative h-10 w-10 shrink-0">
+                    <div className="h-full w-full rounded-xl overflow-hidden border border-border/40 bg-primary/5 flex items-center justify-center">
+                    {chat.avatarData ? (
+                        <PixelAvatar avatar={chat.avatarData} className="!w-full !h-full [&>svg]:!w-full [&>svg]:!h-full" />
+                    ) : chat.isGroup ? (
+                        <Users className="h-4 w-4 text-primary/50" />
+                    ) : (
+                        <User className="h-4 w-4 text-primary/50" />
+                    )}
+                    </div>
+                </div>
+
+                {/* Text */}
+                <div className="flex flex-col min-w-0 flex-1 ml-1">
+                    <span className="font-bold text-sm tracking-tight truncate">{chat.name}</span>
+                    {chat.preview && (
+                        <span className="text-[11px] text-muted-foreground/60 truncate font-medium mt-0.5">
+                            {chat.preview}
+                        </span>
+                    )}
+                </div>
+
+                <ArrowRight className="h-4 w-4 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
+              </CommandItem>
+            ))}
+
             <CommandItem 
-                key={user.uid} 
-                onSelect={() => handleNavigate(`/profile/${user.uid}`)}
-                className="gap-4 p-3"
+              value="all conversations chats"
+              onSelect={() => handleNavigate("/chat")}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/chat"); }}
+              className="flex items-center gap-3 p-3 cursor-pointer opacity-60 [&_*]:pointer-events-none"
             >
-              <div className="h-8 w-8 rounded-lg overflow-hidden shrink-0 border border-white/5">
-                <PixelAvatar avatar={user.avatar} className="w-full h-full" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-xs tracking-tight uppercase">{user.firstName} {user.lastName}</span>
-                <span className="text-[9px] font-medium opacity-40 uppercase tracking-widest">
-                  {user.isAdmin ? 'Administrator' : (t.member || 'Member')}
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/80 flex-1">
+                    All conversations
                 </span>
-              </div>
-              <ArrowRight className="ml-auto h-3 w-3 opacity-30" />
+                <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
             </CommandItem>
-          ))}
-          <CommandItem onSelect={() => handleNavigate("/members")} className="gap-3 p-3 opacity-60">
-            <Search className="h-4 w-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Search all members</span>
-          </CommandItem>
-        </CommandGroup>
+          </CommandGroup>
+        )}
 
         <CommandSeparator />
 
         <CommandGroup heading={t.system || "Settings & System"}>
-          <CommandItem onSelect={() => handleNavigate("/profile")} className="gap-3 p-3">
-            <User className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.myProfile}</span>
+          <CommandItem 
+            value="profile settings me"
+            onSelect={() => handleNavigate("/profile")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/profile"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <User className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.myProfile}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
-          <CommandItem onSelect={() => handleNavigate("/notifications")} className="gap-3 p-3">
-            <Bell className="h-4 w-4 opacity-70" />
-            <span className="font-bold uppercase tracking-widest text-[10px]">{t.notifications}</span>
+
+          <CommandItem 
+            value="notifications alerts"
+            onSelect={() => handleNavigate("/notifications")}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/notifications"); }}
+            className="flex items-center gap-3 p-3 cursor-pointer [&_*]:pointer-events-none"
+          >
+            <Bell className="h-4 w-4 opacity-70 shrink-0" />
+            <span className="font-bold uppercase tracking-wider text-[10px] text-foreground/80 flex-1">
+                {t.notifications}
+            </span>
+            <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
           </CommandItem>
+
           {currentUser?.isAdmin && (
-            <CommandItem onSelect={() => handleNavigate("/admin")} className="gap-3 p-3 text-primary">
-              <Sparkles className="h-4 w-4" />
-              <span className="font-black uppercase tracking-widest text-[10px]">Administrative Core</span>
+            <CommandItem 
+              value="admin administrative core panel"
+              onSelect={() => handleNavigate("/admin")}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleNavigate("/admin"); }}
+              className="flex items-center gap-3 p-3 cursor-pointer text-primary [&_*]:pointer-events-none"
+            >
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span className="font-black uppercase tracking-wider text-[10px] text-primary/90 flex-1">
+                    Admin
+                </span>
+                <ArrowRight className="h-3 w-3 opacity-30 shrink-0 transition-transform duration-200 group-data-[selected=true]:translate-x-1" />
             </CommandItem>
           )}
         </CommandGroup>

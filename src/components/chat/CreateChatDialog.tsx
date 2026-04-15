@@ -54,7 +54,7 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   }, [isYouth, otherUsers]);
 
   const goToChat = (chatId: string) => {
-    setIsPageLoading(true);
+    // setIsPageLoading(true);
     router.push(`/chat/${chatId}`);
     onOpenChange(false);
   };

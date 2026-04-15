@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { translations } from '@/lib/translations';
 import { PageHeader } from '@/components/ui/page-layout';
+import BiblePlanSkeleton from '@/components/bible/bible-plan-skeleton';
 
 
 type ViewState = 
@@ -256,6 +257,8 @@ export default function BibleChecklistPage() {
     </div>
   );
 
+
+  // ... all useMemo and useCallback hooks are defined above this point ...
 
   if (!isMounted || loadingAuth || planLoading || (!isGuest && loadingChecklist)) {
     return null;
