@@ -89,9 +89,8 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
       const readBy = Array.isArray(n.readBy) ? n.readBy : [];
       return !readBy.includes(currentUser.uid);
     }).length;
-    const unreadChats = chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
-    return unreadAlerts + unreadChats;
-  }, [notifications, chats, currentUser, mounted]);
+    return unreadAlerts;
+  }, [notifications, currentUser, mounted]);
 
   return (
     <header className="sticky top-0 z-40 w-full">

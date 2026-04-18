@@ -65,8 +65,11 @@ export default function AppSidebar() {
 
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
-    return chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
-  }, [chats, currentUser]);
+    return chats.filter(chat => {
+      if (pathname === `/chat/${chat.id}`) return false;
+      return isChatUnread(chat, currentUser.uid);
+    }).length;
+  }, [chats, currentUser, pathname]);
 
   const navigate = (path: string) => {
     if (pathname !== path) setIsPageLoading(true);
