@@ -246,7 +246,7 @@ export default function ChatList() {
                 const isActive = pathname === `/chat/${chat.id}`;
                 const lastSeenMillis = chat.memberSeen?.[currentUser!.uid]?.toMillis?.() || 0;
                 const lastSentMillis = chat.lastMessageSentAt?.toMillis?.() || 0;
-                const isUnread = currentUser && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
+                const isUnread = currentUser && !isActive && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
                 const lastSenderProfile = allUsers.find(u => u.uid === chat.lastMessageSenderId);
                 const lastSenderName = lastSenderProfile?.firstName || 'Someone';
 

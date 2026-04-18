@@ -105,16 +105,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!currentUser) return 0;
     
     // 1. Unread Notifications (Alerts/Announcements)
-    const unreadAlerts = notifications.filter(n => {
+    return notifications.filter(n => {
         const readBy = Array.isArray(n.readBy) ? n.readBy : [];
         return !readBy.includes(currentUser.uid);
     }).length;
-
-    // 2. Unread Chats
-    const unreadChats = chats.filter(chat => isChatUnread(chat, currentUser.uid)).length;
-    
-    return unreadAlerts + unreadChats;
-  }, [notifications, chats, currentUser]);
+  }, [notifications, currentUser]);
 
   const updateNativeBadge = React.useCallback((count: number) => {
     if (typeof window !== 'undefined' && 'setAppBadge' in navigator) {
