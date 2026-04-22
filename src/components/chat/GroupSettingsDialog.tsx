@@ -196,7 +196,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
             {isAdmin && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full" outline>
+                  <Button variant="outline" className="w-full border-destructive text-destructive hover:bg-destructive/10">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete Group Permanently
                   </Button>
                 </AlertDialogTrigger>

@@ -2,60 +2,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
-import { type MulticastMessage, type Messaging } from 'firebase-admin/messaging';
+import { type Messaging } from 'firebase-admin/messaging';
 import type { UserProfileData, Chat, ChatMessage } from '@/types';
-import { getMillis, isChatUnread } from '@/lib/notification-utils';
+import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils';
 
-/**
- * Forcefully converts all values in a record to strings to create a safe FCM data payload.
- */
-function toSafeStringMap(input: Record<string, unknown>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(input)) {
-    out[key] = String(value ?? '');
-  }
-  return out;
-}
-
-/**
- * Calculates the total unread count for a given user across all chats and notifications.
- */
-async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
-    try {
-        // 1. Unread System Notifications (Checking readBy array, limited to last 30 days for performance)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const notificationsSnapshot = await db.collection('notifications')
-            .where('createdAt', '>=', thirtyDaysAgo)
-            .get();
-            
-        let unreadNotifications = 0;
-        notificationsSnapshot.forEach((doc: any) => {
-            const data = doc.data();
-            const readBy = Array.isArray(data.readBy) ? data.readBy : [];
-            const isTargetUser = data.isGlobal || data.userId === userId || data.type === 'announcement';
-            if (isTargetUser && !readBy.includes(userId)) {
-                unreadNotifications++;
-            }
-        });
-
-        // 2. Unread Chats (using memberSeen)
-        const chatsSnapshot = await db.collection('chats').where('members', 'array-contains', userId).get();
-        let unreadChats = 0;
-        chatsSnapshot.forEach((doc: any) => {
-            const chat = { id: doc.id, ...doc.data() } as Chat;
-            if (isChatUnread(chat, userId)) {
-                unreadChats++;
-            }
-        });
-
-        return unreadNotifications + unreadChats;
-    } catch (error) {
-        console.error(`[calculateTotalUnread] Error for ${userId}:`, error);
-        return 0; // Default to 0 on error
-    }
-}
 
 async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore): Promise<string> {
     try {
@@ -96,19 +46,18 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
         return { success: 0, failure: 0, reason: "No recipients for this message." };
     }
     
-    // Check if recipients are active in the chat to avoid redundant pushes (10 second window)
-    const tenSecondsAgo = Date.now() - 10000;
-    const recipientIds = allRecipientIds.filter(uid => {
-        const lastSeen = chat.memberSeen?.[uid];
-        return !lastSeen || getMillis(lastSeen) < tenSecondsAgo;
-    });
+    // Always send push to all non-sender members. The client-side foreground handler
+    // (onMessage in app-layout.tsx) already suppresses the notification popup when
+    // the user is currently viewing this specific chat.
+    const recipientIds = allRecipientIds;
 
-    if (recipientIds.length === 0) {
-        return { success: 0, failure: 0, reason: "All recipients are currently active." };
+    // Get FCM tokens for the recipients (batch in chunks of 30 — Firestore `in` query limit)
+    const userDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    for (let i = 0; i < recipientIds.length; i += 30) {
+        const chunk = recipientIds.slice(i, i + 30);
+        const snap = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
+        snap.docs.forEach(d => userDocs.push(d));
     }
-
-    // Get FCM tokens for the recipients
-    const usersSnapshot = await adminDb.collection('users').where(FieldPath.documentId(), 'in', recipientIds).get();
     
     const senderName = await getSenderDisplayName(message.senderId, chat, adminDb);
     const messageText = message.text ?? 'Sent a file';
@@ -128,8 +77,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
     let totalFailureCount = 0;
 
     // Send individualized notifications to support correct unread counts (badges)
-    for (let i = 0; i < usersSnapshot.docs.length; i++) {
-        const docSnapshot = usersSnapshot.docs[i];
+    for (let i = 0; i < userDocs.length; i++) {
+        const docSnapshot = userDocs[i];
         const userId = docSnapshot.id;
         const user = docSnapshot.data() as UserProfileData;
         

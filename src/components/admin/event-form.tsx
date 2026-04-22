@@ -110,7 +110,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           details: event.details || '',
           location: event.location || '',
           allowedRoleIds: event.allowedRoleIds || [],
-          category: event.category,
+          category: event.category as EventCategory,
           recurrence: event.recurrence ?? 'none',
           recurrenceUntil: event.recurrenceUntil ? parseDay(event.recurrenceUntil) : defaultRecurrenceUntil,
           weekdays: event.weekdays ?? [],

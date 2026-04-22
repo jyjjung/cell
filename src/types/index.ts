@@ -1,7 +1,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { Layout, Layouts } from 'react-grid-layout';
+// Layout types removed: react-grid-layout is no longer used
+type Layouts = Record<string, any>;
 
 export interface AppRole {
   id: string;
@@ -305,6 +306,8 @@ export interface ChatMessage {
   songId?: string;
   songTitle?: string;
   sheetKey?: string;
+  isDeleted?: boolean;
+  deletedBy?: string;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

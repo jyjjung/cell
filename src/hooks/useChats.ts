@@ -45,7 +45,6 @@ export function useChats() {
 
     const unsubscribe = onSnapshot(
       chatsQuery,
-      { includeMetadataChanges: true },
       (snapshot) => {
       const chatsData = snapshot.docs.map(doc => ({
         id: doc.id,

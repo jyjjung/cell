@@ -26,7 +26,7 @@ function EventCard({ row, index, currentUser }: { row: EventOccurrenceRow; index
   const eventDate = occurrenceDate;
   const rangeStart = parseDay(event.date);
   const rangeEnd = event.endDate ? parseDay(event.endDate) : null;
-  const config = categoryConfig[event.category] || categoryConfig[EventCategory.Event];
+  const config = categoryConfig[event.category as EventCategory] || categoryConfig[EventCategory.Event];
   const Icon = config.icon;
   const isRecurring = event.recurrence && event.recurrence !== 'none';
 
@@ -139,8 +139,8 @@ export default function EventsPage() {
     });
 
     const rows = expandEventsToOccurrenceRows(filteredEvents, {
-      from: subYears(today, 5),
-      until: addYears(today, 4),
+      from: subYears(today, 1),
+      until: addYears(today, 1),
     });
 
     const upcomingRows = rows.filter((r) => !isBefore(r.occurrenceDate, today));

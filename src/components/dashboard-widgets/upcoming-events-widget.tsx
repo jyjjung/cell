@@ -113,7 +113,7 @@ export default function UpcomingEventsWidget() {
                 allDay: event.allDay ?? true,
                 title: event.title,
                 type: 'event',
-                category: event.category,
+                category: event.category as EventCategory,
                 details: event.details,
             });
         });

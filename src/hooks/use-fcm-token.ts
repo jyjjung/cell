@@ -18,7 +18,7 @@ import { doc, updateDoc } from 'firebase/firestore';
  */
 async function getFCMRegistration(): Promise<ServiceWorkerRegistration> {
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-    scope: '/',
+    scope: '/firebase-cloud-messaging-push-scope',
   });
   // If the SW is still installing, wait for it to activate
   if (registration.installing) {

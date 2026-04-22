@@ -21,7 +21,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function CompleteProfileDialog({ isOpen }: { isOpen: boolean }) {
-  const { currentUser, updateUserProfile, setNeedsProfileCompletion } = useAuth();
+  const { currentUser, updateUserProfile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
@@ -41,7 +41,6 @@ export default function CompleteProfileDialog({ isOpen }: { isOpen: boolean }) {
         firstName: data.firstName,
         lastName: data.lastName,
       });
-      setNeedsProfileCompletion(false);
       toast({
           title: "Profile Updated!",
           description: "Your name has been saved.",
