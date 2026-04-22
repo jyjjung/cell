@@ -19,7 +19,6 @@ export function useAllUsers() {
 
     const unsubscribe = onSnapshot(
       usersQuery,
-      { includeMetadataChanges: true },
       (querySnapshot) => {
       const usersData: UserProfileData[] = [];
       querySnapshot.forEach((doc) => {

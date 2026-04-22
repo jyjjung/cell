@@ -155,16 +155,19 @@ export default function ProfilePage() {
             // CRITICAL: Explicitly register firebase-messaging-sw.js.
             // Cannot use navigator.serviceWorker.ready — that may return sw.js (next-pwa),
             // which doesn't have Firebase Messaging code, breaking onBackgroundMessage.
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' });
             const currentToken = await getToken(messaging, { 
                 vapidKey,
                 serviceWorkerRegistration: registration 
             });
             
             if (currentToken) {
-                // SET (not union) to aggressively clear all 84+ accumulated stale tokens.
-                // Other devices will re-add themselves via use-fcm-token on next open.
-                await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: [currentToken] });
+                // Preserve tokens from other devices (up to 3 total).
+                // Put this device's token first, keep existing tokens deduped.
+                const existing = currentUser.fcmTokens || [];
+                const filtered = existing.filter(t => t !== currentToken);
+                const newList = [currentToken, ...filtered].slice(0, 3);
+                await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: newList });
                 toast({
                     title: "Notifications Enabled",
                     description: "You will now receive push notifications on this device.",

@@ -5,7 +5,6 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
-  CACHE_SIZE_UNLIMITED,
   Timestamp,
   type Firestore,
 } from 'firebase/firestore';
@@ -37,7 +36,7 @@ function createDb(): Firestore {
   try {
     return initializeFirestore(app, {
       localCache: persistentLocalCache({
-        cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+        cacheSizeBytes: 50 * 1024 * 1024, // 50 MB limit
         tabManager: persistentMultipleTabManager(),
       }),
     });

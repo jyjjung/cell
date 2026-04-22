@@ -63,6 +63,19 @@ const MessageBubble = React.memo(function MessageBubble({
     return match ? match[1] : null;
   }, [message.text]);
 
+  // --- DELETED MESSAGE PLACEHOLDER (must be after all hooks) ---
+  if (message.isDeleted) {
+    const deleterUser = allUsers.find(u => u.uid === message.deletedBy);
+    const deleterName = deleterUser?.firstName || senderName || 'Someone';
+    return (
+      <div className="flex w-full py-1 justify-center">
+        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
+          {deleterName} deleted a message
+        </p>
+      </div>
+    );
+  }
+
   const handleDownload = async (url: string) => {
     try {
       const res = await fetch(url);
@@ -304,7 +317,7 @@ const MessageBubble = React.memo(function MessageBubble({
                       <CornerUpLeft className="h-3 w-3 text-foreground/40" />
                   </button>
 
-                  {isSender && onDelete && (
+                  {(isSender || isAdmin) && onDelete && (
                       <Popover>
                           <PopoverTrigger asChild>
                               <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
@@ -368,7 +381,7 @@ function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { c
                     return (
                         <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-white/5 rounded transition-colors text-white", isSender ? "text-right" : "text-left")}>
                             <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
-                            <span className="opacity-80 text-[11px] break-words line-clamp-2">{reply.text || (reply.imageUrl ? '📸 Image' : '')}</span>
+                            <span className={cn("opacity-80 text-[11px] break-words line-clamp-2", reply.isDeleted && "italic opacity-40")}>{reply.isDeleted ? 'deleted a message' : (reply.text || (reply.imageUrl ? '📸 Image' : ''))}</span>
                         </div>
                     );
                 })}

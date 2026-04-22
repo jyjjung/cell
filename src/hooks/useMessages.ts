@@ -18,8 +18,7 @@ import {
   getDocs,
   getDocsFromCache,
   deleteField,
-  getDoc,
-  deleteDoc
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage, Chat } from '@/types';
@@ -48,7 +47,6 @@ export function useMessages(chatId: string | null) {
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const unsubscribe = onSnapshot(
       chatDocRef,
-      { includeMetadataChanges: true },
       (snap) => {
         if (snap.exists()) {
           setChat({ id: snap.id, ...snap.data() } as Chat);
@@ -80,7 +78,6 @@ export function useMessages(chatId: string | null) {
 
     const unsubscribe = onSnapshot(
       messagesQuery,
-      { includeMetadataChanges: true },
       (snapshot) => {
         if (snapshot.docs.length < MESSAGES_PER_PAGE) {
           setHasMore(false);
@@ -261,15 +258,31 @@ export function useMessages(chatId: string | null) {
   }, [currentUser, chatId]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
-    if (!chatId) return;
+    if (!chatId || !currentUser) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
     try {
-      await deleteDoc(messageRef);
+      // Soft delete: preserve the message shell so a "deleted a message" note appears
+      await updateDoc(messageRef, {
+        isDeleted: true,
+        deletedBy: currentUser.uid,
+        text: deleteField(),
+        imageUrl: deleteField(),
+        invitationId: deleteField(),
+        eventId: deleteField(),
+        setlistId: deleteField(),
+        rosterId: deleteField(),
+        qtDate: deleteField(),
+        cleaningDate: deleteField(),
+        songId: deleteField(),
+        songTitle: deleteField(),
+        sheetKey: deleteField(),
+        reactions: deleteField(),
+      });
     } catch (error) {
       console.error("Failed to delete message:", error);
       toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
     }
-  }, [chatId, toast]);
+  }, [chatId, currentUser, toast]);
 
 
   return { 

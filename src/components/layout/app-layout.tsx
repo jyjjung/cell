@@ -19,7 +19,6 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { Loader2, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ChunkErrorListener } from './chunk-error-listener';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { useFCMToken } from '@/hooks/use-fcm-token';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
@@ -105,11 +104,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!currentUser) return 0;
     
     // 1. Unread Notifications (Alerts/Announcements)
-    return notifications.filter(n => {
-        const readBy = Array.isArray(n.readBy) ? n.readBy : [];
-        return !readBy.includes(currentUser.uid);
+    const unreadNotifs = notifications.filter(n => {
+      const readBy = Array.isArray(n.readBy) ? n.readBy : [];
+      return !readBy.includes(currentUser.uid);
     }).length;
-  }, [notifications, currentUser]);
+
+    // 2. Unread Chats (matching server-side calculateTotalUnread for badge consistency)
+    const unreadChatCount = chats.filter(chat => {
+      if (pathname === `/chat/${chat.id}`) return false;
+      return isChatUnread(chat, currentUser.uid);
+    }).length;
+
+    return unreadNotifs + unreadChatCount;
+  }, [notifications, chats, currentUser, pathname]);
 
   const updateNativeBadge = React.useCallback((count: number) => {
     if (typeof window !== 'undefined' && 'setAppBadge' in navigator) {
@@ -218,7 +225,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-      <ChunkErrorListener />
       <ImmersiveBackground />
       <Sidebar />
       <SidebarInset className="min-w-0 bg-transparent h-svh overflow-hidden flex flex-col">

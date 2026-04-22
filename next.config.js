@@ -6,7 +6,6 @@ const withPWA = pwa.default({
   dest: "public",
   register: true,
   skipWaiting: true,
-  importScripts: ["/firebase-messaging-sw.js"],
   disable: false, 
 });
 

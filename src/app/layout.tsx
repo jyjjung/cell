@@ -53,8 +53,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <OfflineBanner />
         <ChunkErrorListener />
+        <OfflineBanner />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <PageLoadingProvider>
               <AuthProvider>

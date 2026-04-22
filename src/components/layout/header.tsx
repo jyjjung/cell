@@ -5,10 +5,8 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
-import { useChats } from "@/hooks/useChats";
 import { useAuth } from "@/contexts/auth-context";
 import { useMemo, useState, useEffect, useRef } from "react";
-import { isChatUnread } from "@/lib/notification-utils";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +20,6 @@ interface HeaderProps {
 export default function Header({ onOpenCommandMenu }: HeaderProps) {
   const { currentUser } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
-  const { chats } = useChats();
   const [mounted, setMounted] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'announcements' | 'notifications'>('announcements');
@@ -244,7 +241,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                                       className="block text-xs text-muted-foreground leading-relaxed line-clamp-2"
                                     />
                                     <p className="text-[10px] text-muted-foreground/50 font-semibold pt-1">
-                                      {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() || new Date(n.createdAt), { addSuffix: true }) : "Just now"}
+                                      {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() ?? new Date(), { addSuffix: true }) : "Just now"}
                                     </p>
                                   </div>
 
@@ -303,7 +300,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                                       className="block text-xs text-muted-foreground leading-relaxed line-clamp-2"
                                     />
                                     <p className="text-[10px] text-muted-foreground/50 font-semibold pt-1">
-                                      {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() || new Date(n.createdAt), { addSuffix: true }) : "Just now"}
+                                      {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() ?? new Date(), { addSuffix: true }) : "Just now"}
                                     </p>
                                   </div>
 

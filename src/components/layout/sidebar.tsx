@@ -99,8 +99,7 @@ export default function AppSidebar() {
     {
       label: t.scripture, icon: BookOpen,
       children: [
-        { href: '/bible-checklist', label: t.readingPlan, requiresAuth: true },
-        { href: '/bible-checklist', label: t.readingPlan, requiresGuest: true },
+        { href: '/bible-checklist', label: t.readingPlan },
         { href: '/full-plan', label: t.fullPlan },
         { href: '/memorize', label: t.memoryVerses },
         { href: '/leaderboard', label: t.communityProgress, requiresAuth: true },

@@ -19,8 +19,7 @@ import {
   getDocsFromCache,
   deleteField,
   getDoc,
-  increment,
-  deleteDoc
+  increment
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage, Chat } from '@/types';
@@ -79,7 +78,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     const unsubscribe = onSnapshot(
       messagesQuery,
-      { includeMetadataChanges: true },
       (snapshot) => {
         if (snapshot.docs.length < MESSAGES_PER_PAGE) {
           setHasMore(false);
@@ -227,17 +225,26 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   }, [currentUser, chatId, parentMessageId]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
-    if (!chatId || !parentMessageId) return;
-    const parentRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
+    if (!chatId || !parentMessageId || !currentUser) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
     try {
-      await deleteDoc(messageRef);
-      await updateDoc(parentRef, { replyCount: increment(-1) });
+      // Soft delete: preserve the message shell so a "deleted a message" note appears
+      await updateDoc(messageRef, {
+        isDeleted: true,
+        deletedBy: currentUser.uid,
+        text: deleteField(),
+        imageUrl: deleteField(),
+        invitationId: deleteField(),
+        eventId: deleteField(),
+        setlistId: deleteField(),
+        rosterId: deleteField(),
+        reactions: deleteField(),
+      });
     } catch (error) {
       console.error("Failed to delete thread message:", error);
       toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
     }
-  }, [chatId, parentMessageId, toast]);
+  }, [chatId, parentMessageId, currentUser, toast]);
 
   return { 
     messages, 

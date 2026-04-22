@@ -72,3 +72,10 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Listen for SKIP_WAITING messages from the client (e.g. on version update or chunk error)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

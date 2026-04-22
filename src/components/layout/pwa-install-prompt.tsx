@@ -44,8 +44,29 @@ export function PWAInstallPrompt() {
     sessionStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
-  const handleUpdateRefresh = () => {
-    localStorage.setItem('pwa_app_version', process.env.NEXT_PUBLIC_APP_VERSION || '6.0');
+  const handleUpdateRefresh = async () => {
+    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '6.0';
+    localStorage.setItem('pwa_app_version', currentVersion);
+
+    try {
+      // Clear all service worker caches to purge stale chunks
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+
+      // Force service workers to update
+      const registrations = await navigator.serviceWorker?.getRegistrations();
+      if (registrations) {
+        for (const reg of registrations) {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          await reg.update().catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[PWAInstallPrompt] Cache cleanup failed:', e);
+    }
+
     window.location.reload();
   };
 
