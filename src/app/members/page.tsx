@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useRoles } from '@/hooks/use-roles';
 import { useEvents } from '@/hooks/use-events';
@@ -111,35 +112,36 @@ export default function MembersPage() {
               const birthday = userBirthdays.get(user.uid);
               const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
               return (
-                <motion.div
-                  layout
-                  key={user.uid}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.94 }}
-                  transition={{ duration: 0.28, delay: Math.min(i * 0.03, 0.3), ease: [0.22, 1, 0.36, 1] }}
-                  className="group flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm hover:bg-card hover:shadow-md hover:border-border/70 transition-all"
-                >
-                  <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                    <PixelAvatar avatar={user.avatar} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm truncate">{user.firstName} {user.lastName}</p>
-                    {birthday && (
-                      <div className="flex items-center gap-1.5 mt-0.5 text-pink-500/70">
-                        <Cake className="h-3 w-3 shrink-0" />
-                        <span className="text-[11px] font-medium">{birthday}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {userRoles.length > 0 ? userRoles.map(name => (
-                        <Badge key={name} variant="secondary" className="h-5 px-2 text-[10px] font-semibold rounded-lg">{name}</Badge>
-                      )) : (
-                        <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium rounded-lg opacity-40">Member</Badge>
-                      )}
+                <Link href={`/members/${user.uid}`} key={user.uid} className="block group">
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    transition={{ duration: 0.28, delay: Math.min(i * 0.03, 0.3), ease: [0.22, 1, 0.36, 1] }}
+                    className="flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm group-hover:bg-card group-hover:shadow-md group-hover:border-border/70 transition-all cursor-pointer"
+                  >
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                      <PixelAvatar avatar={user.avatar} />
                     </div>
-                  </div>
-                </motion.div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>
+                      {birthday && (
+                        <div className="flex items-center gap-1.5 mt-0.5 text-pink-500/70">
+                          <Cake className="h-3 w-3 shrink-0" />
+                          <span className="text-[11px] font-medium">{birthday}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {userRoles.length > 0 ? userRoles.map(name => (
+                          <Badge key={name} variant="secondary" className="h-5 px-2 text-[10px] font-semibold rounded-lg">{name}</Badge>
+                        )) : (
+                          <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium rounded-lg opacity-40">Member</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
               );
             })}
           </div>

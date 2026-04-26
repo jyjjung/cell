@@ -9,7 +9,7 @@ import {
   Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
   Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
   Users, UserPlus, Link2, UserCheck, UserX, Shield, Download,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -101,10 +101,39 @@ function SongDetailView({
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [viewSheet, setViewSheet] = useState<SongChordSheet | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(song.title);
   const [editArtist, setEditArtist] = useState(song.artist || '');
   const [saving, setSaving] = useState(false);
+  const { addChordSheet } = useWorshipSongs();
+
+  const handleConvertPdf = async (sheet: SongChordSheet) => {
+    setConvertingId(sheet.id);
+    try {
+      toast({ title: 'Downloading PDF...' });
+      const res = await fetch(sheet.imageUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `${song.title}_key_${sheet.key}.pdf`, { type: 'application/pdf' });
+      
+      toast({ title: 'Converting to images...' });
+      const { convertPdfToImages } = await import('@/lib/pdfUtils');
+      const blobs = await convertPdfToImages(file, 2);
+      
+      toast({ title: `Uploading ${blobs.length} pages...` });
+      for (let i = 0; i < blobs.length; i++) {
+        const pageFile = new File([blobs[i]], `${song.title}_pg${i+1}.jpg`, { type: 'image/jpeg' });
+        await addChordSheet(song.id, pageFile, sheet.key);
+      }
+      
+      await removeChordSheet(song.id, sheet);
+      toast({ title: 'Conversion complete!' });
+    } catch (e: any) {
+      toast({ title: 'Conversion failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   const handleSaveEdit = async () => {
     if (!editTitle.trim()) return;
@@ -224,6 +253,15 @@ function SongDetailView({
                         className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
                         <Download className="h-3.5 w-3.5" />
                       </button>
+                      {sheet.imageUrl.toLowerCase().includes('.pdf') && (
+                        <button
+                          title="Convert PDF to Images"
+                          onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
+                          disabled={convertingId === sheet.id}
+                          className="p-1.5 rounded-lg bg-emerald-500/80 hover:bg-emerald-500 text-white transition-colors">
+                          {convertingId === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(sheet)}
                         title="Delete sheet"
                         disabled={deleting === sheet.id}
@@ -253,16 +291,13 @@ function SongDetailView({
             map.get(s.key)!.push(s);
             return map;
           }, new Map<ChordKey, SongChordSheet[]>())
-        ).flatMap(([key, sheets]) =>
-          sheets.map((s, i) => ({
-            imageUrl: s.imageUrl,
+        ).map(([key, sheets]) => ({
+            imageUrls: sheets.map(s => s.imageUrl),
             songTitle: song.title,
             key,
-            page: i + 1,
-            totalPages: sheets.length,
-          } as ViewerSlide))
+          } as ViewerSlide)
         );
-        const start = slides.findIndex(sl => sl.imageUrl === viewSheet.imageUrl);
+        const start = slides.findIndex(sl => sl.imageUrls.includes(viewSheet.imageUrl));
         return <FullScreenViewer slides={slides} startIndex={Math.max(0, start)} onClose={() => setViewSheet(null)} />;
       })()}
     </motion.div>
@@ -271,7 +306,7 @@ function SongDetailView({
 
 // ── SongsLibraryTab ───────────────────────────────────────────────────────────
 function SongsLibraryTab() {
-  const { songs, loading, deleteSong } = useWorshipSongs();
+  const { songs, loading, deleteSong, addChordSheet, removeChordSheet } = useWorshipSongs();
   const [newSongOpen, setNewSongOpen] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
   const [detailSong, setDetailSong] = useState<WorshipSong | null>(null);
@@ -308,7 +343,7 @@ function SongsLibraryTab() {
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
           {/* Header actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
               <Input placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)}
@@ -642,15 +677,13 @@ function SetlistDetailView({
       const libSong = songs.find(s => s.id === ps.songId);
       if (!libSong) continue;
       const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-      forKey.forEach((sheet, i) => {
+      if (forKey.length > 0) {
         slides.push({
-          imageUrl: sheet.imageUrl,
           songTitle: ps.title,
           key: ps.key,
-          page: i + 1,
-          totalPages: forKey.length,
+          imageUrls: forKey.map(s => s.imageUrl),
         });
-      });
+      }
     }
     return slides;
   }, [orderedSongs, songs]);
@@ -771,7 +804,7 @@ function SetlistDetailView({
                     <KeyBadge keyName={ps.key} accent />
                     {sheetsForKey.length > 0 ? (
                       <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                        <Check className="h-2.5 w-2.5" /> {sheetsForKey.length} sheet{sheetsForKey.length > 1 ? 's' : ''}
+                        <Check className="h-2.5 w-2.5" /> {sheetsForKey.length} {sheetsForKey.length > 1 ? 'pages' : 'page'}
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold text-muted-foreground/40">no sheet</span>

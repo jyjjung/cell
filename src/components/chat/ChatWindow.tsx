@@ -133,6 +133,18 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       const olderMsg = messages[i + 1];
+      const newerMsg = messages[i - 1];
+
+      // Apple Messages logic for blocks:
+      // showName (top of group) if older message is different sender OR > 1hr gap
+      const showName = !olderMsg || 
+                       olderMsg.senderId !== msg.senderId || 
+                       (msg.createdAt && olderMsg.createdAt && (msg.createdAt.toMillis() - olderMsg.createdAt.toMillis() > 3600000));
+
+      // showAvatar (bottom of group) if newer message is different sender OR > 1hr gap
+      const showAvatar = !newerMsg || 
+                         newerMsg.senderId !== msg.senderId || 
+                         (newerMsg.createdAt && msg.createdAt && (newerMsg.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
 
       const senderProfile = allUsers.find(u => u.uid === msg.senderId);
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
@@ -153,6 +165,8 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           onDelete={deleteMessage}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
           parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
+          showAvatar={showAvatar}
+          showName={showName}
         />
       );
 
@@ -196,13 +210,13 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         </div>
       )}
 
-      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-white/5 bg-background/50 backdrop-blur-xl z-20">
+      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
         <Link href="/chat" className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-all">
           <ArrowLeft className="h-5 w-5" />
         </Link>
 
         <div className="flex flex-col items-center gap-1 min-w-0">
-          <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-white/10 shadow-sm">
+          <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-border shadow-sm">
             <PixelAvatar avatar={chatDetails.avatar} />
           </div>
           <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>
@@ -251,31 +265,28 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
             const libSong = songs.find(s => s.id === ps.songId);
             if (!libSong) continue;
             const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-            forKey.forEach((sheet, i) => {
+            if (forKey.length > 0) {
               slides.push({
-                imageUrl: sheet.imageUrl,
+                imageUrls: forKey.map(s => s.imageUrl),
                 songTitle: ps.title,
                 key: ps.key,
-                page: i + 1,
-                totalPages: forKey.length,
               });
-            });
+            }
           }
         } else if (worshipViewer.songId) {
           const libSong = songs.find(s => s.id === worshipViewer.songId);
           if (!libSong) return null;
           
+          const keyMap = new Map<string, string[]>();
           libSong.chordSheets.forEach((sheet) => {
-            // Group by key to get proper paging if multiple sheets for one key
-            const forKey = libSong.chordSheets.filter(s => s.key === sheet.key);
-            const page = forKey.findIndex(s => s.id === sheet.id) + 1;
-            
+            if (!keyMap.has(sheet.key)) keyMap.set(sheet.key, []);
+            keyMap.get(sheet.key)!.push(sheet.imageUrl);
+          });
+          Array.from(keyMap.entries()).forEach(([key, urls]) => {
             slides.push({
-              imageUrl: sheet.imageUrl,
+              imageUrls: urls,
               songTitle: libSong.title,
-              key: sheet.key,
-              page,
-              totalPages: forKey.length,
+              key: key as any,
             });
           });
         }
@@ -291,7 +302,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
             if (foundIdx !== -1) startIndex = foundIdx;
           }
         } else if (worshipViewer.imageUrl) {
-          const foundIdx = slides.findIndex(sl => sl.imageUrl === worshipViewer.imageUrl);
+          const foundIdx = slides.findIndex(sl => sl.imageUrls?.includes(worshipViewer.imageUrl!));
           if (foundIdx !== -1) startIndex = foundIdx;
         }
 

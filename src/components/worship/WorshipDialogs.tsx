@@ -16,7 +16,6 @@ import { format, parseISO } from 'date-fns';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
-import { useAllUsers } from '@/hooks/use-all-users';
 import type { WorshipSong, WorshipSetlist, ChordKey, SongChordSheet } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -193,7 +192,7 @@ export function NewRosterDialog({
                 const sl = playlists.find(p => p.id === e.target.value);
                 if (sl) { setName(sl.name); setDate(sl.date); }
               }}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40"
             >
               <option value="">None</option>
               {playlists.map(pl => (
@@ -236,8 +235,22 @@ export function AddChordSheetDialog({
     if (!song || !file) return;
     setSaving(true);
     try {
-      await addChordSheet(song.id, file, key);
-      toast({ title: 'Chord sheet uploaded', description: `Added ${key === 'numbers' ? '#' : key} chart to ${song.title}.` });
+      if (file.type === 'application/pdf') {
+        toast({ title: 'Processing PDF', description: 'Converting pages to images...' });
+        const { convertPdfToImages } = await import('@/lib/pdfUtils');
+        const blobs = await convertPdfToImages(file, 2);
+        
+        toast({ title: 'Uploading', description: `Uploading ${blobs.length} page(s)...` });
+        for (let i = 0; i < blobs.length; i++) {
+            const pageFile = new File([blobs[i]], `${file.name.replace('.pdf', '')}_pg${i+1}.jpg`, { type: 'image/jpeg' });
+            await addChordSheet(song.id, pageFile, key);
+        }
+        toast({ title: 'Chord sheet uploaded', description: `Added ${blobs.length} pages for ${key === 'numbers' ? '#' : key} chart to ${song.title}.` });
+      } else {
+        await addChordSheet(song.id, file, key);
+        toast({ title: 'Chord sheet uploaded', description: `Added ${key === 'numbers' ? '#' : key} chart to ${song.title}.` });
+      }
+
       setFile(null); setKey('numbers');
       onClose();
     } catch (e: any) {
@@ -251,13 +264,13 @@ export function AddChordSheetDialog({
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Upload Chart</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Add a chord sheet image for {song?.title}.
+            Add a chord sheet image or PDF for {song?.title}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="cs-file">Chart File (Image only) <span className="text-rose-500">*</span></Label>
-            <Input id="cs-file" type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
+            <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-rose-500">*</span></Label>
+            <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cs-key">Musical Key</Label>
@@ -265,7 +278,7 @@ export function AddChordSheetDialog({
               id="cs-key"
               value={key}
               onChange={e => setKey(e.target.value as ChordKey)}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40"
             >
               {ALL_KEYS.map(k => (
                 <option key={k} value={k}>{k === 'numbers' ? '#' : k}</option>

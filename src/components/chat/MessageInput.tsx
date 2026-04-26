@@ -195,7 +195,7 @@ export default function MessageInput({
   return (
     <div className="w-full max-w-md mx-auto px-4 flex flex-col gap-2">
       {replyToMessage && (
-        <div className="flex items-center justify-between bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs">
+        <div className="flex items-center justify-between bg-muted border border-border/50 rounded-xl px-4 py-2 text-xs">
           <div className="flex items-center gap-2 truncate opacity-70">
             <span className="font-bold">Replying to message:</span>
             <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
@@ -220,7 +220,7 @@ export default function MessageInput({
             {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
         </button>
 
-        <div className="flex-1 flex items-center bg-[#3B3B3D]/40 backdrop-blur-3xl px-3 py-1 rounded-[1.25rem] border border-white/5 overflow-hidden">
+        <div className="flex-1 flex items-center bg-muted/40 backdrop-blur-3xl px-3 py-1 rounded-[1.25rem] border border-border/50 overflow-hidden focus-within:border-primary/50 transition-colors">
           {stagedCommand && (
             <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-lg px-2 py-1 mr-2 shrink-0 max-w-[120px]">
                <span className="text-[10px] font-black uppercase text-primary truncate">{stagedCommand.label}</span>
@@ -256,13 +256,13 @@ export default function MessageInput({
               onBlur={() => updateTypingStatus(false)}
               onKeyDown={handleKeyDown}
               style={{ fontSize: '16px' }}
-              className="flex-1 bg-transparent border-none outline-none text-white py-1.5 placeholder:text-muted-foreground/50"
+              className="flex-1 bg-transparent border-none outline-none text-foreground py-1.5 placeholder:text-muted-foreground/50"
           />
           <button 
               type="button" 
               onClick={handleSend} 
               disabled={disabled || (!text.trim() && !stagedCommand) || isUploading}
-              className={cn("h-7 w-7 flex items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-[#007AFF] text-white" : "bg-white/10 text-muted-foreground opacity-20")}
+              className={cn("h-7 w-7 flex items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-[#007AFF] text-white" : "bg-muted text-muted-foreground opacity-20")}
           >
               <ArrowUp className="h-4 w-4" strokeWidth={3} />
           </button>
