@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText } from 'lucide-react';
+import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon } from 'lucide-react';
+
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 
@@ -66,6 +67,11 @@ export function FullScreenViewer({
   const pinchStartW   = useRef<number>(0);
   const isPinching    = useRef(false);
   const swipeStartX   = useRef<number | null>(null);
+  const swipeStartY   = useRef<number | null>(null);
+  const [holdDir, setHoldDir] = useState<'next' | 'prev' | null>(null);
+  const holdTimer = useRef<NodeJS.Timeout | null>(null);
+
+
 
   useImagePreloader(slides);
 
@@ -125,8 +131,39 @@ export function FullScreenViewer({
       const dist  = getTouchDist(e.touches);
       const ratio = dist / lastPinchDist.current;
       setImgPxWidth(clampWidth(pinchStartW.current * ratio));
+    } else if (e.touches.length === 1 && swipeStartX.current !== null) {
+      const dx = e.touches[0].clientX - swipeStartX.current;
+      const dy = e.touches[0].clientY - (swipeStartY.current ?? 0);
+      const scrollEl = scrollRef.current;
+
+      if (scrollEl && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        const atLeftEdge = scrollEl.scrollLeft <= 5;
+        const atRightEdge = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 5;
+        
+        let dir: 'next' | 'prev' | null = null;
+        if (dx > 80 && atLeftEdge) dir = 'prev';
+        else if (dx < -80 && atRightEdge) dir = 'next';
+
+        if (dir && ((dir === 'next' && idx < slides.length - 1) || (dir === 'prev' && idx > 0))) {
+          if (holdDir !== dir) {
+            setHoldDir(dir);
+            if (holdTimer.current) clearTimeout(holdTimer.current);
+            holdTimer.current = setTimeout(() => {
+              setIdx(i => dir === 'next' ? Math.min(i + 1, slides.length - 1) : Math.max(i - 1, 0));
+              setHoldDir(null); // Reset after switch
+            }, 600);
+          }
+        } else {
+          setHoldDir(null);
+          if (holdTimer.current) {
+            clearTimeout(holdTimer.current);
+            holdTimer.current = null;
+          }
+        }
+      }
     }
-  }, [clampWidth]);
+  }, [clampWidth, holdDir, idx, slides.length]);
+
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
     if (e.touches.length === 0) {
@@ -135,19 +172,41 @@ export function FullScreenViewer({
       lastPinchDist.current = null;
 
       const currentW = imgPxWidth ?? fitWidthRef.current;
-      const cW       = containerRef.current?.clientWidth ?? 400;
-      const isAtFit  = Math.abs(currentW - fitWidthRef.current) < 2;
+      const isAtFit  = Math.abs(currentW - fitWidthRef.current) < 5;
 
-      if (!wasPinching && isAtFit && swipeStartX.current !== null) {
+      if (!wasPinching && swipeStartX.current !== null) {
         const dx = e.changedTouches[0].clientX - swipeStartX.current;
-        if (Math.abs(dx) > 55) {
+        const dy = e.changedTouches[0].clientY - (swipeStartY.current ?? 0);
+        
+        const scrollEl = scrollRef.current;
+        let canSwipe = isAtFit;
+
+        // If zoomed in, only allow swipe if at horizontal edges
+        if (!canSwipe && scrollEl) {
+          const atLeftEdge = scrollEl.scrollLeft <= 10;
+          const atRightEdge = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 10;
+          if ((dx > 0 && atLeftEdge) || (dx < 0 && atRightEdge)) {
+            canSwipe = true;
+          }
+        }
+
+        // Must be a clear horizontal gesture
+        if (canSwipe && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
           if (dx < 0) setIdx(i => Math.min(i + 1, slides.length - 1));
           else        setIdx(i => Math.max(i - 1, 0));
         }
       }
       swipeStartX.current = null;
+      swipeStartY.current = null;
+      setHoldDir(null);
+      if (holdTimer.current) {
+        clearTimeout(holdTimer.current);
+        holdTimer.current = null;
+      }
     }
   }, [imgPxWidth, slides.length]);
+
+
 
   const handleTouchStartRaw = useCallback((e: TouchEvent) => {
     if (e.touches.length === 2) {
@@ -157,6 +216,7 @@ export function FullScreenViewer({
       pinchStartW.current   = imgPxWidth ?? fitWidthRef.current;
     } else if (e.touches.length === 1 && !isPinching.current) {
       swipeStartX.current = e.touches[0].clientX;
+      swipeStartY.current = e.touches[0].clientY;
     }
   }, [imgPxWidth]);
 
@@ -251,7 +311,7 @@ export function FullScreenViewer({
           <div
             ref={scrollRef}
             className="w-full h-full overflow-auto"
-            style={{ touchAction: 'pan-y' }}
+            style={{ touchAction: 'pan-x pan-y' }}
           >
             {/* Center column — images stack vertically, centered horizontally */}
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
@@ -317,9 +377,49 @@ export function FullScreenViewer({
             <ChevronRight className="h-6 w-6" />
           </button>
         </div>
+        {/* Swipe-and-Hold Indicator */}
+        <AnimatePresence>
+          {holdDir && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, x: holdDir === 'next' ? 20 : -20 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: holdDir === 'next' ? 40 : -40 }}
+              className={cn(
+                "fixed top-1/2 -translate-y-1/2 z-[400] flex flex-col items-center gap-3 p-6 rounded-3xl backdrop-blur-2xl border-2 shadow-2xl",
+                holdDir === 'next' 
+                  ? "right-8 bg-rose-500/20 border-rose-500/40" 
+                  : "left-8 bg-amber-500/20 border-amber-500/40"
+              )}
+            >
+              <div className={cn(
+                "w-16 h-16 rounded-2xl flex items-center justify-center mb-1",
+                holdDir === 'next' ? "bg-rose-500 text-white" : "bg-amber-500 text-white"
+              )}>
+                {holdDir === 'next' ? <ArrowRight className="h-8 w-8" /> : <ArrowLeftIcon className="h-8 w-8" />}
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-60 text-white mb-1">
+                  {holdDir === 'next' ? 'Next Song' : 'Previous Song'}
+                </p>
+                <p className="text-white font-black text-lg max-w-[160px] leading-tight">
+                  {holdDir === 'next' ? slides[idx + 1]?.songTitle : slides[idx - 1]?.songTitle}
+                </p>
+              </div>
+              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 0.6, ease: "linear" }}
+                  className={cn("h-full", holdDir === 'next' ? "bg-rose-500" : "bg-amber-500")}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </AnimatePresence>
   );
+
 
   if (typeof document === 'undefined') return null;
   return createPortal(viewerContent, document.body);

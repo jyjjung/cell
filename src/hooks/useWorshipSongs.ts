@@ -11,11 +11,28 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { useAuth } from '@/contexts/auth-context';
 
 const SONGS_COLLECTION = 'worshipSongs';
+const CACHE_KEY = 'cache_worship_songs';
 
 export function useWorshipSongs() {
   const { currentUser } = useAuth();
-  const [songs, setSongs] = useState<WorshipSong[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [songs, setSongs] = useState<WorshipSong[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem(CACHE_KEY);
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (!currentUser) { setSongs([]); setLoading(false); return; }
@@ -23,6 +40,15 @@ export function useWorshipSongs() {
     const unsub = onSnapshot(q, (snap) => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
       setSongs(loaded);
+      
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(loaded));
+        } catch (e) {
+          console.warn("Failed to cache songs:", e);
+        }
+      }
+      
       setLoading(false);
 
       // ── Cache-prime chord sheet images into the SW CacheFirst cache ────────

@@ -22,11 +22,28 @@ import { getPrivateChatId } from '@/lib/chat-utils';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 
 const CHATS_COLLECTION = 'chats';
+const CACHE_KEY = 'cache_user_chats';
 
 export function useChats() {
   const { currentUser } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [chats, setChats] = useState<Chat[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem(CACHE_KEY);
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -34,8 +51,6 @@ export function useChats() {
       setLoading(false);
       return;
     }
-
-    setLoading(true);
     
     // Privacy restricted: strictly only fetch chats where user is a member
     const chatsQuery = query(
@@ -64,6 +79,15 @@ export function useChats() {
       });
 
       setChats(chatsData);
+      
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(chatsData));
+        } catch (e) {
+          console.warn("Failed to cache chats:", e);
+        }
+      }
+      
       setLoading(false);
     }, (error) => {
       console.error("Error fetching user chats:", error);

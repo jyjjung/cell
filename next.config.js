@@ -6,7 +6,31 @@ const withPWA = pwa.default({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: false, 
+  disable: false,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/api\.dicebear\.com\/.*$/,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "dicebear-avatars",
+        expiration: {
+          maxEntries: 500,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*$/,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "firebase-storage",
+        expiration: {
+          maxEntries: 1000,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+  ],
 });
 
 const nextConfig = {

@@ -10,17 +10,44 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
+const CACHE_KEY = 'cache_worship_setlists';
 
 export function useWorshipSetlists() {
   const { currentUser } = useAuth();
-  const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [setlists, setSetlists] = useState<WorshipSetlist[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem(CACHE_KEY);
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (!currentUser) { setSetlists([]); setLoading(false); return; }
     const q = query(collection(db, SETLISTS_COLLECTION), orderBy('date', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      setSetlists(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist)));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist));
+      setSetlists(data);
+      
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn("Failed to cache setlists:", e);
+        }
+      }
+      
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
