@@ -85,7 +85,7 @@ export default function ThreadWindow({
 
   return (
     <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
-      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-white/5 bg-background/50 backdrop-blur-xl z-20">
+      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -122,9 +122,9 @@ export default function ThreadWindow({
                         />
                       </div>
                       <div className="flex items-center gap-4 mt-6 mb-4">
-                        <div className="h-px bg-white/10 flex-1" />
-                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{messages.length} Replies</span>
-                        <div className="h-px bg-white/10 flex-1" />
+                        <div className="h-px bg-border flex-1" />
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{messages.length} Replies</span>
+                        <div className="h-px bg-border flex-1" />
                       </div>
                   </div>
                 )}
@@ -141,7 +141,7 @@ export default function ThreadWindow({
 
             {loading && messages.length === 0 && (
                 <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-white/20" />
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/40" />
                 </div>
             )}
         </div>

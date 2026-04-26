@@ -24,6 +24,8 @@ import RosterSummary from './summaries/RosterSummary';
 import QTSummary from './summaries/QTSummary';
 import CleaningSummary from './summaries/CleaningSummary';
 import SongSummary from './summaries/SongSummary';
+import { PixelAvatar } from '../avatar/PixelAvatar';
+
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -38,11 +40,14 @@ interface MessageBubbleProps {
   parentMessage?: ChatMessage;
   parentSenderName?: string;
   onDelete?: (messageId: string) => void;
+  showAvatar?: boolean;
+  showName?: boolean;
 }
 
 const MessageBubble = React.memo(function MessageBubble({ 
   message, chat, sender, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete 
+  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
+  showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
   const { allUsers } = useAllUsers();
@@ -99,34 +104,45 @@ const MessageBubble = React.memo(function MessageBubble({
           className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
       >
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
+              {!isSender && isGroup && (
+                  <div className="w-7 h-7 flex-shrink-0 mb-0.5">
+                      {showAvatar ? (
+                           <div className="w-7 h-7 rounded-full overflow-hidden bg-muted border border-border/50 shadow-sm ring-1 ring-border/10">
+                               <PixelAvatar avatar={sender?.avatar} className="w-full h-full" />
+                           </div>
+                      ) : (
+                          <div className="w-7" />
+                      )}
+                  </div>
+              )}
               <div className={cn(
                   "flex flex-col min-w-0 transition-all duration-300", 
                   isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
                   isSender ? "items-end" : "items-start"
               )}>
+                  {!isSender && isGroup && senderName && showName && (
+                      <p className="text-[10px] font-bold text-[#007AFF] mb-1 ml-3.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
+                  )}
                   <div
                       className={cn(
                       'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
                       youtubeId && "w-full sm:min-w-[300px] max-w-full",
                       !isSpecialContent && (
                           isSender
-                          ? 'bg-[#007AFF] text-white rounded-br-[0.25rem] ml-auto shadow-sm px-2.5 py-1'
-                          : 'bg-[#3B3B3D]/90 text-white backdrop-blur-md rounded-bl-[0.25rem] mr-auto border border-white/5 px-2.5 py-1'
+                          ? cn('bg-[#007AFF] text-white ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
+                          : cn('bg-[#3B3B3D]/90 text-white backdrop-blur-md mr-auto border border-white/5 px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
                       ),
                       isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                       )}
                   >
                         {/* Parent message quote block */}
                         {parentMessage && (
-                            <div className={cn("mb-2 p-2 rounded-xl text-xs border border-white/10 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-black/30 text-white/80")}>
+                            <div className={cn("mb-2 p-2 rounded-xl text-xs border border-border/20 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-foreground/5 text-foreground/80")}>
                                 <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
                                 <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
                             </div>
                         )}
 
-                        {!isSender && isGroup && senderName && (
-                            <p className="text-[9px] font-bold text-[#007AFF] mb-0.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
-                        )}
   
                         {message.imageUrl && !message.songId && (
                           <ImageLightbox
@@ -138,7 +154,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                   whileHover={{ scale: 1.01 }}
                                   whileTap={{ scale: 0.98 }}
                                   className={cn(
-                                    "relative rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/20 mb-1.5 cursor-zoom-in transition-all",
+                                    "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all",
                                     !message.text && "mb-0"
                                   )}
                               >
@@ -172,7 +188,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                     <h4 className="text-[13px] font-black text-white truncate leading-tight">
                                         {message.songTitle || 'Shared Chord Sheet'}
                                     </h4>
-                                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest truncate">
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest truncate">
                                         {message.sheetKey ? `${message.sheetKey} Chart • ` : ''}Click to Expand
                                     </p>
                                 </div>
@@ -185,7 +201,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                         </div>
                                         <div className="text-center">
                                             <p className="text-white text-sm font-bold tracking-tight">PDF Chord Sheet</p>
-                                            <p className="text-white/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">Click to view in high quality</p>
+                                            <p className="text-foreground/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">Click to view in high quality</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -379,7 +395,7 @@ function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { c
                     const sender = allUsers.find(u => u.uid === reply.senderId);
                     const senderName = sender?.firstName || 'Someone';
                     return (
-                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-white/5 rounded transition-colors text-white", isSender ? "text-right" : "text-left")}>
+                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
                             <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
                             <span className={cn("opacity-80 text-[11px] break-words line-clamp-2", reply.isDeleted && "italic opacity-40")}>{reply.isDeleted ? 'deleted a message' : (reply.text || (reply.imageUrl ? '📸 Image' : ''))}</span>
                         </div>

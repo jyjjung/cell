@@ -100,7 +100,7 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
                 <Textarea 
                   placeholder="Enter the announcement message... Paragraphs are supported." 
                   {...field} 
-                  className="min-h-[160px] rounded-2xl bg-white/5 border-white/5 resize-y p-4 text-sm"
+                  className="min-h-[160px] rounded-2xl bg-white/5 border-white/5 resize-y p-4 text-base"
                 />
               </FormControl>
               <FormMessage />

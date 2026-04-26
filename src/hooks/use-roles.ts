@@ -36,10 +36,6 @@ export function useRoles() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAdmin) {
-      setLoading(false);
-      return;
-    }
     const q = query(collection(db, ROLES_COLLECTION), orderBy("name", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const rolesData: AppRole[] = [];

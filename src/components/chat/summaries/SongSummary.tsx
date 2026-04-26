@@ -91,7 +91,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
                 "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
                 isSender ? "bg-white/10 text-white" : "bg-primary/10 text-primary"
             )}>
-                {song.chordSheets?.length || 0} Charts
+                {new Set(song.chordSheets?.map(s => s.key) ?? []).size} Keys
             </span>
         </div>
         <ChevronRight className={cn(

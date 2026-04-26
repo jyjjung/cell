@@ -273,27 +273,34 @@ export default function SlashCommandSelector({
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Available Keys</p>
             <div className="grid grid-cols-4 gap-2">
                 {selectedSong.chordSheets.length > 0 ? (
-                    selectedSong.chordSheets.map((sheet) => (
+                    Array.from(
+                      selectedSong.chordSheets.reduce((map, sheet) => {
+                        if (!map.has(sheet.key)) map.set(sheet.key, []);
+                        map.get(sheet.key)!.push(sheet.imageUrl);
+                        return map;
+                      }, new Map<string, string[]>()).entries()
+                    ).map(([key, urls]) => (
                         <button
-                            key={sheet.id}
+                            key={key}
                             onClick={() => {
                                 onSelect('song', selectedSong.id, { 
-                                    imageUrl: sheet.imageUrl,
-                                    sheetKey: sheet.key,
+                                    imageUrl: urls[0],
+                                    imageUrls: urls,
+                                    sheetKey: key,
                                     songTitle: selectedSong.title,
                                     artist: selectedSong.artist,
-                                    label: `${selectedSong.title} (${sheet.key})`
+                                    label: `${selectedSong.title} (${key})`
                                 });
                                 onClose();
                             }}
                             className="h-12 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-center text-[13px] font-black hover:bg-primary hover:text-white transition-all active:scale-95"
                         >
-                            {sheet.key}
+                            {key}
                         </button>
                     ))
                 ) : (
-                    <div className="col-span-4 p-8 text-center bg-white/5 rounded-2xl border border-dashed border-white/10">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 text-rose-500">No Sheets Uploaded</p>
+                    <div className="col-span-4 p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">No Sheets Uploaded</p>
                     </div>
                 )}
             </div>

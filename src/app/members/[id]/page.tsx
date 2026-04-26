@@ -1,0 +1,262 @@
+"use client";
+
+import { useMemo, useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
+import { useRoles } from '@/hooks/use-roles';
+import { useEvents } from '@/hooks/use-events';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { useAuth } from '@/contexts/auth-context';
+import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import { translations } from '@/lib/translations';
+import { PageHeader } from '@/components/ui/page-layout';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { motion } from 'framer-motion';
+import { 
+  User as UserIcon, 
+  Cake, 
+  BookOpen, 
+  Trophy, 
+  Shield, 
+  Calendar,
+  ChevronLeft
+} from 'lucide-react';
+import { format, parseISO, isValid, startOfDay, isBefore, isSameDay } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export default function MemberProfilePage() {
+  const params = useParams();
+  const userId = params.id as string;
+  const router = useRouter();
+  const { allUsers, loading: usersLoading } = useAllUsers();
+  const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
+  const { roles, loading: rolesLoading } = useRoles();
+  const { events, loading: eventsLoading } = useEvents();
+  const { plan, loading: planLoading } = useBiblePlan();
+  const { currentUser } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
+
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  useEffect(() => { setIsMounted(true); }, []);
+
+  const user = useMemo(() => allUsers.find(u => u.uid === userId), [allUsers, userId]);
+  const checklist = useMemo(() => allChecklists.find(c => c.userId === userId), [allChecklists, userId]);
+  const rolesMap = useMemo(() => new Map(roles.map(r => [r.id, r.name])), [roles]);
+  
+  const userBirthday = useMemo(() => {
+    const bday = events.find(e => e.category === 'Birthday' && e.userId === userId);
+    if (!bday || !bday.date) return null;
+    try {
+      const d = parseISO(bday.date);
+      return isValid(d) ? format(d, 'MMMM d') : null;
+    } catch {
+      return null;
+    }
+  }, [events, userId]);
+
+  const totalPassagesToDate = useMemo(() => {
+    if (!plan?.dailyReadings) return 0;
+    const today = startOfDay(new Date());
+    return plan.dailyReadings
+      .filter(r => {
+        try {
+          const d = parseISO(r.date);
+          return isValid(d) && (isBefore(d, today) || isSameDay(d, today));
+        } catch {
+          return false;
+        }
+      })
+      .reduce((acc, day) => acc + (day.passages?.filter(p => p?.displayText && !p.displayText.startsWith('Error:'))?.length ?? 0), 0);
+  }, [plan]);
+
+  const progressPercentage = useMemo(() => {
+    if (!checklist || totalPassagesToDate === 0) return 0;
+    return parseFloat(((checklist.completedPassages.length / totalPassagesToDate) * 100).toFixed(1));
+  }, [checklist, totalPassagesToDate]);
+
+  const isLoading = !isMounted || usersLoading || checklistsLoading || rolesLoading || eventsLoading || planLoading;
+
+  if (isLoading) {
+    return (
+      <div className="relative space-y-8 pb-32 max-w-3xl mx-auto px-4 md:px-8 mt-12">
+        <Skeleton className="h-10 w-24 rounded-xl" />
+        <div className="flex flex-col items-center space-y-4">
+          <Skeleton className="h-32 w-32 rounded-[2.5rem]" />
+          <Skeleton className="h-8 w-48 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-3xl" />
+          <Skeleton className="h-24 rounded-3xl" />
+        </div>
+        <Skeleton className="h-48 rounded-3xl" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-muted-foreground">User not found.</p>
+        <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+      </div>
+    );
+  }
+
+  const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
+
+  return (
+    <div className="relative space-y-8 pb-32 max-w-3xl mx-auto px-4 md:px-8 mt-12">
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex items-center"
+      >
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => router.back()}
+          className="rounded-xl gap-1.5 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          {t.back || 'Back'}
+        </Button>
+      </motion.div>
+
+      {/* Profile Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center text-center space-y-6"
+      >
+        <div className="relative group">
+          <div className="h-32 w-32 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-muted relative z-10">
+            <PixelAvatar avatar={user.avatar} />
+          </div>
+          <div className="absolute -inset-4 bg-primary/10 rounded-[3rem] blur-2xl -z-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+        </div>
+
+        <div className="space-y-2">
+          <h1 className="text-3xl font-black tracking-tight">{user.firstName} {user.lastName}</h1>
+          {user.isAdmin && (
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 mt-2">
+              <Shield className="h-3 w-3 mr-1" /> Admin
+            </Badge>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="font-bold text-sm">{t.bibleReading || 'Bible Reading'}</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-black">{checklist?.completedPassages.length || 0}</span>
+              <span className="text-xs font-bold text-muted-foreground mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
+            </div>
+            <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
+            <p className="text-[11px] font-bold text-primary">{progressPercentage}% {t.complete || 'Complete'}</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-pink-500/10">
+              <Cake className="h-5 w-5 text-pink-500" />
+            </div>
+            <h3 className="font-bold text-sm">{t.birthday || 'Birthday'}</h3>
+          </div>
+          <div className="pt-1">
+            <p className="text-2xl font-black">{userBirthday || t.notAvailable || 'Not Available'}</p>
+            <p className="text-xs font-bold text-muted-foreground mt-1">{t.celebrationDate || 'Annual Celebration'}</p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Groups/Roles */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10">
+            <Shield className="h-5 w-5 text-amber-500" />
+          </div>
+          <h3 className="font-bold text-sm">{t.groupsAndRoles || 'Groups & Roles'}</h3>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {userRoles.length > 0 ? (
+            userRoles.map(role => (
+              <Badge 
+                key={role} 
+                variant="outline" 
+                className="px-4 py-1.5 rounded-xl border-border/60 bg-muted/30 text-sm font-semibold"
+              >
+                {role}
+              </Badge>
+            ))
+          ) : (
+            <Badge 
+              variant="outline" 
+              className="px-4 py-1.5 rounded-xl border-border/30 opacity-50 text-sm font-medium italic"
+            >
+              {t.member || 'Member'}
+            </Badge>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Extra Info */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      >
+        <div className="p-4 rounded-2xl bg-muted/20 border border-border/20 flex items-center gap-3">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Member Since</p>
+            <p className="text-xs font-bold truncate">
+              {user.createdAt ? format(user.createdAt.toDate(), 'MMMM yyyy') : 'Unknown'}
+            </p>
+          </div>
+        </div>
+        
+        {checklist?.updatedAt && (
+          <div className="p-4 rounded-2xl bg-muted/20 border border-border/20 flex items-center gap-3">
+            <Trophy className="h-4 w-4 text-primary/70" />
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Last Reading</p>
+              <p className="text-xs font-bold truncate">
+                {format(checklist.updatedAt.toDate(), 'MMM d, h:mm a')}
+              </p>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
