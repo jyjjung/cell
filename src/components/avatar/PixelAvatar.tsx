@@ -34,6 +34,25 @@ export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
   const stops = bg.stops.map(s => `${s.color} ${s.offset}`).join(', ');
   const bgStyle = { background: `linear-gradient(to bottom, ${stops})` };
 
+  // Handle custom uploaded image
+  if (mode === 'image') {
+    return (
+        <div className={cn("relative overflow-hidden flex items-center justify-center aspect-square", className)} style={bgStyle}>
+            {finalAvatar.imageUrl ? (
+                <img 
+                    src={finalAvatar.imageUrl} 
+                    alt="Custom Profile" 
+                    className="w-full h-full object-cover" 
+                />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/20">
+                    <span className="text-[10px] uppercase font-black tracking-widest">No Image</span>
+                </div>
+            )}
+        </div>
+    );
+  }
+
   // Handle generative modes via DiceBear
   if (mode && mode !== 'custom') {
     let style = 'pixel-art';

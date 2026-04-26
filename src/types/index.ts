@@ -173,12 +173,13 @@ export interface EditableAvatarData {
   backgroundColor: string;
 }
 
-export type AvatarMode = 'custom' | 'initials' | 'animal' | 'landscape' | 'robot' | 'pixel-art';
+export type AvatarMode = 'custom' | 'initials' | 'animal' | 'landscape' | 'robot' | 'pixel-art' | 'image';
 
 export interface AvatarData extends Partial<EditableAvatarData> {
   mode?: AvatarMode;
   seed?: string;
   initials?: string;
+  imageUrl?: string;
 }
 
 export interface AppUser extends FirebaseUser {

@@ -9,8 +9,15 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Dog, Zap, Layout, Type, Eraser } from 'lucide-react';
-
+import { RefreshCw, User, Dog, Zap, Layout, Type, Eraser, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '@/lib/cropImage';
+import { Slider } from '@/components/ui/slider';
 function BackgroundSelector({
   currentData,
   onDataChange,
@@ -206,6 +213,191 @@ function GenerativeControls({
     )
 }
 
+function ImageUploadControls({
+    currentData,
+    onDataChange
+}: {
+    currentData: AvatarData,
+    onDataChange: (data: AvatarData) => void
+}) {
+    const { currentUser } = useAuth();
+    const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // Cropping states
+    const [imageSrc, setImageSrc] = useState<string | null>(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
+    const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            
+            if (!file.type.startsWith('image/')) {
+                toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image file." });
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                toast({ variant: "destructive", title: "File too large", description: "Maximum file size is 5MB." });
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.addEventListener('load', () => setImageSrc(reader.result?.toString() || null));
+            reader.readAsDataURL(file);
+            
+            // Reset input so the same file can be selected again if needed
+            e.target.value = '';
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!imageSrc || !croppedAreaPixels) return;
+
+        try {
+            setIsUploading(true);
+            setUploadProgress(0);
+
+            // Generate the cropped image blob
+            const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels, 0);
+            
+            if (!croppedImageBlob) {
+                throw new Error("Failed to crop image");
+            }
+
+            const uid = currentUser?.uid || 'anonymous';
+            const storagePath = `avatars/${uid}_${Date.now()}_cropped.jpg`;
+            const storageRef = ref(storage, storagePath);
+            const uploadTask = uploadBytesResumable(storageRef, croppedImageBlob);
+
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    setIsUploading(false);
+                    toast({ variant: "destructive", title: "Upload failed", description: error.message });
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    onDataChange({ ...currentData, mode: 'image', imageUrl: downloadURL });
+                    setIsUploading(false);
+                    setImageSrc(null); // Close the cropper UI
+                }
+            );
+        } catch (error: any) {
+            setIsUploading(false);
+            toast({ variant: "destructive", title: "Upload failed", description: error.message || "An unknown error occurred" });
+        }
+    };
+
+    if (imageSrc) {
+        return (
+            <div className="flex flex-col h-[300px] md:h-[400px] gap-4 w-full max-w-md mx-auto">
+                <div className="relative flex-1 rounded-2xl overflow-hidden bg-black w-full min-h-[200px]">
+                    <Cropper
+                        image={imageSrc}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={1}
+                        cropShape="round"
+                        showGrid={false}
+                        onCropChange={setCrop}
+                        onCropComplete={onCropComplete}
+                        onZoomChange={setZoom}
+                    />
+                </div>
+                
+                <div className="flex items-center gap-4 px-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Zoom</span>
+                    <Slider 
+                        value={[zoom]} 
+                        min={1} 
+                        max={3} 
+                        step={0.1} 
+                        onValueChange={(val) => setZoom(val[0])} 
+                    />
+                </div>
+                
+                <div className="flex gap-2">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setImageSrc(null)}
+                        disabled={isUploading}
+                        className="flex-1 rounded-xl"
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleUpload}
+                        disabled={isUploading}
+                        className="flex-1 rounded-xl font-black uppercase tracking-widest relative overflow-hidden"
+                    >
+                        {isUploading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin relative z-10" />
+                                <span className="relative z-10">Uploading {Math.round(uploadProgress)}%</span>
+                                <div 
+                                    className="absolute top-0 left-0 bottom-0 bg-primary/30 z-0 transition-all duration-300" 
+                                    style={{ width: `${uploadProgress}%` }}
+                                />
+                            </>
+                        ) : (
+                            "Save & Upload"
+                        )}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col items-center justify-center h-[250px] md:h-[300px] text-center gap-6">
+            <div className="space-y-2">
+                <h3 className="text-xl font-black tracking-tight">Custom Image</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">Upload your own profile picture.</p>
+            </div>
+            
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
+            />
+            
+            <Button 
+                onClick={() => fileInputRef.current?.click()} 
+                size="lg" 
+                className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest"
+            >
+                <Upload className="mr-2 h-5 w-5" />
+                Select Image
+            </Button>
+            
+            {currentData.mode === 'image' && currentData.imageUrl && (
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => onDataChange({ ...currentData, imageUrl: undefined, mode: 'custom' })}
+                    className="text-muted-foreground hover:text-destructive"
+                >
+                    Remove Image
+                </Button>
+            )}
+        </div>
+    )
+}
+
 interface AvatarEditorProps {
     value: AvatarData;
     onChange: (data: AvatarData) => void;
@@ -233,13 +425,14 @@ export function AvatarEditor({
         <BackgroundSelector currentData={value} onDataChange={onChange} />
         
         <Tabs value={currentMode} onValueChange={(val) => onChange({ ...value, mode: val as AvatarMode })} className="w-full">
-            <TabsList className="grid grid-cols-3 lg:grid-cols-6 h-12 md:h-14 p-1 bg-muted/20 rounded-2xl gap-1">
+            <TabsList className="grid grid-cols-4 lg:grid-cols-7 h-12 md:h-14 p-1 bg-muted/20 rounded-2xl gap-1">
                 <TabsTrigger value="custom" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><User className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="animal" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Dog className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="robot" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Zap className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="landscape" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Layout className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="initials" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Type className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="pixel-art" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Px</TabsTrigger>
+                <TabsTrigger value="image" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ImageIcon className="h-4 w-4" /></TabsTrigger>
             </TabsList>
 
             <div className="mt-6 md:mt-8">
@@ -260,6 +453,9 @@ export function AvatarEditor({
                 </TabsContent>
                 <TabsContent value="pixel-art">
                     <GenerativeControls mode="pixel-art" currentData={value} onDataChange={onChange} />
+                </TabsContent>
+                <TabsContent value="image">
+                    <ImageUploadControls currentData={value} onDataChange={onChange} />
                 </TabsContent>
             </div>
         </Tabs>
