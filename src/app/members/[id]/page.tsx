@@ -150,28 +150,30 @@ export default function MemberProfilePage() {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
+      <div className={`grid grid-cols-1 ${user.showInCommunityProgress !== false ? 'sm:grid-cols-2' : ''} gap-4`}>
+        {user.showInCommunityProgress !== false && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-bold text-sm">{t.bibleReading || 'Bible Reading'}</h3>
             </div>
-            <h3 className="font-bold text-sm">{t.bibleReading || 'Bible Reading'}</h3>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-end">
-              <span className="text-2xl font-black">{checklist?.completedPassages.length || 0}</span>
-              <span className="text-xs font-bold text-muted-foreground mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
+            <div className="space-y-2">
+              <div className="flex justify-between items-end">
+                <span className="text-2xl font-black">{checklist?.completedPassages.length || 0}</span>
+                <span className="text-xs font-bold text-muted-foreground mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
+              </div>
+              <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
+              <p className="text-[11px] font-bold text-primary">{progressPercentage}% {t.complete || 'Complete'}</p>
             </div>
-            <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
-            <p className="text-[11px] font-bold text-primary">{progressPercentage}% {t.complete || 'Complete'}</p>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -229,23 +231,13 @@ export default function MemberProfilePage() {
       </motion.div>
 
       {/* Extra Info */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
-        <div className="p-4 rounded-2xl bg-muted/20 border border-border/20 flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Member Since</p>
-            <p className="text-xs font-bold truncate">
-              {user.createdAt ? format(user.createdAt.toDate(), 'MMMM yyyy') : 'Unknown'}
-            </p>
-          </div>
-        </div>
-        
-        {checklist?.updatedAt && (
+      {user.showInCommunityProgress !== false && checklist?.updatedAt && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-1 gap-4"
+        >
           <div className="p-4 rounded-2xl bg-muted/20 border border-border/20 flex items-center gap-3">
             <Trophy className="h-4 w-4 text-primary/70" />
             <div className="min-w-0">
@@ -255,8 +247,8 @@ export default function MemberProfilePage() {
               </p>
             </div>
           </div>
-        )}
-      </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 }
