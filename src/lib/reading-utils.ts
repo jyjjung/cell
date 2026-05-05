@@ -19,7 +19,8 @@ export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading |
 
 export function findNextUnreadReading(
   dailyReadings: DailyReading[],
-  completedPassages: string[]
+  completedPassages: string[],
+  beforeDate?: Date
 ): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
 
@@ -37,6 +38,16 @@ export function findNextUnreadReading(
   });
 
   for (const reading of sortedReadings) {
+    // If beforeDate is provided, only consider readings strictly before that date
+    if (beforeDate) {
+      try {
+        const readingDate = parseDay(reading.date);
+        if (!isValid(readingDate) || readingDate >= beforeDate) continue;
+      } catch (e) {
+        continue;
+      }
+    }
+
     // A reading is "unread" if not all its passages are in completedPassages
     // Ensure reading.passages is an array and has items before checking every()
     const validPassages = reading.passages?.filter(p => p && p.displayText && typeof p.displayText === 'string' && !p.displayText.startsWith("Error:")) || [];
