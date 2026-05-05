@@ -37,7 +37,7 @@ export default function CalendarWidget({
   }, [events, cleaningRoster, qtRoster]);
 
   return (
-    <Card className="p-4 rounded-[2.5rem] bg-card/30 backdrop-blur-xl border-border/50 shadow-2xl overflow-hidden">
+    <Card className="p-3 rounded-3xl bg-card/30 backdrop-blur-xl border-border/50 shadow-2xl overflow-hidden">
       <Calendar
         mode="single"
         selected={selectedDate}
@@ -59,7 +59,7 @@ export default function CalendarWidget({
           row: "grid grid-cols-7 w-full mt-2 justify-items-center",
           cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
           day: cn(
-            "h-11 w-11 p-0 font-bold aria-selected:opacity-100 transition-all rounded-2xl mx-auto flex items-center justify-center relative",
+            "h-9 w-9 p-0 font-bold aria-selected:opacity-100 transition-all rounded-xl mx-auto flex items-center justify-center relative",
             "hover:bg-primary/20 hover:text-primary active:scale-90"
           ),
           day_selected: "bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary hover:text-primary-foreground",
@@ -84,7 +84,7 @@ export default function CalendarWidget({
                 type="button"
                 onClick={() => onDateSelect(date)}
                 className={cn(
-                  "h-11 w-11 rounded-2xl flex flex-col items-center justify-center relative transition-all group",
+                  "h-9 w-9 rounded-xl flex flex-col items-center justify-center relative transition-all group",
                   isSelected ? "bg-primary text-primary-foreground shadow-xl shadow-primary/20" : "hover:bg-muted/50",
                   isOutside ? "opacity-20" : "opacity-100",
                   isSameDay(date, new Date()) && !isSelected && "border border-primary/30 text-primary"
