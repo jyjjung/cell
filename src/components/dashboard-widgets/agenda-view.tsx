@@ -87,38 +87,64 @@ export default function AgendaView({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => onItemClick?.(item)}
-                className="w-full text-left group"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${
+                  item.type === 'cleaning' ? 'bg-emerald-500/10 border-emerald-500/20' : 
+                  item.type === 'qt' ? 'bg-primary/10 border-primary/20' : 
+                  'bg-sky-500/10 border-sky-500/20'
+                }`}
               >
-                <Card className={cn(
-                  "p-4 rounded-3xl bg-card/20 border-border/40 hover:bg-card/40 transition-all flex items-center gap-4 group-active:scale-[0.98] shadow-lg shadow-black/5",
-                  item.type === 'cleaning' ? "border-l-4 border-l-emerald-500" : 
-                  item.type === 'qt' ? "border-l-4 border-l-primary" : "border-l-4 border-l-orange-500"
-                )}>
-                  <div className={cn(
-                    "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border border-white/5",
-                    item.type === 'cleaning' ? "bg-emerald-500/10 text-emerald-500" : 
-                    item.type === 'qt' ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500"
-                  )}>
-                    {item.type === 'cleaning' ? <ShieldCheck className="w-5 h-5" /> : 
-                     item.type === 'qt' ? <BookOpenText className="w-5 h-5" /> : <Calendar className="w-5 h-5" />}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/50 mb-0.5">
-                      {item.type === 'cleaning' ? 'Church Cleaning' : item.type === 'qt' ? 'Spiritual' : item.category || 'Event'}
+                <div className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background/60 border border-white/5 shadow-sm">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
+                    {format(selectedDate, 'MMM')}
+                  </span>
+                  <span className={`text-base font-black leading-tight ${
+                    item.type === 'cleaning' ? 'text-emerald-500' : 
+                    item.type === 'qt' ? 'text-primary' : 
+                    'text-sky-500'
+                  }`}>
+                    {format(selectedDate, 'd')}
+                  </span>
+                </div>
+
+                <div className={`shrink-0 p-1.5 rounded-lg bg-background/60 border border-white/5 shadow-sm ${
+                  item.type === 'cleaning' ? 'text-emerald-500' : 
+                  item.type === 'qt' ? 'text-primary' : 
+                  'text-sky-500'
+                }`}>
+                  {item.type === 'cleaning' ? <ShieldCheck className="w-3.5 h-3.5" /> : 
+                   item.type === 'qt' ? <BookOpenText className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                       {item.type === 'cleaning' ? 'Cleaning' : item.type === 'qt' ? 'QT Sharing' : item.category || 'Event'}
                     </p>
-                    <h4 className="font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                      {item.title}
-                    </h4>
-                    {!item.allDay && item.startTime && (
-                      <p className="text-[10px] font-bold text-primary/60 mt-0.5 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {item.startTime}
-                      </p>
+                    {isSameDay(selectedDate, new Date()) && (
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${
+                        item.type === 'cleaning' ? 'bg-emerald-500/10 text-emerald-500' : 
+                        item.type === 'qt' ? 'bg-primary/10 text-primary' : 
+                        'bg-sky-500/10 text-sky-500'
+                      }`}>
+                        Today
+                      </span>
                     )}
                   </div>
-                  
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                </Card>
+                  <p className="font-bold text-sm truncate">{item.title}</p>
+                  {(!item.allDay && item.startTime) ? (
+                    <p className="text-xs text-muted-foreground/60 font-medium truncate flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {item.startTime}
+                    </p>
+                  ) : item.type === 'cleaning' && item.assignedNames ? (
+                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.assignedNames}</p>
+                  ) : item.type === 'qt' && item.qtTitle ? (
+                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.qtTitle}</p>
+                  ) : item.details ? (
+                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.details}</p>
+                  ) : null}
+                </div>
+                
+                <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
               </motion.button>
             ))
           ) : (
