@@ -29,7 +29,19 @@ export async function getLocalBiblePassage(
   version: 'korRV' | 'engESV' = 'korRV'
 ): Promise<BiblePassage | null> {
   try {
-    const filePath = path.join(BIBLE_DATA_DIR, `${version}.xml`);
+    let fileName = `${version}.xml`;
+    if (version === 'korRV') {
+      try {
+        const files = fs.readdirSync(BIBLE_DATA_DIR);
+        const bebliaFile = files.find(f => f.endsWith('.beblia.xml'));
+        if (bebliaFile) fileName = bebliaFile;
+      } catch (e) {
+        console.warn('Could not read BIBLE_DATA_DIR to find beblia xml, using fallback string', e);
+        fileName = '성경전서 개역개정판 (1998).beblia.xml';
+      }
+    }
+    
+    const filePath = path.join(BIBLE_DATA_DIR, fileName);
     if (!fs.existsSync(filePath)) {
       console.error(`Bible file not found: ${filePath}`);
       return null;
@@ -119,7 +131,7 @@ export async function getLocalBiblePassage(
       return {
         book: bookMeta.fullName,
         chapter: chapter,
-        version: 'English Standard Version',
+        version: bible.translation || (version === 'korRV' ? '개역개정판' : 'English Standard Version'),
         verses: parsedVerses,
       };
     }

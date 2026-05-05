@@ -16,6 +16,7 @@ import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import type { StructuredPassage } from '@/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { startOfDay } from 'date-fns';
 
 export default function NextReadingWidget() {
     const { plan, loading: planLoading } = useBiblePlan();
@@ -27,7 +28,7 @@ export default function NextReadingWidget() {
 
     const nextUnread = useMemo(() => {
         if (!plan?.dailyReadings || loadingChecklist) return null;
-        return findNextUnreadReading(plan.dailyReadings, completedPassages);
+        return findNextUnreadReading(plan.dailyReadings, completedPassages, startOfDay(new Date()));
     }, [plan, completedPassages, loadingChecklist]);
     
     const unreadPassagesToShow = useMemo(() => {

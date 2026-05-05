@@ -11,6 +11,8 @@ import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useCleaningDays } from '@/hooks/useCleaningDays';
+import { useWorshipRosters } from '@/hooks/useWorshipRosters';
+import { useAllCustomRosterEntries } from '@/hooks/useAllCustomRosterEntries';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
@@ -19,7 +21,8 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, addDays, isAfter, isSameDay } from 'date-fns';
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
-  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin
+  Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin,
+  Music2, ListChecks
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -58,13 +61,15 @@ type TimelineItem = {
 export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const t = translations[currentUser.preferredLanguage || 'en'];
   const { plan, loading: planLoading } = useBiblePlan();
-  const { completedPassages, togglePassageCompletion, loadingChecklist } = useUserBibleChecklist();
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { events, loading: eventsLoading } = useEvents();
   const { chats } = useChats();
   const { roster: cleaningRoster } = useCleaningRoster();
   const { roster: qtRoster } = useQTRoster();
   const { allUsers } = useAllUsers();
   const { cleaningDays } = useCleaningDays();
+  const { rosters: worshipRosters } = useWorshipRosters();
+  const { entries: customRosterEntries } = useAllCustomRosterEntries();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
@@ -88,7 +93,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const cleaningDaysMap = useMemo(() => new Map(cleaningDays.map(d => [d.id, d.name])), [cleaningDays]);
 
   const todaysReading = useMemo(() => plan?.dailyReadings ? findTodaysReading(plan.dailyReadings) : null, [plan]);
-  const nextUnread = useMemo(() => plan?.dailyReadings ? findNextUnreadReading(plan.dailyReadings, completedPassages) : null, [plan, completedPassages]);
+  const nextUnread = useMemo(() => plan?.dailyReadings ? findNextUnreadReading(plan.dailyReadings, completedPassages, startOfToday()) : null, [plan, completedPassages]);
 
   const todayPassages = useMemo(() => todaysReading?.passages.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [], [todaysReading]);
   const todayDoneCount = useMemo(() => todayPassages.filter(p => completedPassages.includes(p.displayText)).length, [todayPassages, completedPassages]);
@@ -143,6 +148,125 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 4);
   }, [events, cleaningRoster, qtRoster, usersMap, cleaningDaysMap]);
 
+  // ── My personal roster assignments (UID-based, no false-name matches) ──
+  type MyRosterItem = {
+    id: string;
+    date: Date;
+    label: string;
+    sublabel?: string;
+    type: 'cleaning' | 'qt' | 'worship' | 'custom';
+    href: string;
+  };
+
+  const myRosterItems = useMemo((): MyRosterItem[] => {
+    const today = startOfToday();
+    const items: MyRosterItem[] = [];
+
+    // Cleaning – match by uid in assignedUserIds array
+    cleaningRoster.forEach(r => {
+      const d = parseISO(r.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      if (!r.assignedUserIds.includes(currentUser.uid)) return;
+      const dayLabel = cleaningDaysMap.get(r.dayId);
+      items.push({
+        id: `cleaning-${r.id}`,
+        date: d,
+        label: 'Church Cleaning',
+        sublabel: dayLabel,
+        type: 'cleaning',
+        href: '/cleaning-roster',
+      });
+    });
+
+    // QT – match by userId field (not name)
+    qtRoster.forEach(r => {
+      const d = parseISO(r.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      if (r.userId !== currentUser.uid) return;
+      items.push({
+        id: `qt-${r.id}`,
+        date: d,
+        label: 'QT Sharing',
+        sublabel: r.title || r.passage,
+        type: 'qt',
+        href: '/qt',
+      });
+    });
+
+    // Worship roster – match by userId in any slot's members
+    worshipRosters.forEach(roster => {
+      const d = parseISO(roster.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      const myRoles: string[] = [];
+      roster.slots.forEach(slot => {
+        if (slot.members.some(m => m.userId === currentUser.uid)) {
+          myRoles.push(slot.role);
+        }
+      });
+      if (myRoles.length === 0) return;
+      items.push({
+        id: `worship-${roster.id}`,
+        date: d,
+        label: roster.name || 'Worship Roster',
+        sublabel: myRoles.join(', '),
+        type: 'worship',
+        href: '/worship',
+      });
+    });
+
+    // Custom rosters – match by userId in assignments array
+    customRosterEntries.forEach(entry => {
+      const d = parseISO(entry.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      const myDuties = entry.assignments
+        .filter(a => a.userId === currentUser.uid)
+        .map(a => a.duty);
+      if (myDuties.length === 0) return;
+      items.push({
+        id: `custom-${entry.id}`,
+        date: d,
+        label: entry.rosterName,
+        sublabel: myDuties.join(', '),
+        type: 'custom',
+        href: '/rosters',
+      });
+    });
+
+    return items.sort((a, b) => compareAsc(a.date, b.date));
+  }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap]);
+
+  const myRosterTypeColor = (type: MyRosterItem['type']) => {
+    switch (type) {
+      case 'cleaning': return 'text-emerald-500';
+      case 'qt': return 'text-primary';
+      case 'worship': return 'text-purple-500';
+      case 'custom': return 'text-orange-500';
+    }
+  };
+  const myRosterTypeBg = (type: MyRosterItem['type']) => {
+    switch (type) {
+      case 'cleaning': return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'qt': return 'bg-primary/10 border-primary/20';
+      case 'worship': return 'bg-purple-500/10 border-purple-500/20';
+      case 'custom': return 'bg-orange-500/10 border-orange-500/20';
+    }
+  };
+  const myRosterTypeIcon = (type: MyRosterItem['type']) => {
+    switch (type) {
+      case 'cleaning': return ShieldCheck;
+      case 'qt': return BookOpenText;
+      case 'worship': return Music2;
+      case 'custom': return ListChecks;
+    }
+  };
+  const myRosterTypeLabel = (type: MyRosterItem['type']) => {
+    switch (type) {
+      case 'cleaning': return 'Cleaning';
+      case 'qt': return 'QT Sharing';
+      case 'worship': return 'Worship';
+      case 'custom': return 'Custom Roster';
+    }
+  };
 
   const typeColor = (type: string) => type === 'cleaning' ? 'text-emerald-500' : type === 'qt' ? 'text-primary' : 'text-orange-500';
   const typeBg = (type: string) => type === 'cleaning' ? 'bg-emerald-500/10 border-emerald-500/20' : type === 'qt' ? 'bg-primary/10 border-primary/20' : 'bg-orange-500/10 border-orange-500/20';
@@ -167,7 +291,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         const myCleaningSoon = !myCleaningToday && cleaningRoster.find(r => isSameDay(parseISO(r.date || ''), tomorrow) && r.assignedUserIds.includes(currentUser.uid));
         const myQTSoon = qtRoster.find(r => {
           const d = parseISO(r.date || '');
-          return (isSameDay(d, today) || isSameDay(d, tomorrow)) && (currentUser.firstName ? r.personName?.includes(currentUser.firstName) : false);
+          return (isSameDay(d, today) || isSameDay(d, tomorrow)) && r.userId === currentUser.uid;
         });
 
         const duty = myCleaningToday || myCleaningSoon || myQTSoon;
@@ -291,38 +415,91 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             )}
 
             {/* Next Up / Integrated Section */}
-            {nextUnread && (
-                <div className={cn(
-                    "mt-6 pt-6 border-t border-border/20",
-                    isTodayComplete && "mt-2 border-t-0 p-4 rounded-3xl bg-emerald-500/10 border-emerald-500/20"
-                )}>
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                {isTodayComplete && <Sparkles className="h-3 w-3 text-emerald-500" />}
-                                <p className={cn(
-                                    "text-[10px] font-black uppercase tracking-widest",
-                                    isTodayComplete ? "text-emerald-600 dark:text-emerald-400" : "text-primary/60"
-                                )}>
-                                    {isTodayComplete ? "All done! Next available reading" : "Coming up next"}
-                                </p>
-                            </div>
-                            <p className="font-bold text-base truncate opacity-90">{nextUnread.passages?.[0]?.displayText}</p>
-                        </div>
-                        <Button 
-                            onClick={() => nextUnread.passages?.[0] && readPassage(nextUnread.passages?.[0].displayText)}
-                            className={cn(
-                                "rounded-2xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0 active:scale-95 transition-all",
-                                isTodayComplete ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20" : "bg-primary shadow-primary/20"
-                            )}>
-                            Read Now
-                        </Button>
-                    </div>
+            {nextUnread && (() => {
+                const nextPassages = nextUnread.passages?.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [];
+                const p = nextPassages.find(passage => !completedPassages.includes(passage.displayText));
+                if (!p) return null;
+                const done = false; // p is always unread by definition
+                return (
+                <div className="mt-6 pt-6 border-t border-border/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">Missed Reading</p>
+                    <motion.div layout transition={spring}
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer bg-card border-amber-500/20 hover:bg-amber-500/10 shadow-sm"
+                    >
+                        <Checkbox
+                            checked={false}
+                            onCheckedChange={() => togglePassageCompletion(p.displayText)}
+                            className="h-5 w-5 rounded-lg shrink-0 border-amber-500/30"
+                        />
+                        <button onClick={() => readPassage(p.displayText)} className="flex-1 text-left text-sm font-semibold truncate transition-colors">
+                            {p.displayText}
+                        </button>
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </motion.div>
                 </div>
-            )}
+                );
+            })()}
           </div>
         </div>
       </motion.section>
+
+      {/* ── My Upcoming Rosters ── */}
+      {myRosterItems.length > 0 && (
+        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-section-title text-purple-500">My Upcoming Duties</h2>
+          </div>
+
+          <div className="space-y-2">
+            {myRosterItems.map(item => {
+              const Icon = myRosterTypeIcon(item.type);
+              const isToday = isSameDay(item.date, startOfToday());
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => go(item.href)}
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${myRosterTypeBg(item.type)}`}
+                >
+                  {/* Date badge */}
+                  <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
+                      {format(item.date, 'MMM')}
+                    </span>
+                    <span className={`text-lg font-black leading-tight ${myRosterTypeColor(item.type)}`}>
+                      {format(item.date, 'd')}
+                    </span>
+                  </div>
+
+                  {/* Icon */}
+                  <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${myRosterTypeColor(item.type)}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                        {myRosterTypeLabel(item.type)}
+                      </p>
+                      {isToday && (
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${myRosterTypeBg(item.type)} ${myRosterTypeColor(item.type)}`}>
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-bold text-sm truncate">{item.label}</p>
+                    {item.sublabel && (
+                      <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.sublabel}</p>
+                    )}
+                  </div>
+
+                  <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
+                </button>
+              );
+            })}
+          </div>
+        </motion.section>
+      )}
 
       {/* ── Community Schedule Hub ── */}
       <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
