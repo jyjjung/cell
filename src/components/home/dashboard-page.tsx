@@ -303,11 +303,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap, usersMap]);
 
   return (
-    <div className="relative space-y-5 pb-24 max-w-5xl mx-auto px-4 md:px-8 mt-6">
+    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
 
       {/* ── Greeting ── */}
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="space-y-1">
-        <h1 className="text-4xl md:text-hero font-black tracking-tight leading-tight md:leading-none normal-case not-italic">
+        <h1 className="text-4xl md:text-hero normal-case not-italic leading-tight md:leading-none">
           {getGreeting(currentUser.preferredLanguage || 'en')},<br />
           <span className="gradient-text">{currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}</span>
         </h1>
@@ -332,13 +332,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
         return (
           <motion.div custom={0.5} variants={fadeUp} initial="hidden" animate="visible"
-            className="glass-thick p-3 md:p-4 rounded-3xl border border-primary/20 flex flex-col md:flex-row items-center gap-4 relative overflow-hidden group shadow-2xl shadow-primary/5">
+            className="glass-thick p-6 rounded-[2rem] border border-primary/20 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group shadow-2xl shadow-primary/5">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               {type === 'cleaning' ? <ShieldCheck className="w-24 h-24" /> : <BookOpenText className="w-24 h-24" />}
             </div>
 
-            <div className={cn("p-2.5 rounded-2xl shrink-0 animate-pulse-subtle", type === 'cleaning' ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/20 text-primary")}>
-              {type === 'cleaning' ? <ShieldCheck className="h-5 w-5" /> : <BookOpenText className="h-5 w-5" />}
+            <div className={cn("p-4 rounded-2xl shrink-0 animate-pulse-subtle", type === 'cleaning' ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/20 text-primary")}>
+              {type === 'cleaning' ? <ShieldCheck className="h-8 w-8" /> : <BookOpenText className="h-8 w-8" />}
             </div>
 
             <div className="flex-1 text-center md:text-left">
@@ -369,11 +369,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           { label: 'Next Up', value: upcomingEvents[0] ? format(upcomingEvents[0].date, 'MMM d') : '—', sub: upcomingEvents[0]?.label || 'Clear schedule', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: Calendar, onClick: () => go('/events') },
         ].map((card, i) => (
           <button key={card.label} onClick={card.onClick}
-            className={cn("flex flex-col items-start gap-2 p-3 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.02] active:scale-[0.98] group relative", card.bg)}>
-            <div className={cn("p-1.5 rounded-lg bg-background/60 border border-white/5 shadow-sm group-hover:bg-background transition-colors", card.color)}>
-              <card.icon className="h-3.5 w-3.5" />
+            className={cn("flex flex-col items-start gap-3 p-4 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.02] active:scale-[0.98] group relative", card.bg)}>
+            <div className={cn("p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm group-hover:bg-background transition-colors", card.color)}>
+              <card.icon className="h-4 w-4" />
             </div>
-            <div className="min-w-0 w-full mt-1">
+            <div className="min-w-0 w-full">
               <p className="text-micro-label !opacity-100 text-muted-foreground/40 truncate !tracking-tight">{card.label}</p>
               <p className={cn("text-xl font-black leading-tight mt-0.5", card.color)}>{card.value}</p>
               <p className="text-[11px] font-bold text-muted-foreground/60 truncate tracking-tight">{card.sub}</p>
@@ -386,7 +386,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       {/* ── Bible Reading Hub ── */}
       <motion.section custom={1} variants={fadeUp} initial="hidden" animate="visible"
         className={cn(
-          "relative p-4 md:p-6 rounded-3xl border shadow-lg overflow-hidden transition-all duration-500 bg-card/50 border-border/50 backdrop-blur-xl",
+          "relative p-6 md:p-8 rounded-[2.5rem] border shadow-lg overflow-hidden transition-all duration-500 bg-card/50 border-border/50 backdrop-blur-xl",
           isTodayComplete && "bg-emerald-500/5 border-emerald-500/20"
         )}>
         {/* Decorative blob */}
@@ -394,10 +394,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           isTodayComplete ? "bg-emerald-400" : "bg-primary/40")} />
 
         <div className="relative">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={cn("p-1.5 rounded-lg shadow-inner", isTodayComplete ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/10 text-primary")}>
-                <BookOpen className="h-3.5 w-3.5" />
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-2.5 rounded-xl shadow-inner", isTodayComplete ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/10 text-primary")}>
+                <BookOpen className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <p className="text-micro-label !opacity-100 text-muted-foreground/50">Daily Path</p>
@@ -420,14 +420,14 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                             return (
                                 <motion.div key={p.displayText} layout transition={spring}
                                     className={cn(
-                                        "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-200 group cursor-pointer",
-                                        done ? "opacity-50 bg-muted/10 border-transparent shadow-none" : "bg-card border-border/40 hover:bg-primary shadow-sm hover:border-primary hover:text-white"
+                                        "flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer",
+                                        done ? "opacity-50 bg-muted/20 border-transparent shadow-none" : "bg-card border-border/40 hover:bg-primary shadow-sm hover:border-primary hover:text-white"
                                     )}
                                 >
                                     <Checkbox
                                         checked={done}
                                         onCheckedChange={() => togglePassageCompletion(p.displayText)}
-                                        className="h-3.5 w-3.5 rounded shrink-0 border-primary/20"
+                                        className="h-5 w-5 rounded-lg shrink-0 border-primary/20"
                                     />
                                     <button onClick={() => readPassage(p.displayText)} className={cn("flex-1 text-left text-sm font-semibold truncate transition-colors", done && "line-through")}>
                                         {p.displayText}
@@ -451,15 +451,15 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 if (!p) return null;
                 const done = false; // p is always unread by definition
                 return (
-                <div className="mt-4 pt-4 border-t border-border/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">Missed Reading</p>
+                <div className="mt-6 pt-6 border-t border-border/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">Missed Reading</p>
                     <motion.div layout transition={spring}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl border transition-all duration-200 group cursor-pointer bg-card border-amber-500/20 hover:bg-amber-500/10 shadow-sm"
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer bg-card border-amber-500/20 hover:bg-amber-500/10 shadow-sm"
                     >
                         <Checkbox
                             checked={false}
                             onCheckedChange={() => togglePassageCompletion(p.displayText)}
-                            className="h-4 w-4 rounded-md shrink-0 border-amber-500/30"
+                            className="h-5 w-5 rounded-lg shrink-0 border-amber-500/30"
                         />
                         <button onClick={() => readPassage(p.displayText)} className="flex-1 text-left text-sm font-semibold truncate transition-colors">
                             {p.displayText}
@@ -475,8 +475,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
       {/* ── My Upcoming Rosters ── */}
       {myRosterItems.length > 0 && (
-        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
-          <div className="flex items-center justify-between px-1 mb-1">
+        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+          <div className="flex items-center justify-between px-1">
             <h2 className="text-section-title text-purple-500">My Upcoming Duties</h2>
           </div>
 
@@ -488,10 +488,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 <button
                   key={item.id}
                   onClick={() => setSelectedEvent(item)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
                 >
                   {/* Date badge */}
-                  <div className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background/60 border border-white/5 shadow-sm">
+                  <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
                       {format(item.date, 'MMM')}
                     </span>
@@ -501,8 +501,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                   </div>
 
                   {/* Icon */}
-                  <div className={`shrink-0 p-1.5 rounded-lg bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
-                    <Icon className="h-3.5 w-3.5" />
+                  <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
 
                   {/* Content */}
@@ -532,16 +532,16 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       )}
 
       {/* ── Community Schedule Hub ── */}
-      <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3 pt-2">
-        <div className="flex items-center justify-between px-1 mb-1">
+      <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+        <div className="flex items-center justify-between px-1">
           <h2 className="text-section-title text-emerald-600 dark:text-emerald-400">Community Schedule</h2>
-          <Button variant="ghost" size="sm" onClick={() => go('/events')} className="h-6 px-2 text-[10px] rounded-lg font-bold text-primary">
+          <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">
             Full View <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
         
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8">
           {/* Left: The Visual Calendar */}
           <div className="lg:col-span-5 xl:col-span-4">
             <CalendarWidget 
@@ -581,9 +581,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                   <button
                     key={item.id}
                     onClick={() => setSelectedEvent(item)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
+                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
                   >
-                    <div className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background/60 border border-white/5 shadow-sm">
+                    <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
                       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
                         {format(item.date, 'MMM')}
                       </span>
@@ -592,8 +592,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                       </span>
                     </div>
 
-                    <div className={`shrink-0 p-1.5 rounded-lg bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
-                      <Icon className="h-3.5 w-3.5" />
+                    <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
+                      <Icon className="h-4 w-4" />
                     </div>
 
                     <div className="flex-1 min-w-0">

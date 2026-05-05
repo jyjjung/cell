@@ -87,13 +87,13 @@ export default function AgendaView({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => onItemClick?.(item)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${
+                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${
                   item.type === 'cleaning' ? 'bg-emerald-500/10 border-emerald-500/20' : 
                   item.type === 'qt' ? 'bg-primary/10 border-primary/20' : 
                   'bg-sky-500/10 border-sky-500/20'
                 }`}
               >
-                <div className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background/60 border border-white/5 shadow-sm">
+                <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
                     {format(selectedDate, 'MMM')}
                   </span>
@@ -106,13 +106,13 @@ export default function AgendaView({
                   </span>
                 </div>
 
-                <div className={`shrink-0 p-1.5 rounded-lg bg-background/60 border border-white/5 shadow-sm ${
+                <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${
                   item.type === 'cleaning' ? 'text-emerald-500' : 
                   item.type === 'qt' ? 'text-primary' : 
                   'text-sky-500'
                 }`}>
-                  {item.type === 'cleaning' ? <ShieldCheck className="w-3.5 h-3.5" /> : 
-                   item.type === 'qt' ? <BookOpenText className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
+                  {item.type === 'cleaning' ? <ShieldCheck className="w-4 h-4" /> : 
+                   item.type === 'qt' ? <BookOpenText className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
                 </div>
                 
                 <div className="flex-1 min-w-0">
