@@ -94,10 +94,10 @@ export default function AgendaView({
                 }`}
               >
                 <div className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-background/60 border border-white/5 shadow-sm">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
                     {format(selectedDate, 'MMM')}
                   </span>
-                  <span className={`text-base font-black leading-tight ${
+                  <span className={`text-lg font-black leading-tight ${
                     item.type === 'cleaning' ? 'text-emerald-500' : 
                     item.type === 'qt' ? 'text-primary' : 
                     'text-sky-500'
