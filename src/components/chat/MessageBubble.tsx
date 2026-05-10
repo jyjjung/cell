@@ -36,10 +36,10 @@ interface MessageBubbleProps {
   userMap: Record<string, any>;
   lastSeenNames?: string[];
   onReply?: () => void;
+  onOpenThread?: (messageId: string) => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
-  onOpenThread?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   showAvatar?: boolean;
   showName?: boolean;
@@ -424,10 +424,9 @@ const MessageBubble = React.memo(function MessageBubble({
 
       {message.replyCount ? (
         <InlineThreadPreview
-          chatId={chat.id}
-          parentMessageId={message.id}
+          message={message}
           isSender={isSender}
-          onReply={() => onOpenThread?.(message.id)}
+          onOpenThread={() => onOpenThread?.(message.id)}
           userMap={userMap}
         />
       ) : null}
@@ -435,33 +434,28 @@ const MessageBubble = React.memo(function MessageBubble({
   );
 });
 
-function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply, userMap }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void, userMap: Record<string, any> }) {
-    const { messages } = useThreadMessages(chatId, parentMessageId);
-
-    if (!messages || messages.length === 0) return null;
-
-    const reversedMessages = [...messages].reverse();
+function InlineThreadPreview({ message, isSender, onOpenThread, userMap }: { message: ChatMessage, isSender: boolean, onOpenThread?: () => void, userMap: Record<string, any> }) {
+    if (!message.replyCount) return null;
+    
+    const sender = userMap[message.latestReplySenderId || ''];
+    const senderName = sender?.firstName || 'Someone';
 
     return (
         <div className={cn("flex flex-col gap-0.5 w-full mt-1 mb-2", isSender ? "items-end" : "items-start")}>
             <div className={cn("flex flex-col gap-0.5 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
-                {reversedMessages.map(reply => {
-                    const sender = userMap[reply.senderId];
-                    const senderName = sender?.firstName || 'Someone';
-                    return (
-                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
-                            <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
-                            <span className={cn("opacity-80 text-[11px] break-words line-clamp-2", reply.isDeleted && "italic opacity-40")}>{reply.isDeleted ? 'deleted a message' : (reply.text || (reply.imageUrl ? '📸 Image' : ''))}</span>
-                        </div>
-                    );
-                })}
+                {message.latestReplyText && (
+                    <div className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
+                        <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
+                        <span className="opacity-80 text-[11px] break-words line-clamp-1">{message.latestReplyText}</span>
+                    </div>
+                )}
             </div>
             
             <button 
-                onClick={onReply}
+                onClick={onOpenThread}
                 className={cn("text-[9px] font-bold text-[#007AFF] hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
             >
-                Open thread
+                {message.replyCount} {message.replyCount === 1 ? 'reply' : 'replies'} • Open thread
             </button>
         </div>
     );
