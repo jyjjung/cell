@@ -107,6 +107,9 @@ export const translations = {
     at: "at",
     uploadingImage: "Uploading Image...",
     image: "Image",
+    thread: "Thread",
+    replies: "replies",
+    loadMore: "Load more",
 
     // Rosters & Community
     qtTitle: "QT Roster",
@@ -280,6 +283,9 @@ export const translations = {
     at: "",
     uploadingImage: "이미지 업로드 중...",
     image: "이미지",
+    thread: "스레드",
+    replies: "개의 답글",
+    loadMore: "이전 메시지 불러오기",
 
     // Rosters & Community
     qtTitle: "QT 순서",
