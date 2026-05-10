@@ -1,14 +1,17 @@
 
 "use client";
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn, isPdfUrl } from '@/lib/utils';
 import { SmilePlus, Download, Music, Maximize, FileText, Trash2 } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ImageLightbox } from './ImageLightbox';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
@@ -31,10 +34,8 @@ interface MessageBubbleProps {
   chat: Chat;
   sender: ChatMemberInfo | null;
   toggleReaction: (messageId: string, emoji: string) => void;
-  userMap: Record<string, any>;
   lastSeenNames?: string[];
   onReply?: () => void;
-  onOpenThread?: (messageId: string) => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
@@ -44,20 +45,18 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = React.memo(function MessageBubble({ 
-  message, chat, sender, toggleReaction, userMap, lastSeenNames = [], 
-  onReply, onOpenThread, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
+  message, chat, sender, toggleReaction, lastSeenNames = [], 
+  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
   showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
+  const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const [selectedEmojiDetail, setSelectedEmojiDetail] = useState<{emoji: string, uids: string[]} | null>(null);
-
   const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
   const senderName = getMemberFullName(sender);
-  
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
   const seenByNamesString = lastSeenNames.length > 0 ? lastSeenNames.join(', ') : "";
@@ -69,7 +68,20 @@ const MessageBubble = React.memo(function MessageBubble({
     return match ? match[1] : null;
   }, [message.text]);
 
-  const handleDownload = useCallback(async (url: string) => {
+  // --- DELETED MESSAGE PLACEHOLDER (must be after all hooks) ---
+  if (message.isDeleted) {
+    const deleterUser = allUsers.find(u => u.uid === message.deletedBy);
+    const deleterName = deleterUser?.firstName || senderName || 'Someone';
+    return (
+      <div className="flex w-full py-1 justify-center">
+        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
+          {deleterName} deleted a message
+        </p>
+      </div>
+    );
+  }
+
+  const handleDownload = async (url: string) => {
     try {
       const res = await fetch(url);
       const blob = await res.blob();
@@ -82,378 +94,320 @@ const MessageBubble = React.memo(function MessageBubble({
     } catch (e) {
       window.open(url, '_blank');
     }
-  }, []);
-
-  // --- DELETED MESSAGE PLACEHOLDER ---
-  if (message.isDeleted) {
-    const deleterUser = userMap[message.deletedBy || ''];
-    const deleterName = deleterUser?.firstName || senderName || 'Someone';
-    return (
-      <div className="flex w-full py-1 justify-center">
-        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
-          {deleterName} deleted a message
-        </p>
-      </div>
-    );
-  }
+  };
 
   return (
-    <div
-      className={cn(
-        "flex w-full relative py-[1px] flex-col group animate-in fade-in duration-300",
-        isSender ? "items-end" : "items-start"
-      )}
-    >
-      <div className={cn("flex items-end gap-2 w-full", isSender ? "flex-row-reverse" : "flex-row")}>
-        {!isSender && isGroup && (
-          <div className="w-7 h-7 flex-shrink-0 mb-0.5">
-            {showAvatar ? (
-              <div className="w-7 h-7 rounded-full overflow-hidden bg-muted border border-border/50 shadow-sm ring-1 ring-border/10">
-                <PixelAvatar avatar={sender?.avatar} className="w-full h-full" />
-              </div>
-            ) : (
-              <div className="w-7" />
-            )}
-          </div>
-        )}
-        <div
-          className={cn(
-            "flex flex-col min-w-0 transition-all duration-300",
-            isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
-            isSender ? "items-end" : "items-start"
-          )}
-        >
-          {!isSender && isGroup && senderName && showName && (
-            <p className="text-[10px] font-bold text-[#007AFF] mb-1 ml-3.5 opacity-90 truncate uppercase tracking-tight">
-              {senderName}
-            </p>
-          )}
-          <div
-            className={cn(
-              "relative rounded-[1.25rem] transition-all w-fit min-w-[40px]",
-              youtubeId && "w-full sm:min-w-[300px] max-w-full",
-              !isSpecialContent &&
-                (isSender
-                  ? cn(
-                      "bg-[#007AFF] text-white ml-auto shadow-sm px-2.5 py-1",
-                      showAvatar ? "rounded-br-[0.25rem]" : "rounded-br-[1.25rem]"
-                    )
-                  : cn(
-                      "bg-[#3B3B3D]/90 text-white backdrop-blur-md mr-auto border border-white/5 px-2.5 py-1",
-                      showAvatar ? "rounded-bl-[0.25rem]" : "rounded-bl-[1.25rem]"
-                    )),
-              isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
-            )}
-          >
-            {parentMessage && (
-              <div
-                className={cn(
-                  "mb-2 p-2 rounded-xl text-xs border border-border/20 flex flex-col gap-1",
-                  isSender ? "bg-black/20 text-white/80" : "bg-foreground/5 text-foreground/80"
-                )}
-              >
-                <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">
-                  {parentSenderName || "Someone"}
-                </span>
-                <span className="truncate italic opacity-90">{parentMessage.text || "📸 Image"}</span>
-              </div>
-            )}
-
-            {message.imageUrl && !message.songId && (
-              <ImageLightbox
-                imageUrl={message.imageUrl}
-                altText={t.image || "Image"}
-                onDownload={handleDownload}
-                trigger={
+    <TooltipProvider delayDuration={0}>
+      <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
+      >
+          <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
+              {!isSender && isGroup && (
+                  <div className="w-7 h-7 flex-shrink-0 mb-0.5">
+                      {showAvatar ? (
+                           <div className="w-7 h-7 rounded-full overflow-hidden bg-muted border border-border/50 shadow-sm ring-1 ring-border/10">
+                               <PixelAvatar avatar={sender?.avatar} className="w-full h-full" />
+                           </div>
+                      ) : (
+                          <div className="w-7" />
+                      )}
+                  </div>
+              )}
+              <div className={cn(
+                  "flex flex-col min-w-0 transition-all duration-300", 
+                  isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
+                  isSender ? "items-end" : "items-start"
+              )}>
+                  {!isSender && isGroup && senderName && showName && (
+                      <p className="text-[10px] font-bold text-[#007AFF] mb-1 ml-3.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
+                  )}
                   <div
-                    className={cn(
-                      "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all active:scale-[0.98]",
-                      !message.text && "mb-0"
-                    )}
+                      className={cn(
+                      'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
+                      youtubeId && "w-full sm:min-w-[300px] max-w-full",
+                      !isSpecialContent && (
+                          isSender
+                          ? cn('bg-[#007AFF] text-white ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
+                          : cn('bg-[#3B3B3D]/90 text-white backdrop-blur-md mr-auto border border-white/5 px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
+                      ),
+                      isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
+                      )}
                   >
-                    <img
-                      src={message.imageUrl}
-                      alt={t.image || "Image"}
-                      className="max-w-full h-auto object-cover max-h-[400px] w-full"
-                      style={{ minWidth: "150px" }}
-                      loading="eager"
-                    />
-                  </div>
-                }
-              />
-            )}
+                        {/* Parent message quote block */}
+                        {parentMessage && (
+                            <div className={cn("mb-2 p-2 rounded-xl text-xs border border-border/20 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-foreground/5 text-foreground/80")}>
+                                <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
+                                <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
+                            </div>
+                        )}
 
-            {message.songId && message.imageUrl && (
-              <div
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (onOpenWorshipViewer) {
-                    onOpenWorshipViewer(message.setlistId, message.songId, message.imageUrl);
-                  }
-                }}
-                className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
-              >
-                <div className="flex items-center gap-3 p-3 bg-foreground/5 border border-border/10 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-foreground/10 transition-colors">
-                  <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                    <Music className="w-4 h-4 text-primary" />
+  
+                        {message.imageUrl && !message.songId && (
+                          <ImageLightbox
+                            imageUrl={message.imageUrl}
+                            altText={t.image || "Image"}
+                            onDownload={handleDownload}
+                            trigger={
+                              <motion.div 
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  className={cn(
+                                    "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all",
+                                    !message.text && "mb-0"
+                                  )}
+                              >
+                                <img 
+                                  src={message.imageUrl} 
+                                  alt={t.image || "Image"} 
+                                  className="max-w-full h-auto object-cover max-h-[400px] w-full"
+                                  style={{ minWidth: '150px' }}
+                                  loading="lazy"
+                                />
+                              </motion.div>
+                            }
+                          />
+                        )}
+
+                        {message.songId && message.imageUrl && (
+                          <div 
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                if (onOpenWorshipViewer) {
+                                  onOpenWorshipViewer(message.setlistId, message.songId, message.imageUrl);
+                                }
+                            }}
+                            className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
+                          >
+                             <div className="flex items-center gap-3 p-3 bg-foreground/5 border border-border/10 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-foreground/10 transition-colors">
+                                <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                                    <Music className="w-4 h-4 text-primary" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="text-[13px] font-black text-white truncate leading-tight">
+                                        {message.songTitle || 'Shared Chord Sheet'}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest truncate">
+                                        {message.sheetKey ? `${message.sheetKey} Chart • ` : ''}Click to Expand
+                                    </p>
+                                </div>
+                             </div>
+                             <div className="relative border border-border/10 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-foreground/5 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
+                                {isPdfUrl(message.imageUrl) ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-500/10 to-rose-600/20 p-6 gap-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center shadow-inner">
+                                            <FileText className="h-8 w-8 text-rose-500" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-white text-sm font-bold tracking-tight">PDF Chord Sheet</p>
+                                            <p className="text-foreground/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">Click to view in high quality</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <img 
+                                        src={message.imageUrl} 
+                                        alt="Chord Sheet" 
+                                        className="w-full h-auto object-cover max-h-[350px]"
+                                    />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
+                                <div className="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 translate-y-1 opacity-0 group-hover/sheet:translate-y-0 group-hover/sheet:opacity-100 transition-all">
+                                   <Maximize className="w-3 h-3" />
+                                   Full View
+                                </div>
+                             </div>
+                          </div>
+                        )}
+
+                        {message.text && (
+                          <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
+                              <LinkifiedText 
+                                text={message.text} 
+                                isSender={isSender} 
+                                className="text-[15px] font-normal" 
+                              />
+                          </div>
+                        )}
+
+                        {message.invitationId && (
+                          <InvitationSummary invitationId={message.invitationId} isSender={isSender} />
+                        )}
+
+                        {message.eventId && (
+                          <EventSummary eventId={message.eventId} isSender={isSender} />
+                        )}
+
+                        {message.setlistId && (
+                          <SetlistSummary 
+                            setlistId={message.setlistId} 
+                            isSender={isSender} 
+                            onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
+                          />
+                        )}
+
+                        {message.rosterId && (
+                          <RosterSummary rosterId={message.rosterId} isSender={isSender} />
+                        )}
+                        
+                        {message.qtDate && (
+                          <QTSummary date={message.qtDate} isSender={isSender} />
+                        )}
+                        
+                        {message.cleaningDate && (
+                          <CleaningSummary date={message.cleaningDate} isSender={isSender} />
+                        )}
+                        
+                        {message.songId && !message.imageUrl && (
+                          <SongSummary 
+                            songId={message.songId} 
+                            isSender={isSender} 
+                            onOpenViewer={(songId) => onOpenWorshipViewer?.(undefined, songId)}
+                          />
+                        )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-[13px] font-black text-white truncate leading-tight">
-                      {message.songTitle || "Shared Chord Sheet"}
-                    </h4>
-                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest truncate">
-                      {message.sheetKey ? `${message.sheetKey} Chart • ` : ""}Click to Expand
-                    </p>
-                  </div>
-                </div>
-                <div className="relative border border-border/10 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-foreground/5 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
-                  {isPdfUrl(message.imageUrl) ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-500/10 to-rose-600/20 p-6 gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center shadow-inner">
-                        <FileText className="h-8 w-8 text-rose-500" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-white text-sm font-bold tracking-tight">PDF Chord Sheet</p>
-                        <p className="text-foreground/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">
-                          Click to view in high quality
-                        </p>
-                      </div>
+
+                  {youtubeId && (
+                    <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={`https://www.youtube.com/embed/${youtubeId}`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      ></iframe>
                     </div>
-                  ) : (
-                    <img
-                      src={message.imageUrl}
-                      alt="Chord Sheet"
-                      className="w-full h-auto object-cover max-h-[350px]"
-                      loading="eager"
-                    />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
-                  <div className="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 translate-y-1 opacity-0 group-hover/sheet:translate-y-0 group-hover/sheet:opacity-100 transition-all">
-                    <Maximize className="w-3 h-3" />
-                    Full View
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {message.text && (
-              <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
-                <LinkifiedText text={message.text} isSender={isSender} className="text-[15px] font-normal" />
-              </div>
-            )}
-
-            {message.invitationId && <InvitationSummary invitationId={message.invitationId} isSender={isSender} />}
-            {message.eventId && <EventSummary eventId={message.eventId} isSender={isSender} />}
-            {message.setlistId && (
-              <SetlistSummary
-                setlistId={message.setlistId}
-                isSender={isSender}
-                onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
-              />
-            )}
-            {message.rosterId && <RosterSummary rosterId={message.rosterId} isSender={isSender} />}
-            {message.qtDate && <QTSummary date={message.qtDate} isSender={isSender} />}
-            {message.cleaningDate && <CleaningSummary date={message.cleaningDate} isSender={isSender} />}
-            {message.songId && !message.imageUrl && (
-              <SongSummary
-                songId={message.songId}
-                isSender={isSender}
-                onOpenViewer={(songId) => onOpenWorshipViewer?.(undefined, songId)}
-              />
-            )}
-          </div>
-
-          {youtubeId && (
-            <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
-              <iframe
-                width="100%"
-                height="100%"
-                src={`https://www.youtube.com/embed/${youtubeId}`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          )}
-
-          {/* Reactions - Simplified to reduce DOM nodes */}
-          {reactionEntries.length > 0 && (
-            <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
-              {reactionEntries.map(([emoji, uids]) => (
-                <button
-                  key={emoji}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEmojiDetail({ emoji, uids });
-                  }}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all active:scale-90",
-                    uids.includes(currentUser?.uid || "")
-                      ? "bg-primary/20 border border-primary/30 text-primary"
-                      : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
+                  {/* Reactions */}
+                  {reactionEntries.length > 0 && (
+                      <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
+                          {reactionEntries.map(([emoji, uids]) => (
+                              <button
+                                  key={emoji}
+                                  onClick={() => toggleReaction(message.id, emoji)}
+                                  className={cn(
+                                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
+                                      uids.includes(currentUser?.uid || '')
+                                          ? "bg-primary/20 border border-primary/30 text-primary"
+                                          : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
+                                  )}
+                              >
+                                  <span>{emoji}</span>
+                                  <span className="font-bold text-[10px]">{uids.length}</span>
+                              </button>
+                          ))}
+                      </div>
                   )}
-                >
-                  <span>{emoji}</span>
-                  <span className="font-bold text-[10px]">{uids.length}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
 
-        <div
-          className={cn(
-            "flex flex-row gap-2 mt-1.5 transition-all duration-200 z-10",
-            isSender ? "justify-end mr-1" : "justify-start ml-1"
-          )}
-        >
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
-                <SmilePlus className="h-3 w-3 text-foreground/40" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
-              {standardReactions.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => toggleReaction(message.id, emoji)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
-                >
-                  <span className="text-lg">{emoji}</span>
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
+                  <div className={cn(
+                      "flex flex-row gap-2 mt-1.5 transition-all duration-200 z-10",
+                      isSender ? "justify-end mr-1" : "justify-start ml-1"
+                  )}>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                              <SmilePlus className="h-3 w-3 text-foreground/40" />
+                          </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
+                          {standardReactions.map(emoji => (
+                              <button
+                                  key={emoji}
+                                  onClick={() => toggleReaction(message.id, emoji)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
+                              >
+                                  <span className="text-lg">{emoji}</span>
+                              </button>
+                          ))}
+                      </PopoverContent>
+                  </Popover>
 
-          <button
-            onClick={onReply}
-            className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
-          >
-            <CornerUpLeft className="h-3 w-3 text-foreground/40" />
-          </button>
-
-          {(isSender || isAdmin) && onDelete && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
-                  <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
-                <p className="text-[11px] font-bold text-foreground mb-3 uppercase tracking-wider">Delete Message?</p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="flex-1 h-8 rounded-xl text-[10px] font-black uppercase tracking-widest"
-                    onClick={() => onDelete(message.id)}
+                  <button 
+                      onClick={onReply}
+                      className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
                   >
-                    Delete
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      </div>
+                      <CornerUpLeft className="h-3 w-3 text-foreground/40" />
+                  </button>
 
-      {seenByNamesString && (
-        <div
-          className={cn(
-            "mt-1 px-4 text-[8px] font-medium text-muted-foreground/60 transition-opacity",
-            isSender ? "text-right" : "text-left"
-          )}
-        >
-          {t.seenBy} {seenByNamesString}
-        </div>
-      )}
-
-      {message.replyCount ? (
-        <InlineThreadPreview
-          message={message}
-          isSender={isSender}
-          onOpenThread={() => onOpenThread?.(message.id)}
-          userMap={userMap}
-        />
-      ) : null}
-
-      {/* Reaction Detail Dialog - Only one in the DOM per bubble, and only when needed */}
-      <Dialog open={!!selectedEmojiDetail} onOpenChange={(open) => !open && setSelectedEmojiDetail(null)}>
-        <DialogContent className="w-[90vw] max-w-sm rounded-3xl p-0 overflow-hidden">
-          <DialogHeader className="p-4 border-b border-border/10 bg-muted/30">
-            <DialogTitle className="flex items-center justify-between">
-               <span className="text-sm font-black uppercase tracking-widest opacity-40">
-                {selectedEmojiDetail?.emoji} Reactions
-              </span>
-              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                {selectedEmojiDetail?.uids.length}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto py-2 custom-scrollbar">
-            {selectedEmojiDetail?.uids.map((uid) => {
-              const user = userMap[uid];
-              if (!user) return null;
-              return (
-                <div key={uid} className="flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/5 transition-colors">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-muted border border-border/50 shrink-0 shadow-sm">
-                    <PixelAvatar avatar={user.avatar} className="w-full h-full" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold truncate leading-none mb-1">
-                      {user.firstName} {user.lastName}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-tight">Member</span>
-                  </div>
-                </div>
-              );
-            })}
+                  {(isSender || isAdmin) && onDelete && (
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
+                                  <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
+                              </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
+                              <p className="text-[11px] font-bold text-foreground mb-3 uppercase tracking-wider">Delete Message?</p>
+                              <div className="flex gap-2">
+                                  <Button 
+                                      variant="destructive" 
+                                      size="sm" 
+                                      className="flex-1 h-8 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                      onClick={() => onDelete(message.id)}
+                                  >
+                                      Delete
+                                  </Button>
+                              </div>
+                          </PopoverContent>
+                      </Popover>
+                  )}
+              </div>
           </div>
-          <div className="p-4 bg-muted/20 border-t border-border/10">
-            <Button
-              variant={selectedEmojiDetail?.uids.includes(currentUser?.uid || "") ? "ghost" : "premium"}
-              size="lg"
-              className="w-full rounded-2xl font-black text-[10px] uppercase tracking-widest"
-              onClick={() => {
-                if (selectedEmojiDetail) {
-                    toggleReaction(message.id, selectedEmojiDetail.emoji);
-                    setSelectedEmojiDetail(null);
-                }
-              }}
-            >
-              {selectedEmojiDetail?.uids.includes(currentUser?.uid || "") ? "Remove My Reaction" : "React Too!"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          
+          {seenByNamesString && (
+            <div className={cn(
+                "mt-1 px-4 text-[8px] font-medium text-muted-foreground/60 transition-opacity",
+                isSender ? "text-right" : "text-left"
+            )}>
+              {t.seenBy} {seenByNamesString}
+            </div>
+          )}
+
+          {message.replyCount ? (
+              <InlineThreadPreview 
+                  chatId={chat.id} 
+                  parentMessageId={message.id} 
+                  isSender={isSender} 
+                  onReply={onReply} 
+              />
+          ) : null}
+      </motion.div>
+    </TooltipProvider>
   );
 });
 
-function InlineThreadPreview({ message, isSender, onOpenThread, userMap }: { message: ChatMessage, isSender: boolean, onOpenThread?: () => void, userMap: Record<string, any> }) {
-    if (!message.replyCount) return null;
-    
-    const sender = userMap[message.latestReplySenderId || ''];
-    const senderName = sender?.firstName || 'Someone';
+function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void }) {
+    const { messages } = useThreadMessages(chatId, parentMessageId);
+    const { allUsers } = useAllUsers();
+
+    if (!messages || messages.length === 0) return null;
+
+    const reversedMessages = [...messages].reverse();
 
     return (
         <div className={cn("flex flex-col gap-0.5 w-full mt-1 mb-2", isSender ? "items-end" : "items-start")}>
             <div className={cn("flex flex-col gap-0.5 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
-                {message.latestReplyText && (
-                    <div className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
-                        <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
-                        <span className="opacity-80 text-[11px] break-words line-clamp-1">{message.latestReplyText}</span>
-                    </div>
-                )}
+                {reversedMessages.map(reply => {
+                    const sender = allUsers.find(u => u.uid === reply.senderId);
+                    const senderName = sender?.firstName || 'Someone';
+                    return (
+                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
+                            <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
+                            <span className={cn("opacity-80 text-[11px] break-words line-clamp-2", reply.isDeleted && "italic opacity-40")}>{reply.isDeleted ? 'deleted a message' : (reply.text || (reply.imageUrl ? '📸 Image' : ''))}</span>
+                        </div>
+                    );
+                })}
             </div>
             
             <button 
-                onClick={onOpenThread}
+                onClick={onReply}
                 className={cn("text-[9px] font-bold text-[#007AFF] hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
             >
-                {message.replyCount} {message.replyCount === 1 ? 'reply' : 'replies'} • Open thread
+                Open thread
             </button>
         </div>
     );

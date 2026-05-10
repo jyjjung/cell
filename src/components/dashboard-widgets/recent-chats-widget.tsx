@@ -18,14 +18,6 @@ export default function RecentChatsWidget() {
     const { allUsers } = useAllUsers();
     const router = useRouter();
     const { setIsPageLoading } = usePageLoading();
-    
-    const userMap = useMemo(() => {
-        const map: Record<string, any> = {};
-        allUsers.forEach(u => {
-            map[u.uid] = u;
-        });
-        return map;
-    }, [allUsers]);
 
     const recentChats = useMemo(() => {
         return chats.slice(0, 3);
@@ -64,9 +56,9 @@ export default function RecentChatsWidget() {
                     <AnimatePresence mode="popLayout">
                         {recentChats.map(chat => {
                             const isGroup = chat.type === 'group';
-                            const peerId = chat.members.find(id => id !== currentUser?.uid);
+                            const peerId = chat.members.find(id => id !== currentUser.uid);
                             
-                            const peerProfile = peerId ? userMap[peerId] : null;
+                            const peerProfile = peerId ? allUsers.find(u => u.uid === peerId) : null;
                             const infoFromChat = peerId ? chat.memberInfo[peerId] : null;
                             
                             let name = 'Private Chat';

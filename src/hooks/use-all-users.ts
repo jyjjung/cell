@@ -51,6 +51,31 @@ export function useAllUsers() {
           globalLoading = false;
           globalError = null;
           notifySubscribers();
+
+          // ── Cache-prime profile pictures and avatars ────────────────────────
+          if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.caches) {
+            (async () => {
+              for (const user of usersData) {
+                const urls = [user.photoURL, user.avatar?.imageUrl].filter(Boolean) as string[];
+                for (const url of urls) {
+                  try {
+                    const matched = await caches.match(url);
+                    if (!matched) {
+                      fetch(url, { mode: 'no-cors', cache: 'force-cache' }).then(() => {
+                        const img = new Image();
+                        img.src = url;
+                        img.decode().catch(() => {});
+                      }).catch(() => {});
+                    } else {
+                      const img = new Image();
+                      img.src = url;
+                      img.decode().catch(() => {});
+                    }
+                  } catch (e) {}
+                }
+              }
+            })();
+          }
         },
         (err) => {
           console.error("Error fetching all users:", err);
