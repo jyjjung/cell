@@ -158,13 +158,14 @@ const MessageBubble = React.memo(function MessageBubble({
                                     !message.text && "mb-0"
                                   )}
                               >
-                                <img 
-                                  src={message.imageUrl} 
-                                  alt={t.image || "Image"} 
-                                  className="max-w-full h-auto object-cover max-h-[400px] w-full"
-                                  style={{ minWidth: '150px' }}
-                                  loading="lazy"
-                                />
+                                  <img 
+                                    src={message.imageUrl} 
+                                    alt={t.image || "Image"} 
+                                    className="max-w-full h-auto object-cover max-h-[400px] w-full"
+                                    style={{ minWidth: '150px' }}
+                                    loading="eager"
+                                    fetchpriority="high"
+                                  />
                               </motion.div>
                             }
                           />
@@ -209,6 +210,8 @@ const MessageBubble = React.memo(function MessageBubble({
                                         src={message.imageUrl} 
                                         alt="Chord Sheet" 
                                         className="w-full h-auto object-cover max-h-[350px]"
+                                        loading="eager"
+                                        fetchpriority="high"
                                     />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
@@ -284,21 +287,37 @@ const MessageBubble = React.memo(function MessageBubble({
                   {/* Reactions */}
                   {reactionEntries.length > 0 && (
                       <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
-                          {reactionEntries.map(([emoji, uids]) => (
-                              <button
-                                  key={emoji}
-                                  onClick={() => toggleReaction(message.id, emoji)}
-                                  className={cn(
-                                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
-                                      uids.includes(currentUser?.uid || '')
-                                          ? "bg-primary/20 border border-primary/30 text-primary"
-                                          : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
-                                  )}
-                              >
-                                  <span>{emoji}</span>
-                                  <span className="font-bold text-[10px]">{uids.length}</span>
-                              </button>
-                          ))}
+                          {reactionEntries.map(([emoji, uids]) => {
+                              const reactionNames = uids.map(uid => {
+                                  const user = allUsers.find(u => u.uid === uid);
+                                  return user ? (user.firstName || 'Someone') : 'Someone';
+                              }).join(', ');
+
+                              return (
+                                  <Tooltip key={emoji} delayDuration={300}>
+                                      <TooltipTrigger asChild>
+                                          <button
+                                              onClick={() => toggleReaction(message.id, emoji)}
+                                              className={cn(
+                                                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
+                                                  uids.includes(currentUser?.uid || '')
+                                                      ? "bg-primary/20 border border-primary/30 text-primary"
+                                                      : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
+                                              )}
+                                          >
+                                              <span>{emoji}</span>
+                                              <span className="font-bold text-[10px]">{uids.length}</span>
+                                          </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent 
+                                          side="top" 
+                                          className="text-[11px] font-medium bg-foreground/90 backdrop-blur-xl text-background border-none rounded-xl px-2.5 py-1 shadow-xl"
+                                      >
+                                          {reactionNames}
+                                      </TooltipContent>
+                                  </Tooltip>
+                              );
+                          })}
                       </div>
                   )}
               </div>

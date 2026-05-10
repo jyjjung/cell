@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,36 +13,102 @@ import { useAuth } from '@/contexts/auth-context';
 
 const SONGS_COLLECTION = 'worshipSongs';
 
+// Singleton state
+let globalSongs: WorshipSong[] = [];
+let globalLoading = true;
+let subscribers = new Set<() => void>();
+let unsubscribeFn: (() => void) | null = null;
+let activeUid: string | null = null;
+
+function notifySubscribers() {
+  subscribers.forEach((callback) => callback());
+}
+
 export function useWorshipSongs() {
   const { currentUser } = useAuth();
-  const [songs, setSongs] = useState<WorshipSong[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState({
+    songs: globalSongs,
+    loading: globalLoading,
+  });
 
   useEffect(() => {
-    if (!currentUser) { setSongs([]); setLoading(false); return; }
-    const q = query(collection(db, SONGS_COLLECTION), orderBy('title', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
-      const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
-      setSongs(loaded);
-      setLoading(false);
+    if (!currentUser) {
+      setState({ songs: [], loading: false });
+      return;
+    }
 
-      // ── Cache-prime chord sheet images into the SW CacheFirst cache ────────
-      // This runs silently in the background. Once fetched, the service worker
-      // intercepts all subsequent requests and serves from cache — enabling true
-      // offline access to chord sheets without any extra UI work.
-      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        for (const song of loaded) {
-          for (const sheet of song.chordSheets) {
-            if (sheet.imageUrl) {
-              // Fire-and-forget — do not await, errors are silently ignored
-              fetch(sheet.imageUrl, { mode: 'no-cors', cache: 'force-cache' }).catch(() => {});
-            }
-          }
+    const handleChange = () => {
+      setState({
+        songs: globalSongs,
+        loading: globalLoading,
+      });
+    };
+
+    subscribers.add(handleChange);
+
+    // If user changed, reset
+    if (activeUid !== currentUser.uid) {
+        if (unsubscribeFn) {
+            unsubscribeFn();
+            unsubscribeFn = null;
         }
+        activeUid = currentUser.uid;
+        globalSongs = [];
+        globalLoading = true;
+    }
+
+    if (!unsubscribeFn) {
+      const q = query(collection(db, SONGS_COLLECTION), orderBy('title', 'asc'));
+      unsubscribeFn = onSnapshot(q, (snap) => {
+        const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
+        globalSongs = loaded;
+        globalLoading = false;
+        notifySubscribers();
+
+        // ── Cache-prime chord sheet images into the SW CacheFirst cache ────────
+        if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.caches) {
+          // Optimized: check if already in cache before fetching to save bandwidth/ops
+          (async () => {
+              for (const song of loaded) {
+                  for (const sheet of song.chordSheets) {
+                      if (sheet.imageUrl) {
+                          try {
+                              const matched = await caches.match(sheet.imageUrl);
+                              if (!matched) {
+                                  // Fire-and-forget — only fetch if NOT in cache
+                                  fetch(sheet.imageUrl, { mode: 'no-cors', cache: 'force-cache' }).then(() => {
+                                      const img = new Image();
+                                      img.src = sheet.imageUrl;
+                                      img.decode().catch(() => {});
+                                  }).catch(() => {});
+                              } else {
+                                  const img = new Image();
+                                  img.src = sheet.imageUrl;
+                                  img.decode().catch(() => {});
+                              }
+                          } catch (e) {}
+                      }
+                  }
+              }
+            })();
+        }
+      }, () => {
+          globalLoading = false;
+          notifySubscribers();
+      });
+    } else {
+        handleChange();
+    }
+
+    return () => {
+      subscribers.delete(handleChange);
+      if (subscribers.size === 0 && unsubscribeFn) {
+        unsubscribeFn();
+        unsubscribeFn = null;
+        activeUid = null;
       }
-    }, () => setLoading(false));
-    return unsub;
-  }, [currentUser]);
+    };
+  }, [currentUser?.uid]);
 
   /** Create a new song with no chord sheets yet */
   const addSong = useCallback(async (title: string, artist?: string): Promise<string> => {
@@ -113,5 +180,5 @@ export function useWorshipSongs() {
     await deleteDoc(doc(db, SONGS_COLLECTION, song.id));
   }, []);
 
-  return { songs, loading, addSong, updateSong, addChordSheet, removeChordSheet, deleteSong };
+  return { ...state, addSong, updateSong, addChordSheet, removeChordSheet, deleteSong };
 }

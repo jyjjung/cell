@@ -8,32 +8,99 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
 
+// Singleton state
+let globalUsers: UserProfileData[] = [];
+let globalLoading = true;
+let globalError: Error | null = null;
+let subscribers = new Set<() => void>();
+let unsubscribeFn: (() => void) | null = null;
+
+function notifySubscribers() {
+  subscribers.forEach((callback) => callback());
+}
+
 export function useAllUsers() {
-  const [allUsers, setAllUsers] = useState<UserProfileData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [state, setState] = useState({
+    allUsers: globalUsers,
+    loading: globalLoading,
+    error: globalError,
+  });
 
   useEffect(() => {
-    setLoading(true);
-    const usersQuery = query(collection(db, USERS_COLLECTION));
-
-    const unsubscribe = onSnapshot(
-      usersQuery,
-      (querySnapshot) => {
-      const usersData: UserProfileData[] = [];
-      querySnapshot.forEach((doc) => {
-        usersData.push(doc.data() as UserProfileData);
+    const handleChange = () => {
+      setState({
+        allUsers: globalUsers,
+        loading: globalLoading,
+        error: globalError,
       });
-      setAllUsers(usersData);
-      setLoading(false);
-    }, (err) => {
-      console.error("Error fetching all users:", err);
-      setError(err);
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    subscribers.add(handleChange);
+
+    // If this is the first subscriber, start the Firestore listener
+    if (subscribers.size === 1 && !unsubscribeFn) {
+      const usersQuery = query(collection(db, USERS_COLLECTION));
+      unsubscribeFn = onSnapshot(
+        usersQuery,
+        (querySnapshot) => {
+          const usersData: UserProfileData[] = [];
+          querySnapshot.forEach((doc) => {
+            usersData.push(doc.data() as UserProfileData);
+          });
+          globalUsers = usersData;
+          globalLoading = false;
+          globalError = null;
+          notifySubscribers();
+
+          // ── Cache-prime profile pictures and avatars ────────────────────────
+          if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.caches) {
+            (async () => {
+              for (const user of usersData) {
+                const urls = [user.photoURL, user.avatar?.imageUrl].filter(Boolean) as string[];
+                for (const url of urls) {
+                  try {
+                    const matched = await caches.match(url);
+                    if (!matched) {
+                      fetch(url, { mode: 'no-cors', cache: 'force-cache' }).then(() => {
+                        const img = new Image();
+                        img.src = url;
+                        img.decode().catch(() => {});
+                      }).catch(() => {});
+                    } else {
+                      const img = new Image();
+                      img.src = url;
+                      img.decode().catch(() => {});
+                    }
+                  } catch (e) {}
+                }
+              }
+            })();
+          }
+        },
+        (err) => {
+          console.error("Error fetching all users:", err);
+          globalError = err;
+          globalLoading = false;
+          notifySubscribers();
+        }
+      );
+    } else {
+        // Already loading or loaded, just update local state with current globals
+        handleChange();
+    }
+
+    return () => {
+      subscribers.delete(handleChange);
+      // If no more subscribers, clean up the listener
+      if (subscribers.size === 0 && unsubscribeFn) {
+        unsubscribeFn();
+        unsubscribeFn = null;
+        // Optionally reset state or keep it for next time
+        // We'll keep it for faster re-mounts but mark as loading if we want fresh data next time
+        // globalLoading = true; 
+      }
+    };
   }, []);
 
-  return { allUsers, loading, error };
+  return state;
 }
