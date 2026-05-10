@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,73 +11,20 @@ import { useAuth } from '@/contexts/auth-context';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
 
-// Singleton state
-let globalSetlists: WorshipSetlist[] = [];
-let globalLoading = true;
-let subscribers = new Set<() => void>();
-let unsubscribeFn: (() => void) | null = null;
-let activeUid: string | null = null;
-
-function notifySubscribers() {
-  subscribers.forEach((callback) => callback());
-}
-
 export function useWorshipSetlists() {
   const { currentUser } = useAuth();
-  const [state, setState] = useState({
-    setlists: globalSetlists,
-    loading: globalLoading,
-  });
+  const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) {
-      setState({ setlists: [], loading: false });
-      return;
-    }
-
-    const handleChange = () => {
-      setState({
-        setlists: globalSetlists,
-        loading: globalLoading,
-      });
-    };
-
-    subscribers.add(handleChange);
-
-    // If user changed, reset
-    if (activeUid !== currentUser.uid) {
-        if (unsubscribeFn) {
-            unsubscribeFn();
-            unsubscribeFn = null;
-        }
-        activeUid = currentUser.uid;
-        globalSetlists = [];
-        globalLoading = true;
-    }
-
-    if (!unsubscribeFn) {
-      const q = query(collection(db, SETLISTS_COLLECTION), orderBy('date', 'desc'));
-      unsubscribeFn = onSnapshot(q, (snap) => {
-        globalSetlists = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist));
-        globalLoading = false;
-        notifySubscribers();
-      }, () => {
-          globalLoading = false;
-          notifySubscribers();
-      });
-    } else {
-        handleChange();
-    }
-
-    return () => {
-      subscribers.delete(handleChange);
-      if (subscribers.size === 0 && unsubscribeFn) {
-        unsubscribeFn();
-        unsubscribeFn = null;
-        activeUid = null;
-      }
-    };
-  }, [currentUser?.uid]);
+    if (!currentUser) { setSetlists([]); setLoading(false); return; }
+    const q = query(collection(db, SETLISTS_COLLECTION), orderBy('date', 'desc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setSetlists(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist)));
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, [currentUser]);
 
   const createSetlist = useCallback(async (name: string, date: string): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');
@@ -149,7 +95,7 @@ export function useWorshipSetlists() {
   }, []);
 
   return {
-    ...state,
+    setlists, loading,
     createSetlist, updateSetlist,
     addSongToSetlist, removeSongFromSetlist, reorderSetlistSongs,
     deleteSetlist,
