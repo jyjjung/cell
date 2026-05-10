@@ -110,6 +110,12 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
   const chatDetails = useMemo(() => chat ? getChatDetails(chat) : { name: 'Chat', avatar: null }, [chat]);
 
+  const messageMap = useMemo(() => {
+    const map: Record<string, ChatMessage> = {};
+    messages.forEach(m => { map[m.id] = m; });
+    return map;
+  }, [messages]);
+
   const renderContent = useCallback(() => {
     if (!chat) return null;
     const content = [];
@@ -118,7 +124,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       const olderMsg = messages[i + 1];
       const sender = chat.memberInfo[msg.senderId] || null;
       
-      const parentMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined;
+      const parentMessage = msg.replyToId ? messageMap[msg.replyToId] : undefined;
       let parentSenderName = '';
       if (parentMessage) {
           const pSender = userMap[parentMessage.senderId];
@@ -159,7 +165,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       }
     }
     return content;
-  }, [messages, chat, toggleReaction, lastSeenNamesPerMessage, userMap, deleteMessage]);
+  }, [messages, chat, toggleReaction, lastSeenNamesPerMessage, userMap, deleteMessage, messageMap]);
 
   if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
