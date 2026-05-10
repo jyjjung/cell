@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Shield, LogOut, User,
   LogIn, UserPlus, MessageCircle, ChevronDown, ChevronRight,
-  CalendarCheck, Music, Library
+  CalendarCheck, Music, Library, Lightbulb
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
@@ -117,6 +117,7 @@ export default function AppSidebar() {
     },
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
     { href: '/media', label: 'Resources', icon: Library },
+    { href: '/feedback', label: 'Feedback', icon: Lightbulb, requiresAuth: true },
     { href: '/members', label: t.members, icon: Users },
   ];
 

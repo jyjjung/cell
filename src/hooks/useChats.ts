@@ -23,54 +23,99 @@ import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 
 const CHATS_COLLECTION = 'chats';
 
+// Singleton state
+let globalChats: Chat[] = [];
+let globalLoading = true;
+let subscribers = new Set<() => void>();
+let unsubscribeFn: (() => void) | null = null;
+let activeUid: string | null = null;
+
+function notifySubscribers() {
+  subscribers.forEach((callback) => callback());
+}
+
 export function useChats() {
   const { currentUser } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState({
+    chats: globalChats,
+    loading: globalLoading,
+  });
 
   useEffect(() => {
     if (!currentUser?.uid) {
-      setChats([]);
-      setLoading(false);
+      setState({ chats: [], loading: false });
       return;
     }
 
-    setLoading(true);
-    
-    // Privacy restricted: strictly only fetch chats where user is a member
-    const chatsQuery = query(
-      collection(db, CHATS_COLLECTION),
-      where('members', 'array-contains', currentUser.uid)
-    );
-
-    const unsubscribe = onSnapshot(
-      chatsQuery,
-      (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Chat));
-      
-      // Sort on the client to ensure consistent order across different query types
-      chatsData.sort((a, b) => {
-        const getMillis = (c: Chat) => {
-            const ts = c.lastMessageSentAt || c.createdAt;
-            if (!ts) return 0;
-            if (typeof (ts as any).toMillis === 'function') return (ts as any).toMillis();
-            if (ts instanceof Date) return ts.getTime();
-            return 0;
-        };
-        return getMillis(b) - getMillis(a);
+    const handleChange = () => {
+      setState({
+        chats: globalChats,
+        loading: globalLoading,
       });
+    };
 
-      setChats(chatsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching user chats:", error);
-      setLoading(false);
-    });
+    subscribers.add(handleChange);
 
-    return () => unsubscribe();
+    // If user changed, we MUST reset the listener
+    if (activeUid !== currentUser.uid) {
+        if (unsubscribeFn) {
+            unsubscribeFn();
+            unsubscribeFn = null;
+        }
+        activeUid = currentUser.uid;
+        globalChats = [];
+        globalLoading = true;
+    }
+
+    // Start listener if it's the first subscriber for this user
+    if (!unsubscribeFn) {
+        const chatsQuery = query(
+            collection(db, CHATS_COLLECTION),
+            where('members', 'array-contains', currentUser.uid)
+        );
+
+        unsubscribeFn = onSnapshot(
+            chatsQuery,
+            (snapshot) => {
+                const chatsData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                } as Chat));
+                
+                // Sort on the client to ensure consistent order across different query types
+                chatsData.sort((a, b) => {
+                    const getMillis = (c: Chat) => {
+                        const ts = c.lastMessageSentAt || c.createdAt;
+                        if (!ts) return 0;
+                        if (typeof (ts as any).toMillis === 'function') return (ts as any).toMillis();
+                        if (ts instanceof Date) return ts.getTime();
+                        return 0;
+                    };
+                    return getMillis(b) - getMillis(a);
+                });
+
+                globalChats = chatsData;
+                globalLoading = false;
+                notifySubscribers();
+            }, (error) => {
+                console.error("Error fetching user chats:", error);
+                globalLoading = false;
+                notifySubscribers();
+            }
+        );
+    } else {
+        // Already loading or loaded for this user
+        handleChange();
+    }
+
+    return () => {
+      subscribers.delete(handleChange);
+      if (subscribers.size === 0 && unsubscribeFn) {
+        unsubscribeFn();
+        unsubscribeFn = null;
+        activeUid = null;
+      }
+    };
   }, [currentUser?.uid]);
 
   const createPrivateChat = useCallback(async (peerUser: UserProfileData): Promise<string> => {
@@ -164,5 +209,5 @@ export function useChats() {
     return chatId;
   }, [currentUser]);
 
-  return { chats, loading, createPrivateChat, createGroupChat };
+  return { ...state, createPrivateChat, createGroupChat };
 }
