@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { getChatDetails } from '@/lib/chat-utils';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import type { WorshipSong } from '@/types';
+import type { WorshipSong, ChatMessage } from '@/types';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import GroupSettingsDialog from './GroupSettingsDialog';
 import ThreadWindow from './ThreadWindow';
@@ -55,18 +55,19 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const [showNewRoster, setShowNewRoster] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
   
-  const { setlists } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
 
+  // Optimized: Call updateSeenTimestamp only when chatId changes or a new message arrives, 
+  // but with a stable dependency.
   useEffect(() => {
     if (chatId) {
       updateSeenTimestamp();
     }
-  }, [chatId, messages, updateSeenTimestamp]);
+  }, [chatId, updateSeenTimestamp]);
 
   useEffect(() => {
     if (isInitialLoad.current && messages.length > 0) {
@@ -81,6 +82,12 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     });
     return map;
   }, [allUsers]);
+
+  const messageMap = useMemo(() => {
+    const map: Record<string, ChatMessage> = {};
+    messages.forEach(m => { map[m.id] = m; });
+    return map;
+  }, [messages]);
 
   const lastSeenNamesPerMessage = useMemo(() => {
     if (!chat?.memberSeen || !messages.length || !allUsers.length) return {};
@@ -110,11 +117,12 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
   const chatDetails = useMemo(() => chat ? getChatDetails(chat) : { name: 'Chat', avatar: null }, [chat]);
 
-  const messageMap = useMemo(() => {
-    const map: Record<string, ChatMessage> = {};
-    messages.forEach(m => { map[m.id] = m; });
-    return map;
-  }, [messages]);
+  // Stable callbacks to prevent MessageBubble re-renders
+  const handleReply = useCallback((msgId: string) => setReplyToId(msgId), []);
+  const handleOpenThread = useCallback((msgId: string) => setActiveThreadId(msgId), []);
+  const handleOpenWorshipViewer = useCallback((setlistId?: string, songId?: string, imageUrl?: string) => {
+    setWorshipViewer({ setlistId, songId, imageUrl });
+  }, []);
 
   const renderContent = useCallback(() => {
     if (!chat) return null;
@@ -139,9 +147,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           sender={sender}
           userMap={userMap}
           toggleReaction={toggleReaction}
-          onReply={() => setReplyToId(msg.id)}
-          onOpenThread={(msgId) => setActiveThreadId(msgId)}
-          onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
+          onReply={() => handleReply(msg.id)}
+          onOpenThread={handleOpenThread}
+          onOpenWorshipViewer={handleOpenWorshipViewer}
           parentMessage={parentMessage}
           parentSenderName={parentSenderName}
           onDelete={deleteMessage}
@@ -165,7 +173,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       }
     }
     return content;
-  }, [messages, chat, toggleReaction, lastSeenNamesPerMessage, userMap, deleteMessage, messageMap]);
+  }, [messages, chat, toggleReaction, lastSeenNamesPerMessage, userMap, deleteMessage, messageMap, handleReply, handleOpenThread, handleOpenWorshipViewer]);
+
+  const replyToMessage = useMemo(() => replyToId ? messageMap[replyToId] : undefined, [messageMap, replyToId]);
 
   if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
@@ -236,7 +246,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-md border-t border-border/50 relative z-10">
         <MessageInput 
           chatId={chatId} 
-          replyToMessage={messages.find(m => m.id === replyToId)} 
+          replyToMessage={replyToMessage} 
           onCancelReply={() => setReplyToId(null)}
           onOpenWorshipCreate={(type, songId) => {
             if (type === 'song') setShowNewSong(true);
@@ -253,15 +263,12 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       <NewSongDialog 
         open={showNewSong} 
         onClose={() => setShowNewSong(false)} 
-        onCreated={(id) => {
-          // Could optionally send a message about the new song
-        }} 
+        onCreated={(id) => {}} 
       />
       <NewSetlistDialog 
         open={showNewSetlist} 
         onClose={() => setShowNewSetlist(false)} 
         onCreated={(id) => {
-          // Automatically share the new setlist in chat
           sendMessage(undefined, undefined, undefined, undefined, undefined, id);
         }} 
       />
@@ -269,7 +276,6 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         open={showNewRoster} 
         onClose={() => setShowNewRoster(false)} 
         onCreated={(id) => {
-          // Automatically share the new roster in chat
           sendMessage(undefined, undefined, undefined, undefined, undefined, undefined, id);
         }} 
       />
@@ -279,7 +285,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         onClose={() => setAddSheetSong(null)} 
       />
 
-      {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
+      {isSettingsOpen && chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
 
       {activeThreadId && chat && (
         <ThreadWindow
