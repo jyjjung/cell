@@ -1,16 +1,14 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn, isPdfUrl } from '@/lib/utils';
 import { SmilePlus, Download, Music, Maximize, FileText, Trash2 } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ImageLightbox } from './ImageLightbox';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
@@ -55,6 +53,8 @@ const MessageBubble = React.memo(function MessageBubble({
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
+  const [selectedEmojiDetail, setSelectedEmojiDetail] = useState<{emoji: string, uids: string[]} | null>(null);
+
   const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
   const senderName = getMemberFullName(sender);
   
@@ -69,20 +69,7 @@ const MessageBubble = React.memo(function MessageBubble({
     return match ? match[1] : null;
   }, [message.text]);
 
-  // --- DELETED MESSAGE PLACEHOLDER (must be after all hooks) ---
-  if (message.isDeleted) {
-    const deleterUser = userMap[message.deletedBy || ''];
-    const deleterName = deleterUser?.firstName || senderName || 'Someone';
-    return (
-      <div className="flex w-full py-1 justify-center">
-        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
-          {deleterName} deleted a message
-        </p>
-      </div>
-    );
-  }
-
-  const handleDownload = async (url: string) => {
+  const handleDownload = useCallback(async (url: string) => {
     try {
       const res = await fetch(url);
       const blob = await res.blob();
@@ -95,14 +82,25 @@ const MessageBubble = React.memo(function MessageBubble({
     } catch (e) {
       window.open(url, '_blank');
     }
-  };
+  }, []);
+
+  // --- DELETED MESSAGE PLACEHOLDER ---
+  if (message.isDeleted) {
+    const deleterUser = userMap[message.deletedBy || ''];
+    const deleterName = deleterUser?.firstName || senderName || 'Someone';
+    return (
+      <div className="flex w-full py-1 justify-center">
+        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
+          {deleterName} deleted a message
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <div
       className={cn(
-        "flex w-full relative py-[1px] flex-col group",
+        "flex w-full relative py-[1px] flex-col group animate-in fade-in duration-300",
         isSender ? "items-end" : "items-start"
       )}
     >
@@ -167,11 +165,9 @@ const MessageBubble = React.memo(function MessageBubble({
                 altText={t.image || "Image"}
                 onDownload={handleDownload}
                 trigger={
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
+                  <div
                     className={cn(
-                      "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all",
+                      "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all active:scale-[0.98]",
                       !message.text && "mb-0"
                     )}
                   >
@@ -182,7 +178,7 @@ const MessageBubble = React.memo(function MessageBubble({
                       style={{ minWidth: "150px" }}
                       loading="eager"
                     />
-                  </motion.div>
+                  </div>
                 }
               />
             )}
@@ -281,75 +277,27 @@ const MessageBubble = React.memo(function MessageBubble({
             </div>
           )}
 
-          {/* Reactions */}
+          {/* Reactions - Simplified to reduce DOM nodes */}
           {reactionEntries.length > 0 && (
             <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
-              {reactionEntries.map(([emoji, uids]) => {
-                const reactedUsers = uids.map((uid) => userMap[uid]).filter(Boolean);
-                const hasReacted = uids.includes(currentUser?.uid || "");
-
-                return (
-                  <Popover key={emoji}>
-                    <PopoverTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
-                          hasReacted
-                            ? "bg-primary/20 border border-primary/30 text-primary"
-                            : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
-                        )}
-                      >
-                        <span>{emoji}</span>
-                        <span className="font-bold text-[10px]">{uids.length}</span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="top"
-                      align="center"
-                      className="w-48 p-0 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-2xl shadow-2xl overflow-hidden z-[100]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="p-3 border-b border-border/10 bg-muted/30 flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">
-                          {emoji} Reactions
-                        </span>
-                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-md">
-                          {uids.length}
-                        </span>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto py-1 custom-scrollbar">
-                        {reactedUsers.map((user) => (
-                          <div key={user!.uid} className="flex items-center gap-2 px-3 py-1.5">
-                            <div className="w-5 h-5 rounded-full overflow-hidden bg-muted border border-border/50 shrink-0">
-                              <PixelAvatar avatar={user!.avatar} className="w-full h-full" />
-                            </div>
-                            <span className="text-xs font-bold truncate">
-                              {user!.firstName} {user!.lastName}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="p-2 bg-muted/20 border-t border-border/10">
-                        <Button
-                          variant={hasReacted ? "ghost" : "premium"}
-                          size="sm"
-                          className={cn(
-                            "w-full h-8 rounded-xl text-[10px] font-black uppercase tracking-widest",
-                            hasReacted ? "hover:bg-rose-500/10 hover:text-rose-500" : ""
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleReaction(message.id, emoji);
-                          }}
-                        >
-                          {hasReacted ? "Remove Reaction" : "Add Reaction"}
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              })}
+              {reactionEntries.map(([emoji, uids]) => (
+                <button
+                  key={emoji}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEmojiDetail({ emoji, uids });
+                  }}
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all active:scale-90",
+                    uids.includes(currentUser?.uid || "")
+                      ? "bg-primary/20 border border-primary/30 text-primary"
+                      : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
+                  )}
+                >
+                  <span>{emoji}</span>
+                  <span className="font-bold text-[10px]">{uids.length}</span>
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -430,7 +378,57 @@ const MessageBubble = React.memo(function MessageBubble({
           userMap={userMap}
         />
       ) : null}
-    </motion.div>
+
+      {/* Reaction Detail Dialog - Only one in the DOM per bubble, and only when needed */}
+      <Dialog open={!!selectedEmojiDetail} onOpenChange={(open) => !open && setSelectedEmojiDetail(null)}>
+        <DialogContent className="w-[90vw] max-w-sm rounded-3xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b border-border/10 bg-muted/30">
+            <DialogTitle className="flex items-center justify-between">
+               <span className="text-sm font-black uppercase tracking-widest opacity-40">
+                {selectedEmojiDetail?.emoji} Reactions
+              </span>
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                {selectedEmojiDetail?.uids.length}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto py-2 custom-scrollbar">
+            {selectedEmojiDetail?.uids.map((uid) => {
+              const user = userMap[uid];
+              if (!user) return null;
+              return (
+                <div key={uid} className="flex items-center gap-3 px-4 py-2.5 hover:bg-foreground/5 transition-colors">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-muted border border-border/50 shrink-0 shadow-sm">
+                    <PixelAvatar avatar={user.avatar} className="w-full h-full" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-bold truncate leading-none mb-1">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-tight">Member</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="p-4 bg-muted/20 border-t border-border/10">
+            <Button
+              variant={selectedEmojiDetail?.uids.includes(currentUser?.uid || "") ? "ghost" : "premium"}
+              size="lg"
+              className="w-full rounded-2xl font-black text-[10px] uppercase tracking-widest"
+              onClick={() => {
+                if (selectedEmojiDetail) {
+                    toggleReaction(message.id, selectedEmojiDetail.emoji);
+                    setSelectedEmojiDetail(null);
+                }
+              }}
+            >
+              {selectedEmojiDetail?.uids.includes(currentUser?.uid || "") ? "Remove My Reaction" : "React Too!"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 });
 
