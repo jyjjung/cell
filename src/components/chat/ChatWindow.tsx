@@ -8,23 +8,25 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { Loader2, ArrowLeft, Info, WifiOff } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { getMemberFullName } from '@/lib/chat-utils';
+import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
+
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
-import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
+import ThreadWindow from './ThreadWindow';
+import { PixelAvatar } from '../avatar/PixelAvatar';
+import { Button } from '../ui/button';
+import GroupSettingsDialog from './GroupSettingsDialog';
+import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
+import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
-import { cn } from '@/lib/utils';
-import { getChatDetails } from '@/lib/chat-utils';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import type { WorshipSong, ChatMessage } from '@/types';
-import { PixelAvatar } from '../avatar/PixelAvatar';
-import GroupSettingsDialog from './GroupSettingsDialog';
-import ThreadWindow from './ThreadWindow';
+import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
 import { 
   NewSongDialog, 
   NewSetlistDialog, 
-  NewRosterDialog,
+  NewRosterDialog, 
   AddChordSheetDialog 
 } from '../worship/WorshipDialogs';
 
@@ -55,38 +57,23 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const [showNewRoster, setShowNewRoster] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
   
+  const { setlists } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
 
-  // Optimized: Call updateSeenTimestamp only when chatId changes or a new message arrives, 
-  // but with a stable dependency.
   useEffect(() => {
     if (chatId) {
       updateSeenTimestamp();
     }
-  }, [chatId, updateSeenTimestamp]);
+  }, [chatId, messages, updateSeenTimestamp]);
 
   useEffect(() => {
     if (isInitialLoad.current && messages.length > 0) {
       isInitialLoad.current = false;
     }
-  }, [messages]);
-
-  const userMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    allUsers.forEach(u => {
-      map[u.uid] = u;
-    });
-    return map;
-  }, [allUsers]);
-
-  const messageMap = useMemo(() => {
-    const map: Record<string, ChatMessage> = {};
-    messages.forEach(m => { map[m.id] = m; });
-    return map;
   }, [messages]);
 
   const lastSeenNamesPerMessage = useMemo(() => {
@@ -105,57 +92,81 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       );
 
       if (lastReadMessage) {
-        const user = userMap[uid];
-        if (user) {
-          if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
-          map[lastReadMessage.id].push(user.firstName);
+        const user = allUsers.find(u => u.uid === uid);
+        const name = user?.firstName || 'Someone';
+        if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
+        if (!map[lastReadMessage.id].includes(name)) {
+          map[lastReadMessage.id].push(name);
         }
       }
     });
+
     return map;
-  }, [chat?.memberSeen, chat?.members, messages, allUsers, currentUser?.uid, userMap]);
+  }, [chat?.memberSeen, chat?.members, messages, allUsers, currentUser]);
 
-  const chatDetails = useMemo(() => chat ? getChatDetails(chat) : { name: 'Chat', avatar: null }, [chat]);
+  const chatDetails = useMemo(() => {
+    if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null };
+    if (chat.type === 'private') {
+      const peerId = chat.members.find(id => id !== currentUser.uid);
+      if (!peerId) return { name: 'Private Chat', avatar: null };
 
-  // Stable callbacks to prevent MessageBubble re-renders
-  const handleReply = useCallback((msgId: string) => setReplyToId(msgId), []);
-  const handleOpenThread = useCallback((msgId: string) => setActiveThreadId(msgId), []);
-  const handleOpenWorshipViewer = useCallback((setlistId?: string, songId?: string, imageUrl?: string) => {
-    setWorshipViewer({ setlistId, songId, imageUrl });
-  }, []);
+      const peerProfile = allUsers.find(u => u.uid === peerId);
+      const peerInfoFromChat = chat.memberInfo[peerId];
+
+      let name = 'Private Chat';
+      if (peerProfile && peerProfile.firstName) {
+        name = `${peerProfile.firstName} ${peerProfile.lastName || ''}`.trim();
+      } else {
+        name = getMemberFullName(peerInfoFromChat) || 'Private Chat';
+      }
+
+      return {
+        name: name,
+        avatar: peerProfile?.avatar || peerInfoFromChat?.avatar,
+      };
+    }
+    return { name: chat.name, avatar: null };
+  }, [chat, currentUser, allUsers]);
 
   const renderContent = useCallback(() => {
-    if (!chat) return null;
     const content = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       const olderMsg = messages[i + 1];
-      const sender = chat.memberInfo[msg.senderId] || null;
-      
-      const parentMessage = msg.replyToId ? messageMap[msg.replyToId] : undefined;
-      let parentSenderName = '';
-      if (parentMessage) {
-          const pSender = userMap[parentMessage.senderId];
-          parentSenderName = pSender?.firstName || 'Someone';
-      }
+      const newerMsg = messages[i - 1];
+
+      // Apple Messages logic for blocks:
+      // showName (top of group) if older message is different sender OR > 1hr gap
+      const showName = !olderMsg || 
+                       olderMsg.senderId !== msg.senderId || 
+                       (msg.createdAt && olderMsg.createdAt && (msg.createdAt.toMillis() - olderMsg.createdAt.toMillis() > 3600000));
+
+      // showAvatar (bottom of group) if newer message is different sender OR > 1hr gap
+      const showAvatar = !newerMsg || 
+                         newerMsg.senderId !== msg.senderId || 
+                         (newerMsg.createdAt && msg.createdAt && (newerMsg.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
+
+      const senderProfile = allUsers.find(u => u.uid === msg.senderId);
+      const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
+      const senderForBubble: ChatMemberInfo | null = senderProfile
+        ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
+        : senderInfoFromChat;
 
       content.push(
         <MessageBubble
           key={msg.id}
           message={msg}
-          chat={chat}
-          sender={sender}
-          userMap={userMap}
+          chat={chat as Chat}
+          sender={senderForBubble}
           toggleReaction={toggleReaction}
-          onReply={() => handleReply(msg.id)}
-          onOpenThread={handleOpenThread}
-          onOpenWorshipViewer={handleOpenWorshipViewer}
-          parentMessage={parentMessage}
-          parentSenderName={parentSenderName}
-          onDelete={deleteMessage}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
-          showAvatar={olderMsg?.senderId !== msg.senderId}
-          showName={olderMsg?.senderId !== msg.senderId}
+          onReply={() => setActiveThreadId(msg.id)}
+          onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
+          onDelete={deleteMessage}
+          parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
+          parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
+          showAvatar={showAvatar}
+          showName={showName}
         />
       );
 
@@ -173,9 +184,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       }
     }
     return content;
-  }, [messages, chat, toggleReaction, lastSeenNamesPerMessage, userMap, deleteMessage, messageMap, handleReply, handleOpenThread, handleOpenWorshipViewer]);
-
-  const replyToMessage = useMemo(() => replyToId ? messageMap[replyToId] : undefined, [messageMap, replyToId]);
+  }, [messages, chat, allUsers, toggleReaction, lastSeenNamesPerMessage]);
 
   if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
@@ -193,7 +202,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   }
 
   return (
-      <div className="w-full h-full flex flex-col overflow-hidden">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       {showOfflineRibbon && (
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
           <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -230,29 +239,93 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         >
           <div className="flex flex-col-reverse gap-0.5 max-w-3xl mx-auto w-full">
             {renderContent()}
-            
-            {hasMore && (
-              <div className="text-center py-6">
-                <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
-                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  {t.loadMore || 'Load older messages'}
-                </Button>
-              </div>
-            )}
           </div>
+          {hasMore && (
+            <div className="text-center py-6">
+              <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
+                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Load more
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur-md border-t border-border/50 relative z-10">
-        <MessageInput 
-          chatId={chatId} 
-          replyToMessage={replyToMessage} 
+      {/* Worship Viewer Modal logic constructed from state */}
+      {(() => {
+        if (!worshipViewer) return null;
+        const slides: ViewerSlide[] = [];
+        
+        if (worshipViewer.setlistId) {
+          const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
+          if (!setlist) return null;
+
+          const orderedSongs = [...setlist.songs].sort((a, b) => a.order - b.order);
+          for (const ps of orderedSongs) {
+            const libSong = songs.find(s => s.id === ps.songId);
+            if (!libSong) continue;
+            const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
+            if (forKey.length > 0) {
+              slides.push({
+                imageUrls: forKey.map(s => s.imageUrl),
+                songTitle: ps.title,
+                key: ps.key,
+              });
+            }
+          }
+        } else if (worshipViewer.songId) {
+          const libSong = songs.find(s => s.id === worshipViewer.songId);
+          if (!libSong) return null;
+          
+          const keyMap = new Map<string, string[]>();
+          libSong.chordSheets.forEach((sheet) => {
+            if (!keyMap.has(sheet.key)) keyMap.set(sheet.key, []);
+            keyMap.get(sheet.key)!.push(sheet.imageUrl);
+          });
+          Array.from(keyMap.entries()).forEach(([key, urls]) => {
+            slides.push({
+              imageUrls: urls,
+              songTitle: libSong.title,
+              key: key as any,
+            });
+          });
+        }
+
+        if (slides.length === 0) return null;
+
+        let startIndex = 0;
+        if (worshipViewer.setlistId && worshipViewer.songId) {
+          const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
+          const ps = setlist?.songs.find((s: any) => s.songId === worshipViewer.songId);
+          if (ps) {
+            const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
+            if (foundIdx !== -1) startIndex = foundIdx;
+          }
+        } else if (worshipViewer.imageUrl) {
+          const foundIdx = slides.findIndex(sl => sl.imageUrls?.includes(worshipViewer.imageUrl!));
+          if (foundIdx !== -1) startIndex = foundIdx;
+        }
+
+        return (
+          <FullScreenViewer 
+            slides={slides} 
+            startIndex={startIndex} 
+            onClose={() => setWorshipViewer(null)} 
+          />
+        );
+      })()}
+
+      <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
+        <MessageInput
+          chatId={chatId}
+          disabled={!online}
+          replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
-          onOpenWorshipCreate={(type, songId) => {
+          onOpenWorshipCreate={(type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => {
             if (type === 'song') setShowNewSong(true);
-            else if (type === 'setlist') setShowNewSetlist(true);
-            else if (type === 'roster') setShowNewRoster(true);
-            else if (type === 'chords' && songId) {
+            if (type === 'setlist') setShowNewSetlist(true);
+            if (type === 'roster') setShowNewRoster(true);
+            if (type === 'chords' && songId) {
               const song = songs.find(s => s.id === songId);
               if (song) setAddSheetSong(song);
             }
@@ -263,12 +336,15 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       <NewSongDialog 
         open={showNewSong} 
         onClose={() => setShowNewSong(false)} 
-        onCreated={(id) => {}} 
+        onCreated={(id) => {
+          // Could optionally send a message about the new song
+        }} 
       />
       <NewSetlistDialog 
         open={showNewSetlist} 
         onClose={() => setShowNewSetlist(false)} 
         onCreated={(id) => {
+          // Automatically share the new setlist in chat
           sendMessage(undefined, undefined, undefined, undefined, undefined, id);
         }} 
       />
@@ -276,6 +352,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         open={showNewRoster} 
         onClose={() => setShowNewRoster(false)} 
         onCreated={(id) => {
+          // Automatically share the new roster in chat
           sendMessage(undefined, undefined, undefined, undefined, undefined, undefined, id);
         }} 
       />
@@ -285,7 +362,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         onClose={() => setAddSheetSong(null)} 
       />
 
-      {isSettingsOpen && chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
+      {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
 
       {activeThreadId && chat && (
         <ThreadWindow

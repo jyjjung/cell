@@ -4,7 +4,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function ChatLayout({
   children,
@@ -25,10 +24,8 @@ export default function ChatLayout({
   }
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <div className="w-full flex-1 flex flex-col min-h-0">
-        {children}
-      </div>
-    </TooltipProvider>
+    <div className="w-full flex-1 flex flex-col min-h-0">
+      {children}
+    </div>
   );
 }

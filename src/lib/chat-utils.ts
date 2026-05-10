@@ -1,5 +1,5 @@
 
-import type { ChatMemberInfo, Chat } from '@/types';
+import type { ChatMemberInfo } from '@/types';
 
 /**
  * Generates a deterministic, consistent chat ID for a private (one-to-one) chat
@@ -30,22 +30,4 @@ export function getMemberFullName(memberInfo: ChatMemberInfo | null | undefined)
     }
 
     return null;
-}
-
-/**
- * Extracts display name and avatar for a chat based on its type and members.
- */
-export function getChatDetails(chat: Chat) {
-    if (chat.type === 'group') {
-        return {
-            name: chat.name || 'Group Chat',
-            avatar: chat.photoURL || null,
-        };
-    }
-    // For private chats, normally the UI handles peer lookup, 
-    // but we return the name stored in the chat object as a fallback.
-    return {
-        name: chat.name || 'Private Chat',
-        avatar: chat.photoURL || null,
-    };
 }
