@@ -10,7 +10,6 @@ import { cn, isPdfUrl } from '@/lib/utils';
 import { SmilePlus, Download, Music, Maximize, FileText, Trash2 } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageLightbox } from './ImageLightbox';
 import { translations } from '@/lib/translations';
@@ -34,23 +33,24 @@ interface MessageBubbleProps {
   chat: Chat;
   sender: ChatMemberInfo | null;
   toggleReaction: (messageId: string, emoji: string) => void;
+  userMap: Record<string, any>;
   lastSeenNames?: string[];
   onReply?: () => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
+  onOpenThread?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   showAvatar?: boolean;
   showName?: boolean;
 }
 
 const MessageBubble = React.memo(function MessageBubble({ 
-  message, chat, sender, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
+  message, chat, sender, toggleReaction, userMap, lastSeenNames = [], 
+  onReply, onOpenThread, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
   showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
-  const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -58,14 +58,6 @@ const MessageBubble = React.memo(function MessageBubble({
   const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
   const senderName = getMemberFullName(sender);
   
-  const userMap = useMemo(() => {
-    const map: Record<string, any> = {};
-    allUsers.forEach(u => {
-      map[u.uid] = u;
-    });
-    return map;
-  }, [allUsers]);
-
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
   const seenByNamesString = lastSeenNames.length > 0 ? lastSeenNames.join(', ') : "";
@@ -435,16 +427,16 @@ const MessageBubble = React.memo(function MessageBubble({
           chatId={chat.id}
           parentMessageId={message.id}
           isSender={isSender}
-          onReply={onReply}
+          onReply={() => onOpenThread?.(message.id)}
+          userMap={userMap}
         />
       ) : null}
     </motion.div>
   );
 });
 
-function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void }) {
+function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply, userMap }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void, userMap: Record<string, any> }) {
     const { messages } = useThreadMessages(chatId, parentMessageId);
-    const { allUsers } = useAllUsers();
 
     if (!messages || messages.length === 0) return null;
 
@@ -454,7 +446,7 @@ function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { c
         <div className={cn("flex flex-col gap-0.5 w-full mt-1 mb-2", isSender ? "items-end" : "items-start")}>
             <div className={cn("flex flex-col gap-0.5 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
                 {reversedMessages.map(reply => {
-                    const sender = allUsers.find(u => u.uid === reply.senderId);
+                    const sender = userMap[reply.senderId];
                     const senderName = sender?.firstName || 'Someone';
                     return (
                         <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
