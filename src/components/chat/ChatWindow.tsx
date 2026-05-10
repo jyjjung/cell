@@ -29,6 +29,7 @@ import {
   NewRosterDialog, 
   AddChordSheetDialog 
 } from '../worship/WorshipDialogs';
+import { TooltipProvider } from '../ui/tooltip';
 
 function formatMessageDate(date: Date) {
   if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
@@ -76,6 +77,14 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     }
   }, [messages]);
 
+  const userMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    allUsers.forEach(u => {
+      map[u.uid] = u;
+    });
+    return map;
+  }, [allUsers]);
+
   const lastSeenNamesPerMessage = useMemo(() => {
     if (!chat?.memberSeen || !messages.length || !allUsers.length) return {};
 
@@ -92,7 +101,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       );
 
       if (lastReadMessage) {
-        const user = allUsers.find(u => u.uid === uid);
+        const user = userMap[uid];
         const name = user?.firstName || 'Someone';
         if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
         if (!map[lastReadMessage.id].includes(name)) {
@@ -110,7 +119,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       const peerId = chat.members.find(id => id !== currentUser.uid);
       if (!peerId) return { name: 'Private Chat', avatar: null };
 
-      const peerProfile = allUsers.find(u => u.uid === peerId);
+      const peerProfile = userMap[peerId];
       const peerInfoFromChat = chat.memberInfo[peerId];
 
       let name = 'Private Chat';
@@ -146,7 +155,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
                          newerMsg.senderId !== msg.senderId || 
                          (newerMsg.createdAt && msg.createdAt && (newerMsg.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
 
-      const senderProfile = allUsers.find(u => u.uid === msg.senderId);
+      const senderProfile = userMap[msg.senderId];
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
       const senderForBubble: ChatMemberInfo | null = senderProfile
         ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
@@ -164,7 +173,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
           onDelete={deleteMessage}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
-          parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
+          parentSenderName={msg.replyToId ? (getMemberFullName(userMap[messages.find(m => m.id === msg.replyToId)?.senderId || ''] as any) || undefined) : undefined}
           showAvatar={showAvatar}
           showName={showName}
         />
@@ -202,7 +211,8 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
+    <TooltipProvider delayDuration={0}>
+      <div className="w-full h-full flex flex-col overflow-hidden">
       {showOfflineRibbon && (
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
           <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -374,5 +384,6 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }

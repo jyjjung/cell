@@ -9,6 +9,7 @@ import { translations } from '@/lib/translations';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Chat, ChatMemberInfo } from '@/types';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 
@@ -37,6 +38,14 @@ export default function ThreadWindow({
   const { allUsers } = useAllUsers();
   const listRef = useRef<HTMLDivElement>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
+  
+  const userMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    allUsers.forEach(u => {
+      map[u.uid] = u;
+    });
+    return map;
+  }, [allUsers]);
 
   const renderContent = useCallback(() => {
     const content = [];
@@ -44,7 +53,7 @@ export default function ThreadWindow({
       const msg = messages[i];
       const olderMsg = messages[i + 1] || parentMessage;
 
-      const senderProfile = allUsers.find(u => u.uid === msg.senderId);
+      const senderProfile = userMap[msg.senderId];
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
       const senderForBubble: ChatMemberInfo | null = senderProfile 
           ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
@@ -77,14 +86,15 @@ export default function ThreadWindow({
     return content;
   }, [messages, chat, allUsers, toggleReaction, parentMessage]);
 
-  const parentSenderProfile = parentMessage ? allUsers.find(u => u.uid === parentMessage.senderId) : null;
+  const parentSenderProfile = parentMessage ? userMap[parentMessage.senderId] : null;
   const parentSenderInfo = parentMessage && chat ? chat.memberInfo[parentMessage.senderId] : null;
   const parentSenderForBubble = parentSenderProfile
       ? { firstName: parentSenderProfile.firstName, lastName: parentSenderProfile.lastName, avatar: parentSenderProfile.avatar as any }
       : parentSenderInfo;
 
   return (
-    <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
+    <TooltipProvider delayDuration={0}>
+      <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
       <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
         <Button 
           variant="ghost" 
@@ -155,5 +165,6 @@ export default function ThreadWindow({
           />
       </div>
     </div>
+    </TooltipProvider>
   );
 }
