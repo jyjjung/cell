@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { useChats } from "@/hooks/useChats";
@@ -42,6 +42,14 @@ export default function ChatList() {
   const loading = loadingChats && chats.length === 0;
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
+  const userMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    allUsers.forEach(u => {
+      map[u.uid] = u;
+    });
+    return map;
+  }, [allUsers]);
+
   useEffect(() => {
     if (!online || !chats.length) return;
     const key = chats.map((c) => c.id).sort().join(',');
@@ -56,7 +64,7 @@ export default function ChatList() {
     if (chat.type === 'private') {
       const peerId = chat.members.find(id => id !== currentUser.uid);
       const peerInfoFromChat = peerId ? chat.memberInfo[peerId] : null;
-      const peerFullProfile = peerId ? allUsers.find(u => u.uid === peerId) : null;
+      const peerFullProfile = peerId ? userMap[peerId] : null;
 
       let fullName = 'Private Chat';
       if (peerFullProfile && peerFullProfile.firstName) {
@@ -247,7 +255,7 @@ export default function ChatList() {
                 const lastSeenMillis = chat.memberSeen?.[currentUser!.uid]?.toMillis?.() || 0;
                 const lastSentMillis = chat.lastMessageSentAt?.toMillis?.() || 0;
                 const isUnread = currentUser && !isActive && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
-                const lastSenderProfile = allUsers.find(u => u.uid === chat.lastMessageSenderId);
+                const lastSenderProfile = userMap[chat.lastMessageSenderId || ''];
                 const lastSenderName = lastSenderProfile?.firstName || 'Someone';
 
                 return (
