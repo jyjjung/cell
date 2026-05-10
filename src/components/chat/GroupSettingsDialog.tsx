@@ -33,7 +33,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
   const [isAdding, setIsAdding] = useState(false);
   const [usersToAdd, setUsersToAdd] = useState<string[]>([]);
 
-  const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser!.uid);
+  const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser?.uid || '');
 
   const form = useForm({
     resolver: zodResolver(renameSchema),
@@ -125,7 +125,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                         </div>
                         <span>{member.firstName} {member.lastName}</span>
                       </div>
-                      {isGroupAdmin && member.uid !== currentUser!.uid && (
+                      {isGroupAdmin && member.uid !== currentUser?.uid && (
                          <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
