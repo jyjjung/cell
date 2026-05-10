@@ -62,7 +62,7 @@ export default function ChatList() {
     if (!currentUser) return null;
 
     if (chat.type === 'private') {
-      const peerId = chat.members.find(id => id !== currentUser.uid);
+      const peerId = chat.members.find(id => id !== currentUser?.uid);
       const peerInfoFromChat = peerId ? chat.memberInfo[peerId] : null;
       const peerFullProfile = peerId ? userMap[peerId] : null;
 
@@ -252,7 +252,7 @@ export default function ChatList() {
                 if (!details) return null;
 
                 const isActive = pathname === `/chat/${chat.id}`;
-                const lastSeenMillis = chat.memberSeen?.[currentUser!.uid]?.toMillis?.() || 0;
+                const lastSeenMillis = (currentUser && chat.memberSeen?.[currentUser.uid]?.toMillis?.()) || 0;
                 const lastSentMillis = chat.lastMessageSentAt?.toMillis?.() || 0;
                 const isUnread = currentUser && !isActive && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
                 const lastSenderProfile = userMap[chat.lastMessageSenderId || ''];

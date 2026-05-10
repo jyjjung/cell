@@ -64,7 +64,7 @@ export default function RecentChatsWidget() {
                     <AnimatePresence mode="popLayout">
                         {recentChats.map(chat => {
                             const isGroup = chat.type === 'group';
-                            const peerId = chat.members.find(id => id !== currentUser.uid);
+                            const peerId = chat.members.find(id => id !== currentUser?.uid);
                             
                             const peerProfile = peerId ? userMap[peerId] : null;
                             const infoFromChat = peerId ? chat.memberInfo[peerId] : null;
