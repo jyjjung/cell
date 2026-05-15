@@ -21,6 +21,15 @@ import { useBiblePlan } from './use-bible-plan';
 import { useNotifications } from './use-notifications';
 import { startOfDay, parseISO, isBefore, isSameDay, isValid } from 'date-fns';
 
+/**
+ * Creates a date-scoped unique key for a passage to prevent cross-day collisions
+ * in plans like M'Cheyne that repeat the same chapters on multiple days.
+ * Format: "yyyy-MM-dd::Book Chapter"  e.g. "2025-01-01::Matthew 1"
+ */
+export function makePassageKey(date: string, displayText: string): string {
+  return `${date}::${displayText}`;
+}
+
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
 interface ScripturePoint {
@@ -111,27 +120,34 @@ export function useUserBibleChecklist() {
     }
   };
 
-  const togglePassageCompletion = useCallback(async (passageDisplayText: string) => {
+  const togglePassageCompletion = useCallback(async (passageDisplayText: string, date?: string) => {
     if (!currentUser?.uid || !passageDisplayText) {
       throw new Error("User not logged in or invalid passage data.");
     }
-    
-    const isCompleted = completedPassages.includes(passageDisplayText);
+
+    // Use date-scoped key when date is provided; fall back to bare displayText for legacy callers.
+    const key = date ? makePassageKey(date, passageDisplayText) : passageDisplayText;
+    // Also check legacy bare key for backward compatibility with existing Firestore data.
+    const isCompleted = completedPassages.includes(key) || (!date && completedPassages.includes(passageDisplayText));
     const updatePayload = {
-      completedPassages: isCompleted ? arrayRemove(passageDisplayText) : arrayUnion(passageDisplayText)
+      completedPassages: isCompleted ? arrayRemove(key) : arrayUnion(key)
     };
     updateChecklistDocument(updatePayload);
 
   }, [currentUser, completedPassages, checklistDocExists]);
 
 
-  const markMultiplePassages = useCallback(async (passageDisplayTexts: string[], markAsComplete: boolean) => {
-    if (!currentUser?.uid || passageDisplayTexts.length === 0) {
+  /**
+   * Mark multiple passages as complete/incomplete.
+   * Pass pre-scoped keys (from makePassageKey) or bare displayTexts.
+   */
+  const markMultiplePassages = useCallback(async (passageKeys: string[], markAsComplete: boolean) => {
+    if (!currentUser?.uid || passageKeys.length === 0) {
         throw new Error("User not logged in or no passages to update.");
     }
 
     const updatePayload = {
-      completedPassages: markAsComplete ? arrayUnion(...passageDisplayTexts) : arrayRemove(...passageDisplayTexts)
+      completedPassages: markAsComplete ? arrayUnion(...passageKeys) : arrayRemove(...passageKeys)
     };
     updateChecklistDocument(updatePayload);
   }, [currentUser, checklistDocExists]);
@@ -185,8 +201,10 @@ export function useUserBibleChecklist() {
         const endsBeforeOrAtUserEnd = comparePoints(passageEndPoint, tempUserEndPointForComparison) <= 0;
 
         if (startsAfterOrAtUserStart && endsBeforeOrAtUserEnd) {
-          if (!completedPassages.includes(passage.displayText)) {
-            passagesToComplete.push(passage.displayText);
+          const key = makePassageKey(dailyReading.date, passage.displayText);
+          const legacyKey = passage.displayText;
+          if (!completedPassages.includes(key) && !completedPassages.includes(legacyKey)) {
+            passagesToComplete.push(key);
           }
         }
       }

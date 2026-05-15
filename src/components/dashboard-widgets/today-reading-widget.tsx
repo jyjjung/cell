@@ -16,6 +16,7 @@ import type { StructuredPassage } from '@/types';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 
 
 export default function TodayReadingWidget() {
@@ -49,8 +50,14 @@ export default function TodayReadingWidget() {
     
   const isAllComplete = useMemo(() => {
       if (passagesToShow.length === 0) return false;
-      return passagesToShow.every(p => completedPassages.includes(p.displayText));
-  }, [passagesToShow, completedPassages]);
+      const date = todaysReading?.date;
+      return passagesToShow.every(p => {
+        if (date) {
+          return completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText);
+        }
+        return completedPassages.includes(p.displayText);
+      });
+  }, [passagesToShow, completedPassages, todaysReading?.date]);
 
   return (
      <>
@@ -98,7 +105,10 @@ export default function TodayReadingWidget() {
                 <div className="space-y-2">
                 <AnimatePresence mode="popLayout">
                     {passagesToShow.map(passage => {
-                        const isChecked = completedPassages.includes(passage.displayText);
+                        const date = todaysReading?.date;
+                        const isChecked = date
+                          ? completedPassages.includes(makePassageKey(date, passage.displayText)) || completedPassages.includes(passage.displayText)
+                          : completedPassages.includes(passage.displayText);
                         return (
                         <motion.div 
                             layout
@@ -112,7 +122,7 @@ export default function TodayReadingWidget() {
                             <Checkbox
                                 id={`today-reading-${passage.displayText}`}
                                 checked={isChecked}
-                                onCheckedChange={() => togglePassageCompletion(passage.displayText)}
+                                onCheckedChange={() => togglePassageCompletion(passage.displayText, todaysReading?.date)}
                                 className="h-5 w-5 rounded-lg border-primary/20 group-hover:border-primary-foreground/50"
                             />
                             )}

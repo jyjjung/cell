@@ -17,6 +17,7 @@ import type { StructuredPassage } from '@/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startOfDay } from 'date-fns';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 
 export default function NextReadingWidget() {
     const { plan, loading: planLoading } = useBiblePlan();
@@ -33,7 +34,11 @@ export default function NextReadingWidget() {
     
     const unreadPassagesToShow = useMemo(() => {
         if (!nextUnread) return [];
-        return nextUnread.passages.filter(p => !completedPassages.includes(p.displayText));
+        const date = nextUnread.date;
+        return nextUnread.passages.filter(p => 
+          !completedPassages.includes(makePassageKey(date, p.displayText)) &&
+          !completedPassages.includes(p.displayText) // legacy fallback
+        );
     }, [nextUnread, completedPassages]);
 
 
@@ -84,7 +89,7 @@ export default function NextReadingWidget() {
                                     >
                                         <Checkbox
                                             id={`next-reading-${passage.displayText}`}
-                                            onCheckedChange={() => togglePassageCompletion(passage.displayText)}
+                                            onCheckedChange={() => togglePassageCompletion(passage.displayText, nextUnread?.date)}
                                             className="h-5 w-5 rounded-lg border-primary/20 group-hover:border-primary-foreground/50"
                                         />
                                         <button

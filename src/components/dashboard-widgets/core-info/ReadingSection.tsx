@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 
 interface ReadingSectionProps {
   title: { labelKey: string; titleKey: string };
   reading: { date: string; passages: any[] } | null;
   completedPassages: string[];
-  togglePassageCompletion: (displayText: string) => void;
+  togglePassageCompletion: (displayText: string, date?: string) => void;
   handlePassageClick: (displayText: string) => void;
   t: any;
   handleLink: (path: string) => void;
@@ -57,15 +58,19 @@ export const ReadingSection = React.memo(({ title, reading, completedPassages, t
                 className="flex items-center gap-5 p-6 rounded-[2rem] bg-muted/20 border border-transparent hover:border-primary/20 hover:bg-muted/30 transition-all group/passage"
               >
                 <Checkbox 
-                    checked={completedPassages.includes(p.displayText)} 
-                    onCheckedChange={() => togglePassageCompletion(p.displayText)} 
+                    checked={reading.date 
+                      ? completedPassages.includes(makePassageKey(reading.date, p.displayText)) || completedPassages.includes(p.displayText)
+                      : completedPassages.includes(p.displayText)} 
+                    onCheckedChange={() => togglePassageCompletion(p.displayText, reading.date)} 
                     className="h-6 w-6 rounded-lg border-primary/20 bg-background/50 hover:bg-primary/10 transition-all" 
                 />
                 <button 
                     onClick={() => handlePassageClick(p.displayText)} 
                     className={cn(
                         "text-lg font-black tracking-tighter hover:text-primary transition-all text-left flex items-center gap-2", 
-                        completedPassages.includes(p.displayText) && "line-through opacity-40"
+                        (reading.date
+                          ? completedPassages.includes(makePassageKey(reading.date, p.displayText)) || completedPassages.includes(p.displayText)
+                          : completedPassages.includes(p.displayText)) && "line-through opacity-40"
                     )}
                 >
                     {p.displayText}

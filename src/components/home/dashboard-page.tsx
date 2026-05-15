@@ -16,6 +16,7 @@ import { useAllCustomRosterEntries } from '@/hooks/useAllCustomRosterEntries';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, addDays, isAfter, isSameDay, getMonth } from 'date-fns';
@@ -104,13 +105,32 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const nextUnread = useMemo(() => plan?.dailyReadings ? findNextUnreadReading(plan.dailyReadings, completedPassages, startOfToday()) : null, [plan, completedPassages]);
 
   const todayPassages = useMemo(() => todaysReading?.passages.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [], [todaysReading]);
-  const todayDoneCount = useMemo(() => todayPassages.filter(p => completedPassages.includes(p.displayText)).length, [todayPassages, completedPassages]);
+  const todayDoneCount = useMemo(() => todayPassages.filter(p => {
+    const date = todaysReading?.date;
+    return date
+      ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
+      : completedPassages.includes(p.displayText);
+  }).length, [todayPassages, completedPassages, todaysReading?.date]);
   const isTodayComplete = todayPassages.length > 0 && todayDoneCount === todayPassages.length;
 
   const overallPct = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
     const total = plan.dailyReadings.flatMap(d => d.passages || []).length;
-    return total > 0 ? Math.round((completedPassages.length / total) * 100) : 0;
+    if (total === 0) return 0;
+    let completed = 0;
+    plan.dailyReadings.forEach(day => {
+      day.passages?.forEach(p => {
+        if (p.displayText && !p.displayText.startsWith('Error:')) {
+          if (
+            completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
+            completedPassages.includes(p.displayText)
+          ) {
+            completed++;
+          }
+        }
+      });
+    });
+    return Math.round((completed / total) * 100);
   }, [plan, completedPassages]);
 
   const daysLeft = useMemo(() => {
@@ -416,7 +436,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mb-2">Today's assigned</p>
                     <AnimatePresence mode="popLayout">
                         {todayPassages.map(p => {
-                            const done = completedPassages.includes(p.displayText);
+                            const date = todaysReading?.date;
+                            const done = date
+                              ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
+                              : completedPassages.includes(p.displayText);
                             return (
                                 <motion.div key={p.displayText} layout transition={spring}
                                     className={cn(
@@ -426,7 +449,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                                 >
                                     <Checkbox
                                         checked={done}
-                                        onCheckedChange={() => togglePassageCompletion(p.displayText)}
+                                        onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
                                         className="h-5 w-5 rounded-lg shrink-0 border-primary/20"
                                     />
                                     <button onClick={() => readPassage(p.displayText)} className={cn("flex-1 text-left text-sm font-semibold truncate transition-colors", done && "line-through")}>
@@ -447,7 +470,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             {/* Next Up / Integrated Section */}
             {nextUnread && (() => {
                 const nextPassages = nextUnread.passages?.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [];
-                const p = nextPassages.find(passage => !completedPassages.includes(passage.displayText));
+                const p = nextPassages.find(passage => {
+                  const date = nextUnread.date;
+                  return !(
+                    completedPassages.includes(makePassageKey(date, passage.displayText)) ||
+                    completedPassages.includes(passage.displayText)
+                  );
+                });
                 if (!p) return null;
                 const done = false; // p is always unread by definition
                 return (
@@ -458,7 +487,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                     >
                         <Checkbox
                             checked={false}
-                            onCheckedChange={() => togglePassageCompletion(p.displayText)}
+                            onCheckedChange={() => togglePassageCompletion(p.displayText, nextUnread.date)}
                             className="h-5 w-5 rounded-lg shrink-0 border-amber-500/30"
                         />
                         <button onClick={() => readPassage(p.displayText)} className="flex-1 text-left text-sm font-semibold truncate transition-colors">
