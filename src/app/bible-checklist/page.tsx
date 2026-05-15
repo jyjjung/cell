@@ -26,6 +26,7 @@ import {
 import { translations } from '@/lib/translations';
 import { PageHeader } from '@/components/ui/page-layout';
 import BiblePlanSkeleton from '@/components/bible/bible-plan-skeleton';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 
 
 type ViewState = 
@@ -118,7 +119,10 @@ export default function BibleChecklistPage() {
                   completedCount += numValidPassages;
               }
             } else {
-              completedCount += validPassages.filter(p => completedPassages.includes(p.displayText)).length;
+              completedCount += validPassages.filter(p => 
+                completedPassages.includes(makePassageKey(reading.date, p.displayText)) ||
+                completedPassages.includes(p.displayText) // legacy fallback
+              ).length;
             }
         });
 
@@ -161,7 +165,17 @@ export default function BibleChecklistPage() {
          }
        });
     } else {
-       completed = completedPassages.length;
+       // Count actual plan passages completed (handles both scoped and legacy bare keys)
+       plan.dailyReadings.forEach(day => {
+         day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).forEach(p => {
+           if (
+             completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
+             completedPassages.includes(p.displayText)
+           ) {
+             completed++;
+           }
+         });
+       });
     }
 
     const percentage = total > 0 ? (completed / total) * 100 : 0;
@@ -179,7 +193,9 @@ export default function BibleChecklistPage() {
   
     const completedChapters = new Set<string>();
     completedPassages.forEach(cp => {
-      const passage = allPassages.find(p => p.displayText === cp);
+      // Handle both scoped keys ("date::Book Ch") and bare displayText
+      const displayText = cp.includes('::') ? cp.split('::').slice(1).join('::') : cp;
+      const passage = allPassages.find(p => p.displayText === displayText);
       if (passage) {
         completedChapters.add(`${passage.book} ${passage.chapter}`);
       }

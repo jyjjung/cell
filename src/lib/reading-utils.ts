@@ -1,6 +1,7 @@
 import type { DailyReading, StructuredPassage } from '@/types';
 import { isValid, isSameDay, startOfDay } from 'date-fns';
 import { parseDay } from './event-occurrences';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 
 export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
@@ -55,7 +56,10 @@ export function findNextUnreadReading(
     if (validPassages.length === 0) { // If a day has no valid passages, it's effectively "read" or skipped.
         continue;
     }
-    const isFullyCompleted = validPassages.every(p => completedPassages.includes(p.displayText));
+    const isFullyCompleted = validPassages.every(p => 
+      completedPassages.includes(makePassageKey(reading.date, p.displayText)) ||
+      completedPassages.includes(p.displayText) // legacy fallback for old bare-key entries
+    );
     
     if (!isFullyCompleted) {
       return reading; // This is the first reading (chronologically) that is not fully completed

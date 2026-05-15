@@ -12,6 +12,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import BiblePassageViewerDialog from '@/components/bible/bible-passage-viewer-dialog';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import type { AppUser } from '@/types';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
@@ -22,7 +23,7 @@ interface BiblePlanDisplayProps {
   displayTitle?: string;
   currentUser?: AppUser | null;
   completedPassages: string[];
-  togglePassageCompletion: (passageDisplayText: string) => Promise<void>;
+  togglePassageCompletion: (passageDisplayText: string, date?: string) => Promise<void>;
   onToggleAllToday?: (passageTexts: string[], markComplete: boolean) => void;
   allPassageTextsForDay?: string[];
   loading?: boolean;
@@ -71,8 +72,14 @@ export default function BiblePlanDisplay({
     if (!allPassageTextsForDay || allPassageTextsForDay.length === 0) return false;
     const validTextsFromProp = allPassageTextsForDay.filter(text => text && !text.startsWith("Error:"));
     if (validTextsFromProp.length === 0) return false;
-    return validTextsFromProp.every(text => completedPassages.includes(text));
-  }, [allPassageTextsForDay, completedPassages]);
+    const date = readingToDisplay?.date;
+    return validTextsFromProp.every(text => {
+      if (date) {
+        return completedPassages.includes(makePassageKey(date, text)) || completedPassages.includes(text);
+      }
+      return completedPassages.includes(text);
+    });
+  }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date]);
   
   let parsedDayDate: Date | null = null;
   if (readingToDisplay?.date) {
@@ -156,7 +163,10 @@ export default function BiblePlanDisplay({
               className="space-y-2 text-sm">
               {validPassagesForThisReading.map((passage, index) => {
                 const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
-                const isChecked = completedPassages.includes(passage.displayText);
+                const date = readingToDisplay.date;
+                const isChecked = date
+                  ? completedPassages.includes(makePassageKey(date, passage.displayText)) || completedPassages.includes(passage.displayText)
+                  : completedPassages.includes(passage.displayText);
                 const isPassageValid = !passage.displayText.startsWith("Error:");
 
                 return (
@@ -168,7 +178,7 @@ export default function BiblePlanDisplay({
                       <Checkbox
                         id={passageIdPart}
                         checked={isChecked}
-                        onCheckedChange={() => togglePassageCompletion(passage.displayText)}
+                        onCheckedChange={() => togglePassageCompletion(passage.displayText, readingToDisplay.date)}
                         aria-label={`Mark '${passage.displayText}' as read`}
                         className="h-5 w-5"
                         disabled={!isPassageValid || isTogglingDay}
