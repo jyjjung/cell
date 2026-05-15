@@ -101,6 +101,82 @@ export function useUserBibleChecklist() {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // ── One-time migration: bare keys → date-scoped keys ──────────────────────
+  // Legacy completedPassages stored bare displayText (e.g. "Matthew 1").
+  // M'Cheyne repeats the same chapters twice a year, so a bare key causes the
+  // second occurrence to appear pre-checked. We migrate each bare key to its
+  // first-occurrence scoped key (e.g. "2025-01-01::Matthew 1") exactly once.
+  const migrationRunRef = useRef(false);
+
+  useEffect(() => {
+    if (migrationRunRef.current) return;
+    if (!currentUser?.uid || !currentGlobalPlan?.dailyReadings || loadingChecklist) return;
+
+    // No bare keys → already migrated or fresh account
+    const bareKeys = completedPassages.filter(key => !key.includes('::'));
+    if (bareKeys.length === 0) {
+      migrationRunRef.current = true;
+      return;
+    }
+
+    // Mark as run immediately to prevent re-entry on snapshot updates
+    migrationRunRef.current = true;
+
+    // Build first-occurrence map: displayText → earliest date in the plan
+    const firstOccurrenceMap = new Map<string, string>();
+    for (const day of currentGlobalPlan.dailyReadings) {
+      for (const passage of day.passages) {
+        if (passage.displayText && !firstOccurrenceMap.has(passage.displayText)) {
+          firstOccurrenceMap.set(passage.displayText, day.date);
+        }
+      }
+    }
+
+    const toRemove: string[] = [];
+    const toAdd: string[] = [];
+
+    for (const bareKey of bareKeys) {
+      toRemove.push(bareKey);
+      const date = firstOccurrenceMap.get(bareKey);
+      if (date) {
+        const scopedKey = makePassageKey(date, bareKey);
+        if (!completedPassages.includes(scopedKey)) {
+          toAdd.push(scopedKey);
+        }
+      }
+      // If bare key isn't in plan at all, just drop it (orphaned entry)
+    }
+
+    if (toRemove.length === 0) return;
+
+    console.log(`[BibleChecklist] Migrating ${toRemove.length} bare keys → date-scoped format…`);
+
+    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
+
+    // Firestore doesn't support arrayRemove + arrayUnion on the same field in
+    // one write, so we use two sequential setDoc-merge calls.
+    setDoc(checklistDocRef, {
+      completedPassages: arrayRemove(...toRemove),
+      updatedAt: serverTimestamp(),
+    }, { merge: true })
+      .then(() => toAdd.length > 0
+        ? setDoc(checklistDocRef, {
+            completedPassages: arrayUnion(...toAdd),
+            updatedAt: serverTimestamp(),
+          }, { merge: true })
+        : Promise.resolve()
+      )
+      .then(() => console.log(`[BibleChecklist] Migration complete — ${toRemove.length} keys converted.`))
+      .catch(e => {
+        console.error('[BibleChecklist] Migration failed:', e);
+        migrationRunRef.current = false; // allow retry on next render
+      });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, loadingChecklist]);
+  // NOTE: completedPassages intentionally excluded — we only want to run once
+  // after initial load, not on every Firestore update.
+
   const updateChecklistDocument = (updatePayload: any) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
