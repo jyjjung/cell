@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
-const MESSAGES_PER_PAGE = 200; // Larger window for offline/PWA (IndexedDB cache)
+const MESSAGES_PER_PAGE = 30; // Optimized window for lower read costs, pagination loads more
 
 export function useMessages(chatId: string | null) {
   const { currentUser } = useAuth();

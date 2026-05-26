@@ -80,7 +80,10 @@ export function useWorshipSongs() {
     const extension = lastDotIndex !== -1 ? file.name.slice(lastDotIndex).toLowerCase() : '';
     const storagePath = `worshipChordSheets/${songId}/${sheetId}${extension}`;
     const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, file, { contentType: file.type || 'application/octet-stream' });
+    await uploadBytes(storageRef, file, { 
+      contentType: file.type || 'application/octet-stream',
+      cacheControl: 'public, max-age=31536000'
+    });
     const imageUrl = await getDownloadURL(storageRef);
     const sheet: SongChordSheet = {
       id: sheetId,

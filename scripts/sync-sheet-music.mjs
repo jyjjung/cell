@@ -172,7 +172,10 @@ async function run() {
     // Upload to Storage
     await bucket.upload(a.filePath, {
       destination: storagePath,
-      metadata: { contentType: 'application/pdf' }
+      metadata: { 
+        contentType: 'application/pdf',
+        cacheControl: 'public, max-age=31536000'
+      }
     });
     
     const fileRef = bucket.file(storagePath);
