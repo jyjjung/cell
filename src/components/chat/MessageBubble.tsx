@@ -291,10 +291,9 @@ const MessageBubble = React.memo(function MessageBubble({
                               }).join(', ');
 
                               return (
-                                  <Tooltip key={emoji} delayDuration={300}>
-                                      <TooltipTrigger asChild>
+                                  <Popover key={emoji}>
+                                      <PopoverTrigger asChild>
                                           <button
-                                              onClick={() => toggleReaction(message.id, emoji)}
                                               className={cn(
                                                   "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
                                                   uids.includes(currentUser?.uid || '')
@@ -305,14 +304,28 @@ const MessageBubble = React.memo(function MessageBubble({
                                               <span>{emoji}</span>
                                               <span className="font-bold text-[10px]">{uids.length}</span>
                                           </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent 
+                                      </PopoverTrigger>
+                                      <PopoverContent 
                                           side="top" 
-                                          className="text-[11px] font-medium bg-foreground/90 backdrop-blur-xl text-background border-none rounded-xl px-2.5 py-1 shadow-xl"
+                                          className="text-[11px] font-medium bg-foreground/90 backdrop-blur-xl text-background border-none rounded-xl px-2.5 py-2 shadow-xl w-auto max-w-[200px]"
                                       >
-                                          {reactionNames}
-                                      </TooltipContent>
-                                  </Tooltip>
+                                          <div className="flex flex-col gap-2">
+                                              <div className="break-words">
+                                                  <span className="opacity-70 mr-1">Reacted:</span>
+                                                  {reactionNames}
+                                              </div>
+                                              <button 
+                                                  onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleReaction(message.id, emoji);
+                                                  }}
+                                                  className="text-[10px] font-bold opacity-70 hover:opacity-100 transition-opacity bg-background/20 py-1 rounded-md w-full"
+                                              >
+                                                  {uids.includes(currentUser?.uid || '') ? "Remove Reaction" : "Add Reaction"}
+                                              </button>
+                                          </div>
+                                      </PopoverContent>
+                                  </Popover>
                               );
                           })}
                       </div>

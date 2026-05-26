@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
 const CHATS_COLLECTION = 'chats';
-const MESSAGES_PER_PAGE = 200;
+const MESSAGES_PER_PAGE = 30; // Optimized window for lower read costs, pagination loads more
 
 export function useThreadMessages(chatId: string | null, parentMessageId: string | null) {
   const { currentUser } = useAuth();

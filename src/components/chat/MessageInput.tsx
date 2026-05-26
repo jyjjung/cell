@@ -177,7 +177,10 @@ export default function MessageInput({
         setIsUploading(true);
         const storagePath = `chats/${chatId}/${Date.now()}_${file.name}`;
         const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+        const uploadTask = uploadBytesResumable(storageRef, file, {
+            contentType: file.type || 'image/jpeg',
+            cacheControl: 'public, max-age=31536000'
+        });
         uploadTask.on('state_changed', null, (error) => {
             setIsUploading(false);
             toast({ variant: "destructive", title: "Upload failed", description: error.message });

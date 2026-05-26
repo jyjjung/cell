@@ -276,7 +276,10 @@ function ImageUploadControls({
             const uid = currentUser?.uid || 'anonymous';
             const storagePath = `avatars/${uid}_${Date.now()}_cropped.jpg`;
             const storageRef = ref(storage, storagePath);
-            const uploadTask = uploadBytesResumable(storageRef, croppedImageBlob);
+            const uploadTask = uploadBytesResumable(storageRef, croppedImageBlob, {
+                contentType: croppedImageBlob.type || 'image/jpeg',
+                cacheControl: 'public, max-age=31536000'
+            });
 
             uploadTask.on('state_changed', 
                 (snapshot) => {

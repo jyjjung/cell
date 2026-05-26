@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ChevronLeft, ChevronRight, X, Search, Languages } from 'lucide-react';
@@ -25,6 +25,17 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [browsingBook, setBrowsingBook] = useState<string | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = 0;
+      }
+    }
+  }, [html, book, chapter]);
 
   useEffect(() => {
     if (targetPassage) {
@@ -176,7 +187,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
-            <ScrollArea className="h-full px-6 py-8 md:px-10">
+            <ScrollArea ref={scrollRef} className="h-full px-6 py-8 md:px-10">
               {error ? (
                 <div className="text-destructive text-center py-20 font-bold bg-destructive/10 rounded-2xl">
                   <p>{error}</p>
