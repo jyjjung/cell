@@ -53,6 +53,17 @@ function StatusBadge({ status }: { status: string }) {
 
 const changelogs = [
   {
+    version: "v1.3.0",
+    subtitle: "Liquid Glass & Admin Refresh",
+    date: "Late-May 2026",
+    changes: [
+      "Rolled out a consistent liquid-glass visual system across headers, cards, dialogs, forms, tabs, and table surfaces in light and dark mode",
+      "Unified page shell spacing, header rhythm, and mobile top-bar behavior to remove cross-page alignment drift",
+      "Refreshed admin area with compact Notion-style table density and standardized admin page layouts/navigation placement",
+      "Improved schedule and readings flows, including corrected pace-to-finish calculations and aligned bottom navigation icon centering",
+    ],
+  },
+  {
     version: "v1.2.1",
     date: "Mid-May 2026",
     changes: [
