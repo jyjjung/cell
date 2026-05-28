@@ -159,7 +159,7 @@ export default function AdminQTRosterPage() {
             </div>
             <div className="flex items-center gap-4">
                 {Object.keys(localChanges).length > 0 && (
-                    <Button onClick={handleBulkSave} disabled={isSavingAll} className="h-14 rounded-2xl px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-black whitespace-nowrap shadow-xl shadow-primary/20">
+                    <Button variant="primary" onClick={handleBulkSave} disabled={isSavingAll} className="h-14 rounded-2xl px-6 font-black whitespace-nowrap shadow-xl shadow-primary/20">
                         {isSavingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         Save ({Object.keys(localChanges).length} Drafts)
                     </Button>
