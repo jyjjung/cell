@@ -97,7 +97,6 @@ export default function AdminQTRosterPage() {
     if (datesWithChanges.length === 0) return;
     
     setIsSavingAll(true);
-    let errorCount = 0;
     
     try {
         const promises = datesWithChanges.map(async (date) => {
@@ -105,31 +104,20 @@ export default function AdminQTRosterPage() {
             const changes = localChanges[date] || {};
             const resolvedUserId = changes.userId !== undefined ? changes.userId : (existingEntry.userId || undefined);
 
-            const dataToSave: Omit<QTRosterEntry, 'id'> = {
-                date: date,
-                userId: resolvedUserId,
+            const dataToSave: Omit<QTRosterEntry, 'id'> & { userId?: string } = {
+                date,
                 personName: changes.personName !== undefined ? changes.personName : (existingEntry.personName || ''),
                 title: changes.title !== undefined ? changes.title : (existingEntry.title || ''),
                 passage: changes.passage !== undefined ? changes.passage : (existingEntry.passage || ''),
+                ...(resolvedUserId ? { userId: resolvedUserId } : {}),
             };
-
-            if (!dataToSave.personName) {
-                toast({ variant: "destructive", title: "Missing Person", description: `Please enter or select a person for ${format(new Date(date), "MMM d")}` });
-                errorCount++;
-                return Promise.resolve();
-            }
 
             return upsertEntry(dataToSave);
         });
 
         await Promise.all(promises);
-        
-        if (errorCount === 0) {
-            setLocalChanges({});
-            toast({ title: "Sync Successful", description: `All roster drafts committed.` });
-        } else {
-            toast({ variant: "destructive", title: "Partial Sync", description: `Some drafts failed to sync due to missing data.` });
-        }
+        setLocalChanges({});
+        toast({ title: "Sync Successful", description: `All roster drafts committed.` });
     } catch (error) {
         console.error("Failed to save roster entry", error);
         toast({ variant: "destructive", title: "Sync Failed", description: "Database rejected the transmission." });
@@ -174,7 +162,7 @@ export default function AdminQTRosterPage() {
                 {Object.keys(localChanges).length > 0 && (
                     <Button onClick={handleBulkSave} disabled={isSavingAll} className="h-14 rounded-2xl px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-black whitespace-nowrap shadow-xl shadow-primary/20">
                         {isSavingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Sync Hub ({Object.keys(localChanges).length} Drafts)
+                        Save ({Object.keys(localChanges).length} Drafts)
                     </Button>
                 )}
                 <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
