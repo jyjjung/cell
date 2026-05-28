@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import SunCalc from "suncalc";
 import { useTheme } from "next-themes";
 
 type LakePhase = "night" | "dawn" | "day" | "dusk";
@@ -11,22 +10,6 @@ function fallbackPhaseByHour(now: Date): LakePhase {
   if (h >= 5 && h < 8) return "dawn";
   if (h >= 8 && h < 18) return "day";
   if (h >= 18 && h < 20) return "dusk";
-  return "night";
-}
-
-function phaseFromSunTimes(now: Date, lat: number, lon: number): LakePhase {
-  const times = SunCalc.getTimes(now, lat, lon);
-  const dawn = times.dawn;
-  const sunriseEnd = times.sunriseEnd;
-  const goldenHour = times.goldenHour;
-  const dusk = times.dusk;
-
-  if (!dawn || !sunriseEnd || !goldenHour || !dusk) return fallbackPhaseByHour(now);
-
-  if (now < dawn) return "night";
-  if (now >= dawn && now < sunriseEnd) return "dawn";
-  if (now >= sunriseEnd && now < goldenHour) return "day";
-  if (now >= goldenHour && now < dusk) return "dusk";
   return "night";
 }
 
@@ -85,47 +68,17 @@ const PHASE_STYLE_DARK: Record<LakePhase, { filter: string; overlay: string; bas
 
 export default function DynamicLakeWallpaper() {
   const [phase, setPhase] = useState<LakePhase>(() => fallbackPhaseByHour(new Date()));
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    let mounted = true;
-    if (!("geolocation" in navigator)) return;
-
-    const onSuccess = (pos: GeolocationPosition) => {
-      if (!mounted) return;
-      setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-    };
-
-    const onError = () => {
-      // Keep fallback mode; no-op.
-    };
-
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-      enableHighAccuracy: false,
-      timeout: 5000,
-      maximumAge: 1000 * 60 * 30,
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
     const tick = () => {
-      const now = new Date();
-      if (coords) {
-        setPhase(phaseFromSunTimes(now, coords.lat, coords.lon));
-      } else {
-        setPhase(fallbackPhaseByHour(now));
-      }
+      setPhase(fallbackPhaseByHour(new Date()));
     };
 
     tick();
     const id = window.setInterval(tick, 1000 * 60 * 5);
     return () => window.clearInterval(id);
-  }, [coords]);
+  }, []);
 
   const phaseStyle = useMemo(
     () => (resolvedTheme === "dark" ? PHASE_STYLE_DARK[phase] : PHASE_STYLE_LIGHT[phase]),
