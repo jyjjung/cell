@@ -65,6 +65,17 @@ function formatTimelineDate(value: any) {
 
 const changelogs = [
   {
+    version: "v1.3.1",
+    subtitle: "UX Polish & Glass Tuning",
+    date: "Late-May 2026",
+    changes: [
+      "Added suggestion lifecycle timeline milestones (posted, response left, completed) to Feedback",
+      "Updated QT roster editor to allow blank fields and simplified the action label to Save",
+      "Removed top-edge highlight artifacts and body margin gap that caused thin white lines",
+      "Retuned global glass transparency/blur for stronger consistency across light and dark themes without white edge glow",
+    ],
+  },
+  {
     version: "v1.3.0",
     subtitle: "Liquid Glass & Admin Refresh",
     date: "Late-May 2026",
