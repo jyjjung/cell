@@ -49,6 +49,18 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function formatTimelineDate(value: any) {
+  if (!value?.toDate) return 'Not yet';
+  const d = value.toDate();
+  return d.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
@@ -170,9 +182,13 @@ export default function FeedbackPage() {
     }
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const handleUpdateStatus = async (item: any, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'suggestions', id), { status: newStatus });
+      const payload: Record<string, any> = { status: newStatus };
+      if (newStatus === 'completed' && !item.completedAt) {
+        payload.completedAt = serverTimestamp();
+      }
+      await updateDoc(doc(db, 'suggestions', item.id), payload);
       toast({ title: "Status Updated", description: "Feedback status has been updated." });
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Failed to update status." });
@@ -181,7 +197,10 @@ export default function FeedbackPage() {
 
   const handleSaveNote = async (id: string) => {
     try {
-      await updateDoc(doc(db, 'suggestions', id), { adminNote: adminNoteText });
+      await updateDoc(doc(db, 'suggestions', id), {
+        adminNote: adminNoteText,
+        respondedAt: adminNoteText.trim() ? serverTimestamp() : null,
+      });
       toast({ title: "Note Saved", description: "Admin response has been added." });
       setEditingNoteId(null);
     } catch {
@@ -268,13 +287,13 @@ export default function FeedbackPage() {
                                         <MessageSquare className="w-3.5 h-3.5 mr-2" />
                                         {item.adminNote ? 'Edit Note' : 'Add Note'}
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'pending')} className="text-xs font-bold rounded-lg cursor-pointer">
+                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'pending')} className="text-xs font-bold rounded-lg cursor-pointer">
                                         <Clock className="w-3.5 h-3.5 mr-2" /> Mark Pending
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'in-progress')} className="text-xs font-bold rounded-lg cursor-pointer text-foreground focus:text-foreground focus:bg-muted">
+                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'in-progress')} className="text-xs font-bold rounded-lg cursor-pointer text-foreground focus:text-foreground focus:bg-muted">
                                         <Loader2 className="w-3.5 h-3.5 mr-2" /> Mark In Progress
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'completed')} className="text-xs font-bold rounded-lg cursor-pointer text-success focus:text-success focus:bg-success/10">
+                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'completed')} className="text-xs font-bold rounded-lg cursor-pointer text-success focus:text-success focus:bg-success/10">
                                         <Check className="w-3.5 h-3.5 mr-2" /> Mark Completed
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -312,9 +331,23 @@ export default function FeedbackPage() {
                               </div>
                             )}
 
-                            {/* Meta line */}
-                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                              <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span>
+                            {/* Timeline */}
+                            <div className="rounded-xl border border-border/40 bg-muted/30 p-3">
+                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Timeline</p>
+                              <div className="space-y-1.5 text-xs text-muted-foreground">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Posted</span>
+                                  <span className="text-foreground/90">{formatTimelineDate(item.createdAt)}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Response left</span>
+                                  <span className="text-foreground/90">{formatTimelineDate(item.respondedAt)}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span>Completed</span>
+                                  <span className="text-foreground/90">{formatTimelineDate(item.completedAt)}</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </FeedCard>
