@@ -1,6 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
+import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 // Layout types removed: react-grid-layout is no longer used
 type Layouts = Record<string, any>;
 
@@ -158,6 +159,7 @@ export interface AvatarData extends Partial<EditableAvatarData> {
   seed?: string;
   initials?: string;
   imageUrl?: string;
+  cosmeticTier?: AvatarCosmeticTier;
 }
 
 export interface AppUser extends FirebaseUser {
@@ -173,6 +175,8 @@ export interface AppUser extends FirebaseUser {
   avatar?: AvatarData;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
+  clickMeCount?: number;
+  clickMeLastClaimAt?: Timestamp;
 }
 
 
@@ -193,6 +197,8 @@ export interface UserProfileData {
   avatar?: AvatarData;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
+  clickMeCount?: number;
+  clickMeLastClaimAt?: Timestamp;
 }
 
 

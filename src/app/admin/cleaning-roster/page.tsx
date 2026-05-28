@@ -25,7 +25,6 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
@@ -309,7 +308,7 @@ export default function AdminCleaningRosterPage() {
                                         <div className="flex flex-wrap gap-2 items-center">
                                             {assignedUsers.map(user => (
                                                 <Badge key={user.uid} variant="secondary" className="pl-1 pr-1 py-0.5 h-7 rounded-md gap-1 border-white/5 bg-muted">
-                                                    <div className="h-6 w-6 rounded-md overflow-hidden bg-muted border border-white/10 shrink-0">
+                                                    <div className="h-6 w-6 rounded-full bg-muted border border-white/10 shrink-0">
                                                         <PixelAvatar avatar={user.avatar} />
                                                     </div>
                                                     <span className="text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px]">
@@ -365,7 +364,6 @@ export default function AdminCleaningRosterPage() {
             </div>
         )}
       </section>
-      <AdminHubTabs />
     </div>
   );
 }

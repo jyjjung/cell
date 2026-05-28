@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminQTRosterPage() {
   const { roster, loading: rosterLoading, upsertEntry, deleteEntry } = useQTRoster();
@@ -372,7 +371,6 @@ export default function AdminQTRosterPage() {
             )}
         </DialogContent>
       </Dialog>
-      <AdminHubTabs />
     </div>
   );
 }

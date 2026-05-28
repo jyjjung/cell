@@ -18,7 +18,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
@@ -30,6 +30,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import { db } from '@/lib/firebase';
+import { doc, increment, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useUserAchievementStats } from '@/hooks/use-user-achievement-stats';
+import { getUnlockedAchievements } from '@/lib/achievements';
+import { getAvatarTierByUnlocked } from '@/lib/avatar-cosmetics';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
@@ -86,6 +93,12 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const { openBibleReader } = useGlobalBibleReader();
   const [selectedEvent, setSelectedEvent] = useState<DashboardListItem | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
+  const [isClaimingAchievementHelp, setIsClaimingAchievementHelp] = useState(false);
+  const [optimisticNextClaimAtMs, setOptimisticNextClaimAtMs] = useState<number | null>(null);
+  const { toast } = useToast();
+  const { createNotification } = useNotifications();
+  const { messageCount, feedbackCount, clickMeCount } = useUserAchievementStats(currentUser.uid, true);
+  const lastSyncedTierRef = useRef<string | null>(null);
 
   const isLoading = planLoading || eventsLoading || loadingChecklist;
 
@@ -315,6 +328,128 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return items.sort((a, b) => compareAsc(a.date, b.date));
   }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap, usersMap]);
 
+  const claimCooldownMs = 24 * 60 * 60 * 1000;
+  const serverNextClaimAtMs = useMemo(() => {
+    const baseMs = currentUser.clickMeLastClaimAt?.toMillis?.() || 0;
+    return baseMs > 0 ? baseMs + claimCooldownMs : 0;
+  }, [currentUser.clickMeLastClaimAt]);
+  const nextClaimAtMs = optimisticNextClaimAtMs && optimisticNextClaimAtMs > serverNextClaimAtMs
+    ? optimisticNextClaimAtMs
+    : serverNextClaimAtMs;
+  const nowMs = Date.now();
+  const canClaimAchievementHelp = nowMs >= nextClaimAtMs;
+  const remainingMs = Math.max(0, nextClaimAtMs - nowMs);
+  const cooldownLabel = useMemo(() => {
+    if (remainingMs <= 0) return 'Ready now';
+    const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+    const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+    return `${hours}h ${minutes}m`;
+  }, [remainingMs]);
+
+  const handleAchievementHelpClick = useCallback(async () => {
+    if (!canClaimAchievementHelp || isClaimingAchievementHelp) return;
+    setIsClaimingAchievementHelp(true);
+    try {
+      const currentStats = {
+        completedPassages: completedPassages.length,
+        messageCount,
+        feedbackCount,
+        clickMeCount: typeof clickMeCount === 'number' ? clickMeCount : (currentUser.clickMeCount || 0),
+      };
+      const previouslyUnlockedIds = new Set(getUnlockedAchievements(currentStats).map((achievement) => achievement.id));
+
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        clickMeCount: increment(1),
+        clickMeLastClaimAt: serverTimestamp(),
+      });
+
+      const nextStats = {
+        ...currentStats,
+        clickMeCount: (currentStats.clickMeCount || 0) + 1,
+      };
+      const newlyUnlocked = getUnlockedAchievements(nextStats).filter(
+        (achievement) => !previouslyUnlockedIds.has(achievement.id)
+      );
+
+      if (newlyUnlocked.length > 0) {
+        await Promise.all(
+          newlyUnlocked.map((achievement) =>
+            createNotification({
+              title: `Achievement Unlocked: ${achievement.title}`,
+              message: achievement.description,
+              type: 'admin',
+              isGlobal: false,
+              userId: currentUser.uid,
+              relatedUrl: '/profile',
+            })
+          )
+        );
+      }
+
+      setOptimisticNextClaimAtMs(Date.now() + claimCooldownMs);
+      toast({
+        title: newlyUnlocked.length > 0 ? 'Achievement Unlocked!' : 'Click Count +1',
+        description: newlyUnlocked.length > 0
+          ? `${newlyUnlocked[0].title} has been added to your achievements.`
+          : 'This counted toward Click Me achievements. Come back in 24 hours.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Could not claim right now',
+        description: 'Please try again in a moment.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClaimingAchievementHelp(false);
+    }
+  }, [
+    canClaimAchievementHelp,
+    isClaimingAchievementHelp,
+    currentUser.uid,
+    currentUser.clickMeCount,
+    completedPassages.length,
+    messageCount,
+    feedbackCount,
+    clickMeCount,
+    createNotification,
+    toast,
+  ]);
+
+  useEffect(() => {
+    if (
+      typeof messageCount !== 'number' ||
+      typeof feedbackCount !== 'number' ||
+      typeof clickMeCount !== 'number'
+    ) {
+      return;
+    }
+
+    const unlocked = getUnlockedAchievements({
+      completedPassages: completedPassages.length,
+      messageCount,
+      feedbackCount,
+      clickMeCount,
+    });
+    const targetTier = getAvatarTierByUnlocked(unlocked.length).id;
+    const currentTier = currentUser.avatar?.cosmeticTier || 'none';
+
+    if (targetTier === currentTier || targetTier === lastSyncedTierRef.current) return;
+    lastSyncedTierRef.current = targetTier;
+
+    updateDoc(doc(db, 'users', currentUser.uid), {
+      'avatar.cosmeticTier': targetTier,
+    }).catch(() => {
+      lastSyncedTierRef.current = null;
+    });
+  }, [
+    currentUser.uid,
+    currentUser.avatar?.cosmeticTier,
+    completedPassages.length,
+    messageCount,
+    feedbackCount,
+    clickMeCount,
+  ]);
+
   return (
     <div className="page-container max-w-4xl space-y-6 pb-32">
 
@@ -358,8 +493,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       {/* ── Bible Reading Hub ── */}
       <motion.section custom={1} variants={fadeUp} initial="hidden" animate="visible"
         className={cn(
-          "glass-elevated relative p-5 md:p-6 rounded-2xl overflow-hidden transition-all duration-500",
-          isTodayComplete && "bg-primary/5 border-primary/20"
+          "glass-card relative p-5 md:p-6 rounded-2xl overflow-hidden transition-all duration-500",
+          isTodayComplete && "border-primary/20"
         )}>
         <div className="relative">
           <div className="flex items-center justify-between mb-5">
@@ -609,6 +744,23 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           <Button className="w-full h-12 rounded-2xl font-bold text-sm mt-4" onClick={() => setSelectedEvent(null)}>Done</Button>
         </DialogContent>
       </Dialog>
+
+      <motion.div custom={6} variants={fadeUp} initial="hidden" animate="visible" className="pt-1">
+        <div className="rounded-xl border border-border/30 dark:border-border/15 bg-transparent px-3 py-2 text-center">
+          <Button
+            onClick={handleAchievementHelpClick}
+            disabled={!canClaimAchievementHelp || isClaimingAchievementHelp}
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-lg px-3 text-[11px] font-semibold text-zinc-700 dark:text-zinc-400 hover:bg-muted/40 dark:hover:bg-muted/20"
+          >
+            {isClaimingAchievementHelp ? 'Claiming...' : 'Click me!'}
+          </Button>
+          <p className="mt-0.5 text-[10px] text-zinc-600 dark:text-zinc-500">
+            Builds your Click Me achievement count. {canClaimAchievementHelp ? 'Available once every 24 hours.' : `Next claim in ${cooldownLabel}.`}
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -24,9 +24,13 @@ import { Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { motion } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-layout';
+import { formatAppDate, getAppLocale } from '@/lib/formatting';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import HiddenAchievements from '@/components/profile/hidden-achievements';
+import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 
 
 
@@ -50,8 +54,10 @@ export default function ProfilePage() {
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const { createNotification } = useNotifications();
+  const { completedPassages } = useUserBibleChecklist();
   
   const t = translations[preferredLanguage || 'en'];
+  const locale = getAppLocale(preferredLanguage);
 
   useEffect(() => {
     setIsMounted(true);
@@ -243,6 +249,22 @@ export default function ProfilePage() {
     }
   };
 
+  const handleHaloTierSelect = async (tier: AvatarCosmeticTier) => {
+    if (!currentUser) return;
+    try {
+      await updateUserProfile(currentUser.uid, {
+        avatar: {
+          ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
+          cosmeticTier: tier,
+        },
+      });
+      toast({ title: "Halo Updated", description: "Avatar halo selection saved." });
+    } catch (error) {
+      console.error("Failed to update halo tier:", error);
+      toast({ variant: "destructive", title: "Update failed", description: "Could not save halo selection." });
+    }
+  };
+
   const handleLanguageChange = async (lang: 'en' | 'ko') => {
     if (!currentUser) return;
     // Optimistic UI update
@@ -296,7 +318,7 @@ export default function ProfilePage() {
         className="glass-card flex items-center gap-6 p-6 rounded-3xl"
       >
         <div className="relative group shrink-0">
-          <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-border/40 bg-muted shadow-sm">
+          <div className="h-20 w-20 rounded-full border-2 border-border/40 bg-muted shadow-sm">
             <PixelAvatar avatar={currentUser.avatar} />
           </div>
           <Dialog open={isAvatarEditorOpen} onOpenChange={setIsAvatarEditorOpen}>
@@ -307,14 +329,14 @@ export default function ProfilePage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Customize Your Avatar</DialogTitle>
-                <DialogDescription>Make changes to your pixel art avatar. Click save when done.</DialogDescription>
+                <DialogTitle>{t.customizeAvatarTitle}</DialogTitle>
+                <DialogDescription>{t.customizeAvatarDesc}</DialogDescription>
               </DialogHeader>
               <div className="py-2"><AvatarEditor value={avatarInEditor} onChange={setAvatarInEditor} /></div>
               <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setIsAvatarEditorOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setIsAvatarEditorOpen(false)}>{t.cancel}</Button>
                 <Button onClick={handleAvatarSave} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} {t.save}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -323,8 +345,24 @@ export default function ProfilePage() {
         <div className="min-w-0">
           <p className="text-xl font-bold">{currentUser.displayName}</p>
           <p className="text-sm text-muted-foreground">{currentUser.email}</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Name changes require an admin.</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">{t.profileNameChangeAdminOnly}</p>
         </div>
+      </motion.div>
+
+      {/* Hidden Achievements */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="glass-card p-6 rounded-3xl"
+      >
+        <HiddenAchievements
+          userId={currentUser.uid}
+          completedPassages={completedPassages.length}
+          allowHaloSelection
+          selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
+          onHaloTierSelect={handleHaloTierSelect}
+          previewAvatar={currentUser.avatar}
+        />
       </motion.div>
 
       {/* Significant Dates Card */}
@@ -340,14 +378,14 @@ export default function ProfilePage() {
             <div>
               <p className="text-sm font-medium">{t.yourBirthday}</p>
               <p className="text-xs text-muted-foreground">
-                {birthdayEvent ? format(parseISO(birthdayEvent.date), 'MMMM d') : 'Not linked yet.'}
+                {birthdayEvent ? formatAppDate(parseISO(birthdayEvent.date), locale, { month: 'long', day: 'numeric' }) : t.profileBirthdayNotLinked}
               </p>
             </div>
           </div>
           {birthdayEvent && <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />}
         </div>
         {!birthdayEvent && (
-          <p className="text-xs text-muted-foreground/60 px-1">Ask an admin to link your birthday via the community schedule.</p>
+          <p className="text-xs text-muted-foreground/60 px-1">{t.profileBirthdayLinkHint}</p>
         )}
       </motion.div>
 
@@ -401,15 +439,15 @@ export default function ProfilePage() {
                   {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
                 </Button>
                 <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" className="w-full rounded-xl h-9 text-xs text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
-                  {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} Repair Push Notifications
+                  {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} {t.repairPushNotifications}
                 </Button>
             </div>
           )}
           {pushSupport === 'NEEDS_PWA_INSTALL' && (
             <Alert variant="default">
               <Download className="h-4 w-4" />
-              <AlertTitle>Enable Push Notifications on iOS</AlertTitle>
-              <AlertDescription>Add this app to your Home Screen to enable notifications.</AlertDescription>
+              <AlertTitle>{t.enablePushIosHintTitle}</AlertTitle>
+              <AlertDescription>{t.enablePushIosHintDesc}</AlertDescription>
             </Alert>
           )}
         </div>
@@ -419,7 +457,7 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card p-6 rounded-3xl border-destructive/20 bg-destructive/5 space-y-4"
+        className="glass-card p-6 rounded-3xl space-y-4"
       >
         <h2 className="text-base font-semibold">{t.account}</h2>
         <div className="flex items-center justify-between">

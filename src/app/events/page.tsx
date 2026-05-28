@@ -9,13 +9,12 @@ import { motion } from 'framer-motion';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useAuth } from '@/contexts/auth-context';
-import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
     <div className="space-y-2">
-      <p className="text-micro-label !opacity-100 text-muted-foreground/60 px-1 mb-3">{month}</p>
+      <p className="text-micro-label !opacity-100 text-zinc-700 dark:text-zinc-300 px-1 mb-3">{month}</p>
       {rows.map((row, i) => (
         <EventOccurrenceCard key={row.occurrenceKey} row={row} index={i} />
       ))}
@@ -84,7 +83,6 @@ export default function EventsPage() {
       <PageHeader
         title="Events"
       />
-      <ScheduleHubTabs />
 
       <Tabs defaultValue="upcoming" className="w-full">
         <TabsList className="h-10">

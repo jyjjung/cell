@@ -196,7 +196,7 @@ export default function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="glass-thin group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 text-left transition-all hover:border-ring/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60">
-                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted shadow-sm">
+                  <div className="h-8 w-8 shrink-0 rounded-full border border-border/50 bg-muted shadow-sm">
                     {currentUser ? <PixelAvatar avatar={currentUser.avatar} /> : <User className="h-full w-full p-2 text-muted-foreground" />}
                   </div>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">

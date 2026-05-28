@@ -9,7 +9,9 @@ import {
 import { cn } from '@/lib/utils';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { format } from 'date-fns';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
+import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import Link from 'next/link';
 
 interface RosterSummaryProps {
@@ -20,7 +22,10 @@ interface RosterSummaryProps {
 export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps) {
   const { rosters } = useWorshipRosters();
   const { allUsers } = useAllUsers();
+  const { currentUser } = useAuth();
   const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+  const locale = getAppLocale(currentUser?.preferredLanguage);
   
   const roster = useMemo(() => 
     rosters.find(r => r.id === rosterId), 
@@ -50,7 +55,7 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      return format(date, 'EEEE, MMM do');
+      return formatAppDate(date, locale, { weekday: 'long', month: 'short', day: 'numeric' });
     } catch {
       return dateStr;
     }
@@ -72,7 +77,7 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
                 <div className="flex h-5 w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40">
                     <ClipboardList className="h-3 w-3 text-primary" />
                 </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Service Roster</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t.serviceRoster}</span>
             </div>
             <h3 className="mb-1 truncate text-sm font-semibold leading-tight text-foreground">{roster.name}</h3>
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
@@ -87,8 +92,8 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
         <div className="flex flex-col gap-1.5 pt-1">
            <div className="overflow-hidden rounded-lg border border-border/50">
              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2 bg-muted/35 px-2.5 py-1.5">
-               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Role</p>
-               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Person</p>
+               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t.rosterRole}</p>
+               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t.rosterPerson}</p>
              </div>
              {assignedSlots.map((slot, i) => {
                const names = (slot.members || []).map((m) => {
@@ -99,7 +104,7 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
                  return rawName ? toFirstLastInitial(rawName) : '';
                });
                const uniqueNames = [...new Set(names.filter(Boolean))];
-               const displayNames = uniqueNames.join(', ');
+               const displayNames = uniqueNames.join(', ') || t.rosterUnassigned;
 
                return (
                  <div
@@ -120,15 +125,13 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
            </div>
            {assignedSlots.length === 0 && (
              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-center">
-               <p className="text-[11px] font-medium text-muted-foreground">No assigned roles</p>
+               <p className="text-[11px] font-medium text-muted-foreground">{t.rosterNoAssignedRoles}</p>
              </div>
            )}
         </div>
 
         <div className="mt-0.5 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
-            Tap to View Roster
-          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">{t.rosterTapToView}</span>
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>

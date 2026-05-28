@@ -16,13 +16,13 @@ export default function GlobalPageLoader() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.22 }}
           className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-background/80 backdrop-blur-xl px-8 text-center"
           aria-label="Loading page"
           role="status"
         >
           <div className="mb-12">
-            <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
+            <Loader2 className="spinner-standard h-12 w-12 animate-spin text-primary/40" />
           </div>
         </motion.div>
       )}

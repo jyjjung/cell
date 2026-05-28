@@ -23,6 +23,9 @@ import { useFCMToken } from '@/hooks/use-fcm-token';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
 import { CommandMenu } from './command-menu';
 import DynamicLakeWallpaper from './dynamic-lake-wallpaper';
+import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
+import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -42,6 +45,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const showReadingsTabs =
+    pathname.startsWith('/bible-checklist') ||
+    pathname.startsWith('/full-plan') ||
+    pathname.startsWith('/memorize') ||
+    pathname.startsWith('/leaderboard');
+  const showScheduleTabs =
+    pathname.startsWith('/events') ||
+    pathname.startsWith('/qt') ||
+    pathname.startsWith('/cleaning-roster');
+  const showAdminTabs = pathname.startsWith('/admin');
 
   useEffect(() => {
     setIsPageLoading(false);
@@ -237,6 +250,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Footer />
             </div>
             </div>
+            {showReadingsTabs && <ReadingsHubTabs />}
+            {showScheduleTabs && <ScheduleHubTabs />}
+            {showAdminTabs && <AdminHubTabs />}
             <PWAInstallPrompt />
         
         {/* User Gesture Notification Prompt */}

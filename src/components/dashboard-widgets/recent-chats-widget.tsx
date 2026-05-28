@@ -81,12 +81,12 @@ export default function RecentChatsWidget() {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="w-full flex items-center gap-4 p-3 rounded-2xl glass-thin hover:ring-blue-500/30 transition-all group overflow-hidden"
                                 >
-                                    <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden glass-thin">
+                                    <div className="h-10 w-10 shrink-0 rounded-full glass-thin">
                                         {avatar ? <PixelAvatar avatar={avatar} /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Users className="h-5 w-5 text-muted-foreground group-hover:text-white" /></div>}
                                     </div>
                                     <div className="flex-grow min-w-0 text-left overflow-hidden">
                                         <p className="font-bold text-sm truncate text-foreground group-hover:text-white">{name}</p>
-                                        <p className="text-xs text-muted-foreground truncate font-medium group-hover:text-white/80 block w-full">{chat.lastMessageText || 'No messages yet'}</p>
+                                        <p className="text-xs text-zinc-700 dark:text-zinc-300 truncate font-semibold group-hover:text-white/80 block w-full">{chat.lastMessageText || 'No messages yet'}</p>
                                     </div>
                                 </motion.button>
                             );

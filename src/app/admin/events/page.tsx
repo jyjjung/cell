@@ -18,7 +18,6 @@ import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminEventsPage() {
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();
@@ -265,7 +264,6 @@ export default function AdminEventsPage() {
         </section>
       )}
 
-      <AdminHubTabs />
 
     </div>
   );

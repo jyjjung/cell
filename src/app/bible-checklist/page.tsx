@@ -27,7 +27,6 @@ import { translations } from '@/lib/translations';
 import { FeedCard, PageHeader } from '@/components/ui/page-layout';
 import BiblePlanSkeleton from '@/components/bible/bible-plan-skeleton';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
-import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 
 
 type ViewState = 
@@ -304,11 +303,11 @@ export default function BibleChecklistPage() {
   const StatCard = ({ title, value, unit, description }: { title: string, value: string | number, unit?: string, description?: string }) => (
     <FeedCard className="rounded-2xl p-3">
       <div className="mb-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{title}</p>
       </div>
       <div>
-          <p className="text-xl font-bold leading-none tracking-tight">{value} {unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}</p>
-          {description && <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60">{description}</p>}
+          <p className="text-xl font-bold leading-none tracking-tight">{value} {unit && <span className="ml-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{unit}</span>}</p>
+          {description && <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{description}</p>}
       </div>
     </FeedCard>
   );
@@ -443,7 +442,7 @@ export default function BibleChecklistPage() {
                                   <Progress value={overallProgress.percentage} className="flex-grow h-2 bg-muted shadow-inner" />
                                   <span className="font-bold text-foreground text-xl tracking-tight">{Math.round(overallProgress.percentage)}%</span>
                               </div>
-                              <p className="text-xs font-medium text-muted-foreground">
+                              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                                 {isGuest 
                                     ? `The plan is ${Math.round(overallProgress.percentage)}% complete as of today.`
                                     : `${overallProgress.completed} of ${overallProgress.total} passages completed.`
@@ -452,7 +451,7 @@ export default function BibleChecklistPage() {
                           </div>
                           {!isGuest && paceStats.chaptersLeft > 0 && (
                             <div className="pt-4 border-t border-border/40">
-                              <p className="text-xs font-medium text-muted-foreground">{paceStats.passagesLeft} passages remaining.</p>
+                              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{paceStats.passagesLeft} passages remaining.</p>
                             </div>
                           )}
                       </FeedCard>
@@ -529,7 +528,6 @@ export default function BibleChecklistPage() {
               </div>
         )}
 
-        <ReadingsHubTabs />
     </div>
     {!isGuest && (
       <MarkRangeReadDialog isOpen={isMarkRangeDialogOpen} onOpenChange={setIsMarkRangeDialogOpen} />

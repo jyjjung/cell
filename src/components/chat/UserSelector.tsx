@@ -71,7 +71,7 @@ export default function UserSelector({
         <RadioGroupItem value={user.uid} id={`user-selector-${user.uid}`} className="h-5 w-5" />
       )}
       <Label htmlFor={`user-selector-${user.uid}`} className="flex flex-1 items-center gap-3 cursor-pointer">
-        <div className="h-8 w-8 rounded-full overflow-hidden bg-muted flex-shrink-0">
+        <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0">
           <PixelAvatar avatar={user.avatar} />
         </div>
         <div className="min-w-0">
