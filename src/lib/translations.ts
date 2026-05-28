@@ -152,6 +152,20 @@ export const translations = {
     testPush: "Send Test Notification",
     significantDates: "Significant Dates",
     yourBirthday: "Your Birthday",
+    profileNameChangeAdminOnly: "Name changes require an admin.",
+    profileBirthdayNotLinked: "Not linked yet.",
+    profileBirthdayLinkHint: "Ask an admin to link your birthday via the community schedule.",
+    repairPushNotifications: "Repair Push Notifications",
+    enablePushIosHintTitle: "Enable Push Notifications on iOS",
+    enablePushIosHintDesc: "Add this app to your Home Screen to enable notifications.",
+
+    // Chat - Roster summary
+    serviceRoster: "Service Roster",
+    rosterRole: "Role",
+    rosterPerson: "Person",
+    rosterUnassigned: "Unassigned",
+    rosterNoAssignedRoles: "No assigned roles",
+    rosterTapToView: "Tap to View Roster",
 
     // Auth
     welcomeBack: "Welcome Back",
@@ -325,6 +339,20 @@ export const translations = {
     testPush: "테스트 알림 보내기",
     significantDates: "중요한 날짜",
     yourBirthday: "나의 생일",
+    profileNameChangeAdminOnly: "이름 변경은 관리자에게 요청해주세요.",
+    profileBirthdayNotLinked: "아직 연결되지 않았습니다.",
+    profileBirthdayLinkHint: "공동체 일정에서 생일을 연결하려면 관리자에게 요청해 주세요.",
+    repairPushNotifications: "푸시 알림 복구",
+    enablePushIosHintTitle: "iOS에서 푸시 알림 활성화",
+    enablePushIosHintDesc: "알림을 사용하려면 이 앱을 홈 화면에 추가하세요.",
+
+    // Chat - Roster summary
+    serviceRoster: "예배 로스터",
+    rosterRole: "역할",
+    rosterPerson: "담당자",
+    rosterUnassigned: "미배정",
+    rosterNoAssignedRoles: "배정된 역할이 없습니다",
+    rosterTapToView: "탭하여 로스터 보기",
 
     // Auth
     welcomeBack: "환영합니다",

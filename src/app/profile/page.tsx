@@ -293,7 +293,7 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center gap-6 p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm"
+        className="glass-card flex items-center gap-6 p-6 rounded-3xl"
       >
         <div className="relative group shrink-0">
           <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-border/40 bg-muted shadow-sm">
@@ -331,10 +331,10 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
+        className="glass-card p-6 rounded-3xl space-y-4"
       >
         <h2 className="text-base font-semibold">{t.significantDates}</h2>
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
+        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
           <div className="flex items-center gap-3">
             <Cake className="h-4 w-4 text-primary" />
             <div>
@@ -355,12 +355,12 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
+        className="glass-card p-6 rounded-3xl space-y-4"
       >
         <h2 className="text-base font-semibold">{t.settings}</h2>
 
         {/* Language */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
+        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
           <div className="flex items-center gap-3">
             <Languages className="h-4 w-4 text-primary" />
             <div>
@@ -378,7 +378,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Community Progress Toggle */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
+        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
           <div className="flex-1 min-w-0 pr-4">
             <p className="text-sm font-medium">{t.communityProgressTitle}</p>
             <p className="text-xs text-muted-foreground">{t.communityProgress}</p>
@@ -387,7 +387,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Push Notifications */}
-        <div className="p-4 rounded-2xl bg-muted border border-border/30 space-y-4">
+        <div className="glass-thin p-4 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-4">
               <p className="text-sm font-medium">{t.pushNotifications}</p>
@@ -419,7 +419,7 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="p-6 rounded-3xl border border-destructive/20 bg-destructive/5 space-y-4"
+        className="glass-card p-6 rounded-3xl border-destructive/20 bg-destructive/5 space-y-4"
       >
         <h2 className="text-base font-semibold">{t.account}</h2>
         <div className="flex items-center justify-between">

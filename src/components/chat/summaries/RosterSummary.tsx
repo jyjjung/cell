@@ -4,13 +4,11 @@ import React, { useMemo } from 'react';
 import { 
   ClipboardList, 
   ChevronRight,
-  Users,
-  ShieldCheck
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -22,6 +20,7 @@ interface RosterSummaryProps {
 export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps) {
   const { rosters } = useWorshipRosters();
   const { allUsers } = useAllUsers();
+  const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
   
   const roster = useMemo(() => 
     rosters.find(r => r.id === rosterId), 
@@ -36,6 +35,16 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
 
   const slots = roster.slots || [];
   const totalPositions = slots.reduce((acc, slot) => acc + (slot.members?.length || 0), 0);
+  const assignedSlots = slots.filter((slot) => (slot.members || []).length > 0);
+
+  const toFirstLastInitial = (rawName: string) => {
+    const parts = rawName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return rawName;
+    if (parts.length === 1) return parts[0];
+    const first = parts[0];
+    const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
+    return `${first} ${lastInitial}.`;
+  };
 
   const formatDateText = (dateStr: string) => {
     try {
@@ -52,69 +61,75 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
   return (
     <Link href={`/worship?tab=rosters&id=${rosterId}`} className="block transition-transform active:scale-95">
       <div className={cn(
-        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
+        "group flex w-full max-w-full flex-col gap-2.5 rounded-2xl border p-3 shadow-sm transition-all duration-200",
         isSender 
           ? "border-primary/30 bg-primary/5 text-foreground" 
           : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
-                    <ClipboardList className="w-3.5 h-3.5 text-primary" />
+            <div className="mb-1 flex items-center gap-2">
+                <div className="flex h-5 w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40">
+                    <ClipboardList className="h-3 w-3 text-primary" />
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Service Roster</span>
             </div>
-            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{roster.name}</h3>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
+            <h3 className="mb-1 truncate text-sm font-semibold leading-tight text-foreground">{roster.name}</h3>
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
-             <Users className="h-4 w-4 text-muted-foreground" />
+          <div className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/40">
+             <Users className="h-3.5 w-3.5 text-muted-foreground" />
              <span className="text-[10px] font-semibold text-foreground">{totalPositions}</span>
           </div>
         </div>
 
         {/* Roles */}
-        <div className="flex flex-col gap-2 pt-2">
-           {slots.filter(s => s.members.length > 0).map((slot, i) => {
-             const m = slot.members[0];
-             const user = m?.userId ? allUsers.find(u => u.uid === m.userId) : null;
-             const name = m?.displayName || user?.firstName || 'TBD';
+        <div className="flex flex-col gap-1.5 pt-1">
+           <div className="overflow-hidden rounded-lg border border-border/50">
+             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2 bg-muted/35 px-2.5 py-1.5">
+               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Role</p>
+               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Person</p>
+             </div>
+             {assignedSlots.map((slot, i) => {
+               const names = (slot.members || []).map((m) => {
+                 const user = m?.userId ? usersMap.get(m.userId) : null;
+                 const rawName =
+                   m?.displayName ||
+                   [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+                 return rawName ? toFirstLastInitial(rawName) : '';
+               });
+               const uniqueNames = [...new Set(names.filter(Boolean))];
+               const displayNames = uniqueNames.join(', ');
 
-             return (
-               <div key={i} className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="h-6 w-6 shrink-0 border border-border/60">
-                      {user?.photoURL && <AvatarImage src={user.photoURL} alt={name} />}
-                      <AvatarFallback className="bg-muted text-[8px] font-semibold uppercase text-foreground">
-                        {name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-foreground">{name}</p>
-                      <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{slot.role}</p>
-                    </div>
-                  </div>
-                  {user && (
-                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
-                      <ShieldCheck className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                  )}
-               </div>
-             );
-           })}
-           {slots.filter(s => s.members.length > 0).length === 0 && (
-             <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-8 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">No filled positions</p>
+               return (
+                 <div
+                   key={i}
+                   className={cn(
+                     "grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2 px-2.5 py-1.5 transition-colors",
+                     i !== 0 && "border-t border-border/40",
+                     "bg-muted/20 group-hover:bg-muted/35"
+                   )}
+                 >
+                   <p className="truncate text-[11px] font-semibold text-foreground">{slot.role}</p>
+                   <p className="truncate text-[11px] font-medium text-foreground/90">
+                     {displayNames}
+                   </p>
+                 </div>
+               );
+             })}
+           </div>
+           {assignedSlots.length === 0 && (
+             <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-center">
+               <p className="text-[11px] font-medium text-muted-foreground">No assigned roles</p>
              </div>
            )}
         </div>
 
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
+        <div className="mt-0.5 flex items-center justify-between">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             Tap to View Roster
           </span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </Link>
