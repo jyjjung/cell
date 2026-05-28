@@ -159,12 +159,12 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: -6 }}
                     transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="glass-elevated absolute right-0 top-full z-50 mt-2 w-[min(380px,calc(100vw-16px))] overflow-hidden rounded-2xl max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-16 max-sm:mt-0 max-sm:w-auto"
+                    className="absolute right-0 top-full z-50 mt-2 w-[min(380px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-16 max-sm:mt-0 max-sm:w-auto"
                     role="dialog"
                     aria-label="Alerts panel"
                   >
                     {/* Panel Tabs */}
-                    <div className="flex items-center p-1.5 border-b border-border/30 gap-1 bg-background/20">
+                    <div className="flex items-center p-1.5 border-b border-border gap-1 bg-card">
                       <button onClick={() => setActiveTab('announcements')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'announcements' ? "glass-card text-foreground" : "text-muted-foreground hover:bg-background/35")}>
                         <Megaphone className={cn("h-3.5 w-3.5", activeTab === 'announcements' && "text-orange-500")} /> Announcements
                         {unreadAnnouncements.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'announcements' ? "bg-orange-500 text-white" : "bg-muted-foreground/20 text-foreground")}>{unreadAnnouncements.length}</span>}
@@ -177,7 +177,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
 
                     {/* Specific Sub-header */}
                     {activeTab === 'announcements' && unreadAnnouncements.length > 0 && (
-                      <div className="flex justify-end px-4 py-1.5 border-b border-border/20 bg-muted/5">
+                      <div className="flex justify-end px-4 py-1.5 border-b border-border bg-muted">
                         <button
                           onClick={() => markAllAsRead(unreadAnnouncements.map(n => n.id))}
                           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors uppercase tracking-widest"
@@ -188,7 +188,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                       </div>
                     )}
                     {activeTab === 'notifications' && unreadGeneralNotifications.length > 0 && (
-                      <div className="flex justify-end px-4 py-1.5 border-b border-border/20 bg-muted/5">
+                      <div className="flex justify-end px-4 py-1.5 border-b border-border bg-muted">
                         <button
                           onClick={() => markAllAsRead(unreadGeneralNotifications.map(n => n.id))}
                           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors uppercase tracking-widest"
@@ -325,7 +325,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-border/30 px-3 py-2 bg-muted/5">
+                    <div className="border-t border-border px-3 py-2 bg-muted">
                       <button
                         onClick={() => { setPanelOpen(false); router.push(activeTab === 'announcements' ? "/announcements" : "/notifications"); }}
                         className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
