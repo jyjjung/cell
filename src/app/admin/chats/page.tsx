@@ -18,7 +18,6 @@ import { Loader2, Trash2, Shield, Users, MessageCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminChatsPage() {
   const { chats, loading: loadingChats } = useChats();
@@ -159,7 +158,6 @@ export default function AdminChatsPage() {
           </div>
         )}
       </section>
-      <AdminHubTabs />
     </div>
   );
 }

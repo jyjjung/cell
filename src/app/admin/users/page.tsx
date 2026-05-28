@@ -46,7 +46,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -264,7 +263,7 @@ export default function AdminUsersPage() {
       )}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border border-white/10 shrink-0">
+            <div className="h-10 w-10 rounded-full bg-muted border border-white/10 shrink-0">
               <PixelAvatar avatar={user.avatar} />
             </div>
             <div className="min-w-0 flex-1">
@@ -413,7 +412,7 @@ export default function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="py-2">
                           <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted border border-white/10 shrink-0">
+                              <div className="h-8 w-8 rounded-full bg-muted border border-white/10 shrink-0">
                                   <PixelAvatar avatar={user.avatar} />
                               </div>
                               <div className="min-w-0 flex items-center gap-2">
@@ -484,7 +483,6 @@ export default function AdminUsersPage() {
           </>
         )}
       </section>
-      <AdminHubTabs />
 
       {/* Edit User Dialog */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>

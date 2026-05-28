@@ -89,7 +89,7 @@ export default function MembersPage() {
 
       {/* Search */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-700 dark:text-zinc-300" />
         <Input
           placeholder={t.searchMembers}
           value={searchTerm}
@@ -117,7 +117,7 @@ export default function MembersPage() {
                     transition={{ duration: 0.28, delay: Math.min(i * 0.03, 0.3), ease: [0.22, 1, 0.36, 1] }}
                     className="flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm group-hover:bg-card group-hover:shadow-md group-hover:border-border/70 transition-all cursor-pointer"
                   >
-                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                    <div className="h-14 w-14 rounded-full bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
                       <PixelAvatar avatar={user.avatar} />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -132,7 +132,7 @@ export default function MembersPage() {
                         {userRoles.length > 0 ? userRoles.map(name => (
                           <Badge key={name} variant="secondary" className="h-5 px-2 text-[10px] font-semibold rounded-lg">{name}</Badge>
                         )) : (
-                          <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium rounded-lg opacity-40">Member</Badge>
+                          <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium rounded-lg text-zinc-900 dark:text-zinc-100">Member</Badge>
                         )}
                       </div>
                     </div>

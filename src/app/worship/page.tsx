@@ -1413,9 +1413,9 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{r.name}</p>
+                      <p className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">{r.name}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-xs text-muted-foreground/60 font-medium">
+                        <span className="text-xs text-zinc-800 dark:text-zinc-200 font-semibold">
                           {filled}/{r.slots.length} roles filled
                         </span>
                         {linked && (

@@ -79,19 +79,19 @@ export function RosterCard({
               users.slice(0, 3).map((user, idx) => (
                 <div
                   key={user.uid}
-                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shadow-sm group-hover:scale-105 transition-transform duration-500 relative"
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted/30 border border-border/60 shadow-sm group-hover:scale-105 transition-transform duration-500 relative"
                   style={{ zIndex: 10 - idx }}
                 >
                   <PixelAvatar avatar={user.avatar} />
                 </div>
               ))
             ) : (
-              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shrink-0 shadow-sm flex items-center justify-center">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted/30 border border-border/60 shrink-0 shadow-sm flex items-center justify-center">
                 <User className="h-5 w-5 text-muted-foreground/40" />
               </div>
             )}
             {users.length > 3 && (
-              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-muted border border-border/60 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted border border-border/60 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
                 +{users.length - 3}
               </div>
             )}
@@ -128,7 +128,7 @@ export function RosterCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                    <div className="h-8 w-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
                       {completedBy.avatar ? <PixelAvatar avatar={completedBy.avatar} /> : <Check className="h-4 w-4 text-green-500" />}
                     </div>
                   </TooltipTrigger>

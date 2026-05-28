@@ -11,7 +11,6 @@ import { LinkifiedText } from '@/components/ui/linkified-text';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
-import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 
 export default function QTRosterPage() {
     const { roster, loading: rosterLoading } = useQTRoster();
@@ -84,7 +83,6 @@ export default function QTRosterPage() {
             <PageHeader 
                 title="QT Roster" 
             />
-            <ScheduleHubTabs />
             
             {(rosterLoading || usersLoading) ? (
                  <div className="flex flex-col items-center justify-center py-32 gap-4">

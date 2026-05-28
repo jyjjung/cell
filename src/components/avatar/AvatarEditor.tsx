@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Dog, Zap, Layout, Type, Eraser, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { RefreshCw, User, Dog, Type, Eraser, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -415,7 +415,7 @@ export function AvatarEditor({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
       <div className="md:col-span-1 flex flex-col items-center justify-center space-y-4 md:space-y-6 p-6 md:p-8 bg-muted/20 rounded-[2rem] md:rounded-[2.5rem] border border-border/50">
-        <div className="w-32 h-32 md:w-48 md:h-48 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 border-background shadow-2xl shadow-primary/10">
+        <div className="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-background shadow-2xl shadow-primary/10">
             <PixelAvatar avatar={value} className="w-full h-full" />
         </div>
         <div className="text-center space-y-1">
@@ -428,13 +428,10 @@ export function AvatarEditor({
         <BackgroundSelector currentData={value} onDataChange={onChange} />
         
         <Tabs value={currentMode} onValueChange={(val) => onChange({ ...value, mode: val as AvatarMode })} className="w-full">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-7 h-12 md:h-14 p-1 bg-muted/20 rounded-2xl gap-1">
+            <TabsList className="grid grid-cols-4 lg:grid-cols-4 h-12 md:h-14 p-1 bg-muted/20 rounded-2xl gap-1">
                 <TabsTrigger value="custom" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><User className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="animal" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Dog className="h-4 w-4" /></TabsTrigger>
-                <TabsTrigger value="robot" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Zap className="h-4 w-4" /></TabsTrigger>
-                <TabsTrigger value="landscape" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Layout className="h-4 w-4" /></TabsTrigger>
                 <TabsTrigger value="initials" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><Type className="h-4 w-4" /></TabsTrigger>
-                <TabsTrigger value="pixel-art" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Px</TabsTrigger>
                 <TabsTrigger value="image" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ImageIcon className="h-4 w-4" /></TabsTrigger>
             </TabsList>
 
@@ -445,17 +442,8 @@ export function AvatarEditor({
                 <TabsContent value="animal">
                     <GenerativeControls mode="animal" currentData={value} onDataChange={onChange} />
                 </TabsContent>
-                <TabsContent value="robot">
-                    <GenerativeControls mode="robot" currentData={value} onDataChange={onChange} />
-                </TabsContent>
-                <TabsContent value="landscape">
-                    <GenerativeControls mode="landscape" currentData={value} onDataChange={onChange} />
-                </TabsContent>
                 <TabsContent value="initials">
                     <InitialsControls currentData={value} onDataChange={onChange} />
-                </TabsContent>
-                <TabsContent value="pixel-art">
-                    <GenerativeControls mode="pixel-art" currentData={value} onDataChange={onChange} />
                 </TabsContent>
                 <TabsContent value="image">
                     <ImageUploadControls currentData={value} onDataChange={onChange} />

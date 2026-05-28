@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
-import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
+import HiddenAchievements from '@/components/profile/hidden-achievements';
 
 interface UserProgressDisplay {
   userId: string;
@@ -75,7 +75,6 @@ export default function LeaderboardPage() {
       <PageHeader 
         title={t.communityProgressTitle} 
       />
-      <ReadingsHubTabs />
 
 
 
@@ -106,7 +105,7 @@ export default function LeaderboardPage() {
                     </div>
 
                     {/* Avatar */}
-                    <div className="h-10 w-10 rounded-xl overflow-hidden bg-muted border border-border/30 shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-muted border border-border/30 shrink-0">
                       <PixelAvatar avatar={item.avatar} />
                     </div>
 
@@ -126,10 +125,10 @@ export default function LeaderboardPage() {
                     </div>
                   </motion.div>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl shadow-2xl">
+                <DialogContent className="w-[92vw] sm:max-w-md max-h-[82vh] overflow-y-auto rounded-3xl p-6 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl shadow-2xl">
                     <div className="flex flex-col items-center text-center space-y-4">
                         <div className="relative">
-                            <div className="w-24 h-24 rounded-[2rem] overflow-hidden bg-muted border-4 border-background shadow-xl">
+                            <div className="w-24 h-24 rounded-full bg-muted border-4 border-background shadow-xl">
                                 <PixelAvatar avatar={item.avatar} />
                             </div>
                             {rank && (
@@ -157,25 +156,11 @@ export default function LeaderboardPage() {
                             </div>
                         </div>
 
-                        <div className="w-full text-left space-y-3 mt-6">
-                            <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest">Earned Badges</h3>
-                            <div className="flex gap-2 flex-wrap">
-                                {item.progressPercentage >= 100 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/50 text-primary text-xs font-bold">
-                                        <Trophy className="w-3.5 h-3.5" /> 100% Master
-                                    </div>
-                                ) : item.completedCount > 50 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-primary dark:text-primary text-xs font-bold">
-                                        <Award className="w-3.5 h-3.5" /> Dedicated Reader
-                                    </div>
-                                ) : item.completedCount > 0 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-primary dark:text-primary text-xs font-bold">
-                                        <Medal className="w-3.5 h-3.5" /> Journey Begun
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic">No badges earned yet.</p>
-                                )}
-                            </div>
+                        <div className="w-full text-left mt-6">
+                          <HiddenAchievements
+                            userId={item.userId}
+                            completedPassages={item.completedCount}
+                          />
                         </div>
                     </div>
                 </DialogContent>

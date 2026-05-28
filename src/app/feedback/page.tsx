@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, FeedCard } from '@/components/ui/page-layout';
+import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
 
 /* ── Animation variants ─────────────────────────────────── */
 
@@ -32,38 +33,39 @@ const fadeUp = {
 
 /* ── Status helpers ──────────────────────────────────────── */
 
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; label: string; classes: string }> = {
-  completed: { icon: Check,   label: 'Completed',   classes: 'bg-success/10 text-success' },
-  'in-progress': { icon: Loader2, label: 'In Progress', classes: 'bg-muted text-primary' },
-  pending:  { icon: Clock,   label: 'Pending',     classes: 'bg-muted text-muted-foreground' },
+const STATUS_CONFIG: Record<string, { icon: React.ElementType; classes: string }> = {
+  completed: { icon: Check, classes: 'bg-success/10 text-success' },
+  'in-progress': { icon: Loader2, classes: 'bg-muted text-primary' },
+  pending: { icon: Clock, classes: 'bg-muted text-muted-foreground' },
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${cfg.classes}`}>
-      <Icon className={`w-3 h-3 ${status === 'in-progress' ? 'animate-spin' : ''}`} />
-      {cfg.label}
+      <Icon className={`spinner-standard w-3 h-3 ${status === 'in-progress' ? 'animate-spin' : ''}`} />
+      {getStatusLabel(status, locale)}
     </span>
   );
-}
-
-function formatTimelineDate(value: any) {
-  if (!value?.toDate) return 'Not yet';
-  const d = value.toDate();
-  return d.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
 }
 
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.3",
+    subtitle: "Achievements, Halo Cosmetics & UI Polish",
+    date: "Late-May 2026",
+    changes: [
+      "Added hidden achievements across Bible reading, chat, feedback, and dashboard activity with unlock notifications",
+      "Introduced tiered avatar halo cosmetics (12 styles) equippable from your own profile settings, visible on avatars app-wide",
+      "Added a subtle daily “Click me!” dashboard button that counts toward dedicated achievements",
+      "Improved light-mode text contrast and unified glass styling across pages; profile pictures are now consistently round",
+      "Community progress and member profiles show unlocked achievements only; cosmetics picker and locked list stay on your profile",
+      "Expanded Bible/feedback/click achievement tiers and streamlined chat milestones to fewer, meaningful steps",
+    ],
+  },
   {
     version: "v1.3.2",
     subtitle: "Profile & Chat Roster Refinements",
@@ -163,6 +165,7 @@ const changelogs = [
 
 export default function FeedbackPage() {
   const { currentUser, isAdmin } = useAuth();
+  const locale = getAppLocale(currentUser?.preferredLanguage);
   const { toast } = useToast();
   const [suggestion, setSuggestion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -297,7 +300,7 @@ export default function FeedbackPage() {
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <button className="transition-opacity hover:opacity-80">
-                                        <StatusBadge status={item.status} />
+                                        <StatusBadge status={item.status} locale={locale} />
                                       </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-44 rounded-xl p-1">
@@ -320,7 +323,7 @@ export default function FeedbackPage() {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 ) : (
-                                  <StatusBadge status={item.status} />
+                                  <StatusBadge status={item.status} locale={locale} />
                                 )}
                               </div>
                             </div>
@@ -358,15 +361,15 @@ export default function FeedbackPage() {
                               <div className="space-y-1.5 text-xs text-muted-foreground">
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Posted</span>
-                                  <span className="text-foreground/90">{formatTimelineDate(item.createdAt)}</span>
+                                  <span className="text-foreground/90">{formatAppDateTime(item.createdAt?.toDate?.() ?? null, locale)}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Response left</span>
-                                  <span className="text-foreground/90">{formatTimelineDate(item.respondedAt)}</span>
+                                  <span className="text-foreground/90">{formatAppDateTime(item.respondedAt?.toDate?.() ?? null, locale)}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Completed</span>
-                                  <span className="text-foreground/90">{formatTimelineDate(item.completedAt)}</span>
+                                  <span className="text-foreground/90">{formatAppDateTime(item.completedAt?.toDate?.() ?? null, locale)}</span>
                                 </div>
                               </div>
                             </div>

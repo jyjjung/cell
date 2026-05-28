@@ -9,7 +9,6 @@ import { BookMarked, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { EmptyState, PageHeader } from '@/components/ui/page-layout';
-import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 
 export default function MemorizePage() {
   const { memoryVerses, loading } = useMemoryVerses();
@@ -24,7 +23,6 @@ export default function MemorizePage() {
   return (
     <div className="page-container space-y-8 pb-32">
       <PageHeader title="Memory Verses" />
-      <ReadingsHubTabs />
 
       {memoryVerses.length === 0 ? (
         <EmptyState

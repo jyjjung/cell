@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
-import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 
 import { RosterCard } from '@/components/ui/roster-card';
 
@@ -89,7 +88,6 @@ export default function FullBiblePlanPage() {
           </Button>
         }
       />
-      <ReadingsHubTabs />
 
       {planLoading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">

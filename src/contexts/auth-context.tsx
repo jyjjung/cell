@@ -95,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isYouth: profileData.isYouth || false,
               avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
               fcmTokens: profileData.fcmTokens || [],
+              clickMeCount: profileData.clickMeCount || 0,
+              clickMeLastClaimAt: profileData.clickMeLastClaimAt,
             } as AppUser);
             setIsAdmin(profileData.isAdmin || false);
           }

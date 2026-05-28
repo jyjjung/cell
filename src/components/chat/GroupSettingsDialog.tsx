@@ -120,7 +120,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                  {currentMembers.map(member => (
                    <div key={member.uid} className="flex items-center justify-between p-1 rounded-md hover:bg-muted">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full overflow-hidden bg-muted">
+                        <div className="h-8 w-8 rounded-full bg-muted">
                            <PixelAvatar avatar={member.avatar} />
                         </div>
                         <span>{member.firstName} {member.lastName}</span>

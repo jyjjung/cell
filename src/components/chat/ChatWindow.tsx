@@ -216,7 +216,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         </Link>
 
         <div className="flex flex-col items-center gap-1 min-w-0">
-          <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-border shadow-sm">
+          <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm">
             <PixelAvatar avatar={chatDetails.avatar} />
           </div>
           <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>

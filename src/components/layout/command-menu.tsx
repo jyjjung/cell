@@ -180,7 +180,7 @@ export function CommandMenu({ open: controlledOpen, onOpenChange: controlledOnOp
               >
                 {/* Avatar */}
                 <div className="relative h-10 w-10 shrink-0">
-                    <div className="h-full w-full rounded-xl overflow-hidden border border-border/40 bg-primary/5 flex items-center justify-center">
+                    <div className="h-full w-full rounded-full border border-border/40 bg-primary/5 flex items-center justify-center">
                     {chat.avatarData ? (
                         <PixelAvatar avatar={chat.avatarData} className="!w-full !h-full [&>svg]:!w-full [&>svg]:!h-full" />
                     ) : chat.isGroup ? (

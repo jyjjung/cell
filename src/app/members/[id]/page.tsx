@@ -26,6 +26,7 @@ import {
 import { format, parseISO, isValid, startOfDay, isBefore, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import HiddenAchievements from '@/components/profile/hidden-achievements';
 
 export default function MemberProfilePage() {
   const params = useParams();
@@ -100,7 +101,7 @@ export default function MemberProfilePage() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <p className="text-muted-foreground">User not found.</p>
+        <p className="text-zinc-900 dark:text-zinc-100">User not found.</p>
         <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
       </div>
     );
@@ -119,7 +120,7 @@ export default function MemberProfilePage() {
           variant="ghost" 
           size="sm" 
           onClick={() => router.back()}
-          className="rounded-xl gap-1.5 text-muted-foreground hover:text-foreground"
+          className="rounded-xl gap-1.5 text-zinc-800 dark:text-zinc-200 hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
           {t.back || 'Back'}
@@ -133,10 +134,10 @@ export default function MemberProfilePage() {
         className="flex flex-col items-center text-center space-y-6"
       >
         <div className="relative group">
-          <div className="h-32 w-32 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-muted relative z-10">
+          <div className="h-32 w-32 rounded-full border-4 border-card shadow-2xl bg-muted relative z-10">
             <PixelAvatar avatar={user.avatar} />
           </div>
-          <div className="absolute -inset-4 bg-primary/10 rounded-[3rem] blur-2xl -z-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl -z-0 opacity-50 group-hover:opacity-100 transition-opacity" />
         </div>
 
         <div className="space-y-2">
@@ -167,7 +168,7 @@ export default function MemberProfilePage() {
             <div className="space-y-2">
               <div className="flex justify-between items-end">
                 <span className="text-2xl font-black">{checklist?.completedPassages.length || 0}</span>
-                <span className="text-xs font-bold text-muted-foreground mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
               </div>
               <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
               <p className="text-[11px] font-bold text-primary">{progressPercentage}% {t.complete || 'Complete'}</p>
@@ -189,7 +190,7 @@ export default function MemberProfilePage() {
           </div>
           <div className="pt-1">
             <p className="text-2xl font-black">{userBirthday || t.notAvailable || 'Not Available'}</p>
-            <p className="text-xs font-bold text-muted-foreground mt-1">{t.celebrationDate || 'Annual Celebration'}</p>
+            <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-1">{t.celebrationDate || 'Annual Celebration'}</p>
           </div>
         </motion.div>
       </div>
@@ -230,6 +231,20 @@ export default function MemberProfilePage() {
         </div>
       </motion.div>
 
+      {/* Hidden Achievements */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm"
+      >
+        <HiddenAchievements
+          userId={user.uid}
+          completedPassages={checklist?.completedPassages.length || 0}
+          lockedLimit={6}
+        />
+      </motion.div>
+
       {/* Extra Info */}
       {user.showInCommunityProgress !== false && checklist?.updatedAt && (
         <motion.div
@@ -241,7 +256,7 @@ export default function MemberProfilePage() {
           <div className="p-4 rounded-2xl bg-muted border border-border/20 flex items-center gap-3">
             <Trophy className="h-4 w-4 text-primary" />
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Last Reading</p>
+              <p className="text-[10px] uppercase font-black text-zinc-800 dark:text-zinc-200 tracking-widest">Last Reading</p>
               <p className="text-xs font-bold truncate">
                 {format(checklist.updatedAt.toDate(), 'MMM d, h:mm a')}
               </p>

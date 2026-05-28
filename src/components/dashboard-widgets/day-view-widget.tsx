@@ -69,11 +69,11 @@ const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void 
                     </span>
                   )}
                 </div>
-                <p className="text-micro-label !opacity-100 text-muted-foreground/60 group-hover:text-white/80 !tracking-widest">{getLabel()}</p>
+                <p className="text-micro-label !opacity-100 text-zinc-700 dark:text-zinc-300 group-hover:text-white/80 !tracking-widest">{getLabel()}</p>
             </div>
             <div className="text-right shrink-0">
                 <p className="text-[10px] font-black uppercase text-foreground leading-none group-hover:text-white">{format(item.date, "MMM d")}</p>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1 tracking-tighter group-hover:text-white/70">{format(item.date, "EEEE")}</p>
+                <p className="text-[9px] font-bold text-zinc-700 dark:text-zinc-300 uppercase mt-1 tracking-tighter group-hover:text-white/70">{format(item.date, "EEEE")}</p>
             </div>
         </button>
     )

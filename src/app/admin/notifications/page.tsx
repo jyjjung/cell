@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminNotificationsPage() {
   const { notifications, loading, deleteNotification } = useNotifications();
@@ -154,7 +153,6 @@ export default function AdminNotificationsPage() {
             </div>
         )}
       </section>
-      <AdminHubTabs />
     </div>
   );
 }

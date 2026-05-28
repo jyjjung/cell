@@ -71,9 +71,9 @@ export default function EventOccurrenceCard({
           </div>
           <p className="text-sm font-bold tracking-tight text-foreground">{event.title}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-medium text-muted-foreground/60">{format(eventDate, "EEEE, MMMM do, yyyy")}</p>
+            <p className="text-[10px] font-medium text-zinc-700 dark:text-zinc-300">{format(eventDate, "EEEE, MMMM do, yyyy")}</p>
             {!isRecurring && rangeEnd && format(rangeStart, "yyyy-MM-dd") !== format(rangeEnd, "yyyy-MM-dd") && (
-              <span className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground/30">
+              <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-700/80 dark:text-zinc-300/80">
                 ({format(rangeStart, "MMM d")} - {format(rangeEnd, "MMM d, yyyy")})
               </span>
             )}
@@ -86,9 +86,9 @@ export default function EventOccurrenceCard({
                 </span>
               </div>
             )}
-            {event.allDay && <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/20">All Day</span>}
+            {event.allDay && <span className="text-[9px] font-black uppercase tracking-widest text-zinc-700/80 dark:text-zinc-300/80">All Day</span>}
             {event.location && (
-              <div className="flex items-center gap-1 text-[9px] font-bold text-muted-foreground/40">
+              <div className="flex items-center gap-1 text-[9px] font-bold text-zinc-700/85 dark:text-zinc-300/85">
                 <MapPin className="h-2.5 w-2.5" />
                 <span>{event.location}</span>
               </div>

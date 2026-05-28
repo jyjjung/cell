@@ -223,7 +223,7 @@ export default function ChatList() {
                       {/* Avatar Section */}
                       <div className="relative h-12 w-12 shrink-0">
                         <div className={cn(
-                          "h-full w-full rounded-xl overflow-hidden border transition-all duration-300",
+                          "h-full w-full rounded-full border transition-all duration-300",
                           isActive ? "border-primary-foreground/30" : "border-border/40 bg-muted/20"
                         )}>
                           {details.avatarData ? (
@@ -265,8 +265,8 @@ export default function ChatList() {
                             {details.name}
                           </p>
                           {chat.lastMessageSentAt && (
-                            <span className={cn(
-                              "text-[10px] whitespace-nowrap opacity-50 font-medium",
+                          <span className={cn(
+                              "text-[10px] whitespace-nowrap font-semibold",
                               isActive ? "text-primary-foreground" : "text-muted-foreground"
                             )}>
                               {formatDistanceToNow(chat.lastMessageSentAt.toDate(), { addSuffix: true })}
@@ -276,7 +276,7 @@ export default function ChatList() {
                         <p className={cn(
                           "text-xs truncate leading-relaxed",
                           isActive ? "text-primary-foreground/70" : "text-muted-foreground",
-                          isUnread && !isActive ? "font-bold text-foreground opacity-100" : "font-medium opacity-50"
+                          isUnread && !isActive ? "font-bold text-foreground opacity-100" : "font-semibold text-zinc-700 dark:text-zinc-300 opacity-90"
                         )}>
                           {chat.lastMessageText ? (
                             <>

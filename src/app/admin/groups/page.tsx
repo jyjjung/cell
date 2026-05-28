@@ -19,7 +19,6 @@ import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PageHeader } from '@/components/ui/page-layout';
 import { ShieldCheck } from 'lucide-react';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters."),
@@ -252,7 +251,6 @@ export default function AdminRolesPage() {
           </div>
         )}
       </section>
-      <AdminHubTabs />
     </div>
   );
 }

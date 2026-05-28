@@ -15,7 +15,6 @@ import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
-import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
@@ -78,7 +77,6 @@ export default function CleaningRosterPage() {
             <PageHeader 
                 title={t.cleaningRosterTitle} 
             />
-            <ScheduleHubTabs />
             
             {(rosterLoading || daysLoading || usersLoading) ? (
                  <div className="flex flex-col items-center justify-center py-32 gap-4">

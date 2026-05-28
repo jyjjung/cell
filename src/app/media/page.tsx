@@ -221,19 +221,19 @@ export default function LinksPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-semibold leading-tight group-hover:text-primary transition-colors">
+                    <p className="truncate text-sm font-semibold leading-tight text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors">
                       {link.title}
                     </p>
                     {link.description && (
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/70">
+                      <p className="mt-1 line-clamp-2 text-xs text-zinc-700 dark:text-zinc-300">
                         {link.description}
                       </p>
                     )}
-                    <p className="mt-1 truncate text-[10px] text-muted-foreground/50">
+                    <p className="mt-1 truncate text-[10px] text-zinc-700 dark:text-zinc-300">
                       {hostname(link.url)}
                     </p>
                   </div>
-                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-700 dark:text-zinc-300 group-hover:text-primary transition-colors" />
                 </a>
 
                 {/* Admin actions */}

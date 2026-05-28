@@ -26,7 +26,6 @@ import { useAllUsers } from "@/hooks/use-all-users";
 import { useQTRoster } from "@/hooks/useQTRoster";
 import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
-import AdminHubTabs from "@/components/admin/admin-hub-tabs";
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState("");
@@ -153,7 +152,6 @@ export default function AdminHubPage() {
   return (
     <div className="admin-page max-w-4xl">
       <PageHeader title="Admin" description="Manage community operations from one place." />
-      <AdminHubTabs />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">Quick actions</h2>

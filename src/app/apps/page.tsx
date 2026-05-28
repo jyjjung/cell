@@ -227,7 +227,7 @@ function AppTile({ app, onClick }: { app: AppItem; onClick: () => void }) {
         <p className="text-xs sm:text-[13px] font-semibold text-foreground leading-tight truncate">
           {app.name}
         </p>
-        <p className="text-[10px] text-muted-foreground/70 font-medium leading-tight line-clamp-1 hidden sm:block">
+        <p className="text-[10px] text-zinc-700 dark:text-zinc-300 font-medium leading-tight line-clamp-1 hidden sm:block">
           {app.description}
         </p>
       </div>
@@ -271,7 +271,7 @@ export default function AppsPage() {
             return (
               <motion.div key={section.title} variants={fadeUp} className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">
+                  <span className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-700 dark:text-zinc-300">
                     {section.title}
                   </span>
                   <div className="flex-1 h-px bg-border/40" />
