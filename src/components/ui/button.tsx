@@ -11,6 +11,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "glass-elevated text-foreground hover:text-foreground active:scale-[0.98]",
+        primary:
+          "border border-primary/20 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]",
         destructive:
           "glass-elevated bg-destructive/80 text-destructive-foreground hover:bg-destructive/90 active:scale-[0.98]",
         outline:

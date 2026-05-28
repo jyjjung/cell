@@ -139,7 +139,7 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
             {onCancel && (
                 <Button type="button" variant="ghost" onClick={onCancel} className="h-12 px-6 rounded-xl">Cancel</Button>
             )}
-            <Button type="submit" className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold text-xs uppercase tracking-widest transition-all" disabled={isLoading}>
+            <Button type="submit" variant="primary" className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest transition-all" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                 {submitButtonText}
             </Button>

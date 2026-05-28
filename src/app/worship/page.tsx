@@ -1521,7 +1521,7 @@ export default function WorshipPortalPage() {
           action={
             <Button
               size="sm"
-              className="rounded-xl h-9 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+              className="h-9 rounded-xl gap-1.5 px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
               onClick={() => {
                 if (tab === 'rosters') setOpenNewRosterSignal((n) => n + 1);
                 if (tab === 'playlists') setOpenNewSetlistSignal((n) => n + 1);

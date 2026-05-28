@@ -54,6 +54,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.4",
+    subtitle: "Header Button Contrast",
+    date: "Late-May 2026",
+    changes: [
+      "Fixed unreadable header action labels on Worship Portal and Links by matching the standard glass header button style",
+      "Added a solid primary button variant for form submit actions where high-contrast fills are needed",
+    ],
+  },
+  {
     version: "v1.3.3",
     subtitle: "Achievements, Halo Cosmetics & UI Polish",
     date: "Late-May 2026",
@@ -271,7 +280,7 @@ export default function FeedbackPage() {
                       onChange={(e) => setSuggestion(e.target.value)}
                     />
                     <div className="flex justify-end">
-                      <Button type="submit" disabled={!suggestion.trim() || isSubmitting} className="h-9 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
+                      <Button type="submit" variant="primary" disabled={!suggestion.trim() || isSubmitting} className="h-9 rounded-xl">
                         {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                         Submit Suggestion
                       </Button>
@@ -350,7 +359,7 @@ export default function FeedbackPage() {
                                 />
                                 <div className="flex justify-end gap-2">
                                   <Button size="sm" variant="ghost" className="h-8 rounded-lg" onClick={() => setEditingNoteId(null)}>Cancel</Button>
-                                  <Button size="sm" className="h-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => handleSaveNote(item.id)}>Save Note</Button>
+                                  <Button size="sm" variant="primary" className="h-8 rounded-lg" onClick={() => handleSaveNote(item.id)}>Save Note</Button>
                                 </div>
                               </div>
                             )}

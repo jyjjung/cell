@@ -122,7 +122,7 @@ function AddEditLinkDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+            <Button variant="primary" className="flex-1 rounded-xl"
               onClick={handleSave} disabled={!title.trim() || !url.trim() || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {existing ? 'Save' : 'Add Link'}
@@ -177,7 +177,7 @@ export default function LinksPage() {
           action={
             isAdmin ? (
               <Button
-                className="rounded-xl h-10 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                className="h-9 rounded-xl gap-1.5 px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
                 onClick={() => setAddOpen(true)}
               >
                 <Plus className="h-4 w-4" /> Add Link
