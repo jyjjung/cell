@@ -65,6 +65,16 @@ function formatTimelineDate(value: any) {
 
 const changelogs = [
   {
+    version: "v1.3.2",
+    subtitle: "Profile & Chat Roster Refinements",
+    date: "Late-May 2026",
+    changes: [
+      "Refreshed profile settings surfaces to use shared glass-card and glass-thin styling for visual consistency",
+      "Reworked worship roster chat summary into a compact table layout and improved name formatting readability",
+      "Added/updated translation dictionary entries for new profile and roster summary copy in English and Korean",
+    ],
+  },
+  {
     version: "v1.3.1",
     subtitle: "UX Polish & Glass Tuning",
     date: "Late-May 2026",
