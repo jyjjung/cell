@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Shield, LogOut, User,
-  LogIn, UserPlus, MessageCircle, ChevronDown, ChevronRight,
+  LogIn, UserPlus, MessageCircle, ChevronDown,
   CalendarCheck, Music, Library, Lightbulb
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,22 +29,20 @@ import { PixelAvatar } from '../avatar/PixelAvatar';
 
 import { useChats } from '@/hooks/useChats';
 import { translations } from '@/lib/translations';
-import { getMillis, isChatUnread } from '@/lib/notification-utils';
+import { isChatUnread } from '@/lib/notification-utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '../ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
 
 type NavItem = {
-  href?: string;
+  href: string;
   label: string;
   icon?: React.ElementType;
   badge?: number;
   requiresAuth?: boolean;
   requiresGuest?: boolean;
-  children?: { href: string; label: string; badge?: number; requiresAuth?: boolean; requiresGuest?: boolean }[];
 };
 
 export default function AppSidebar() {
@@ -53,7 +51,6 @@ export default function AppSidebar() {
   const { currentUser, isAdmin, isWorshipTeam, signOutUser, loadingAuth } = useAuth();
   const { setOpenMobile } = useSidebar();
   const [isMounted, setIsMounted] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
   const { setIsPageLoading } = usePageLoading();
 
   const { chats } = useChats();
@@ -79,55 +76,24 @@ export default function AppSidebar() {
 
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
-  };
-
-  // Auto-open group that contains active route
-  useEffect(() => {
-    navItems.forEach(item => {
-      if (item.children?.some(c => pathname.startsWith(c.href))) {
-        setOpenGroups(prev => prev.includes(item.label) ? prev : [...prev, item.label]);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
   const navItems: NavItem[] = [
     { href: '/', label: t.home, icon: Home },
-
-    {
-      label: t.scripture, icon: BookOpen,
-      children: [
-        { href: '/bible-checklist', label: t.readingPlan },
-        { href: '/full-plan', label: t.fullPlan },
-        { href: '/memorize', label: t.memoryVerses },
-        { href: '/leaderboard', label: t.communityProgress, requiresAuth: true },
-      ]
-    },
+    { href: '/bible-checklist', label: 'Readings', icon: BookOpen },
     { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
-    {
-      label: t.datesAndRosters, icon: CalendarCheck,
-      children: [
-        { href: '/events', label: t.events },
-        { href: '/rsvp', label: 'RSVP', requiresAuth: true },
-        { href: '/qt', label: t.qtRoster },
-        { href: '/cleaning-roster', label: t.cleaningRoster },
-      ]
-    },
+    { href: '/events', label: 'Schedule', icon: CalendarCheck },
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
     { href: '/media', label: 'Resources', icon: Library },
     { href: '/members', label: t.members, icon: Users },
-    { href: '/feedback', label: 'Updates & Feedback', icon: Lightbulb },
+    { href: '/feedback', label: 'Feedback & Updates', icon: Lightbulb },
   ];
 
   const isVisible = (item: { requiresAuth?: boolean; requiresGuest?: boolean }) =>
     (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/30 bg-background/80 backdrop-blur-2xl">
+    <Sidebar collapsible="icon" className="glass-nav border-r border-border/40">
       {/* Logo */}
-      <SidebarHeader className="px-5 py-6 border-b border-border/10">
+      <SidebarHeader className="px-2.5 py-2.5 border-b border-border/20">
         <Link href="/" onClick={() => navigate('/')}
           className="flex items-center group-data-[collapsible=icon]:justify-center transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
@@ -137,119 +103,41 @@ export default function AppSidebar() {
       </SidebarHeader>
 
       {/* Navigation */}
-      <SidebarContent className="px-3 py-4 gap-1">
+      <SidebarContent className="px-1.5 py-1.5 gap-1">
         {!isMounted || loadingAuth ? (
-          <div className="space-y-1.5 px-1">
+            <div className="space-y-2 px-1">
             {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}
           </div>
         ) : (
-          <SidebarMenu className="gap-0.5">
+          <SidebarMenu className="gap-0.5 p-1">
             {navItems.map(item => {
-              if (!item.children) {
-                // Simple link
-                if (!isVisible(item as any)) return null;
-                const active = isActive(item.href!);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={item.label}
-                      onClick={() => navigate(item.href!)}
-                      className={cn(
-                        "h-10 rounded-xl px-3 text-sm font-medium transition-all gap-3",
-                        active ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
-                      )}
-                    >
-                      <Link href={item.href!}>
-                        {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                    {typeof item.badge === 'number' && item.badge > 0 && (
-                      <SidebarMenuBadge className="bg-primary text-primary-foreground text-[10px] font-bold">
-                        {item.badge}
-                      </SidebarMenuBadge>
-                    )}
-                  </SidebarMenuItem>
-                );
-              }
-
-              // Group with children
-              const isOpen = openGroups.includes(item.label);
-              const hasActiveChild = item.children.some(c => isActive(c.href));
-              const visibleChildren = item.children.filter(isVisible);
-              if (visibleChildren.length === 0) return null;
+              if (!isVisible(item as any)) return null;
+              const active = isActive(item.href);
 
               return (
-                <SidebarMenuItem key={item.label}>
-                  {/* Icon-only collapsed fallback — visible only when sidebar is icon-only */}
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    isActive={hasActiveChild}
+                    asChild
+                    isActive={active}
                     tooltip={item.label}
-                    onClick={() => navigate(visibleChildren[0].href)}
+                    onClick={() => navigate(item.href)}
                     className={cn(
-                      "h-10 rounded-xl px-3 text-sm font-medium transition-all gap-3 hidden group-data-[collapsible=icon]:flex",
-                      hasActiveChild ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
+                      "h-8.5 rounded-lg px-2.5 text-[13px] font-medium transition-all gap-2.5 focus-visible:ring-1 focus-visible:ring-primary/60",
+                      active
+                        ? "glass-elevated text-foreground"
+                        : "text-foreground/75 hover:bg-background/35 hover:text-foreground"
                     )}
                   >
-                    {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
+                    <Link href={item.href}>
+                      {item.icon && <item.icon className="h-[15px] w-[15px] shrink-0" />}
+                      <span>{item.label}</span>
+                    </Link>
                   </SidebarMenuButton>
-
-                  {/* Expanded group header — hidden in icon-only mode */}
-                  <button
-                    onClick={() => toggleGroup(item.label)}
-                    className={cn(
-                      "w-full flex items-center gap-3 h-10 px-3 rounded-xl text-sm font-medium transition-all group-data-[collapsible=icon]:hidden",
-                      hasActiveChild ? "text-primary" : "text-foreground/70 hover:text-foreground hover:bg-muted/60"
-                    )}
-                  >
-                    {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {typeof item.badge === 'number' && item.badge > 0 && (
-                      <span className="text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none">{item.badge}</span>
-                    )}
-                    <motion.div animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.2 }}>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    </motion.div>
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="overflow-hidden"
-                      >
-                        <div className="pl-7 pr-1 py-1 space-y-0.5">
-                          {visibleChildren.map(child => {
-                            const childActive = isActive(child.href);
-                            return (
-                              <button
-                                key={child.href + child.label}
-                                onClick={() => navigate(child.href)}
-                                className={cn(
-                                  "w-full text-left px-3 py-2 rounded-lg text-sm transition-all",
-                                  childActive
-                                    ? "bg-primary/10 text-primary font-semibold"
-                                    : "text-foreground/60 hover:text-foreground hover:bg-muted/50 font-medium"
-                                )}
-                              >
-                                <span className="flex-1 truncate">{child.label}</span>
-                                {typeof child.badge === 'number' && child.badge > 0 && (
-                                  <span className="text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full leading-none shrink-0 ml-2">
-                                    {child.badge}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {typeof item.badge === 'number' && item.badge > 0 && (
+                    <SidebarMenuBadge className="h-5 min-w-5 rounded-md bg-primary text-primary-foreground text-[10px] font-semibold">
+                      {item.badge}
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               );
             })}
@@ -257,7 +145,7 @@ export default function AppSidebar() {
             {/* Admin button */}
             {isMounted && !loadingAuth && isAdmin && (
               <>
-                <SidebarSeparator className="my-2 opacity-30" />
+                <SidebarSeparator className="my-1.5 opacity-30" />
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -265,14 +153,14 @@ export default function AppSidebar() {
                     tooltip="Admin"
                     onClick={() => navigate('/admin')}
                     className={cn(
-                      "h-10 rounded-xl px-3 text-sm font-medium gap-3 transition-all",
+                      "h-8.5 rounded-lg px-2.5 text-[13px] font-medium gap-2.5 transition-all focus-visible:ring-1 focus-visible:ring-primary/60",
                       pathname.startsWith('/admin')
-                        ? "bg-primary text-primary-foreground"
+                        ? "glass-elevated text-foreground"
                         : "text-primary/80 hover:bg-primary/10 hover:text-primary"
                     )}
                   >
                     <Link href="/admin">
-                      <Shield className="h-4 w-4 shrink-0" />
+                      <Shield className="h-[15px] w-[15px] shrink-0" />
                       <span>Admin</span>
                     </Link>
                   </SidebarMenuButton>
@@ -282,12 +170,12 @@ export default function AppSidebar() {
 
             {/* Guest sign-in prompt */}
             {isMounted && !loadingAuth && !currentUser && (
-              <div className="mt-4 space-y-1.5 group-data-[collapsible=icon]:hidden">
-                <SidebarSeparator className="opacity-30 mb-3" />
-                <Button asChild variant="default" className="w-full h-10 rounded-xl text-sm font-semibold" onClick={() => navigate('/login')}>
+              <div className="mt-3 space-y-1 group-data-[collapsible=icon]:hidden">
+                <SidebarSeparator className="mb-2 opacity-30" />
+                <Button asChild variant="default" className="h-8.5 w-full rounded-lg text-[13px] font-semibold" onClick={() => navigate('/login')}>
                   <Link href="/login"><LogIn className="mr-2 h-4 w-4" />{t.signIn}</Link>
                 </Button>
-                <Button asChild variant="ghost" className="w-full h-10 rounded-xl text-sm font-medium text-muted-foreground" onClick={() => navigate('/signup')}>
+                <Button asChild variant="ghost" className="h-8.5 w-full rounded-lg text-[13px] font-medium text-muted-foreground" onClick={() => navigate('/signup')}>
                   <Link href="/signup"><UserPlus className="mr-2 h-4 w-4" />{t.register}</Link>
                 </Button>
               </div>
@@ -297,7 +185,7 @@ export default function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="p-3 border-t border-border/30">
+      <SidebarFooter className="border-t border-border/30 p-2">
         <div className="flex items-center gap-2">
           {!isMounted || loadingAuth ? (
             <div className="flex items-center gap-3 flex-1">
@@ -307,18 +195,18 @@ export default function AppSidebar() {
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 h-12 px-2 rounded-xl hover:bg-muted/50 transition-all flex-1 min-w-0 text-left group">
-                  <div className="h-9 w-9 shrink-0 rounded-xl overflow-hidden bg-muted border border-border/50 shadow-sm">
+                <button className="glass-thin group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 text-left transition-all hover:border-ring/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted shadow-sm">
                     {currentUser ? <PixelAvatar avatar={currentUser.avatar} /> : <User className="h-full w-full p-2 text-muted-foreground" />}
                   </div>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-semibold truncate leading-tight">{currentUser?.firstName || 'Guest'}</p>
-                    {currentUser && <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>}
+                    <p className="truncate text-[13px] font-semibold leading-tight">{currentUser?.firstName || 'Guest'}</p>
+                    {currentUser && <p className="truncate text-[11px] text-muted-foreground">{currentUser.email}</p>}
                   </div>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 group-data-[collapsible=icon]:hidden" />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-data-[collapsible=icon]:hidden" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-2 border-border/50 shadow-2xl mb-1">
+              <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-2 mb-1">
                 {currentUser ? (
                   <>
                     <DropdownMenuItem className="rounded-xl h-10 font-medium text-sm gap-2" onSelect={() => navigate('/profile')}>

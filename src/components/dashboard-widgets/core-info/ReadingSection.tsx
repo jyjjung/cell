@@ -44,7 +44,7 @@ export const ReadingSection = React.memo(({ title, reading, completedPassages, t
             <motion.p 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.3 }}
-                className="text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 border border-dashed border-border/50 rounded-[2rem]"
+                className="glass-thin text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 border-dashed border-border/50 rounded-[2rem]"
             >
                 {t[emptyMsg]}
             </motion.p>
@@ -55,7 +55,7 @@ export const ReadingSection = React.memo(({ title, reading, completedPassages, t
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="flex items-center gap-5 p-6 rounded-[2rem] bg-muted/20 border border-transparent hover:border-primary/20 hover:bg-muted/30 transition-all group/passage"
+                className="flex items-center gap-5 p-6 rounded-[2rem] glass-thin hover:ring-primary/30 transition-all group/passage"
               >
                 <Checkbox 
                     checked={reading.date 

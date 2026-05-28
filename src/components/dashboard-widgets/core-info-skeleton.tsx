@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function CoreInfoSkeleton() {
   return (
-    <div className="w-full bg-card/10 backdrop-blur-3xl border border-white/5 p-8 md:p-12 rounded-[3.5rem] space-y-24">
+    <div className="glass-card w-full p-8 md:p-12 rounded-[3.5rem] space-y-24">
       {/* Header */}
       <div className="space-y-6">
         <div className="space-y-3">

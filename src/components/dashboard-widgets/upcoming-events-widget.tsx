@@ -57,13 +57,13 @@ const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void 
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-transparent hover:bg-primary transition-all group text-left"
+            className="w-full flex items-center gap-4 p-4 rounded-2xl glass-thin hover:ring-primary/30 transition-all group text-left"
         >
             <div className="flex-grow min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
                    {!item.allDay && item.startTime && (
-                    <span className="text-micro-label !opacity-100 px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground group-hover:bg-white/20 group-hover:text-white shrink-0 !tracking-tight">
+                    <span className="text-micro-label !opacity-100 px-1.5 py-0.5 rounded-md glass-thin text-muted-foreground group-hover:text-white shrink-0 !tracking-tight">
                       {item.startTime}
                     </span>
                   )}
@@ -168,14 +168,11 @@ export default function UpcomingEventsWidget() {
 
     return (
         <>
-            <div className="relative p-6 md:p-8 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
+            <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
                 <div className="flex items-center justify-between mb-6">
                     <div className="min-w-0">
                         <h3 className="text-base font-bold tracking-tight">Timeline</h3>
                         <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Community Schedule</p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner">
-                        <Calendar className="h-5 w-5" />
                     </div>
                 </div>
 
@@ -211,7 +208,7 @@ export default function UpcomingEventsWidget() {
                     <Button 
                         variant="outline" 
                         size="sm"
-                        className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest bg-background/50 border-border/50 hover:bg-primary hover:text-white transition-all shadow-none group" 
+                        className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest transition-all shadow-none group"
                         onClick={handleGoToEvents}
                     >
                         Schedule View
@@ -273,12 +270,12 @@ export default function UpcomingEventsWidget() {
                         {selectedItem?.type === 'qt' && (
                             <div className="space-y-4">
                                 {selectedItem.qtTitle && (
-                                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                                    <div className="glass-thin p-4 rounded-2xl">
                                         <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Message Title</h4>
                                         <p className="font-bold text-lg leading-tight">{selectedItem.qtTitle}</p>
                                     </div>
                                 )}
-                                <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                                <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
                                     <div>
                                         <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-1">Passage</h4>
                                         <p className="font-mono text-sm font-bold">{selectedItem.passage}</p>
@@ -290,7 +287,7 @@ export default function UpcomingEventsWidget() {
 
                         {selectedItem?.type === 'cleaning' && (
                             <div className="space-y-4">
-                                <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                                <div className="glass-thin p-4 rounded-2xl">
                                     <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Day Type</h4>
                                     <p className="font-bold text-lg leading-tight">{selectedItem.dayName || 'Standard Cleaning'}</p>
                                 </div>

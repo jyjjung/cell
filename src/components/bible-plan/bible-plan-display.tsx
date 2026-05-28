@@ -114,7 +114,7 @@ export default function BiblePlanDisplay({
   
   if (loading) {
     return (
-      <Card className="bg-card/80 rounded-md shadow-sm">
+      <Card className="rounded-[2rem]">
         <CardHeader className="p-3">
            <div className="h-4 bg-muted rounded w-3/4 animate-pulse mb-1"></div>
            <div className="h-3 bg-muted rounded w-1/2 animate-pulse"></div>
@@ -130,7 +130,7 @@ export default function BiblePlanDisplay({
   
   if (!planAvailable && displayTitle?.includes("Today")) { 
      return (
-      <div className="p-8 bg-card/40 backdrop-blur-xl border border-border/50 rounded-[2.5rem] shadow-xl text-center">
+      <div className="glass-elevated p-8 rounded-[2.5rem] text-center">
         <Info className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
         <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">No Bible reading plan has been set by the admin yet.</p>
       </div>
@@ -139,7 +139,7 @@ export default function BiblePlanDisplay({
 
   if (!readingToDisplay) {
     return (
-      <div className="p-6 bg-card/40 backdrop-blur-xl border border-border/50 rounded-[2rem] shadow-md flex items-center justify-between">
+      <div className="glass-card p-6 rounded-[2rem] flex items-center justify-between">
          <div className="flex items-center space-x-4">
             <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center">
                 <CalendarX className="h-5 w-5 text-muted-foreground" />
@@ -172,7 +172,7 @@ export default function BiblePlanDisplay({
                 return (
                   <li
                     key={passageIdPart}
-                    className="flex items-center space-x-3 p-2 rounded-md min-w-0 transition-colors bg-background/30"
+                    className="glass-thin flex items-center space-x-3 p-2 rounded-xl min-w-0 transition-colors"
                   >
                     {showIndividualCheckboxes && (
                       <Checkbox
@@ -252,13 +252,13 @@ export default function BiblePlanDisplay({
   );
 
   const CardWrapper = ({ children }: {children: React.ReactNode}) => (
-    <div 
-        className={cn(
-            "relative hover:shadow-xl transition-all duration-300 rounded-[2rem] border overflow-hidden backdrop-blur-xl", 
-            isAllPassagesForThisReadingComplete ? "bg-success/5 border-success/30 shadow-success/10" :
-            isCurrentDay ? "bg-primary/5 border-primary/30 shadow-primary/10" :
-            isOverdueDay ? "bg-destructive/5 border-destructive/30 shadow-destructive/10" : "bg-card/40 border-border/50 shadow-lg"
-        )}
+    <div
+      className={cn(
+        "glass-card relative transition-all duration-300 rounded-[2rem] overflow-hidden",
+        isAllPassagesForThisReadingComplete ? "ring-1 ring-success/30" :
+        isCurrentDay ? "ring-1 ring-primary/25" :
+        isOverdueDay ? "ring-1 ring-destructive/30" : ""
+      )}
     >
       {children}
     </div>
@@ -277,11 +277,11 @@ export default function BiblePlanDisplay({
         </CardWrapper>
       ) : (
         <AccordionItem value={readingToDisplay.date || 'bible-reading-item'} className="border-b-0 mb-4 last:mb-0">
-           <div className={cn(
-              "relative hover:shadow-xl transition-all duration-300 rounded-[2rem] border overflow-hidden backdrop-blur-xl", 
-              isAllPassagesForThisReadingComplete ? "bg-success/5 border-success/30 shadow-success/10" :
-              isCurrentDay ? "bg-primary/5 border-primary/30 shadow-primary/10" :
-              isOverdueDay ? "bg-destructive/5 border-destructive/30 shadow-destructive/10" : "bg-card/40 border-border/50 shadow-lg hover:border-primary/20"
+          <div className={cn(
+              "glass-card relative transition-all duration-300 rounded-[2rem] overflow-hidden",
+              isAllPassagesForThisReadingComplete ? "ring-1 ring-success/30" :
+              isCurrentDay ? "ring-1 ring-primary/25" :
+              isOverdueDay ? "ring-1 ring-destructive/30" : ""
           )}>
             <AccordionTrigger className="px-8 py-6 w-full group rounded-t-[2rem] transition-colors [&[data-state=open]]:bg-black/5 dark:[&[data-state=open]]:bg-white/5 hover:no-underline">
               {HeaderComponent}

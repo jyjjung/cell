@@ -5,9 +5,9 @@ import { format, isSameDay, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Clock, Calendar, ShieldCheck, BookOpenText, Users, Info, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventOccursOnDate } from '@/lib/event-occurrences';
+import { eventOccursOnDate, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import type { AppEvent, CleaningRosterEntry, QTRosterEntry, UserProfileData, CleaningDay } from '@/types';
-import { Card } from '@/components/ui/card';
+import EventOccurrenceCard from '@/components/events/event-occurrence-card';
 
 interface AgendaViewProps {
   selectedDate: Date;
@@ -38,7 +38,12 @@ export default function AgendaView({
     // Events
     events.forEach(e => {
       if (eventOccursOnDate(e, selectedDate)) {
-        list.push({ ...e, date: selectedDate, type: 'event', label: e.category || 'Event' });
+        const row: EventOccurrenceRow = {
+          event: e,
+          occurrenceDate: selectedDate,
+          occurrenceKey: `${e.id}-${format(selectedDate, 'yyyy-MM-dd')}`,
+        };
+        list.push({ kind: 'event', row });
       }
     });
 
@@ -80,6 +85,14 @@ export default function AgendaView({
         <AnimatePresence mode="popLayout">
           {items.length > 0 ? (
             items.map((item, idx) => (
+              item.kind === 'event' ? (
+                <EventOccurrenceCard
+                  key={item.row.occurrenceKey}
+                  row={item.row}
+                  index={idx}
+                  className="glass-card"
+                />
+              ) : (
               <motion.button
                 key={`${item.type}-${item.id || idx}`}
                 initial={{ opacity: 0, x: 20 }}
@@ -87,10 +100,10 @@ export default function AgendaView({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => onItemClick?.(item)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${
-                  item.type === 'cleaning' ? 'bg-emerald-500/10 border-emerald-500/20' : 
-                  item.type === 'qt' ? 'bg-primary/10 border-primary/20' : 
-                  'bg-sky-500/10 border-sky-500/20'
+                className={`glass-card w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:scale-[1.01] active:scale-[0.99] group ${
+                  item.type === 'cleaning' ? 'ring-1 ring-emerald-500/25' : 
+                  item.type === 'qt' ? 'ring-1 ring-primary/25' : 
+                  'ring-1 ring-sky-500/25'
                 }`}
               >
                 <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
@@ -117,7 +130,7 @@ export default function AgendaView({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
                        {item.type === 'cleaning' ? 'Cleaning' : item.type === 'qt' ? 'QT Sharing' : item.category || 'Event'}
                     </p>
                     {isSameDay(selectedDate, new Date()) && (
@@ -132,20 +145,21 @@ export default function AgendaView({
                   </div>
                   <p className="font-bold text-sm truncate">{item.title}</p>
                   {(!item.allDay && item.startTime) ? (
-                    <p className="text-xs text-muted-foreground/60 font-medium truncate flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground font-medium truncate flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {item.startTime}
                     </p>
                   ) : item.type === 'cleaning' && item.assignedNames ? (
-                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.assignedNames}</p>
+                    <p className="text-xs text-muted-foreground font-medium truncate">{item.assignedNames}</p>
                   ) : item.type === 'qt' && item.qtTitle ? (
-                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.qtTitle}</p>
+                    <p className="text-xs text-muted-foreground font-medium truncate">{item.qtTitle}</p>
                   ) : item.details ? (
-                    <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.details}</p>
+                    <p className="text-xs text-muted-foreground font-medium truncate">{item.details}</p>
                   ) : null}
                 </div>
                 
-                <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
+                <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
               </motion.button>
+              )
             ))
           ) : (
             <motion.div

@@ -37,7 +37,7 @@ export const CommunityTimeline = React.memo(({ timelineItems, t, handleLink, onI
             <motion.p 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.3 }}
-                className="text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 border border-dashed border-border/50 rounded-[2rem]"
+                className="glass-thin text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 rounded-[2rem]"
             >
                 Clear Horizon
             </motion.p>
@@ -51,7 +51,7 @@ export const CommunityTimeline = React.memo(({ timelineItems, t, handleLink, onI
                 whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.05)' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onItemSelect(item)} 
-                className="w-full flex items-center gap-6 p-6 rounded-[2.5rem] bg-muted/20 border border-transparent hover:border-border/30 transition-all group/event text-left"
+                className="w-full flex items-center gap-6 p-6 rounded-[2.5rem] glass-thin hover:ring-primary/30 transition-all group/event text-left"
               >
                 <div className="text-center w-16 shrink-0 border-r border-border/30 group-hover/event:border-primary/20 pr-6 transition-colors">
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover/event:opacity-90 group-hover/event:text-primary transition-all font-mono">

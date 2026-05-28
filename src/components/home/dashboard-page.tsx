@@ -17,9 +17,9 @@ import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
-import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
+import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, useEffect } from 'react';
-import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, addDays, isAfter, isSameDay, getMonth } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
   Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin,
@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/dialog';
 import CalendarWidget from '@/components/dashboard-widgets/calendar-widget';
 import AgendaView from '@/components/dashboard-widgets/agenda-view';
+import { PageHeader } from '@/components/ui/page-layout';
+import { EventCategory } from '@/types';
 interface DashboardPageProps {
   currentUser: AppUser;
 }
@@ -157,22 +159,22 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   // ── Unified Type Helpers ──
   const itemTypeColor = (type: DashboardListItem['type']) => {
     switch (type) {
-      case 'cleaning': return 'text-emerald-500';
+      case 'cleaning': return 'text-primary';
       case 'qt': return 'text-primary';
-      case 'worship': return 'text-purple-500';
-      case 'custom': return 'text-orange-500';
-      case 'event': return 'text-sky-500';
-      case 'birthday': return 'text-pink-500';
+      case 'worship': return 'text-primary';
+      case 'custom': return 'text-primary';
+      case 'event': return 'text-primary';
+      case 'birthday': return 'text-primary';
     }
   };
   const itemTypeBg = (type: DashboardListItem['type']) => {
     switch (type) {
-      case 'cleaning': return 'bg-emerald-500/10 border-emerald-500/20';
+      case 'cleaning': return 'bg-muted border-border';
       case 'qt': return 'bg-primary/10 border-primary/20';
-      case 'worship': return 'bg-purple-500/10 border-purple-500/20';
-      case 'custom': return 'bg-orange-500/10 border-orange-500/20';
-      case 'event': return 'bg-sky-500/10 border-sky-500/20';
-      case 'birthday': return 'bg-pink-500/10 border-pink-500/20';
+      case 'worship': return 'bg-muted border-border';
+      case 'custom': return 'bg-muted border-border';
+      case 'event': return 'bg-muted border-border';
+      case 'birthday': return 'bg-muted border-border';
     }
   };
   const itemTypeIcon = (type: DashboardListItem['type']) => {
@@ -196,47 +198,38 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     }
   };
 
-  const upcomingCommunityItems = useMemo((): DashboardListItem[] => {
+  const dashboardEventRows = useMemo((): EventOccurrenceRow[] => {
     const today = startOfToday();
-    const threeDaysFromNow = addDays(today, 3);
-    const currentMonth = getMonth(today);
-    const items: DashboardListItem[] = [];
-
-    filteredEvents.forEach(e => {
-      const next = nextOccurrenceOnOrAfter(e, today);
-      if (!next) return;
-      
-      const isBirthday = e.category === 'Birthday' || e.category?.toLowerCase() === 'birthday';
-      
-      if (isBirthday) {
-         if (getMonth(next) === currentMonth) {
-             items.push({
-                 id: `event-${e.id}`,
-                 date: next,
-                 label: e.title,
-                 sublabel: e.details || 'Birthday',
-                 type: 'birthday',
-                 details: e.details,
-             });
-         }
-      } else {
-         if (!isBefore(next, today) && !isAfter(next, threeDaysFromNow)) {
-             items.push({
-                 id: `event-${e.id}`,
-                 date: next,
-                 label: e.title,
-                 sublabel: e.details || e.category || 'Event',
-                 type: 'event',
-                 details: e.details,
-             });
-         }
-      }
-    });
-
-    return items.sort((a, b) => compareAsc(a.date, b.date));
+    const windowStart = today;
+    const windowEnd = endOfMonth(addMonths(today, 1));
+    const rows = expandEventsToOccurrenceRows(filteredEvents, { from: windowStart, until: windowEnd });
+    return rows.sort((a, b) => compareAsc(a.occurrenceDate, b.occurrenceDate));
   }, [filteredEvents]);
 
-  const upcomingEvents = upcomingCommunityItems.slice(0, 4);
+  const upcomingOnlyEvents = useMemo(
+    () => filteredEvents.filter((event) => {
+      const rows = expandEventsToOccurrenceRows([event], {
+        from: startOfToday(),
+        until: endOfMonth(addMonths(startOfToday(), 1)),
+      });
+      return rows.length > 0;
+    }),
+    [filteredEvents]
+  );
+
+  const nextUpEvent = dashboardEventRows[0] ?? null;
+
+  const openEventFromOccurrence = useCallback((row: EventOccurrenceRow) => {
+    const isBirthday = row.event.category === EventCategory.Birthday;
+    setSelectedEvent({
+      id: row.occurrenceKey,
+      date: row.occurrenceDate,
+      label: row.event.title,
+      sublabel: row.event.category,
+      type: isBirthday ? 'birthday' : 'event',
+      details: row.event.details,
+    });
+  }, []);
 
   const myRosterItems = useMemo((): DashboardListItem[] => {
     const today = startOfToday();
@@ -323,82 +316,41 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap, usersMap]);
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container max-w-4xl space-y-6 pb-32">
 
-      {/* ── Greeting ── */}
-      <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible" className="space-y-1">
-        <h1 className="text-4xl md:text-hero normal-case not-italic leading-tight md:leading-none">
-          {getGreeting(currentUser.preferredLanguage || 'en')},<br />
-          <span className="gradient-text">{currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}</span>
-        </h1>
-      </motion.div>
+      <PageHeader
+        title={`${getGreeting(currentUser.preferredLanguage || 'en')}, ${currentUser.firstName}${currentUser.preferredLanguage === 'ko' ? '님' : ''}`}
+      />
       
-      {/* ── Smart Roster Assistant ── */}
-      {(() => {
-        const today = startOfToday();
-        const tomorrow = addDays(today, 1);
-        const myCleaningToday = cleaningRoster.find(r => isSameDay(parseISO(r.date || ''), today) && r.assignedUserIds.includes(currentUser.uid));
-        const myCleaningSoon = !myCleaningToday && cleaningRoster.find(r => isSameDay(parseISO(r.date || ''), tomorrow) && r.assignedUserIds.includes(currentUser.uid));
-        const myQTSoon = qtRoster.find(r => {
-          const d = parseISO(r.date || '');
-          return (isSameDay(d, today) || isSameDay(d, tomorrow)) && r.userId === currentUser.uid;
-        });
-
-        const duty = myCleaningToday || myCleaningSoon || myQTSoon;
-        if (!duty) return null;
-
-        const isToday = isSameDay(parseISO(duty.date || ''), today);
-        const type = myCleaningToday || myCleaningSoon ? 'cleaning' : 'qt';
-
-        return (
-          <motion.div custom={0.5} variants={fadeUp} initial="hidden" animate="visible"
-            className="glass-thick p-6 rounded-[2rem] border border-primary/20 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group shadow-2xl shadow-primary/5">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              {type === 'cleaning' ? <ShieldCheck className="w-24 h-24" /> : <BookOpenText className="w-24 h-24" />}
-            </div>
-
-            <div className={cn("p-4 rounded-2xl shrink-0 animate-pulse-subtle", type === 'cleaning' ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/20 text-primary")}>
-              {type === 'cleaning' ? <ShieldCheck className="h-8 w-8" /> : <BookOpenText className="h-8 w-8" />}
-            </div>
-
-            <div className="flex-1 text-center md:text-left">
-              <p className="text-micro-label !opacity-100 mb-1">Upcoming Duty Assistant</p>
-              <h1 className="text-xl font-black tracking-tight mb-1 uppercase">
-                {isToday ? "You're on duty today!" : "Duty Reminder: Tomorrow"}
-              </h1>
-              <p className="text-sm font-medium text-muted-foreground/80">
-                {type === 'cleaning'
-                  ? `You are assigned to the Church Cleaning team ${isToday ? 'today' : 'tomorrow'}.`
-                  : `You're scheduled for the QT sharing ${isToday ? 'today' : 'tomorrow'}.`}
-              </p>
-            </div>
-
-            <Button className="rounded-2xl h-12 px-8 font-black text-xs uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 active:scale-95 transition-all"
-              onClick={() => go(type === 'cleaning' ? '/cleaning-roster' : '/qt')}>
-              View Details <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </motion.div>
-        );
-      })()}
-
       {/* ── Stats Row ── */}
-      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
-          { label: 'Progress', value: `${overallPct}%`, sub: `${daysLeft ?? '—'} days left`, color: 'text-sky-500', bg: 'bg-sky-500/10 border-sky-500/20', icon: Flame, onClick: () => go('/bible-checklist') },
-          { label: 'Messages', value: unreadChatCount, sub: unreadChatCount > 0 ? 'Unread' : 'All caught up', color: unreadChatCount > 0 ? 'text-indigo-500' : 'text-muted-foreground/40', bg: 'bg-indigo-500/10 border-indigo-500/20', icon: MessageCircle, onClick: () => go('/chat') },
-          { label: 'Next Up', value: upcomingEvents[0] ? format(upcomingEvents[0].date, 'MMM d') : '—', sub: upcomingEvents[0]?.label || 'Clear schedule', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: Calendar, onClick: () => go('/events') },
+          { label: 'Progress', value: `${overallPct}%`, sub: `${daysLeft ?? '—'} days left`, color: 'text-primary', bg: 'bg-muted border-border', icon: Flame, onClick: () => go('/bible-checklist') },
+          { label: 'Messages', value: unreadChatCount, sub: unreadChatCount > 0 ? 'Unread' : 'All caught up', color: unreadChatCount > 0 ? 'text-primary' : 'text-muted-foreground/40', bg: 'bg-muted border-border', icon: MessageCircle, onClick: () => go('/chat') },
+          {
+            label: 'Next Up',
+            value: nextUpEvent?.event.category || '—',
+            sub: nextUpEvent
+              ? `${nextUpEvent.event.title} · ${format(nextUpEvent.occurrenceDate, 'MMM d')}`
+              : 'Clear schedule',
+            color: 'text-primary',
+            bg: 'bg-muted border-border',
+            icon: Calendar,
+            onClick: () => go('/events'),
+          },
         ].map((card, i) => (
-          <button key={card.label} onClick={card.onClick}
-            className={cn("flex flex-col items-start gap-3 p-4 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.02] active:scale-[0.98] group relative", card.bg)}>
-            <div className={cn("p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm group-hover:bg-background transition-colors", card.color)}>
-              <card.icon className="h-4 w-4" />
-            </div>
+          <button
+            key={card.label}
+            onClick={card.onClick}
+            className={cn(
+              "group glass-elevated relative flex flex-col items-start gap-2 rounded-2xl p-4 text-left transition-colors"
+            )}
+          >
             <div className="min-w-0 w-full">
-              <p className="text-micro-label !opacity-100 text-muted-foreground/40 truncate !tracking-tight">{card.label}</p>
-              <p className={cn("text-xl font-black leading-tight mt-0.5", card.color)}>{card.value}</p>
-              <p className="text-[11px] font-bold text-muted-foreground/60 truncate tracking-tight">{card.sub}</p>
+              <p className="truncate text-xs font-medium text-muted-foreground">{card.label}</p>
+              <p className={cn("mt-0.5 text-xl font-bold leading-tight", card.color)}>{card.value}</p>
+              <p className="truncate text-xs text-muted-foreground">{card.sub}</p>
             </div>
-            <ChevronRight className="absolute top-4 right-4 h-3 w-3 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
           </button>
         ))}
       </motion.div>
@@ -406,17 +358,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       {/* ── Bible Reading Hub ── */}
       <motion.section custom={1} variants={fadeUp} initial="hidden" animate="visible"
         className={cn(
-          "relative p-6 md:p-8 rounded-[2.5rem] border shadow-lg overflow-hidden transition-all duration-500 bg-card/50 border-border/50 backdrop-blur-xl",
-          isTodayComplete && "bg-emerald-500/5 border-emerald-500/20"
+          "glass-elevated relative p-5 md:p-6 rounded-2xl overflow-hidden transition-all duration-500",
+          isTodayComplete && "bg-primary/5 border-primary/20"
         )}>
-        {/* Decorative blob */}
-        <div className={cn("absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-30",
-          isTodayComplete ? "bg-emerald-400" : "bg-primary/40")} />
-
         <div className="relative">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
-              <div className={cn("p-2.5 rounded-xl shadow-inner", isTodayComplete ? "bg-emerald-500/20 text-emerald-500" : "bg-primary/10 text-primary")}>
+              <div className="p-2.5 rounded-xl shadow-inner bg-primary/10 text-primary">
                 <BookOpen className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -443,8 +391,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                             return (
                                 <motion.div key={p.displayText} layout transition={spring}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer",
-                                        done ? "opacity-50 bg-muted/20 border-transparent shadow-none" : "bg-card border-border/40 hover:bg-primary shadow-sm hover:border-primary hover:text-white"
+                                        "glass-thin flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group cursor-pointer",
+                                        done ? "opacity-60" : "hover:bg-primary/12 hover:border-primary/35"
                                     )}
                                 >
                                     <Checkbox
@@ -463,7 +411,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 </div>
             ) : (
                 <div className="py-2">
-                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rest Day — No reading assigned for today.</p>
+                    <p className="text-sm font-bold text-primary">Rest Day — No reading assigned for today.</p>
                 </div>
             )}
 
@@ -481,14 +429,14 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 const done = false; // p is always unread by definition
                 return (
                 <div className="mt-6 pt-6 border-t border-border/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">Missed Reading</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">Missed Reading</p>
                     <motion.div layout transition={spring}
-                        className="flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-200 group cursor-pointer bg-card border-amber-500/20 hover:bg-amber-500/10 shadow-sm"
+                        className="glass-thin flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group cursor-pointer hover:bg-muted/35"
                     >
                         <Checkbox
                             checked={false}
                             onCheckedChange={() => togglePassageCompletion(p.displayText, nextUnread.date)}
-                            className="h-5 w-5 rounded-lg shrink-0 border-amber-500/30"
+                            className="h-5 w-5 rounded-lg shrink-0 border-border"
                         />
                         <button onClick={() => readPassage(p.displayText)} className="flex-1 text-left text-sm font-semibold truncate transition-colors">
                             {p.displayText}
@@ -504,151 +452,102 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
       {/* ── My Upcoming Rosters ── */}
       {myRosterItems.length > 0 && (
-        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+        <motion.section custom={3} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-section-title text-purple-500">My Upcoming Duties</h2>
+            <h2 className="text-section-title text-primary">My Upcoming Duties</h2>
           </div>
 
-          <div className="space-y-2">
-            {myRosterItems.map(item => {
-              const Icon = itemTypeIcon(item.type);
-              const isToday = isSameDay(item.date, startOfToday());
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedEvent(item)}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
-                >
-                  {/* Date badge */}
-                  <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
-                      {format(item.date, 'MMM')}
-                    </span>
-                    <span className={`text-lg font-black leading-tight ${itemTypeColor(item.type)}`}>
-                      {format(item.date, 'd')}
-                    </span>
-                  </div>
-
-                  {/* Icon */}
-                  <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                        {itemTypeLabel(item.type)}
-                      </p>
-                      {isToday && (
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${itemTypeBg(item.type)} ${itemTypeColor(item.type)}`}>
-                          Today
-                        </span>
-                      )}
-                    </div>
-                    <p className="font-bold text-sm truncate">{item.label}</p>
-                    {item.sublabel && (
-                      <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.sublabel}</p>
-                    )}
-                  </div>
-
-                  <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
-                </button>
-              );
-            })}
+          <div className="glass-elevated overflow-hidden rounded-xl">
+            <div className="hidden grid-cols-[58px_72px_minmax(0,1fr)_88px] gap-2 border-b border-border/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
+              <span>Date</span>
+              <span>Type</span>
+              <span>Title</span>
+              <span>Details</span>
+            </div>
+            {myRosterItems.slice(0, 8).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedEvent(item)}
+                className="grid h-8 w-full grid-cols-[58px_72px_minmax(0,1fr)] items-center gap-2 border-b border-border/30 px-2.5 text-left text-[11px] leading-none last:border-b-0 hover:bg-muted/40 sm:grid-cols-[58px_72px_minmax(0,1fr)_88px]"
+              >
+                <span className="text-muted-foreground">{format(item.date, 'MMM d')}</span>
+                <span className="truncate font-medium text-primary">{itemTypeLabel(item.type)}</span>
+                <span className="truncate font-medium text-foreground">{item.label}</span>
+                <span className="hidden truncate text-muted-foreground sm:block">{item.sublabel || '—'}</span>
+              </button>
+            ))}
           </div>
         </motion.section>
       )}
 
-      {/* ── Community Schedule Hub ── */}
-      <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-4">
+      {/* ── Upcoming Events ── */}
+      <motion.section custom={4} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-section-title text-emerald-600 dark:text-emerald-400">Community Schedule</h2>
+          <h2 className="text-section-title text-primary">Upcoming Events</h2>
           <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">
             Full View <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
-        
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8">
-          {/* Left: The Visual Calendar */}
+
+        {dashboardEventRows.length > 0 && (
+          <div className="glass-elevated overflow-hidden rounded-xl">
+            <div className="hidden grid-cols-[58px_72px_minmax(0,1fr)_88px] gap-2 border-b border-border/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:grid">
+              <span>Date</span>
+              <span>Type</span>
+              <span>Title</span>
+              <span>Time</span>
+            </div>
+            {dashboardEventRows.slice(0, 10).map((row) => (
+              <button
+                key={row.occurrenceKey}
+                onClick={() => openEventFromOccurrence(row)}
+                className="grid h-8 w-full grid-cols-[58px_72px_minmax(0,1fr)] items-center gap-2 border-b border-border/30 px-2.5 text-left text-[11px] leading-none last:border-b-0 hover:bg-muted/40 sm:grid-cols-[58px_72px_minmax(0,1fr)_88px]"
+              >
+                <span className="text-muted-foreground">{format(row.occurrenceDate, 'MMM d')}</span>
+                <span className="truncate font-medium text-primary">{row.event.category}</span>
+                <span className="truncate font-medium text-foreground">{row.event.title}</span>
+                <span className="hidden truncate text-muted-foreground sm:block">
+                  {row.event.allDay ? 'All day' : row.event.startTime || '—'}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </motion.section>
+
+      {/* ── Community Schedule Hub ── */}
+      <motion.section custom={5} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-section-title text-primary">Community Schedule</h2>
+          <Button variant="ghost" size="sm" onClick={() => go('/events')} className="text-xs rounded-xl font-bold text-primary">
+            Full View <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+
+        <div className="mb-2 grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
           <div className="lg:col-span-5 xl:col-span-4">
-            <CalendarWidget 
+            <CalendarWidget
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
-              events={filteredEvents}
+              events={upcomingOnlyEvents}
               cleaningRoster={cleaningRoster}
               qtRoster={qtRoster}
             />
           </div>
-
-          {/* Right: The Agenda for selected day */}
           <div className="lg:col-span-7 xl:col-span-8">
-            <AgendaView 
+            <AgendaView
               selectedDate={selectedDate}
-              events={filteredEvents}
+              events={upcomingOnlyEvents}
               cleaningRoster={cleaningRoster}
               qtRoster={qtRoster}
               allUsers={allUsers}
               cleaningDays={cleaningDays}
-              onItemClick={(item) => setSelectedEvent(item as any)}
+              onItemClick={(item) => {
+                setSelectedEvent(item as DashboardListItem);
+              }}
             />
           </div>
         </div>
-
-        {/* Cards Below: Important events */}
-        {upcomingCommunityItems.length > 0 && (
-          <div className="pt-6 mt-6 border-t border-border/40 space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/50 mb-1 px-1">
-              Important Dates
-            </h3>
-            <div className="space-y-2">
-              {upcomingCommunityItems.map(item => {
-                const Icon = itemTypeIcon(item.type);
-                const isToday = isSameDay(item.date, startOfToday());
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedEvent(item)}
-                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border text-left transition-all hover:glass-thick hover:scale-[1.01] active:scale-[0.99] group ${itemTypeBg(item.type)}`}
-                  >
-                    <div className="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-background/60 border border-white/5 shadow-sm">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 leading-none">
-                        {format(item.date, 'MMM')}
-                      </span>
-                      <span className={`text-lg font-black leading-tight ${itemTypeColor(item.type)}`}>
-                        {format(item.date, 'd')}
-                      </span>
-                    </div>
-
-                    <div className={`shrink-0 p-2 rounded-xl bg-background/60 border border-white/5 shadow-sm ${itemTypeColor(item.type)}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                          {itemTypeLabel(item.type)}
-                        </p>
-                        {isToday && (
-                          <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md ${itemTypeBg(item.type)} ${itemTypeColor(item.type)}`}>
-                            Today
-                          </span>
-                        )}
-                      </div>
-                      <p className="font-bold text-sm truncate">{item.label}</p>
-                      {item.sublabel && (
-                        <p className="text-xs text-muted-foreground/60 font-medium truncate">{item.sublabel}</p>
-                      )}
-                    </div>
-
-                    <ChevronRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </motion.section>
 
       {/* ── Event Detail Dialog ── */}
@@ -697,10 +596,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Day Type</p>
                   <p className="font-bold">{selectedEvent.dayName}</p>
                 </div>}
-                <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-3">
-                  <Users className="h-5 w-5 text-emerald-500 shrink-0" />
+                <div className="p-4 rounded-2xl bg-muted border border-border flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary shrink-0" />
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">Team</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Team</p>
                     <p className="font-bold text-sm">{selectedEvent.assignedNames}</p>
                   </div>
                 </div>

@@ -22,13 +22,13 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notific
       exit={{ opacity: 0, x: 40, scale: 0.96 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
       className={cn(
-        "flex items-start gap-4 p-5 rounded-2xl border transition-all",
+        "flex items-start gap-3 rounded-2xl border p-4 transition-colors",
         isRead
-          ? "bg-muted/10 border-border/20 opacity-60"
-          : "bg-card/50 border-border/40 backdrop-blur-sm hover:shadow-md hover:border-border/60"
+          ? "bg-muted border-border/20 opacity-60"
+          : "bg-card/60 border-border/40 hover:bg-card/80"
       )}
     >
-      <div className={cn("mt-0.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/20" : "bg-orange-500 animate-pulse")} />
+      <div className={cn("mt-0.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/20" : "bg-muted animate-pulse")} />
       <div className="flex-1 min-w-0 space-y-1">
         <p className={cn("font-semibold text-sm", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
         <LinkifiedText text={notification.message} className="block text-sm text-muted-foreground leading-relaxed" />
@@ -38,7 +38,7 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notific
       </div>
       {!isRead && onMarkRead && (
         <Button variant="ghost" size="icon" onClick={onMarkRead}
-          className="h-8 w-8 rounded-xl hover:bg-orange-500/10 hover:text-orange-500 shrink-0 transition-colors">
+          className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted hover:text-primary transition-colors">
           <X className="h-4 w-4" />
         </Button>
       )}
@@ -62,12 +62,9 @@ export default function AnnouncementsPage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-6">
       <PageHeader
         title={t.announcements}
-        icon={Megaphone}
-        accentColor="text-orange-500"
-        iconBgColor="bg-orange-500/10"
         action={
           unread.length > 0 ? (
             <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-semibold text-xs"
@@ -82,11 +79,11 @@ export default function AnnouncementsPage() {
         <EmptyState icon={Megaphone} title="No announcements yet" description="Check back later for community updates." />
       ) : (
         <Tabs defaultValue="unread" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-muted/30 border border-border/30 h-11">
-            <TabsTrigger value="unread" className="rounded-xl text-sm font-semibold">
-              Unread {unread.length > 0 && <span className="ml-1.5 bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{unread.length}</span>}
+          <TabsList className="h-10">
+            <TabsTrigger value="unread" className="rounded-md text-sm font-medium">
+              Unread {unread.length > 0 && <span className="ml-1.5 bg-muted text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{unread.length}</span>}
             </TabsTrigger>
-            <TabsTrigger value="archive" className="rounded-xl text-sm font-semibold">Archive</TabsTrigger>
+            <TabsTrigger value="archive" className="rounded-md text-sm font-medium">Archive</TabsTrigger>
           </TabsList>
 
           <TabsContent value="unread" className="mt-6">

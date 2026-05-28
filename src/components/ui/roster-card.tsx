@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { User, Check, ShieldCheck } from 'lucide-react';
+import { User, Check } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -56,20 +56,18 @@ export function RosterCard({
     <div
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-5 sm:p-6 rounded-[2rem] bg-card/20 backdrop-blur-xl border border-white/5 transition-all overflow-hidden",
+        "group relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-4 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 transition-all overflow-hidden",
         onClick && "cursor-pointer hover:border-primary/20",
         isCompleted && "bg-green-500/5 border-green-500/20 hover:border-green-500/30"
       )}
     >
       {/* Visual Connection Line (Desktop) */}
-      {showLine && (
-        <div className="hidden sm:block absolute left-[2.75rem] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/5 to-transparent" />
-      )}
+      {showLine && <div className="hidden sm:block absolute left-[2.5rem] top-0 bottom-0 w-px bg-border/30" />}
 
       {/* Date Side */}
-      <div className="flex sm:flex-col items-center justify-start sm:justify-center w-full sm:w-14 shrink-0 sm:border-r border-white/5 sm:pr-4 gap-2 sm:gap-0">
+      <div className="flex sm:flex-col items-center justify-start sm:justify-center w-full sm:w-12 shrink-0 sm:border-r border-border/40 sm:pr-3 gap-2 sm:gap-0">
         <p className={cn("text-micro-label !opacity-100", accentColor)}>{format(date, 'EEE')}</p>
-        <p className="text-2xl font-black tracking-tighter text-foreground leading-none">{format(date, 'd')}</p>
+        <p className="text-xl font-black tracking-tighter text-foreground leading-none">{format(date, 'd')}</p>
       </div>
 
       {/* Avatars & Content Block */}
@@ -81,19 +79,19 @@ export function RosterCard({
               users.slice(0, 3).map((user, idx) => (
                 <div
                   key={user.uid}
-                  className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shadow-lg group-hover:scale-105 transition-transform duration-500 relative"
+                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shadow-sm group-hover:scale-105 transition-transform duration-500 relative"
                   style={{ zIndex: 10 - idx }}
                 >
                   <PixelAvatar avatar={user.avatar} />
                 </div>
               ))
             ) : (
-              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden bg-muted/20 border border-white/10 shrink-0 shadow-lg flex items-center justify-center">
-                <User className="h-6 w-6 text-muted-foreground/40" />
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shrink-0 shadow-sm flex items-center justify-center">
+                <User className="h-5 w-5 text-muted-foreground/40" />
               </div>
             )}
             {users.length > 3 && (
-              <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-muted border border-white/10 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-lg">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-muted border border-border/60 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
                 +{users.length - 3}
               </div>
             )}
@@ -102,7 +100,7 @@ export function RosterCard({
 
         <div className="flex-grow min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h3 className="text-base font-bold tracking-tight text-foreground truncate">{title}</h3>
+            <h3 className="text-sm font-bold tracking-tight text-foreground truncate">{title}</h3>
             {/* Mobile Only Right Element (Compact) */}
             <div className="sm:hidden">
               {rightElement}
@@ -121,7 +119,7 @@ export function RosterCard({
       </div>
 
       {/* Right Element (Desktop) & Completion Status */}
-      <div className="hidden sm:flex items-center gap-4 shrink-0 ml-auto">
+      <div className="hidden sm:flex items-center gap-2 shrink-0 ml-auto">
         {rightElement}
 
         {isCompleted && (
@@ -156,7 +154,7 @@ export function RosterCard({
       )}
 
       {/* Background decoration */}
-      <div className={cn("absolute -bottom-8 -right-8 w-24 h-24 blur-3xl opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity", accentBg)} />
+      <div className={cn("absolute -bottom-8 -right-8 w-20 h-20 blur-3xl opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity", accentBg)} />
     </div>
   );
 

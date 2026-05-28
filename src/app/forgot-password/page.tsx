@@ -73,9 +73,9 @@ export default function ForgotPasswordPage() {
           </div>
 
         {isSubmitted ? (
-            <div className="text-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <p className="font-medium text-green-400">Reset Link Sent</p>
+            <div className="text-center p-4 bg-muted rounded-lg border border-border/50">
+              <CheckCircle className="h-8 w-8 text-primary mx-auto mb-2" />
+              <p className="font-medium text-primary">Reset Link Sent</p>
               <p className="text-sm text-muted-foreground mt-1">Please check your inbox (and spam folder).</p>
             </div>
         ) : (

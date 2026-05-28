@@ -1,14 +1,10 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { 
-  Calendar, 
   Clock, 
   MapPin, 
   ChevronRight,
-  Info,
-  Layers,
   Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,7 +26,7 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
   );
 
   if (!event) return (
-    <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl text-[11px] font-bold opacity-30">
+    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Event Summary...
     </div>
   );
@@ -54,31 +50,31 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
   return (
     <Link href={`/events`} className="block transition-transform active:scale-95">
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
+        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
         isSender 
-          ? "bg-[#007AFF]/10 border-[#007AFF]/20 text-white" 
-          : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"
+          ? "border-primary/30 bg-primary/5 text-foreground" 
+          : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start gap-4">
-          <div className="h-16 w-16 rounded-[1.5rem] bg-card border border-white/10 flex flex-col items-center justify-center shrink-0 shadow-lg">
-             <span className="text-[11px] font-black text-primary tracking-widest uppercase">{dayOfWeek}</span>
-             <span className="text-[28px] font-black text-white p-0 -mt-1">{dayOfMonth}</span>
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{dayOfWeek}</span>
+             <span className="text-2xl font-semibold leading-none text-foreground">{dayOfMonth}</span>
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-                <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">{event.category || 'Event'}</span>
+            <div className="mb-1 flex items-center gap-2">
+                <Star className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{event.category || 'Event'}</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{event.title}</h3>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{event.title}</h3>
             
-            <div className="flex flex-col gap-1.5 opacity-70">
-              <div className="flex items-center gap-2 text-[12px] font-bold">
+            <div className="flex flex-col gap-1.5 text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs font-medium">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{event.startTime ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}` : 'All Day'}</span>
               </div>
               {event.location && (
-                <div className="flex items-center gap-2 text-[12px] font-bold">
+                <div className="flex items-center gap-2 text-xs font-medium">
                   <MapPin className="w-3.5 h-3.5" />
                   <span className="truncate">{event.location}</span>
                 </div>
@@ -88,16 +84,16 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
         </div>
 
         {event.details && (
-            <div className="p-3 bg-white/5 border border-white/5 rounded-2xl">
-                <p className="text-[11px] font-medium leading-relaxed opacity-60 line-clamp-2">{event.details}</p>
+            <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
+                <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{event.details}</p>
             </div>
         )}
 
-        <div className="flex items-center justify-between mt-1 group-hover:translate-x-2 transition-transform duration-300">
-          <span className="text-[11px] font-black uppercase tracking-widest text-[#007AFF] group-hover:text-white transition-colors">
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             See Calendar
           </span>
-          <ChevronRight className="w-4 h-4 text-[#007AFF] opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </Link>

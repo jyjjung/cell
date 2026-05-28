@@ -24,11 +24,11 @@ function NotificationItem({ notification, isRead, onMarkRead, index }: { notific
       className={cn(
         "flex items-start gap-4 p-5 rounded-2xl border transition-all",
         isRead
-          ? "bg-muted/10 border-border/20 opacity-60"
+          ? "bg-muted border-border/20 opacity-60"
           : "bg-card/50 border-border/40 backdrop-blur-sm hover:shadow-md"
       )}
     >
-      <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", isRead ? "bg-muted/30" : "bg-primary/10")}>
+      <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", isRead ? "bg-muted" : "bg-primary/10")}>
         <Bell className={cn("h-3.5 w-3.5", isRead ? "text-muted-foreground/40" : "text-primary")} />
       </div>
       <div className="flex-1 min-w-0 space-y-1">
@@ -64,13 +64,9 @@ export default function NotificationsPage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <PageHeader
         title={t.notifications}
-        description="Activity Feed"
-        icon={Bell}
-        iconBgColor="bg-primary/10"
-        accentColor="text-primary"
         action={
           unread.length > 0 ? (
             <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-semibold text-xs"
@@ -85,7 +81,7 @@ export default function NotificationsPage() {
         <EmptyState icon={BellOff} title={t.allSettled} description="You're all caught up." />
       ) : (
         <Tabs defaultValue="unread" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-muted/30 border border-border/30 h-11">
+          <TabsList className="h-11 rounded-2xl">
             <TabsTrigger value="unread" className="rounded-xl text-sm font-semibold">
               Unread {unread.length > 0 && <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{unread.length}</span>}
             </TabsTrigger>

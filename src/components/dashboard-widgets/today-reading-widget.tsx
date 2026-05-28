@@ -9,7 +9,7 @@ import { findTodaysReading } from '@/lib/reading-utils';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { Loader2, CheckCircle, BookOpen, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle, ArrowRight } from 'lucide-react';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import type { StructuredPassage } from '@/types';
@@ -62,8 +62,8 @@ export default function TodayReadingWidget() {
   return (
      <>
       <div className={cn(
-        "relative flex flex-col p-6 md:p-8 rounded-[2.5rem] border transition-all duration-500 overflow-hidden h-full min-h-[240px] bg-card border-border/50 shadow-xl",
-        isAllComplete && "bg-success/5 border-success/20 shadow-success/5"
+        "glass-card relative flex flex-col p-6 md:p-8 rounded-[2.5rem] transition-all duration-500 overflow-hidden h-full min-h-[240px]",
+        isAllComplete && "ring-1 ring-success/30"
       )}>
         <div className="flex items-center justify-between mb-6">
             <div className="min-w-0">
@@ -72,12 +72,6 @@ export default function TodayReadingWidget() {
                     isAllComplete ? "text-success" : "text-foreground"
                 )}>Daily Bread</h3>
                 <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Today's Journey</p>
-            </div>
-            <div className={cn(
-                "p-2.5 rounded-xl transition-all shadow-inner",
-                isAllComplete ? "bg-success/20 text-success" : "bg-primary/10 text-primary"
-            )}>
-                <BookOpen className="h-5 w-5" />
             </div>
         </div>
 
@@ -114,8 +108,8 @@ export default function TodayReadingWidget() {
                             layout
                             key={passage.displayText} 
                             className={cn(
-                                "group flex items-center gap-3 p-3 rounded-2xl transition-all border border-transparent",
-                                isChecked ? "opacity-40 hover:opacity-100" : "bg-muted/20 hover:bg-primary cursor-pointer"
+                                "group flex items-center gap-3 p-3 rounded-2xl transition-all glass-thin cursor-pointer",
+                                isChecked ? "opacity-60 hover:opacity-100 hover:ring-primary/10" : "hover:ring-primary/30"
                             )}
                         >
                             {currentUser && (
@@ -147,7 +141,7 @@ export default function TodayReadingWidget() {
             <Button 
                 variant="outline" 
                 size="sm"
-                className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest bg-background/50 border-border/50 hover:bg-primary hover:text-primary-foreground transition-all shadow-none group" 
+                className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest transition-all shadow-none group" 
                 onClick={handleGoToPlan}
             >
                 Reading Archive

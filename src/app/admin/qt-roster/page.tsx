@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminQTRosterPage() {
   const { roster, loading: rosterLoading, upsertEntry, deleteEntry } = useQTRoster();
@@ -151,20 +152,16 @@ export default function AdminQTRosterPage() {
   const loading = rosterLoading || usersLoading;
 
   return (
-    <div className="relative space-y-16 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <header className="space-y-6">
+    <div className="admin-page">
+      <header className="space-y-4">
         <PageHeader
           title="QT Rota"
-          description="Spiritual Timeline Management"
-          icon={Calendar}
-          accentColor="text-primary"
-          iconBgColor="bg-primary/10"
         />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-8 border-y border-white/5">
             <div className="flex items-center gap-4">
                 <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
-                    <ChevronsLeft className="mr-2 h-4 w-4" /> Prev Phase
+                    <ChevronsLeft className="mr-2 h-4 w-4" /> Prev. Month
                 </Button>
                 <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setViewMode(viewMode === 'timeline' ? 'grid' : 'timeline')}>
                     {viewMode === 'timeline' ? 'Switch to Grid' : 'Switch to Timeline'}
@@ -181,7 +178,7 @@ export default function AdminQTRosterPage() {
                     </Button>
                 )}
                 <Button variant="outline" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest text-[10px]" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-                    Next Phase <ChevronsRight className="ml-2 h-4 w-4" />
+                    Next Month <ChevronsRight className="ml-2 h-4 w-4" />
                 </Button>
             </div>
         </div>
@@ -232,7 +229,7 @@ export default function AdminQTRosterPage() {
                                  onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
                                  placeholder="Identity..."
                                  className={cn(
-                                     "h-10 rounded-xl bg-muted/20 border-white/5 transition-all text-xs",
+                                     "h-10 rounded-xl bg-muted border-white/5 transition-all text-xs",
                                      isLinked && "pr-8 border-success/30 focus-visible:ring-success/30"
                                  )}
                                />
@@ -252,13 +249,13 @@ export default function AdminQTRosterPage() {
                                 value={displayData.title}
                                 onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
                                 placeholder="Message Theme"
-                                className="h-10 rounded-xl bg-muted/20 border-white/5 text-xs"
+                                className="h-10 rounded-xl bg-muted border-white/5 text-xs"
                              />
                              <Input
                                 value={displayData.passage}
                                 onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
                                 placeholder="Passage"
-                                className="h-10 rounded-xl bg-muted/20 border-white/5 font-mono text-[10px] uppercase tracking-widest"
+                                className="h-10 rounded-xl bg-muted border-white/5 font-mono text-[10px] uppercase tracking-widest"
                              />
                          </div>
                     </div>
@@ -266,9 +263,9 @@ export default function AdminQTRosterPage() {
               })}
           </div>
       ) : (
-        <div className="border border-white/5 rounded-[2.5rem] overflow-hidden bg-card/20 backdrop-blur-md">
-          <Table>
-            <TableHeader className="bg-muted/30">
+        <div className="admin-table-wrap">
+          <Table className="admin-table">
+            <TableHeader className="bg-muted">
               <TableRow className="hover:bg-transparent border-white/5">
                 <TableHead className="w-[120px] font-black uppercase tracking-widest text-[10px]">Temporal Point</TableHead>
                 <TableHead className="w-[300px] font-black uppercase tracking-widest text-[10px]">Assigned Identity</TableHead>
@@ -293,11 +290,11 @@ export default function AdminQTRosterPage() {
                 const isLinked = !!(localChanges[dateStr]?.userId ?? entry?.userId);
 
                 return (
-                  <TableRow key={dateStr} className={cn("border-white/5 transition-colors group", isDirty && "bg-primary/5")}>
+                  <TableRow key={dateStr} className={cn("transition-colors group", isDirty && "bg-primary/5")}>
                     <TableCell className="font-black tracking-tighter">
                         <div className="flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-40">{format(dateObj, 'EEE')}</span>
-                            <span className="text-xl">{format(dateObj, 'MMM d')}</span>
+                            <span className="text-sm font-semibold">{format(dateObj, 'MMM d')}</span>
                         </div>
                     </TableCell>
                     <TableCell>
@@ -308,7 +305,7 @@ export default function AdminQTRosterPage() {
                             onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
                             placeholder="Type or select identity..."
                             className={cn(
-                                "h-12 rounded-xl bg-muted/20 border-white/5 transition-all focus:bg-background",
+                                "h-9 rounded-lg bg-muted border-white/5 transition-all focus:bg-background text-xs",
                                 isLinked && "pr-10 border-success/30 focus-visible:ring-success/30"
                             )}
                           />
@@ -323,7 +320,7 @@ export default function AdminQTRosterPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-12 w-12 shrink-0 rounded-xl"
+                          className="h-9 w-9 shrink-0 rounded-lg"
                           onClick={() => {
                             setEditingDate(dateStr);
                             setIsSelectorOpen(true);
@@ -338,7 +335,7 @@ export default function AdminQTRosterPage() {
                         value={displayData.title}
                         onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
                         placeholder="Theme"
-                        className="h-12 rounded-xl bg-muted/20 border-white/5"
+                        className="h-9 rounded-lg bg-muted border-white/5 text-xs"
                       />
                     </TableCell>
                     <TableCell>
@@ -346,17 +343,17 @@ export default function AdminQTRosterPage() {
                         value={displayData.passage}
                         onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
                         placeholder="Reference"
-                        className="h-12 rounded-xl bg-muted/20 border-white/5 font-mono text-xs font-bold uppercase tracking-widest"
+                        className="h-9 rounded-lg bg-muted border-white/5 font-mono text-[11px] uppercase tracking-wide"
                       />
                     </TableCell>
-                    <TableCell className="text-right py-6">
+                    <TableCell className="text-right">
                        <div className="flex justify-end gap-2">
                         <Button 
                             size="icon" 
                             variant="destructive" 
                             onClick={() => handleDelete(dateStr)} 
                             disabled={!entry}
-                            className="h-12 w-12 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity"
+                            className="h-9 w-9 rounded-lg opacity-30 group-hover:opacity-100 transition-opacity"
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
@@ -387,6 +384,7 @@ export default function AdminQTRosterPage() {
             )}
         </DialogContent>
       </Dialog>
+      <AdminHubTabs />
     </div>
   );
 }

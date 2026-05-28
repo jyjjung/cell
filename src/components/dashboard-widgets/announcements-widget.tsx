@@ -18,7 +18,7 @@ const AnnouncementItem = ({ notification, onMarkRead }: { notification: any, onM
     initial={{ opacity: 0, scale: 0.95 }}
     animate={{ opacity: 1, scale: 1 }}
     exit={{ opacity: 0, x: 50, transition: { duration: 0.2 } }}
-    className="relative p-4 bg-muted/20 hover:bg-orange-500 transition-all rounded-[1.5rem] border border-transparent group"
+    className="relative p-4 glass-thin hover:ring-orange-500/30 transition-all rounded-[1.5rem] group"
   >
     <div className="flex items-center justify-between gap-4">
         <div className="flex-grow min-w-0 space-y-0.5">
@@ -62,13 +62,13 @@ export default function AnnouncementsWidget() {
   }
 
   return (
-    <div className="relative p-6 md:p-8 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
+    <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
         <div className="flex items-center justify-between mb-6">
             <div className="min-w-0">
                 <h3 className="text-lg font-black tracking-tight">Announcements</h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Updates</p>
             </div>
-            <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 shadow-inner">
+            <div className="p-2.5 rounded-xl glass-thin text-orange-500 ring-1 ring-orange-500/20">
                 <Zap className="h-5 w-5" />
             </div>
         </div>
@@ -106,7 +106,7 @@ export default function AnnouncementsWidget() {
         <div className="flex flex-col gap-3 mt-8">
             <Button 
                 variant="outline" 
-                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-orange-500 hover:text-white transition-all shadow-none group" 
+                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group" 
                 onClick={handleGoToAnnouncements}
             >
                 Announcements Vault

@@ -4,8 +4,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -50,19 +49,5 @@ export default function AdminLayout({
   }
 
   // If the user is an admin OR they are on the admin login page, show the content.
-  const isSubPage = pathname !== '/admin';
-
-  return (
-    <>
-      {isSubPage && (
-          <div className="fixed top-6 right-4 md:right-8 z-50">
-            <Link href="/admin" className="flex items-center gap-2 px-4 py-2 h-10 rounded-full bg-card/60 backdrop-blur-3xl border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all font-black uppercase tracking-widest text-[10px] text-foreground shadow-2xl shadow-black/50 group">
-                <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
-                Return to Hub
-            </Link>
-          </div>
-      )}
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

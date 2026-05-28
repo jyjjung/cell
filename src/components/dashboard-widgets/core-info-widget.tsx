@@ -61,7 +61,7 @@ export default function CoreInfoWidget() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative w-full bg-card/10 backdrop-blur-3xl border border-white/5 p-8 md:p-12 rounded-[3.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.4)] overflow-hidden space-y-24"
+      className="glass-elevated relative w-full p-8 md:p-12 rounded-[3.5rem] overflow-hidden space-y-24"
     >
       {/* Decorative radial gradient for depth */}
       <div className="absolute top-0 right-[-20%] w-[80%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full -z-10" />

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminNotificationsPage() {
   const { notifications, loading, deleteNotification } = useNotifications();
@@ -40,21 +41,17 @@ export default function AdminNotificationsPage() {
   };
 
   return (
-    <div className="relative space-y-16 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <header className="space-y-6">
+    <div className="admin-page">
+      <header className="space-y-4">
         <PageHeader
           title="Announcements"
-          description="Community Communication Console"
-          icon={Megaphone}
-          accentColor="text-orange-500"
-          iconBgColor="bg-orange-500/10"
         />
       </header>
 
       <section className="max-w-2xl space-y-8">
         <div className="p-8 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6">
             <h2 className="text-xl font-black tracking-tight uppercase tracking-widest flex items-center gap-3">
-                <Send className="h-5 w-5 text-orange-500" /> Dispatch New
+                <Send className="h-5 w-5 text-primary" /> Dispatch New
             </h2>
             <NotificationAdminForm />
         </div>
@@ -102,9 +99,9 @@ export default function AdminNotificationsPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Silence in the Air</p>
           </div>
         ) : (
-            <div className="border border-white/5 rounded-[2.5rem] overflow-hidden bg-card/20 backdrop-blur-md">
-            <Table>
-                <TableHeader className="bg-muted/30">
+            <div className="admin-table-wrap">
+            <Table className="admin-table">
+                <TableHeader className="bg-muted">
                 <TableRow className="hover:bg-transparent border-white/5">
                     <TableHead className="font-black uppercase tracking-widest text-[10px]">Announcement Payload</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[10px]">Type</TableHead>
@@ -115,9 +112,11 @@ export default function AdminNotificationsPage() {
                 <TableBody>
                 {announcements.map((notification) => (
                     <TableRow key={notification.id} className="border-white/5 transition-colors group">
-                        <TableCell className="py-6 min-w-[200px]">
-                            <p className="font-black tracking-tight text-base leading-snug mb-1">{notification.title}</p>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{notification.message}</p>
+                        <TableCell className="min-w-[260px]">
+                            <p className="truncate text-xs font-semibold">
+                              {notification.title}
+                              {notification.message ? <span className="ml-2 text-muted-foreground">- {notification.message}</span> : null}
+                            </p>
                         </TableCell>
                         <TableCell>
                             <Badge variant="outline" className="h-5 px-2 rounded-lg border-white/10 bg-white/5 font-black text-[8px] uppercase tracking-widest">{notification.type}</Badge>
@@ -125,7 +124,7 @@ export default function AdminNotificationsPage() {
                         <TableCell className="text-[10px] font-bold uppercase tracking-widest opacity-40">
                             {notification.createdAt ? formatDistanceToNow(notification.createdAt.toDate()) : 'N/A'}
                         </TableCell>
-                        <TableCell className="text-right py-6">
+                        <TableCell className="text-right">
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="icon" className="h-10 w-10 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity" aria-label="Delete notification">
@@ -155,6 +154,7 @@ export default function AdminNotificationsPage() {
             </div>
         )}
       </section>
+      <AdminHubTabs />
     </div>
   );
 }

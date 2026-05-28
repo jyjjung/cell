@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 
 interface UserProgressDisplay {
   userId: string;
@@ -27,9 +28,9 @@ interface UserProgressDisplay {
 }
 
 const rankConfig = [
-  { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-500/10 border-yellow-500/30', border: 'border-yellow-500/30' },
-  { icon: Medal, color: 'text-slate-400', bg: 'bg-slate-400/10 border-slate-400/30', border: 'border-slate-400/30' },
-  { icon: Award, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/30', border: 'border-orange-400/30' },
+  { icon: Trophy, color: 'text-primary', bg: 'bg-muted border-border', border: 'border-border' },
+  { icon: Medal, color: 'text-primary', bg: 'bg-muted border-border', border: 'border-border' },
+  { icon: Award, color: 'text-primary', bg: 'bg-muted border-border', border: 'border-border' },
 ];
 
 export default function LeaderboardPage() {
@@ -70,14 +71,11 @@ export default function LeaderboardPage() {
   if (!isMounted || planLoading || checklistsLoading || usersLoading) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <PageHeader 
         title={t.communityProgressTitle} 
-        description="See how the community is progressing in the reading plan." 
-        icon={Trophy} 
-        accentColor="text-yellow-500" 
-        iconBgColor="bg-yellow-500/10" 
       />
+      <ReadingsHubTabs />
 
 
 
@@ -103,7 +101,7 @@ export default function LeaderboardPage() {
                     )}
                   >
                     {/* Rank */}
-                    <div className={cn("w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border", rank ? rank.bg : 'bg-muted/30 border-border/20')}>
+                    <div className={cn("w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border", rank ? rank.bg : 'bg-muted border-border/20')}>
                       {RankIcon ? <RankIcon className={cn("h-5 w-5", rank.color)} /> : <span className="text-sm font-bold text-muted-foreground">{i + 1}</span>}
                     </div>
 
@@ -149,12 +147,12 @@ export default function LeaderboardPage() {
                         </div>
 
                         <div className="w-full grid grid-cols-2 gap-4 mt-4">
-                            <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+                            <div className="p-4 rounded-2xl bg-muted border border-border/50">
                                 <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-1">Passages Read</p>
                                 <p className="text-2xl font-black">{item.completedCount}</p>
                             </div>
                             <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
-                                <p className="text-[10px] uppercase font-black text-primary/80 tracking-widest mb-1">Completion</p>
+                                <p className="text-[10px] uppercase font-black text-primary tracking-widest mb-1">Completion</p>
                                 <p className="text-2xl font-black text-primary">{Math.round(item.progressPercentage)}%</p>
                             </div>
                         </div>
@@ -163,15 +161,15 @@ export default function LeaderboardPage() {
                             <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest">Earned Badges</h3>
                             <div className="flex gap-2 flex-wrap">
                                 {item.progressPercentage >= 100 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border/50 text-primary text-xs font-bold">
                                         <Trophy className="w-3.5 h-3.5" /> 100% Master
                                     </div>
                                 ) : item.completedCount > 50 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-primary dark:text-primary text-xs font-bold">
                                         <Award className="w-3.5 h-3.5" /> Dedicated Reader
                                     </div>
                                 ) : item.completedCount > 0 ? (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-bold">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border text-primary dark:text-primary text-xs font-bold">
                                         <Medal className="w-3.5 h-3.5" /> Journey Begun
                                     </div>
                                 ) : (

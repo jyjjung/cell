@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
@@ -90,9 +91,9 @@ function ManageCleaningDays() {
                     </form>
                 </div>
 
-                <div className="border border-white/5 rounded-[2.5rem] overflow-hidden bg-card/20 backdrop-blur-md">
-                    <Table>
-                        <TableHeader className="bg-muted/30">
+                <div className="admin-table-wrap">
+                    <Table className="admin-table">
+                        <TableHeader className="bg-muted">
                             <TableRow className="hover:bg-transparent border-white/5">
                                 <TableHead className="font-black uppercase tracking-widest text-[10px]">Designation</TableHead>
                                 <TableHead className="text-right font-black uppercase tracking-widest text-[10px]">Control</TableHead>
@@ -100,9 +101,9 @@ function ManageCleaningDays() {
                         </TableHeader>
                         <TableBody>
                             {cleaningDays.map(day => (
-                                <TableRow key={day.id} className="border-white/5 group">
-                                    <TableCell className="py-4 font-black tracking-tight uppercase text-sm">{day.name}</TableCell>
-                                    <TableCell className="text-right py-4">
+                                <TableRow key={day.id} className="group">
+                                    <TableCell className="font-semibold uppercase text-xs">{day.name}</TableCell>
+                                    <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
                                             <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setEditingDay(day); form.setValue("name", day.name); }}>
                                                 <Edit className="h-4 w-4" />
@@ -218,14 +219,10 @@ export default function AdminCleaningRosterPage() {
   const loading = rosterLoading || usersLoading || daysLoading;
 
   return (
-    <div className="relative space-y-24 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <header className="space-y-6">
+    <div className="admin-page">
+      <header className="space-y-4">
         <PageHeader
           title="Service Rota"
-          description="Sanctuary Maintenance Command"
-          icon={ListTodo}
-          accentColor="text-emerald-500"
-          iconBgColor="bg-emerald-500/10"
         />
       </header>
 
@@ -239,7 +236,7 @@ export default function AdminCleaningRosterPage() {
                 <div className="space-y-1">
                     <h2 className="text-2xl font-black tracking-tighter uppercase">Timeline View.</h2>
                 </div>
-                <div className="flex items-center gap-4 bg-muted/20 p-1.5 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-4 bg-muted p-1.5 rounded-2xl border border-white/5">
                     <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
                         <ChevronsLeft className="h-4 w-4" />
                     </Button>
@@ -251,7 +248,7 @@ export default function AdminCleaningRosterPage() {
             </div>
 
             <div className="flex justify-center py-4">
-                <ToggleGroup type="multiple" value={selectedDaysOfWeek} onValueChange={(val) => setSelectedDaysOfWeek(val.length > 0 ? val : [])} aria-label="Filter by day of week" className="bg-muted/20 p-1.5 rounded-2xl border border-white/5">
+                <ToggleGroup type="multiple" value={selectedDaysOfWeek} onValueChange={(val) => setSelectedDaysOfWeek(val.length > 0 ? val : [])} aria-label="Filter by day of week" className="bg-muted p-1.5 rounded-2xl border border-white/5">
                     {daysOfWeek.map(day => (
                         <ToggleGroupItem key={day.value} value={day.value} className="h-10 w-10 rounded-xl font-black text-xs transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">{day.label}</ToggleGroupItem>
                     ))}
@@ -265,9 +262,9 @@ export default function AdminCleaningRosterPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest">Compiling Timeline</p>
             </div>
         ) : (
-            <div className="border border-white/5 rounded-[2.5rem] overflow-hidden bg-card/20 backdrop-blur-md">
-                <Table>
-                    <TableHeader className="bg-muted/30">
+            <div className="admin-table-wrap">
+                <Table className="admin-table">
+                    <TableHeader className="bg-muted">
                         <TableRow className="hover:bg-transparent border-white/5">
                             <TableHead className="w-[140px] font-black uppercase tracking-widest text-[10px]">Spatial Date</TableHead>
                             <TableHead className="w-[220px] font-black uppercase tracking-widest text-[10px]">Module Type</TableHead>
@@ -293,16 +290,16 @@ export default function AdminCleaningRosterPage() {
                             const canSave = displayData.dayId && displayData.assignedUserIds.length > 0;
 
                             return (
-                                <TableRow key={dateStr} className={cn("border-white/5 group transition-colors", isDirty && "bg-primary/5")}>
+                                <TableRow key={dateStr} className={cn("group transition-colors", isDirty && "bg-primary/5")}>
                                     <TableCell className="font-black tracking-tighter">
                                         <div className="flex flex-col">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-40">{format(dateObj, 'EEE')}</span>
-                                            <span className="text-xl">{format(dateObj, 'MMM d')}</span>
+                                            <span className="text-sm font-semibold">{format(dateObj, 'MMM d')}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
                                         <Select value={displayData.dayId} onValueChange={(val) => handleFieldChange(dateStr, 'dayId', val)}>
-                                            <SelectTrigger className="h-12 rounded-xl bg-muted/20 border-white/5"><SelectValue placeholder="Identify Module" /></SelectTrigger>
+                                            <SelectTrigger className="h-9 rounded-lg bg-muted border-white/5 text-xs"><SelectValue placeholder="Identify Module" /></SelectTrigger>
                                             <SelectContent className="rounded-2xl">
                                                 {cleaningDays.map(day => <SelectItem key={day.id} value={day.id} className="rounded-xl">{day.name}</SelectItem>)}
                                             </SelectContent>
@@ -311,7 +308,7 @@ export default function AdminCleaningRosterPage() {
                                     <TableCell>
                                         <div className="flex flex-wrap gap-2 items-center">
                                             {assignedUsers.map(user => (
-                                                <Badge key={user.uid} variant="secondary" className="pl-1 pr-1 py-0.5 h-8 rounded-lg gap-1 border-white/5 bg-muted/30">
+                                                <Badge key={user.uid} variant="secondary" className="pl-1 pr-1 py-0.5 h-7 rounded-md gap-1 border-white/5 bg-muted">
                                                     <div className="h-6 w-6 rounded-md overflow-hidden bg-muted border border-white/10 shrink-0">
                                                         <PixelAvatar avatar={user.avatar} />
                                                     </div>
@@ -332,7 +329,7 @@ export default function AdminCleaningRosterPage() {
                                             
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="outline" size="sm" className="h-8 rounded-lg border-dashed border-white/20 bg-transparent hover:bg-muted/20 px-3">
+                                                    <Button variant="outline" size="sm" className="h-8 rounded-lg border-dashed border-white/20 bg-transparent hover:bg-muted px-3">
                                                         <UserPlus className="h-3 w-3 mr-2" />
                                                         <span className="text-[9px] font-black uppercase tracking-widest">Assign</span>
                                                     </Button>
@@ -350,12 +347,12 @@ export default function AdminCleaningRosterPage() {
                                             </Popover>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right py-6">
+                                    <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button size="icon" variant={isDirty ? "default" : "outline"} onClick={() => handleSave(dateStr)} disabled={isSaving || !canSave} className="h-12 w-12 rounded-xl">
+                                            <Button size="icon" variant={isDirty ? "default" : "outline"} onClick={() => handleSave(dateStr)} disabled={isSaving || !canSave} className="h-9 w-9 rounded-lg">
                                                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                             </Button>
-                                            <Button size="icon" variant="destructive" onClick={() => handleDelete(dateStr)} disabled={!entry} className="h-12 w-12 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity">
+                                            <Button size="icon" variant="destructive" onClick={() => handleDelete(dateStr)} disabled={!entry} className="h-9 w-9 rounded-lg opacity-30 group-hover:opacity-100 transition-opacity">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -368,6 +365,7 @@ export default function AdminCleaningRosterPage() {
             </div>
         )}
       </section>
+      <AdminHubTabs />
     </div>
   );
 }

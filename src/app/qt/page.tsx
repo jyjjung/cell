@@ -6,13 +6,12 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import type { QTRosterEntry, UserProfileData } from '@/types';
 import { format, isBefore, startOfToday, compareAsc } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
-import { Loader2, User, CalendarOff, BookOpen, Calendar } from 'lucide-react';
-import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { Loader2, CalendarOff, CalendarClock, History } from 'lucide-react';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
-import { RosterCard } from '@/components/ui/roster-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 
 export default function QTRosterPage() {
     const { roster, loading: rosterLoading } = useQTRoster();
@@ -75,121 +74,129 @@ export default function QTRosterPage() {
 
     }, [roster]);
 
-    const RosterMonthGroup = ({ month, entries }: { month: string, entries: QTRosterEntry[] }) => (
-        <div className="space-y-8">
-            <div className="flex items-center gap-4">
-                <h2 className="text-section-title text-foreground/80">{month}</h2>
-                <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
-            </div>
-            <div className="flex flex-col gap-4">
-                {entries.map((entry, idx) => {
-                    const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                    const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
-                    const entryDate = parseDay(entry.date);
-
-                    return (
-                        <RosterCard 
-                            key={entry.id}
-                            index={idx}
-                            date={entryDate}
-                            title={displayName}
-                            subtitle={entry.title && (
-                                <LinkifiedText 
-                                    text={entry.title} 
-                                    className="block text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed" 
-                                />
-                            )}
-                            users={user ? [user] : []}
-                            rightElement={(
-                                <div className="shrink-0">
-                                    <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
-                                        <p className="text-micro-label text-primary font-mono whitespace-nowrap !opacity-100 tracking-tight">
-                                            {entry.passage}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        />
-                    );
-                })}
-            </div>
-        </div>
-    );
-    
     if(!isMounted) return null;
 
     // Calculate global indices for staggered animation
     let globalIdx = 0;
     
     return (
-      <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <div className="page-container space-y-6">
             <PageHeader 
                 title="QT Roster" 
-                subtitle="Spiritual Timeline Synchronization"
-                icon={Calendar}
-                accentColor="text-primary"
-                iconBgColor="bg-primary/10"
             />
+            <ScheduleHubTabs />
             
             {(rosterLoading || usersLoading) ? (
                  <div className="flex flex-col items-center justify-center py-32 gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
-                    <p className="text-micro-label !opacity-100 opacity-40">Syncing Spiritual Matrix...</p>
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading roster...</p>
                  </div>
             ) : (
-                <div className="space-y-20">
+                <Tabs defaultValue="upcoming" className="w-full">
+                    <TabsList className="h-10">
+                        <TabsTrigger value="upcoming" className="rounded-md text-sm font-medium">Upcoming</TabsTrigger>
+                        <TabsTrigger value="past" className="rounded-md text-sm font-medium">Past</TabsTrigger>
+                    </TabsList>
                     {roster.length > 0 ? (
                         <>
-                        {upcomingByMonth.length > 0 ? (
-                            upcomingByMonth.map(([month, entries]) => (
-                                <div key={`upcoming-${month}`} className="space-y-8">
-                                    <div className="flex items-center gap-4">
-                                        <h2 className="text-section-title text-foreground/80">{month}</h2>
-                                        <div className="h-px bg-gradient-to-r from-white/10 to-transparent flex-grow" />
-                                    </div>
-                                    <div className="flex flex-col gap-4">
-                                        {entries.map((entry) => {
-                                            const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                                            const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
-                                            const entryDate = parseDay(entry.date);
-                                            const currentIndex = globalIdx++;
+                        <TabsContent value="upcoming" className="mt-6 space-y-8">
+                            {upcomingByMonth.length > 0 ? (
+                                upcomingByMonth.map(([month, entries]) => (
+                                    <div key={`upcoming-${month}`} className="space-y-4">
+                                        <p className="text-micro-label !opacity-100 text-muted-foreground/60 px-1">{month}</p>
+                                        <div className="flex flex-col gap-3">
+                                            {entries.map((entry) => {
+                                                const user = entry.userId ? usersMap.get(entry.userId) : undefined;
+                                                const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
+                                                const entryDate = parseDay(entry.date);
+                                                const currentIndex = globalIdx++;
 
-                                            return (
-                                                <div id={`date-${entry.date}`} className="scroll-mt-24 transition-all duration-700">
-                                                    <RosterCard 
-                                                        key={entry.id}
-                                                        index={currentIndex}
-                                                        date={entryDate}
-                                                        title={displayName}
-                                                        subtitle={entry.title && (
-                                                            <LinkifiedText 
-                                                                text={entry.title} 
-                                                                className="block text-xs font-medium text-muted-foreground/70 mt-1.5 leading-relaxed" 
-                                                            />
-                                                        )}
-                                                        users={user ? [user] : []}
-                                                        rightElement={(
-                                                            <div className="shrink-0">
-                                                                <div className="bg-primary/5 px-4 py-2 rounded-xl border border-primary/10">
-                                                                    <p className="text-micro-label text-primary font-mono whitespace-nowrap !opacity-100 tracking-tight">
-                                                                        {entry.passage}
+                                                return (
+                                                    <div id={`date-${entry.date}`} className="scroll-mt-24 transition-all duration-700">
+                                                        <RosterFeedCard
+                                                            key={entry.id}
+                                                            index={currentIndex}
+                                                            date={entryDate}
+                                                            label="QT Roster"
+                                                            title={displayName}
+                                                            description={(
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <p className="text-[10px] font-medium text-muted-foreground/60">
+                                                                        {format(entryDate, 'EEEE, MMMM do, yyyy')}
+                                                                    </p>
+                                                                    {entry.title && (
+                                                                        <LinkifiedText
+                                                                            text={entry.title}
+                                                                            className="block text-[10px] font-medium text-muted-foreground/70 leading-relaxed"
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            rightElement={(
+                                                                <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
+                                                                    <p className="text-[9px] font-black uppercase tracking-wider text-primary font-mono whitespace-nowrap">
+                                                                        {entry.passage || '—'}
                                                                     </p>
                                                                 </div>
-                                                            </div>
-                                                        )}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
+                                                            )}
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))
-                        ) : (
-                            <EmptyState 
-                                icon={CalendarOff} 
-                                title="Current Horizon is Clear" 
-                            />
-                        )}
+                                ))
+                            ) : (
+                                <EmptyState 
+                                    icon={CalendarOff} 
+                                    title="Current Horizon is Clear" 
+                                />
+                            )}
+                        </TabsContent>
+                        <TabsContent value="past" className="mt-6 space-y-8 opacity-80">
+                            {pastByMonth.length > 0 ? (
+                                pastByMonth.map(([month, entries]) => (
+                                    <div key={`past-${month}`} className="space-y-4">
+                                        <p className="text-micro-label !opacity-100 text-muted-foreground/60 px-1">{month}</p>
+                                        <div className="flex flex-col gap-3">
+                                            {entries.map((entry) => {
+                                                const user = entry.userId ? usersMap.get(entry.userId) : undefined;
+                                                const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
+                                                const entryDate = parseDay(entry.date);
+                                                const currentIndex = globalIdx++;
+
+                                                return (
+                                                    <RosterFeedCard
+                                                        key={`past-${entry.id}`}
+                                                        index={currentIndex}
+                                                        date={entryDate}
+                                                        label="QT Roster"
+                                                        title={displayName}
+                                                        description={
+                                                            <p className="text-[10px] font-medium text-muted-foreground/60">
+                                                                {format(entryDate, 'EEEE, MMMM do, yyyy')}
+                                                            </p>
+                                                        }
+                                                        rightElement={
+                                                            <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
+                                                                <p className="text-[9px] font-black uppercase tracking-wider text-primary font-mono whitespace-nowrap">
+                                                                    {entry.passage || '—'}
+                                                                </p>
+                                                            </div>
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <EmptyState 
+                                    icon={CalendarOff} 
+                                    title="No past QT roster entries" 
+                                />
+                            )}
+                        </TabsContent>
                         </>
                     ) : (
                         <EmptyState 
@@ -197,7 +204,7 @@ export default function QTRosterPage() {
                             title="Awaiting Activation Command" 
                         />
                     )}
-                </div>
+                </Tabs>
             )}
         </div>
     )

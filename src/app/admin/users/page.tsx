@@ -46,6 +46,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -259,18 +260,18 @@ export default function AdminUsersPage() {
     return (
       <div className={cn(
         "p-4 rounded-2xl bg-card/20 backdrop-blur-md border border-white/5 space-y-4",
-        isDuplicate && "bg-orange-500/[0.03] border-orange-500/20"
+        isDuplicate && "bg-muted/[0.03] border-border"
       )}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted/20 border border-white/10 shrink-0">
+            <div className="h-10 w-10 rounded-lg overflow-hidden bg-muted border border-white/10 shrink-0">
               <PixelAvatar avatar={user.avatar} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="font-bold tracking-tight text-sm leading-none truncate">{user.firstName} {user.lastName}</p>
                 {isDuplicate && (
-                  <AlertCircle className="h-3.5 w-3.5 text-orange-500 animate-pulse shrink-0" />
+                  <AlertCircle className="h-3.5 w-3.5 text-primary animate-pulse shrink-0" />
                 )}
               </div>
               <p className="text-xs font-medium text-muted-foreground truncate mt-1">{user.email}</p>
@@ -278,11 +279,11 @@ export default function AdminUsersPage() {
           </div>
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             {isApproved ? (
-              <Badge variant="outline" className="h-5 px-1.5 rounded border-green-500/30 bg-green-500/5 text-green-500 font-bold text-[10px]">
+              <Badge variant="outline" className="h-5 px-1.5 rounded border-border/50 bg-muted text-primary font-bold text-[10px]">
                 <ShieldCheck className="h-3 w-3 mr-1" /> Auth
               </Badge>
             ) : (
-              <Badge variant="outline" className="h-5 px-1.5 rounded border-orange-500/30 bg-orange-500/5 text-orange-500 font-bold text-[10px] animate-pulse">
+              <Badge variant="outline" className="h-5 px-1.5 rounded border-border bg-muted text-primary font-bold text-[10px] animate-pulse">
                 <Clock className="h-3 w-3 mr-1" /> Pending
               </Badge>
             )}
@@ -314,15 +315,11 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="relative space-y-16 pb-24 max-w-6xl mx-auto px-4 md:px-8 mt-12">
-      <header className="space-y-6">
+    <div className="admin-page max-w-6xl">
+      <header className="space-y-4">
         <PageHeader 
           title="Users"
-          icon={Users}
-          accentColor="text-primary"
-          iconBgColor="bg-primary/10"
         />
-
         <div className="flex flex-col md:flex-row items-center gap-3 w-full">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -335,7 +332,7 @@ export default function AdminUsersPage() {
           </div>
 
           {selectedUserIds.size > 0 && (
-              <Button onClick={handleBulkApprove} disabled={isBulkApproving} className="h-10 rounded-lg px-4 bg-green-500 hover:bg-green-600 text-white font-semibold whitespace-nowrap shrink-0">
+              <Button onClick={handleBulkApprove} disabled={isBulkApproving} className="h-10 rounded-lg px-4 bg-muted hover:bg-card text-foreground font-semibold whitespace-nowrap shrink-0">
                   {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
                   Approve ({selectedUserIds.size})
               </Button>
@@ -344,8 +341,8 @@ export default function AdminUsersPage() {
       </header>
 
       {duplicateNameSet.size > 0 && (
-        <Alert className="rounded-[2rem] border-orange-500/20 bg-orange-500/5 p-6 shadow-xl">
-          <AlertTriangle className="h-5 w-5 text-orange-500" />
+        <Alert className="rounded-[2rem] border-border bg-muted p-6 shadow-xl">
+          <AlertTriangle className="h-5 w-5 text-primary" />
           <div className="ml-2">
             <AlertTitle className="text-lg font-black tracking-tight uppercase">Duplicate Users Detected</AlertTitle>
             <AlertDescription className="text-sm font-medium opacity-70 mt-1 leading-relaxed">
@@ -369,9 +366,9 @@ export default function AdminUsersPage() {
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block border border-white/5 rounded-[2.5rem] overflow-x-auto bg-card/20 backdrop-blur-md">
-              <Table>
-                <TableHeader className="bg-muted/30">
+            <div className="admin-table-wrap hidden md:block">
+              <Table className="admin-table">
+                <TableHeader className="bg-muted">
                   <TableRow className="hover:bg-transparent border-white/5">
                     <TableHead className="w-[50px]">
                       <Checkbox 
@@ -399,7 +396,7 @@ export default function AdminUsersPage() {
                     return (
                     <TableRow key={user.uid} className={cn(
                       "border-white/5 transition-colors group hover:bg-white/5",
-                      duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && "bg-orange-500/[0.03]"
+                      duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && "bg-muted/[0.03]"
                     )}>
                       <TableCell>
                          {isPending && (
@@ -415,30 +412,30 @@ export default function AdminUsersPage() {
                          )}
                       </TableCell>
                       <TableCell className="py-2">
-                          <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted/20 border border-white/10 shrink-0">
+                          <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-lg overflow-hidden bg-muted border border-white/10 shrink-0">
                                   <PixelAvatar avatar={user.avatar} />
                               </div>
-                              <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-bold tracking-tight text-sm">{user.firstName} {user.lastName}</p>
-                                    {duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && (
-                                      <Badge variant="outline" className="h-4 px-1.5 border-orange-500/30 bg-orange-500/10 text-orange-500 font-bold text-[9px] animate-pulse">
-                                        Duplicate
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-xs font-medium text-muted-foreground truncate">{user.email}</p>
+                              <div className="min-w-0 flex items-center gap-2">
+                                <p className="truncate text-xs font-semibold">
+                                  {user.firstName} {user.lastName}
+                                  <span className="ml-2 text-muted-foreground">{user.email}</span>
+                                </p>
+                                {duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`) && (
+                                  <Badge variant="outline" className="h-4 px-1.5 border-border bg-muted text-primary font-bold text-[9px] animate-pulse">
+                                    Duplicate
+                                  </Badge>
+                                )}
                               </div>
                           </div>
                       </TableCell>
                       <TableCell className="py-2">
                           {(user.isApproved || user.isAdmin) ? (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-green-500/30 bg-green-500/5 text-green-500 font-bold text-[10px]">
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border/50 bg-muted text-primary font-bold text-[10px]">
                                 <ShieldCheck className="h-3 w-3 mr-1" /> Authorized
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-orange-500/30 bg-orange-500/5 text-orange-500 font-bold text-[10px] animate-pulse">
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border bg-muted text-primary font-bold text-[10px] animate-pulse">
                                 <Clock className="h-3 w-3 mr-1" /> Pending
                             </Badge>
                           )}
@@ -487,6 +484,7 @@ export default function AdminUsersPage() {
           </>
         )}
       </section>
+      <AdminHubTabs />
 
       {/* Edit User Dialog */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
@@ -503,7 +501,7 @@ export default function AdminUsersPage() {
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">First Name</FormLabel>
-                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted/30" disabled={isSaving} /></FormControl>
+                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted" disabled={isSaving} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -511,7 +509,7 @@ export default function AdminUsersPage() {
                 <FormField control={form.control} name="lastName" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Last Name</FormLabel>
-                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted/30" disabled={isSaving} /></FormControl>
+                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted" disabled={isSaving} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -139,7 +139,6 @@ export function useMessages(chatId: string | null) {
     text?: string, 
     imageUrl?: string, 
     replyToId?: string,
-    invitationId?: string,
     eventId?: string,
     setlistId?: string,
     rosterId?: string,
@@ -150,7 +149,7 @@ export function useMessages(chatId: string | null) {
     sheetKey?: string
   ) => {
     if (!currentUser || !chatId) return;
-    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId) return;
+    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -162,7 +161,6 @@ export function useMessages(chatId: string | null) {
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
     if (replyToId) messageData.replyToId = replyToId;
-    if (invitationId) messageData.invitationId = invitationId;
     if (eventId) messageData.eventId = eventId;
     if (setlistId) messageData.setlistId = setlistId;
     if (rosterId) messageData.rosterId = rosterId;
@@ -176,7 +174,6 @@ export function useMessages(chatId: string | null) {
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
 
     let lastText = trimmedText || "📷 Image";
-    if (invitationId) lastText = "📩 Invitation";
     if (eventId) lastText = "📅 Event";
     if (setlistId) lastText = "🎵 Setlist";
     if (rosterId) lastText = "📋 Roster";
@@ -267,7 +264,6 @@ export function useMessages(chatId: string | null) {
         deletedBy: currentUser.uid,
         text: deleteField(),
         imageUrl: deleteField(),
-        invitationId: deleteField(),
         eventId: deleteField(),
         setlistId: deleteField(),
         rosterId: deleteField(),

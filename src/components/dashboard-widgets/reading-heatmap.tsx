@@ -81,7 +81,7 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
   }
 
   return (
-    <div className="p-6 bg-card/40 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-md w-full overflow-x-auto">
+    <div className="glass-card p-6 rounded-3xl w-full overflow-x-auto">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-black uppercase tracking-widest text-primary/80">Reading Consistency</h3>
         <p className="text-xs text-muted-foreground font-medium">Last {daysToShow} days</p>
@@ -97,7 +97,7 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
                 let intensityClass = 'bg-muted/30 border border-transparent'; // no reading / missed
                 if (day.hasReading) {
                   if (day.complete === day.total) {
-                    intensityClass = "bg-primary border-primary shadow-[0_0_8px_rgba(14,165,233,0.5)] dark:shadow-[0_0_8px_rgba(14,165,233,0.3)]";
+                    intensityClass = "bg-primary border border-primary/50";
                   } else if (day.complete > 0) {
                     intensityClass = "bg-primary/40 border border-primary/20";
                   } else {

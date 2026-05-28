@@ -20,28 +20,6 @@ export enum EventCategory {
 /** none: single or multi-day span. daily/weekly: repeats until recurrenceUntil. */
 export type EventRecurrence = 'none' | 'daily' | 'weekly';
 
-export type RSVPStatus = 'accept' | 'maybe' | 'decline';
-
-export interface InvitationResponse {
-  uid: string;
-  status: RSVPStatus;
-  selectedDates: string[]; // ISO strings from dateOptions
-  updatedAt: Timestamp;
-}
-
-export interface AppInvitation {
-  id: string;
-  title: string;
-  description: string;
-  location?: string;
-  dateOptions: string[]; // ISO strings
-  allowedRoleIds: string[];
-  responses: { [uid: string]: InvitationResponse };
-  createdBy: string;
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
-}
-
 export interface AppEvent {
   id: string;
   date: string;
@@ -298,7 +276,6 @@ export interface ChatMessage {
   latestReplySenderId?: string;
   latestReplyText?: string;
   latestReplyImageUrl?: string;
-  invitationId?: string;
   eventId?: string;
   setlistId?: string;
   rosterId?: string;

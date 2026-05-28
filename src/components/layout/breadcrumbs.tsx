@@ -25,7 +25,6 @@ const routeLabels: Record<string, string> = {
   '/admin': 'Admin',
   '/worship': 'Worship Portal',
   '/media': 'Resources',
-  '/rsvp': 'RSVP',
 };
 
 export function Breadcrumbs() {
@@ -61,25 +60,25 @@ export function Breadcrumbs() {
   if (isMobile) {
     const parentCrumb = crumbs.length >= 2 ? crumbs[crumbs.length - 2] : null;
     const currentCrumb = crumbs[crumbs.length - 1];
+    const showBackButton = pathsegments.length > 1;
 
     return (
       <nav aria-label="Breadcrumb" className="flex items-center">
-        {parentCrumb && (
+        {showBackButton && parentCrumb && (
           <motion.button
             initial={{ opacity: 0, x: -4 }}
             animate={{ opacity: 1, x: 0 }}
             onClick={() => router.back()}
-            className="flex items-center gap-1 h-9 px-2 -ml-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all active:scale-95"
+            className="glass-thin flex items-center gap-1 h-9 px-2 rounded-xl text-muted-foreground hover:text-foreground transition-all active:scale-95"
             aria-label={`Back to ${parentCrumb.label}`}
           >
             <ChevronLeft className="h-4 w-4 shrink-0" />
-            <span className="text-sm font-semibold">{parentCrumb.label === 'Home' ? '' : parentCrumb.label}</span>
           </motion.button>
         )}
         <motion.span
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-sm font-bold text-foreground ml-1"
+          className={cn("text-sm font-bold text-foreground", showBackButton ? "ml-1" : "ml-0.5")}
         >
           {currentCrumb.label}
         </motion.span>
@@ -109,10 +108,10 @@ export function Breadcrumbs() {
               <Link
                 href={crumb.href}
                 className={cn(
-                  "text-xs font-bold uppercase tracking-wider transition-all hover:text-primary active:scale-95 px-1 py-0.5 rounded-md",
+                  "glass-thin text-xs font-bold uppercase tracking-wider transition-all hover:text-primary active:scale-95 px-1 py-0.5 rounded-md border-transparent",
                   isLast
                     ? "text-foreground"
-                    : "text-muted-foreground/60 hover:bg-muted/40"
+                    : "text-muted-foreground/60 hover:bg-background/35"
                 )}
                 aria-current={isLast ? 'page' : undefined}
               >

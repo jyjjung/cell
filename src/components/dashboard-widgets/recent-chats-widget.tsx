@@ -31,13 +31,13 @@ export default function RecentChatsWidget() {
     if (!currentUser) return null;
 
     return (
-        <div className="relative p-6 md:p-8 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
+        <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
             <div className="flex items-center justify-between mb-6">
                 <div className="min-w-0">
                     <h3 className="text-lg font-black tracking-tight">Active Circles</h3>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Recent Messenger</p>
                 </div>
-                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 shadow-inner">
+                <div className="p-2.5 rounded-xl glass-thin text-blue-500 ring-1 ring-blue-500/20">
                     <MessageCircle className="h-5 w-5" />
                 </div>
             </div>
@@ -79,9 +79,9 @@ export default function RecentChatsWidget() {
                                     onClick={() => handleGoToChat(chat.id)}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="w-full flex items-center gap-4 p-3 rounded-2xl bg-muted/20 border border-transparent hover:bg-blue-500 transition-all group overflow-hidden"
+                                    className="w-full flex items-center gap-4 p-3 rounded-2xl glass-thin hover:ring-blue-500/30 transition-all group overflow-hidden"
                                 >
-                                    <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden bg-muted border border-border/20 group-hover:border-white/30">
+                                    <div className="h-10 w-10 shrink-0 rounded-full overflow-hidden glass-thin">
                                         {avatar ? <PixelAvatar avatar={avatar} /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Users className="h-5 w-5 text-muted-foreground group-hover:text-white" /></div>}
                                     </div>
                                     <div className="flex-grow min-w-0 text-left overflow-hidden">
@@ -98,7 +98,7 @@ export default function RecentChatsWidget() {
             <div className="mt-8">
                 <Button
                     variant="outline"
-                    className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-blue-500 hover:text-white transition-all shadow-none group"
+                    className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group"
                     onClick={() => { setIsPageLoading(true); router.push('/chat'); }}
                 >
                     Circle Hub

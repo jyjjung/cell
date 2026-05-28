@@ -7,7 +7,6 @@ import {
   Sparkles, 
   Send, 
   Calendar, 
-  Mail, 
   Bell, 
   ArrowUp,
   User,
@@ -21,7 +20,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useEvents } from '@/hooks/use-events';
-import { useInvitations } from '@/hooks/use-invitations';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useToast } from '@/hooks/use-toast';
 import { parse, isValid, format } from 'date-fns';
@@ -33,7 +31,6 @@ import { Music, ListMusic, ClipboardList } from 'lucide-react';
 type WizardState = 
   | 'IDLE'
   | 'EVENT_TITLE' | 'EVENT_CATEGORY' | 'EVENT_START_DATE' | 'EVENT_END_DATE' | 'EVENT_START_TIME' | 'EVENT_END_TIME' | 'EVENT_LOCATION' | 'EVENT_CONFIRM'
-  | 'INVITE_TITLE' | 'INVITE_DESC' | 'INVITE_DATE' | 'INVITE_START_TIME' | 'INVITE_END_TIME' | 'INVITE_LOCATION' | 'INVITE_CONFIRM'
   | 'ANN_TITLE' | 'ANN_MSG' | 'ANN_CONFIRM'
   | 'SONG_TITLE' | 'SONG_ARTIST' | 'SONG_CONFIRM'
   | 'SETLIST_NAME' | 'SETLIST_DATE' | 'SETLIST_CONFIRM'
@@ -50,7 +47,6 @@ type Message = {
 export default function SystemChat() {
   const { currentUser } = useAuth();
   const { addEvent } = useEvents();
-  const { addInvitation } = useInvitations();
   const { createNotification } = useNotifications();
   const { addSong } = useWorshipSongs();
   const { createSetlist } = useWorshipSetlists();
@@ -109,7 +105,7 @@ export default function SystemChat() {
   useEffect(() => {
     if (messages.length === 0 && currentUser) {
         const timeout = setTimeout(() => {
-            systemSay(`Hi ${currentUser.firstName || 'there'}! I'm the creation wizard. You can manage **Events**, **Invites**, **Songs**, **Setlists**, or **Rosters** here. To share these items in any chat, just type **'/'** at any time!`);
+            systemSay(`Hi ${currentUser.firstName || 'there'}! I'm the creation wizard. You can manage **Events**, **Songs**, **Setlists**, or **Rosters** here. To share these items in any chat, just type **'/'** at any time!`);
         }, 1000);
         return () => clearTimeout(timeout);
     }
@@ -125,12 +121,6 @@ export default function SystemChat() {
     setWizardState('EVENT_TITLE');
     setFormData({});
     systemSay("Great! Let's create an **Event**. First, what is the **title**? (e.g. Youth Retreat)");
-  };
-
-  const startInviteFlow = () => {
-    setWizardState('INVITE_TITLE');
-    setFormData({});
-    systemSay("Awesome! Let's start an **Invitation**. What's the **title** of this invite? (e.g. Annual BBQ)");
   };
 
   const startAnnouncementFlow = () => {
@@ -178,12 +168,11 @@ export default function SystemChat() {
     if (wizardState === 'IDLE') {
         const lower = text.toLowerCase();
         if (lower.includes('event')) startEventFlow();
-        else if (lower.includes('invite')) startInviteFlow();
         else if (lower.includes('announcement')) startAnnouncementFlow();
         else if (lower.includes('song')) startSongFlow();
         else if (lower.includes('setlist')) startSetlistFlow();
         else if (lower.includes('roster')) startRosterFlow();
-        else systemSay("I didn't quite get that. Would you like to create an **Event**, an **Invite**, a **Song**, a **Setlist**, or a **Roster**?");
+        else systemSay("I didn't quite get that. Would you like to create an **Event**, a **Song**, a **Setlist**, or a **Roster**?");
         return;
     }
 
@@ -240,50 +229,6 @@ export default function SystemChat() {
             });
         } else {
             systemSay("Aborted. What else?");
-            setWizardState('IDLE');
-        }
-    }
-
-    // INVITE FLOW
-    else if (wizardState === 'INVITE_TITLE') {
-        setFormData({ ...formData, title: text });
-        setWizardState('INVITE_DESC');
-        systemSay("Now, provide a short **Description**. Enter to skip.");
-    } else if (wizardState === 'INVITE_DESC') {
-        setFormData({ ...formData, description: text || '' });
-        setWizardState('INVITE_DATE');
-        systemSay("What is the **Date**? (e.g. Saturday, Aug 12th)");
-    } else if (wizardState === 'INVITE_DATE') {
-        setFormData({ ...formData, rawDate: text });
-        setWizardState('INVITE_START_TIME');
-        systemSay("What's the **Start Time**? (e.g. 7:00 PM). Enter to skip.");
-    } else if (wizardState === 'INVITE_START_TIME') {
-        setFormData({ ...formData, startTime: text || '' });
-        setWizardState('INVITE_END_TIME');
-        systemSay("What's the **End Time**? (e.g. 9:00 PM). Enter to skip.");
-    } else if (wizardState === 'INVITE_END_TIME') {
-        setFormData({ ...formData, endTime: text || '' });
-        setWizardState('INVITE_LOCATION');
-        systemSay("What is the **Location**? Enter to skip.");
-    } else if (wizardState === 'INVITE_LOCATION') {
-        const timeStr = formData.startTime ? (formData.endTime ? ` ${formData.startTime}-${formData.endTime}` : ` ${formData.startTime}`) : '';
-        const finalData = { 
-            ...formData, 
-             location: text || '',
-             dateOptions: [`${formData.rawDate}${timeStr}`]
-        };
-        setFormData(finalData);
-        setWizardState('INVITE_CONFIRM');
-        systemSay(`Launch the invitation **${formData.title}**? (Yes/No)`);
-    } else if (wizardState === 'INVITE_CONFIRM') {
-        if (text.toLowerCase().includes('yes')) {
-            addInvitation(formData).then(() => {
-                systemSay("The invitation is live.");
-                setWizardState('IDLE');
-                toast({ title: "Invite Created" });
-            });
-        } else {
-            systemSay("Cancelled. What next?");
             setWizardState('IDLE');
         }
     }
@@ -426,8 +371,8 @@ export default function SystemChat() {
                     <div className={cn(
                         "px-6 py-4 rounded-[1.8rem] group relative transition-all duration-300",
                         msg.sender === 'user' 
-                            ? "bg-[#007AFF] font-black rounded-tr-xl shadow-xl shadow-blue-500/10" 
-                            : "bg-[#3B3B3D]/20 border border-white/5 text-foreground font-inter rounded-tl-xl"
+                            ? "bg-primary text-primary-foreground font-black rounded-tr-xl shadow-xl shadow-black/10" 
+                            : "bg-card/40 border border-border text-foreground font-inter rounded-tl-xl"
                     )}>
                         <p className="text-[15px] leading-relaxed relative z-10 !text-white" style={{ color: 'white' }}>
                             {msg.content}
@@ -466,14 +411,6 @@ export default function SystemChat() {
                         Event
                     </Button>
                     <Button 
-                        onClick={startInviteFlow}
-                        variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
-                    >
-                        <Mail className="mr-2 h-3.5 w-3.5 text-primary" />
-                        Invite
-                    </Button>
-                    <Button 
                         onClick={startAnnouncementFlow}
                         variant="outline"
                         className="h-10 px-6 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
@@ -485,25 +422,25 @@ export default function SystemChat() {
                     <Button 
                         onClick={startSongFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
                     >
-                        <Music className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        <Music className="mr-2 h-3.5 w-3.5 text-primary" />
                         New Song
                     </Button>
                     <Button 
                         onClick={startSetlistFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
                     >
-                        <ListMusic className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        <ListMusic className="mr-2 h-3.5 w-3.5 text-primary" />
                         Setlist
                     </Button>
                     <Button 
                         onClick={startRosterFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-rose-500/10 hover:bg-rose-500/5 hover:border-rose-500/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
                     >
-                        <ClipboardList className="mr-2 h-3.5 w-3.5 text-rose-500" />
+                        <ClipboardList className="mr-2 h-3.5 w-3.5 text-primary" />
                         Team Roster
                     </Button>
                 </motion.div>
@@ -530,13 +467,13 @@ export default function SystemChat() {
             <div className="flex justify-end px-6">
                 <button 
                     onClick={() => { setWizardState('IDLE'); setMessages([]); focusInput(); }} 
-                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-red-500/60 transition-colors"
+                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-destructive/70 transition-colors"
                 >
                     Reset Chat
                 </button>
             </div>
             
-            <div className="flex items-center gap-2 bg-[#3B3B3D]/30 backdrop-blur-3xl px-6 py-1.5 rounded-full border border-white/5 focus-within:bg-[#3B3B3D]/50 transition-all relative group">
+            <div className="flex items-center gap-2 bg-card/40 backdrop-blur-3xl px-6 py-1.5 rounded-full border border-border focus-within:bg-card/60 transition-all relative group">
                 <input 
                     ref={inputRef}
                     value={inputValue}
@@ -555,7 +492,7 @@ export default function SystemChat() {
                     disabled={isTyping}
                     className={cn(
                         "h-8 w-8 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0",
-                        inputValue.trim() || wizardState !== 'IDLE' ? "bg-[#007AFF] text-white shadow-lg shadow-blue-500/20" : "bg-white/10 text-muted-foreground opacity-20"
+                        inputValue.trim() || wizardState !== 'IDLE' ? "bg-primary text-primary-foreground shadow-lg shadow-black/20" : "bg-white/10 text-muted-foreground opacity-20"
                     )}
                 >
                     <ArrowUp className="h-4 w-4" strokeWidth={3} />

@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 
 import { RosterCard } from '@/components/ui/roster-card';
 
@@ -78,13 +79,9 @@ export default function FullBiblePlanPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <PageHeader 
         title="Full Plan" 
-        subtitle="Complete Spiritual Roadmap"
-        icon={BookOpen}
-        accentColor="text-sky-500"
-        iconBgColor="bg-sky-500/10"
         action={
           <Button variant="outline" size="sm" onClick={handleCopyToClipboard} disabled={!planAsText || planLoading} className="rounded-xl font-bold">
             <Copy className="mr-2 h-4 w-4" />
@@ -92,11 +89,12 @@ export default function FullBiblePlanPage() {
           </Button>
         }
       />
+      <ReadingsHubTabs />
 
       {planLoading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-sky-500/20" />
-              <p className="text-micro-label text-sky-500/40 !opacity-100">Downloading Sacred Data...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-micro-label text-primary !opacity-100">Downloading Sacred Data...</p>
           </div>
       ) : (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) ? (
           <EmptyState 
@@ -113,11 +111,11 @@ export default function FullBiblePlanPage() {
                     date={parseDay(reading.date)}
                     title={generatePassageSummary(reading)}
                     subtitle={format(parseDay(reading.date), "EEEE, MMMM d, yyyy")}
-                    accentColor="text-sky-500"
-                    accentBg="bg-sky-500/20"
+                    accentColor="text-primary"
+                    accentBg="bg-muted"
                     showLine={false}
                     hideAvatars={true}
-                    rightElement={<BookOpen className="h-5 w-5 text-sky-500/40" />}
+                    rightElement={<BookOpen className="h-5 w-5 text-primary" />}
                 />
             ))}
           </section>

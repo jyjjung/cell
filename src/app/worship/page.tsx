@@ -76,8 +76,8 @@ function KeyBadge({ keyName, accent = false }: { keyName: ChordKey; accent?: boo
     <span className={cn(
       'inline-flex items-center justify-center min-w-[2rem] h-6 px-1.5 rounded-lg text-[11px] font-black tracking-tight border',
       accent
-        ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
-        : 'bg-muted/40 border-border/40 text-muted-foreground'
+        ? 'bg-muted border-border text-primary'
+        : 'bg-muted border-border/40 text-muted-foreground'
     )}>
       {keyName === 'numbers' ? '#' : keyName}
     </span>
@@ -192,7 +192,7 @@ function SongDetailView({
           {editing ? (
             <>
               <Button size="sm" variant="ghost" className="rounded-xl h-9" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 gap-1.5"
+              <Button size="sm" className="rounded-xl h-9 gap-1.5"
                 onClick={handleSaveEdit} disabled={!editTitle.trim() || saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
               </Button>
@@ -203,7 +203,7 @@ function SongDetailView({
                 onClick={() => { setEditTitle(song.title); setEditArtist(song.artist || ''); setEditing(true); }}>
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </Button>
-              <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 gap-1.5"
+              <Button size="sm" className="rounded-xl h-9 gap-1.5"
                 onClick={() => setAddSheetOpen(true)}>
                 <Plus className="h-3.5 w-3.5" /> Add Sheet
               </Button>
@@ -228,17 +228,17 @@ function SongDetailView({
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {sheets.map((sheet, idx) => (
-                  <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted/10 aspect-[3/4]">
+                  <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted aspect-[3/4]">
                     {sheet.imageUrl.toLowerCase().includes('.pdf') ? (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors">
-                        <BookOpen className="h-10 w-10 text-rose-500/40" />
-                        <span className="text-[10px] font-black text-rose-500/60 mt-2">PDF DOCUMENT</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-muted group-hover:bg-muted transition-colors">
+                        <BookOpen className="h-10 w-10 text-primary" />
+                        <span className="text-[10px] font-black text-primary mt-2">PDF DOCUMENT</span>
                       </div>
                     ) : (
                       <img src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
                         className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
                       <button onClick={() => setViewSheet(sheet)}
                         title="View sheet"
                         className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
@@ -258,14 +258,14 @@ function SongDetailView({
                           title="Convert PDF to Images"
                           onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
                           disabled={convertingId === sheet.id}
-                          className="p-1.5 rounded-lg bg-emerald-500/80 hover:bg-emerald-500 text-white transition-colors">
+                          className="p-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/10 text-white transition-colors">
                           {convertingId === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         </button>
                       )}
                       <button onClick={() => handleDelete(sheet)}
                         title="Delete sheet"
                         disabled={deleting === sheet.id}
-                        className="p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white transition-colors">
+                        className="p-1.5 rounded-lg bg-destructive hover:bg-destructive text-destructive-foreground transition-colors">
                         {deleting === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </button>
                     </div>
@@ -305,7 +305,7 @@ function SongDetailView({
 }
 
 // ── SongsLibraryTab ───────────────────────────────────────────────────────────
-function SongsLibraryTab() {
+function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
   const { songs, loading, deleteSong, addChordSheet, removeChordSheet } = useWorshipSongs();
   const [newSongOpen, setNewSongOpen] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
@@ -314,6 +314,10 @@ function SongsLibraryTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipSong | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (openNewSignal && openNewSignal > 0) setNewSongOpen(true);
+  }, [openNewSignal]);
 
   const filtered = useMemo(() =>
     songs.filter(s => s.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -333,7 +337,7 @@ function SongsLibraryTab() {
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-rose-500" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   return (
     <AnimatePresence mode="wait">
@@ -342,17 +346,12 @@ function SongsLibraryTab() {
           onBack={() => setDetailSong(null)} />
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-          {/* Header actions */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
               <Input placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)}
                 className="pl-9 rounded-xl h-10" />
             </div>
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-10 gap-1.5 shrink-0"
-              onClick={() => setNewSongOpen(true)}>
-              <Plus className="h-4 w-4" /> New Song
-            </Button>
           </div>
 
           {filtered.length === 0 ? (
@@ -367,10 +366,10 @@ function SongsLibraryTab() {
             <div className="space-y-2">
               {filtered.map((song, i) => (
                 <motion.div key={song.id} custom={i} variants={fadeUp} initial="hidden" animate="visible"
-                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-rose-500/30 group transition-all cursor-pointer"
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-border group transition-all cursor-pointer"
                   onClick={() => setDetailSong(song)}>
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-                    <Music2 className="h-5 w-5 text-rose-500" />
+                  <div className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center shrink-0">
+                    <Music2 className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm truncate">{song.title}</p>
@@ -389,16 +388,16 @@ function SongsLibraryTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-rose-500 hover:bg-rose-500/10"
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-primary hover:bg-muted"
                       onClick={() => { setAddSheetSong(song); }}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-red-500 hover:bg-red-500/10"
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-destructive hover:bg-destructive"
                       onClick={() => setDeleteConfirm(song)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-rose-500 transition-colors shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors shrink-0" />
                 </motion.div>
               ))}
             </div>
@@ -497,9 +496,9 @@ function AddSongToSetlistDialog({
                     if (keys.length > 0) setSelectedKey(keys[0]);
                     else setSelectedKey('numbers');
                   }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-rose-500/10 hover:border-rose-500/30 border border-transparent transition-all text-left">
-                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
-                      <Music2 className="h-4 w-4 text-rose-500" />
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted hover:border-border border border-transparent transition-all text-left">
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <Music2 className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{song.title}</p>
@@ -517,16 +516,16 @@ function AddSongToSetlistDialog({
           ) : (
             <>
               {/* Selected song confirmation + key picker */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center shrink-0">
-                  <Music2 className="h-4 w-4 text-rose-500" />
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <Music2 className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{selectedSong.title}</p>
                   {selectedSong.artist && <p className="text-xs text-muted-foreground/60">{selectedSong.artist}</p>}
                 </div>
                 <button onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); }}
-                  className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors">
+                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -546,21 +545,21 @@ function AddSongToSetlistDialog({
                         className={cn(
                           'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all relative',
                           selectedKey === k
-                            ? 'bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-500/20'
+                            ? 'bg-muted border-border text-white shadow-md shadow-rose-500/20'
                             : hasSheet
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:border-rose-500/40'
-                            : 'bg-muted/30 border-border/40 text-muted-foreground hover:border-rose-500/40'
+                            ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600 hover:border-border'
+                            : 'bg-muted border-border/40 text-muted-foreground hover:border-border'
                         )}>
                         {k === 'numbers' ? '#' : k}
                         {hasSheet && selectedKey !== k && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full" />
+                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500/10 rounded-full" />
                         )}
                       </button>
                     );
                   })}
                 </div>
                 {availableKeys.includes(selectedKey) && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <p className="text-xs text-green-600 dark:text-green-600 font-semibold flex items-center gap-1">
                     <Check className="h-3 w-3" /> Chord sheet available for this key
                   </p>
                 )}
@@ -575,7 +574,7 @@ function AddSongToSetlistDialog({
 
           <div className="flex gap-2 pt-1">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600"
+            <Button className="flex-1 rounded-xl"
               onClick={handleAdd} disabled={!selectedSong || adding}>
               {adding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Add to Setlist
             </Button>
@@ -737,12 +736,12 @@ function SetlistDetailView({
             </Button>
           )}
           {reorderMode && reorderDirty && (
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 gap-1.5" onClick={handleSaveOrder} disabled={savingOrder}>
+            <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSaveOrder} disabled={savingOrder}>
               {savingOrder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
           )}
           {!reorderMode && (
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 gap-1.5"
+            <Button size="sm" className="rounded-xl h-9 gap-1.5"
               onClick={() => setAddSongOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add Song
             </Button>
@@ -778,7 +777,7 @@ function SetlistDetailView({
                 onDragEnd={reorderMode ? handleDragEnd : undefined}
                 className={cn(
                   'flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm group transition-all',
-                  reorderMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-default hover:border-rose-500/20',
+                  reorderMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-default hover:border-border',
                   dragging && dragIdx.current === i ? 'opacity-40 scale-[0.98]' : ''
                 )}>
                 {reorderMode ? (
@@ -786,8 +785,8 @@ function SetlistDetailView({
                 ) : (
                   <div className="w-4 shrink-0 hidden sm:block" />
                 )}
-                <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-black text-rose-500">{i + 1}</span>
+                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xs font-black text-primary">{i + 1}</span>
                 </div>
                 <div
                   className={cn(
@@ -798,12 +797,12 @@ function SetlistDetailView({
                 >
                   <p className={cn(
                     'font-bold text-sm truncate transition-colors',
-                    !reorderMode && sheetsForKey.length > 0 && 'group-hover:text-rose-500'
+                    !reorderMode && sheetsForKey.length > 0 && 'group-hover:text-primary'
                   )}>{ps.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <KeyBadge keyName={ps.key} accent />
                     {sheetsForKey.length > 0 ? (
-                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-green-600 dark:text-green-600 flex items-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> {sheetsForKey.length} {sheetsForKey.length > 1 ? 'pages' : 'page'}
                       </span>
                     ) : (
@@ -815,7 +814,7 @@ function SetlistDetailView({
                   {!reorderMode && (
                     <>
                       {sheetsForKey.length > 0 && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                           title="Download sheet(s)"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -829,7 +828,7 @@ function SetlistDetailView({
                         </Button>
                       )}
                       {libSong && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10"
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                           title="Add chord sheet"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -846,7 +845,7 @@ function SetlistDetailView({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-20"
+                          className="h-7 w-7 rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
                           onClick={() => handleMove(i, 'up')}
                           disabled={i === 0}
                         >
@@ -855,14 +854,14 @@ function SetlistDetailView({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 disabled:opacity-20"
+                          className="h-7 w-7 rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
                           onClick={() => handleMove(i, 'down')}
                           disabled={i === orderedSongs.length - 1}
                         >
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </div>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 pointer-events-auto"
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive pointer-events-auto"
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -893,7 +892,7 @@ function SetlistDetailView({
 }
 
 // ── SetlistsTab ──────────────────────────────────────────────────────────────
-function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null }) {
+function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: string | null; openNewSignal?: number }) {
   const { setlists: playlists, loading, deleteSetlist: deletePlaylist } = useWorshipSetlists();
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<WorshipSetlist | null>(null);
@@ -911,6 +910,10 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
     }
   }, [initialSetlistId, playlists]);
 
+  useEffect(() => {
+    if (openNewSignal && openNewSignal > 0) setNewOpen(true);
+  }, [openNewSignal]);
+
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setDeleting(true);
@@ -924,7 +927,7 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-rose-500" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   return (
     <AnimatePresence mode="wait">
@@ -937,13 +940,6 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
         />
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-          <div className="flex justify-end">
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-10 gap-1.5"
-              onClick={() => setNewOpen(true)}>
-              <Plus className="h-4 w-4" /> New Setlist
-            </Button>
-          </div>
-
           {playlists.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 rounded-3xl border-2 border-dashed border-border/40 text-center">
               <ListMusic className="h-10 w-10 text-muted-foreground/30 mb-3" />
@@ -954,13 +950,13 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
             <div className="space-y-2">
               {playlists.map((pl, i) => (
                 <motion.div key={pl.id} custom={i} variants={fadeUp} initial="hidden" animate="visible"
-                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-rose-500/30 group transition-all cursor-pointer"
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-border group transition-all cursor-pointer"
                   onClick={() => setDetail(pl)}>
-                  <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-[10px] font-black text-rose-500/70 uppercase tracking-wider leading-none">
+                  <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex flex-col items-center justify-center shrink-0">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-wider leading-none">
                       {format(parseISO(pl.date), 'MMM')}
                     </span>
-                    <span className="text-lg font-black text-rose-500 leading-tight">
+                    <span className="text-lg font-black text-primary leading-tight">
                       {format(parseISO(pl.date), 'd')}
                     </span>
                   </div>
@@ -971,12 +967,12 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-red-500 hover:bg-red-500/10"
+                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-destructive hover:bg-destructive"
                       onClick={() => setDeleteConfirm(pl)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-rose-500 transition-colors shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors shrink-0" />
                 </motion.div>
               ))}
             </div>
@@ -1010,16 +1006,16 @@ function SetlistsTab({ initialSetlistId }: { initialSetlistId?: string | null })
 // ── Worship Roster Components ─────────────────────────────────────────────────
 
 function roleBadgeClass(role: WorshipRole) {
-  if (role === 'Lead') return 'bg-rose-500/15 border-rose-500/30 text-rose-500';
-  if (role === 'Drums') return 'bg-orange-500/15 border-orange-500/30 text-orange-500';
+  if (role === 'Lead') return 'bg-muted border-border text-primary';
+  if (role === 'Drums') return 'bg-muted border-border text-primary';
   if (role.startsWith('Keys')) return 'bg-amber-500/15 border-amber-500/30 text-amber-500';
-  if (role === 'Bass') return 'bg-yellow-500/15 border-yellow-500/30 text-yellow-500';
-  if (role.startsWith('Vox')) return 'bg-emerald-500/15 border-emerald-500/20 text-emerald-600 dark:text-emerald-400';
-  if (role.startsWith('E/G')) return 'bg-sky-500/15 border-sky-500/30 text-sky-500';
-  if (role === 'A/G') return 'bg-blue-500/15 border-blue-500/30 text-blue-500';
-  if (role === 'PPT') return 'bg-violet-500/15 border-violet-500/30 text-violet-500';
-  if (role === 'Sound') return 'bg-pink-500/15 border-pink-500/30 text-pink-500';
-  return 'bg-muted/40 border-border/40 text-muted-foreground';
+  if (role === 'Bass') return 'bg-muted border-border text-primary';
+  if (role.startsWith('Vox')) return 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600';
+  if (role.startsWith('E/G')) return 'bg-muted border-border text-primary';
+  if (role === 'A/G') return 'bg-muted border-border text-primary';
+  if (role === 'PPT') return 'bg-muted border-border text-primary';
+  if (role === 'Sound') return 'bg-muted border-border text-primary';
+  return 'bg-muted border-border/40 text-muted-foreground';
 }
 
 // ── RosterDetailView ────────────────────────────────────────────────────────────
@@ -1129,39 +1125,51 @@ function RosterDetailView({
         </Button>
         <div className="flex-1 min-w-0">
           <h2 className="font-black text-lg normal-case not-italic leading-tight truncate">{roster.name}</h2>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-2 mt-0.5">
             <p className="text-xs text-muted-foreground/60 font-medium flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               {format(parseISO(roster.date), 'EEEE, MMMM d, yyyy')}
             </p>
-            {linkedPlaylist ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => onOpenPlaylist(linkedPlaylist.id)}
-                  className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20 transition-colors"
-                  title="Open linked setlist">
-                  <Link2 className="h-2.5 w-2.5" /> {linkedPlaylist.name} ↗
-                </button>
-                <button
-                  onClick={() => setLinkSetlistOpen(true)}
-                  className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground/40 hover:text-rose-500 transition-colors"
-                  title="Change linked setlist">
-                  <Pencil className="h-2.5 w-2.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setLinkSetlistOpen(true)}
-                className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground border border-border/40 hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/20 transition-all font-bold"
-                title="Link a setlist">
-                <Plus className="h-2.5 w-2.5" /> Link Setlist
-              </button>
-            )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          {linkedPlaylist ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
+                onClick={() => onOpenPlaylist(linkedPlaylist.id)}
+                title="Open linked setlist"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                {linkedPlaylist.name}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
+                onClick={() => setLinkSetlistOpen(true)}
+                title="Change linked setlist"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Change
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
+              onClick={() => setLinkSetlistOpen(true)}
+              title="Link a setlist"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Link Setlist
+            </Button>
+          )}
           {dirty && (
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 gap-1.5" onClick={handleSave} disabled={saving}>
+            <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
           )}
@@ -1174,7 +1182,7 @@ function RosterDetailView({
         {slots.map((slot, slotIdx) => (
           <div
             key={slot.role}
-            className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-rose-500/20"
+            className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-border"
           >
             <div className="flex items-center gap-3 px-4 py-3">
               <span className={cn(
@@ -1190,12 +1198,12 @@ function RosterDetailView({
                   slot.members.map((m, mi) => (
                     <span key={mi} className={cn(
                       'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border',
-                      m.userId ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-muted/50 border-border/50 text-muted-foreground'
+                      m.userId ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600' : 'bg-muted border-border/50 text-muted-foreground'
                     )}>
                       {m.userId ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
                       {m.displayName}
                       <button onClick={() => removeMember(slotIdx, mi)}
-                        className="ml-0.5 hover:text-red-500 transition-colors">
+                        className="ml-0.5 hover:text-destructive transition-colors">
                         <X className="h-2.5 w-2.5" />
                       </button>
                     </span>
@@ -1204,7 +1212,7 @@ function RosterDetailView({
               </div>
               <button
                 onClick={() => { setPickerSlotIdx(slotIdx); setMemberSearch(''); setGuestName(''); }}
-                className="shrink-0 p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground/40 hover:text-rose-500 transition-colors"
+                className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-primary transition-colors"
                 title="Add member">
                 <UserPlus className="h-4 w-4" />
               </button>
@@ -1244,10 +1252,10 @@ function RosterDetailView({
                       className={cn(
                         'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-sm transition-all',
                         already
-                          ? 'opacity-40 cursor-not-allowed bg-muted/20'
-                          : 'hover:bg-rose-500/10 hover:border-rose-500/20 border border-transparent'
+                          ? 'opacity-40 cursor-not-allowed bg-muted'
+                          : 'hover:bg-muted hover:border-border border border-transparent'
                       )}>
-                      <UserCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <UserCheck className="h-3.5 w-3.5 text-green-600 shrink-0" />
                       <span className="font-semibold">{u.firstName} {u.lastName}</span>
                       {already && <span className="ml-auto text-[10px] text-muted-foreground/40">added</span>}
                     </button>
@@ -1267,7 +1275,7 @@ function RosterDetailView({
                       addMemberToSlot(pickerSlotIdx, { userId: null, displayName: guestName.trim() });
                     }
                   }} />
-                <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-9 shrink-0"
+                <Button size="sm" className="rounded-xl h-9 shrink-0"
                   disabled={!guestName.trim() || pickerSlotIdx === null}
                   onClick={() => pickerSlotIdx !== null && guestName.trim() &&
                     addMemberToSlot(pickerSlotIdx, { userId: null, displayName: guestName.trim() })
@@ -1293,7 +1301,7 @@ function RosterDetailView({
                 onClick={() => handleLinkSetlist(null)}
                 className={cn(
                   "w-full flex items-center justify-between p-3 rounded-xl border border-transparent transition-all text-sm font-bold",
-                  !roster.setlistId ? "bg-rose-500/10 border-rose-500/20 text-rose-500" : "hover:bg-muted/50 text-muted-foreground"
+                  !roster.setlistId ? "bg-muted border-border text-primary" : "hover:bg-muted text-muted-foreground"
                 )}>
                 None / Unlink
                 {!roster.setlistId && <Check className="h-4 w-4" />}
@@ -1306,19 +1314,19 @@ function RosterDetailView({
                   onClick={() => handleLinkSetlist(sl.id)}
                   className={cn(
                     "w-full flex items-center gap-3 p-3 rounded-xl border border-transparent transition-all text-left group",
-                    roster.setlistId === sl.id ? "bg-rose-500/10 border-rose-500/20" : "hover:bg-rose-500/5 hover:border-rose-500/10"
+                    roster.setlistId === sl.id ? "bg-muted border-border" : "hover:bg-muted hover:border-border"
                   )}>
                   <div className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border transition-colors",
-                    roster.setlistId === sl.id ? "bg-rose-500/20 border-rose-500/30 text-rose-500" : "bg-muted/30 border-border/40 text-muted-foreground group-hover:border-rose-500/20 group-hover:text-rose-500"
+                    roster.setlistId === sl.id ? "bg-muted border-border text-primary" : "bg-muted border-border/40 text-muted-foreground group-hover:border-border group-hover:text-primary"
                   )}>
                     <ListMusic className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-bold truncate", roster.setlistId === sl.id ? "text-rose-500" : "text-foreground")}>{sl.name}</p>
+                    <p className={cn("text-sm font-bold truncate", roster.setlistId === sl.id ? "text-primary" : "text-foreground")}>{sl.name}</p>
                     <p className="text-[10px] text-muted-foreground font-semibold">{format(parseISO(sl.date), 'MMM d, yyyy')}</p>
                   </div>
-                  {roster.setlistId === sl.id && <Check className="h-4 w-4 text-rose-500" />}
+                  {roster.setlistId === sl.id && <Check className="h-4 w-4 text-primary" />}
                 </button>
               ))}
             </div>
@@ -1331,7 +1339,7 @@ function RosterDetailView({
 }
 
 // ── RostersTab ────────────────────────────────────────────────────────────────
-function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setlistId: string) => void; initialRosterId?: string | null }) {
+function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpenPlaylist: (setlistId: string) => void; initialRosterId?: string | null; openNewSignal?: number }) {
   const { rosters, loading, deleteRoster } = useWorshipRosters();
   const { setlists: playlists } = useWorshipSetlists();
   const [newOpen, setNewOpen] = useState(false);
@@ -1350,6 +1358,10 @@ function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setl
     }
   }, [initialRosterId, rosters]);
 
+  useEffect(() => {
+    if (openNewSignal && openNewSignal > 0) setNewOpen(true);
+  }, [openNewSignal]);
+
   const handleDelete = async () => {
     if (!deleteConfirm) return;
     setDeleting(true);
@@ -1363,7 +1375,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setl
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-rose-500" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   return (
     <AnimatePresence mode="wait">
@@ -1377,13 +1389,6 @@ function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setl
         />
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-          <div className="flex justify-end">
-            <Button size="sm" className="rounded-xl bg-rose-500 hover:bg-rose-600 h-10 gap-1.5"
-              onClick={() => setNewOpen(true)}>
-              <Plus className="h-4 w-4" /> New Roster
-            </Button>
-          </div>
-
           {rosters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 rounded-3xl border-2 border-dashed border-border/40 text-center">
               <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
@@ -1397,13 +1402,13 @@ function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setl
                 const filled = r.slots.filter(s => s.members.length > 0).length;
                 return (
                   <motion.div key={r.id} custom={i} variants={fadeUp} initial="hidden" animate="visible"
-                    className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-rose-500/30 group transition-all cursor-pointer"
+                    className="flex items-center gap-4 p-4 rounded-2xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-border group transition-all cursor-pointer"
                     onClick={() => setDetail(r)}>
-                    <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[10px] font-black text-rose-500/70 uppercase tracking-wider leading-none">
+                    <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-wider leading-none">
                         {format(parseISO(r.date), 'MMM')}
                       </span>
-                      <span className="text-lg font-black text-rose-500 leading-tight">
+                      <span className="text-lg font-black text-primary leading-tight">
                         {format(parseISO(r.date), 'd')}
                       </span>
                     </div>
@@ -1414,19 +1419,19 @@ function RostersTab({ onOpenPlaylist, initialRosterId }: { onOpenPlaylist: (setl
                           {filled}/{r.slots.length} roles filled
                         </span>
                         {linked && (
-                          <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                          <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-primary border border-border">
                             <Link2 className="h-2 w-2" /> {linked.name}
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-red-500 hover:bg-red-500/10"
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl hover:text-destructive hover:bg-destructive"
                         onClick={() => setDeleteConfirm(r)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-rose-500 transition-colors shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors shrink-0" />
                   </motion.div>
                 );
               })}
@@ -1467,6 +1472,9 @@ export default function WorshipPortalPage() {
   const [tab, setTab] = useState<'playlists' | 'songs' | 'rosters'>(initialTab || 'rosters');
   const [pendingSetlistId, setPendingSetlistId] = useState<string | null>(tab === 'playlists' ? (initialId || null) : null);
   const [pendingRosterId, setPendingRosterId] = useState<string | null>(tab === 'rosters' ? (initialId || null) : null);
+  const [openNewRosterSignal, setOpenNewRosterSignal] = useState(0);
+  const [openNewSetlistSignal, setOpenNewSetlistSignal] = useState(0);
+  const [openNewSongSignal, setOpenNewSongSignal] = useState(0);
 
   useEffect(() => {
     if (initialTab) {
@@ -1489,8 +1497,8 @@ export default function WorshipPortalPage() {
   if (!isAdmin && !isWorshipTeam) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-16rem)] p-8 text-center space-y-6">
-        <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
-          <Shield className="h-8 w-8 text-rose-500" />
+        <div className="w-20 h-20 rounded-3xl bg-muted border border-border flex items-center justify-center">
+          <Shield className="h-8 w-8 text-primary" />
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-black tracking-tight">Access Restricted</h1>
@@ -1498,7 +1506,7 @@ export default function WorshipPortalPage() {
             The Worship Portal is only accessible to members of the Worship Team.
           </p>
         </div>
-        <Button asChild className="rounded-2xl bg-rose-500 hover:bg-rose-600 px-8">
+        <Button asChild className="rounded-2xl px-8">
           <Link href="/">Return Home</Link>
         </Button>
       </div>
@@ -1506,46 +1514,88 @@ export default function WorshipPortalPage() {
   }
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Worship Portal"
-          description="Build setlists and manage your library. Tip: Type '/' in any chat to share songs, setlists, and rosters with your team."
-          icon={Music}
-          accentColor="text-rose-500"
-          iconBgColor="bg-rose-500/20"
+          action={
+            <Button
+              size="sm"
+              className="rounded-xl h-9 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+              onClick={() => {
+                if (tab === 'rosters') setOpenNewRosterSignal((n) => n + 1);
+                if (tab === 'playlists') setOpenNewSetlistSignal((n) => n + 1);
+                if (tab === 'songs') setOpenNewSongSignal((n) => n + 1);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {tab === 'rosters' ? 'New Roster' : tab === 'playlists' ? 'New Setlist' : 'New Song'}
+            </Button>
+          }
         />
-      </motion.div>
-
-      {/* Tab switcher */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="flex p-1 rounded-2xl bg-muted/30 border border-border/30 w-fit gap-1 flex-wrap">
-          {([
-            { key: 'rosters', label: 'Rosters', icon: Users },
-            { key: 'playlists', label: 'Setlists', icon: ListMusic },
-            { key: 'songs', label: 'Song Library', icon: BookOpen },
-          ] as const).map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all',
-                tab === t.key
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}>
-              <t.icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <AnimatePresence mode="wait">
-          {tab === 'playlists' && <SetlistsTab key="playlists" initialSetlistId={pendingSetlistId} />}
-          {tab === 'songs' && <SongsLibraryTab key="songs" />}
-          {tab === 'rosters' && <RostersTab key="rosters" onOpenPlaylist={handleOpenPlaylist} initialRosterId={pendingRosterId} />}
+          {tab === 'playlists' && (
+            <SetlistsTab
+              key="playlists"
+              initialSetlistId={pendingSetlistId}
+              openNewSignal={openNewSetlistSignal}
+            />
+          )}
+          {tab === 'songs' && <SongsLibraryTab key="songs" openNewSignal={openNewSongSignal} />}
+          {tab === 'rosters' && (
+            <RostersTab
+              key="rosters"
+              onOpenPlaylist={handleOpenPlaylist}
+              initialRosterId={pendingRosterId}
+              openNewSignal={openNewRosterSignal}
+            />
+          )}
         </AnimatePresence>
       </motion.div>
+
+      <div className="h-16 md:h-0" />
+      <div className="fixed bottom-3 left-1/2 z-40 w-[min(680px,calc(100vw-16px))] -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)] md:w-[min(720px,calc(100vw-16rem-32px))]">
+        <div className="glass-elevated rounded-[1.75rem] border-transparent px-2 py-2">
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              type="button"
+              onClick={() => setTab('rosters')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
+                tab === 'rosters' ? "bg-background/40 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-background/25"
+              )}
+            >
+              <Users className={cn("h-5 w-5", tab === 'rosters' ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-[10px] leading-none", tab === 'rosters' ? "font-semibold" : "font-medium")}>Rosters</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('playlists')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
+                tab === 'playlists' ? "bg-background/40 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-background/25"
+              )}
+            >
+              <ListMusic className={cn("h-5 w-5", tab === 'playlists' ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-[10px] leading-none", tab === 'playlists' ? "font-semibold" : "font-medium")}>Setlists</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('songs')}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
+                tab === 'songs' ? "bg-background/40 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-background/25"
+              )}
+            >
+              <Music2 className={cn("h-5 w-5", tab === 'songs' ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-[10px] leading-none", tab === 'songs' ? "font-semibold" : "font-medium")}>Songs</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

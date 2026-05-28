@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 export default function ChatListSkeleton() {
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12 animate-in fade-in duration-500">
+    <div className="page-container space-y-8 pb-32 animate-in fade-in duration-500">
       
       {/* ── Page Header Skeleton ── */}
       <div className="flex items-center justify-between">

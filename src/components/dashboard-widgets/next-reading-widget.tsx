@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { Loader2, CheckCircle, FastForward, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
@@ -56,14 +56,11 @@ export default function NextReadingWidget() {
 
     return (
         <>
-            <div className="relative flex flex-col p-6 md:p-8 rounded-[2.5rem] border bg-card border-border/50 shadow-xl transition-all duration-500 h-full min-h-[240px]">
+            <div className="glass-card relative flex flex-col p-6 md:p-8 rounded-[2.5rem] transition-all duration-500 h-full min-h-[240px]">
                 <div className="flex items-center justify-between mb-6">
                     <div className="min-w-0">
                         <h3 className="text-lg font-black tracking-tight">Progression</h3>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">On the Horizon</p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500 shadow-inner">
-                        <FastForward className="h-5 w-5" />
                     </div>
                 </div>
 
@@ -85,7 +82,7 @@ export default function NextReadingWidget() {
                                     <motion.div 
                                         layout
                                         key={passage.displayText} 
-                                        className="group flex items-center gap-3 p-3 rounded-2xl bg-muted/20 transition-all border border-transparent hover:bg-primary cursor-pointer"
+                                        className="group flex items-center gap-3 p-3 rounded-2xl glass-thin transition-all cursor-pointer"
                                     >
                                         <Checkbox
                                             id={`next-reading-${passage.displayText}`}
@@ -113,7 +110,7 @@ export default function NextReadingWidget() {
                 <div className="mt-8">
                     <Button 
                         variant="outline" 
-                        className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-primary hover:text-primary-foreground transition-all shadow-none group" 
+                        className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group" 
                         onClick={handleGoToPlan}
                     >
                         Journey Log
