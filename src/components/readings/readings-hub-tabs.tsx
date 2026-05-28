@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, ScrollText, Brain, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,6 @@ export default function ReadingsHubTabs() {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser } = useAuth();
-  const [isBibleOpen, setIsBibleOpen] = useState(false);
   const { isOpen, setIsOpen } = useGlobalBibleReader();
 
   const tabs = useMemo<ReadingTab[]>(
@@ -43,14 +42,6 @@ export default function ReadingsHubTabs() {
   const leftTabs = visibleTabs.slice(0, 2);
   const rightTabs = visibleTabs.slice(2, 4);
 
-  useEffect(() => {
-    setIsBibleOpen(isOpen);
-  }, [isOpen]);
-
-  const handleOpenChange = (open: boolean) => {
-    setIsBibleOpen(open);
-    setIsOpen(open);
-  };
   return (
     <>
       <div className="fixed bottom-3 left-1/2 z-40 w-[min(680px,calc(100vw-16px))] -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)] md:w-[min(720px,calc(100vw-16rem-32px))]">
@@ -77,7 +68,7 @@ export default function ReadingsHubTabs() {
               );
             })}
             <div className="flex items-center justify-center">
-              <Popover open={isBibleOpen} onOpenChange={handleOpenChange}>
+              <Popover open={isOpen} onOpenChange={setIsOpen}>
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -92,7 +83,7 @@ export default function ReadingsHubTabs() {
                   side="top"
                   className="mb-2 w-[calc(100vw-1.5rem)] sm:w-[380px] p-0 h-[600px] max-h-[calc(100vh-8rem)] overflow-hidden rounded-xl flex flex-col"
                 >
-                  <MiniBibleReader onClose={() => setIsBibleOpen(false)} />
+                  <MiniBibleReader onClose={() => setIsOpen(false)} />
                 </PopoverContent>
               </Popover>
             </div>

@@ -16,7 +16,16 @@ export function GlobalBibleReader() {
   const { isOpen, setIsOpen } = useGlobalBibleReader();
   const pathname = usePathname();
 
+  const hasReadingsHubPopup =
+    pathname.startsWith('/bible-checklist') ||
+    pathname.startsWith('/full-plan') ||
+    pathname.startsWith('/memorize') ||
+    pathname.startsWith('/leaderboard');
   const isAllowedPage = pathname === '/';
+
+  if (hasReadingsHubPopup) {
+    return null;
+  }
 
   if (!isAllowedPage && !isOpen) {
     return null;
