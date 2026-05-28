@@ -4,11 +4,11 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMessages } from '@/hooks/useMessages';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
-import { ArrowUp, Image as ImageIcon, Loader2, X, Plus } from 'lucide-react';
+import { ArrowUp, Loader2, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
-import { ref, uploadBytesResumable, getDownloadURL, StorageError, UploadTaskSnapshot } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatMessage } from '@/types';
@@ -59,23 +59,22 @@ export default function MessageInput({
 
     if (stagedCommand) {
       // Send with metadata
-      const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [
+      const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [
         trimmedText || undefined, 
         stagedCommand.metadata?.imageUrl, 
         replyToMessage?.id
       ];
       
       const { type, id, metadata } = stagedCommand;
-      if (type === 'invitation') args[3] = id;
-      else if (type === 'event') args[4] = id;
-      else if (type === 'setlist') args[5] = id;
-      else if (type === 'roster') args[6] = id;
-      else if (type === 'qt') args[7] = id;
-      else if (type === 'cleaning') args[8] = id;
+      if (type === 'event') args[3] = id;
+      else if (type === 'setlist') args[4] = id;
+      else if (type === 'roster') args[5] = id;
+      else if (type === 'qt') args[6] = id;
+      else if (type === 'cleaning') args[7] = id;
       else if (type === 'song') {
-          args[9] = id;
-          if (metadata?.songTitle) args[10] = metadata.songTitle;
-          if (metadata?.sheetKey) args[11] = metadata.sheetKey;
+          args[8] = id;
+          if (metadata?.songTitle) args[9] = metadata.songTitle;
+          if (metadata?.sheetKey) args[10] = metadata.sheetKey;
       }
 
       sendMessage(...args);
@@ -92,7 +91,7 @@ export default function MessageInput({
   };
 
   const handleSlashSelect = (
-    type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', 
+    type: 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', 
     id: string,
     metadata?: any
   ) => {
@@ -198,7 +197,7 @@ export default function MessageInput({
   return (
     <div className="w-full max-w-md mx-auto px-4 flex flex-col gap-2">
       {replyToMessage && (
-        <div className="flex items-center justify-between bg-muted border border-border/50 rounded-xl px-4 py-2 text-xs">
+        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-2 text-xs">
           <div className="flex items-center gap-2 truncate opacity-70">
             <span className="font-bold">Replying to message:</span>
             <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
@@ -215,19 +214,19 @@ export default function MessageInput({
             onClick={() => setShowSlashCommands(!showSlashCommands)} 
             disabled={disabled || isUploading}
             className={cn(
-                "h-9 w-9 flex items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-primary transition-all active:scale-90", 
-                showSlashCommands && "bg-primary text-white rotate-45",
+                "flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-foreground transition-all active:scale-90", 
+                showSlashCommands && "bg-foreground text-background rotate-45",
                 isUploading && "animate-pulse"
             )}
         >
             {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
         </button>
 
-        <div className="flex-1 flex items-center bg-muted/40 backdrop-blur-3xl px-3 py-1 rounded-[1.25rem] border border-border/50 overflow-hidden focus-within:border-primary/50 transition-colors">
+        <div className="flex flex-1 items-center overflow-hidden rounded-[1.25rem] border border-border/60 bg-card px-3 py-1 transition-colors focus-within:border-ring">
           {stagedCommand && (
-            <div className="flex items-center gap-1.5 bg-primary/20 border border-primary/30 rounded-lg px-2 py-1 mr-2 shrink-0 max-w-[120px]">
-               <span className="text-[10px] font-black uppercase text-primary truncate">{stagedCommand.label}</span>
-               <button onClick={() => setStagedCommand(null)} className="text-primary/60 hover:text-primary">
+            <div className="mr-2 flex max-w-[120px] shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
+               <span className="truncate text-[10px] font-semibold uppercase text-foreground">{stagedCommand.label}</span>
+               <button onClick={() => setStagedCommand(null)} className="text-muted-foreground transition-colors hover:text-foreground">
                  <X className="w-3 h-3" />
                </button>
             </div>
@@ -259,13 +258,13 @@ export default function MessageInput({
               onBlur={() => updateTypingStatus(false)}
               onKeyDown={handleKeyDown}
               style={{ fontSize: '16px' }}
-              className="flex-1 bg-transparent border-none outline-none text-foreground py-1.5 placeholder:text-muted-foreground/50"
+              className="flex-1 border-none bg-transparent py-1.5 text-foreground outline-none placeholder:text-muted-foreground"
           />
           <button 
               type="button" 
               onClick={handleSend} 
               disabled={disabled || (!text.trim() && !stagedCommand) || isUploading}
-              className={cn("h-7 w-7 flex items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-[#007AFF] text-white" : "bg-muted text-muted-foreground opacity-20")}
+              className={cn("flex h-7 w-7 items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-foreground text-background" : "bg-muted text-muted-foreground opacity-40")}
           >
               <ArrowUp className="h-4 w-4" strokeWidth={3} />
           </button>

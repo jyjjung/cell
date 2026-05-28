@@ -22,7 +22,7 @@ interface TimelineDetailsDialogProps {
 
 export const TimelineDetailsDialog = ({ item, onClose, t }: TimelineDetailsDialogProps) => (
   <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
-    <DialogContent className="rounded-[3rem] p-10 border-border/50 bg-card/60 backdrop-blur-3xl shadow-2xl overflow-hidden">
+    <DialogContent className="rounded-[3rem] p-10 overflow-hidden">
       {/* Decorative background glow */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -z-10 rounded-full" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/5 blur-3xl -z-10 rounded-full" />
@@ -54,7 +54,7 @@ export const TimelineDetailsDialog = ({ item, onClose, t }: TimelineDetailsDialo
       
       <div className="mt-10 space-y-8">
         {item?.type === 'event' && item.details && (
-          <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/5 shadow-inner">
+          <div className="glass-thin p-8 rounded-[2.5rem]">
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Brief Context</p>
             <p className="text-sm font-medium leading-relaxed opacity-90 text-white/80">{item.details}</p>
           </div>
@@ -63,12 +63,12 @@ export const TimelineDetailsDialog = ({ item, onClose, t }: TimelineDetailsDialo
         {item?.type === 'qt' && (
           <div className="space-y-4">
             {item.qtTitle && (
-              <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/5">
+              <div className="glass-thin p-8 rounded-[2.5rem]">
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Teaching Topic</p>
                 <p className="text-xl font-black leading-tight text-white/90">{item.qtTitle}</p>
               </div>
             )}
-            <div className="flex items-center justify-between p-8 rounded-[2.5rem] bg-primary/5 border border-primary/10 shadow-xl">
+            <div className="glass-thin flex items-center justify-between p-8 rounded-[2.5rem]">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-3">Scripture Assignment</p>
                 <p className="text-2xl font-black tracking-tighter text-white/90">{item.passage}</p>
@@ -80,11 +80,11 @@ export const TimelineDetailsDialog = ({ item, onClose, t }: TimelineDetailsDialo
         
         {item?.type === 'cleaning' && (
           <div className="grid grid-cols-1 gap-4">
-            <div className="p-8 rounded-[2.5rem] bg-white/5 border border-white/5">
+            <div className="glass-thin p-8 rounded-[2.5rem]">
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Duty Classification</p>
               <p className="text-xl font-black text-white/90">{item.dayName || 'Standard Roster'}</p>
             </div>
-            <div className="p-8 rounded-[2.5rem] bg-green-500/5 border border-green-500/10 shadow-xl">
+            <div className="glass-thin p-8 rounded-[2.5rem]">
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-green-500 mb-3">Assigned Stewards</p>
               <p className="text-xl font-black text-white/90">{item.assignedNames}</p>
             </div>

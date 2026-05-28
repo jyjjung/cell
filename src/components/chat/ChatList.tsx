@@ -12,8 +12,7 @@ import { cn } from "@/lib/utils";
 import { getMemberFullName } from "@/lib/chat-utils";
 
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, MessageCircle, ArrowRight, Plus, Search, Sparkles } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import CreateChatDialog from "./CreateChatDialog";
@@ -36,8 +35,6 @@ export default function ChatList() {
   const { setIsPageLoading } = usePageLoading();
 
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "private" | "group">("all");
 
   const loading = loadingChats && chats.length === 0;
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -83,16 +80,7 @@ export default function ChatList() {
     return null;
   };
 
-  const filteredChats = chats.filter(chat => {
-    const details = getChatDetails(chat);
-    if (!details) return false;
-
-    const matchesTab = activeTab === "all" || chat.type === activeTab;
-    const matchesSearch = details.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (chat.lastMessageText?.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return matchesTab && matchesSearch;
-  });
+  const filteredChats = chats.filter((chat) => !!getChatDetails(chat));
 
   const handleLinkClick = (path: string) => {
     if (pathname !== path) {
@@ -101,61 +89,23 @@ export default function ChatList() {
   };
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <PageHeader
         title="Messages"
-        subtitle="Private & Group Archive"
-        icon={MessageCircle}
-        accentColor="text-primary"
         action={
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="rounded-xl h-9 px-4 font-bold text-[10px] uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+            className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
           >
             <Plus className="mr-2 h-4 w-4" />
-            New Group
+            New Chat
           </Button>
         }
       />
 
       {!online && chats.length > 0 && (
-        <p className="text-xs font-medium text-amber-600 dark:text-amber-400/90 px-1">{t.chatOfflineBanner}</p>
+        <p className="px-1 text-xs font-medium text-muted-foreground">{t.chatOfflineBanner}</p>
       )}
-
-      {/* Search & Tabs */}
-      <div className="space-y-4">
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
-          <Input
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 pl-11 pr-4 rounded-xl bg-card/30 backdrop-blur-xl border-border/40 focus:border-primary/50 focus:ring-primary/20 transition-all font-medium text-sm placeholder:text-muted-foreground/30 shadow-sm"
-          />
-        </div>
-
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/30 border border-border/30 w-fit h-10">
-          {(["all", "private", "group"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "relative px-4 py-1.5 rounded-lg text-xs font-semibold transition-all min-w-[80px]",
-                activeTab === tab ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {activeTab === tab && (
-                <motion.div
-                  layoutId="activeTabChat"
-                  className="absolute inset-0 bg-primary rounded-lg shadow-sm"
-                  transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
-                />
-              )}
-              <span className="relative z-10 capitalize">{tab === "group" ? "Groups" : tab}</span>
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Content Section */}
       <div className="relative">
@@ -177,13 +127,13 @@ export default function ChatList() {
         ) : filteredChats.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
-            title={searchQuery ? "No matches found" : t.silenceInTheAir}
-            description={searchQuery ? `We couldn't find any conversations matching "${searchQuery}"` : "Start a new conversation to get connected."}
+            title={t.silenceInTheAir}
+            description="Start a new conversation to get connected."
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {isAdmin && (activeTab === 'all' || activeTab === 'group') && (
+              {isAdmin && (
                 <motion.div
                     key="system-assistant"
                     layout
@@ -297,7 +247,7 @@ export default function ChatList() {
                               className="absolute -top-1 -right-1 flex h-4 w-4 z-20"
                             >
                               <span className={cn(
-                                "relative inline-flex rounded-full h-4 w-4 bg-sky-500 border-2",
+                                "relative inline-flex h-4 w-4 rounded-full border-2 bg-foreground",
                                 isActive ? "border-primary" : "border-background"
                               )}></span>
                             </motion.span>

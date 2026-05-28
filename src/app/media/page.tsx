@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link2, Plus, Trash2, ExternalLink, Loader2, Pencil, Save, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Link2, Plus, Trash2, ExternalLink, Loader2, Pencil } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
@@ -106,12 +105,12 @@ function AddEditLinkDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="link-title">Title <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="link-title">Title <span className="text-primary">*</span></Label>
             <Input id="link-title" placeholder="e.g. Church Website" value={title}
               onChange={e => setTitle(e.target.value)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="link-url">URL <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="link-url">URL <span className="text-primary">*</span></Label>
             <Input id="link-url" placeholder="https://example.com" value={url}
               onChange={e => setUrl(e.target.value)} className="rounded-xl"
               onKeyDown={e => e.key === 'Enter' && handleSave()} />
@@ -123,7 +122,7 @@ function AddEditLinkDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-violet-500 hover:bg-violet-600"
+            <Button className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleSave} disabled={!title.trim() || !url.trim() || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {existing ? 'Save' : 'Add Link'}
@@ -137,7 +136,7 @@ function AddEditLinkDialog({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LinksPage() {
-  const { currentUser, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { toast } = useToast();
   const [links, setLinks]     = useState<CommunityLink[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,86 +170,81 @@ export default function LinksPage() {
   };
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-4xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container max-w-4xl space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <PageHeader
           title="Links"
-          description="A curated collection of useful links for the community."
-          icon={Link2}
-          accentColor="text-violet-500"
-          iconBgColor="bg-violet-500/20"
+          action={
+            isAdmin ? (
+              <Button
+                className="rounded-xl h-10 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                onClick={() => setAddOpen(true)}
+              >
+                <Plus className="h-4 w-4" /> Add Link
+              </Button>
+            ) : undefined
+          }
         />
       </motion.div>
 
-      {/* Admin add button */}
-      {isAdmin && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="flex justify-end">
-          <Button className="rounded-xl bg-violet-500 hover:bg-violet-600 h-10 gap-2"
-            onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" /> Add Link
-          </Button>
-        </motion.div>
-      )}
-
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : links.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-24 rounded-3xl border-2 border-dashed border-border/40 text-center">
-          <Link2 className="h-10 w-10 text-muted-foreground/30 mb-3" />
-          <p className="font-semibold text-muted-foreground">No links yet</p>
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 py-16 text-center">
+          <Link2 className="mb-3 h-10 w-10 text-muted-foreground/30" />
+          <p className="font-semibold text-foreground">No links yet</p>
           {isAdmin && (
             <p className="text-xs text-muted-foreground/60 mt-1">Add your first link using the button above.</p>
           )}
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {links.map((link, i) => {
             const favicon = faviconUrl(link.url);
             return (
               <motion.div key={link.id} custom={i} variants={fadeUp} initial="hidden" animate="visible"
-                className="group relative rounded-3xl bg-card/50 border border-border/40 backdrop-blur-sm hover:border-violet-500/30 transition-all overflow-hidden">
+                className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/60 transition-colors hover:bg-card/80">
                 {/* Clickable area */}
                 <a href={link.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-start gap-4 p-5 pr-16">
+                  className="flex items-start gap-3 p-4 pr-14">
                   {/* Favicon */}
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
                     {favicon ? (
                       <img src={favicon} alt="" className="w-6 h-6 object-contain"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     ) : (
-                      <Link2 className="h-4 w-4 text-violet-500" />
+                      <Link2 className="h-4 w-4 text-primary" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm leading-tight truncate group-hover:text-violet-500 transition-colors">
+                    <p className="truncate text-sm font-semibold leading-tight group-hover:text-primary transition-colors">
                       {link.title}
                     </p>
                     {link.description && (
-                      <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2 font-medium">
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/70">
                         {link.description}
                       </p>
                     )}
-                    <p className="text-[11px] text-muted-foreground/40 font-mono mt-1.5 truncate">
+                    <p className="mt-1 truncate text-[10px] text-muted-foreground/50">
                       {hostname(link.url)}
                     </p>
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-violet-500 transition-colors shrink-0 mt-0.5" />
+                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
                 </a>
 
                 {/* Admin actions */}
                 {isAdmin && (
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                     <button onClick={e => { e.preventDefault(); setEditLink(link); }}
-                      className="p-1.5 rounded-lg bg-background/80 border border-border/50 hover:text-violet-500 hover:border-violet-500/40 transition-colors">
+                      className="rounded-md border border-border/60 bg-background p-1.5 hover:text-primary transition-colors">
                       <Pencil className="h-3 w-3" />
                     </button>
                     <button onClick={e => { e.preventDefault(); setDeleteConfirm(link); }}
-                      className="p-1.5 rounded-lg bg-background/80 border border-border/50 hover:text-red-500 hover:border-red-500/40 transition-colors">
+                      className="rounded-md border border-border/60 bg-background p-1.5 hover:text-destructive transition-colors">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -266,7 +260,7 @@ export default function LinksPage() {
       <AddEditLinkDialog open={!!editLink} existing={editLink} onClose={() => setEditLink(null)} />
 
       <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
-        <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+        <DialogContent className="max-w-sm rounded-2xl border-border/50 bg-card p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-black normal-case not-italic">Remove "{deleteConfirm?.title}"?</DialogTitle>
             <DialogDescription>This link will be removed for everyone.</DialogDescription>

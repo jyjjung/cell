@@ -56,7 +56,7 @@ export default function MembersPage() {
 
   if (isLoading) {
     return (
-      <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+      <div className="page-container space-y-8 pb-32">
         {/* Header skeleton */}
         <div className="flex items-center gap-4">
           <Skeleton className="h-14 w-14 rounded-2xl" />
@@ -82,13 +82,9 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       <PageHeader
         title={t.members}
-        description={t.memberCount.replace('{count}', filteredUsers.length.toString())}
-        icon={Users}
-        accentColor="text-primary"
-        iconBgColor="bg-primary/10"
       />
 
       {/* Search */}
@@ -127,7 +123,7 @@ export default function MembersPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>
                       {birthday && (
-                        <div className="flex items-center gap-1.5 mt-0.5 text-pink-500/70">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-primary">
                           <Cake className="h-3 w-3 shrink-0" />
                           <span className="text-[11px] font-medium">{birthday}</span>
                         </div>

@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Calendar, 
-  Mail, 
   Music, 
   ClipboardList,
   Search,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEvents } from '@/hooks/use-events';
-import { useInvitations } from '@/hooks/use-invitations';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useQTRoster } from '@/hooks/useQTRoster';
@@ -27,7 +25,7 @@ import { format } from 'date-fns';
 
 interface SlashCommandSelectorProps {
   inputValue: string;
-  onSelect: (type: 'invitation' | 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', id: string, metadata?: any) => void;
+  onSelect: (type: 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', id: string, metadata?: any) => void;
   onClose: () => void;
   onCategoryClick?: (category: string) => void;
   showWorshipCreation?: boolean;
@@ -35,7 +33,6 @@ interface SlashCommandSelectorProps {
 
 const COMMANDS = [
   { id: 'image', label: 'Attach Image', icon: ImageIcon, description: 'Share a photo with the group' },
-  { id: 'invite', label: '/invite', icon: Mail, description: 'Share an invitation' },
   { id: 'event', label: '/event', icon: Calendar, description: 'Share an event' },
   { id: 'setlist', label: '/setlist', icon: Music, description: 'Share a worship setlist' },
   { id: 'roster', label: '/roster', icon: ClipboardList, description: 'Share a worship roster' },
@@ -61,7 +58,6 @@ export default function SlashCommandSelector({
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   
   const { events } = useEvents();
-  const { invitations } = useInvitations();
   const { setlists } = useWorshipSetlists();
   const { rosters } = useWorshipRosters();
   const { roster: qtRoster } = useQTRoster();
@@ -78,10 +74,7 @@ export default function SlashCommandSelector({
     const trimmed = inputValue.trim();
     
     // Pattern matching for slash commands
-    if (trimmed.startsWith('/invite')) {
-      setActiveCommand('invite');
-      setSearchTerm(trimmed.replace('/invite', '').trim());
-    } else if (trimmed.startsWith('/event')) {
+    if (trimmed.startsWith('/event')) {
       setActiveCommand('event');
       setSearchTerm(trimmed.replace('/event', '').trim());
     } else if (trimmed.startsWith('/setlist')) {
@@ -138,11 +131,6 @@ export default function SlashCommandSelector({
             );
     }
     
-    if (activeCommand === 'invite') {
-      return invitations
-        .filter(i => i.title.toLowerCase().includes(search))
-        .map(i => ({ id: i.id, title: i.title, subtitle: i.description, date: i.dateOptions[0], type: 'invitation' }));
-    }
     if (activeCommand === 'event') {
       return events
         .filter(e => e.title.toLowerCase().includes(search))
@@ -183,7 +171,7 @@ export default function SlashCommandSelector({
         }));
     }
     return [];
-  }, [activeCommand, searchTerm, invitations, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs, showWorshipCreation]);
+  }, [activeCommand, searchTerm, events, setlists, rosters, qtRoster, cleaningRoster, cleaningDays, songs, showWorshipCreation]);
 
   const handleKeyboardSelect = (index: number) => {
     const items = filteredItems;
@@ -236,11 +224,11 @@ export default function SlashCommandSelector({
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      className="absolute bottom-full left-0 right-0 mb-4 w-full bg-popover/90 backdrop-blur-2xl border border-border/20 rounded-[2rem] shadow-2xl overflow-hidden z-[100] flex flex-col"
+      className="absolute bottom-full left-0 right-0 z-[100] mb-4 flex w-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-popover shadow-lg"
     >
-      <div className="p-4 border-b border-border/10 bg-foreground/5 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 p-4">
         <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/50">
                 {activeCommand ? (
                     (() => {
                         const Icon = COMMANDS.find(c => c.id === activeCommand)?.icon || Search;
@@ -250,7 +238,7 @@ export default function SlashCommandSelector({
                     <Search className="w-3.5 h-3.5 text-primary" />
                 )}
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {selectedSong ? "Pick Key" : (activeCommand ? `Shared ${activeCommand}` : "Quick Actions")}
             </span>
         </div>
@@ -260,7 +248,7 @@ export default function SlashCommandSelector({
                     if (selectedSong) setSelectedSongId(null);
                     else setActiveCommand(null);
                 }}
-                className="text-[9px] font-bold text-primary hover:underline transition-all"
+                className="text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
                 Back
             </button>
@@ -270,7 +258,7 @@ export default function SlashCommandSelector({
       <div className="max-h-[280px] overflow-y-auto py-2 custom-scrollbar">
         {selectedSong ? (
           <div className="p-4">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Available Keys</p>
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Available Keys</p>
             <div className="grid grid-cols-4 gap-2">
                 {selectedSong.chordSheets.length > 0 ? (
                     Array.from(
@@ -293,14 +281,14 @@ export default function SlashCommandSelector({
                                 });
                                 onClose();
                             }}
-                            className="h-12 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-center text-[13px] font-black hover:bg-primary hover:text-white transition-all active:scale-95"
+                            className="flex h-12 items-center justify-center rounded-xl border border-border/60 bg-muted/40 text-[13px] font-semibold transition-colors hover:bg-muted active:scale-95"
                         >
                             {key}
                         </button>
                     ))
                 ) : (
-                    <div className="col-span-4 p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/50">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">No Sheets Uploaded</p>
+                    <div className="col-span-4 rounded-2xl border border-dashed border-border/60 bg-muted/30 p-8 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">No Sheets Uploaded</p>
                     </div>
                 )}
             </div>
@@ -323,23 +311,22 @@ export default function SlashCommandSelector({
                   }
                 }}
                 className={cn(
-                  "flex items-center gap-4 p-3 rounded-2xl hover:bg-foreground/5 transition-all text-left group",
-                  cmd.isWorshipCreation ? "border-l-2 border-primary/40 bg-primary/5" : "",
-                  cmd.id === 'image' ? "bg-primary/5 border border-primary/10 mb-2" : "",
-                  !activeCommand && selectedIndex === COMMANDS.indexOf(cmd) && "bg-foreground/10"
+                  "group flex items-center gap-4 rounded-xl p-3 text-left transition-colors hover:bg-muted/40",
+                  cmd.isWorshipCreation ? "border border-border/60 bg-muted/30" : "",
+                  cmd.id === 'image' ? "mb-2 border border-border/60 bg-muted/30" : "",
+                  !activeCommand && selectedIndex === COMMANDS.indexOf(cmd) && "bg-muted/60"
                 )}
               >
                 <div className={cn(
-                    "h-10 w-10 rounded-xl bg-foreground/5 border border-border/10 flex items-center justify-center group-hover:scale-110 transition-transform",
-                    cmd.id === 'image' ? "bg-primary/10" : ""
+                    "flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-muted/40 transition-transform group-hover:scale-105"
                 )}>
-                  <cmd.icon className={cn("w-5 h-5 text-foreground/70", cmd.id === 'image' ? "text-primary" : "")} />
+                  <cmd.icon className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={cn("text-[13px] font-bold text-foreground group-hover:text-primary transition-colors", cmd.id === 'image' ? "text-primary/90" : "")}>{cmd.label}</p>
+                  <p className="text-[13px] font-medium text-foreground transition-colors group-hover:text-foreground">{cmd.label}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{cmd.description}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             ))}
           </div>
@@ -358,11 +345,11 @@ export default function SlashCommandSelector({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-4 p-3 rounded-2xl hover:bg-foreground/5 transition-all text-left group",
-                    activeCommand && selectedIndex === filteredItems.indexOf(item) && "bg-foreground/10"
+                    "group flex items-center gap-4 rounded-xl p-3 text-left transition-colors hover:bg-muted/40",
+                    activeCommand && selectedIndex === filteredItems.indexOf(item) && "bg-muted/60"
                   )}
                 >
-                  <div className="h-10 w-10 rounded-xl bg-foreground/5 border border-border/10 flex flex-col items-center justify-center shrink-0 overflow-hidden">
+                  <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted/40">
                     {(() => {
                       try {
                         if (!item.date) throw new Error();
@@ -386,16 +373,16 @@ export default function SlashCommandSelector({
                     })()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-foreground truncate group-hover:text-primary transition-colors">{item.title}</p>
-                    <p className="text-[10px] text-muted-foreground truncate opacity-70">{item.subtitle}</p>
+                    <p className="truncate text-[13px] font-medium text-foreground transition-colors">{item.title}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{item.subtitle}</p>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               ))
             ) : (
               <div className="p-8 text-center">
-                <p className="text-[11px] font-bold text-muted-foreground/40 uppercase tracking-widest">No matching results</p>
-                <p className="text-[10px] text-muted-foreground/20 mt-1">Try a different search term</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">No matching results</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">Try a different search term</p>
               </div>
             )}
           </div>

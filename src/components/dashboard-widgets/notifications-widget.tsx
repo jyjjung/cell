@@ -18,7 +18,7 @@ const NotificationItem = ({ notification, onMarkRead }: { notification: any, onM
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-    className="relative p-4 bg-muted/20 hover:bg-destructive transition-all rounded-[1.5rem] border border-transparent group"
+    className="relative p-4 glass-thin hover:ring-destructive/30 transition-all rounded-[1.5rem] group"
   >
     <div className="flex items-center justify-between gap-4">
         <div className="flex-grow min-w-0 space-y-0.5">
@@ -60,13 +60,13 @@ export default function NotificationsWidget() {
   }
 
   return (
-    <div className="relative p-6 md:p-8 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
+    <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
         <div className="flex items-center justify-between mb-6">
             <div className="min-w-0">
                 <h3 className="text-lg font-black tracking-tight">Activity Feed</h3>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time Pulse</p>
             </div>
-            <div className="p-2.5 rounded-xl bg-destructive/10 text-destructive shadow-inner">
+            <div className="p-2.5 rounded-xl glass-thin text-destructive ring-1 ring-destructive/20">
                 <Bell className="h-5 w-5" />
             </div>
         </div>
@@ -104,7 +104,7 @@ export default function NotificationsWidget() {
         <div className="flex flex-col gap-3 mt-8">
             <Button 
                 variant="outline" 
-                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] bg-background/50 border-border/50 hover:bg-destructive hover:text-white transition-all shadow-none group" 
+                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group" 
                 onClick={handleGoToNotifications}
             >
                 Alert Vault

@@ -33,7 +33,7 @@ export default function PendingApprovalPage() {
   if (!isMounted || loadingAuth) {
     return (
         <div className="flex h-screen items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
     );
   }
@@ -67,7 +67,7 @@ export default function PendingApprovalPage() {
                 </p>
             </div>
 
-            <div className="p-6 rounded-[2rem] bg-muted/20 border border-white/5 italic text-sm text-muted-foreground">
+            <div className="p-6 rounded-[2rem] bg-muted border border-white/5 italic text-sm text-muted-foreground">
                 "{t.contactAdmin}"
             </div>
 

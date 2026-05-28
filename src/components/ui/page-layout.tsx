@@ -4,48 +4,28 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-import { usePathname } from 'next/navigation';
-import { getRouteTheme } from '@/lib/theme-colors';
-
 interface PageHeaderProps {
   title: string;
-  subtitle?: string; // Kept for backwards compatibility
-  description?: string; // New field for the body text
-  icon?: React.ElementType; // New field for the large icon
-  accentColor?: string; // Deprecated: overridden by route theme
-  iconBgColor?: string; // Deprecated: overridden by route theme
+  description?: string;
   action?: React.ReactNode;
   delay?: number;
 }
 
-export function PageHeader({ title, subtitle, description, icon: Icon, accentColor, iconBgColor, action, delay = 0 }: PageHeaderProps) {
-  const pathname = usePathname() || '';
-  const theme = getRouteTheme(pathname);
-
-  // Force universal theme compliance: ignore passed colors in favor of route theme
-  const finalAccentColor = theme.headerText;
-  const finalIconBgColor = theme.headerBg;
-
+export function PageHeader({ title, description, action, delay = 0 }: PageHeaderProps) {
   return (
     <motion.header
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6"
+      className="glass-nav -mb-2 flex flex-col gap-1 rounded-2xl px-4 py-2 sm:flex-row sm:items-start sm:justify-between sm:px-5"
     >
-      <div className="space-y-4 min-w-0">
-        <div className="flex items-center gap-3">
-          {Icon && (
-            <div className={cn("p-3 rounded-2xl", finalIconBgColor, finalAccentColor)}>
-              <Icon className="w-8 h-8" />
-            </div>
-          )}
-          <div className="space-y-1">
-            <h1 className={cn("text-hero tracking-tighter capitalize", finalAccentColor)}>{title}</h1>
-          </div>
-        </div>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl capitalize">
+          {title}
+        </h1>
+        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {action && <div className="shrink-0 mt-2 sm:mt-0">{action}</div>}
+      {action && <div className="mt-0.5 shrink-0 sm:mt-0">{action}</div>}
     </motion.header>
   );
 }
@@ -61,11 +41,13 @@ export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) 
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center py-20 text-center rounded-3xl border-2 border-dashed border-border/40"
+      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 px-6 py-12 text-center"
     >
-      <Icon className="h-10 w-10 text-muted-foreground/30 mb-4" />
-      <h3 className="text-base font-bold text-muted-foreground">{title}</h3>
-      {description && <p className="text-xs text-muted-foreground/60 mt-1 max-w-xs">{description}</p>}
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-muted/45">
+        <Icon className="h-5 w-5 text-muted-foreground/70" />
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {description && <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>}
     </motion.div>
   );
 }
@@ -82,7 +64,7 @@ export function FeedCard({ children, className, index = 0 }: FeedCardProps) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
-      className={cn("rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm p-5 hover:shadow-md transition-shadow", className)}
+      className={cn("glass-card rounded-2xl p-4 transition-shadow", className)}
     >
       {children}
     </motion.div>

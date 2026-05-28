@@ -1,20 +1,17 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { 
   ClipboardList, 
   ChevronRight,
-  User,
   Users,
-  ShieldCheck,
-  Star
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { format, parseISO, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import Link from 'next/link';
 
 interface RosterSummaryProps {
@@ -32,7 +29,7 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
   );
 
   if (!roster) return (
-    <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl text-[11px] font-bold opacity-30">
+    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...
     </div>
   );
@@ -55,25 +52,25 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
   return (
     <Link href={`/worship?tab=rosters&id=${rosterId}`} className="block transition-transform active:scale-95">
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
+        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
         isSender 
-          ? "bg-[#007AFF]/10 border-[#007AFF]/20 text-white" 
-          : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"
+          ? "border-primary/30 bg-primary/5 text-foreground" 
+          : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-                <div className="h-6 w-6 rounded-lg bg-[#007AFF]/20 flex items-center justify-center">
-                    <ClipboardList className="w-3.5 h-3.5 text-[#007AFF]" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
+                    <ClipboardList className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">Service Roster</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Service Roster</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{roster.name}</h3>
-            <p className="text-[11px] font-bold opacity-50 tracking-widest uppercase">{dateText}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{roster.name}</h3>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0">
-             <Users className="w-4 h-4 text-primary/40" />
-             <span className="text-[10px] font-black text-primary">{totalPositions}</span>
+          <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+             <Users className="h-4 w-4 text-muted-foreground" />
+             <span className="text-[10px] font-semibold text-foreground">{totalPositions}</span>
           </div>
         </div>
 
@@ -85,39 +82,39 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
              const name = m?.displayName || user?.firstName || 'TBD';
 
              return (
-               <div key={i} className="flex items-center justify-between p-3 rounded-[1.2rem] bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
+               <div key={i} className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
                   <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="h-6 w-6 border border-white/10 shrink-0">
+                    <Avatar className="h-6 w-6 shrink-0 border border-border/60">
                       {user?.photoURL && <AvatarImage src={user.photoURL} alt={name} />}
-                      <AvatarFallback className="text-[8px] uppercase font-black bg-white/5 text-white">
+                      <AvatarFallback className="bg-muted text-[8px] font-semibold uppercase text-foreground">
                         {name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="text-[12px] font-bold truncate text-white/90">{name}</p>
-                      <p className="text-[9px] font-black opacity-40 uppercase tracking-widest truncate">{slot.role}</p>
+                      <p className="truncate text-xs font-medium text-foreground">{name}</p>
+                      <p className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{slot.role}</p>
                     </div>
                   </div>
                   {user && (
-                    <div className="h-4 w-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                      <ShieldCheck className="h-2.5 w-2.5 text-emerald-500" />
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15">
+                      <ShieldCheck className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                   )}
                </div>
              );
            })}
            {slots.filter(s => s.members.length > 0).length === 0 && (
-             <div className="px-4 py-8 text-center bg-white/5 rounded-2xl border border-dashed border-white/10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">No filled positions</p>
+             <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-8 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">No filled positions</p>
              </div>
            )}
         </div>
 
-        <div className="flex items-center justify-between mt-1 group-hover:translate-x-2 transition-transform duration-300">
-          <span className="text-[11px] font-black uppercase tracking-widest text-[#007AFF] group-hover:text-white transition-colors">
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             Tap to View Roster
           </span>
-          <ChevronRight className="w-4 h-4 text-[#007AFF] opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </Link>

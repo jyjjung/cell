@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Trash2, Shield, Users, MessageCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminChatsPage() {
   const { chats, loading: loadingChats } = useChats();
@@ -85,25 +87,25 @@ export default function AdminChatsPage() {
   };
 
   return (
-    <div className="space-y-12">
-      <header>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Manage Chats</h1>
+    <div className="admin-page">
+      <header className="space-y-4">
+        <PageHeader title="Manage Chats" />
       </header>
 
       <section>
         {loading ? (
-            <div className="h-40 flex items-center justify-center rounded-lg bg-muted/50 border-2 border-dashed">
+            <div className="h-40 flex items-center justify-center rounded-lg bg-muted border-2 border-dashed">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         ) : chats.length === 0 ? (
-            <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
+            <div className="p-10 text-center bg-muted rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
                 <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
                 <h3 className="font-semibold">No chats found</h3>
                 <p className="text-muted-foreground text-sm">There are no chats in the database yet.</p>
             </div>
         ) : (
-          <div className="border rounded-lg overflow-x-auto">
-            <Table>
+          <div className="admin-table-wrap">
+            <Table className="admin-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name / Participants</TableHead>
@@ -157,6 +159,7 @@ export default function AdminChatsPage() {
           </div>
         )}
       </section>
+      <AdminHubTabs />
     </div>
   );
 }

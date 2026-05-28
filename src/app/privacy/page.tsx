@@ -6,39 +6,30 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ShieldCheck, Lock, Eye, Database, Fingerprint } from 'lucide-react';
+import { PageHeader, FeedCard } from '@/components/ui/page-layout';
 
 export default function PrivacyPolicyPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-8 md:px-20 py-16 max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-12"
-        >
-          <Button 
-            variant="ghost" 
+    <div className="page-container max-w-4xl space-y-10">
+
+      <PageHeader
+        title="Privacy Policy"
+        action={
+          <Button
+            variant="ghost"
             onClick={() => router.back()}
-            className="hover:bg-primary/5 -ml-4 font-bold"
+            className="h-9 rounded-xl font-bold"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-        </motion.div>
+        }
+      />
 
-        <header className="mb-16 space-y-4">
-          <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-tight text-foreground">
-            Privacy <br />
-            <span className="text-primary">Policy.</span>
-          </h1>
-          <p className="text-xl text-muted-foreground font-medium">
-            A commitment to data integrity and community sovereignty.
-          </p>
-        </header>
-
-        <div className="space-y-12 text-muted-foreground leading-relaxed font-medium">
-          <section className="space-y-4">
+      <div className="space-y-6 text-muted-foreground leading-relaxed font-medium">
+          <FeedCard>
+            <section className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Fingerprint className="h-5 w-5 text-primary" />
@@ -50,9 +41,11 @@ export default function PrivacyPolicyPage() {
               to facilitate community coordination: your verified email, your name, and your recipe-based avatar configuration. 
               We do not sell, rent, or trade your personal information with any third-party marketing entities.
             </p>
-          </section>
+            </section>
+          </FeedCard>
 
-          <section className="space-y-4">
+          <FeedCard>
+            <section className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Lock className="h-5 w-5 text-primary" />
@@ -64,9 +57,11 @@ export default function PrivacyPolicyPage() {
               In-circle messaging is accessible only to active participants. Once a member leaves a circle, their access to 
               future transmissions is immediately revoked, and their "read by" presence is localized to their period of membership.
             </p>
-          </section>
+            </section>
+          </FeedCard>
 
-          <section className="space-y-4">
+          <FeedCard>
+            <section className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Database className="h-5 w-5 text-primary" />
@@ -78,9 +73,11 @@ export default function PrivacyPolicyPage() {
               These providers maintain industry-leading security certifications. We utilize **Firebase Cloud Messaging (FCM)** 
               to deliver urgent community alerts directly to your device, ensuring a real-time pulse without constant background tracking.
             </p>
-          </section>
+            </section>
+          </FeedCard>
 
-          <section className="space-y-4">
+          <FeedCard>
+            <section className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <ShieldCheck className="h-5 w-5 text-primary" />
@@ -92,8 +89,8 @@ export default function PrivacyPolicyPage() {
               at any time. For a comprehensive audit of your data or to request permanent record termination, please contact 
               a community administrator.
             </p>
-          </section>
-        </div>
+            </section>
+          </FeedCard>
       </div>
     </div>
   );

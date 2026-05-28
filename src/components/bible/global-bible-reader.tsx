@@ -16,7 +16,7 @@ export function GlobalBibleReader() {
   const { isOpen, setIsOpen } = useGlobalBibleReader();
   const pathname = usePathname();
 
-  const isAllowedPage = pathname === '/' || pathname === '/bible-checklist';
+  const isAllowedPage = pathname === '/';
 
   if (!isAllowedPage && !isOpen) {
     return null;

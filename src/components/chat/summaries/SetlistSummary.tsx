@@ -1,17 +1,14 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Music, 
   ChevronRight,
-  ListMusic,
-  Play,
-  Share2
+  Play
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
-import { format, parseISO, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 interface SetlistSummaryProps {
@@ -30,7 +27,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
   );
 
   if (!setlist) return (
-    <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl text-[11px] font-bold opacity-30">
+    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Setlist...
     </div>
   );
@@ -63,24 +60,24 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
       className="block transition-transform active:scale-95 cursor-pointer"
     >
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
+        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
         isSender 
-          ? "bg-[#007AFF]/10 border-[#007AFF]/20 text-white" 
-          : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"
+          ? "border-primary/30 bg-primary/5 text-foreground" 
+          : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-                <div className="h-6 w-6 rounded-lg bg-pink-500/20 flex items-center justify-center">
-                    <Music className="w-3.5 h-3.5 text-pink-500" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
+                    <Music className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">Worship Setlist</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Worship Setlist</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{setlist.name}</h3>
-            <p className="text-[11px] font-bold opacity-50 tracking-widest uppercase">{dateText}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{setlist.name}</h3>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center shrink-0">
-              <Play className="w-4 h-4 text-pink-500 fill-pink-500" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+              <Play className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
@@ -97,22 +94,22 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
                    router.push(`/worship?tab=playlists&id=${setlistId}&songId=${song.songId}`);
                  }
                }}
-               className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors pointer-events-auto"
+              className="pointer-events-auto flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
              >
                 <div className="flex items-center gap-3 min-w-0">
-                   <span className="text-[10px] font-black opacity-30 w-4">{i + 1}</span>
-                   <p className="text-[13px] font-bold truncate">{song.title}</p>
+                   <span className="w-4 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
+                   <p className="truncate text-[13px] font-medium text-foreground">{song.title}</p>
                 </div>
-                <div className="px-2 py-0.5 rounded-md bg-white/10 text-[10px] font-black uppercase tracking-widest text-[#007AFF]">{song.key}</div>
+                <div className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{song.key}</div>
              </div>
            ))}
         </div>
 
-        <div className="flex items-center justify-between mt-1 group-hover:translate-x-2 transition-transform duration-300">
-          <span className="text-[11px] font-black uppercase tracking-widest text-[#007AFF] group-hover:text-white transition-colors">
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             Open Chart Viewer
           </span>
-          <ChevronRight className="w-4 h-4 text-[#007AFF] opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </div>

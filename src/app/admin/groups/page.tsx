@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PageHeader } from '@/components/ui/page-layout';
 import { ShieldCheck } from 'lucide-react';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters."),
@@ -103,41 +104,37 @@ export default function AdminRolesPage() {
   };
 
   return (
-    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <div className="admin-page">
+      <header className="space-y-4">
         <PageHeader 
-          title="Manage Roles & Chats" 
-          description="Configure permission tiers and role-linked messaging groups."
-          icon={ShieldCheck}
-          accentColor="text-blue-500"
-          iconBgColor="bg-blue-500/10"
-        />
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={handleSync} 
-            disabled={isSyncing || loading}
-            className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]"
-          >
-            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-            Sync Circles
-          </Button>
-          
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openAddDialog} className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]">
-                <PlusCircle className="mr-2 h-4 w-4" /> New Role
+          title="Manage Roles & Chats"
+          action={
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleSync} 
+                disabled={isSyncing || loading}
+                className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]"
+              >
+                {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Sync Circles
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
-                <DialogDescription>
-                  {editingRole ? 'Change the name of the role.' : 'Create a new role to assign to users. You can also choose to create a linked group chat.'}
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-4">
+              
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openAddDialog} className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]">
+                    <PlusCircle className="mr-2 h-4 w-4" /> New Role
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
+                    <DialogDescription>
+                      {editingRole ? 'Change the name of the role.' : 'Create a new role to assign to users. You can also choose to create a linked group chat.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-4">
                   <FormField
                     control={form.control}
                     name="name"
@@ -176,34 +173,36 @@ export default function AdminRolesPage() {
                       )}
                     />
                   )}
-                  <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {editingRole ? 'Save Changes' : 'Create Role'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                      <DialogFooter className="pt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isSaving}>
+                          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {editingRole ? 'Save Changes' : 'Create Role'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          }
+        />
       </header>
 
       <section>
         {loading ? (
-          <div className="h-40 flex items-center justify-center rounded-lg bg-muted/50 border-2 border-dashed">
+          <div className="h-40 flex items-center justify-center rounded-lg bg-muted border-2 border-dashed">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : roles.length === 0 ? (
-          <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
+          <div className="p-10 text-center bg-muted rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
             <Users className="h-10 w-10 text-muted-foreground mb-3" />
             <h3 className="font-semibold">No roles found</h3>
             <p className="text-muted-foreground text-sm">Click "New Role" to create one.</p>
           </div>
         ) : (
-          <div className="border rounded-lg overflow-x-auto">
-            <Table>
+          <div className="admin-table-wrap">
+            <Table className="admin-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -217,7 +216,7 @@ export default function AdminRolesPage() {
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">{role.name}</TableCell>
                     <TableCell>
-                      {role.chatId && <Check className="h-5 w-5 text-green-500" />}
+                      {role.chatId && <Check className="h-5 w-5 text-primary" />}
                     </TableCell>
                     <TableCell>{role.createdAt ? format(role.createdAt.toDate(), 'dd/MM/yyyy') : 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-2">
@@ -253,6 +252,7 @@ export default function AdminRolesPage() {
           </div>
         )}
       </section>
+      <AdminHubTabs />
     </div>
   );
 }

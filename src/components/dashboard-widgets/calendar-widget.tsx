@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { Calendar } from '@/components/ui/calendar';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { format, isSameDay } from 'date-fns';
-import { eventOccursOnDate, parseDay } from '@/lib/event-occurrences';
-import type { AppEvent, CleaningRosterEntry, QTRosterEntry } from '@/types';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import {
+  addMonths,
+  endOfMonth,
+  format,
+  isBefore,
+  isSameDay,
+  startOfMonth,
+  startOfToday,
+  subMonths,
+} from "date-fns";
+import { expandEventsToOccurrenceRows, parseDay } from "@/lib/event-occurrences";
+import type { AppEvent, CleaningRosterEntry, QTRosterEntry } from "@/types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface CalendarWidgetProps {
   selectedDate: Date;
@@ -17,6 +25,12 @@ interface CalendarWidgetProps {
   qtRoster: QTRosterEntry[];
 }
 
+type DayActivity = { event: boolean; cleaning: boolean; qt: boolean };
+
+function dateKey(date: Date) {
+  return format(date, "yyyy-MM-dd");
+}
+
 export default function CalendarWidget({
   selectedDate,
   onDateSelect,
@@ -24,49 +38,85 @@ export default function CalendarWidget({
   cleaningRoster,
   qtRoster,
 }: CalendarWidgetProps) {
-  
-  // Calculate which dates have which types of entries
-  const modifiers = useMemo(() => {
-    // This is expensive if we do it for every day in the view, 
-    // but react-day-picker calls it efficiently or we can use a custom Day component
-    return {
-      hasEvent: (date: Date) => events.some(e => eventOccursOnDate(e, date)),
-      hasCleaning: (date: Date) => cleaningRoster.some(r => isSameDay(parseDay(r.date), date)),
-      hasQT: (date: Date) => qtRoster.some(r => isSameDay(parseDay(r.date), date)),
+  const [month, setMonth] = useState<Date>(startOfMonth(selectedDate));
+  const today = startOfToday();
+
+  useEffect(() => {
+    setMonth((prev) =>
+      prev.getMonth() === selectedDate.getMonth() && prev.getFullYear() === selectedDate.getFullYear()
+        ? prev
+        : startOfMonth(selectedDate)
+    );
+  }, [selectedDate]);
+
+  const activityByDate = useMemo(() => {
+    const map = new Map<string, DayActivity>();
+    const touch = (date: Date, key: keyof DayActivity) => {
+      const k = dateKey(date);
+      const cur = map.get(k) ?? { event: false, cleaning: false, qt: false };
+      cur[key] = true;
+      map.set(k, cur);
     };
-  }, [events, cleaningRoster, qtRoster]);
+
+    const rangeStart = startOfMonth(subMonths(month, 1));
+    const rangeEnd = endOfMonth(addMonths(month, 1));
+
+    expandEventsToOccurrenceRows(events, { from: rangeStart, until: rangeEnd }).forEach((row) => {
+      if (!isBefore(row.occurrenceDate, today)) touch(row.occurrenceDate, "event");
+    });
+
+    cleaningRoster.forEach((r) => {
+      const d = parseDay(r.date);
+      if (!isBefore(d, today)) touch(d, "cleaning");
+    });
+
+    qtRoster.forEach((r) => {
+      const d = parseDay(r.date);
+      if (!isBefore(d, today)) touch(d, "qt");
+    });
+
+    return map;
+  }, [events, cleaningRoster, qtRoster, month, today]);
+
+  const modifiers = useMemo(
+    () => ({
+      hasEvent: (date: Date) => activityByDate.get(dateKey(date))?.event ?? false,
+      hasCleaning: (date: Date) => activityByDate.get(dateKey(date))?.cleaning ?? false,
+      hasQT: (date: Date) => activityByDate.get(dateKey(date))?.qt ?? false,
+    }),
+    [activityByDate]
+  );
 
   return (
-    <Card className="p-4 rounded-[2.5rem] bg-card/30 backdrop-blur-xl border-border/50 shadow-2xl overflow-hidden">
+    <div className="glass-card overflow-hidden rounded-xl">
       <Calendar
         mode="single"
+        month={month}
+        onMonthChange={setMonth}
         selected={selectedDate}
         onSelect={(date) => date && onDateSelect(date)}
         modifiers={modifiers}
-        className="p-0 border-none w-full"
+        showOutsideDays
+        className="w-full border-none p-2 sm:p-3"
         classNames={{
-          months: "w-full focus:outline-none",
-          month: "w-full space-y-4",
-          caption: "flex justify-center pt-1 relative items-center px-4 mb-4 min-h-[40px]",
-          caption_label: "text-sm font-black uppercase font-mono tracking-[0.2em] text-foreground",
-          nav: "flex items-center",
-          nav_button: "h-9 w-9 bg-background/50 backdrop-blur-md border border-border/40 p-0 flex items-center justify-center rounded-2xl opacity-60 hover:opacity-100 hover:bg-primary/10 hover:border-primary/30 transition-all active:scale-90",
-          nav_button_previous: "absolute left-2 z-10",
-          nav_button_next: "absolute right-2 z-10",
-          table: "w-full border-collapse space-y-1",
-          head_row: "grid grid-cols-7 w-full mb-4 px-1",
-          head_cell: "text-muted-foreground/40 font-black text-[9px] uppercase tracking-widest text-center",
-          row: "grid grid-cols-7 w-full mt-2 justify-items-center",
-          cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
-          day: cn(
-            "h-11 w-11 p-0 font-bold aria-selected:opacity-100 transition-all rounded-2xl mx-auto flex items-center justify-center relative",
-            "hover:bg-primary/20 hover:text-primary active:scale-90"
-          ),
-          day_selected: "bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:bg-primary hover:text-primary-foreground",
-          day_today: "bg-accent/50 text-accent-foreground",
-          day_outside: "opacity-20",
-          day_disabled: "text-muted-foreground opacity-50",
-          day_hidden: "invisible",
+          months: "w-full",
+          month: "w-full space-y-2",
+          caption: "relative mb-2 flex items-center justify-center px-8",
+          caption_label: "text-sm font-semibold text-foreground",
+          nav: "flex items-center gap-1",
+          nav_button:
+            "glass-thin inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground",
+          nav_button_previous: "absolute left-0",
+          nav_button_next: "absolute right-0",
+          table: "w-full border-collapse",
+          head_row: "grid grid-cols-7",
+          head_cell: "py-1 text-center text-[10px] font-medium uppercase text-muted-foreground",
+          row: "mt-0.5 grid grid-cols-7",
+          cell: "relative p-0 text-center focus-within:z-10",
+          day: "hidden",
+          day_selected: "hidden",
+          day_today: "hidden",
+          day_outside: "hidden",
         }}
         components={{
           IconLeft: () => <ChevronLeft className="h-4 w-4" />,
@@ -74,9 +124,12 @@ export default function CalendarWidget({
           Day: ({ date, displayMonth, ...props }) => {
             const isSelected = isSameDay(date, selectedDate);
             const isOutside = date.getMonth() !== displayMonth.getMonth();
-            const hasEvent = modifiers.hasEvent(date);
-            const hasCleaning = modifiers.hasCleaning(date);
-            const hasQT = modifiers.hasQT(date);
+            const isToday = isSameDay(date, today);
+            const activity = activityByDate.get(dateKey(date));
+            const hasEvent = activity?.event;
+            const hasCleaning = activity?.cleaning;
+            const hasQT = activity?.qt;
+            const hasDots = hasEvent || hasCleaning || hasQT;
 
             return (
               <button
@@ -84,31 +137,62 @@ export default function CalendarWidget({
                 type="button"
                 onClick={() => onDateSelect(date)}
                 className={cn(
-                  "h-11 w-11 rounded-2xl flex flex-col items-center justify-center relative transition-all group",
-                  isSelected ? "bg-primary text-primary-foreground shadow-xl shadow-primary/20" : "hover:bg-muted/50",
-                  isOutside ? "opacity-20" : "opacity-100",
-                  isSameDay(date, new Date()) && !isSelected && "border border-primary/30 text-primary"
+                  "relative mx-auto flex h-9 w-9 flex-col items-center justify-center rounded-md text-xs font-medium transition-colors sm:h-10 sm:w-10",
+                  isSelected && "bg-primary text-primary-foreground shadow-sm",
+                  !isSelected && isToday && "bg-primary/10 text-primary ring-1 ring-primary/30",
+                  !isSelected && !isToday && "hover:bg-muted/60",
+                  isOutside && "text-muted-foreground/40"
                 )}
               >
-                <span className="z-10 text-xs font-black">{format(date, 'd')}</span>
-                
-                {/* Dots container */}
-                <div className="absolute bottom-2 left-0 right-0 flex gap-0.5 justify-center z-20">
-                  {hasEvent && (
-                    <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-orange-500")} />
-                  )}
-                  {hasCleaning && (
-                    <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-emerald-500")} />
-                  )}
-                  {hasQT && (
-                    <div className={cn("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-primary")} />
-                  )}
-                </div>
+                <span className="leading-none">{format(date, "d")}</span>
+                {hasDots && (
+                  <span className="absolute bottom-1 flex gap-0.5">
+                    {hasEvent && (
+                      <span
+                        className={cn(
+                          "h-1 w-1 rounded-full",
+                          isSelected ? "bg-primary-foreground/90" : "bg-orange-500"
+                        )}
+                      />
+                    )}
+                    {hasCleaning && (
+                      <span
+                        className={cn(
+                          "h-1 w-1 rounded-full",
+                          isSelected ? "bg-primary-foreground/90" : "bg-emerald-500"
+                        )}
+                      />
+                    )}
+                    {hasQT && (
+                      <span
+                        className={cn(
+                          "h-1 w-1 rounded-full",
+                          isSelected ? "bg-primary-foreground/90" : "bg-sky-500"
+                        )}
+                      />
+                    )}
+                  </span>
+                )}
               </button>
             );
-          }
+          },
         }}
       />
-    </Card>
+
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/40 px-3 py-2 text-[10px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+          Event
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Cleaning
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+          QT
+        </span>
+      </div>
+    </div>
   );
 }

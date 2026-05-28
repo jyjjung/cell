@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Calendar, 
   ChevronRight,
   BookOpen,
-  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQTRoster } from '@/hooks/useQTRoster';
@@ -32,7 +30,7 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
   );
 
   if (!entry) return (
-    <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl text-[11px] font-bold opacity-30">
+    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading QT Entry...
     </div>
   );
@@ -56,48 +54,48 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
       className="block transition-transform active:scale-95 cursor-pointer"
     >
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
+        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
         isSender 
-          ? "bg-primary/10 border-primary/20 text-white" 
-          : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"
+          ? "border-primary/30 bg-primary/5 text-foreground" 
+          : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-                <div className="h-6 w-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
                     <BookOpen className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">QT Roster</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">QT Roster</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{entry.passage}</h3>
-            <p className="text-[11px] font-bold opacity-50 tracking-widest uppercase">{formatDateText(date)}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{entry.passage}</h3>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{formatDateText(date)}</p>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center shrink-0">
-             <Calendar className="w-4 h-4 text-primary/40" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+             <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-3 rounded-[1.2rem] bg-white/5 border border-white/5 group-hover:bg-white/10 transition-colors">
-            <Avatar className="h-8 w-8 border border-white/10 shrink-0">
+        <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
+            <Avatar className="h-8 w-8 shrink-0 border border-border/60">
                 {user?.avatar ? (
                   <PixelAvatar avatar={user.avatar} className="w-full h-full" />
                 ) : (
-                  <AvatarFallback className="text-[10px] uppercase font-black bg-white/5 text-white">
+                  <AvatarFallback className="bg-muted text-[10px] font-semibold uppercase text-foreground">
                     {name[0]}
                   </AvatarFallback>
                 )}
             </Avatar>
             <div className="min-w-0">
-                <p className="text-[14px] font-bold truncate text-white/90">{name}</p>
-                <p className="text-[10px] font-black opacity-40 uppercase tracking-widest truncate">Assigned Reader</p>
+                <p className="truncate text-sm font-medium text-foreground">{name}</p>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Assigned Reader</p>
             </div>
         </div>
 
-        <div className="flex items-center justify-between mt-1 group-hover:translate-x-2 transition-transform duration-300">
-          <span className="text-[11px] font-black uppercase tracking-widest text-primary group-hover:text-white transition-colors">
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             View Full Roster
           </span>
-          <ChevronRight className="w-4 h-4 text-primary opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </div>

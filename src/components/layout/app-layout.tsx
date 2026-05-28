@@ -11,7 +11,6 @@ import { messaging } from '@/lib/firebase';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { onMessage } from 'firebase/messaging';
 import { cn } from '@/lib/utils';
-import { ImmersiveBackground } from './immersive-background';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from './footer';
@@ -22,29 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { useFCMToken } from '@/hooks/use-fcm-token';
 import { getMillis, isChatUnread } from '@/lib/notification-utils';
-import { useLoadingVerse } from '@/hooks/use-loading-verse';
 import { CommandMenu } from './command-menu';
-
-function InitialLoadingVerse() {
-  const loadingVerse = useLoadingVerse(true);
-  
-  if (!loadingVerse) return null;
-  return (
-    <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="space-y-4 max-w-2xl px-6"
-    >
-        <p className="text-xl md:text-2xl font-black tracking-tight leading-tight italic opacity-80">
-            "{loadingVerse.text}"
-        </p>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">
-            — {loadingVerse.reference}
-        </p>
-    </motion.div>
-  );
-}
+import DynamicLakeWallpaper from './dynamic-lake-wallpaper';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -208,14 +186,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background px-8 text-center space-y-12">
         <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
-        <InitialLoadingVerse />
       </div>
     );
   }
   if (!currentUser) {
     return (
-      <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col">
-        <ImmersiveBackground />
+      <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col bg-background">
+        <DynamicLakeWallpaper />
         <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
             <div className="flex-grow flex flex-col">{children}</div>
             <Footer />
@@ -225,9 +202,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-      <ImmersiveBackground />
       <Sidebar />
-      <SidebarInset className="min-w-0 bg-transparent h-svh overflow-hidden flex flex-col">
+      <SidebarInset className="min-w-0 bg-background h-svh overflow-hidden flex flex-col">
+        <DynamicLakeWallpaper />
         
         <div className="flex-1 flex flex-col min-h-0 relative z-10">
         <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />
@@ -247,9 +224,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         {isIndividualChat ? children : (
                             <motion.div
                                 key={pathname}
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.25, ease: "easeOut" }}
+                                className="page-shell"
                             >
                                 {children}
                             </motion.div>
@@ -267,21 +245,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <motion.div 
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
-               className="bg-primary p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 border border-white/20"
+               className="glass-elevated p-4 rounded-2xl flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <Bell className="h-5 w-5 text-white" />
+                <div className="glass-thin p-2 rounded-xl">
+                  <Bell className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">Stay Updated</p>
-                  <p className="text-white/80 text-xs">Enable push notifications.</p>
+                  <p className="text-foreground font-bold text-sm">Stay Updated</p>
+                  <p className="text-muted-foreground text-xs">Enable push notifications.</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => handleDismissBanner()}
-                  className="px-3 py-1.5 text-xs text-white/60 hover:text-white font-medium transition-colors"
+                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
                 >
                   Later
                 </button>
@@ -290,7 +268,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     setShowPermissionBanner(false);
                     router.push('/profile');
                   }}
-                  className="bg-white text-primary px-4 py-1.5 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all"
+                  className="glass-thin px-4 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all"
                 >
                   Set Up
                 </button>

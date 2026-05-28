@@ -18,6 +18,7 @@ import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminEventsPage() {
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();
@@ -93,8 +94,8 @@ export default function AdminEventsPage() {
   };
 
   const EventTable = ({ eventsToDisplay }: { eventsToDisplay: AppEvent[] }) => (
-     <div className="overflow-x-auto border rounded-lg">
-        <Table>
+     <div className="admin-table-wrap">
+        <Table className="admin-table">
             <TableHeader>
             <TableRow>
                 <TableHead className="min-w-[250px]">Title</TableHead>
@@ -152,46 +153,44 @@ export default function AdminEventsPage() {
 
 
   return (
-    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <div className="admin-page">
+      <header className="space-y-4">
         <PageHeader 
-          title="Manage Events" 
-          description="Orchestrate the community calendar and sync schedules."
-          icon={Calendar}
-          accentColor="text-green-500"
-          iconBgColor="bg-green-500/10"
+          title="Manage Events"
+          action={
+            <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openAddModal}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+                </DialogHeader>
+                <EventForm
+                  event={editingEvent}
+                  onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
+                  onCancel={() => {
+                    setEditingEvent(null);
+                    setIsFormModalOpen(false);
+                  }}
+                  submitButtonText={editingEvent ? "Update Event" : "Create Event"}
+                />
+              </DialogContent>
+            </Dialog>
+          }
         />
-        <Dialog open={isFormModalOpen} onOpenChange={setIsFormModalOpen}>
-            <DialogTrigger asChild>
-            <Button onClick={openAddModal}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Event
-            </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-                <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-            </DialogHeader>
-            <EventForm
-                event={editingEvent}
-                onSubmit={editingEvent ? handleUpdateEvent : handleAddEvent}
-                onCancel={() => {
-                setEditingEvent(null);
-                setIsFormModalOpen(false);
-                }}
-                submitButtonText={editingEvent ? "Update Event" : "Create Event"}
-            />
-            </DialogContent>
-        </Dialog>
       </header>
 
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
         {eventsLoading ? (
-            <div className="h-40 flex items-center justify-center rounded-lg bg-muted/50 border-2 border-dashed">
+            <div className="h-40 flex items-center justify-center rounded-lg bg-muted border-2 border-dashed">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         ) : upcomingEvents.length === 0 ? (
-            <div className="p-10 text-center bg-muted/50 rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
+            <div className="p-10 text-center bg-muted rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
               <ListOrdered className="h-10 w-10 text-muted-foreground mb-3" />
               <h3 className="font-semibold">No upcoming events</h3>
               <p className="text-muted-foreground text-sm">Click "Add New Event" to get started.</p>
@@ -265,6 +264,8 @@ export default function AdminEventsPage() {
            </div>
         </section>
       )}
+
+      <AdminHubTabs />
 
     </div>
   );

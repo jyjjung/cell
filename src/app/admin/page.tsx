@@ -1,38 +1,36 @@
 "use client";
 
-import { useState, type FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, type FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Lock,
   Shield,
-  Zap,
   Users,
   Calendar,
-  BookOpen,
   Megaphone,
-  ArrowRight,
   ShieldCheck,
   ListTodo,
-  Layers,
-  MailOpen,
+  ListChecks,
+  BookOpen,
+  Brain,
+  MessageCircle,
   MessageSquarePlus,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { usePageLoading } from '@/contexts/page-loading-context';
-import { cn } from '@/lib/utils';
-import { PageHeader } from '@/components/ui/page-layout';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useQTRoster } from '@/hooks/useQTRoster';
-import { useNotifications } from '@/hooks/use-notifications';
-import { isSameMonth, parseISO } from 'date-fns';
+} from "lucide-react";
+import { usePageLoading } from "@/contexts/page-loading-context";
+import { PageHeader } from "@/components/ui/page-layout";
+import { useAllUsers } from "@/hooks/use-all-users";
+import { useQTRoster } from "@/hooks/useQTRoster";
+import { useNotifications } from "@/hooks/use-notifications";
+import { isSameMonth, parseISO } from "date-fns";
+import AdminHubTabs from "@/components/admin/admin-hub-tabs";
 
 export default function AdminHubPage() {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { currentUser, loadingAuth, adminPasswordLogin, isAdmin } = useAuth();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
@@ -47,23 +45,23 @@ export default function AdminHubPage() {
     setIsMounted(true);
   }, []);
 
-  const pendingApprovals = allUsers.filter(u => !u.isApproved && !u.isAdmin).length;
+  const pendingApprovals = allUsers.filter((u) => !u.isApproved && !u.isAdmin).length;
 
   const currentMonth = new Date();
-  const unassignedRosterDays = roster.filter(r => {
-    // Assuming r.date is 'YYYY-MM-DD'
+  const unassignedRosterDays = roster.filter((r) => {
     if (!isSameMonth(parseISO(r.date), currentMonth)) return false;
     return !r.personName || !r.userId;
   }).length;
 
-  const scheduledNotifs = notifications.filter(n => n.scheduledFor && n.scheduledFor.toDate() > new Date()).length;
-
+  const scheduledNotifs = notifications.filter(
+    (n) => n.scheduledFor && n.scheduledFor.toDate() > new Date()
+  ).length;
 
   const handleAdminAuth = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     const success = await adminPasswordLogin(password);
-    if (!success) setError('Invalid Access Key.');
+    if (!success) setError("Invalid Access Key.");
   };
 
   const handleLaunch = (path: string) => {
@@ -73,26 +71,23 @@ export default function AdminHubPage() {
 
   if (!isMounted || loadingAuth) return null;
 
-  // --- LOGIN GATE ---
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md space-y-12"
-        >
-          <div className="text-center space-y-4">
-            <div className="inline-flex p-4 bg-primary/10 rounded-3xl border border-primary/20 mb-4 backdrop-blur-xl">
-              <Shield className="h-8 w-8 text-primary animate-pulse" />
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-3">
+            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+              <Shield className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-page-title">Admin.</h1>
+            <h1 className="text-page-title">Admin</h1>
           </div>
 
           {currentUser ? (
             <form onSubmit={handleAdminAuth} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="password" title="Access Key" className="sr-only">Access Key</Label>
+                <Label htmlFor="password" title="Access Key" className="sr-only">
+                  Access Key
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -100,175 +95,88 @@ export default function AdminHubPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="Enter Access Key"
-                  className="h-16 text-center text-xl font-black rounded-3xl bg-card/40 backdrop-blur-md border-2 border-primary/10 focus:border-primary transition-all"
+                  className="h-14 rounded-xl border-border text-center text-lg"
                 />
               </div>
               {error && (
-                <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-micro-label text-destructive text-center p-3 bg-destructive/10 rounded-2xl border border-destructive/20 !opacity-100 italic">
+                <p className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-center text-sm text-destructive">
                   {error}
-                </motion.p>
+                </p>
               )}
-              <Button type="submit" size="hero" className="w-full">
-                <Lock className="mr-2 h-5 w-5" />
+              <Button type="submit" className="h-12 w-full">
+                <Lock className="mr-2 h-4 w-4" />
                 Authenticate
               </Button>
             </form>
           ) : (
-            <Button onClick={() => handleLaunch('/login')} className="w-full h-16 rounded-full text-lg font-black">
+            <Button onClick={() => handleLaunch("/login")} className="h-12 w-full">
               Sign In to Portal
             </Button>
           )}
-        </motion.div>
+        </div>
       </div>
     );
   }
 
-  // --- COMPACT COMMAND HUB ---
-  const NavCard = ({ icon: Icon, title, desc, href, indicator }: any) => (
+  const quickActions = [
+    { title: "Announcements", href: "/admin/notifications", icon: Megaphone, badge: scheduledNotifs },
+    { title: "QT Roster", href: "/admin/qt-roster", icon: ListChecks, badge: unassignedRosterDays },
+    { title: "Cleaning Roster", href: "/admin/cleaning-roster", icon: ListTodo },
+    { title: "Events", href: "/admin/events", icon: Calendar },
+  ];
+
+  const allSections = [
+    { title: "Users", href: "/admin/users", icon: Users, badge: pendingApprovals },
+    { title: "Roles", href: "/admin/groups", icon: ShieldCheck },
+    { title: "Bible Plan", href: "/admin/bible-plan", icon: BookOpen },
+    { title: "Memory Verses", href: "/admin/memory-verses", icon: Brain },
+    { title: "Chats", href: "/admin/chats", icon: MessageCircle },
+  ];
+
+  const NavCard = ({ icon: Icon, title, href, badge }: { icon: React.ElementType; title: string; href: string; badge?: number }) => (
     <button
       onClick={() => handleLaunch(href)}
-      className="group relative flex flex-col p-5 rounded-2xl bg-card/10 hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all text-left w-full h-full"
+      className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-left transition-colors hover:bg-muted/50"
     >
-      <div className="flex items-center gap-3 w-full mb-3">
-        <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-        <h3 className="font-bold tracking-tight text-base flex-1">{title}</h3>
-        <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary/60" />
+      <div className="flex items-center gap-3">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">{title}</span>
       </div>
-      <p className="text-xs text-muted-foreground/80 leading-snug line-clamp-2">{desc}</p>
-
+      {typeof badge === "number" && badge > 0 ? (
+        <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+          {badge}
+        </span>
+      ) : null}
     </button>
   );
 
   return (
-    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
-      <PageHeader
-        title="Admin Hub"
-        description="Unified Management Suite"
-        icon={Zap}
-        accentColor="text-primary"
-        iconBgColor="bg-primary/10"
-      />
+    <div className="admin-page max-w-4xl">
+      <PageHeader title="Admin" description="Manage community operations from one place." />
+      <AdminHubTabs />
 
-       {/* Sector 0: Creation Wizard */}
-       <section className="space-y-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-[10px] font-black tracking-widest uppercase text-primary">Creation Portal</h2>
-          <div className="h-px bg-primary/20 flex-grow" />
-        </div>
-        <div className="grid grid-cols-1 gap-4">
-          <button
-            onClick={() => handleLaunch('/chat/system')}
-            className="group relative flex flex-col p-8 rounded-3xl bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 transition-all text-left w-full h-full shadow-2xl shadow-primary/5"
-          >
-            <div className="flex items-center gap-4 w-full mb-4">
-              <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/20 group-hover:scale-110 transition-transform">
-                <MessageSquarePlus className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-black tracking-tighter text-xl uppercase">Chat</h3>
-              </div>
-              <ArrowRight className="h-5 w-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />
-            </div>
-            <p className="text-base text-foreground/80 leading-relaxed font-medium">Create events, invitations, and announcements through a guided conversation. No AI, just a clear, step-by-step process.</p>
-          </button>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">Quick actions</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {quickActions.map((action) => (
+            <NavCard key={action.href} {...action} />
+          ))}
         </div>
       </section>
 
-      {/* Sector 1: Users & Access */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Users & Access</h2>
-          <div className="h-px bg-border/50 flex-grow" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <NavCard
-            icon={Users}
-            title="Users"
-            desc="Manage users, roles, and authorize new community members."
-            href="/admin/users"
-            color="bg-primary"
-            indicator={pendingApprovals}
-          />
-          <NavCard
-            icon={ShieldCheck}
-            title="Roles"
-            desc="Configure permission tiers and role-linked messaging groups."
-            href="/admin/groups"
-            color="bg-blue-500"
-          />
-          <NavCard
-            icon={Megaphone}
-            title="Announcements"
-            desc="Send urgent community messages and system-wide alerts."
-            href="/admin/notifications"
-            color="bg-orange-500"
-            indicator={scheduledNotifs}
-          />
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">All sections</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {allSections.map((section) => (
+            <NavCard key={section.href} {...section} />
+          ))}
         </div>
       </section>
 
-      {/* Sector 2: Schedules & Sync */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Schedules & Sync</h2>
-          <div className="h-px bg-border/50 flex-grow" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <NavCard
-            icon={Calendar}
-            title="Events"
-            desc="Orchestrate the community calendar and sync schedules."
-            href="/admin/events"
-            color="bg-green-500"
-          />
-          <NavCard
-            icon={Layers}
-            title="QT Roster"
-            desc="Assign spiritual sharing duties and sharing rotations."
-            href="/admin/qt-roster"
-            color="bg-purple-500"
-            indicator={unassignedRosterDays}
-          />
-          <NavCard
-            icon={ListTodo}
-            title="Service Rota"
-            desc="Manage cleaning teams and facility maintenance rotations."
-            href="/admin/cleaning-roster"
-            color="bg-emerald-500"
-          />
-          <NavCard
-            icon={MailOpen}
-            title="Invitations"
-            desc="Create standalone scheduling invites and track responder date preferences."
-            href="/admin/invitations"
-            color="bg-blue-500"
-          />
-        </div>
-      </section>
-
-      {/* Sector 3: Spiritual Growth */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Spiritual Core</h2>
-          <div className="h-px bg-border/50 flex-grow" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <NavCard
-            icon={BookOpen}
-            title="Bible Plan"
-            desc="Configure the global reading sequence and milestones."
-            href="/admin/bible-plan"
-            color="bg-red-500"
-          />
-          <NavCard
-            icon={Lock}
-            title="Memorization"
-            desc="Curate scripture portions for community study tracks."
-            href="/admin/memory-verses"
-            color="bg-amber-500"
-          />
-        </div>
-      </section>
+      <Button onClick={() => handleLaunch("/chat/system")} className="h-12 w-full sm:w-auto">
+        <MessageSquarePlus className="mr-2 h-4 w-4" />
+        Open system chat creator
+      </Button>
     </div>
   );
 }

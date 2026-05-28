@@ -6,20 +6,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm active:scale-[0.98] transition-all",
+        default: "glass-elevated text-foreground hover:text-foreground active:scale-[0.98]",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm active:scale-[0.98] transition-all",
+          "glass-elevated bg-destructive/80 text-destructive-foreground hover:bg-destructive/90 active:scale-[0.98]",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground active:scale-[0.98] transition-all",
+          "glass-thin text-foreground hover:bg-accent/55 hover:text-accent-foreground active:scale-[0.98]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-[0.98] transition-all",
-        ghost: "hover:bg-accent hover:text-accent-foreground active:scale-[0.95] transition-all",
+          "glass-thin bg-secondary/75 text-secondary-foreground hover:bg-secondary/85 active:scale-[0.98]",
+        ghost: "glass-thin border-transparent bg-transparent hover:bg-accent/50 hover:text-accent-foreground active:scale-[0.95]",
         link: "text-primary underline-offset-4 hover:underline",
-        premium: "bg-gradient-to-br from-primary to-blue-600 text-white hover:brightness-110 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all border border-white/10",
+        premium: "glass-elevated bg-gradient-to-br from-primary/90 to-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]",
       },
       size: {
         default: "h-11 px-5 py-2 rounded-2xl",

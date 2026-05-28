@@ -4,24 +4,22 @@
 import MemoryVerseAdmin from '@/components/admin/memory-verse-admin';
 import { PageHeader } from '@/components/ui/page-layout';
 import { Lock } from 'lucide-react';
+import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 
 export default function AdminMemoryVersesPage() {
 
   return (
-    <div className="relative space-y-12 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="admin-page">
       <header>
         <PageHeader
           title="Memorization"
-          description="Curate scripture portions for community study tracks."
-          icon={Lock}
-          accentColor="text-amber-500"
-          iconBgColor="bg-amber-500/10"
         />
       </header>
 
       <section>
         <MemoryVerseAdmin />
       </section>
+      <AdminHubTabs />
     </div>
   );
 }

@@ -139,13 +139,12 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     text?: string, 
     imageUrl?: string, 
     replyToId?: string,
-    invitationId?: string,
     eventId?: string,
     setlistId?: string,
     rosterId?: string
   ) => {
     if (!currentUser || !chatId || !parentMessageId) return;
-    if (!text?.trim() && !imageUrl && !invitationId && !eventId && !setlistId && !rosterId) return;
+    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -156,7 +155,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
-    if (invitationId) messageData.invitationId = invitationId;
     if (eventId) messageData.eventId = eventId;
     if (setlistId) messageData.setlistId = setlistId;
     if (rosterId) messageData.rosterId = rosterId;
@@ -172,7 +170,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         };
         if (messageData.text) parentUpdate.latestReplyText = messageData.text;
         if (messageData.imageUrl) parentUpdate.latestReplyImageUrl = messageData.imageUrl;
-        if (invitationId) parentUpdate.latestReplyText = "📩 Invitation";
         if (eventId) parentUpdate.latestReplyText = "📅 Event";
         if (setlistId) parentUpdate.latestReplyText = "🎵 Setlist";
         if (rosterId) parentUpdate.latestReplyText = "📋 Roster";
@@ -183,7 +180,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         // notification shows the thread replier's name, not the original message author.
         const notifText = messageData.text
             || (messageData.imageUrl ? '📷 Image' : null)
-            || (invitationId ? '📩 Invitation' : null)
             || (eventId ? '📅 Event' : null)
             || (setlistId ? '🎵 Setlist' : null)
             || (rosterId ? '📋 Roster' : null)
@@ -234,7 +230,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         deletedBy: currentUser.uid,
         text: deleteField(),
         imageUrl: deleteField(),
-        invitationId: deleteField(),
         eventId: deleteField(),
         setlistId: deleteField(),
         rosterId: deleteField(),

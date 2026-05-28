@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight } from "lucide-react";
@@ -18,6 +18,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onOpenCommandMenu }: HeaderProps) {
+  const { isMobile, state } = useSidebar();
   const { currentUser } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
   const [mounted, setMounted] = useState(false);
@@ -91,11 +92,13 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="flex h-14 items-center justify-between gap-3 px-3 md:px-4 bg-background/70 backdrop-blur-xl border-b border-border/40 shadow-sm shadow-black/[0.03]">
+      <div className="glass-nav flex h-14 items-center justify-between gap-3 px-3 md:px-4 border-b border-border/50">
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">
-          <SidebarTrigger className="h-9 w-9 rounded-xl shrink-0 hover:bg-muted/70 transition-colors" />
-          <div className="overflow-hidden min-w-0 pr-1 truncate">
+          {(isMobile || state === "collapsed") && (
+            <SidebarTrigger className="h-9 w-9 rounded-xl shrink-0 hover:bg-muted/70 transition-colors" />
+          )}
+          <div className="min-w-0 pr-1 overflow-visible">
             <Breadcrumbs />
           </div>
         </div>
@@ -107,7 +110,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
             <button
               id="header-search-pill"
               onClick={onOpenCommandMenu}
-              className="flex items-center gap-2 h-8 px-2.5 md:px-3 rounded-xl bg-muted/60 hover:bg-muted border border-border/50 hover:border-border/80 transition-all text-muted-foreground hover:text-foreground group"
+              className="glass-thin flex items-center gap-2 h-8 px-2.5 md:px-3 rounded-xl hover:border-ring/40 transition-all text-muted-foreground hover:text-foreground group"
               aria-label="Open command menu"
             >
               <Search className="h-4 w-4 md:h-3.5 md:w-3.5" />
@@ -156,17 +159,17 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96, y: -6 }}
                     transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="absolute right-0 top-full mt-2 w-[340px] sm:w-[380px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-2xl shadow-2xl shadow-black/10 overflow-hidden z-50"
+                    className="glass-elevated absolute right-0 top-full z-50 mt-2 w-[min(380px,calc(100vw-16px))] overflow-hidden rounded-2xl max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-16 max-sm:mt-0 max-sm:w-auto"
                     role="dialog"
                     aria-label="Alerts panel"
                   >
                     {/* Panel Tabs */}
-                    <div className="flex items-center p-1.5 border-b border-border/30 gap-1 bg-muted/10">
-                      <button onClick={() => setActiveTab('announcements')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'announcements' ? "bg-background text-foreground shadow-sm shadow-black/5" : "text-muted-foreground hover:bg-muted/50")}>
+                    <div className="flex items-center p-1.5 border-b border-border/30 gap-1 bg-background/20">
+                      <button onClick={() => setActiveTab('announcements')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'announcements' ? "glass-card text-foreground" : "text-muted-foreground hover:bg-background/35")}>
                         <Megaphone className={cn("h-3.5 w-3.5", activeTab === 'announcements' && "text-orange-500")} /> Announcements
                         {unreadAnnouncements.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'announcements' ? "bg-orange-500 text-white" : "bg-muted-foreground/20 text-foreground")}>{unreadAnnouncements.length}</span>}
                       </button>
-                      <button onClick={() => setActiveTab('notifications')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'notifications' ? "bg-background text-foreground shadow-sm shadow-black/5" : "text-muted-foreground hover:bg-muted/50")}>
+                      <button onClick={() => setActiveTab('notifications')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'notifications' ? "glass-card text-foreground" : "text-muted-foreground hover:bg-background/35")}>
                         <Bell className={cn("h-3.5 w-3.5", activeTab === 'notifications' && "text-primary")} /> Notifications
                         {unreadGeneralNotifications.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'notifications' ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-foreground")}>{unreadGeneralNotifications.length}</span>}
                       </button>
@@ -197,7 +200,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                     )}
 
                     {/* Content List */}
-                    <div className="max-h-[420px] overflow-y-auto overscroll-contain">
+                    <div className="max-h-[min(420px,calc(100vh-13rem))] overflow-y-auto overscroll-contain">
                       {activeTab === 'announcements' ? (
                         announcements.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">

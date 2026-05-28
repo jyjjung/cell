@@ -74,7 +74,7 @@ export function ImageLightbox({ imageUrl, altText = "Image", onDownload, trigger
                         size="icon"
                         variant="ghost"
                         onClick={() => onDownload(imageUrl)}
-                        className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/10 hover:bg-[#007AFF] text-white backdrop-blur-md transition-colors"
+                        className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/10 hover:bg-primary text-white backdrop-blur-md transition-colors"
                       >
                         <Download className="h-5 w-5" />
                       </Button>

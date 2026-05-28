@@ -265,7 +265,7 @@ export default function ProfilePage() {
         if (currentUser && (!currentUser.fcmTokens || currentUser.fcmTokens.length === 0)) {
            return <Button onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
         }
-        return <div className="flex items-center text-sm text-green-500"><BellRing className="mr-2 h-4 w-4" />{t.enabled}</div>;
+        return <div className="flex items-center text-sm text-primary"><BellRing className="mr-2 h-4 w-4" />{t.enabled}</div>;
       case 'NEEDS_PERMISSION':
         return <Button onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
       case 'NEEDS_PWA_INSTALL':
@@ -283,13 +283,10 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-5xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container space-y-8 pb-32">
       {/* Header */}
       <PageHeader
         title={t.myProfile}
-        icon={UserIcon}
-        accentColor="text-primary"
-        iconBgColor="bg-primary/10"
       />
 
       {/* Avatar + Name Card */}
@@ -337,9 +334,9 @@ export default function ProfilePage() {
         className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
       >
         <h2 className="text-base font-semibold">{t.significantDates}</h2>
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/30">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
           <div className="flex items-center gap-3">
-            <Cake className="h-4 w-4 text-pink-500" />
+            <Cake className="h-4 w-4 text-primary" />
             <div>
               <p className="text-sm font-medium">{t.yourBirthday}</p>
               <p className="text-xs text-muted-foreground">
@@ -347,7 +344,7 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-          {birthdayEvent && <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+          {birthdayEvent && <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />}
         </div>
         {!birthdayEvent && (
           <p className="text-xs text-muted-foreground/60 px-1">Ask an admin to link your birthday via the community schedule.</p>
@@ -363,7 +360,7 @@ export default function ProfilePage() {
         <h2 className="text-base font-semibold">{t.settings}</h2>
 
         {/* Language */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/30">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
           <div className="flex items-center gap-3">
             <Languages className="h-4 w-4 text-primary" />
             <div>
@@ -381,7 +378,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Community Progress Toggle */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/30">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-muted border border-border/30">
           <div className="flex-1 min-w-0 pr-4">
             <p className="text-sm font-medium">{t.communityProgressTitle}</p>
             <p className="text-xs text-muted-foreground">{t.communityProgress}</p>
@@ -390,7 +387,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Push Notifications */}
-        <div className="p-4 rounded-2xl bg-muted/30 border border-border/30 space-y-4">
+        <div className="p-4 rounded-2xl bg-muted border border-border/30 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0 pr-4">
               <p className="text-sm font-medium">{t.pushNotifications}</p>

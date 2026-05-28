@@ -1,12 +1,8 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { 
-  ClipboardList, 
-  ChevronRight,
   ListTodo,
-  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
@@ -39,7 +35,7 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
   );
 
   if (!entry) return (
-    <div className="p-4 bg-muted/20 border border-white/5 rounded-2xl text-[11px] font-bold opacity-30">
+    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...
     </div>
   );
@@ -62,46 +58,45 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
       className="block transition-transform active:scale-95 cursor-pointer"
     >
       <div className={cn(
-        "flex flex-col gap-4 p-5 rounded-[1.8rem] border shadow-2xl transition-all duration-300 w-full max-w-full",
+        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
         isSender 
-          ? "bg-emerald-500/10 border-emerald-500/20 text-white" 
-          : "bg-[#3B3B3D]/30 border-white/5 text-white backdrop-blur-2xl"
+          ? "border-primary/30 bg-primary/5 text-foreground" 
+          : "border-border/60 bg-card text-foreground"
       )}>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5">
-                <div className="h-6 w-6 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                    <ListTodo className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
+                    <ListTodo className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50">Facility Roster</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Facility Roster</span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight text-white mb-2 truncate">{day?.name || 'Cleaning Session'}</h3>
-            <p className="text-[11px] font-bold opacity-50 tracking-widest uppercase">{formatDateText(date)}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{day?.name || 'Cleaning Session'}</h3>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{formatDateText(date)}</p>
           </div>
         </div>
 
         <div className="flex -space-x-3 mt-2">
             {assignedUsers.map((user, i) => (
-                <Avatar key={i} className="h-10 w-10 border-4 border-[#1C1C1E] ring-1 ring-white/10 shrink-0 overflow-hidden">
+                <Avatar key={i} className="h-10 w-10 shrink-0 overflow-hidden border-2 border-background">
                     {user?.avatar ? (
                         <PixelAvatar avatar={user.avatar} className="w-full h-full" />
                     ) : (
-                        <AvatarFallback className="text-[10px] uppercase font-black bg-white/5 text-white">
+                        <AvatarFallback className="bg-muted text-[10px] font-semibold uppercase text-foreground">
                         {user?.firstName?.[0] || '?'}
                         </AvatarFallback>
                     )}
                 </Avatar>
             ))}
             {assignedUsers.length === 0 && (
-                <div className="px-4 py-2 rounded-xl bg-white/5 text-[10px] font-bold opacity-30 italic">No assigned personnel</div>
+                <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-2 text-[10px] font-medium text-muted-foreground">No assigned personnel</div>
             )}
         </div>
 
-        <div className="flex items-center justify-between mt-1 group-hover:translate-x-2 transition-transform duration-300">
-          <span className="text-[11px] font-black uppercase tracking-widest text-emerald-500 group-hover:text-white transition-colors">
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
             Access System Status
           </span>
-          <ChevronRight className="w-4 h-4 text-emerald-500 opacity-40 group-hover:opacity-100 group-hover:text-white transition-all" strokeWidth={3} />
         </div>
       </div>
     </div>

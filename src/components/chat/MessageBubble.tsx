@@ -17,7 +17,6 @@ import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Button } from '@/components/ui/button';
 import { CornerUpLeft } from 'lucide-react';
-import InvitationSummary from './summaries/InvitationSummary';
 import EventSummary from './summaries/EventSummary';
 import SetlistSummary from './summaries/SetlistSummary';
 import RosterSummary from './summaries/RosterSummary';
@@ -55,7 +54,7 @@ const MessageBubble = React.memo(function MessageBubble({
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const isSpecialContent = !!(message.imageUrl || message.invitationId || message.eventId || message.setlistId || message.rosterId || message.songId);
+  const isSpecialContent = !!(message.imageUrl || message.eventId || message.setlistId || message.rosterId || message.songId);
   const senderName = getMemberFullName(sender);
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
@@ -121,7 +120,7 @@ const MessageBubble = React.memo(function MessageBubble({
                   isSender ? "items-end" : "items-start"
               )}>
                   {!isSender && isGroup && senderName && showName && (
-                      <p className="text-[10px] font-bold text-[#007AFF] mb-1 ml-3.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
+                      <p className="text-[10px] font-bold text-primary mb-1 ml-3.5 opacity-90 truncate uppercase tracking-tight">{senderName}</p>
                   )}
                   <div
                       className={cn(
@@ -129,8 +128,8 @@ const MessageBubble = React.memo(function MessageBubble({
                       youtubeId && "w-full sm:min-w-[300px] max-w-full",
                       !isSpecialContent && (
                           isSender
-                          ? cn('bg-[#007AFF] text-white ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
-                          : cn('bg-[#3B3B3D]/90 text-white backdrop-blur-md mr-auto border border-white/5 px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
+                          ? cn('bg-primary text-primary-foreground ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
+                          : cn('bg-card/80 text-foreground backdrop-blur-md mr-auto border border-border px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
                       ),
                       isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                       )}
@@ -195,13 +194,13 @@ const MessageBubble = React.memo(function MessageBubble({
                              </div>
                              <div className="relative border border-border/10 border-t-0 rounded-b-[1.25rem] overflow-hidden bg-foreground/5 h-[220px] group-hover/sheet:border-primary/30 transition-colors">
                                 {isPdfUrl(message.imageUrl) ? (
-                                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-500/10 to-rose-600/20 p-6 gap-4">
-                                        <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center shadow-inner">
-                                            <FileText className="h-8 w-8 text-rose-500" />
+                                    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-muted/40 p-6">
+                                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border/60 bg-muted">
+                                            <FileText className="h-8 w-8 text-muted-foreground" />
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-white text-sm font-bold tracking-tight">PDF Chord Sheet</p>
-                                            <p className="text-foreground/40 text-[10px] font-medium uppercase tracking-widest mt-0.5">Click to view in high quality</p>
+                                            <p className="text-sm font-semibold tracking-tight text-foreground">PDF Chord Sheet</p>
+                                            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Click to view in high quality</p>
                                         </div>
                                     </div>
                                 ) : (
@@ -212,7 +211,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                     />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
-                                <div className="absolute bottom-3 right-3 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 translate-y-1 opacity-0 group-hover/sheet:translate-y-0 group-hover/sheet:opacity-100 transition-all">
+                                <div className="absolute bottom-3 right-3 flex translate-y-1 items-center gap-1.5 rounded-md border border-border/60 bg-background/80 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground opacity-0 transition-all group-hover/sheet:translate-y-0 group-hover/sheet:opacity-100">
                                    <Maximize className="w-3 h-3" />
                                    Full View
                                 </div>
@@ -221,17 +220,13 @@ const MessageBubble = React.memo(function MessageBubble({
                         )}
 
                         {message.text && (
-                          <div className={cn(isSpecialContent && "px-3 py-2 bg-[#3B3B3D]/90 rounded-2xl mb-2")}>
+                          <div className={cn(isSpecialContent && "px-3 py-2 bg-card/80 rounded-2xl mb-2")}>
                               <LinkifiedText 
                                 text={message.text} 
                                 isSender={isSender} 
                                 className="text-[15px] font-normal" 
                               />
                           </div>
-                        )}
-
-                        {message.invitationId && (
-                          <InvitationSummary invitationId={message.invitationId} isSender={isSender} />
                         )}
 
                         {message.eventId && (
@@ -434,7 +429,7 @@ function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { c
             
             <button 
                 onClick={onReply}
-                className={cn("text-[9px] font-bold text-[#007AFF] hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
+                className={cn("text-[9px] font-bold text-primary hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
             >
                 Open thread
             </button>

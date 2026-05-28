@@ -82,7 +82,7 @@ export default function MemberProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="relative space-y-8 pb-32 max-w-3xl mx-auto px-4 md:px-8 mt-12">
+      <div className="page-container max-w-3xl space-y-8 pb-32">
         <Skeleton className="h-10 w-24 rounded-xl" />
         <div className="flex flex-col items-center space-y-4">
           <Skeleton className="h-32 w-32 rounded-[2.5rem]" />
@@ -109,7 +109,7 @@ export default function MemberProfilePage() {
   const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
 
   return (
-    <div className="relative space-y-8 pb-32 max-w-3xl mx-auto px-4 md:px-8 mt-12">
+    <div className="page-container max-w-3xl space-y-8 pb-32">
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -182,8 +182,8 @@ export default function MemberProfilePage() {
           className="p-6 rounded-3xl border border-border/40 bg-card/50 backdrop-blur-sm space-y-4"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-pink-500/10">
-              <Cake className="h-5 w-5 text-pink-500" />
+            <div className="p-2 rounded-xl bg-muted">
+              <Cake className="h-5 w-5 text-primary" />
             </div>
             <h3 className="font-bold text-sm">{t.birthday || 'Birthday'}</h3>
           </div>
@@ -214,7 +214,7 @@ export default function MemberProfilePage() {
               <Badge 
                 key={role} 
                 variant="outline" 
-                className="px-4 py-1.5 rounded-xl border-border/60 bg-muted/30 text-sm font-semibold"
+                className="px-4 py-1.5 rounded-xl border-border/60 bg-muted text-sm font-semibold"
               >
                 {role}
               </Badge>
@@ -238,8 +238,8 @@ export default function MemberProfilePage() {
           transition={{ delay: 0.4 }}
           className="grid grid-cols-1 gap-4"
         >
-          <div className="p-4 rounded-2xl bg-muted/20 border border-border/20 flex items-center gap-3">
-            <Trophy className="h-4 w-4 text-primary/70" />
+          <div className="p-4 rounded-2xl bg-muted border border-border/20 flex items-center gap-3">
+            <Trophy className="h-4 w-4 text-primary" />
             <div className="min-w-0">
               <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Last Reading</p>
               <p className="text-xs font-bold truncate">
