@@ -19,7 +19,7 @@ import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, isSameDay, startOfMonth, endOfMonth, addMonths, addDays } from 'date-fns';
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
   Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin,
@@ -328,6 +328,21 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return items.sort((a, b) => compareAsc(a.date, b.date));
   }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap, usersMap]);
 
+  const imminentDuties = useMemo(() => {
+    const today = startOfToday();
+    const tomorrow = addDays(today, 1);
+    return myRosterItems.filter(
+      item => isSameDay(item.date, today) || isSameDay(item.date, tomorrow)
+    );
+  }, [myRosterItems]);
+
+  const getDutyWhenLabel = useCallback((date: Date) => {
+    const today = startOfToday();
+    if (isSameDay(date, today)) return t.dutyToday;
+    if (isSameDay(date, addDays(today, 1))) return t.dutyTomorrow;
+    return format(date, 'MMM d');
+  }, [t]);
+
   const claimCooldownMs = 24 * 60 * 60 * 1000;
   const serverNextClaimAtMs = useMemo(() => {
     const baseMs = currentUser.clickMeLastClaimAt?.toMillis?.() || 0;
@@ -456,7 +471,55 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       <PageHeader
         title={`${getGreeting(currentUser.preferredLanguage || 'en')}, ${currentUser.firstName}${currentUser.preferredLanguage === 'ko' ? '님' : ''}`}
       />
-      
+
+      {imminentDuties.length > 0 && (
+        <motion.section custom={0.5} variants={fadeUp} initial="hidden" animate="visible">
+          <div className="glass-card rounded-2xl border-primary/25 bg-primary/5 p-4 md:p-5">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <div>
+                  <p className="text-micro-label !opacity-100 text-primary">{t.dutyReminderTitle}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{t.dutyReminderSubtitle}</p>
+                </div>
+                <div className="space-y-1.5">
+                  {imminentDuties.map(item => {
+                    const Icon = itemTypeIcon(item.type);
+                    const when = getDutyWhenLabel(item.date);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedEvent(item)}
+                        className="glass-thin flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                      >
+                        <Icon className={cn('h-4 w-4 shrink-0', itemTypeColor(item.type))} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold leading-snug">
+                            <span className="text-primary">{when}</span>
+                            <span className="text-muted-foreground"> · </span>
+                            <span>{item.label}</span>
+                          </p>
+                          {(item.sublabel || itemTypeLabel(item.type)) && (
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              {itemTypeLabel(item.type)}
+                              {item.sublabel ? ` — ${item.sublabel}` : ''}
+                            </p>
+                          )}
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+      )}
+
       {/* ── Stats Row ── */}
       <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
