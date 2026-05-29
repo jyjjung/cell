@@ -193,8 +193,8 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                   <p>{error}</p>
                 </div>
               ) : (
-                <div 
-                  className="prose prose-p:my-2 lg:prose-lg dark:prose-invert max-w-none font-serif leading-[2.5] tracking-wide pb-12 opacity-90 transition-opacity"
+                <div
+                  className="prose prose-lg lg:prose-xl prose-p:my-2 dark:prose-invert max-w-none font-serif leading-[2.5] tracking-wide pb-12 esv-text [&_p]:text-[1.06rem] lg:[&_p]:text-[1.1rem] opacity-90 transition-opacity"
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
               )}
