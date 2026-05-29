@@ -1,27 +1,38 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { grantSecretAchievement, type SecretAchievementKey } from '@/lib/achievement-secrets';
 
 export function useGrantSecretAchievement(secretKey: SecretAchievementKey, enabled = true) {
-  const { currentUser } = useAuth();
-  const inFlightRef = useRef(false);
+  const { currentUser, registerSecretUnlock } = useAuth();
 
   useEffect(() => {
-    if (!enabled || !currentUser?.uid || inFlightRef.current) return;
+    if (!enabled || !currentUser?.uid) return;
     if (currentUser.unlockedSecrets?.includes(secretKey)) return;
 
-    inFlightRef.current = true;
-    const userId = currentUser.uid;
+    let active = true;
 
     void (async () => {
       try {
-        await grantSecretAchievement(userId, secretKey);
-      } catch {
-        // Allow retry on transient failures.
-        inFlightRef.current = false;
+        const achievement = await grantSecretAchievement(currentUser.uid, secretKey);
+        if (!active) return;
+        if (achievement) {
+          registerSecretUnlock(secretKey);
+        }
+      } catch (error) {
+        console.error('[useGrantSecretAchievement]', secretKey, error);
       }
     })();
-  }, [enabled, secretKey, currentUser?.uid]);
+
+    return () => {
+      active = false;
+    };
+  }, [
+    enabled,
+    secretKey,
+    currentUser?.uid,
+    currentUser?.unlockedSecrets,
+    registerSecretUnlock,
+  ]);
 }
