@@ -15,7 +15,7 @@ import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllCustomRosterEntries } from '@/hooks/useAllCustomRosterEntries';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
@@ -128,25 +128,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }).length, [todayPassages, completedPassages, todaysReading?.date]);
   const isTodayComplete = todayPassages.length > 0 && todayDoneCount === todayPassages.length;
 
-  const overallPct = useMemo(() => {
-    if (!plan?.dailyReadings) return 0;
-    const total = plan.dailyReadings.flatMap(d => d.passages || []).length;
-    if (total === 0) return 0;
-    let completed = 0;
-    plan.dailyReadings.forEach(day => {
-      day.passages?.forEach(p => {
-        if (p.displayText && !p.displayText.startsWith('Error:')) {
-          if (
-            completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-            completedPassages.includes(p.displayText)
-          ) {
-            completed++;
-          }
-        }
-      });
-    });
-    return Math.round((completed / total) * 100);
-  }, [plan, completedPassages]);
+  const overallPct = useMemo(
+    () => calculatePlanProgressPercent(plan?.dailyReadings, completedPassages),
+    [plan?.dailyReadings, completedPassages],
+  );
 
   const daysLeft = useMemo(() => {
     if (!plan?.dailyReadings?.length) return null;
@@ -366,7 +351,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     setIsClaimingAchievementHelp(true);
     try {
       const currentStats = {
-        completedPassages: completedPassages.length,
+        planProgressPercent: overallPct,
         messageCount,
         feedbackCount,
         clickMeCount: typeof clickMeCount === 'number' ? clickMeCount : (currentUser.clickMeCount || 0),
@@ -422,6 +407,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     isClaimingAchievementHelp,
     currentUser.uid,
     currentUser.clickMeCount,
+    overallPct,
     completedPassages.length,
     messageCount,
     feedbackCount,
@@ -440,7 +426,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     }
 
     const unlocked = getUnlockedAchievements({
-      completedPassages: completedPassages.length,
+      planProgressPercent: overallPct,
       messageCount,
       feedbackCount,
       clickMeCount,
@@ -459,6 +445,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [
     currentUser.uid,
     currentUser.avatar?.cosmeticTier,
+    overallPct,
     completedPassages.length,
     messageCount,
     feedbackCount,

@@ -779,7 +779,14 @@ export const HIDDEN_ACHIEVEMENTS: AchievementDefinition[] = [
   },
 ];
 
+function normalizedPlanProgressPercent(value: number | undefined | null): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
 export function getUnlockedAchievements(stats: AchievementStats): AchievementDefinition[] {
+  const planProgressPercent = normalizedPlanProgressPercent(stats.planProgressPercent);
+
   return HIDDEN_ACHIEVEMENTS.filter((achievement) => {
     if (achievement.metric === 'secret') {
       const key = achievement.secretKey;
@@ -789,7 +796,10 @@ export function getUnlockedAchievements(stats: AchievementStats): AchievementDef
     const requirements = achievement.requirements;
     if (!requirements) return false;
 
-    if (typeof requirements.planProgressPercent === 'number' && stats.planProgressPercent < requirements.planProgressPercent) {
+    if (
+      typeof requirements.planProgressPercent === 'number' &&
+      planProgressPercent < requirements.planProgressPercent
+    ) {
       return false;
     }
 
@@ -825,9 +835,10 @@ export function getAchievementProgress(stats: AchievementStats, achievement: Ach
   if (!requirements) return 0;
 
   const fractions: number[] = [];
+  const planProgressPercent = normalizedPlanProgressPercent(stats.planProgressPercent);
 
   if (typeof requirements.planProgressPercent === 'number') {
-    const ratio = stats.planProgressPercent / requirements.planProgressPercent;
+    const ratio = planProgressPercent / requirements.planProgressPercent;
     fractions.push(Math.max(0, Math.min(1, ratio)));
   }
 

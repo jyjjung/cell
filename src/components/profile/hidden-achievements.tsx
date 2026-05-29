@@ -5,6 +5,8 @@ import { Loader2, MessageCircle, Sparkles, BookOpen, Lightbulb } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { getAchievementProgress, getUnlockedAchievements, HIDDEN_ACHIEVEMENTS, type AchievementId } from '@/lib/achievements';
 import { useUserAchievementStats } from '@/hooks/use-user-achievement-stats';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { calculatePlanProgressPercent } from '@/lib/reading-utils';
 import { AVATAR_COSMETIC_TIERS, getCosmeticTierProgress, type AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { Progress } from '@/components/ui/progress';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
@@ -12,9 +14,12 @@ import type { AvatarData } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 interface HiddenAchievementsProps {
   userId: string;
-  completedPassages: number;
+  completedPassageKeys: string[];
+  unlockedSecrets?: string[];
   className?: string;
   lockedLimit?: number;
+  /** Own profile settings only: show achievement descriptions */
+  showDescriptions?: boolean;
   /** Own profile settings only: halo picker to equip unlocked cosmetics */
   allowHaloSelection?: boolean;
   selectedHaloTier?: AvatarCosmeticTier;
@@ -24,24 +29,40 @@ interface HiddenAchievementsProps {
 
 function iconForAchievement(id: AchievementId) {
   if (id.startsWith('bible-')) return BookOpen;
+  if (id.startsWith('bible-pct-')) return BookOpen;
   if (id.startsWith('messages-')) return MessageCircle;
   if (id.startsWith('feedback-')) return Lightbulb;
-  if (id.startsWith('click-')) return Sparkles;
+  if (id.startsWith('click-') || id.startsWith('secret-')) return Sparkles;
   return Sparkles;
 }
 
+const SECRET_LOCKED_HINT = 'A surprise waiting to be found.';
+
 export default function HiddenAchievements({
   userId,
-  completedPassages,
+  completedPassageKeys,
+  unlockedSecrets = [],
   className,
   lockedLimit = 8,
+  showDescriptions = false,
   allowHaloSelection = false,
   selectedHaloTier,
   onHaloTierSelect,
   previewAvatar,
 }: HiddenAchievementsProps) {
+  const { plan } = useBiblePlan();
   const { messageCount, feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
-  const stats = { completedPassages, messageCount, feedbackCount, clickMeCount };
+  const planProgressPercent = useMemo(
+    () => calculatePlanProgressPercent(plan?.dailyReadings, completedPassageKeys),
+    [plan?.dailyReadings, completedPassageKeys],
+  );
+  const stats = {
+    planProgressPercent,
+    messageCount,
+    feedbackCount,
+    clickMeCount,
+    unlockedSecrets,
+  };
   const unlocked = getUnlockedAchievements(stats);
   const unlockedIds = new Set(unlocked.map((item) => item.id));
   const locked = HIDDEN_ACHIEVEMENTS
@@ -155,9 +176,11 @@ export default function HiddenAchievements({
                   <Icon className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{achievement.title}</span>
                 </div>
-                <p className="mt-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-                  {achievement.description}
-                </p>
+                {showDescriptions && (
+                  <p className="mt-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+                    {achievement.description}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -183,9 +206,15 @@ export default function HiddenAchievements({
                 >
                   <div className="flex items-center gap-2">
                     <Icon className="h-3.5 w-3.5 text-zinc-700 dark:text-zinc-300" />
-                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{achievement.title}</span>
+                    <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                      {achievement.metric === 'secret' ? '???' : achievement.title}
+                    </span>
                   </div>
-                  <p className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300">{achievement.description}</p>
+                  {showDescriptions && (
+                    <p className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300">
+                      {achievement.metric === 'secret' ? SECRET_LOCKED_HINT : achievement.description}
+                    </p>
+                  )}
                   <p className="mt-1 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300">
                     Progress: {Math.round(progress * 100)}%
                   </p>

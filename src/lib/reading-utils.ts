@@ -67,3 +67,50 @@ export function findNextUnreadReading(
   }
   return null; // All readings are completed
 }
+
+/**
+ * Whether a plan passage is marked complete.
+ * Achievement progress uses date-scoped keys only — legacy bare keys (e.g. "Matthew 1")
+ * match every repeat in M'Cheyne and would inflate plan % to 100%.
+ */
+export function isPassageCompletedForPlan(
+  date: string,
+  displayText: string,
+  completedPassages: string[],
+  options?: { allowLegacyBareKey?: boolean },
+): boolean {
+  if (!displayText || displayText.startsWith('Error:')) return false;
+
+  const scopedKey = makePassageKey(date, displayText);
+  if (completedPassages.includes(scopedKey)) return true;
+
+  if (options?.allowLegacyBareKey !== false) {
+    return completedPassages.includes(displayText);
+  }
+
+  return false;
+}
+
+/** Share of all plan passages marked complete (0–100, rounded). */
+export function calculatePlanProgressPercent(
+  dailyReadings: DailyReading[] | undefined | null,
+  completedPassages: string[],
+): number {
+  if (!dailyReadings?.length) return 0;
+
+  let total = 0;
+  let completed = 0;
+
+  dailyReadings.forEach((day) => {
+    day.passages?.forEach((passage) => {
+      if (!passage.displayText || passage.displayText.startsWith('Error:')) return;
+      total += 1;
+      if (isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, { allowLegacyBareKey: false })) {
+        completed += 1;
+      }
+    });
+  });
+
+  if (total === 0) return 0;
+  return Math.round((completed / total) * 100);
+}
