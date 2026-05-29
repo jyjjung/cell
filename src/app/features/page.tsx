@@ -1,37 +1,45 @@
-
 "use client";
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { PageHeader, FeedCard } from '@/components/ui/page-layout';
-import { 
-  ArrowLeft, 
-  Rocket, 
-  Zap, 
-  Shield, 
-  Database,
+import {
+  ArrowLeft,
+  BookOpen,
+  MessageCircle,
+  Trophy,
+  Sparkles,
+  UserCircle,
+  LayoutDashboard,
+  Shield,
   Cloud,
-  Cpu
 } from 'lucide-react';
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
+    transition: { staggerChildren: 0.1 },
+  },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
+  visible: { opacity: 1, y: 0 },
 };
 
-function Section({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) {
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
   return (
     <motion.section variants={itemVariants} className="space-y-4">
       <div className="flex items-center gap-3">
@@ -40,7 +48,7 @@ function Section({ title, icon: Icon, children }: { title: string, icon: any, ch
         </div>
         <h2 className="text-2xl font-black tracking-tight">{title}</h2>
       </div>
-      <div className="pl-12 text-muted-foreground leading-relaxed font-medium">
+      <div className="pl-0 sm:pl-12 text-muted-foreground leading-relaxed font-medium space-y-3">
         {children}
       </div>
     </motion.section>
@@ -52,132 +60,141 @@ export default function FeaturesPage() {
 
   return (
     <div className="page-container max-w-4xl space-y-10">
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-10"
-        >
-          <motion.div variants={itemVariants}>
-            <PageHeader
-              title="Platform Intelligence"
-              action={
-                <Button
-                  variant="ghost"
-                  onClick={() => router.back()}
-                  className="h-9 rounded-xl font-bold"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
-                </Button>
-              }
-            />
-          </motion.div>
-
-          <FeedCard>
-            <Section title="The Vision" icon={Rocket}>
-              <p>
-                The em. portal is designed as a zero-overhead centralized hub for community synchronization. 
-                By leveraging modern cloud infrastructure and efficient data patterns, we maintain a high-fidelity 
-                experience that scales to hundreds of members without incurring operational costs.
-              </p>
-            </Section>
-          </FeedCard>
-
-          <FeedCard>
-            <Section title="Tier Analysis: Vercel Hobby" icon={Cloud}>
-              <div className="space-y-4">
-                <p>
-                  The application is deployed on the **Vercel Global Edge Network**, ensuring ultra-low latency for all community members. 
-                  Operating on the Hobby tier provides industry-grade hosting with specific constraints:
-                </p>
-                <ul className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <li className="rounded-xl border border-border/50 bg-muted p-4 text-xs">
-                    <strong className="mb-1 block text-foreground">Bandwidth: 100GB/mo</strong>
-                    Current utilization is &lt; 1% due to text-based data fetching and optimized asset delivery.
-                  </li>
-                  <li className="rounded-xl border border-border/50 bg-muted p-4 text-xs">
-                    <strong className="mb-1 block text-foreground">Compute: 10s Timeout</strong>
-                    Serverless functions are optimized for sub-second execution to prevent execution stalls.
-                  </li>
-                  <li className="rounded-xl border border-border/50 bg-muted p-4 text-xs">
-                    <strong className="mb-1 block text-foreground">Edge Runtime</strong>
-                    Critical routes are processed at the edge, reducing TTFB (Time to First Byte) significantly.
-                  </li>
-                  <li className="rounded-xl border border-border/50 bg-muted p-4 text-xs">
-                    <strong className="mb-1 block text-foreground">Automated CI/CD</strong>
-                    Zero-downtime deployments ensure the community always has the latest security patches.
-                  </li>
-                </ul>
-              </div>
-            </Section>
-          </FeedCard>
-
-          <FeedCard>
-            <Section title="Tier Analysis: Firebase Spark" icon={Database}>
-            <div className="space-y-4">
-              <p>
-                **Google Firebase** powers the real-time identity and persistence layer. The Spark tier is 
-                generous for community use but requires disciplined data architecture:
-              </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-border/50 bg-muted p-4 text-center">
-                  <p className="text-2xl font-black text-primary">50k</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Daily Reads</p>
-                </div>
-                <div className="rounded-xl border border-border/50 bg-muted p-4 text-center">
-                  <p className="text-2xl font-black text-primary">20k</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Daily Writes</p>
-                </div>
-                <div className="rounded-xl border border-border/50 bg-muted p-4 text-center">
-                  <p className="text-2xl font-black text-primary">1GB</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Total Storage</p>
-                </div>
-              </div>
-              <p className="text-sm italic">
-                *Strategy: We utilize denormalized member data in chat documents to minimize multi-document "join" reads, preserving our daily quota.*
-              </p>
-            </div>
-            </Section>
-          </FeedCard>
-
-          <FeedCard>
-            <Section title="Avatar Recipe Logic" icon={Cpu}>
-              <p>
-                Standard community apps store member photos as binary files (avg. 2MB each). For a 500-member community, 
-                this would consume 1GB of storage instantly. 
-              </p>
-              <p className="mt-2">
-                The em. portal uses **"Recipe-based Generative Avatars"**. We store only a tiny string of configuration data 
-                (e.g., `skin:tan, hair:short`). This JSON data is &lt; 1KB, allowing us to support **over 3 million members** on the free tier 
-                without ever hitting the 1GB storage ceiling.
-              </p>
-            </Section>
-          </FeedCard>
-
-          <FeedCard>
-            <Section title="Rendering Optimization" icon={Zap}>
-            <p>
-              To maintain high **Interaction to Next Paint (INP)** scores, we utilize hardware-accelerated animations:
-            </p>
-            <ul className="mt-2 list-disc space-y-2 pl-5">
-              <li><strong>GPU Promotion:</strong> Large background blurs are promoted to separate compositor layers to avoid main-thread painting bottlenecks.</li>
-              <li><strong>Adaptive UI:</strong> High-cost effects like the mouse-glow follower are automatically disabled on touch devices to preserve mobile CPU cycles.</li>
-              <li><strong>Optimistic UI:</strong> Bible checklist updates and chat reactions reflect instantly in the local cache before server confirmation, ensuring zero perceived latency.</li>
-            </ul>
-            </Section>
-          </FeedCard>
-
-          <FeedCard>
-            <Section title="Privacy & Infrastructure" icon={Shield}>
-              <p>
-                Data is secured via **Firestore Security Rules**, ensuring members can only read chats they belong to and modify 
-                only their own progress logs. We utilize **Firebase Cloud Messaging (FCM)** for push notifications, 
-                which requires the app to be "Installed" as a PWA on iOS to bypass browser notification restrictions.
-              </p>
-            </Section>
-          </FeedCard>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-10"
+      >
+        <motion.div variants={itemVariants}>
+          <PageHeader
+            title="How It Works"
+            action={
+              <Button
+                variant="ghost"
+                onClick={() => router.back()}
+                className="h-9 rounded-xl font-bold"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+            }
+          />
+          <p className="text-muted-foreground font-medium mt-2 max-w-2xl">
+            A quick guide to the em. portal—how the community stays synced, how progress is tracked, and
+            how achievements and avatars fit together.
+          </p>
         </motion.div>
+
+        <FeedCard>
+          <Section title="One Hub for the Community" icon={LayoutDashboard}>
+            <p>
+              After sign-in and approval, your dashboard brings together today&apos;s Bible reading, upcoming
+              duties, QT and cleaning rosters, events, and shortcuts to chat and member tools. Everything
+              updates in real time so you always see the same plan as the rest of the cell.
+            </p>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Bible Reading Plan" icon={BookOpen}>
+            <p>
+              Follow the community M&apos;Cheyne-style plan on the checklist and full-plan views. Mark passages
+              as you read; progress syncs to your profile and powers Bible-related achievements. Passages
+              open in a built-in reader so you can read without leaving the app.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>Date-scoped completion keys keep duplicate passages accurate across the year.</li>
+              <li>Heatmaps and pace tools help you see how you&apos;re doing over time.</li>
+              <li>Community Progress shows aggregate reading momentum (when members opt in).</li>
+            </ul>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Circles & Communication" icon={MessageCircle}>
+            <p>
+              Ministry and fellowship groups chat in dedicated circles. Only members of a circle can read
+              its messages. Reactions and read receipts stay scoped to active participation—when someone
+              leaves, they no longer see new activity there.
+            </p>
+            <p>
+              Push notifications (via installed PWA + FCM) alert you to important community messages when
+              you enable them.
+            </p>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Hidden Achievements" icon={Trophy}>
+            <p>
+              Beyond visible milestones, the app includes a large set of hidden achievements tied to Bible
+              progress, chat, feedback, and exploration. On your own profile you can see descriptions and
+              progress toward locked goals; on other members&apos; profiles you only see what they have already
+              unlocked.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>Bible tiers unlock as you complete larger percentages of the full plan.</li>
+              <li>Chat, feedback, and dashboard activity unlock their own milestone tracks.</li>
+              <li>Secret discoveries unlock when you visit certain parts of the app (QT, events, media, and more).</li>
+            </ul>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Halo Cosmetics" icon={Sparkles}>
+            <p>
+              Each unlocked achievement counts toward cosmetic tiers. As you earn more, new halo styles
+              unlock—from subtle bronze rings up through master-tier radiance with stronger glow and motion.
+            </p>
+            <p>
+              Equip any unlocked halo from your profile settings. Others see your equipped halo on your
+              avatar across the app; the picker and locked achievement list stay private to you.
+            </p>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Recipe-Based Avatars" icon={UserCircle}>
+            <p>
+              Instead of uploading photos, you build a pixel avatar from a compact recipe (skin, hair,
+              outfit, and similar options). The recipe is tiny text stored in your profile—efficient for
+              hundreds of members and easy to render everywhere consistently.
+            </p>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Service & Rosters" icon={Cloud}>
+            <p>
+              Cleaning schedules, QT sharing rotations, worship rosters, and event listings keep serving
+              and gathering organized. Admins maintain rosters; members see what&apos;s coming on the dashboard
+              and dedicated pages.
+            </p>
+          </Section>
+        </FeedCard>
+
+        <FeedCard>
+          <Section title="Privacy & Hosting" icon={Shield}>
+            <p>
+              Access is gated by Firebase Authentication and Firestore rules. You control leaderboard
+              visibility, and achievement details respect the unlocked-only display rule described above.
+            </p>
+            <p>
+              The app runs on Vercel with Firebase on Google Cloud—free-tier friendly architecture
+              (recipe avatars, denormalized chat data, optimistic UI) keeps the portal fast without
+              unnecessary storage or read costs.
+            </p>
+            <p>
+              <Link
+                href="/privacy"
+                className="text-primary font-bold hover:underline text-sm"
+              >
+                Read the full Privacy Policy →
+              </Link>
+            </p>
+          </Section>
+        </FeedCard>
+      </motion.div>
     </div>
   );
 }
