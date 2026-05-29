@@ -177,6 +177,7 @@ export interface AppUser extends FirebaseUser {
   preferredLanguage?: 'en' | 'ko';
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
+  unlockedSecrets?: string[];
 }
 
 
@@ -199,6 +200,7 @@ export interface UserProfileData {
   preferredLanguage?: 'en' | 'ko';
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
+  unlockedSecrets?: string[];
 }
 
 

@@ -425,6 +425,46 @@
   animation: ambient-drift 30s ease-in-out infinite;
 }
 
+@keyframes halo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes halo-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-halo-spin {
+  animation: halo-spin 14s linear infinite;
+}
+
+.animate-halo-spin-slow {
+  animation: halo-spin 22s linear infinite;
+}
+
+.animate-halo-spin-reverse {
+  animation: halo-spin-reverse 20s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-halo-spin,
+  .animate-halo-spin-slow,
+  .animate-halo-spin-reverse {
+    animation: none;
+  }
+}
+
 /* GPU acceleration */
 .gpu-accelerated {
   will-change: transform, opacity;
