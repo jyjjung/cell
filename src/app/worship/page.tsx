@@ -1463,7 +1463,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WorshipPortalPage() {
-  const { isAdmin, isWorshipTeam, loadingAuth } = useAuth();
+  const { isAdmin, isWorshipTeam, loadingAuth, currentUser } = useAuth();
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialTab = searchParams?.get('tab') as 'playlists' | 'songs' | 'rosters' | null;
   const initialId = searchParams?.get('id');

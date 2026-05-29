@@ -1,244 +1,185 @@
 export type AchievementId = string;
 
-export type AchievementMetric = 'bible' | 'messages' | 'feedback' | 'click' | 'hybrid';
+export type AchievementMetric = 'bible' | 'messages' | 'feedback' | 'click' | 'hybrid' | 'secret';
 
 export interface AchievementDefinition {
   id: AchievementId;
   title: string;
   description: string;
   metric: AchievementMetric;
-  requirements: {
-    completedPassages?: number;
+  requirements?: {
+    /** Bible & hybrid achievements: minimum % of the full reading plan completed. */
+    planProgressPercent?: number;
     messageCount?: number;
     feedbackCount?: number;
     clickMeCount?: number;
   };
+  /** Firestore `unlockedSecrets` entry; used when metric is `secret`. */
+  secretKey?: string;
 }
 
 export interface AchievementStats {
-  completedPassages: number;
+  planProgressPercent: number;
   messageCount: number | null;
   feedbackCount: number | null;
   clickMeCount: number | null;
+  unlockedSecrets?: string[];
 }
 
 export const HIDDEN_ACHIEVEMENTS: AchievementDefinition[] = [
   {
-    id: 'bible-1',
-    title: 'First Reading',
-    description: 'Read your first Bible passage.',
+    id: 'bible-pct-1',
+    title: 'First Step',
+    description: 'Reach 1% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 1 },
+    requirements: { planProgressPercent: 1 },
   },
   {
-    id: 'bible-5',
+    id: 'bible-pct-2',
+    title: 'Early Momentum',
+    description: 'Reach 2% of the reading plan.',
+    metric: 'bible',
+    requirements: { planProgressPercent: 2 },
+  },
+  {
+    id: 'bible-pct-5',
     title: 'Opening the Word',
-    description: 'Read 5 Bible passages.',
+    description: 'Reach 5% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 5 },
+    requirements: { planProgressPercent: 5 },
   },
   {
-    id: 'bible-10',
+    id: 'bible-pct-10',
     title: 'Daily Bread',
-    description: 'Read 10 Bible passages.',
+    description: 'Reach 10% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 10 },
+    requirements: { planProgressPercent: 10 },
   },
   {
-    id: 'bible-15',
+    id: 'bible-pct-15',
     title: 'Quiet Time',
-    description: 'Read 15 Bible passages.',
+    description: 'Reach 15% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 15 },
+    requirements: { planProgressPercent: 15 },
   },
   {
-    id: 'bible-25',
-    title: 'First Steps',
-    description: 'Read 25 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 25 },
-  },
-  {
-    id: 'bible-50',
-    title: 'Verse Walker',
-    description: 'Read 50 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 50 },
-  },
-  {
-    id: 'bible-75',
-    title: 'Pathfinder',
-    description: 'Read 75 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 75 },
-  },
-  {
-    id: 'bible-100',
+    id: 'bible-pct-20',
     title: 'Steady Reader',
-    description: 'Read 100 Bible passages.',
+    description: 'Reach 20% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 100 },
+    requirements: { planProgressPercent: 20 },
   },
   {
-    id: 'bible-150',
+    id: 'bible-pct-25',
+    title: 'First Quarter',
+    description: 'Reach 25% of the reading plan.',
+    metric: 'bible',
+    requirements: { planProgressPercent: 25 },
+  },
+  {
+    id: 'bible-pct-30',
+    title: 'Pathfinder',
+    description: 'Reach 30% of the reading plan.',
+    metric: 'bible',
+    requirements: { planProgressPercent: 30 },
+  },
+  {
+    id: 'bible-pct-35',
+    title: 'Growing Roots',
+    description: 'Reach 35% of the reading plan.',
+    metric: 'bible',
+    requirements: { planProgressPercent: 35 },
+  },
+  {
+    id: 'bible-pct-40',
     title: 'Lamp Bearer',
-    description: 'Read 150 Bible passages.',
+    description: 'Reach 40% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 150 },
+    requirements: { planProgressPercent: 40 },
   },
   {
-    id: 'bible-200',
+    id: 'bible-pct-45',
     title: 'Covenant Keeper',
-    description: 'Read 200 Bible passages.',
+    description: 'Reach 45% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 200 },
+    requirements: { planProgressPercent: 45 },
   },
   {
-    id: 'bible-250',
-    title: 'Chapter Chaser',
-    description: 'Read 250 Bible passages.',
+    id: 'bible-pct-50',
+    title: 'Halfway Herald',
+    description: 'Reach 50% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 250 },
+    requirements: { planProgressPercent: 50 },
   },
   {
-    id: 'bible-300',
+    id: 'bible-pct-55',
     title: 'Scripture Anchor',
-    description: 'Read 300 Bible passages.',
+    description: 'Reach 55% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 300 },
+    requirements: { planProgressPercent: 55 },
   },
   {
-    id: 'bible-400',
+    id: 'bible-pct-60',
     title: 'Testimony Builder',
-    description: 'Read 400 Bible passages.',
+    description: 'Reach 60% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 400 },
+    requirements: { planProgressPercent: 60 },
   },
   {
-    id: 'bible-500',
+    id: 'bible-pct-65',
     title: 'Morning Watchman',
-    description: 'Read 500 Bible passages.',
+    description: 'Reach 65% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 500 },
+    requirements: { planProgressPercent: 65 },
   },
   {
-    id: 'bible-600',
+    id: 'bible-pct-70',
     title: 'Faithful Scribe',
-    description: 'Read 600 Bible passages.',
+    description: 'Reach 70% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 600 },
+    requirements: { planProgressPercent: 70 },
   },
   {
-    id: 'bible-750',
+    id: 'bible-pct-75',
     title: 'Scroll Scholar',
-    description: 'Read 750 Bible passages.',
+    description: 'Reach 75% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 750 },
+    requirements: { planProgressPercent: 75 },
   },
   {
-    id: 'bible-900',
+    id: 'bible-pct-80',
     title: 'Word Seeker',
-    description: 'Read 900 Bible passages.',
+    description: 'Reach 80% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 900 },
+    requirements: { planProgressPercent: 80 },
   },
   {
-    id: 'bible-1000',
-    title: 'Faithful Finisher',
-    description: 'Read 1,000 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 1000 },
-  },
-  {
-    id: 'bible-1100',
-    title: 'Steadfast Reader',
-    description: 'Read 1,100 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 1100 },
-  },
-  {
-    id: 'bible-1200',
+    id: 'bible-pct-85',
     title: 'Word Dweller',
-    description: 'Read 1,200 Bible passages.',
+    description: 'Reach 85% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 1200 },
+    requirements: { planProgressPercent: 85 },
   },
   {
-    id: 'bible-1300',
-    title: 'Rooted in Truth',
-    description: 'Read 1,300 Bible passages.',
+    id: 'bible-pct-90',
+    title: 'Steadfast Finisher',
+    description: 'Reach 90% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 1300 },
+    requirements: { planProgressPercent: 90 },
   },
   {
-    id: 'bible-1400',
-    title: 'Deep Roots',
-    description: 'Read 1,400 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 1400 },
-  },
-  {
-    id: 'bible-1500',
+    id: 'bible-pct-95',
     title: 'Scripture Pilgrim',
-    description: 'Read 1,500 Bible passages.',
+    description: 'Reach 95% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 1500 },
+    requirements: { planProgressPercent: 95 },
   },
   {
-    id: 'bible-1599',
+    id: 'bible-pct-100',
     title: 'Plan Completer',
-    description: 'Read 1,599 Bible passages.',
+    description: 'Complete 100% of the reading plan.',
     metric: 'bible',
-    requirements: { completedPassages: 1599 },
-  },
-  {
-    id: 'bible-1800',
-    title: 'Canon Companion',
-    description: 'Read 1,800 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 1800 },
-  },
-  {
-    id: 'bible-2000',
-    title: 'Scripture Marathoner',
-    description: 'Read 2,000 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 2000 },
-  },
-  {
-    id: 'bible-2500',
-    title: 'Living Testament',
-    description: 'Read 2,500 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 2500 },
-  },
-  {
-    id: 'bible-3000',
-    title: 'Living Epistle',
-    description: 'Read 3,000 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 3000 },
-  },
-  {
-    id: 'bible-3500',
-    title: 'Word Ambassador',
-    description: 'Read 3,500 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 3500 },
-  },
-  {
-    id: 'bible-4000',
-    title: 'Eternal Student',
-    description: 'Read 4,000 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 4000 },
-  },
-  {
-    id: 'bible-5000',
-    title: 'Scripture Sage',
-    description: 'Read 5,000 Bible passages.',
-    metric: 'bible',
-    requirements: { completedPassages: 5000 },
+    requirements: { planProgressPercent: 100 },
   },
   {
     id: 'messages-1',
@@ -586,136 +527,269 @@ export const HIDDEN_ACHIEVEMENTS: AchievementDefinition[] = [
   {
     id: 'community-spark',
     title: 'Community Spark',
-    description: 'Read 10 passages, send 10 messages, and submit 1 feedback suggestion.',
+    description: 'Reach 5% of the reading plan, send 10 messages, and submit 1 feedback suggestion.',
     metric: 'hybrid',
-    requirements: { completedPassages: 10, messageCount: 10, feedbackCount: 1 },
+    requirements: { planProgressPercent: 5, messageCount: 10, feedbackCount: 1 },
   },
   {
     id: 'community-rhythm',
     title: 'Steady Rhythm',
-    description: 'Read 50 passages, send 25 messages, and press "Click me!" 5 times.',
+    description: 'Reach 10% of the reading plan, send 25 messages, and press "Click me!" 5 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 50, messageCount: 25, clickMeCount: 5 },
+    requirements: { planProgressPercent: 10, messageCount: 25, clickMeCount: 5 },
   },
   {
     id: 'community-harmony',
     title: 'Harmony Seeker',
-    description: 'Read 75 passages, send 50 messages, and submit 2 feedback suggestions.',
+    description: 'Reach 15% of the reading plan, send 50 messages, and submit 2 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 75, messageCount: 50, feedbackCount: 2 },
+    requirements: { planProgressPercent: 15, messageCount: 50, feedbackCount: 2 },
   },
   {
     id: 'community-allrounder',
     title: 'All-Round Servant',
-    description: 'Read 100 passages, send 25 messages, submit 1 feedback suggestion, and press "Click me!" once.',
+    description: 'Reach 20% of the reading plan, send 25 messages, submit 1 feedback suggestion, and press "Click me!" once.',
     metric: 'hybrid',
-    requirements: { completedPassages: 100, messageCount: 25, feedbackCount: 1, clickMeCount: 1 },
+    requirements: { planProgressPercent: 20, messageCount: 25, feedbackCount: 1, clickMeCount: 1 },
   },
   {
     id: 'community-torch',
     title: 'Torch Bearer',
-    description: 'Read 150 passages, send 50 messages, submit 3 feedback suggestions, and press "Click me!" 7 times.',
+    description: 'Reach 25% of the reading plan, send 50 messages, submit 3 feedback suggestions, and press "Click me!" 7 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 150, messageCount: 50, feedbackCount: 3, clickMeCount: 7 },
-  },
-  {
-    id: 'community-builder',
-    title: 'Community Builder',
-    description: 'Read 300 passages, send 100 messages, and submit 3 feedback suggestions.',
-    metric: 'hybrid',
-    requirements: { completedPassages: 300, messageCount: 100, feedbackCount: 3 },
+    requirements: { planProgressPercent: 25, messageCount: 50, feedbackCount: 3, clickMeCount: 7 },
   },
   {
     id: 'community-diplomat',
     title: 'Circle Diplomat',
-    description: 'Read 250 passages, send 100 messages, submit 4 feedback suggestions, and press "Click me!" 10 times.',
+    description: 'Reach 30% of the reading plan, send 100 messages, submit 4 feedback suggestions, and press "Click me!" 10 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 250, messageCount: 100, feedbackCount: 4, clickMeCount: 10 },
+    requirements: { planProgressPercent: 30, messageCount: 100, feedbackCount: 4, clickMeCount: 10 },
+  },
+  {
+    id: 'community-builder',
+    title: 'Community Builder',
+    description: 'Reach 35% of the reading plan, send 100 messages, and submit 3 feedback suggestions.',
+    metric: 'hybrid',
+    requirements: { planProgressPercent: 35, messageCount: 100, feedbackCount: 3 },
   },
   {
     id: 'community-pillar',
     title: 'Community Pillar',
-    description: 'Read 500 passages, send 150 messages, and submit 5 feedback suggestions.',
+    description: 'Reach 50% of the reading plan, send 150 messages, and submit 5 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 500, messageCount: 150, feedbackCount: 5 },
+    requirements: { planProgressPercent: 50, messageCount: 150, feedbackCount: 5 },
   },
   {
     id: 'community-steward',
     title: 'House Steward',
-    description: 'Read 600 passages, send 200 messages, submit 8 feedback suggestions, and press "Click me!" 14 times.',
+    description: 'Reach 55% of the reading plan, send 200 messages, submit 8 feedback suggestions, and press "Click me!" 14 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 600, messageCount: 200, feedbackCount: 8, clickMeCount: 14 },
+    requirements: { planProgressPercent: 55, messageCount: 200, feedbackCount: 8, clickMeCount: 14 },
   },
   {
     id: 'community-sentinel',
     title: 'Watchful Sentinel',
-    description: 'Read 750 passages, send 250 messages, submit 10 feedback suggestions, and press "Click me!" 21 times.',
+    description: 'Reach 65% of the reading plan, send 250 messages, submit 10 feedback suggestions, and press "Click me!" 21 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 750, messageCount: 250, feedbackCount: 10, clickMeCount: 21 },
+    requirements: { planProgressPercent: 65, messageCount: 250, feedbackCount: 10, clickMeCount: 21 },
   },
   {
     id: 'community-legacy',
     title: 'Legacy of Service',
-    description: 'Read 1,000 passages, send 1,000 messages, and submit 10 feedback suggestions.',
+    description: 'Reach 75% of the reading plan, send 1,000 messages, and submit 10 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 1000, messageCount: 1000, feedbackCount: 10 },
+    requirements: { planProgressPercent: 75, messageCount: 1000, feedbackCount: 10 },
   },
   {
     id: 'community-covenant',
     title: 'Fourfold Covenant',
-    description: 'Read 1,000 passages, send 1,000 messages, submit 15 feedback suggestions, and press "Click me!" 30 times.',
+    description: 'Reach 80% of the reading plan, send 1,000 messages, submit 15 feedback suggestions, and press "Click me!" 30 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 1000, messageCount: 1000, feedbackCount: 15, clickMeCount: 30 },
+    requirements: { planProgressPercent: 80, messageCount: 1000, feedbackCount: 15, clickMeCount: 30 },
   },
   {
     id: 'community-shepherd',
     title: 'Shepherd of the House',
-    description: 'Read 1,200 passages, send 500 messages, and submit 20 feedback suggestions.',
+    description: 'Reach 85% of the reading plan, send 500 messages, and submit 20 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 1200, messageCount: 500, feedbackCount: 20 },
+    requirements: { planProgressPercent: 85, messageCount: 500, feedbackCount: 20 },
   },
   {
     id: 'community-cornerstone',
     title: 'Cornerstone Contributor',
-    description: 'Read 1,599 passages, send 1,000 messages, and submit 30 feedback suggestions.',
+    description: 'Reach 95% of the reading plan, send 1,000 messages, and submit 30 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 1599, messageCount: 1000, feedbackCount: 30 },
+    requirements: { planProgressPercent: 95, messageCount: 1000, feedbackCount: 30 },
   },
   {
     id: 'community-flame',
     title: 'Flame Keeper',
-    description: 'Read 2,000 passages, send 1,000 messages, and submit 40 feedback suggestions.',
+    description: 'Complete the reading plan, send 1,000 messages, and submit 40 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 2000, messageCount: 1000, feedbackCount: 40 },
+    requirements: { planProgressPercent: 100, messageCount: 1000, feedbackCount: 40 },
   },
   {
     id: 'community-jubilee',
     title: 'Jubilee Herald',
-    description: 'Read 3,000 passages, send 2,000 messages, and submit 75 feedback suggestions.',
+    description: 'Complete the reading plan, send 2,000 messages, and submit 75 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 3000, messageCount: 2000, feedbackCount: 75 },
+    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 75 },
   },
   {
     id: 'community-evergreen',
     title: 'Evergreen Witness',
-    description: 'Read 3,000 passages, send 2,000 messages, and submit 100 feedback suggestions.',
+    description: 'Complete the reading plan, send 2,000 messages, and submit 100 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { completedPassages: 3000, messageCount: 2000, feedbackCount: 100 },
+    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 100 },
   },
   {
     id: 'community-immortal',
     title: 'Immortal Witness',
-    description: 'Read 5,000 passages, send 2,000 messages, submit 150 feedback suggestions, and press "Click me!" 365 times.',
+    description: 'Complete the reading plan, send 2,000 messages, submit 150 feedback suggestions, and press "Click me!" 365 times.',
     metric: 'hybrid',
-    requirements: { completedPassages: 5000, messageCount: 2000, feedbackCount: 150, clickMeCount: 365 },
+    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 150, clickMeCount: 365 },
+  },
+  // ── Secret easter eggs (not tied to bible / messages / feedback / clicks) ──
+  {
+    id: 'secret-midnight',
+    title: 'Midnight Oil',
+    description: 'You showed up when most of the house was asleep.',
+    metric: 'secret',
+    secretKey: 'midnight',
+  },
+  {
+    id: 'secret-early-bird',
+    title: 'Early Riser',
+    description: 'You opened the portal before the sun was fully up.',
+    metric: 'secret',
+    secretKey: 'early-bird',
+  },
+  {
+    id: 'secret-apps',
+    title: 'App Drawer',
+    description: 'You browsed the full apps grid.',
+    metric: 'secret',
+    secretKey: 'apps',
+  },
+  {
+    id: 'secret-memorize',
+    title: 'Memory Lane',
+    description: 'You opened the memory verses hub.',
+    metric: 'secret',
+    secretKey: 'memorize',
+  },
+  {
+    id: 'secret-halo',
+    title: 'Halo Bearer',
+    description: 'You equipped an avatar halo.',
+    metric: 'secret',
+    secretKey: 'halo',
+  },
+  {
+    id: 'secret-changelog',
+    title: 'Patch Notes Historian',
+    description: 'You read through the release changelog.',
+    metric: 'secret',
+    secretKey: 'changelog',
+  },
+  {
+    id: 'secret-members',
+    title: 'Directory Drifter',
+    description: 'You browsed the members directory.',
+    metric: 'secret',
+    secretKey: 'members',
+  },
+  {
+    id: 'secret-events',
+    title: 'Calendar Keeper',
+    description: 'You checked the community events calendar.',
+    metric: 'secret',
+    secretKey: 'events',
+  },
+  {
+    id: 'secret-chat',
+    title: 'Thread Hopper',
+    description: 'You opened the chat hub.',
+    metric: 'secret',
+    secretKey: 'chat',
+  },
+  {
+    id: 'secret-media',
+    title: 'Link Curator',
+    description: 'You visited the media and links page.',
+    metric: 'secret',
+    secretKey: 'media',
+  },
+  {
+    id: 'secret-full-plan',
+    title: 'Big Picture',
+    description: 'You opened the full Bible reading plan.',
+    metric: 'secret',
+    secretKey: 'full-plan',
+  },
+  {
+    id: 'secret-leaderboard',
+    title: 'Friendly Rival',
+    description: 'You peeked at community progress.',
+    metric: 'secret',
+    secretKey: 'leaderboard',
+  },
+  {
+    id: 'secret-sunday',
+    title: 'Sabbath Scroll',
+    description: 'You opened the portal on a Sunday.',
+    metric: 'secret',
+    secretKey: 'sunday',
+  },
+  {
+    id: 'secret-command-menu',
+    title: 'Power User',
+    description: 'You opened the command menu.',
+    metric: 'secret',
+    secretKey: 'command-menu',
+  },
+  {
+    id: 'secret-qt',
+    title: 'QT Crew',
+    description: 'You visited the QT roster.',
+    metric: 'secret',
+    secretKey: 'qt',
+  },
+  {
+    id: 'secret-cleaning',
+    title: 'Sparkle Squad',
+    description: 'You checked the cleaning roster.',
+    metric: 'secret',
+    secretKey: 'cleaning',
+  },
+  {
+    id: 'secret-bible-checklist',
+    title: 'Daily Pathfinder',
+    description: 'You opened the Bible reading checklist.',
+    metric: 'secret',
+    secretKey: 'bible-checklist',
+  },
+  {
+    id: 'secret-avatar-studio',
+    title: 'Mirror Check',
+    description: 'You opened the avatar studio.',
+    metric: 'secret',
+    secretKey: 'avatar-studio',
   },
 ];
 
 export function getUnlockedAchievements(stats: AchievementStats): AchievementDefinition[] {
   return HIDDEN_ACHIEVEMENTS.filter((achievement) => {
-    const { requirements } = achievement;
+    if (achievement.metric === 'secret') {
+      const key = achievement.secretKey;
+      return !!key && (stats.unlockedSecrets?.includes(key) ?? false);
+    }
 
-    if (typeof requirements.completedPassages === 'number' && stats.completedPassages < requirements.completedPassages) {
+    const requirements = achievement.requirements;
+    if (!requirements) return false;
+
+    if (typeof requirements.planProgressPercent === 'number' && stats.planProgressPercent < requirements.planProgressPercent) {
       return false;
     }
 
@@ -742,11 +816,18 @@ export function getUnlockedAchievements(stats: AchievementStats): AchievementDef
 }
 
 export function getAchievementProgress(stats: AchievementStats, achievement: AchievementDefinition): number {
+  if (achievement.metric === 'secret') {
+    const key = achievement.secretKey;
+    return key && stats.unlockedSecrets?.includes(key) ? 1 : 0;
+  }
+
   const requirements = achievement.requirements;
+  if (!requirements) return 0;
+
   const fractions: number[] = [];
 
-  if (typeof requirements.completedPassages === 'number') {
-    const ratio = stats.completedPassages / requirements.completedPassages;
+  if (typeof requirements.planProgressPercent === 'number') {
+    const ratio = stats.planProgressPercent / requirements.planProgressPercent;
     fractions.push(Math.max(0, Math.min(1, ratio)));
   }
 
