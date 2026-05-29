@@ -27,6 +27,7 @@ import { translations } from '@/lib/translations';
 import { FeedCard, PageHeader } from '@/components/ui/page-layout';
 import BiblePlanSkeleton from '@/components/bible/bible-plan-skeleton';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 
 type ViewState = 
@@ -37,6 +38,7 @@ type ViewState =
   
 export default function BibleChecklistPage() {
   const { currentUser, loadingAuth } = useAuth();
+  useGrantSecretAchievement('bible-checklist', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
   const { toast } = useToast();

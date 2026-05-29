@@ -12,9 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 
 import { RosterCard } from '@/components/ui/roster-card';
+import { useAuth } from '@/contexts/auth-context';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function FullBiblePlanPage() {
+  const { currentUser } = useAuth();
   const { plan, loading: planLoading } = useBiblePlan();
+  useGrantSecretAchievement('full-plan', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 

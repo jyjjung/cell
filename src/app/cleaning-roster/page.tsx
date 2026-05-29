@@ -15,9 +15,11 @@ import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
+    useGrantSecretAchievement('cleaning', !!currentUser);
     const { roster, loading: rosterLoading } = useCleaningRoster();
     const { cleaningDays, loading: daysLoading } = useCleaningDays();
     const { allUsers, loading: usersLoading } = useAllUsers();

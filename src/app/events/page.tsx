@@ -10,6 +10,7 @@ import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useAuth } from '@/contexts/auth-context';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
@@ -25,6 +26,7 @@ function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[]
 export default function EventsPage() {
   const { events, loading } = useEvents();
   const { currentUser, isAdmin } = useAuth();
+  useGrantSecretAchievement('events', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 

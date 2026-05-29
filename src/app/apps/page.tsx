@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { PageHeader, FeedCard } from '@/components/ui/page-layout';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 /* ── Animation variants ─────────────────────────────────── */
 
@@ -240,6 +241,7 @@ function AppTile({ app, onClick }: { app: AppItem; onClick: () => void }) {
 export default function AppsPage() {
   const router = useRouter();
   const { currentUser, isAdmin, isWorshipTeam } = useAuth();
+  useGrantSecretAchievement('apps', !!currentUser);
 
   const isVisible = (app: AppItem) => {
     if (app.requiresAdmin && !isAdmin) return false;
