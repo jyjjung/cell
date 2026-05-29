@@ -31,6 +31,8 @@ import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import HiddenAchievements from '@/components/profile/hidden-achievements';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
+import { grantSecretAchievement } from '@/lib/achievement-secrets';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 
 
@@ -55,6 +57,8 @@ export default function ProfilePage() {
   const [isTestingPush, setIsTestingPush] = useState(false);
   const { createNotification } = useNotifications();
   const { completedPassages } = useUserBibleChecklist();
+
+  useGrantSecretAchievement('avatar-studio', !!currentUser && isAvatarEditorOpen);
   
   const t = translations[preferredLanguage || 'en'];
   const locale = getAppLocale(preferredLanguage);
@@ -258,6 +262,9 @@ export default function ProfilePage() {
           cosmeticTier: tier,
         },
       });
+      if (tier !== 'none') {
+        await grantSecretAchievement(currentUser.uid, 'halo');
+      }
       toast({ title: "Halo Updated", description: "Avatar halo selection saved." });
     } catch (error) {
       console.error("Failed to update halo tier:", error);
@@ -357,7 +364,9 @@ export default function ProfilePage() {
       >
         <HiddenAchievements
           userId={currentUser.uid}
-          completedPassages={completedPassages.length}
+          completedPassageKeys={completedPassages}
+          unlockedSecrets={currentUser.unlockedSecrets}
+          showDescriptions
           allowHaloSelection
           selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
           onHaloTierSelect={handleHaloTierSelect}
