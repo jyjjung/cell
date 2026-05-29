@@ -9,9 +9,13 @@ import { BookMarked, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { EmptyState, PageHeader } from '@/components/ui/page-layout';
+import { useAuth } from '@/contexts/auth-context';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function MemorizePage() {
+  const { currentUser } = useAuth();
   const { memoryVerses, loading } = useMemoryVerses();
+  useGrantSecretAchievement('memorize', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<MemoryVerse | null>(null);
   const [isOpen, setIsOpen] = useState(false);

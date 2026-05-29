@@ -26,6 +26,7 @@ import DynamicLakeWallpaper from './dynamic-lake-wallpaper';
 import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,6 +46,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const hour = new Date().getHours();
+  const isSunday = new Date().getDay() === 0;
+  useGrantSecretAchievement('midnight', !!currentUser && !loadingAuth && hour === 0);
+  useGrantSecretAchievement('early-bird', !!currentUser && !loadingAuth && hour >= 5 && hour < 7);
+  useGrantSecretAchievement('sunday', !!currentUser && !loadingAuth && isSunday);
+  useGrantSecretAchievement('command-menu', !!currentUser && !loadingAuth && commandMenuOpen);
   const showReadingsTabs =
     pathname.startsWith('/bible-checklist') ||
     pathname.startsWith('/full-plan') ||

@@ -15,12 +15,14 @@ import { translations } from '@/lib/translations';
 import { format, parseISO, isValid } from 'date-fns';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function MembersPage() {
   const { allUsers, loading: usersLoading } = useAllUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
   const { currentUser } = useAuth();
+  useGrantSecretAchievement('members', !!currentUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];

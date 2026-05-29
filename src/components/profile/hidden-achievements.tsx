@@ -65,8 +65,14 @@ export default function HiddenAchievements({
   };
   const unlocked = getUnlockedAchievements(stats);
   const unlockedIds = new Set(unlocked.map((item) => item.id));
-  const locked = HIDDEN_ACHIEVEMENTS
-    .filter((achievement) => !unlockedIds.has(achievement.id))
+
+  const secretAchievements = useMemo(
+    () => HIDDEN_ACHIEVEMENTS.filter((achievement) => achievement.metric === 'secret'),
+    [],
+  );
+  const unlockedNonSecrets = unlocked.filter((achievement) => achievement.metric !== 'secret');
+  const lockedNonSecrets = HIDDEN_ACHIEVEMENTS
+    .filter((achievement) => achievement.metric !== 'secret' && !unlockedIds.has(achievement.id))
     .map((achievement) => ({
       achievement,
       progress: getAchievementProgress(stats, achievement),
@@ -163,9 +169,9 @@ export default function HiddenAchievements({
         </div>
       )}
 
-      {unlocked.length > 0 ? (
+      {unlockedNonSecrets.length > 0 ? (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {unlocked.map((achievement) => {
+          {unlockedNonSecrets.map((achievement) => {
             const Icon = iconForAchievement(achievement.id);
             return (
               <div
@@ -191,13 +197,50 @@ export default function HiddenAchievements({
         </p>
       )}
 
-      {allowHaloSelection && locked.length > 0 && (
+      {secretAchievements.length > 0 ? (
+        <div className="space-y-2 pt-2">
+          <p className="text-[11px] font-black uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
+            Secret Discoveries
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {secretAchievements.map((achievement) => {
+              const isUnlocked = unlockedIds.has(achievement.id);
+              const Icon = iconForAchievement(achievement.id);
+              return (
+                <div
+                  key={achievement.id}
+                  className={cn(
+                    'rounded-2xl border px-3 py-2.5',
+                    isUnlocked
+                      ? 'border-border/60 bg-muted'
+                      : 'border-border/50 bg-muted/70 opacity-80',
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className={cn('h-3.5 w-3.5', isUnlocked ? 'text-primary' : 'text-zinc-700 dark:text-zinc-300')} />
+                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      {isUnlocked ? achievement.title : '???'}
+                    </span>
+                  </div>
+                  {showDescriptions && (
+                    <p className="mt-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+                      {isUnlocked ? achievement.description : SECRET_LOCKED_HINT}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {allowHaloSelection && lockedNonSecrets.length > 0 && (
         <div className="space-y-2 pt-2">
           <p className="text-[11px] font-black uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
             Still Locked
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {locked.map(({ achievement, progress }) => {
+            {lockedNonSecrets.map(({ achievement, progress }) => {
               const Icon = iconForAchievement(achievement.id);
               return (
                 <div
@@ -207,12 +250,12 @@ export default function HiddenAchievements({
                   <div className="flex items-center gap-2">
                     <Icon className="h-3.5 w-3.5 text-zinc-700 dark:text-zinc-300" />
                     <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                      {achievement.metric === 'secret' ? '???' : achievement.title}
+                      {achievement.title}
                     </span>
                   </div>
                   {showDescriptions && (
                     <p className="mt-1 text-[11px] text-zinc-700 dark:text-zinc-300">
-                      {achievement.metric === 'secret' ? SECRET_LOCKED_HINT : achievement.description}
+                      {achievement.description}
                     </p>
                   )}
                   <p className="mt-1 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300">

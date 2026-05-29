@@ -15,6 +15,7 @@ import {
   serverTimestamp, query, orderBy, updateDoc,
 } from 'firebase/firestore';
 import type { CommunityLink } from '@/types';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -136,7 +137,8 @@ function AddEditLinkDialog({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LinksPage() {
-  const { isAdmin } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
+  useGrantSecretAchievement('media', !!currentUser);
   const { toast } = useToast();
   const [links, setLinks]     = useState<CommunityLink[]>([]);
   const [loading, setLoading] = useState(true);

@@ -16,15 +16,18 @@ import { cn } from '@/lib/utils';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import HiddenAchievements from '@/components/profile/hidden-achievements';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 interface UserProgressDisplay {
   userId: string;
   displayName: string;
   completedCount: number;
+  completedPassageKeys: string[];
   progressPercentage: number;
   totalPassagesToDate: number;
   avatar?: AvatarData;
   isCurrentUser?: boolean;
+  unlockedSecrets?: string[];
 }
 
 const rankConfig = [
@@ -35,6 +38,7 @@ const rankConfig = [
 
 export default function LeaderboardPage() {
   const { currentUser } = useAuth();
+  useGrantSecretAchievement('leaderboard', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
   const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
   const { allUsers, loading: usersLoading } = useAllUsers();
@@ -62,7 +66,7 @@ export default function LeaderboardPage() {
         if (!user?.firstName) return null;
         const completedCount = c.completedPassages.length;
         const progressPercentage = totalPassagesToDate > 0 ? parseFloat(((completedCount / totalPassagesToDate) * 100).toFixed(1)) : 0;
-        return { userId: c.userId, displayName: `${user.firstName} ${user.lastName}`, completedCount, progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid } as UserProgressDisplay;
+        return { userId: c.userId, displayName: `${user.firstName} ${user.lastName}`, completedCount, completedPassageKeys: c.completedPassages, progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);
@@ -159,7 +163,8 @@ export default function LeaderboardPage() {
                         <div className="w-full text-left mt-6">
                           <HiddenAchievements
                             userId={item.userId}
-                            completedPassages={item.completedCount}
+                            completedPassageKeys={item.completedPassageKeys}
+                            unlockedSecrets={item.unlockedSecrets}
                           />
                         </div>
                     </div>

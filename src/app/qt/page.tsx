@@ -11,8 +11,12 @@ import { LinkifiedText } from '@/components/ui/linkified-text';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import { useAuth } from '@/contexts/auth-context';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function QTRosterPage() {
+    const { currentUser } = useAuth();
+    useGrantSecretAchievement('qt', !!currentUser);
     const { roster, loading: rosterLoading } = useQTRoster();
     const { allUsers, loading: usersLoading } = useAllUsers();
     const [isMounted, setIsMounted] = useState(false);
