@@ -240,7 +240,8 @@ export default function MemberProfilePage() {
       >
         <HiddenAchievements
           userId={user.uid}
-          completedPassages={checklist?.completedPassages.length || 0}
+          completedPassageKeys={checklist?.completedPassages || []}
+          unlockedSecrets={user.unlockedSecrets}
           lockedLimit={6}
         />
       </motion.div>
