@@ -36,7 +36,9 @@ export async function grantSecretAchievement(
   if (!snap.exists()) return null;
 
   const existing = (snap.data()?.unlockedSecrets as string[] | undefined) || [];
-  if (existing.includes(secretKey)) return null;
+  if (existing.includes(secretKey)) {
+    return achievement;
+  }
 
   await updateDoc(userRef, { unlockedSecrets: arrayUnion(secretKey) });
   return achievement;

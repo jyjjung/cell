@@ -39,7 +39,7 @@ import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement'
 type PushSupportState = 'SUPPORTED' | 'NEEDS_PWA_INSTALL' | 'NEEDS_PERMISSION' | 'DENIED' | 'UNSUPPORTED' | 'LOADING';
 
 export default function ProfilePage() {
-  const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
+  const { currentUser, loadingAuth, signOutUser, updateUserProfile, registerSecretUnlock } = useAuth();
   const { events, loading: loadingEvents } = useEvents();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -263,7 +263,10 @@ export default function ProfilePage() {
         },
       });
       if (tier !== 'none') {
-        await grantSecretAchievement(currentUser.uid, 'halo');
+        const achievement = await grantSecretAchievement(currentUser.uid, 'halo');
+        if (achievement) {
+          registerSecretUnlock('halo');
+        }
       }
       toast({ title: "Halo Updated", description: "Avatar halo selection saved." });
     } catch (error) {

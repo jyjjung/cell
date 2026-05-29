@@ -33,6 +33,7 @@ interface AuthContextType {
   saveUserProfile: (userId: string, profileData: Partial<UserProfileData>) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   isWorshipTeam: boolean;
+  registerSecretUnlock: (secretKey: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               fcmTokens: profileData.fcmTokens || [],
               clickMeCount: profileData.clickMeCount || 0,
               clickMeLastClaimAt: profileData.clickMeLastClaimAt,
+              unlockedSecrets: profileData.unlockedSecrets || [],
             } as AppUser);
             setIsAdmin(profileData.isAdmin || false);
           }
@@ -313,6 +315,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const registerSecretUnlock = useCallback((secretKey: string) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const existing = prev.unlockedSecrets || [];
+      if (existing.includes(secretKey)) return prev;
+      return { ...prev, unlockedSecrets: [...existing, secretKey] };
+    });
+  }, []);
+
 
   return (
     <AuthContext.Provider value={{
@@ -326,9 +337,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInUser,
       signOutUser,
       updateUserProfile,
-      saveUserProfile: updateUserProfile, 
+      saveUserProfile: updateUserProfile,
       sendPasswordReset,
       isWorshipTeam,
+      registerSecretUnlock,
     }}>
       {children}
     </AuthContext.Provider>

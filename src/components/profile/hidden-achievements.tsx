@@ -7,6 +7,7 @@ import { getAchievementProgress, getUnlockedAchievements, HIDDEN_ACHIEVEMENTS, t
 import { useUserAchievementStats } from '@/hooks/use-user-achievement-stats';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { calculatePlanProgressPercent } from '@/lib/reading-utils';
+import { useAuth } from '@/contexts/auth-context';
 import { AVATAR_COSMETIC_TIERS, getCosmeticTierProgress, type AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { Progress } from '@/components/ui/progress';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
@@ -36,8 +37,6 @@ function iconForAchievement(id: AchievementId) {
   return Sparkles;
 }
 
-const SECRET_LOCKED_HINT = 'A surprise waiting to be found.';
-
 export default function HiddenAchievements({
   userId,
   completedPassageKeys,
@@ -50,8 +49,11 @@ export default function HiddenAchievements({
   onHaloTierSelect,
   previewAvatar,
 }: HiddenAchievementsProps) {
+  const { currentUser } = useAuth();
   const { plan } = useBiblePlan();
   const { messageCount, feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
+  const effectiveUnlockedSecrets =
+    userId === currentUser?.uid ? (currentUser?.unlockedSecrets ?? unlockedSecrets) : unlockedSecrets;
   const planProgressPercent = useMemo(
     () => calculatePlanProgressPercent(plan?.dailyReadings, completedPassageKeys),
     [plan?.dailyReadings, completedPassageKeys],
@@ -61,14 +63,14 @@ export default function HiddenAchievements({
     messageCount,
     feedbackCount,
     clickMeCount,
-    unlockedSecrets,
+    unlockedSecrets: effectiveUnlockedSecrets,
   };
   const unlocked = getUnlockedAchievements(stats);
   const unlockedIds = new Set(unlocked.map((item) => item.id));
 
-  const secretAchievements = useMemo(
-    () => HIDDEN_ACHIEVEMENTS.filter((achievement) => achievement.metric === 'secret'),
-    [],
+  const unlockedSecretsList = useMemo(
+    () => unlocked.filter((achievement) => achievement.metric === 'secret'),
+    [unlocked],
   );
   const unlockedNonSecrets = unlocked.filter((achievement) => achievement.metric !== 'secret');
   const lockedNonSecrets = HIDDEN_ACHIEVEMENTS
@@ -197,34 +199,28 @@ export default function HiddenAchievements({
         </p>
       )}
 
-      {secretAchievements.length > 0 ? (
+      {unlockedSecretsList.length > 0 ? (
         <div className="space-y-2 pt-2">
           <p className="text-[11px] font-black uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
             Secret Discoveries
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {secretAchievements.map((achievement) => {
-              const isUnlocked = unlockedIds.has(achievement.id);
+            {unlockedSecretsList.map((achievement) => {
               const Icon = iconForAchievement(achievement.id);
               return (
                 <div
                   key={achievement.id}
-                  className={cn(
-                    'rounded-2xl border px-3 py-2.5',
-                    isUnlocked
-                      ? 'border-border/60 bg-muted'
-                      : 'border-border/50 bg-muted/70 opacity-80',
-                  )}
+                  className="rounded-2xl border border-border/60 bg-muted px-3 py-2.5"
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={cn('h-3.5 w-3.5', isUnlocked ? 'text-primary' : 'text-zinc-700 dark:text-zinc-300')} />
+                    <Icon className="h-3.5 w-3.5 text-primary" />
                     <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                      {isUnlocked ? achievement.title : '???'}
+                      {achievement.title}
                     </span>
                   </div>
                   {showDescriptions && (
                     <p className="mt-1 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
-                      {isUnlocked ? achievement.description : SECRET_LOCKED_HINT}
+                      {achievement.description}
                     </p>
                   )}
                 </div>
