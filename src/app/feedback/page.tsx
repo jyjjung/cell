@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, FeedCard } from '@/components/ui/page-layout';
 import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
+import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 /* ── Animation variants ─────────────────────────────────── */
 
@@ -53,6 +54,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.5",
+    subtitle: "Bible Popup Readability Tuning",
+    date: "Late-May 2026",
+    changes: [
+      "Increased Bible popup body text readability with a subtle paragraph size bump",
+      "Fine-tuned the size back down after review to keep the reading view balanced on mobile and desktop",
+    ],
+  },
   {
     version: "v1.3.4",
     subtitle: "Header Button Contrast",
@@ -181,6 +191,9 @@ export default function FeedbackPage() {
   const [suggestionsList, setSuggestionsList] = useState<any[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [adminNoteText, setAdminNoteText] = useState('');
+  const [activeTab, setActiveTab] = useState('suggestions');
+
+  useGrantSecretAchievement('changelog', !!currentUser && activeTab === 'changelog');
 
   /* ── Firestore listener ───────────────────────────────── */
 
@@ -253,7 +266,7 @@ export default function FeedbackPage() {
 
           {/* Tabs */}
           <motion.div variants={fadeUp}>
-            <Tabs defaultValue="suggestions" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4 h-10">
                 <TabsTrigger value="suggestions" className="rounded-md text-sm font-medium">
                   Suggestions
