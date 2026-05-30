@@ -4,6 +4,8 @@
  * Upload paths use unique object keys (UUIDs / timestamps), so
  * `immutable` is safe. Do not use `immutable` if reusing the same path for new bytes.
  */
+import { MEDIA_CACHE_NAMES } from '@/lib/sw-cache-utils';
+
 export const STORAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 /** Matches Workbox `maxEntries` in next.config.js. */
@@ -35,7 +37,14 @@ export function isFirebaseStorageMediaUrl(url: string): boolean {
     const { hostname, pathname } = new URL(url);
     if (hostname === 'firebasestorage.googleapis.com') return true;
     if (hostname === 'storage.googleapis.com') {
-      return pathname.includes('firebasestorage');
+      // GCS direct links: /bucket.firebasestorage.app/... or legacy bucket paths
+      return (
+        pathname.includes('firebasestorage') ||
+        pathname.includes('worshipChordSheets') ||
+        pathname.includes('worship-sheets') ||
+        pathname.includes('/avatars/') ||
+        pathname.includes('/chats/')
+      );
     }
     return false;
   } catch {
@@ -61,8 +70,15 @@ export function isQuotaExceededError(error: unknown): boolean {
 export async function isMediaCached(url: string): Promise<boolean> {
   if (typeof caches === 'undefined') return false;
   try {
-    const match = await caches.match(url);
-    return !!match?.ok;
+    const request = new Request(url, { mode: 'cors', credentials: 'omit' });
+    if (await caches.match(request)) return true;
+    if (await caches.match(url)) return true;
+
+    for (const name of MEDIA_CACHE_NAMES) {
+      const cache = await caches.open(name);
+      if (await cache.match(request) || (await cache.match(url))) return true;
+    }
+    return false;
   } catch {
     return false;
   }
