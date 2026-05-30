@@ -8,7 +8,6 @@ import {
   CloudDownload,
   Check,
   Loader2,
-  WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
@@ -229,20 +228,8 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
           isSender
             ? 'border-primary/30 bg-primary/5 text-foreground'
             : 'border-border/60 bg-card text-foreground',
-          allOfflineReady && 'border-green-500/45 bg-green-500/[0.04]',
         )}
       >
-        {allOfflineReady && (
-          <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-700 dark:text-green-400">
-            <WifiOff className="h-3.5 w-3.5 shrink-0" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">
-              Saved for offline
-              {offlineCached ? ` · ${offlineCached.total} page${offlineCached.total === 1 ? '' : 's'}` : ''}
-            </span>
-            <Check className="ml-auto h-3.5 w-3.5 shrink-0" />
-          </div>
-        )}
-
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -253,7 +240,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
                 Worship Setlist
               </span>
               {partialOffline && !offlineCaching && (
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-amber-700 dark:text-amber-400">
+                <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {offlineCached!.cached}/{offlineCached!.total} saved
                 </span>
               )}
@@ -261,19 +248,8 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
             <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{setlist.name}</h3>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
           </div>
-          <div
-            className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border',
-              allOfflineReady
-                ? 'border-green-500/40 bg-green-500/15'
-                : 'border-border/60 bg-muted/40',
-            )}
-          >
-            {allOfflineReady ? (
-              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-            ) : (
-              <Play className="h-4 w-4 text-muted-foreground" />
-            )}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+            <Play className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
@@ -281,10 +257,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
           <div className="space-y-1">
             <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
               <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-300',
-                  allOfflineReady ? 'bg-green-500' : 'bg-primary',
-                )}
+                className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{
                   width: `${offlineCaching
                     ? Math.round((offlineProgress.done / offlineProgress.total) * 100)
@@ -333,12 +306,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
               type="button"
               onClick={handleCacheOffline}
               disabled={offlineCaching}
-              className={cn(
-                'pointer-events-auto flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors disabled:opacity-60',
-                allOfflineReady && !offlineCaching
-                  ? 'border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-500'
-                  : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              )}
+              className="pointer-events-auto flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-60"
             >
               {offlineCaching ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
