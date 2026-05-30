@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog 
 } from '@/components/worship/WorshipDialogs';
+import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -605,7 +606,10 @@ function SetlistDetailView({
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
-
+  const [offlineCaching, setOfflineCaching] = useState(false);
+  const [offlineProgress, setOfflineProgress] = useState({ done: 0, total: 0 });
+  const [offlineCached, setOfflineCached] = useState<{ cached: number; total: number } | null>(null);
+  const offlineAbortRef = useRef<AbortController | null>(null);
 
   // Keep orderedSongs in sync when playlist updates from Firestore (only if not in reorder mode)
   const prevPlaylistRef = useRef(playlist);
@@ -687,6 +691,89 @@ function SetlistDetailView({
     return slides;
   }, [orderedSongs, songs]);
 
+  const setlistMediaUrls = useMemo(
+    () => allSlides.flatMap((s) => s.imageUrls),
+    [allSlides],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (setlistMediaUrls.length === 0) {
+      setOfflineCached(null);
+      return;
+    }
+    void countCachedMediaUrls(setlistMediaUrls).then((result) => {
+      if (!cancelled) setOfflineCached(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [setlistMediaUrls]);
+
+  useEffect(() => {
+    return () => {
+      offlineAbortRef.current?.abort();
+    };
+  }, []);
+
+  const allOfflineReady =
+    offlineCached !== null &&
+    offlineCached.total > 0 &&
+    offlineCached.cached === offlineCached.total;
+
+  const handleCacheSetlistOffline = async () => {
+    if (setlistMediaUrls.length === 0) {
+      toast({ title: 'Nothing to cache', description: 'Add songs with chord sheets first.' });
+      return;
+    }
+    setOfflineCaching(true);
+    setOfflineProgress({ done: 0, total: setlistMediaUrls.length });
+    const controller = new AbortController();
+    offlineAbortRef.current = controller;
+    try {
+      const result = await cacheMediaUrlsForOffline(setlistMediaUrls, {
+        signal: controller.signal,
+        onProgress: (done, t) => {
+          setOfflineProgress({ done, total: t });
+        },
+      });
+      if (result.aborted) return;
+      if (result.quotaExceeded) {
+        toast({
+          title: 'Storage full',
+          description:
+            'Could not save all pages. Try clearing browser data for this site, or cache a smaller setlist.',
+          variant: 'destructive',
+        });
+      } else if (result.failed === 0) {
+        const saved = result.ok + result.skipped;
+        toast({
+          title: 'Ready for offline',
+          description:
+            result.skipped > 0
+              ? `${saved} of ${result.total} pages available (${result.skipped} already on device).`
+              : `Cached ${result.ok} of ${result.total} pages on this device.`,
+        });
+      } else {
+        toast({
+          title: 'Partially cached',
+          description: `${result.ok + result.skipped} of ${result.total} pages saved. ${result.failed} failed — check your connection and try again.`,
+          variant: 'destructive',
+        });
+      }
+      setOfflineCached(await countCachedMediaUrls(setlistMediaUrls));
+    } catch (e: unknown) {
+      toast({
+        title: 'Cache failed',
+        description: e instanceof Error ? e.message : 'Could not save setlist for offline use.',
+        variant: 'destructive',
+      });
+    } finally {
+      offlineAbortRef.current = null;
+      setOfflineCaching(false);
+    }
+  };
+
   // Auto-open song if initialSongId is provided
   const didInitSong = useRef(false);
   useEffect(() => {
@@ -738,6 +825,33 @@ function SetlistDetailView({
           {reorderMode && reorderDirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSaveOrder} disabled={savingOrder}>
               {savingOrder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+            </Button>
+          )}
+          {!reorderMode && allSlides.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className={cn(
+                'rounded-xl h-9 gap-1.5',
+                allOfflineReady && !offlineCaching && 'border-green-500/40 text-green-600 dark:text-green-500',
+              )}
+              disabled={offlineCaching}
+              onClick={handleCacheSetlistOffline}
+            >
+              {offlineCaching ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : allOfflineReady ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {offlineCaching
+                  ? `${offlineProgress.done}/${offlineProgress.total}`
+                  : allOfflineReady
+                    ? 'Ready'
+                    : 'Offline'}
+              </span>
             </Button>
           )}
           {!reorderMode && (

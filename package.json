@@ -1,13 +1,15 @@
 {
   "name": "em",
-  "version": "6.0",
+  "version": "6.1",
   "private": true,
   "scripts": {
     "dev": "next dev --port 9002 --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "storage:cache-headers": "node scripts/add-cache-control.mjs",
+    "storage:cache-headers:dry-run": "node scripts/add-cache-control.mjs --dry-run"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.7",

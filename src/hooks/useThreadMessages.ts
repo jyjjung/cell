@@ -22,6 +22,7 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { primeMediaUrls } from '@/lib/media-cache';
 import type { ChatMessage, Chat } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -87,6 +88,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
         setMessages(newMessages);
         setLoading(false);
+        primeMediaUrls(newMessages.map((m) => m.imageUrl));
       },
       () => {
         setLoading(false);
@@ -131,6 +133,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
 
     setMessages(prev => [...prev, ...newMessages]);
+    primeMediaUrls(newMessages.map((m) => m.imageUrl));
     setLoadingMore(false);
   }, [chatId, parentMessageId, hasMore, loadingMore, toast]);
 

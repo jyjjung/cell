@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { STORAGE_CACHE_CONTROL } from './cache-control.mjs';
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -174,7 +175,7 @@ async function run() {
       destination: storagePath,
       metadata: { 
         contentType: 'application/pdf',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: STORAGE_CACHE_CONTROL
       }
     });
     

@@ -1,5 +1,7 @@
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
+import { primeMediaUrls } from '@/lib/media-cache';
+import type { ChatMessage } from '@/types';
 
 /** How many recent messages to pull into the local Firestore cache per chat (offline / PWA read). */
 const PREFETCH_LIMIT = 200;
@@ -20,7 +22,10 @@ export function prefetchChatMessagesCache(db: Firestore, chatIds: string[]): voi
           orderBy('createdAt', 'desc'),
           limit(PREFETCH_LIMIT)
         );
-        await getDocs(q);
+        const snapshot = await getDocs(q);
+        primeMediaUrls(
+          snapshot.docs.map((doc) => (doc.data() as ChatMessage).imageUrl),
+        );
       } catch {
         /* best-effort */
       }

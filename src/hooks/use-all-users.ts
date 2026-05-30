@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import type { UserProfileData } from '@/types';
 import { db } from '@/lib/firebase';
+import { primeMediaUrls } from '@/lib/media-cache';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
@@ -25,6 +26,7 @@ export function useAllUsers() {
         usersData.push(doc.data() as UserProfileData);
       });
       setAllUsers(usersData);
+      primeMediaUrls(usersData.map((u) => u.photoURL));
       setLoading(false);
     }, (err) => {
       console.error("Error fetching all users:", err);
