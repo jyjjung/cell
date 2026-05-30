@@ -28,6 +28,35 @@ function offlineReadyKey(setlistId: string) {
   return `setlist_offline_ready_${setlistId}`;
 }
 
+function mediaUrlsHash(urls: string[]): string {
+  return urls.slice().sort().join('\0');
+}
+
+function readOfflineReady(setlistId: string): { count: number; hash: string } | null {
+  try {
+    const raw = localStorage.getItem(offlineReadyKey(setlistId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { count: number; hash: string };
+    if (typeof parsed.count === 'number' && typeof parsed.hash === 'string') return parsed;
+  } catch {
+    /* legacy string value — ignore */
+  }
+  return null;
+}
+
+function writeOfflineReady(setlistId: string, urls: string[]) {
+  localStorage.setItem(
+    offlineReadyKey(setlistId),
+    JSON.stringify({ count: urls.length, hash: mediaUrlsHash(urls) }),
+  );
+}
+
+function isOfflineReadyLocally(setlistId: string, urls: string[]): boolean {
+  const record = readOfflineReady(setlistId);
+  if (!record || urls.length === 0) return false;
+  return record.count === urls.length && record.hash === mediaUrlsHash(urls);
+}
+
 export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: SetlistSummaryProps) {
   const { setlists } = useWorshipSetlists();
   const { songs: worshipSongs } = useWorshipSongs();
@@ -64,13 +93,21 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
       setOfflineCached(null);
       return;
     }
+
+    if (isOfflineReadyLocally(setlistId, mediaUrls)) {
+      setOfflineCached({ cached: mediaUrls.length, total: mediaUrls.length });
+    }
+
     void countCachedMediaUrls(mediaUrls).then((result) => {
       if (cancelled) return;
-      setOfflineCached(result);
       if (result.cached === result.total && result.total > 0) {
-        localStorage.setItem(offlineReadyKey(setlistId), String(result.total));
+        writeOfflineReady(setlistId, mediaUrls);
+        setOfflineCached(result);
+      } else if (isOfflineReadyLocally(setlistId, mediaUrls)) {
+        setOfflineCached({ cached: mediaUrls.length, total: mediaUrls.length });
       } else {
         localStorage.removeItem(offlineReadyKey(setlistId));
+        setOfflineCached(result);
       }
     });
     return () => {
@@ -125,8 +162,8 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
         });
       } else if (result.failed === 0) {
         const saved = result.ok + result.skipped;
+        writeOfflineReady(setlistId, mediaUrls);
         setOfflineCached({ cached: result.total, total: result.total });
-        localStorage.setItem(offlineReadyKey(setlistId), String(result.total));
         toast({
           title: 'Ready for offline',
           description:
@@ -140,10 +177,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
           description: `${result.ok + result.skipped} of ${result.total} pages saved. ${result.failed} failed — check your connection and try again.`,
           variant: 'destructive',
         });
-      }
-      setOfflineCached(await countCachedMediaUrls(mediaUrls));
-      if (result.failed === 0 && result.ok + result.skipped === result.total) {
-        localStorage.setItem(offlineReadyKey(setlistId), String(result.total));
+        setOfflineCached(await countCachedMediaUrls(mediaUrls));
       }
     } catch (err: unknown) {
       toast({
@@ -202,7 +236,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
           <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-700 dark:text-green-400">
             <WifiOff className="h-3.5 w-3.5 shrink-0" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">
-              Downloaded for offline
+              Saved for offline
               {offlineCached ? ` · ${offlineCached.total} page${offlineCached.total === 1 ? '' : 's'}` : ''}
             </span>
             <Check className="ml-auto h-3.5 w-3.5 shrink-0" />
@@ -316,7 +350,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
               {offlineCaching
                 ? `${offlineProgress.done}/${offlineProgress.total}`
                 : allOfflineReady
-                  ? 'Downloaded'
+                  ? 'Saved'
                   : partialOffline
                     ? `${offlineCached!.cached}/${offlineCached!.total}`
                     : 'Save offline'}
