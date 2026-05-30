@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText,
-  ArrowRight, ArrowLeft as ArrowLeftIcon, CloudDownload, Check, Loader2,
-} from 'lucide-react';
+import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon } from 'lucide-react';
 
 import { cn, isPdfUrl } from '@/lib/utils';
-import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
-import { useToast } from '@/hooks/use-toast';
 import type { ChordKey } from '@/types';
 
 export interface ViewerSlide {
@@ -57,17 +52,7 @@ function useImagePreloader(slides: ViewerSlide[]) {
 export function FullScreenViewer({
   slides, startIndex = 0, onClose,
 }: { slides: ViewerSlide[]; startIndex?: number; onClose: () => void }) {
-  const { toast } = useToast();
   const [idx, setIdx] = useState(startIndex);
-  const [offlineCaching, setOfflineCaching] = useState(false);
-  const [offlineProgress, setOfflineProgress] = useState({ done: 0, total: 0 });
-  const [offlineCached, setOfflineCached] = useState<{ cached: number; total: number } | null>(null);
-  const offlineAbortRef = useRef<AbortController | null>(null);
-
-  const slideMediaUrls = useMemo(
-    () => slides.flatMap((s) => s.imageUrls ?? []),
-    [slides],
-  );
 
   // Pixel width of images — drives zoom. null = CSS-contained (loading state).
   // We use pixel width (not CSS transform) so the scroll container always
@@ -89,79 +74,6 @@ export function FullScreenViewer({
 
 
   useImagePreloader(slides);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (slideMediaUrls.length === 0) {
-      setOfflineCached(null);
-      return;
-    }
-    void countCachedMediaUrls(slideMediaUrls).then((result) => {
-      if (!cancelled) setOfflineCached(result);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [slideMediaUrls]);
-
-  useEffect(() => {
-    return () => {
-      offlineAbortRef.current?.abort();
-    };
-  }, []);
-
-  const allOfflineReady =
-    offlineCached !== null &&
-    offlineCached.total > 0 &&
-    offlineCached.cached === offlineCached.total;
-
-  const handleCacheOffline = async () => {
-    if (slideMediaUrls.length === 0) return;
-    setOfflineCaching(true);
-    setOfflineProgress({ done: 0, total: slideMediaUrls.length });
-    const controller = new AbortController();
-    offlineAbortRef.current = controller;
-    try {
-      const result = await cacheMediaUrlsForOffline(slideMediaUrls, {
-        signal: controller.signal,
-        onProgress: (done, t) => setOfflineProgress({ done, total: t }),
-      });
-      if (result.aborted) return;
-      if (result.quotaExceeded) {
-        toast({
-          title: 'Storage full',
-          description:
-            'Could not save all pages. Try clearing browser data for this site, or cache fewer sheets.',
-          variant: 'destructive',
-        });
-      } else if (result.failed === 0) {
-        const saved = result.ok + result.skipped;
-        toast({
-          title: 'Ready for offline',
-          description:
-            result.skipped > 0
-              ? `${saved} of ${result.total} pages available (${result.skipped} already on device).`
-              : `Cached ${result.ok} of ${result.total} pages on this device.`,
-        });
-      } else {
-        toast({
-          title: 'Partially cached',
-          description: `${result.ok + result.skipped} of ${result.total} pages saved. ${result.failed} failed — check your connection and try again.`,
-          variant: 'destructive',
-        });
-      }
-      setOfflineCached(await countCachedMediaUrls(slideMediaUrls));
-    } catch (e: unknown) {
-      toast({
-        title: 'Cache failed',
-        description: e instanceof Error ? e.message : 'Could not save sheets for offline use.',
-        variant: 'destructive',
-      });
-    } finally {
-      offlineAbortRef.current = null;
-      setOfflineCaching(false);
-    }
-  };
 
   // Reset when slide changes
   useEffect(() => {
@@ -383,40 +295,9 @@ export function FullScreenViewer({
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom In">
               <ZoomIn className="h-4 w-4" />
             </button>
-            {slideMediaUrls.length > 0 && (
-              <button
-                onClick={handleCacheOffline}
-                disabled={offlineCaching}
-                title={
-                  offlineCaching
-                    ? `Caching ${offlineProgress.done}/${offlineProgress.total}`
-                    : allOfflineReady
-                      ? 'Ready for offline'
-                      : 'Save for offline'
-                }
-                className={cn(
-                  'p-2 rounded-xl text-white disabled:opacity-60',
-                  allOfflineReady && !offlineCaching
-                    ? 'bg-green-500/25 hover:bg-green-500/35'
-                    : 'bg-white/10 hover:bg-white/20',
-                )}
-              >
-                {offlineCaching ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : allOfflineReady ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  <CloudDownload className="h-5 w-5" />
-                )}
-              </button>
-            )}
-            <button
-              onClick={() => (slide.imageUrls ?? []).forEach((url, i) =>
-                setTimeout(() => downloadFile(url, `${slide.songTitle} - ${slide.key}${(slide.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`), i * 300)
-              )}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white"
-              title="Download to device"
-            >
+            <button onClick={() => (slide.imageUrls ?? []).forEach((url, i) =>
+              setTimeout(() => downloadFile(url, `${slide.songTitle} - ${slide.key}${(slide.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`), i * 300)
+            )} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Download to device">
               <Download className="h-5 w-5" />
             </button>
           </div>
