@@ -5,6 +5,11 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Share, RefreshCcw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  activateWaitingServiceWorkers,
+  clearAppCachesPreservingMedia,
+} from '@/lib/sw-cache-utils';
+import { APP_VERSION } from '@/lib/app-version';
 
 /**
  * @fileOverview Detects iOS Safari users and prompts them to install the PWA.
@@ -16,7 +21,7 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     // 1. Version Check
-    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '6.0';
+    const currentVersion = APP_VERSION;
     const storedVersion = localStorage.getItem('pwa_app_version');
     
     // 2. iOS Detection
@@ -45,24 +50,12 @@ export function PWAInstallPrompt() {
   };
 
   const handleUpdateRefresh = async () => {
-    const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION || '6.0';
+    const currentVersion = APP_VERSION;
     localStorage.setItem('pwa_app_version', currentVersion);
 
     try {
-      // Clear all service worker caches to purge stale chunks
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map(name => caches.delete(name)));
-
-      // Force service workers to update
-      const registrations = await navigator.serviceWorker?.getRegistrations();
-      if (registrations) {
-        for (const reg of registrations) {
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
-          await reg.update().catch(() => {});
-        }
-      }
+      await clearAppCachesPreservingMedia();
+      await activateWaitingServiceWorkers();
     } catch (e) {
       console.warn('[PWAInstallPrompt] Cache cleanup failed:', e);
     }

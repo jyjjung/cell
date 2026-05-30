@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatMessage } from '@/types';
@@ -178,7 +179,7 @@ export default function MessageInput({
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file, {
             contentType: file.type || 'image/jpeg',
-            cacheControl: 'public, max-age=31536000'
+            cacheControl: STORAGE_CACHE_CONTROL
         });
         uploadTask.on('state_changed', null, (error) => {
             setIsUploading(false);

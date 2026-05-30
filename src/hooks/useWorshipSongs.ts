@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
+import { primeMediaUrls, STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 
 const SONGS_COLLECTION = 'worshipSongs';
 
@@ -25,20 +26,9 @@ export function useWorshipSongs() {
       setSongs(loaded);
       setLoading(false);
 
-      // ── Cache-prime chord sheet images into the SW CacheFirst cache ────────
-      // This runs silently in the background. Once fetched, the service worker
-      // intercepts all subsequent requests and serves from cache — enabling true
-      // offline access to chord sheets without any extra UI work.
-      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        for (const song of loaded) {
-          for (const sheet of song.chordSheets) {
-            if (sheet.imageUrl) {
-              // Fire-and-forget — do not await, errors are silently ignored
-              fetch(sheet.imageUrl, { mode: 'no-cors', cache: 'force-cache' }).catch(() => {});
-            }
-          }
-        }
-      }
+      primeMediaUrls(
+        loaded.flatMap((song) => song.chordSheets.map((sheet) => sheet.imageUrl)),
+      );
     }, () => setLoading(false));
     return unsub;
   }, [currentUser]);
@@ -82,7 +72,7 @@ export function useWorshipSongs() {
     const storageRef = ref(storage, storagePath);
     await uploadBytes(storageRef, file, { 
       contentType: file.type || 'application/octet-stream',
-      cacheControl: 'public, max-age=31536000'
+      cacheControl: STORAGE_CACHE_CONTROL
     });
     const imageUrl = await getDownloadURL(storageRef);
     const sheet: SongChordSheet = {

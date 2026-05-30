@@ -2,6 +2,10 @@
 "use client";
 
 import { useEffect } from 'react';
+import {
+  activateWaitingServiceWorkers,
+  clearAppCachesPreservingMedia,
+} from '@/lib/sw-cache-utils';
 
 /**
  * @fileOverview Global listener to handle ChunkLoadError in Next.js.
@@ -9,7 +13,7 @@ import { useEffect } from 'react';
  * the browser/PWA attempts to load a stale chunk from the old SW cache.
  *
  * Strategy:
- * 1. Clear all service worker caches so stale assets are purged.
+ * 1. Clear app/Workbox caches (preserve offline media caches).
  * 2. Activate any waiting service worker so the new build's SW is in control.
  * 3. Reload the page once — a sessionStorage flag prevents infinite loops.
  */
@@ -28,21 +32,8 @@ export function ChunkErrorListener() {
       console.warn('[ChunkErrorListener] ChunkLoadError detected — clearing caches and reloading...');
 
       try {
-        // 1. Clear all service worker caches (removes stale chunk references)
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-
-        // 2. Tell any waiting service worker to activate immediately
-        const registrations = await navigator.serviceWorker?.getRegistrations();
-        if (registrations) {
-          for (const reg of registrations) {
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-            // Trigger update check so new SW is fetched
-            reg.update().catch(() => {});
-          }
-        }
+        await clearAppCachesPreservingMedia();
+        await activateWaitingServiceWorkers();
       } catch (e) {
         console.warn('[ChunkErrorListener] Cache/SW cleanup failed:', e);
       }

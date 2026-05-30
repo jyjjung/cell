@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
+import { STORAGE_CACHE_CONTROL } from './cache-control.mjs';
 
 // Load environment variables from .env.local
 dotenv.config({ path: '.env.local' });
@@ -26,8 +27,8 @@ async function run() {
   console.log(`🚀 Starting Cache-Control update script (${isDryRun ? 'DRY RUN' : 'PRODUCTION MODE'})...`);
 
   // Target folders to search and optimize
-  const targets = ['avatars/', 'chats/', 'worshipChordSheets/'];
-  const cacheControlValue = 'public, max-age=31536000';
+  const targets = ['avatars/', 'chats/', 'worshipChordSheets/', 'worship-sheets/'];
+  const cacheControlValue = STORAGE_CACHE_CONTROL;
 
   let totalScanned = 0;
   let totalUpdated = 0;

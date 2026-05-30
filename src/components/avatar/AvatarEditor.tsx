@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { deleteAvatarPhotoAtUrl, deletePreviousAvatarPhotos } from '@/lib/avatar-storage';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/cropImage';
 import { Slider } from '@/components/ui/slider';
@@ -273,12 +275,19 @@ function ImageUploadControls({
                 throw new Error("Failed to crop image");
             }
 
-            const uid = currentUser?.uid || 'anonymous';
+            const uid = currentUser?.uid;
+            if (!uid) {
+                throw new Error('You must be signed in to upload a profile photo.');
+            }
+
+            await deleteAvatarPhotoAtUrl(currentData.imageUrl);
+            await deletePreviousAvatarPhotos(uid);
+
             const storagePath = `avatars/${uid}_${Date.now()}_cropped.jpg`;
             const storageRef = ref(storage, storagePath);
             const uploadTask = uploadBytesResumable(storageRef, croppedImageBlob, {
                 contentType: croppedImageBlob.type || 'image/jpeg',
-                cacheControl: 'public, max-age=31536000'
+                cacheControl: STORAGE_CACHE_CONTROL
             });
 
             uploadTask.on('state_changed', 
