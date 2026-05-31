@@ -244,7 +244,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         {isIndividualChat ? children : (
                             <motion.div
                                 key={pathname}
-                                initial={{ opacity: 0, y: 8 }}
+                                initial={false}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.25, ease: "easeOut" }}
                                 className="page-shell"

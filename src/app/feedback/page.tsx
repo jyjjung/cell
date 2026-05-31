@@ -55,6 +55,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.16",
+    subtitle: "Readings Stability",
+    date: "Late-May 2026",
+    changes: [
+      "My Readings no longer reloads when your profile or achievements update in the background",
+      "Plan tab shows a loading skeleton instead of a blank flash while the reading plan loads",
+      "Fixed avatar photo cleanup on profile when replacing an uploaded photo",
+    ],
+  },
+  {
     version: "v1.3.15",
     subtitle: "Look & Profile Polish",
     date: "Late-May 2026",

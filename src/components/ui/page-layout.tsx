@@ -17,7 +17,7 @@ export function PageHeader({ title, description, action, delay = 0 }: PageHeader
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-nav -mb-2 flex flex-col gap-1 rounded-2xl px-4 py-2 sm:flex-row sm:items-start sm:justify-between sm:px-5"
+      className="glass-nav flex flex-col gap-1 rounded-2xl px-4 py-2 sm:flex-row sm:items-start sm:justify-between sm:px-5"
     >
       <div className="min-w-0">
         <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl capitalize">
@@ -58,12 +58,12 @@ interface FeedCardProps {
   index?: number;
 }
 
-export function FeedCard({ children, className, index = 0 }: FeedCardProps) {
+export function FeedCard({ children, className, index = 0, animate = true }: FeedCardProps & { animate?: boolean }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={animate ? { opacity: 0, y: 12 } : false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.35, delay: animate ? index * 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
       className={cn("glass-card rounded-2xl p-4 transition-shadow", className)}
     >
       {children}
