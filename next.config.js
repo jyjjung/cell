@@ -26,6 +26,15 @@ const FIREBASE_MEDIA_CACHING = [
       cacheableResponse: { statuses: [0, 200] },
     },
   },
+  {
+    urlPattern: /\/wallpapers\/.+\.svg$/i,
+    handler: "CacheFirst",
+    options: {
+      cacheName: "wallpaper-assets",
+      expiration: { maxEntries: 64, maxAgeSeconds: ONE_YEAR_SECONDS },
+      cacheableResponse: { statuses: [0, 200] },
+    },
+  },
 ];
 
 /** Default cross-origin rule only caches 1h — exclude our media hosts (handled above). */

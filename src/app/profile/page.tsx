@@ -5,13 +5,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, Palette, LogOut, BellRing, BellOff, AlertTriangle, Download, Send, User as UserIcon, Languages, Cake } from 'lucide-react';
-import type { UserProfileData, AvatarData, AppEvent } from '@/types';
+import { Loader2, LogOut, BellRing, BellOff, AlertTriangle, Download, Send, Languages, Cake } from 'lucide-react';
+import type { AvatarData } from '@/types';
 import { Switch } from '@/components/ui/switch';
-import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { AvatarEditor } from '@/components/avatar/AvatarEditor';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { getToken } from 'firebase/messaging';
 import { messaging, db } from '@/lib/firebase';
@@ -19,8 +15,6 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNotifications } from '@/hooks/use-notifications';
-import { Label } from '@/components/ui/label';
-import { Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
@@ -30,6 +24,10 @@ import { PageHeader } from '@/components/ui/page-layout';
 import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import HiddenAchievements from '@/components/profile/hidden-achievements';
+import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
+import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
+import { AppearanceSettings } from '@/components/profile/appearance-settings';
+import { ProfileHubTabs, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { grantSecretAchievement } from '@/lib/achievement-secrets';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
@@ -55,6 +53,7 @@ export default function ProfilePage() {
   const [pushSupport, setPushSupport] = useState<PushSupportState>('LOADING');
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTabId>('profile');
   const { createNotification } = useNotifications();
   const { completedPassages } = useUserBibleChecklist();
 
@@ -289,23 +288,30 @@ export default function ProfilePage() {
     }
   };
 
+  const handleTabChange = useCallback((tab: ProfileTabId) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const pushButtonClass = "w-full sm:w-auto";
+
   const renderNotificationButton = useMemo(() => {
     switch (pushSupport) {
       case 'LOADING':
-        return <Button disabled><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.checking}</Button>;
+        return <Button disabled className={pushButtonClass}><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.checking}</Button>;
       case 'SUPPORTED':
         if (currentUser && (!currentUser.fcmTokens || currentUser.fcmTokens.length === 0)) {
-           return <Button onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
+           return <Button className={pushButtonClass} onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
         }
-        return <div className="flex items-center text-sm text-primary"><BellRing className="mr-2 h-4 w-4" />{t.enabled}</div>;
+        return <div className="flex items-center text-[length:var(--app-ui-font-sm)] text-primary"><BellRing className="mr-2 h-4 w-4" />{t.enabled}</div>;
       case 'NEEDS_PERMISSION':
-        return <Button onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
+        return <Button className={pushButtonClass} onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
       case 'NEEDS_PWA_INSTALL':
-        return <div className="flex items-center text-sm text-amber-500"><Download className="mr-2 h-4 w-4" />{t.addHome}</div>;
+        return <div className="flex items-center text-[length:var(--app-ui-font-sm)] text-amber-500"><Download className="mr-2 h-4 w-4" />{t.addHome}</div>;
       case 'DENIED':
-        return <Button disabled><BellOff className="mr-2 h-4 w-4" />{t.permissionDenied}</Button>;
+        return <Button disabled className={pushButtonClass}><BellOff className="mr-2 h-4 w-4" />{t.permissionDenied}</Button>;
       case 'UNSUPPORTED':
-        return <Button disabled><AlertTriangle className="mr-2 h-4 w-4" />{t.notSupported}</Button>;
+        return <Button disabled className={pushButtonClass}><AlertTriangle className="mr-2 h-4 w-4" />{t.notSupported}</Button>;
       default:
         return null;
     }
@@ -315,173 +321,191 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="page-container space-y-8 pb-32">
-      {/* Header */}
-      <PageHeader
-        title={t.myProfile}
-      />
+    <div className="page-container stack-gap-lg pb-32">
+      <PageHeader title={t.myProfile} />
 
-      {/* Avatar + Name Card */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card flex items-center gap-6 p-6 rounded-3xl"
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        className="stack-gap-lg"
       >
-        <div className="relative group shrink-0">
-          <div className="h-20 w-20 rounded-full border-2 border-border/40 bg-muted shadow-sm">
-            <PixelAvatar avatar={currentUser.avatar} />
-          </div>
-          <Dialog open={isAvatarEditorOpen} onOpenChange={setIsAvatarEditorOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" className="absolute -bottom-2 -right-2 h-7 w-7 rounded-xl p-0 shadow-md transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                <Palette className="h-3.5 w-3.5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{t.customizeAvatarTitle}</DialogTitle>
-                <DialogDescription>{t.customizeAvatarDesc}</DialogDescription>
-              </DialogHeader>
-              <div className="py-2"><AvatarEditor value={avatarInEditor} onChange={setAvatarInEditor} /></div>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setIsAvatarEditorOpen(false)}>{t.cancel}</Button>
-                <Button onClick={handleAvatarSave} disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} {t.save}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <div className="min-w-0">
-          <p className="text-xl font-bold">{currentUser.displayName}</p>
-          <p className="text-sm text-muted-foreground">{currentUser.email}</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">{t.profileNameChangeAdminOnly}</p>
-        </div>
-      </motion.div>
+        {activeTab === 'profile' && (
+          <>
+            <ProfileIdentityCard
+              user={currentUser}
+              avatarInEditor={avatarInEditor}
+              isAvatarEditorOpen={isAvatarEditorOpen}
+              isSaving={isSaving}
+              onAvatarEditorOpenChange={setIsAvatarEditorOpen}
+              onAvatarInEditorChange={setAvatarInEditor}
+              onAvatarSave={handleAvatarSave}
+              labels={{
+                customizeAvatarTitle: t.customizeAvatarTitle,
+                customizeAvatarDesc: t.customizeAvatarDesc,
+                editAvatar: t.editAvatar,
+                profileNameChangeAdminOnly: t.profileNameChangeAdminOnly,
+                cancel: t.cancel,
+                save: t.save,
+              }}
+            />
 
-      {/* Hidden Achievements */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card p-6 rounded-3xl"
-      >
-        <HiddenAchievements
-          userId={currentUser.uid}
-          completedPassageKeys={completedPassages}
-          unlockedSecrets={currentUser.unlockedSecrets}
-          showDescriptions
-          allowHaloSelection
-          selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
-          onHaloTierSelect={handleHaloTierSelect}
-          previewAvatar={currentUser.avatar}
-        />
-      </motion.div>
+            <UnlockedHalosGrid
+              userId={currentUser.uid}
+              completedPassageKeys={completedPassages}
+              unlockedSecrets={currentUser.unlockedSecrets}
+              selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
+              onHaloTierSelect={handleHaloTierSelect}
+              previewAvatar={currentUser.avatar}
+              labels={{
+                yourHalos: t.yourHalos,
+                yourHalosDesc: t.yourHalosDesc,
+                haloEquipped: t.haloEquipped,
+                haloTapToEquip: t.haloTapToEquip,
+                noHalosYet: t.noHalosYet,
+              }}
+            />
 
-      {/* Significant Dates Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card p-6 rounded-3xl space-y-4"
-      >
-        <h2 className="text-base font-semibold">{t.significantDates}</h2>
-        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <Cake className="h-4 w-4 text-primary" />
-            <div>
-              <p className="text-sm font-medium">{t.yourBirthday}</p>
-              <p className="text-xs text-muted-foreground">
-                {birthdayEvent ? formatAppDate(parseISO(birthdayEvent.date), locale, { month: 'long', day: 'numeric' }) : t.profileBirthdayNotLinked}
-              </p>
+            <div className="glass-card app-card rounded-3xl stack-gap">
+              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.significantDates}</h2>
+              <div className="glass-thin flex items-center justify-between app-card-sm rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <Cake className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.yourBirthday}</p>
+                    <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">
+                      {birthdayEvent ? formatAppDate(parseISO(birthdayEvent.date), locale, { month: 'long', day: 'numeric' }) : t.profileBirthdayNotLinked}
+                    </p>
+                  </div>
+                </div>
+                {birthdayEvent && <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />}
+              </div>
+              {!birthdayEvent && (
+                <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground/60 px-1">{t.profileBirthdayLinkHint}</p>
+              )}
             </div>
+          </>
+        )}
+
+        {activeTab === 'rewards' && (
+          <div className="glass-card app-card rounded-3xl">
+            <HiddenAchievements
+              userId={currentUser.uid}
+              completedPassageKeys={completedPassages}
+              unlockedSecrets={currentUser.unlockedSecrets}
+              showDescriptions
+              previewAvatar={currentUser.avatar}
+            />
           </div>
-          {birthdayEvent && <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />}
-        </div>
-        {!birthdayEvent && (
-          <p className="text-xs text-muted-foreground/60 px-1">{t.profileBirthdayLinkHint}</p>
+        )}
+
+        {activeTab === 'appearance' && (
+          <div className="glass-card app-card-responsive rounded-3xl stack-gap min-w-0 overflow-hidden">
+            <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.appearance}</h2>
+            <AppearanceSettings
+              labels={{
+                colors: t.colors,
+                background: t.background,
+                scenic: t.scenic,
+                minimal: t.minimal,
+                gradient: t.gradient,
+                typography: t.typography,
+                websiteFont: t.websiteFont,
+                websiteFontSize: t.websiteFontSize,
+                bibleFont: t.bibleFont,
+                bibleFontSize: t.bibleFontSize,
+                glassEffects: t.glassEffects,
+                glassEffectsDesc: t.glassEffectsDesc,
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <>
+            <div className="glass-card app-card rounded-3xl stack-gap">
+              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.settings}</h2>
+
+              <div className="glass-thin flex flex-col gap-3 app-card-sm rounded-2xl sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Languages className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.language}</p>
+                    <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.languageDesc}</p>
+                  </div>
+                </div>
+                <Select value={preferredLanguage} onValueChange={(val) => handleLanguageChange(val as 'en' | 'ko')}>
+                  <SelectTrigger className="w-full sm:w-[7rem] rounded-xl shrink-0"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="ko">한국어</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="glass-thin flex flex-col gap-3 app-card-sm rounded-2xl sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.communityProgressTitle}</p>
+                  <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.communityProgress}</p>
+                </div>
+                <Switch id="community-progress-switch" checked={showProgress} onCheckedChange={handleProgressToggle} className="shrink-0" />
+              </div>
+
+              <div className="glass-thin app-card-sm rounded-2xl stack-gap">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.pushNotifications}</p>
+                    <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.pushNotificationsDesc}</p>
+                  </div>
+                  <div className="shrink-0 w-full sm:w-auto">{renderNotificationButton}</div>
+                </div>
+                {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
+                  <div className="stack-gap-sm">
+                    <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl" size="sm">
+                      {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
+                    </Button>
+                    <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" size="sm" className="w-full rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
+                      {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} {t.repairPushNotifications}
+                    </Button>
+                  </div>
+                )}
+                {pushSupport === 'NEEDS_PWA_INSTALL' && (
+                  <Alert variant="default">
+                    <Download className="h-4 w-4" />
+                    <AlertTitle>{t.enablePushIosHintTitle}</AlertTitle>
+                    <AlertDescription>{t.enablePushIosHintDesc}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-card app-card rounded-3xl stack-gap">
+              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.account}</h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[length:var(--app-ui-font-xs)] font-medium text-muted-foreground">User ID</p>
+                  <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground/50 break-all font-mono mt-0.5">{currentUser.uid}</p>
+                </div>
+              </div>
+              <Button onClick={handleSignOut} variant="destructive" size="sm" className="w-full rounded-xl font-semibold gap-2">
+                <LogOut className="h-4 w-4" /> {t.signOut}
+              </Button>
+            </div>
+          </>
         )}
       </motion.div>
 
-      {/* Settings Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card p-6 rounded-3xl space-y-4"
-      >
-        <h2 className="text-base font-semibold">{t.settings}</h2>
-
-        {/* Language */}
-        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <Languages className="h-4 w-4 text-primary" />
-            <div>
-              <p className="text-sm font-medium">{t.language}</p>
-              <p className="text-xs text-muted-foreground">{t.languageDesc}</p>
-            </div>
-          </div>
-          <Select value={preferredLanguage} onValueChange={(val) => handleLanguageChange(val as 'en' | 'ko')}>
-            <SelectTrigger className="w-[110px] rounded-xl h-9"><SelectValue /></SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="ko">한국어</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Community Progress Toggle */}
-        <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
-          <div className="flex-1 min-w-0 pr-4">
-            <p className="text-sm font-medium">{t.communityProgressTitle}</p>
-            <p className="text-xs text-muted-foreground">{t.communityProgress}</p>
-          </div>
-          <Switch id="community-progress-switch" checked={showProgress} onCheckedChange={handleProgressToggle} />
-        </div>
-
-        {/* Push Notifications */}
-        <div className="glass-thin p-4 rounded-2xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-4">
-              <p className="text-sm font-medium">{t.pushNotifications}</p>
-              <p className="text-xs text-muted-foreground">{t.pushNotificationsDesc}</p>
-            </div>
-            {renderNotificationButton}
-          </div>
-          {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
-            <div className="space-y-2">
-                <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl h-9 text-sm">
-                  {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
-                </Button>
-                <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" className="w-full rounded-xl h-9 text-xs text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
-                  {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} {t.repairPushNotifications}
-                </Button>
-            </div>
-          )}
-          {pushSupport === 'NEEDS_PWA_INSTALL' && (
-            <Alert variant="default">
-              <Download className="h-4 w-4" />
-              <AlertTitle>{t.enablePushIosHintTitle}</AlertTitle>
-              <AlertDescription>{t.enablePushIosHintDesc}</AlertDescription>
-            </Alert>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Account Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="glass-card p-6 rounded-3xl space-y-4"
-      >
-        <h2 className="text-base font-semibold">{t.account}</h2>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">User ID</p>
-            <p className="text-xs text-muted-foreground/50 break-all font-mono mt-0.5">{currentUser.uid}</p>
-          </div>
-        </div>
-        <Button onClick={handleSignOut} variant="destructive" className="rounded-xl h-10 text-sm font-semibold gap-2">
-          <LogOut className="h-4 w-4" /> {t.signOut}
-        </Button>
-      </motion.div>
+      <ProfileHubTabs
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        labels={{
+          profile: t.profileTabProfile,
+          rewards: t.profileTabRewards,
+          appearance: t.profileTabAppearance,
+          settings: t.profileTabSettings,
+        }}
+      />
     </div>
   );
 }

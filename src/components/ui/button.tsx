@@ -6,7 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 text-[length:var(--app-ui-font-sm)]",
   {
     variants: {
       variant: {
@@ -24,10 +24,10 @@ const buttonVariants = cva(
         premium: "glass-elevated bg-gradient-to-br from-primary/90 to-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]",
       },
       size: {
-        default: "h-11 px-5 py-2 rounded-2xl",
-        sm: "h-9 rounded-xl px-3 text-xs",
-        xs: "h-8 rounded-lg px-2 text-[10px]",
-        lg: "h-12 rounded-[1.25rem] px-8 text-base",
+        default: "h-[length:var(--app-control-height-md)] px-5 py-2 rounded-2xl",
+        sm: "h-[length:var(--app-control-height-sm)] rounded-xl px-3 text-[length:var(--app-ui-font-xs)]",
+        xs: "h-8 rounded-lg px-2 text-[length:var(--app-ui-font-xs)]",
+        lg: "h-[length:var(--app-control-height-lg)] rounded-[1.25rem] px-8 text-[length:var(--app-ui-font-base)]",
         hero: "h-16 rounded-full px-10 text-lg font-black uppercase tracking-tight italic",
         icon: "h-10 w-10 rounded-xl",
       },

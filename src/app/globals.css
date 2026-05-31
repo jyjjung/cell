@@ -64,6 +64,29 @@
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 240 6% 88%;
     --sidebar-ring: 240 6% 20%;
+
+    --route-accent: 240 6% 10%;
+
+    --app-font-family: var(--font-geist-sans), system-ui, sans-serif;
+    --app-font-size-scale: 1;
+    --app-line-height: 1.5;
+    --app-letter-spacing: 0;
+    --app-density-gap: 1;
+    --app-section-gap: calc(1.5rem * var(--app-density-gap, 1));
+    --app-inner-gap: calc(1rem * var(--app-density-gap, 1));
+    --app-stack-tight: calc(0.5rem * var(--app-density-gap, 1));
+    --app-card-padding: calc(1.5rem * var(--app-density-gap, 1));
+    --app-card-padding-sm: calc(1rem * var(--app-density-gap, 1));
+    --app-ui-font-sm: 0.875rem;
+    --app-ui-font-xs: 0.75rem;
+    --app-ui-font-base: 1rem;
+    --app-control-height-sm: 2.25rem;
+    --app-control-height-md: 2.75rem;
+    --app-control-height-lg: 3rem;
+    --bible-font-family: var(--font-literata), ui-serif, Georgia, "Times New Roman", serif;
+    --bible-font-size: 1.06rem;
+    --bible-line-height: 1.85;
+    --bible-letter-spacing: 0.01em;
   }
 
   .dark {
@@ -124,6 +147,8 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 4% 16%;
     --sidebar-ring: 240 5% 84%;
+
+    --route-accent: 0 0% 98%;
   }
 }
 
@@ -138,11 +163,15 @@
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     overscroll-behavior-y: none;
+    font-size: calc(16px * var(--app-font-size-scale, 1));
   }
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-family: var(--app-font-family, var(--font-geist-sans), system-ui, sans-serif);
+    font-size: 1rem;
+    line-height: var(--app-line-height, 1.5);
+    letter-spacing: var(--app-letter-spacing, 0);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     margin: 0;
     padding: 0;
@@ -187,6 +216,19 @@
   }
 
   /* Bible reader prose */
+  .bible-prose {
+    font-family: var(--bible-font-family, ui-serif, Georgia, "Times New Roman", serif);
+    line-height: var(--bible-line-height, 1.85);
+    letter-spacing: var(--bible-letter-spacing, 0.01em);
+  }
+
+  .bible-prose p,
+  .prose.bible-prose p,
+  .prose.bible-prose.esv-text p,
+  .prose-sm.bible-prose.esv-text p {
+    font-size: var(--bible-font-size, 1.06rem);
+  }
+
   .prose .esv-text p,
   .prose-sm .esv-text p {
     @apply mb-2 leading-relaxed;
@@ -247,7 +289,7 @@
   .glass-thin,
   .glass-input,
   .glass-nav {
-    border: 1px solid hsl(var(--border) / var(--glass-border-alpha));
+    border: 1px solid hsl(var(--border));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 180ms ease;
@@ -260,25 +302,19 @@
   .glass-thin,
   .glass-input {
     background: hsl(var(--glass-bg) / var(--glass-bg-alpha));
-    box-shadow:
-      0 16px 36px -18px hsl(var(--foreground) / var(--glass-shadow-alpha)),
-      0 2px 6px hsl(var(--foreground) / 0.08);
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
   }
 
   .glass-card:hover,
   .glass-panel:hover,
   .glass-elevated:hover {
-    border-color: hsl(var(--ring) / var(--glass-ring-alpha));
-    box-shadow:
-      0 18px 36px -16px hsl(var(--foreground) / calc(var(--glass-shadow-alpha) + 0.06)),
-      0 2px 6px hsl(var(--foreground) / 0.08);
+    border-color: hsl(var(--border));
+    box-shadow: 0 2px 6px hsl(var(--foreground) / 0.08);
   }
 
   .glass-nav {
     background: hsl(var(--glass-bg) / var(--glass-bg-alpha));
-    box-shadow:
-      0 16px 36px -18px hsl(var(--foreground) / var(--glass-shadow-alpha)),
-      0 2px 6px hsl(var(--foreground) / 0.08);
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
   }
 
   .dark .glass-card,
@@ -288,9 +324,7 @@
   .dark .glass-thin,
   .dark .glass-input {
     background: hsl(var(--glass-bg) / var(--glass-bg-alpha));
-    box-shadow:
-      0 16px 36px -18px hsl(var(--foreground) / var(--glass-shadow-alpha)),
-      0 2px 6px hsl(var(--foreground) / 0.08);
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.08);
   }
 
   /* Shared page shell for consistent page rhythm */
@@ -300,7 +334,43 @@
 
   /* Standard page content wrapper (no extra top margin — shell handles inset) */
   .page-container {
-    @apply relative mx-auto w-full max-w-5xl space-y-4 px-4 pb-24 md:px-8;
+    @apply relative mx-auto flex w-full max-w-5xl flex-col px-4 pb-24 md:px-8;
+    gap: var(--app-inner-gap, 1rem);
+  }
+
+  .stack-gap-lg {
+    @apply flex flex-col;
+    gap: var(--app-section-gap, 1.5rem);
+  }
+
+  .stack-gap {
+    @apply flex flex-col;
+    gap: var(--app-inner-gap, 1rem);
+  }
+
+  .stack-gap-sm {
+    @apply flex flex-col;
+    gap: var(--app-stack-tight, 0.5rem);
+  }
+
+  .app-card {
+    padding: var(--app-card-padding, 1.5rem);
+  }
+
+  .app-card-sm {
+    padding: var(--app-card-padding-sm, 1rem);
+  }
+
+  @media (min-width: 640px) {
+    .app-card-responsive {
+      padding: var(--app-card-padding, 1.5rem);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .app-card-responsive {
+      padding: var(--app-card-padding-sm, 1rem);
+    }
   }
 
   /* Compact Notion-like admin surfaces */
@@ -322,6 +392,28 @@
 
   .admin-table tbody td {
     @apply py-2;
+  }
+
+  /* Solid surfaces when glass is disabled */
+  html[data-glass="off"] .glass-card,
+  html[data-glass="off"] .glass-panel,
+  html[data-glass="off"] .glass-elevated,
+  html[data-glass="off"] .glass-thin,
+  html[data-glass="off"] .glass-input,
+  html[data-glass="off"] .glass-nav {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06) !important;
+  }
+
+  html[data-glass="off"] .glass-thin {
+    background: hsl(var(--muted)) !important;
+  }
+
+  html[data-glass="off"] .glass-input {
+    background: hsl(var(--background)) !important;
   }
 }
 
@@ -521,6 +613,18 @@
 }
 
 @layer utilities {
+  .text-route-accent {
+    color: hsl(var(--route-accent));
+  }
+
+  .bg-route-accent-muted {
+    background-color: hsl(var(--route-accent) / 0.2);
+  }
+
+  .bg-route-accent-soft {
+    background-color: hsl(var(--route-accent) / 0.35);
+  }
+
   /* Improve legacy hard-coded white borders in both themes */
   .border-white\/5 {
     border-color: hsl(var(--border) / 0.55) !important;
@@ -602,10 +706,8 @@
   .bg-muted\/50.backdrop-blur-sm,
   .bg-muted\/50.backdrop-blur-md,
   .bg-muted\/50.backdrop-blur-xl {
-    border-color: hsl(var(--border) / var(--glass-border-alpha)) !important;
-    box-shadow:
-      0 16px 36px -18px hsl(var(--foreground) / var(--glass-shadow-alpha)),
-      0 2px 6px hsl(var(--foreground) / 0.08) !important;
+    border-color: hsl(var(--border)) !important;
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06) !important;
   }
 
   /* Even without backdrop-blur class, keep legacy surfaces consistent */
@@ -618,11 +720,30 @@
   .bg-muted\/30,
   .bg-muted\/40,
   .bg-muted\/50 {
-    border-color: hsl(var(--border) / var(--glass-border-alpha)) !important;
-    box-shadow:
-      0 16px 36px -18px hsl(var(--foreground) / var(--glass-shadow-alpha)),
-      0 2px 6px hsl(var(--foreground) / 0.08) !important;
+    border-color: hsl(var(--border)) !important;
+    box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06) !important;
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  }
+
+  html[data-glass="off"] .backdrop-blur-sm,
+  html[data-glass="off"] .backdrop-blur-md,
+  html[data-glass="off"] .backdrop-blur-xl,
+  html[data-glass="off"] .backdrop-blur-2xl,
+  html[data-glass="off"] .backdrop-blur-3xl,
+  html[data-glass="off"] .bg-card\/30,
+  html[data-glass="off"] .bg-card\/50,
+  html[data-glass="off"] .bg-card\/60,
+  html[data-glass="off"] .bg-card\/80,
+  html[data-glass="off"] .bg-card\/95,
+  html[data-glass="off"] .bg-muted\/20,
+  html[data-glass="off"] .bg-muted\/30,
+  html[data-glass="off"] .bg-muted\/40,
+  html[data-glass="off"] .bg-muted\/50 {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: hsl(var(--card)) !important;
+    box-shadow: none !important;
+    border-color: hsl(var(--border)) !important;
   }
 }

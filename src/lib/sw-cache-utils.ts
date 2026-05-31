@@ -2,6 +2,7 @@
 export const MEDIA_CACHE_NAMES = new Set([
   'firebase-storage-media',
   'google-cloud-storage-media',
+  'wallpaper-assets',
 ]);
 
 export function isMediaCacheName(name: string): boolean {
