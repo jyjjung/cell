@@ -334,8 +334,7 @@
 
   /* Standard page content wrapper (no extra top margin — shell handles inset) */
   .page-container {
-    @apply relative mx-auto flex w-full max-w-5xl flex-col px-4 pb-24 md:px-8;
-    gap: var(--app-inner-gap, 1rem);
+    @apply relative mx-auto w-full max-w-5xl space-y-4 px-4 pb-24 md:px-8;
   }
 
   .stack-gap-lg {

@@ -37,7 +37,7 @@ type ViewState =
 
   
 export default function BibleChecklistPage() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser } = useAuth();
   useGrantSecretAchievement('bible-checklist', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
@@ -317,8 +317,8 @@ export default function BibleChecklistPage() {
 
   // ... all useMemo and useCallback hooks are defined above this point ...
 
-  if (!isMounted || loadingAuth || planLoading || (!isGuest && loadingChecklist)) {
-    return null;
+  if (!isMounted || planLoading) {
+    return <BiblePlanSkeleton />;
   }
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {

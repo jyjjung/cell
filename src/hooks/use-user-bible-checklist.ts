@@ -99,7 +99,7 @@ export function useUserBibleChecklist() {
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   // ── One-time migration: bare keys → date-scoped keys ──────────────────────
   // Legacy completedPassages stored bare displayText (e.g. "Matthew 1").
