@@ -127,7 +127,7 @@ export default function VerseDisplayDialog({
             {!isLoading && !error && !currentVerseTextOverride && verseHtml && (
               <div 
                 dangerouslySetInnerHTML={{ __html: verseHtml }} 
-                className="prose dark:prose-invert max-w-none leading-relaxed esv-text"
+                className="prose dark:prose-invert max-w-none leading-relaxed bible-prose esv-text"
               />
             )}
              {!isLoading && !error && !verseHtml && !currentVerseTextOverride && verse?.reference && (

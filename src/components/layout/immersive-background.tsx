@@ -17,7 +17,7 @@ export function ImmersiveBackground() {
     if (!mounted) return null;
 
     const isDark = resolvedTheme === 'dark';
-    const theme = getRouteTheme(pathname, isDark);
+    const theme = getRouteTheme(pathname);
 
     return (
         <div 

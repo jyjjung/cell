@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
+import { useColorPalette } from "@/contexts/color-palette-context";
+import {
+  cacheScenicWallpapersForOffline,
+  primeAllScenicWallpapers,
+  primeWallpaperUrls,
+} from "@/lib/wallpaper-cache";
 
 type LightPhase = "dawn" | "morning" | "afternoon" | "sunset";
 type DarkPhase = "thunder-clouds" | "rain" | "thunder" | "moon-clear";
@@ -82,10 +88,18 @@ const PHASE_STYLE_DARK: Record<DarkPhase, { filter: string; overlay: string; bas
   },
 };
 
+function scaleAlpha(rgba: string, scale: number): string {
+  const match = rgba.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+  if (!match) return rgba;
+  const alpha = Math.min(parseFloat(match[4]) * scale, 0.35);
+  return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})`;
+}
+
 export default function DynamicLakeWallpaper() {
   const [lightPhase, setLightPhase] = useState<LightPhase>(() => getLightPhaseByHour(new Date()));
   const [darkPhase, setDarkPhase] = useState<DarkPhase>(() => getDarkPhaseByHour(new Date()));
   const { resolvedTheme } = useTheme();
+  const { backgroundMode, overlayScale, isReady } = useColorPalette();
 
   useEffect(() => {
     const tick = () => {
@@ -99,12 +113,61 @@ export default function DynamicLakeWallpaper() {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (!isReady || backgroundMode !== "scenic") return;
+    void cacheScenicWallpapersForOffline();
+    const idleId =
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(() => primeAllScenicWallpapers(), { timeout: 8000 })
+        : window.setTimeout(() => primeAllScenicWallpapers(), 2000);
+    return () => {
+      if (typeof window.requestIdleCallback === "function") {
+        window.cancelIdleCallback(idleId as number);
+      } else {
+        window.clearTimeout(idleId as number);
+      }
+    };
+  }, [isReady, backgroundMode]);
+
   const isDark = resolvedTheme === "dark";
   const image = isDark ? DARK_IMAGES[darkPhase] : LIGHT_IMAGES[lightPhase];
-  const phaseStyle = useMemo(
-    () => (isDark ? PHASE_STYLE_DARK[darkPhase] : PHASE_STYLE_LIGHT[lightPhase]),
-    [darkPhase, lightPhase, isDark]
-  );
+
+  useEffect(() => {
+    if (!isReady || backgroundMode !== "scenic") return;
+    primeWallpaperUrls([image]);
+  }, [image, isReady, backgroundMode]);
+
+  const phaseStyle = useMemo(() => {
+    const base = isDark ? PHASE_STYLE_DARK[darkPhase] : PHASE_STYLE_LIGHT[lightPhase];
+    return {
+      filter: base.filter,
+      overlay: scaleAlpha(base.overlay, overlayScale),
+      baseVeil: scaleAlpha(base.baseVeil, overlayScale),
+    };
+  }, [darkPhase, lightPhase, isDark, overlayScale]);
+
+  if (!isReady) {
+    return <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-background" />;
+  }
+
+  if (backgroundMode === "minimal") {
+    return <div aria-hidden className="pointer-events-none fixed inset-0 z-0 bg-background" />;
+  }
+
+  if (backgroundMode === "gradient") {
+    return (
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-background">
+        <div
+          className="absolute inset-0 transition-opacity duration-[1200ms]"
+          style={{
+            background: isDark
+              ? "radial-gradient(ellipse 120% 80% at 20% 10%, hsl(var(--primary) / 0.22), transparent 55%), radial-gradient(ellipse 100% 70% at 85% 90%, hsl(var(--route-accent) / 0.16), transparent 50%), hsl(var(--background))"
+              : "radial-gradient(ellipse 120% 80% at 15% 15%, hsl(var(--primary) / 0.14), transparent 55%), radial-gradient(ellipse 100% 70% at 85% 85%, hsl(var(--route-accent) / 0.1), transparent 50%), hsl(var(--background))",
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -133,7 +196,7 @@ export default function DynamicLakeWallpaper() {
             backgroundImage:
               "radial-gradient(110% 85% at 50% 28%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 34%, rgba(0,0,0,0.18) 100%)",
             mixBlendMode: "soft-light",
-            opacity: 0.72,
+            opacity: 0.72 * overlayScale,
           }}
         />
       )}

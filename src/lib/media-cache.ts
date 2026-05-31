@@ -13,10 +13,11 @@ export const PRIMED_MAX_ENTRIES = 2500;
 
 const PRIME_CONCURRENCY = 6;
 let primeQueue: string[] = [];
-let primeInFlight = 0;
+let drainActive = false;
 
 /** LRU of recently primed URLs — bounded like the service worker media cache. */
 const primedLru = new Map<string, true>();
+const queued = new Set<string>();
 
 function markPrimed(url: string): void {
   if (primedLru.has(url)) {
@@ -37,7 +38,6 @@ export function isFirebaseStorageMediaUrl(url: string): boolean {
     const { hostname, pathname } = new URL(url);
     if (hostname === 'firebasestorage.googleapis.com') return true;
     if (hostname === 'storage.googleapis.com') {
-      // GCS direct links: /bucket.firebasestorage.app/... or legacy bucket paths
       return (
         pathname.includes('firebasestorage') ||
         pathname.includes('worshipChordSheets') ||
@@ -96,23 +96,29 @@ export async function countCachedMediaUrls(
   return { cached: results.filter(Boolean).length, total: unique.length };
 }
 
-async function drainPrimeQueue(): Promise<void> {
-  while (primeInFlight < PRIME_CONCURRENCY && primeQueue.length > 0) {
-    const url = primeQueue.shift()!;
-    primeInFlight++;
-    try {
-      if (!(await isMediaCached(url))) {
-        await fetch(url, { mode: 'cors', credentials: 'omit' });
-      }
-      markPrimed(url);
-    } catch {
-      /* best-effort */
-    } finally {
-      primeInFlight--;
+async function primeOne(url: string): Promise<void> {
+  try {
+    if (!(await isMediaCached(url))) {
+      await fetch(url, { mode: 'cors', credentials: 'omit' });
     }
+    markPrimed(url);
+  } catch {
+    /* best-effort */
+  } finally {
+    queued.delete(url);
   }
-  if (primeQueue.length > 0) {
-    void drainPrimeQueue();
+}
+
+async function drainPrimeQueue(): Promise<void> {
+  if (drainActive) return;
+  drainActive = true;
+  try {
+    while (primeQueue.length > 0) {
+      const batch = primeQueue.splice(0, PRIME_CONCURRENCY);
+      await Promise.all(batch.map((url) => primeOne(url)));
+    }
+  } finally {
+    drainActive = false;
   }
 }
 
@@ -120,8 +126,8 @@ async function drainPrimeQueue(): Promise<void> {
 export function primeMediaUrl(url: string | undefined | null): void {
   if (!url || typeof window === 'undefined') return;
   if (!isFirebaseStorageMediaUrl(url)) return;
-  if (isPrimed(url)) return;
-  markPrimed(url);
+  if (isPrimed(url) || queued.has(url)) return;
+  queued.add(url);
   primeQueue.push(url);
   void drainPrimeQueue();
 }

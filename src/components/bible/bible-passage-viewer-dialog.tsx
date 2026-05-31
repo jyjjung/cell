@@ -177,7 +177,7 @@ export default function BiblePassageViewerDialog({
             {!isLoading && !error && bibleHtml && (
               <div
                 dangerouslySetInnerHTML={{ __html: bibleHtml }}
-                className="prose prose-lg lg:prose-xl dark:prose-invert max-w-none leading-relaxed esv-text [&_p]:text-[1.06rem] lg:[&_p]:text-[1.1rem]"
+                className="prose prose-lg lg:prose-xl dark:prose-invert max-w-none leading-relaxed bible-prose esv-text"
               />
             )}
             {!isLoading && !error && !bibleHtml && currentDisplayRef && !currentDisplayRef.toLowerCase().includes("error:") && (

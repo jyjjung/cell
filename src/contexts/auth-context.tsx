@@ -87,6 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               roleIds: profileData.roleIds || [],
               showInCommunityProgress: profileData.showInCommunityProgress ?? true,
               preferredLanguage: profileData.preferredLanguage || 'en',
+              colorPalette: profileData.colorPalette,
+              backgroundMode: profileData.backgroundMode,
+              glassEnabled: profileData.glassEnabled,
+              typography: profileData.typography,
+              colorScheme: profileData.colorScheme,
               dashboard: { 
                 layouts: profileData.dashboard?.layouts || {},
                 widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }

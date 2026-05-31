@@ -2,6 +2,10 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
+import type { BackgroundMode, ColorPaletteId } from '@/lib/color-palettes';
+import type { TypographyPreferences } from '@/lib/typography-preferences';
+
+export type ColorSchemePreference = 'light' | 'dark' | 'system';
 // Layout types removed: react-grid-layout is no longer used
 type Layouts = Record<string, any>;
 
@@ -175,6 +179,11 @@ export interface AppUser extends FirebaseUser {
   avatar?: AvatarData;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
+  colorPalette?: ColorPaletteId;
+  backgroundMode?: BackgroundMode;
+  glassEnabled?: boolean;
+  typography?: TypographyPreferences;
+  colorScheme?: ColorSchemePreference;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   unlockedSecrets?: string[];
@@ -198,6 +207,11 @@ export interface UserProfileData {
   avatar?: AvatarData;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
+  colorPalette?: ColorPaletteId;
+  backgroundMode?: BackgroundMode;
+  glassEnabled?: boolean;
+  typography?: TypographyPreferences;
+  colorScheme?: ColorSchemePreference;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   unlockedSecrets?: string[];

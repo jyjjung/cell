@@ -55,6 +55,75 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.15",
+    subtitle: "Look & Profile Polish",
+    date: "Late-May 2026",
+    changes: [
+      "Profile Settings buttons and controls scale with your website font size",
+      "Appearance preferences — colors, fonts, glass, theme, and background — sync to your account",
+      "Original lake scenic wallpapers restored; backgrounds cache on device after first load",
+      "Fixed a crash when prefetching media in the background",
+    ],
+  },
+  {
+    version: "v1.3.11",
+    subtitle: "Typography & Glass Polish",
+    date: "Late-May 2026",
+    changes: [
+      "Website and Bible font size labels are clearer; website font size now scales the whole UI correctly",
+      "18 font choices (sans, serif, mono) including Geist, Literata, Merriweather, JetBrains Mono, and more",
+      "Glass mode uses clean solid borders instead of gradient-style outlines",
+    ],
+  },
+  {
+    version: "v1.3.10",
+    subtitle: "Disable Glass Option",
+    date: "Late-May 2026",
+    changes: [
+      "Turn off frosted glass effects in Profile → Look for solid card and panel backgrounds",
+      "Glass preference syncs to your account across devices",
+    ],
+  },
+  {
+    version: "v1.3.9",
+    subtitle: "Look & Typography",
+    date: "Late-May 2026",
+    changes: [
+      "Simplified color palette picker in Look — compact swatches and a segmented background control",
+      "Choose website and Bible font family (Sans, Serif, Mono) and size (S–XL) from Profile → Look",
+      "Typography preferences sync to your account and apply across the app and Bible readers",
+    ],
+  },
+  {
+    version: "v1.3.8",
+    subtitle: "Profile Tab Polish",
+    date: "Late-May 2026",
+    changes: [
+      "Profile card and avatar editor now live only on the Profile tab — other tabs stay focused",
+      "Larger avatar with a clear Edit Avatar button; tap the picture or button to customize",
+      "Unlocked halos are shown on the Profile tab so you can preview and equip them in one place",
+    ],
+  },
+  {
+    version: "v1.3.7",
+    subtitle: "Profile Bottom Tabs",
+    date: "Late-May 2026",
+    changes: [
+      "Profile is now split into four tabs — Profile, Rewards, Look, and Settings — with a bottom tab bar",
+      "Your avatar stays pinned at the top; each tab shows only its section so the page is easier to scan",
+    ],
+  },
+  {
+    version: "v1.3.6",
+    subtitle: "Color Style Options",
+    date: "Late-May 2026",
+    changes: [
+      "Choose from 16 color palettes in Profile — Monochrome, Azure, Forest, Rose, and more",
+      "Pick a background mode: Scenic lake wallpaper, Minimal solid surface, or soft Gradient",
+      "Your color and background choices sync to your account across devices",
+    ],
+  },
+  {
     version: "v1.3.5",
     subtitle: "Bible Popup Readability Tuning",
     date: "Late-May 2026",
