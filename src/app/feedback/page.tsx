@@ -55,6 +55,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.18",
+    subtitle: "Readings Widget Fix",
+    date: "Late-May 2026",
+    changes: [
+      "Pace to finish stats on My Readings no longer replay their entry animation when checklist data updates",
+    ],
+  },
+  {
     version: "v1.3.17",
     subtitle: "Speed & Bible Preferences",
     date: "Late-May 2026",

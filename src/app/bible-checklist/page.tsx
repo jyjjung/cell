@@ -35,7 +35,37 @@ type ViewState =
   | { view: 'completed-weeks-list'; weeks: WeeklyProgress[] }
   | { view: 'single-week-details'; week: WeeklyProgress };
 
-  
+function PaceStatCard({
+  title,
+  value,
+  unit,
+  description,
+}: {
+  title: string;
+  value: string | number;
+  unit?: string;
+  description?: string;
+}) {
+  return (
+    <FeedCard animate={false} className="rounded-2xl p-3">
+      <div className="mb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{title}</p>
+      </div>
+      <div>
+        <p className="text-xl font-bold leading-none tracking-tight">
+          {value}{' '}
+          {unit && <span className="ml-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{unit}</span>}
+        </p>
+        {description && (
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
+            {description}
+          </p>
+        )}
+      </div>
+    </FeedCard>
+  );
+}
+
 export default function BibleChecklistPage() {
   const { currentUser } = useAuth();
   useGrantSecretAchievement('bible-checklist', !!currentUser);
@@ -302,19 +332,6 @@ export default function BibleChecklistPage() {
     }
   };
 
-  const StatCard = ({ title, value, unit, description }: { title: string, value: string | number, unit?: string, description?: string }) => (
-    <FeedCard className="rounded-2xl p-3">
-      <div className="mb-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{title}</p>
-      </div>
-      <div>
-          <p className="text-xl font-bold leading-none tracking-tight">{value} {unit && <span className="ml-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{unit}</span>}</p>
-          {description && <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{description}</p>}
-      </div>
-    </FeedCard>
-  );
-
-
   // ... all useMemo and useCallback hooks are defined above this point ...
 
   if (!isMounted || planLoading) {
@@ -438,7 +455,7 @@ export default function BibleChecklistPage() {
                       <div className="space-y-1 pl-1">
                         <h2 className="text-section-title">Overall Progress</h2>
                       </div>
-      <FeedCard className="rounded-2xl p-4 space-y-4">
+      <FeedCard animate={false} className="rounded-2xl p-4 space-y-4">
                           <div>
                               <div className="flex items-center gap-4 mb-2">
                                   <Progress value={overallProgress.percentage} className="flex-grow h-2 bg-muted shadow-inner" />
@@ -461,9 +478,9 @@ export default function BibleChecklistPage() {
                         <div className="space-y-3">
                           <h3 className="px-1 text-xs font-semibold uppercase tracking-wider text-primary">{t.paceToFinish}</h3>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <StatCard title={t.chaptersLeft} value={paceStats.chaptersLeft} />
-                            <StatCard title={t.daysLeft} value={paceStats.daysLeft} />
-                            <StatCard title={t.avgPerDay} value={paceStats.chaptersPerDay} unit="passages" />
+                            <PaceStatCard title={t.chaptersLeft} value={paceStats.chaptersLeft} />
+                            <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} />
+                            <PaceStatCard title={t.avgPerDay} value={paceStats.chaptersPerDay} unit="passages" />
                           </div>
                         </div>
                       )}
