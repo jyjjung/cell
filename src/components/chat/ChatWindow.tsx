@@ -38,7 +38,7 @@ function formatMessageDate(date: Date) {
 }
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
-  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, toggleReaction, sendMessage, deleteMessage } = useMessages(chatId);
+  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, updateTypingStatus, toggleReaction, sendMessage, sendImageMessage, deleteMessage } = useMessages(chatId);
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const online = useOnlineStatus();
@@ -65,10 +65,14 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   const blockingLoad = loadingMessages && messages.length === 0;
 
   useEffect(() => {
-    if (chatId) {
+    if (!chatId) return;
+
+    const timeoutId = window.setTimeout(() => {
       updateSeenTimestamp();
-    }
-  }, [chatId, messages, updateSeenTimestamp]);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [chatId, messages.length, updateSeenTimestamp]);
 
   useEffect(() => {
     if (isInitialLoad.current && messages.length > 0) {
@@ -321,6 +325,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           disabled={!online}
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
+          messageActions={{ sendMessage, sendImageMessage, updateTypingStatus }}
           onOpenWorshipCreate={(type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => {
             if (type === 'song') setShowNewSong(true);
             if (type === 'setlist') setShowNewSetlist(true);

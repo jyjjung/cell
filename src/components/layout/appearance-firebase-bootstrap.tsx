@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useColorPalette } from '@/contexts/color-palette-context';
 import { useTypography } from '@/contexts/typography-context';
+import { readStoredBibleVersion } from '@/lib/bible-versions';
 
 /** Pushes local appearance prefs to Firebase when the user profile has no saved values yet. */
 export function AppearanceFirebaseBootstrap() {
@@ -22,6 +23,7 @@ export function AppearanceFirebaseBootstrap() {
     if (!currentUser.colorPalette) patch.colorPalette = paletteId;
     if (!currentUser.backgroundMode) patch.backgroundMode = backgroundMode;
     if (currentUser.glassEnabled === undefined) patch.glassEnabled = glassEnabled;
+    if (!currentUser.bibleTextVersion) patch.bibleTextVersion = readStoredBibleVersion();
 
     if (Object.keys(patch).length > 0) {
       void updateUserProfile(currentUser.uid, patch);

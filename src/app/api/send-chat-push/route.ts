@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    const { chatId, senderId: senderIdOverride, text: textOverride } = body;
+    const { chatId, messageId, senderId: senderIdOverride, text: textOverride } = body;
     if (!chatId) {
         return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
     }
@@ -194,20 +194,31 @@ export async function POST(request: NextRequest) {
         }
         const chat = { id: chatDoc.id, ...chatDoc.data() } as Chat;
 
-        const messagesQuery = chatDocRef.collection('messages').orderBy('createdAt', 'desc').limit(1);
-        const messagesSnapshot = await messagesQuery.get();
+        let targetMessage: ChatMessage | null = null;
 
-        if (messagesSnapshot.empty) {
-            return NextResponse.json({ success: true, delivered: 0, message: 'No messages in chat to notify for.' });
+        if (messageId) {
+            const messageDoc = await chatDocRef.collection('messages').doc(messageId).get();
+            if (messageDoc.exists) {
+                targetMessage = { id: messageDoc.id, ...messageDoc.data() } as ChatMessage;
+            }
         }
-        const latestMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
+
+        if (!targetMessage) {
+            const messagesQuery = chatDocRef.collection('messages').orderBy('createdAt', 'desc').limit(1);
+            const messagesSnapshot = await messagesQuery.get();
+
+            if (messagesSnapshot.empty) {
+                return NextResponse.json({ success: true, delivered: 0, message: 'No messages in chat to notify for.' });
+            }
+            targetMessage = { id: messagesSnapshot.docs[0].id, ...messagesSnapshot.docs[0].data() } as ChatMessage;
+        }
         
         // Allow callers (e.g. thread replies) to override sender/text so the notification
         // is correctly attributed instead of showing the original message author.
-        if (senderIdOverride) (latestMessage as any).senderId = senderIdOverride;
-        if (textOverride) (latestMessage as any).text = textOverride;
+        if (senderIdOverride) (targetMessage as any).senderId = senderIdOverride;
+        if (textOverride) (targetMessage as any).text = textOverride;
 
-        const result = await sendNotifications(chat, latestMessage, adminDb, adminMessaging);
+        const result = await sendNotifications(chat, targetMessage, adminDb, adminMessaging);
         return NextResponse.json({ success: true, delivered: result.success });
 
     } catch (error: any) {

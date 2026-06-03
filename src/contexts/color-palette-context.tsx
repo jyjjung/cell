@@ -57,10 +57,10 @@ function readStoredBackgroundMode(): BackgroundMode {
 export function ColorPaletteProvider({ children }: { children: ReactNode }) {
   const { resolvedTheme } = useTheme();
   const { currentUser, updateUserProfile } = useAuth();
-  const [paletteId, setPaletteIdState] = useState<ColorPaletteId>(DEFAULT_COLOR_PALETTE_ID);
-  const [backgroundMode, setBackgroundModeState] = useState<BackgroundMode>(DEFAULT_BACKGROUND_MODE);
-  const [glassEnabled, setGlassEnabledState] = useState(true);
-  const [isReady, setIsReady] = useState(false);
+  const [paletteId, setPaletteIdState] = useState<ColorPaletteId>(() => readStoredPalette());
+  const [backgroundMode, setBackgroundModeState] = useState<BackgroundMode>(() => readStoredBackgroundMode());
+  const [glassEnabled, setGlassEnabledState] = useState(() => readStoredGlassEnabled());
+  const [isReady, setIsReady] = useState(() => typeof window !== 'undefined');
 
   useEffect(() => {
     const nextPalette = currentUser?.colorPalette ?? readStoredPalette();

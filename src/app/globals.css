@@ -224,18 +224,18 @@
 
   .bible-prose p,
   .prose.bible-prose p,
-  .prose.bible-prose.esv-text p,
-  .prose-sm.bible-prose.esv-text p {
+  .prose.bible-prose.bible-text p,
+  .prose-sm.bible-prose.bible-text p {
     font-size: var(--bible-font-size, 1.06rem);
   }
 
-  .prose .esv-text p,
-  .prose-sm .esv-text p {
+  .prose .bible-text p,
+  .prose-sm .bible-text p {
     @apply mb-2 leading-relaxed;
   }
 
-  .prose .esv-text .verse-num,
-  .prose-sm .esv-text .verse-num,
+  .prose .bible-text .verse-num,
+  .prose-sm .bible-text .verse-num,
   .prose .p .v,
   .prose-sm .p .v,
   .prose .verse-num,
@@ -243,19 +243,19 @@
     @apply text-xs font-bold text-muted-foreground align-super mr-0.5;
   }
 
-  .prose .esv-text .chapter-num,
-  .prose-sm .esv-text .chapter-num,
+  .prose .bible-text .chapter-num,
+  .prose-sm .bible-text .chapter-num,
   .prose .chapter-num,
   .prose-sm .chapter-num {
     @apply font-bold text-2xl text-primary mr-1 float-left;
   }
 
-  .prose .esv-text h2,
-  .prose-sm .esv-text h2,
-  .prose .esv-text h3,
-  .prose-sm .esv-text h3,
-  .prose .esv-text h4,
-  .prose-sm .esv-text h4 {
+  .prose .bible-text h2,
+  .prose-sm .bible-text h2,
+  .prose .bible-text h3,
+  .prose-sm .bible-text h3,
+  .prose .bible-text h4,
+  .prose-sm .bible-text h4 {
     @apply text-lg font-semibold mt-4 mb-2 text-foreground;
   }
 }

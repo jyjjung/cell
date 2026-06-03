@@ -35,6 +35,26 @@ const FIREBASE_MEDIA_CACHING = [
       cacheableResponse: { statuses: [0, 200] },
     },
   },
+  {
+    urlPattern: /^https:\/\/api\.dicebear\.com\/.*/i,
+    handler: "CacheFirst",
+    options: {
+      cacheName: "dicebear-avatars",
+      expiration: { maxEntries: 512, maxAgeSeconds: ONE_YEAR_SECONDS },
+      cacheableResponse: { statuses: [0, 200] },
+    },
+  },
+  {
+    urlPattern: ({ sameOrigin, url }) =>
+      sameOrigin && url.pathname.startsWith("/api/bible"),
+    handler: "NetworkFirst",
+    options: {
+      cacheName: "bible-passage-api",
+      networkTimeoutSeconds: 4,
+      expiration: { maxEntries: 512, maxAgeSeconds: ONE_YEAR_SECONDS },
+      cacheableResponse: { statuses: [0, 200] },
+    },
+  },
 ];
 
 /** Default cross-origin rule only caches 1h — exclude our media hosts (handled above). */
@@ -48,7 +68,8 @@ function patchCrossOriginCaching(entries) {
         const host = url.hostname;
         if (
           host === "firebasestorage.googleapis.com" ||
-          host === "storage.googleapis.com"
+          host === "storage.googleapis.com" ||
+          host === "api.dicebear.com"
         ) {
           return false;
         }

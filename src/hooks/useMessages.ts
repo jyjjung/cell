@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { primeMediaUrls } from '@/lib/media-cache';
+import { mergeLatestMessageWindow } from '@/lib/chat-message-merge';
 import type { ChatMessage, Chat } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,36 @@ export function useMessages(chatId: string | null) {
   const lastDocRef = useRef<any>(null);
   const { toast } = useToast();
 
+  const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
+    if (docs.length < MESSAGES_PER_PAGE) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+    lastDocRef.current = docs[docs.length - 1] ?? null;
+    const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
+    setMessages((prev) => mergeLatestMessageWindow(latestWindow, prev));
+    setLoading(false);
+    primeMediaUrls(latestWindow.map((m) => m.imageUrl));
+  }, []);
+
+  const refreshFromServer = useCallback(async () => {
+    if (!chatId) return;
+
+    const messagesQuery = query(
+      collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION),
+      orderBy('createdAt', 'desc'),
+      limit(MESSAGES_PER_PAGE)
+    );
+
+    try {
+      const snapshot = await getDocs(messagesQuery);
+      applySnapshot(snapshot.docs);
+    } catch (error) {
+      console.error('[useMessages] Failed to refresh messages from server:', error);
+    }
+  }, [chatId, applySnapshot]);
+
   useEffect(() => {
     if (!chatId) {
       setChat(null);
@@ -53,7 +84,9 @@ export function useMessages(chatId: string | null) {
           setChat({ id: snap.id, ...snap.data() } as Chat);
         }
       },
-      () => {}
+      (error) => {
+        console.error('[useMessages] Chat doc listener error:', error);
+      }
     );
     return () => unsubscribe();
   }, [chatId]);
@@ -67,6 +100,7 @@ export function useMessages(chatId: string | null) {
 
     setLoading(true);
     setHasMore(true);
+    setMessages([]);
     lastDocRef.current = null;
 
     // Use onSnapshot to leverage Firestore's native caching automatically.
@@ -80,23 +114,42 @@ export function useMessages(chatId: string | null) {
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        if (snapshot.docs.length < MESSAGES_PER_PAGE) {
-          setHasMore(false);
-        }
-        lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-        const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-
-        setMessages(newMessages);
-        setLoading(false);
-        primeMediaUrls(newMessages.map((m) => m.imageUrl));
+        applySnapshot(snapshot.docs);
       },
-      () => {
+      (error) => {
+        console.error('[useMessages] Messages listener error:', error);
         setLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'Could not load messages',
+          description: 'Check your connection and try reopening the chat.',
+        });
       }
     );
 
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, applySnapshot, toast]);
+
+  useEffect(() => {
+    if (!chatId) return;
+
+    const handleResync = () => {
+      void refreshFromServer();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshFromServer();
+      }
+    };
+
+    window.addEventListener('chat:resync', handleResync);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('chat:resync', handleResync);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [chatId, refreshFromServer]);
 
   const loadMoreMessages = useCallback(async () => {
     if (!chatId || !hasMore || loadingMore || !lastDocRef.current) return;

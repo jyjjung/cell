@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { useChats } from "@/hooks/useChats";
@@ -21,8 +21,6 @@ import type { Chat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
 import { formatDistanceToNow } from "date-fns";
-import { db } from "@/lib/firebase";
-import { prefetchChatMessagesCache } from "@/lib/prefetch-chat-cache";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 
 export default function ChatList() {
@@ -30,7 +28,6 @@ export default function ChatList() {
   const { allUsers } = useAllUsers();
   const { currentUser, isAdmin } = useAuth();
   const online = useOnlineStatus();
-  const prefetchedIdsRef = useRef<string>('');
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
 
@@ -38,14 +35,6 @@ export default function ChatList() {
 
   const loading = loadingChats && chats.length === 0;
   const t = translations[currentUser?.preferredLanguage || 'en'];
-
-  useEffect(() => {
-    if (!online || !chats.length) return;
-    const key = chats.map((c) => c.id).sort().join(',');
-    if (key === prefetchedIdsRef.current) return;
-    prefetchedIdsRef.current = key;
-    prefetchChatMessagesCache(db, chats.map((c) => c.id));
-  }, [online, chats]);
 
   const getChatDetails = (chat: Chat) => {
     if (!currentUser) return null;

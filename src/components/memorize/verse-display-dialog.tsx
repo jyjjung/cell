@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { MemoryVerse } from '@/types';
+import { fetchPassageHtml } from '@/lib/bible-passage-cache';
+import { bibleVersionLabel } from '@/lib/bible-versions';
+import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 
 interface VerseDisplayDialogProps {
   isOpen: boolean;
@@ -23,7 +26,7 @@ export default function VerseDisplayDialog({
   const [error, setError] = useState<string | null>(null);
   const [verseHtml, setVerseHtml] = useState<string>('');
   const [currentVerseTextOverride, setCurrentVerseTextOverride] = useState<string | null>(null);
-  const [version, setVersion] = useState<'korRV' | 'engESV'>('korRV');
+  const { version, setVersion } = useBibleTextVersion();
   const [displayVersionName, setDisplayVersionName] = useState<string>('KRV');
 
   useEffect(() => {
@@ -40,18 +43,9 @@ export default function VerseDisplayDialog({
       else if (verse.reference && verse.reference.trim() !== '') {
         const fetchVerse = async () => {
           try {
-            const response = await fetch(`/api/esv?passage=${encodeURIComponent(verse.reference!)}&version=${version}`);
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || `Failed to fetch verse (status: ${response.status})`);
-            }
-            const data = await response.json();
-            if (data.html) {
-              setVerseHtml(data.html);
-              if (data.version) setDisplayVersionName(data.version);
-            } else {
-              setError('Verse content not found in API response.');
-            }
+            const { html } = await fetchPassageHtml(verse.reference!, version);
+            setVerseHtml(html);
+            setDisplayVersionName(bibleVersionLabel(version));
           } catch (err: any) {
             console.error("Error fetching Bible verse:", err);
             setError(err.message || 'An unknown error occurred while fetching the verse.');
@@ -84,18 +78,18 @@ export default function VerseDisplayDialog({
             <span className="truncate">{displayReference}</span>
             <div className="flex gap-1 ml-4 shrink-0">
               <Button 
-                variant={version === 'korRV' ? "default" : "outline"} 
+                variant={version === 'krv' ? "default" : "outline"} 
                 size="sm" 
                 className="h-7 px-2 text-xs"
-                onClick={() => setVersion('korRV')}
+                onClick={() => setVersion('krv')}
               >
                 KRV
               </Button>
               <Button 
-                variant={version === 'engESV' ? "default" : "outline"} 
-                size="sm" 
+                variant={version === 'esv' ? "default" : "outline"}
+                size="sm"
                 className="h-7 px-2 text-xs"
-                onClick={() => setVersion('engESV')}
+                onClick={() => setVersion('esv')}
               >
                 ESV
               </Button>
@@ -127,7 +121,7 @@ export default function VerseDisplayDialog({
             {!isLoading && !error && !currentVerseTextOverride && verseHtml && (
               <div 
                 dangerouslySetInnerHTML={{ __html: verseHtml }} 
-                className="prose dark:prose-invert max-w-none leading-relaxed bible-prose esv-text"
+                className="prose dark:prose-invert max-w-none leading-relaxed bible-prose bible-text"
               />
             )}
              {!isLoading && !error && !verseHtml && !currentVerseTextOverride && verse?.reference && (

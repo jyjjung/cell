@@ -4,6 +4,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import type { BackgroundMode, ColorPaletteId } from '@/lib/color-palettes';
 import type { TypographyPreferences } from '@/lib/typography-preferences';
+import type { BibleTextVersion } from '@/lib/bible-versions';
 
 export type ColorSchemePreference = 'light' | 'dark' | 'system';
 // Layout types removed: react-grid-layout is no longer used
@@ -184,6 +185,7 @@ export interface AppUser extends FirebaseUser {
   glassEnabled?: boolean;
   typography?: TypographyPreferences;
   colorScheme?: ColorSchemePreference;
+  bibleTextVersion?: BibleTextVersion;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   unlockedSecrets?: string[];
@@ -212,6 +214,7 @@ export interface UserProfileData {
   glassEnabled?: boolean;
   typography?: TypographyPreferences;
   colorScheme?: ColorSchemePreference;
+  bibleTextVersion?: BibleTextVersion;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   unlockedSecrets?: string[];

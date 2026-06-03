@@ -24,10 +24,10 @@ const buttonVariants = cva(
         premium: "glass-elevated bg-gradient-to-br from-primary/90 to-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]",
       },
       size: {
-        default: "h-[length:var(--app-control-height-md)] px-5 py-2 rounded-2xl",
-        sm: "h-[length:var(--app-control-height-sm)] rounded-xl px-3 text-[length:var(--app-ui-font-xs)]",
+        default: "h-[var(--app-control-height-md)] px-5 py-2 rounded-2xl",
+        sm: "h-[var(--app-control-height-sm)] rounded-xl px-3 text-[length:var(--app-ui-font-xs)]",
         xs: "h-8 rounded-lg px-2 text-[length:var(--app-ui-font-xs)]",
-        lg: "h-[length:var(--app-control-height-lg)] rounded-[1.25rem] px-8 text-[length:var(--app-ui-font-base)]",
+        lg: "h-[var(--app-control-height-lg)] rounded-[1.25rem] px-8 text-[length:var(--app-ui-font-base)]",
         hero: "h-16 rounded-full px-10 text-lg font-black uppercase tracking-tight italic",
         icon: "h-10 w-10 rounded-xl",
       },
