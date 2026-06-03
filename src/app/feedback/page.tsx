@@ -55,6 +55,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.17",
+    subtitle: "Speed & Bible Preferences",
+    date: "Late-May 2026",
+    changes: [
+      "Bible popup and passage viewer remember your KRV or ESV choice and sync it to your account",
+      "Chat messages resync when you return to the app; fewer duplicate listeners and missed updates",
+      "Faster first paint — the app shell loads sooner and heavy UI is deferred",
+      "Bible passages, chat history, and avatars cache more aggressively for offline use",
+    ],
+  },
+  {
     version: "v1.3.16",
     subtitle: "Readings Stability",
     date: "Late-May 2026",

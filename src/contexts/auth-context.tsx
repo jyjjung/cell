@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               glassEnabled: profileData.glassEnabled,
               typography: profileData.typography,
               colorScheme: profileData.colorScheme,
+              bibleTextVersion: profileData.bibleTextVersion,
               dashboard: { 
                 layouts: profileData.dashboard?.layouts || {},
                 widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }

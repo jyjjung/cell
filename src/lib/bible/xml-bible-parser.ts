@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import { BIBLE_BOOKS_DATA } from '../bible-data';
+import type { BibleXmlVersion } from '@/lib/bible-versions';
 
 export interface BibleVerse {
   number: number;
@@ -26,7 +27,7 @@ const parser = new XMLParser({
 export async function getLocalBiblePassage(
   bookName: string,
   chapter: number,
-  version: 'korRV' | 'engESV' = 'korRV'
+  version: BibleXmlVersion = 'korRV'
 ): Promise<BiblePassage | null> {
   try {
     let fileName = `${version}.xml`;
@@ -80,7 +81,7 @@ export async function getLocalBiblePassage(
       };
     }
 
-    // Handle ESV XML format
+    // Handle English XML format (engESV.xml)
     if (jsonObj.bible) {
       const bible = jsonObj.bible;
       const bookMeta = Object.values(BIBLE_BOOKS_DATA).find(

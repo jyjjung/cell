@@ -16,7 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from './footer';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
-import { Loader2, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { useFCMToken } from '@/hooks/use-fcm-token';
@@ -190,24 +190,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, pathname]);
   
-  // Foreground Heartbeat: Re-register token on visibility change to catch iOS rotations
+  // Foreground Heartbeat: refresh push registration and chat listeners when returning to the app
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && currentUser) {
-        console.log('[AppLayout] Foreground Heartbeat: Refreshing push registration');
-        registerToken(true); // Forced refresh
+        registerToken(true);
+        window.dispatchEvent(new CustomEvent('chat:resync'));
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [currentUser, registerToken]);
   
-  if (loadingAuth || !hasMounted) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-background px-8 text-center space-y-12">
-        <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
-      </div>
-    );
+  if (!hasMounted) {
+    return <div className="min-h-svh bg-background" aria-busy="true" />;
   }
   if (!currentUser) {
     return (

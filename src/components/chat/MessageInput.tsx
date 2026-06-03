@@ -15,13 +15,32 @@ import { useToast } from '@/hooks/use-toast';
 import type { ChatMessage } from '@/types';
 import SlashCommandSelector from './SlashCommandSelector';
 
+type MessageActions = {
+  sendMessage: (
+    text?: string,
+    imageUrl?: string,
+    replyToId?: string,
+    eventId?: string,
+    setlistId?: string,
+    rosterId?: string,
+    qtDate?: string,
+    cleaningDate?: string,
+    songId?: string,
+    songTitle?: string,
+    sheetKey?: string
+  ) => void | Promise<void>;
+  sendImageMessage: (imageUrl: string, replyToId?: string) => void;
+  updateTypingStatus?: (isTyping: boolean) => void;
+};
+
 export default function MessageInput({ 
   chatId, 
   disabled = false, 
   replyToMessage, 
   onCancelReply,
   onOpenWorshipCreate,
-  parentMessageId 
+  parentMessageId,
+  messageActions,
 }: { 
   chatId: string; 
   disabled?: boolean; 
@@ -29,13 +48,18 @@ export default function MessageInput({
   onCancelReply?: () => void;
   onOpenWorshipCreate?: (type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => void;
   parentMessageId?: string;
+  messageActions?: MessageActions;
 }) {
-  const mainChat = useMessages(parentMessageId ? null : chatId);
-  const threadChat = useThreadMessages(chatId, parentMessageId || null);
+  const useOwnHooks = !messageActions;
+  const mainChat = useMessages(!parentMessageId && useOwnHooks ? chatId : null);
+  const threadChat = useThreadMessages(chatId, parentMessageId && useOwnHooks ? parentMessageId : null);
   
-  const sendMessage = parentMessageId ? threadChat.sendMessage : mainChat.sendMessage;
-  const sendImageMessage = parentMessageId ? threadChat.sendImageMessage : mainChat.sendImageMessage;
-  const updateTypingStatus = parentMessageId ? () => {} : mainChat.updateTypingStatus;
+  const sendMessage = messageActions?.sendMessage
+    ?? (parentMessageId ? threadChat.sendMessage : mainChat.sendMessage);
+  const sendImageMessage = messageActions?.sendImageMessage
+    ?? (parentMessageId ? threadChat.sendImageMessage : mainChat.sendImageMessage);
+  const updateTypingStatus = messageActions?.updateTypingStatus
+    ?? (parentMessageId ? () => {} : mainChat.updateTypingStatus);
 
   const { currentUser } = useAuth();
   const { toast } = useToast();

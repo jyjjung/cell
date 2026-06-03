@@ -8,6 +8,9 @@ import { Loader2, ChevronLeft, ChevronRight, X, Search, Languages } from 'lucide
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 import { getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
+import { fetchPassageHtml } from '@/lib/bible-passage-cache';
+import { bibleVersionLabel } from '@/lib/bible-versions';
+import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 import { cn } from '@/lib/utils';
 
 interface MiniBibleReaderProps {
@@ -16,10 +19,10 @@ interface MiniBibleReaderProps {
 
 export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const { targetPassage } = useGlobalBibleReader();
+  const { version, setVersion } = useBibleTextVersion();
 
   const [book, setBook] = useState(targetPassage?.book || 'Genesis');
   const [chapter, setChapter] = useState(targetPassage?.chapter || 1);
-  const [version, setVersion] = useState<'korRV' | 'engESV'>('korRV');
   const [isLoading, setIsLoading] = useState(false);
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,16 +53,11 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`/api/esv?passage=${encodeURIComponent(`${b} ${c}`)}&version=${v}`, { signal });
-      const data = await resp.json();
-      if (data.html) {
-        setHtml(data.html);
-      } else {
-        setError(data.error || 'Failed to load passage');
-      }
+      const { html } = await fetchPassageHtml(`${b} ${c}`, v, signal);
+      setHtml(html);
     } catch (e: any) {
       if (e.name !== 'AbortError') {
-        setError('Connection error');
+        setError(e.message || 'Connection error');
       }
     } finally {
       setIsLoading(false);
@@ -115,10 +113,10 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
             variant="outline"
             size="sm"
             className="h-10 px-3 rounded-full shadow-sm hover:shadow-md transition-all font-bold text-xs bg-background"
-            onClick={() => setVersion(version === 'korRV' ? 'engESV' : 'korRV')}
+            onClick={() => setVersion(version === 'krv' ? 'esv' : 'krv')}
           >
             <Languages className="h-4 w-4 mr-2 text-primary" />
-            {version === 'korRV' ? 'KRV' : 'ESV'}
+            {bibleVersionLabel(version)}
           </Button>
         </div>
         <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={onClose}>
@@ -194,7 +192,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                 </div>
               ) : (
                 <div
-                  className="prose prose-lg lg:prose-xl prose-p:my-2 dark:prose-invert max-w-none bible-prose pb-12 esv-text opacity-90 transition-opacity"
+                  className="prose prose-lg lg:prose-xl prose-p:my-2 dark:prose-invert max-w-none bible-prose pb-12 bible-text opacity-90 transition-opacity"
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
               )}

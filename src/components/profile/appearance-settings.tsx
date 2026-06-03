@@ -75,7 +75,7 @@ function OptionToggle<T extends string>({
           type="button"
           onClick={() => onChange(option.id)}
           className={cn(
-            'min-h-[length:var(--app-control-height-sm)] rounded-lg px-1 py-2 text-[length:var(--app-ui-font-xs)] font-semibold leading-tight text-center transition-colors',
+            'min-h-[var(--app-control-height-sm)] rounded-lg px-1 py-2 text-[length:var(--app-ui-font-xs)] font-semibold leading-tight text-center transition-colors',
             value === option.id
               ? 'bg-primary text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground'

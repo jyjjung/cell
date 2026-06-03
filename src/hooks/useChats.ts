@@ -20,6 +20,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { getPrivateChatId } from '@/lib/chat-utils';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { prefetchChatMessagesCache } from '@/lib/prefetch-chat-cache';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -65,6 +66,7 @@ export function useChats() {
 
       setChats(chatsData);
       setLoading(false);
+      prefetchChatMessagesCache(db, chatsData.map((chat) => chat.id));
     }, (error) => {
       console.error("Error fetching user chats:", error);
       setLoading(false);

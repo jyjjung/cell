@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { primeMediaUrls } from '@/lib/media-cache';
+import { mergeLatestMessageWindow } from '@/lib/chat-message-merge';
 import type { ChatMessage, Chat } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +43,19 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const lastDocRef = useRef<any>(null);
   const { toast } = useToast();
 
+  const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
+    if (docs.length < MESSAGES_PER_PAGE) {
+      setHasMore(false);
+    } else {
+      setHasMore(true);
+    }
+    lastDocRef.current = docs[docs.length - 1] ?? null;
+    const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
+    setMessages((prev) => mergeLatestMessageWindow(latestWindow, prev));
+    setLoading(false);
+    primeMediaUrls(latestWindow.map((m) => m.imageUrl));
+  }, []);
+
   useEffect(() => {
     if (!chatId || !parentMessageId) {
       setParentMessage(null);
@@ -55,7 +69,9 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
           setParentMessage({ id: snap.id, ...snap.data() } as ChatMessage);
         }
       },
-      () => {}
+      (error) => {
+        console.error('[useThreadMessages] Parent message listener error:', error);
+      }
     );
     return () => unsubscribe();
   }, [chatId, parentMessageId]);
@@ -69,6 +85,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     setLoading(true);
     setHasMore(true);
+    setMessages([]);
     lastDocRef.current = null;
 
     const messagesQuery = query(
@@ -80,23 +97,16 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
-        if (snapshot.docs.length < MESSAGES_PER_PAGE) {
-          setHasMore(false);
-        }
-        lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-        const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-
-        setMessages(newMessages);
-        setLoading(false);
-        primeMediaUrls(newMessages.map((m) => m.imageUrl));
+        applySnapshot(snapshot.docs);
       },
-      () => {
+      (error) => {
+        console.error('[useThreadMessages] Thread listener error:', error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [chatId, parentMessageId]);
+  }, [chatId, parentMessageId, applySnapshot]);
 
   const loadMoreMessages = useCallback(async () => {
     if (!chatId || !parentMessageId || !hasMore || loadingMore || !lastDocRef.current) return;

@@ -32,7 +32,7 @@ export default function ThreadWindow({
   onClose: () => void;
   onDeleteParentMessage?: (id: string) => void;
 }) {
-  const { messages, parentMessage, loading, loadMoreMessages, hasMore, loadingMore, toggleReaction, deleteMessage } = useThreadMessages(chatId, parentMessageId);
+  const { messages, parentMessage, loading, loadMoreMessages, hasMore, loadingMore, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const listRef = useRef<HTMLDivElement>(null);
@@ -152,6 +152,7 @@ export default function ThreadWindow({
           <MessageInput 
               chatId={chatId}
               parentMessageId={parentMessageId}
+              messageActions={{ sendMessage, sendImageMessage }}
           />
       </div>
     </div>

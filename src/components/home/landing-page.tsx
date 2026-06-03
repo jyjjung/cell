@@ -22,9 +22,7 @@ export default function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
                 </motion.div>
                 
                 <motion.h1 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, type: "spring" }}
+                    initial={false}
                     className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] text-foreground select-none"
                 >
                     em. <br />

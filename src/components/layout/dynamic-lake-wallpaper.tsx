@@ -158,7 +158,7 @@ export default function DynamicLakeWallpaper() {
     return (
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-background">
         <div
-          className="absolute inset-0 transition-opacity duration-[1200ms]"
+          className="absolute inset-0 transition-opacity transition-duration-[1200ms]"
           style={{
             background: isDark
               ? "radial-gradient(ellipse 120% 80% at 20% 10%, hsl(var(--primary) / 0.22), transparent 55%), radial-gradient(ellipse 100% 70% at 85% 90%, hsl(var(--route-accent) / 0.16), transparent 50%), hsl(var(--background))"
@@ -172,7 +172,7 @@ export default function DynamicLakeWallpaper() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div
-        className="absolute inset-0 transition-all duration-[1200ms]"
+        className="absolute inset-0 transition-all transition-duration-[1200ms]"
         style={{
           backgroundImage: `url("${image}")`,
           backgroundSize: "cover",
@@ -182,16 +182,16 @@ export default function DynamicLakeWallpaper() {
         }}
       />
       <div
-        className="absolute inset-0 transition-colors duration-[1200ms]"
+        className="absolute inset-0 transition-colors transition-duration-[1200ms]"
         style={{ backgroundColor: phaseStyle.overlay }}
       />
       <div
-        className="absolute inset-0 transition-colors duration-[1200ms]"
+        className="absolute inset-0 transition-colors transition-duration-[1200ms]"
         style={{ backgroundColor: phaseStyle.baseVeil }}
       />
       {isDark && (
         <div
-          className="absolute inset-0 transition-opacity duration-[1200ms]"
+          className="absolute inset-0 transition-opacity transition-duration-[1200ms]"
           style={{
             backgroundImage:
               "radial-gradient(110% 85% at 50% 28%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 34%, rgba(0,0,0,0.18) 100%)",

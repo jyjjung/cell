@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2, BookOpenText, AlertTriangle, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parsePassageReferenceForNavigation, getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
+import { fetchPassageHtml } from '@/lib/bible-passage-cache';
+import { bibleVersionLabel } from '@/lib/bible-versions';
+import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 
 interface BiblePassageViewerDialogProps {
   isOpen: boolean;
@@ -30,7 +33,7 @@ export default function BiblePassageViewerDialog({
   const [currentBook, setCurrentBook] = useState<string | null>(null);
   const [currentChapter, setCurrentChapter] = useState<number | null>(null);
   const [currentDisplayRef, setCurrentDisplayRef] = useState<string | null>(null);
-  const [version, setVersion] = useState<'korRV' | 'engESV'>('korRV');
+  const { version, setVersion } = useBibleTextVersion();
   const [displayVersionName, setDisplayVersionName] = useState<string>('KRV');
 
   const updateCurrentPassageDetails = useCallback((ref: string | null) => {
@@ -71,20 +74,9 @@ export default function BiblePassageViewerDialog({
             return;
           }
 
-          const response = await fetch(`/api/esv?passage=${encodeURIComponent(currentDisplayRef)}&version=${version}`);
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to fetch passage (status: ${response.status})`);
-          }
-          
-          const data = await response.json();
-          if (data.html) {
-            setBibleHtml(data.html);
-            if (data.version) setDisplayVersionName(data.version);
-          } else {
-            setError('Passage content not found in API response.');
-          }
+          const { html } = await fetchPassageHtml(currentDisplayRef, version);
+          setBibleHtml(html);
+          setDisplayVersionName(bibleVersionLabel(version));
         } catch (err: any) {
           console.error("Error fetching Bible passage:", err);
           setError(err.message || 'An unknown error occurred while fetching the passage.');
@@ -141,18 +133,18 @@ export default function BiblePassageViewerDialog({
           </DialogTitle>
           <div className="flex gap-1 mt-1">
             <Button 
-              variant={version === 'korRV' ? "default" : "outline"} 
+              variant={version === 'krv' ? "default" : "outline"} 
               size="sm" 
               className="h-7 px-2 text-xs"
-              onClick={() => setVersion('korRV')}
+              onClick={() => setVersion('krv')}
             >
               KRV
             </Button>
             <Button 
-              variant={version === 'engESV' ? "default" : "outline"} 
+              variant={version === 'esv' ? "default" : "outline"} 
               size="sm" 
               className="h-7 px-2 text-xs"
-              onClick={() => setVersion('engESV')}
+              onClick={() => setVersion('esv')}
             >
               ESV
             </Button>
@@ -177,7 +169,7 @@ export default function BiblePassageViewerDialog({
             {!isLoading && !error && bibleHtml && (
               <div
                 dangerouslySetInnerHTML={{ __html: bibleHtml }}
-                className="prose prose-lg lg:prose-xl dark:prose-invert max-w-none leading-relaxed bible-prose esv-text"
+                className="prose prose-lg lg:prose-xl dark:prose-invert max-w-none leading-relaxed bible-prose bible-text"
               />
             )}
             {!isLoading && !error && !bibleHtml && currentDisplayRef && !currentDisplayRef.toLowerCase().includes("error:") && (

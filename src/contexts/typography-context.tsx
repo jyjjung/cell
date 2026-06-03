@@ -38,8 +38,8 @@ function readStoredTypography(): TypographyPreferences {
 
 export function TypographyProvider({ children }: { children: ReactNode }) {
   const { currentUser, updateUserProfile } = useAuth();
-  const [typography, setTypographyState] = useState<TypographyPreferences>(DEFAULT_TYPOGRAPHY);
-  const [isReady, setIsReady] = useState(false);
+  const [typography, setTypographyState] = useState<TypographyPreferences>(() => readStoredTypography());
+  const [isReady, setIsReady] = useState(() => typeof window !== 'undefined');
 
   useEffect(() => {
     const next = currentUser?.typography
