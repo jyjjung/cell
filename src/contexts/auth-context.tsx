@@ -67,8 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribeFromProfile();
         unsubscribeFromProfile = null;
       }
-      
-      setLoadingAuth(true);
 
       if (firebaseUser) {
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);

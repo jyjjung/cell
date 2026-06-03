@@ -55,6 +55,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.19",
+    subtitle: "Faster Desktop Load",
+    date: "Late-May 2026",
+    changes: [
+      "Home and app shell load faster on desktop — dashboard and wallpaper load after the first paint",
+      "Chat and notification listeners start only after you sign in",
+      "All appearance fonts remain available immediately when changing typography",
+      "Updated Vercel Speed Insights for more reliable performance data",
+    ],
+  },
+  {
     version: "v1.3.18",
     subtitle: "Readings Widget Fix",
     date: "Late-May 2026",
