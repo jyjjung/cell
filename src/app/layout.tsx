@@ -1,7 +1,8 @@
 
-import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import dynamic from 'next/dynamic';
 import { appFontVariableClasses } from '@/lib/app-fonts';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
@@ -17,8 +18,6 @@ import { OfflineBanner } from '@/components/layout/offline-banner';
 import { ThemePreferenceSync } from '@/components/layout/theme-preference-sync';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 
-const Analytics = dynamic(() => import('@vercel/analytics/react').then((m) => m.Analytics), { ssr: false });
-const SpeedInsights = dynamic(() => import('@vercel/speed-insights/next').then((m) => m.SpeedInsights), { ssr: false });
 const GlobalPageLoader = dynamic(() => import('@/components/layout/global-page-loader'), { ssr: false });
 const GlobalBibleReader = dynamic(
   () => import('@/components/bible/global-bible-reader').then((m) => m.GlobalBibleReader),

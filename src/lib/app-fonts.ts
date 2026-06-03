@@ -54,6 +54,7 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: 'swap',
 });
 
+/** All typography font CSS variables — applied on `<html>` at initial load. */
 export const appFontVariableClasses = [
   GeistSans.variable,
   GeistMono.variable,
