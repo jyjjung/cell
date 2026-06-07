@@ -55,6 +55,18 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.22",
+    subtitle: "Chat Photos & Performance",
+    date: "Early-June 2026",
+    changes: [
+      "Photos tab in each chat — browse shared images in a grid; add photos with a dedicated button",
+      "Thread replies also appear in the main chat with a link back to the full thread",
+      "Names show last initials everywhere (e.g. Jane D.) in chats, rosters, and widgets",
+      "Much lower Firestore usage — one shared users list, lazy slash commands, targeted summary loads, no typing writes",
+      "Full chat history caches on device for offline access",
+    ],
+  },
+  {
     version: "v1.3.21",
     subtitle: "Chat Photo Viewer",
     date: "Early-June 2026",

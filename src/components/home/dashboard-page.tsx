@@ -28,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { db } from '@/lib/firebase';
@@ -239,7 +240,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       if (!isValid(d) || isBefore(d, today)) return;
       if (!r.assignedUserIds.includes(currentUser.uid)) return;
       const dayLabel = cleaningDaysMap.get(r.dayId);
-      const names = r.assignedUserIds.map(uid => usersMap.get(uid)?.firstName).filter(Boolean).join(', ');
+      const names = r.assignedUserIds
+        .map((uid) => usersMap.get(uid))
+        .filter(Boolean)
+        .map((user) => formatUserDisplayName(user!))
+        .join(', ');
       items.push({
         id: `my-cleaning-${r.id}`,
         date: d,
@@ -456,7 +461,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     <div className="page-container max-w-4xl space-y-6 pb-32">
 
       <PageHeader
-        title={`${getGreeting(currentUser.preferredLanguage || 'en')}, ${currentUser.firstName}${currentUser.preferredLanguage === 'ko' ? '님' : ''}`}
+        title={`${getGreeting(currentUser.preferredLanguage || 'en')}, ${formatUserDisplayName(currentUser, 'Guest')}${currentUser.preferredLanguage === 'ko' ? '님' : ''}`}
       />
 
       {imminentDuties.length > 0 && (

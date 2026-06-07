@@ -1,5 +1,6 @@
 
-import type { ChatMemberInfo } from '@/types';
+import type { Chat, ChatMemberInfo, UserProfileData } from '@/types';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 /**
  * Generates a deterministic, consistent chat ID for a private (one-to-one) chat
@@ -30,4 +31,20 @@ export function getMemberFullName(memberInfo: ChatMemberInfo | null | undefined)
     }
 
     return null;
+}
+
+/** Compact chat label with last initial, e.g. "Jane D." */
+export function getMemberDisplayName(memberInfo: ChatMemberInfo | null | undefined, fallback = 'Someone'): string {
+    return formatUserDisplayName(memberInfo, fallback);
+}
+
+export function resolveChatUserName(
+  uid: string,
+  chat: Chat,
+  usersById: Map<string, UserProfileData>,
+  fallback = 'Someone',
+): string {
+  const profile = usersById.get(uid);
+  if (profile) return formatUserDisplayName(profile, fallback);
+  return getMemberDisplayName(chat.memberInfo[uid], fallback);
 }

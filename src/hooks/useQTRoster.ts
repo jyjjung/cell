@@ -10,12 +10,17 @@ import { useNotifications } from '@/hooks/use-notifications';
 
 const QT_ROSTERS_COLLECTION = 'qtRosters';
 
-export function useQTRoster() {
+export function useQTRoster(enabled = true) {
   const [roster, setRoster] = useState<QTRosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const { createNotification } = useNotifications();
 
   useEffect(() => {
+    if (!enabled) {
+      setRoster([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const q = query(collection(db, QT_ROSTERS_COLLECTION), orderBy('date', 'asc'));
 
@@ -32,7 +37,7 @@ export function useQTRoster() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [enabled]);
 
   const upsertEntry = useCallback(async (entryData: Omit<QTRosterEntry, 'id'>) => {
     const docId = entryData.date; // Use YYYY-MM-DD as the document ID

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { 
   ListTodo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useCleaningRoster } from '@/hooks/useCleaningRoster';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useCleaningDays } from '@/hooks/useCleaningDays';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
+import { useUsersById } from '@/contexts/users-context';
+import type { CleaningDay, CleaningRosterEntry } from '@/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { format } from 'date-fns';
@@ -19,28 +19,25 @@ interface CleaningSummaryProps {
 }
 
 export default function CleaningSummary({ date, isSender }: CleaningSummaryProps) {
-  const { roster } = useCleaningRoster();
-  const { allUsers } = useAllUsers();
-  const { cleaningDays } = useCleaningDays();
+  const { data: entry, loading: entryLoading } = useFirestoreDoc<CleaningRosterEntry>('cleaningRosters', date);
+  const { data: day, loading: dayLoading } = useFirestoreDoc<CleaningDay>(
+    'cleaningDays',
+    entry?.dayId ?? null,
+  );
+  const usersById = useUsersById();
   const router = useRouter();
-  
-  const entry = useMemo(() => 
-    roster.find(r => r.date === date), 
-    [roster, date]
-  );
 
-  const day = useMemo(() => 
-    cleaningDays.find(d => d.id === entry?.dayId), 
-    [cleaningDays, entry]
-  );
-
-  if (!entry) return (
-    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
+  if (entryLoading || dayLoading || !entry) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...
-    </div>
-  );
+      </div>
+    );
+  }
 
-  const assignedUsers = entry.assignedUserIds.map(uid => allUsers.find(u => u.uid === uid)).filter(Boolean);
+  const assignedUsers = entry.assignedUserIds
+    .map((uid) => usersById.get(uid))
+    .filter(Boolean);
 
   const formatDateText = (dateStr: string) => {
     try {

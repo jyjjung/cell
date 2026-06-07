@@ -8,8 +8,9 @@ import {
   Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEvents } from '@/hooks/use-events';
-import { format, parseISO, isValid } from 'date-fns';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
+import type { AppEvent } from '@/types';
+import { format } from 'date-fns';
 import Link from 'next/link';
 
 interface EventSummaryProps {
@@ -18,18 +19,15 @@ interface EventSummaryProps {
 }
 
 export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
-  const { events } = useEvents();
-  
-  const event = useMemo(() => 
-    events.find(e => e.id === eventId), 
-    [events, eventId]
-  );
+  const { data: event, loading } = useFirestoreDoc<AppEvent>('events', eventId);
 
-  if (!event) return (
-    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
+  if (loading || !event) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Event Summary...
-    </div>
-  );
+      </div>
+    );
+  }
 
   const getDayInfo = () => {
     try {

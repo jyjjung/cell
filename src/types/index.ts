@@ -311,6 +311,8 @@ export interface ChatMessage {
   sheetKey?: string;
   isDeleted?: boolean;
   deletedBy?: string;
+  /** Main-chat message mirroring a thread reply; opens thread on parent. */
+  threadParentId?: string;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

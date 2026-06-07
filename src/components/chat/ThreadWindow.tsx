@@ -3,7 +3,7 @@
 import React, { useRef, useMemo, useEffect, useCallback, useState } from 'react';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { useAuth } from '@/contexts/auth-context';
-import { useAllUsers } from '@/hooks/use-all-users';
+import { useUsersById } from '@/hooks/use-all-users';
 import { Loader2, ArrowLeft, X } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import MessageBubble from './MessageBubble';
@@ -34,9 +34,9 @@ export default function ThreadWindow({
   onClose: () => void;
   onDeleteParentMessage?: (id: string) => void;
 }) {
-  const { messages, parentMessage, loading, loadMoreMessages, hasMore, loadingMore, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
+  const { messages, parentMessage, loading, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
-  const { allUsers } = useAllUsers();
+  const usersById = useUsersById();
   const listRef = useRef<HTMLDivElement>(null);
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -62,7 +62,7 @@ export default function ThreadWindow({
       const msg = messages[i];
       const olderMsg = messages[i + 1] || parentMessage;
 
-      const senderProfile = allUsers.find(u => u.uid === msg.senderId);
+      const senderProfile = usersById.get(msg.senderId);
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
       const senderForBubble: ChatMemberInfo | null = senderProfile 
           ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
@@ -73,7 +73,8 @@ export default function ThreadWindow({
           key={msg.id} 
           message={msg} 
           chat={chat as Chat} 
-          sender={senderForBubble} 
+          sender={senderForBubble}
+          usersById={usersById}
           toggleReaction={toggleReaction} 
           onDelete={deleteMessage}
           onOpenImage={setOpenImageUrl}
@@ -94,9 +95,9 @@ export default function ThreadWindow({
       }
     }
     return content;
-  }, [messages, chat, allUsers, toggleReaction, parentMessage]);
+  }, [messages, chat, usersById, toggleReaction, parentMessage, deleteMessage]);
 
-  const parentSenderProfile = parentMessage ? allUsers.find(u => u.uid === parentMessage.senderId) : null;
+  const parentSenderProfile = parentMessage ? usersById.get(parentMessage.senderId) : undefined;
   const parentSenderInfo = parentMessage && chat ? chat.memberInfo[parentMessage.senderId] : null;
   const parentSenderForBubble = parentSenderProfile
       ? { firstName: parentSenderProfile.firstName, lastName: parentSenderProfile.lastName, avatar: parentSenderProfile.avatar as any }
@@ -133,11 +134,12 @@ export default function ThreadWindow({
                           message={parentMessage}
                           chat={chat}
                           sender={parentSenderForBubble!}
+                          usersById={usersById}
                           toggleReaction={toggleReaction}
                           onOpenImage={setOpenImageUrl}
                           onDelete={(id) => {
                              onDeleteParentMessage?.(id);
-                             onClose(); // Close thread if parent is deleted
+                             onClose();
                           }}
                         />
                       </div>
@@ -149,15 +151,6 @@ export default function ThreadWindow({
                   </div>
                 )}
             </div>
-
-            {hasMore && (
-                <div className="text-center py-6">
-                    <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
-                        {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Load more
-                    </Button>
-                </div>
-            )}
 
             {loading && messages.length === 0 && (
                 <div className="flex justify-center p-8">

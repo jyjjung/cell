@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { format, parseISO, startOfToday, isValid, isSameDay } from 'date-fns';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
-import { Clock, Calendar, ShieldCheck, BookOpenText, Sparkles, ChevronRight, ArrowRight, Info, Users } from 'lucide-react';
 import type { AppEvent, UserProfileData } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventOccursOnDate } from '@/lib/event-occurrences';
@@ -112,7 +112,7 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
         const firstNames = e.assignedUserIds
             .map((uid: string) => usersMap.get(uid))
             .filter(Boolean)
-            .map((u: any) => u!.firstName)
+            .map((u) => formatUserDisplayName(u!))
             .join(', ');
 
         items.push({
@@ -133,7 +133,7 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
         items.push({
           id: e.id,
           date: today,
-          title: e.personName || 'QT Sharing',
+          title: e.personName ? formatNameString(e.personName, 'QT Sharing') : 'QT Sharing',
           allDay: true,
           type: 'qt',
           passage: e.passage,

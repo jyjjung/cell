@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { format, isSameDay, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { Clock, Calendar, ShieldCheck, BookOpenText, Users, Info, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventOccursOnDate, type EventOccurrenceRow } from '@/lib/event-occurrences';
@@ -50,7 +50,11 @@ export default function AgendaView({
     // Cleaning
     cleaningRoster.forEach(r => {
       if (isSameDay(parseISO(r.date), selectedDate)) {
-        const names = r.assignedUserIds.map(id => usersMap.get(id)?.firstName).filter(Boolean).join(', ');
+        const names = r.assignedUserIds
+          .map((id) => usersMap.get(id))
+          .filter(Boolean)
+          .map((user) => formatUserDisplayName(user!))
+          .join(', ');
         list.push({ ...r, date: selectedDate, type: 'cleaning', title: names || 'Church Cleaning', assignedNames: names, dayName: cleaningDaysMap.get(r.dayId) });
       }
     });
@@ -58,7 +62,7 @@ export default function AgendaView({
     // QT
     qtRoster.forEach(r => {
       if (isSameDay(parseISO(r.date), selectedDate)) {
-        list.push({ ...r, date: selectedDate, type: 'qt', label: 'QT Roster', title: r.personName || 'QT Sharing', qtTitle: r.title });
+        list.push({ ...r, date: selectedDate, type: 'qt', label: 'QT Roster', title: formatNameString(r.personName, 'QT Sharing'), qtTitle: r.title });
       }
     });
 

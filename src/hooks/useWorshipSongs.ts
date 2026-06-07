@@ -13,13 +13,13 @@ import { primeMediaUrls, STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 
 const SONGS_COLLECTION = 'worshipSongs';
 
-export function useWorshipSongs() {
+export function useWorshipSongs(enabled = true) {
   const { currentUser } = useAuth();
   const [songs, setSongs] = useState<WorshipSong[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) { setSongs([]); setLoading(false); return; }
+    if (!enabled || !currentUser) { setSongs([]); setLoading(false); return; }
     const q = query(collection(db, SONGS_COLLECTION), orderBy('title', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
@@ -31,7 +31,7 @@ export function useWorshipSongs() {
       );
     }, () => setLoading(false));
     return unsub;
-  }, [currentUser]);
+  }, [enabled, currentUser]);
 
   /** Create a new song with no chord sheets yet */
   const addSong = useCallback(async (title: string, artist?: string): Promise<string> => {

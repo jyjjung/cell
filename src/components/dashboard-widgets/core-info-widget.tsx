@@ -9,6 +9,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { translations } from '@/lib/translations';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 // Modular Components
 import { BroadcastSection } from './core-info/BroadcastSection';
@@ -72,7 +73,7 @@ export default function CoreInfoWidget() {
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30 leading-none">Perspective Session</p>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tighter leading-none text-white/95 uppercase tracking-[-0.04em]">
-            {t.hello}, {currentUser.firstName}{currentUser.preferredLanguage === 'ko' ? '님' : ''}
+            {t.hello}, {formatUserDisplayName(currentUser, 'Guest')}{currentUser.preferredLanguage === 'ko' ? '님' : ''}
           </h2>
         </div>
         <div className="h-1 w-24 bg-primary/40 rounded-full" />

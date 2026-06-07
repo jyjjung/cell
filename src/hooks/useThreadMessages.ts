@@ -13,45 +13,38 @@ import {
   doc,
   updateDoc,
   arrayUnion,
-  Timestamp,
-  startAfter,
-  getDocs,
-  getDocsFromCache,
   deleteField,
-  getDoc,
   increment
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { primeMediaUrls } from '@/lib/media-cache';
-import { mergeLatestMessageWindow } from '@/lib/chat-message-merge';
-import type { ChatMessage, Chat } from '@/types';
+import {
+  CHAT_MESSAGES_LIVE_LIMIT,
+  mergeMessageLists,
+  readAllMessagesFromDeviceCache,
+  syncAllMessagesToDeviceCache,
+  threadMessagesCacheKey,
+  threadMessagesCollection,
+} from '@/lib/chat-messages-device-cache';
+import type { ChatMessage } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
 const CHATS_COLLECTION = 'chats';
-const MESSAGES_PER_PAGE = 30; // Optimized window for lower read costs, pagination loads more
 
 export function useThreadMessages(chatId: string | null, parentMessageId: string | null) {
   const { currentUser } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [parentMessage, setParentMessage] = useState<ChatMessage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const lastDocRef = useRef<any>(null);
   const { toast } = useToast();
+  const syncAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
-    if (docs.length < MESSAGES_PER_PAGE) {
-      setHasMore(false);
-    } else {
-      setHasMore(true);
-    }
-    lastDocRef.current = docs[docs.length - 1] ?? null;
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
-    setMessages((prev) => mergeLatestMessageWindow(latestWindow, prev));
+    setMessages((prev) => mergeMessageLists(latestWindow, prev));
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
   }, []);
@@ -84,14 +77,31 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     }
 
     setLoading(true);
-    setHasMore(true);
     setMessages([]);
-    lastDocRef.current = null;
+    syncAbortRef.current.aborted = false;
+    const syncSignal = syncAbortRef.current;
+
+    const messagesCol = threadMessagesCollection(chatId, parentMessageId);
+    const cacheKey = threadMessagesCacheKey(chatId, parentMessageId);
+
+    void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
+      if (syncSignal.aborted || cached.length === 0) return;
+      setMessages((prev) => mergeMessageLists(prev, cached));
+      setLoading(false);
+      primeMediaUrls(cached.map((m) => m.imageUrl));
+    });
+
+    void syncAllMessagesToDeviceCache(messagesCol, cacheKey, (batch) => {
+      if (syncSignal.aborted) return;
+      setMessages((prev) => mergeMessageLists(prev, batch));
+      setLoading(false);
+      primeMediaUrls(batch.map((m) => m.imageUrl));
+    }, syncSignal);
 
     const messagesQuery = query(
       collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION),
       orderBy('createdAt', 'desc'),
-      limit(MESSAGES_PER_PAGE)
+      limit(CHAT_MESSAGES_LIVE_LIMIT)
     );
 
     const unsubscribe = onSnapshot(
@@ -105,50 +115,13 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      syncSignal.aborted = true;
+      unsubscribe();
+    };
   }, [chatId, parentMessageId, applySnapshot]);
 
-  const loadMoreMessages = useCallback(async () => {
-    if (!chatId || !parentMessageId || !hasMore || loadingMore || !lastDocRef.current) return;
-
-    setLoadingMore(true);
-
-    const moreMessagesQuery = query(
-      collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION),
-      orderBy('createdAt', 'desc'),
-      startAfter(lastDocRef.current),
-      limit(MESSAGES_PER_PAGE)
-    );
-
-    let snapshot;
-    try {
-      snapshot = await getDocs(moreMessagesQuery);
-    } catch {
-      try {
-        snapshot = await getDocsFromCache(moreMessagesQuery);
-      } catch {
-        setLoadingMore(false);
-        toast({
-          variant: 'destructive',
-          title: 'Could not load older messages',
-          description: 'Connect to the internet to load more.',
-        });
-        return;
-      }
-    }
-    if (snapshot.empty || snapshot.docs.length < MESSAGES_PER_PAGE) {
-      setHasMore(false);
-    }
-    lastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
-    const newMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
-
-    setMessages(prev => [...prev, ...newMessages]);
-    primeMediaUrls(newMessages.map((m) => m.imageUrl));
-    setLoadingMore(false);
-  }, [chatId, parentMessageId, hasMore, loadingMore, toast]);
-
-
-  const sendMessage = useCallback((
+  const sendMessage = useCallback(async (
     text?: string, 
     imageUrl?: string, 
     replyToId?: string,
@@ -160,7 +133,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId) return;
 
     const trimmedText = text?.trim();
-    const messageData: any = {
+    const messageData: Record<string, unknown> = {
       senderId: currentUser.uid,
       createdAt: serverTimestamp(),
       seenBy: [currentUser.uid],
@@ -174,38 +147,48 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     const parentDocRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
     const threadColRef = collection(parentDocRef, THREAD_SUBCOLLECTION);
+    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+    const mainColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
 
-    addDoc(threadColRef, messageData).then(() => {
-        // Increment reply count on parent message
-        const parentUpdate: any = {
-            replyCount: increment(1),
-            latestReplySenderId: currentUser.uid,
-        };
-        if (messageData.text) parentUpdate.latestReplyText = messageData.text;
-        if (messageData.imageUrl) parentUpdate.latestReplyImageUrl = messageData.imageUrl;
-        if (eventId) parentUpdate.latestReplyText = "📅 Event";
-        if (setlistId) parentUpdate.latestReplyText = "🎵 Setlist";
-        if (rosterId) parentUpdate.latestReplyText = "📋 Roster";
+    let lastText = trimmedText || '📷 Image';
+    if (eventId) lastText = '📅 Event';
+    if (setlistId) lastText = '🎵 Setlist';
+    if (rosterId) lastText = '📋 Roster';
 
-        updateDoc(parentDocRef, parentUpdate).catch(e => console.error("Failed to increment replyCount", e));
+    try {
+      await addDoc(threadColRef, messageData);
 
-        // Fire-and-forget push notification — pass sender/text overrides so the
-        // notification shows the thread replier's name, not the original message author.
-        const notifText = messageData.text
-            || (messageData.imageUrl ? '📷 Image' : null)
-            || (eventId ? '📅 Event' : null)
-            || (setlistId ? '🎵 Setlist' : null)
-            || (rosterId ? '📋 Roster' : null)
-            || 'Replied in thread';
-        fetch('/api/send-chat-push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatId, senderId: currentUser.uid, text: notifText }),
-        }).catch(error => console.error("Thread push notification dispatch failed:", error));
-    }).catch(error => {
-        console.error("Failed to store thread message:", error);
-    });
+      const parentUpdate: Record<string, unknown> = {
+        replyCount: increment(1),
+        latestReplySenderId: currentUser.uid,
+      };
+      if (messageData.text) parentUpdate.latestReplyText = messageData.text;
+      if (messageData.imageUrl) parentUpdate.latestReplyImageUrl = messageData.imageUrl;
+      if (eventId) parentUpdate.latestReplyText = '📅 Event';
+      if (setlistId) parentUpdate.latestReplyText = '🎵 Setlist';
+      if (rosterId) parentUpdate.latestReplyText = '📋 Roster';
 
+      await updateDoc(parentDocRef, parentUpdate);
+
+      await addDoc(mainColRef, {
+        ...messageData,
+        threadParentId: parentMessageId,
+      });
+
+      await updateDoc(chatDocRef, {
+        lastMessageText: lastText,
+        lastMessageSentAt: serverTimestamp(),
+        lastMessageSenderId: currentUser.uid,
+      });
+
+      fetch('/api/send-chat-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, senderId: currentUser.uid, text: lastText }),
+      }).catch((error) => console.error('Thread push notification dispatch failed:', error));
+    } catch (error) {
+      console.error('Failed to store thread message:', error);
+    }
   }, [currentUser, chatId, parentMessageId]);
 
   const sendImageMessage = useCallback((imageUrl: string, replyToId?: string) => {
@@ -215,29 +198,30 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!currentUser || !chatId || !parentMessageId) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
-    try {
-        const messageSnap = await getDoc(messageRef);
-        if (!messageSnap.exists()) return;
 
-        const currentReactions = messageSnap.data().reactions || {};
-        const reactors: string[] = currentReactions[emoji] || [];
+    let nextReactions: ChatMessage['reactions'] = {};
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentReactions = { ...(m.reactions || {}) };
+        const reactors: string[] = [...(currentReactions[emoji] || [])];
         const userIndex = reactors.indexOf(currentUser.uid);
-
         if (userIndex > -1) reactors.splice(userIndex, 1);
         else reactors.push(currentUser.uid);
-
         if (reactors.length > 0) currentReactions[emoji] = reactors;
         else delete currentReactions[emoji];
+        nextReactions = currentReactions;
+        return { ...m, reactions: currentReactions };
+      }),
+    );
 
-        updateDoc(messageRef, { reactions: currentReactions }).catch(error => {});
-    } catch (error) {}
+    updateDoc(messageRef, { reactions: nextReactions }).catch(() => {});
   }, [currentUser, chatId, parentMessageId]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!chatId || !parentMessageId || !currentUser) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
     try {
-      // Soft delete: preserve the message shell so a "deleted a message" note appears
       await updateDoc(messageRef, {
         isDeleted: true,
         deletedBy: currentUser.uid,
@@ -258,9 +242,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     messages, 
     parentMessage,
     loading, 
-    loadingMore,
-    hasMore,
-    loadMoreMessages,
     sendMessage, 
     sendImageMessage,
     toggleReaction,

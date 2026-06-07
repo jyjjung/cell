@@ -14,6 +14,7 @@ import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
 import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info, Clock } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -125,7 +126,7 @@ export default function UpcomingEventsWidget() {
                 const firstNames = entry.assignedUserIds
                     .map(uid => usersMap.get(uid))
                     .filter(Boolean)
-                    .map(u => u!.firstName)
+                    .map(u => formatUserDisplayName(u!))
                     .join(', ');
 
                 items.push({ 
@@ -148,7 +149,7 @@ export default function UpcomingEventsWidget() {
                     id: entry.id, 
                     date, 
                     allDay: true,
-                    title: entry.personName || "QT Sharing", 
+                    title: entry.personName ? formatNameString(entry.personName, 'QT Sharing') : 'QT Sharing', 
                     type: 'qt',
                     passage: entry.passage,
                     qtTitle: entry.title

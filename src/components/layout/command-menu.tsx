@@ -29,6 +29,7 @@ import { useChats } from "@/hooks/useChats";
 import { useAllUsers } from "@/hooks/use-all-users";
 import { translations } from "@/lib/translations";
 import { PixelAvatar } from "@/components/avatar/PixelAvatar";
+import { formatUserDisplayName } from "@/lib/formatting";
 
 interface CommandMenuProps {
   open?: boolean;
@@ -81,9 +82,9 @@ export function CommandMenu({ open: controlledOpen, onOpenChange: controlledOnOp
         const peer = peerId ? usersMap.get(peerId) : null;
         const peerInfo = peerId ? chat.memberInfo?.[peerId] : null;
         const name = peer
-          ? `${peer.firstName} ${peer.lastName || ''}`.trim()
+          ? formatUserDisplayName(peer)
           : peerInfo
-            ? `${peerInfo.firstName || ''} ${peerInfo.lastName || ''}`.trim()
+            ? formatUserDisplayName(peerInfo, 'Private Chat')
             : 'Private Chat';
         return {
           id: chat.id,

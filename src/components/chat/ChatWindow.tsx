@@ -4,11 +4,12 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/auth-context';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, Info, WifiOff } from 'lucide-react';
+import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
+import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
-import { getMemberFullName } from '@/lib/chat-utils';
+import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 
 import MessageBubble from './MessageBubble';
@@ -20,8 +21,9 @@ import GroupSettingsDialog from './GroupSettingsDialog';
 import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
-import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
+import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
+import ChatPhotoUploadButton from './ChatPhotoUploadButton';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
 import { ChatImageGallery } from './ImageLightbox';
 import { downloadChatImage } from '@/lib/chat-image-download';
@@ -40,28 +42,101 @@ function formatMessageDate(date: Date) {
 }
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
-  const { messages, chat, loading: loadingMessages, loadMoreMessages, hasMore, loadingMore, updateSeenTimestamp, updateTypingStatus, toggleReaction, sendMessage, sendImageMessage, deleteMessage } = useMessages(chatId);
+  const messageState = useMessages(chatId);
+  const { messages } = messageState;
+
+  const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string; imageUrl?: string } | null>(null);
+  const [showNewSong, setShowNewSong] = useState(false);
+  const [showNewSetlist, setShowNewSetlist] = useState(false);
+  const [showNewRoster, setShowNewRoster] = useState(false);
+  const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
+
+  const needsWorshipData = useMemo(
+    () =>
+      !!worshipViewer ||
+      showNewSong ||
+      showNewSetlist ||
+      !!addSheetSong ||
+      messages.some((m) => m.songId || m.setlistId),
+    [worshipViewer, showNewSong, showNewSetlist, addSheetSong, messages],
+  );
+
+  return (
+    <WorshipDataProvider enabled={needsWorshipData}>
+      <ChatWindowBody
+        chatId={chatId}
+        messageState={messageState}
+        worshipViewer={worshipViewer}
+        setWorshipViewer={setWorshipViewer}
+        showNewSong={showNewSong}
+        setShowNewSong={setShowNewSong}
+        showNewSetlist={showNewSetlist}
+        setShowNewSetlist={setShowNewSetlist}
+        showNewRoster={showNewRoster}
+        setShowNewRoster={setShowNewRoster}
+        addSheetSong={addSheetSong}
+        setAddSheetSong={setAddSheetSong}
+      />
+    </WorshipDataProvider>
+  );
+}
+
+function ChatWindowBody({
+  chatId,
+  messageState,
+  worshipViewer,
+  setWorshipViewer,
+  showNewSong,
+  setShowNewSong,
+  showNewSetlist,
+  setShowNewSetlist,
+  showNewRoster,
+  setShowNewRoster,
+  addSheetSong,
+  setAddSheetSong,
+}: {
+  chatId: string;
+  messageState: ReturnType<typeof useMessages>;
+  worshipViewer: { setlistId?: string; songId?: string; imageUrl?: string } | null;
+  setWorshipViewer: (v: { setlistId?: string; songId?: string; imageUrl?: string } | null) => void;
+  showNewSong: boolean;
+  setShowNewSong: (v: boolean) => void;
+  showNewSetlist: boolean;
+  setShowNewSetlist: (v: boolean) => void;
+  showNewRoster: boolean;
+  setShowNewRoster: (v: boolean) => void;
+  addSheetSong: WorshipSong | null;
+  setAddSheetSong: (v: WorshipSong | null) => void;
+}) {
+  const {
+    messages,
+    chat,
+    loading: loadingMessages,
+    updateSeenTimestamp,
+    toggleReaction,
+    sendMessage,
+    sendImageMessage,
+    deleteMessage,
+  } = messageState;
+  const worshipData = useWorshipData();
+  const setlists = worshipData?.setlists ?? [];
+  const songs = worshipData?.songs ?? [];
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
+  const usersById = useUsersById();
   const online = useOnlineStatus();
   const listRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  
-  // Worship Modal Viewer
-  const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string; imageUrl?: string } | null>(null);
+  const [chatTab, setChatTab] = useState<'messages' | 'photos'>('messages');
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
-  
-  // Worship Creation Dialogs
-  const [showNewSong, setShowNewSong] = useState(false);
-  const [showNewSetlist, setShowNewSetlist] = useState(false);
-  const [showNewRoster, setShowNewRoster] = useState(false);
-  const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
-  
-  const { setlists } = useWorshipSetlists();
-  const { songs } = useWorshipSongs();
+
+  const photoCount = useMemo(
+    () => extractChatPhotos(messages, usersById).length,
+    [messages, usersById],
+  );
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
@@ -100,7 +175,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
       if (lastReadMessage) {
         const user = allUsers.find(u => u.uid === uid);
-        const name = user?.firstName || 'Someone';
+        const name = formatUserDisplayName(user);
         if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
         if (!map[lastReadMessage.id].includes(name)) {
           map[lastReadMessage.id].push(name);
@@ -122,9 +197,9 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
       let name = 'Private Chat';
       if (peerProfile && peerProfile.firstName) {
-        name = `${peerProfile.firstName} ${peerProfile.lastName || ''}`.trim();
+        name = formatUserDisplayName(peerProfile);
       } else {
-        name = getMemberFullName(peerInfoFromChat) || 'Private Chat';
+        name = getMemberDisplayName(peerInfoFromChat, 'Private Chat');
       }
 
       return {
@@ -145,6 +220,11 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   );
 
   const openImageIndex = openImageUrl ? chatImages.indexOf(openImageUrl) : 0;
+
+  const messagesById = useMemo(
+    () => new Map(messages.map((m) => [m.id, m])),
+    [messages],
+  );
 
   const renderContent = useCallback(() => {
     const content = [];
@@ -176,14 +256,21 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           message={msg}
           chat={chat as Chat}
           sender={senderForBubble}
+          usersById={usersById}
           toggleReaction={toggleReaction}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
           onReply={() => setActiveThreadId(msg.id)}
+          onOpenThread={setActiveThreadId}
           onOpenImage={setOpenImageUrl}
           onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
           onDelete={deleteMessage}
-          parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
-          parentSenderName={msg.replyToId ? (getMemberFullName(allUsers.find(u => u.uid === messages.find(m => m.id === msg.replyToId)?.senderId) as any) || undefined) : undefined}
+          parentMessage={msg.replyToId ? messagesById.get(msg.replyToId) : undefined}
+          parentSenderName={msg.replyToId ? resolveChatUserName(
+            messagesById.get(msg.replyToId)?.senderId || '',
+            chat as Chat,
+            usersById,
+          ) : undefined}
+          threadParentMessage={msg.threadParentId ? messagesById.get(msg.threadParentId) : undefined}
           showAvatar={showAvatar}
           showName={showName}
         />
@@ -203,7 +290,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       }
     }
     return content;
-  }, [messages, chat, allUsers, toggleReaction, lastSeenNamesPerMessage]);
+  }, [messages, messagesById, chat, allUsers, usersById, toggleReaction, lastSeenNamesPerMessage]);
 
   if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
@@ -251,7 +338,35 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
         </Button>
       </header>
 
+      <div className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background/30">
+        <button
+          type="button"
+          onClick={() => setChatTab('messages')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            chatTab === 'messages'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted/30'
+          }`}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          Messages
+        </button>
+        <button
+          type="button"
+          onClick={() => setChatTab('photos')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            chatTab === 'photos'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted/30'
+          }`}
+        >
+          <Images className="h-3.5 w-3.5" />
+          Photos{photoCount > 0 ? ` (${photoCount})` : ''}
+        </button>
+      </div>
+
       <div className="flex-1 min-h-0 relative">
+        {chatTab === 'messages' ? (
         <div
           ref={listRef}
           className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar"
@@ -259,15 +374,14 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           <div className="flex flex-col-reverse gap-0.5 max-w-3xl mx-auto w-full">
             {renderContent()}
           </div>
-          {hasMore && (
-            <div className="text-center py-6">
-              <Button onClick={loadMoreMessages} variant="ghost" size="sm" disabled={loadingMore} className="rounded-full px-8 font-black text-[10px] tracking-tight opacity-40 hover:opacity-100 uppercase">
-                {loadingMore ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Load more
-              </Button>
-            </div>
-          )}
         </div>
+        ) : (
+          <ChatPhotosAlbum
+            messages={messages}
+            allUsers={allUsers}
+            onOpenImage={setOpenImageUrl}
+          />
+        )}
       </div>
 
       {/* Worship Viewer Modal logic constructed from state */}
@@ -344,12 +458,13 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
       )}
 
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
+        {chatTab === 'messages' ? (
         <MessageInput
           chatId={chatId}
           disabled={!online}
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
-          messageActions={{ sendMessage, sendImageMessage, updateTypingStatus }}
+          messageActions={{ sendMessage, sendImageMessage }}
           onOpenWorshipCreate={(type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => {
             if (type === 'song') setShowNewSong(true);
             if (type === 'setlist') setShowNewSetlist(true);
@@ -360,6 +475,13 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
             }
           }}
         />
+        ) : (
+          <ChatPhotoUploadButton
+            chatId={chatId}
+            disabled={!online}
+            sendImageMessage={sendImageMessage}
+          />
+        )}
       </div>
 
       <NewSongDialog 

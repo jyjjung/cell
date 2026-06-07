@@ -1,14 +1,12 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useThreadMessages } from '@/hooks/useThreadMessages';
-import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
+import type { ChatMessage, Chat, ChatMemberInfo, UserProfileData } from '@/types';
 import { cn, isPdfUrl } from '@/lib/utils';
-import { SmilePlus, Music, Maximize, FileText, Trash2 } from 'lucide-react';
-import { getMemberFullName } from '@/lib/chat-utils';
+import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare } from 'lucide-react';
+import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,31 +29,34 @@ interface MessageBubbleProps {
   message: ChatMessage;
   chat: Chat;
   sender: ChatMemberInfo | null;
+  usersById: Map<string, UserProfileData>;
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
   onReply?: () => void;
+  onOpenThread?: (parentMessageId: string) => void;
   onOpenImage?: (imageUrl: string) => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
+  threadParentMessage?: ChatMessage;
   onDelete?: (messageId: string) => void;
   showAvatar?: boolean;
   showName?: boolean;
 }
 
 const MessageBubble = React.memo(function MessageBubble({ 
-  message, chat, sender, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
+  message, chat, sender, usersById, toggleReaction, lastSeenNames = [], 
+  onReply, onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
+  threadParentMessage, onDelete,
   showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
-  const { allUsers } = useAllUsers();
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const isSpecialContent = !!(message.imageUrl || message.eventId || message.setlistId || message.rosterId || message.songId);
-  const senderName = getMemberFullName(sender);
+  const senderName = getMemberDisplayName(sender);
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
   const seenByNamesString = lastSeenNames.length > 0 ? lastSeenNames.join(', ') : "";
@@ -69,8 +70,7 @@ const MessageBubble = React.memo(function MessageBubble({
 
   // --- DELETED MESSAGE PLACEHOLDER (must be after all hooks) ---
   if (message.isDeleted) {
-    const deleterUser = allUsers.find(u => u.uid === message.deletedBy);
-    const deleterName = deleterUser?.firstName || senderName || 'Someone';
+    const deleterName = resolveChatUserName(message.deletedBy || message.senderId, chat, usersById, senderName || 'Someone');
     return (
       <div className="flex w-full py-1 justify-center">
         <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
@@ -125,6 +125,27 @@ const MessageBubble = React.memo(function MessageBubble({
                                 <span className="font-bold opacity-70 text-[10px] uppercase tracking-wider">{parentSenderName || 'Someone'}</span>
                                 <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
                             </div>
+                        )}
+
+                        {message.threadParentId && threadParentMessage && onOpenThread && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenThread(message.threadParentId!)}
+                            className={cn(
+                              "mb-2 w-full text-left p-2 rounded-xl text-xs border flex flex-col gap-1 transition-colors",
+                              isSender
+                                ? "border-white/20 bg-black/20 text-white/90 hover:bg-black/30"
+                                : "border-primary/20 bg-primary/5 text-foreground/90 hover:bg-primary/10",
+                            )}
+                          >
+                            <span className="flex items-center gap-1 font-bold opacity-80 text-[10px] uppercase tracking-wider">
+                              <MessagesSquare className="h-3 w-3" />
+                              Reply in thread
+                            </span>
+                            <span className="truncate opacity-70 text-[10px]">
+                              {getMemberDisplayName(chat.memberInfo[threadParentMessage.senderId])}: {threadParentMessage.text || (threadParentMessage.imageUrl ? '📸 Image' : 'Message')}
+                            </span>
+                          </button>
                         )}
 
   
@@ -259,10 +280,9 @@ const MessageBubble = React.memo(function MessageBubble({
                   {reactionEntries.length > 0 && (
                       <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
                           {reactionEntries.map(([emoji, uids]) => {
-                              const reactionNames = uids.map(uid => {
-                                  const user = allUsers.find(u => u.uid === uid);
-                                  return user ? (user.firstName || 'Someone') : 'Someone';
-                              }).join(', ');
+                              const reactionNames = uids.map(uid =>
+                                resolveChatUserName(uid, chat, usersById),
+                              ).join(', ');
 
                               return (
                                   <Popover key={emoji}>
@@ -371,11 +391,11 @@ const MessageBubble = React.memo(function MessageBubble({
           )}
 
           {message.replyCount ? (
-              <InlineThreadPreview 
-                  chatId={chat.id} 
-                  parentMessageId={message.id} 
-                  isSender={isSender} 
-                  onReply={onReply} 
+              <ThreadReplyBadge
+                  message={message}
+                  chat={chat}
+                  usersById={usersById}
+                  onOpenThread={onReply}
               />
           ) : null}
       </motion.div>
@@ -383,37 +403,38 @@ const MessageBubble = React.memo(function MessageBubble({
   );
 });
 
-function InlineThreadPreview({ chatId, parentMessageId, isSender, onReply }: { chatId: string, parentMessageId: string, isSender: boolean, onReply?: () => void }) {
-    const { messages } = useThreadMessages(chatId, parentMessageId);
-    const { allUsers } = useAllUsers();
+function ThreadReplyBadge({
+  message,
+  chat,
+  usersById,
+  onOpenThread,
+}: {
+  message: ChatMessage;
+  chat: Chat;
+  usersById: Map<string, UserProfileData>;
+  onOpenThread?: () => void;
+}) {
+  const preview = message.latestReplyText
+    || (message.latestReplyImageUrl ? '📸 Image' : 'Reply');
+  const replierName = message.latestReplySenderId
+    ? resolveChatUserName(message.latestReplySenderId, chat, usersById)
+    : 'Someone';
+  const count = message.replyCount ?? 0;
 
-    if (!messages || messages.length === 0) return null;
-
-    const reversedMessages = [...messages].reverse();
-
-    return (
-        <div className={cn("flex flex-col gap-0.5 w-full mt-1 mb-2", isSender ? "items-end" : "items-start")}>
-            <div className={cn("flex flex-col gap-0.5 max-w-[85%] md:max-w-[70%]", isSender ? "items-end" : "items-start")}>
-                {reversedMessages.map(reply => {
-                    const sender = allUsers.find(u => u.uid === reply.senderId);
-                    const senderName = sender?.firstName || 'Someone';
-                    return (
-                        <div key={reply.id} className={cn("px-2 py-0.5 hover:bg-foreground/5 rounded transition-colors text-foreground", isSender ? "text-right" : "text-left")}>
-                            <span className="font-bold opacity-50 uppercase tracking-tight text-[8px] mr-1.5">{senderName}</span>
-                            <span className={cn("opacity-80 text-[11px] break-words line-clamp-2", reply.isDeleted && "italic opacity-40")}>{reply.isDeleted ? 'deleted a message' : (reply.text || (reply.imageUrl ? '📸 Image' : ''))}</span>
-                        </div>
-                    );
-                })}
-            </div>
-            
-            <button 
-                onClick={onReply}
-                className={cn("text-[9px] font-bold text-primary hover:underline px-2 py-0.5 uppercase tracking-wider", isSender ? "mr-1" : "ml-1")}
-            >
-                Open thread
-            </button>
-        </div>
-    );
+  return (
+    <button
+      type="button"
+      onClick={onOpenThread}
+      className="mt-1 mb-2 px-3 py-1.5 rounded-xl border border-border/30 bg-muted/20 hover:bg-muted/40 transition-colors text-left max-w-[85%]"
+    >
+      <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+        {count} {count === 1 ? 'reply' : 'replies'}
+      </p>
+      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+        <span className="font-bold text-foreground/80">{replierName}:</span> {preview}
+      </p>
+    </button>
+  );
 }
 
 export default MessageBubble;

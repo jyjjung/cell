@@ -11,6 +11,7 @@ import { useQTRoster } from '@/hooks/useQTRoster';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { 
   format, 
   isValid, 
@@ -89,14 +90,18 @@ export function useDashboardData() {
     cleaningRoster.forEach(e => {
         const d = parseDay(e.date);
         if (isValid(d) && !isBefore(d, today)) {
-            const names = e.assignedUserIds.map(uid => usersMap.get(uid)?.firstName).filter(Boolean).join(', ');
+            const names = e.assignedUserIds
+              .map((uid) => usersMap.get(uid))
+              .filter(Boolean)
+              .map((user) => formatUserDisplayName(user!))
+              .join(', ');
             items.push({ id: e.id, date: d, title: names || "Cleaning", type: 'cleaning', assignedNames: names, dayName: cleaningDaysMap.get(e.dayId) });
         }
     });
     
     qtRoster.forEach(e => {
         const d = parseDay(e.date);
-        if (isValid(d) && !isBefore(d, today)) items.push({ id: e.id, date: d, title: e.personName || "QT", type: 'qt', passage: e.passage, qtTitle: e.title });
+        if (isValid(d) && !isBefore(d, today)) items.push({ id: e.id, date: d, title: formatNameString(e.personName, 'QT'), type: 'qt', passage: e.passage, qtTitle: e.title });
     });
     
     return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 5);

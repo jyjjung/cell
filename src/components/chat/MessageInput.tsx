@@ -30,7 +30,6 @@ type MessageActions = {
     sheetKey?: string
   ) => void | Promise<void>;
   sendImageMessage: (imageUrl: string, replyToId?: string) => void;
-  updateTypingStatus?: (isTyping: boolean) => void;
 };
 
 export default function MessageInput({ 
@@ -58,8 +57,6 @@ export default function MessageInput({
     ?? (parentMessageId ? threadChat.sendMessage : mainChat.sendMessage);
   const sendImageMessage = messageActions?.sendImageMessage
     ?? (parentMessageId ? threadChat.sendImageMessage : mainChat.sendImageMessage);
-  const updateTypingStatus = messageActions?.updateTypingStatus
-    ?? (parentMessageId ? () => {} : mainChat.updateTypingStatus);
 
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -110,7 +107,6 @@ export default function MessageInput({
     }
 
     setText('');
-    updateTypingStatus(false);
     setShowSlashCommands(false);
     if (onCancelReply) onCancelReply();
   };
@@ -304,8 +300,6 @@ export default function MessageInput({
                       setTriggerIndex(null);
                   }
               }}
-              onFocus={() => !disabled && !isUploading && updateTypingStatus(true)}
-              onBlur={() => updateTypingStatus(false)}
               onKeyDown={handleKeyDown}
               style={{ fontSize: '16px' }}
               className="flex-1 border-none bg-transparent py-1.5 text-foreground outline-none placeholder:text-muted-foreground"

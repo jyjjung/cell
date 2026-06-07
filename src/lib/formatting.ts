@@ -48,3 +48,39 @@ const STATUS_LABELS: Record<string, Record<AppLocale, string>> = {
 export function getStatusLabel(status: string, locale: AppLocale = 'en'): string {
   return STATUS_LABELS[status]?.[locale] ?? STATUS_LABELS.pending[locale];
 }
+
+type NameLike = {
+  firstName?: string | null;
+  lastName?: string | null;
+} | null | undefined;
+
+/** Compact label: "Jane D." when last name exists, otherwise first name only. */
+export function formatUserDisplayName(person: NameLike, fallback = 'Someone'): string {
+  if (!person?.firstName?.trim()) return fallback;
+  const first = person.firstName.trim();
+  const last = person.lastName?.trim();
+  if (!last) return first;
+  const initial = last[0]?.toUpperCase();
+  return initial ? `${first} ${initial}.` : first;
+}
+
+/** Parse a full name string into "First L." format. */
+export function formatNameString(rawName: string | null | undefined, fallback = ''): string {
+  if (!rawName?.trim()) return fallback;
+  const parts = rawName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return fallback;
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
+  return lastInitial ? `${first} ${lastInitial}.` : first;
+}
+
+export function formatUserListDisplayNames(
+  people: Array<NameLike>,
+  separator = ', ',
+): string {
+  return people
+    .map((person) => formatUserDisplayName(person, ''))
+    .filter(Boolean)
+    .join(separator);
+}

@@ -5,6 +5,7 @@ import { Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { motion } from 'framer-motion';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 interface ActiveCirclesProps {
   recentChats: any[];
@@ -39,7 +40,7 @@ export const ActiveCircles = React.memo(({ recentChats, currentUser, usersMap, t
             recentChats.map((c, i) => {
               const peerId = c.members.find((id: string) => id !== currentUser.uid);
               const peer = peerId ? usersMap.get(peerId) : null;
-              const name = c.type === 'group' ? c.name : (peer?.firstName ? `${peer.firstName} ${peer.lastName}` : 'Circle');
+              const name = c.type === 'group' ? c.name : formatUserDisplayName(peer, 'Circle');
               
               return (
                 <motion.button 
