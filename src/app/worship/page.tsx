@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
 import { cn } from '@/lib/utils';
 import { formatNameString } from '@/lib/formatting';
-import { formatNameString } from '@/lib/formatting';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
