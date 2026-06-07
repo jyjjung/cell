@@ -7,12 +7,11 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import type { ChatMessage, Chat, ChatMemberInfo } from '@/types';
 import { cn, isPdfUrl } from '@/lib/utils';
-import { SmilePlus, Download, Music, Maximize, FileText, Trash2 } from 'lucide-react';
+import { SmilePlus, Music, Maximize, FileText, Trash2 } from 'lucide-react';
 import { getMemberFullName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ImageLightbox } from './ImageLightbox';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,7 @@ interface MessageBubbleProps {
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
   onReply?: () => void;
+  onOpenImage?: (imageUrl: string) => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
   parentSenderName?: string;
@@ -45,7 +45,7 @@ interface MessageBubbleProps {
 
 const MessageBubble = React.memo(function MessageBubble({ 
   message, chat, sender, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
+  onReply, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName, onDelete,
   showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
@@ -79,21 +79,6 @@ const MessageBubble = React.memo(function MessageBubble({
       </div>
     );
   }
-
-  const handleDownload = async (url: string) => {
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `msg-img-${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-    } catch (e) {
-      window.open(url, '_blank');
-    }
-  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -144,14 +129,10 @@ const MessageBubble = React.memo(function MessageBubble({
 
   
                         {message.imageUrl && !message.songId && (
-                          <ImageLightbox
-                            imageUrl={message.imageUrl}
-                            altText={t.image || "Image"}
-                            onDownload={handleDownload}
-                            trigger={
                               <motion.div 
                                   whileHover={{ scale: 1.01 }}
                                   whileTap={{ scale: 0.98 }}
+                                  onClick={() => onOpenImage?.(message.imageUrl!)}
                                   className={cn(
                                     "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all",
                                     !message.text && "mb-0"
@@ -165,8 +146,6 @@ const MessageBubble = React.memo(function MessageBubble({
                                   loading="lazy"
                                 />
                               </motion.div>
-                            }
-                          />
                         )}
 
                         {message.songId && message.imageUrl && (

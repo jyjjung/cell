@@ -23,6 +23,8 @@ import { translations } from '@/lib/translations';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
+import { ChatImageGallery } from './ImageLightbox';
+import { downloadChatImage } from '@/lib/chat-image-download';
 import { 
   NewSongDialog, 
   NewSetlistDialog, 
@@ -50,6 +52,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
   
   // Worship Modal Viewer
   const [worshipViewer, setWorshipViewer] = useState<{ setlistId?: string; songId?: string; imageUrl?: string } | null>(null);
+  const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   
   // Worship Creation Dialogs
   const [showNewSong, setShowNewSong] = useState(false);
@@ -132,6 +135,17 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     return { name: chat.name, avatar: null };
   }, [chat, currentUser, allUsers]);
 
+  const chatImages = useMemo(
+    () =>
+      [...messages]
+        .filter((m) => m.imageUrl && !m.songId && !m.isDeleted)
+        .reverse()
+        .map((m) => m.imageUrl!),
+    [messages],
+  );
+
+  const openImageIndex = openImageUrl ? chatImages.indexOf(openImageUrl) : 0;
+
   const renderContent = useCallback(() => {
     const content = [];
     for (let i = 0; i < messages.length; i++) {
@@ -165,6 +179,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           toggleReaction={toggleReaction}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
           onReply={() => setActiveThreadId(msg.id)}
+          onOpenImage={setOpenImageUrl}
           onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
           onDelete={deleteMessage}
           parentMessage={msg.replyToId ? messages.find(m => m.id === msg.replyToId) : undefined}
@@ -318,6 +333,15 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
           />
         );
       })()}
+
+      {openImageUrl && chatImages.length > 0 && (
+        <ChatImageGallery
+          images={chatImages}
+          initialIndex={Math.max(0, openImageIndex)}
+          onClose={() => setOpenImageUrl(null)}
+          onDownload={downloadChatImage}
+        />
+      )}
 
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
         <MessageInput

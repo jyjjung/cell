@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useMemo, useEffect, useCallback } from 'react';
+import React, { useRef, useMemo, useEffect, useCallback, useState } from 'react';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -8,6 +8,8 @@ import { Loader2, ArrowLeft, X } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import { ChatImageGallery } from './ImageLightbox';
+import { downloadChatImage } from '@/lib/chat-image-download';
 import { Button } from '@/components/ui/button';
 import { Chat, ChatMemberInfo } from '@/types';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
@@ -36,7 +38,23 @@ export default function ThreadWindow({
   const { currentUser } = useAuth();
   const { allUsers } = useAllUsers();
   const listRef = useRef<HTMLDivElement>(null);
+  const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const threadImages = useMemo(() => {
+    const items = [...messages]
+      .filter((m) => m.imageUrl && !m.songId && !m.isDeleted)
+      .reverse()
+      .map((m) => m.imageUrl!);
+    if (parentMessage?.imageUrl && !parentMessage.songId && !parentMessage.isDeleted) {
+      if (!items.includes(parentMessage.imageUrl)) {
+        items.unshift(parentMessage.imageUrl);
+      }
+    }
+    return items;
+  }, [messages, parentMessage]);
+
+  const openImageIndex = openImageUrl ? threadImages.indexOf(openImageUrl) : 0;
 
   const renderContent = useCallback(() => {
     const content = [];
@@ -58,6 +76,7 @@ export default function ThreadWindow({
           sender={senderForBubble} 
           toggleReaction={toggleReaction} 
           onDelete={deleteMessage}
+          onOpenImage={setOpenImageUrl}
         />
       );
 
@@ -115,6 +134,7 @@ export default function ThreadWindow({
                           chat={chat}
                           sender={parentSenderForBubble!}
                           toggleReaction={toggleReaction}
+                          onOpenImage={setOpenImageUrl}
                           onDelete={(id) => {
                              onDeleteParentMessage?.(id);
                              onClose(); // Close thread if parent is deleted
@@ -155,6 +175,15 @@ export default function ThreadWindow({
               messageActions={{ sendMessage, sendImageMessage }}
           />
       </div>
+
+      {openImageUrl && threadImages.length > 0 && (
+        <ChatImageGallery
+          images={threadImages}
+          initialIndex={Math.max(0, openImageIndex)}
+          onClose={() => setOpenImageUrl(null)}
+          onDownload={downloadChatImage}
+        />
+      )}
     </div>
   );
 }
