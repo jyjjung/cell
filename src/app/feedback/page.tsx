@@ -55,6 +55,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.21",
+    subtitle: "Chat Photo Viewer",
+    date: "Early-June 2026",
+    changes: [
+      "Tap a chat photo to browse all images in the conversation — swipe left or right to move between them",
+      "Fullscreen viewer toolbar stays visible and respects the notch on mobile",
+      "Zoom out is capped at fit-to-screen so photos never shrink with empty bars on the sides",
+    ],
+  },
+  {
     version: "v1.3.20",
     subtitle: "Multi-Photo Chat",
     date: "Early-June 2026",
