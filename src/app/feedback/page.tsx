@@ -55,6 +55,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.23",
+    subtitle: "Smoother Chat Scrolling",
+    date: "Early-June 2026",
+    changes: [
+      "Chat scrolling feels smoother — fewer unnecessary re-renders and lighter message bubbles",
+      "YouTube links show a thumbnail until you tap to play, instead of loading embeds for every message",
+      "Reaction and reply controls stay visible on every message",
+    ],
+  },
+  {
     version: "v1.3.22",
     subtitle: "Chat Photos & Performance",
     date: "Early-June 2026",

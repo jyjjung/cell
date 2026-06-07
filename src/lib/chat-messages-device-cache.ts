@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage } from '@/types';
-import { mergeMessageLists } from '@/lib/chat-message-merge';
+import { mergeMessageLists, mergeMessageListsStable } from '@/lib/chat-message-merge';
 
 /** Real-time listener window — small to limit ongoing read costs. */
 export const CHAT_MESSAGES_LIVE_LIMIT = 75;
@@ -174,4 +174,4 @@ export async function syncAllMessagesToDeviceCache(
   }
 }
 
-export { mergeMessageLists };
+export { mergeMessageLists, mergeMessageListsStable };

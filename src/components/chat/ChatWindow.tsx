@@ -8,18 +8,16 @@ import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
-import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
+import { getMemberDisplayName } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
-import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 
-import MessageBubble from './MessageBubble';
+import ChatMessageList from './ChatMessageList';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import { Button } from '../ui/button';
 import GroupSettingsDialog from './GroupSettingsDialog';
 import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
-import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
 import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
 import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
@@ -33,13 +31,6 @@ import {
   NewRosterDialog, 
   AddChordSheetDialog 
 } from '../worship/WorshipDialogs';
-
-function formatMessageDate(date: Date) {
-  if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
-  if (isYesterday(date)) return `Yesterday ${format(date, 'HH:mm')}`;
-  if (differenceInDays(new Date(), date) < 7) return format(date, 'EEEE HH:mm');
-  return format(date, 'MMM d, HH:mm');
-}
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
   const messageState = useMessages(chatId);
@@ -125,7 +116,6 @@ function ChatWindowBody({
   const { allUsers } = useAllUsers();
   const usersById = useUsersById();
   const online = useOnlineStatus();
-  const listRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
@@ -174,8 +164,7 @@ function ChatWindowBody({
       );
 
       if (lastReadMessage) {
-        const user = allUsers.find(u => u.uid === uid);
-        const name = formatUserDisplayName(user);
+        const name = formatUserDisplayName(usersById.get(uid));
         if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
         if (!map[lastReadMessage.id].includes(name)) {
           map[lastReadMessage.id].push(name);
@@ -184,7 +173,7 @@ function ChatWindowBody({
     });
 
     return map;
-  }, [chat?.memberSeen, chat?.members, messages, allUsers, currentUser]);
+  }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser]);
 
   const chatDetails = useMemo(() => {
     if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null };
@@ -226,71 +215,38 @@ function ChatWindowBody({
     [messages],
   );
 
-  const renderContent = useCallback(() => {
-    const content = [];
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      const olderMsg = messages[i + 1];
-      const newerMsg = messages[i - 1];
+  const handleOpenThread = useCallback((messageId: string) => {
+    setActiveThreadId(messageId);
+  }, []);
 
-      // Apple Messages logic for blocks:
-      // showName (top of group) if older message is different sender OR > 1hr gap
-      const showName = !olderMsg || 
-                       olderMsg.senderId !== msg.senderId || 
-                       (msg.createdAt && olderMsg.createdAt && (msg.createdAt.toMillis() - olderMsg.createdAt.toMillis() > 3600000));
+  const handleOpenImage = useCallback((imageUrl: string) => {
+    setOpenImageUrl(imageUrl);
+  }, []);
 
-      // showAvatar (bottom of group) if newer message is different sender OR > 1hr gap
-      const showAvatar = !newerMsg || 
-                         newerMsg.senderId !== msg.senderId || 
-                         (newerMsg.createdAt && msg.createdAt && (newerMsg.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
+  const handleOpenWorshipViewer = useCallback((
+    setlistId?: string,
+    songId?: string,
+    imageUrl?: string,
+  ) => {
+    setWorshipViewer({ setlistId, songId, imageUrl });
+  }, []);
 
-      const senderProfile = allUsers.find(u => u.uid === msg.senderId);
-      const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
-      const senderForBubble: ChatMemberInfo | null = senderProfile
-        ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
-        : senderInfoFromChat;
-
-      content.push(
-        <MessageBubble
-          key={msg.id}
-          message={msg}
-          chat={chat as Chat}
-          sender={senderForBubble}
-          usersById={usersById}
-          toggleReaction={toggleReaction}
-          lastSeenNames={lastSeenNamesPerMessage[msg.id] || []}
-          onReply={() => setActiveThreadId(msg.id)}
-          onOpenThread={setActiveThreadId}
-          onOpenImage={setOpenImageUrl}
-          onOpenWorshipViewer={(setlistId, songId, imageUrl) => setWorshipViewer({ setlistId, songId, imageUrl })}
-          onDelete={deleteMessage}
-          parentMessage={msg.replyToId ? messagesById.get(msg.replyToId) : undefined}
-          parentSenderName={msg.replyToId ? resolveChatUserName(
-            messagesById.get(msg.replyToId)?.senderId || '',
-            chat as Chat,
-            usersById,
-          ) : undefined}
-          threadParentMessage={msg.threadParentId ? messagesById.get(msg.threadParentId) : undefined}
-          showAvatar={showAvatar}
-          showName={showName}
-        />
+  const sendersByUserId = useMemo(() => {
+    if (!chat) return new Map<string, ChatMemberInfo | null>();
+    const map = new Map<string, ChatMemberInfo | null>();
+    for (const msg of messages) {
+      if (map.has(msg.senderId)) continue;
+      const senderProfile = usersById.get(msg.senderId);
+      const senderInfoFromChat = chat.memberInfo[msg.senderId] ?? null;
+      map.set(
+        msg.senderId,
+        senderProfile
+          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
+          : senderInfoFromChat,
       );
-
-      if (olderMsg && msg.createdAt && olderMsg.createdAt) {
-        const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
-        if (diff > 3600000) {
-          content.push(
-            <div key={`time-${msg.id}`} className="py-3 flex justify-center w-full">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
-                {formatMessageDate(msg.createdAt.toDate())}
-              </span>
-            </div>
-          );
-        }
-      }
     }
-    return content;
-  }, [messages, messagesById, chat, allUsers, usersById, toggleReaction, lastSeenNamesPerMessage]);
+    return map;
+  }, [messages, usersById, chat]);
 
   if (blockingLoad) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
@@ -367,14 +323,19 @@ function ChatWindowBody({
 
       <div className="flex-1 min-h-0 relative">
         {chatTab === 'messages' ? (
-        <div
-          ref={listRef}
-          className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar"
-        >
-          <div className="flex flex-col-reverse gap-0.5 max-w-3xl mx-auto w-full">
-            {renderContent()}
-          </div>
-        </div>
+          <ChatMessageList
+            messages={messages}
+            chat={chat}
+            usersById={usersById}
+            sendersByUserId={sendersByUserId}
+            messagesById={messagesById}
+            lastSeenNamesPerMessage={lastSeenNamesPerMessage}
+            toggleReaction={toggleReaction}
+            deleteMessage={deleteMessage}
+            onOpenThread={handleOpenThread}
+            onOpenImage={handleOpenImage}
+            onOpenWorshipViewer={handleOpenWorshipViewer}
+          />
         ) : (
           <ChatPhotosAlbum
             messages={messages}

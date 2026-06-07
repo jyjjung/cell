@@ -1,15 +1,14 @@
 
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { ChatMessage, Chat, ChatMemberInfo, UserProfileData } from '@/types';
 import { cn, isPdfUrl } from '@/lib/utils';
 import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare } from 'lucide-react';
 import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { translations } from '@/lib/translations';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Button } from '@/components/ui/button';
@@ -32,8 +31,7 @@ interface MessageBubbleProps {
   usersById: Map<string, UserProfileData>;
   toggleReaction: (messageId: string, emoji: string) => void;
   lastSeenNames?: string[];
-  onReply?: () => void;
-  onOpenThread?: (parentMessageId: string) => void;
+  onOpenThread?: (messageId: string) => void;
   onOpenImage?: (imageUrl: string) => void;
   onOpenWorshipViewer?: (setlistId?: string, songId?: string, imageUrl?: string) => void;
   parentMessage?: ChatMessage;
@@ -44,13 +42,34 @@ interface MessageBubbleProps {
   showName?: boolean;
 }
 
-const MessageBubble = React.memo(function MessageBubble({ 
+function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubbleProps): boolean {
+  return (
+    prev.message === next.message &&
+    prev.chat === next.chat &&
+    prev.sender === next.sender &&
+    prev.usersById === next.usersById &&
+    prev.toggleReaction === next.toggleReaction &&
+    prev.lastSeenNames === next.lastSeenNames &&
+    prev.onOpenThread === next.onOpenThread &&
+    prev.onOpenImage === next.onOpenImage &&
+    prev.onOpenWorshipViewer === next.onOpenWorshipViewer &&
+    prev.parentMessage === next.parentMessage &&
+    prev.parentSenderName === next.parentSenderName &&
+    prev.threadParentMessage === next.threadParentMessage &&
+    prev.onDelete === next.onDelete &&
+    prev.showAvatar === next.showAvatar &&
+    prev.showName === next.showName
+  );
+}
+
+const MessageBubble = React.memo(function MessageBubble({
   message, chat, sender, usersById, toggleReaction, lastSeenNames = [], 
-  onReply, onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
+  onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
   threadParentMessage, onDelete,
   showAvatar = true, showName = true
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
+  const [youtubePlaying, setYoutubePlaying] = useState(false);
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -81,12 +100,7 @@ const MessageBubble = React.memo(function MessageBubble({
   }
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={cn('flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}
-      >
+      <div className={cn('chat-message-row flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}>
           <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
               {!isSender && isGroup && (
                   <div className="w-7 h-7 flex-shrink-0 mb-0.5">
@@ -100,7 +114,7 @@ const MessageBubble = React.memo(function MessageBubble({
                   </div>
               )}
               <div className={cn(
-                  "flex flex-col min-w-0 transition-all duration-300", 
+                  "flex flex-col min-w-0",
                   isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
                   isSender ? "items-end" : "items-start"
               )}>
@@ -109,12 +123,12 @@ const MessageBubble = React.memo(function MessageBubble({
                   )}
                   <div
                       className={cn(
-                      'relative rounded-[1.25rem] transition-all w-fit min-w-[40px]',
+                      'relative rounded-[1.25rem] w-fit min-w-[40px]',
                       youtubeId && "w-full sm:min-w-[300px] max-w-full",
                       !isSpecialContent && (
                           isSender
                           ? cn('bg-primary text-primary-foreground ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
-                          : cn('bg-card/80 text-foreground backdrop-blur-md mr-auto border border-border px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
+                          : cn('bg-card text-foreground mr-auto border border-border px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
                       ),
                       isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                       )}
@@ -150,12 +164,10 @@ const MessageBubble = React.memo(function MessageBubble({
 
   
                         {message.imageUrl && !message.songId && (
-                              <motion.div 
-                                  whileHover={{ scale: 1.01 }}
-                                  whileTap={{ scale: 0.98 }}
+                              <div 
                                   onClick={() => onOpenImage?.(message.imageUrl!)}
                                   className={cn(
-                                    "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in transition-all",
+                                    "relative rounded-xl overflow-hidden border border-border/20 shadow-lg bg-foreground/5 mb-1.5 cursor-zoom-in",
                                     !message.text && "mb-0"
                                   )}
                               >
@@ -165,8 +177,9 @@ const MessageBubble = React.memo(function MessageBubble({
                                   className="max-w-full h-auto object-cover max-h-[400px] w-full"
                                   style={{ minWidth: '150px' }}
                                   loading="lazy"
+                                  decoding="async"
                                 />
-                              </motion.div>
+                              </div>
                         )}
 
                         {message.songId && message.imageUrl && (
@@ -264,15 +277,37 @@ const MessageBubble = React.memo(function MessageBubble({
 
                   {youtubeId && (
                     <div className="mt-2 aspect-video w-full rounded-xl overflow-hidden border border-white/10 shadow-lg bg-black/40">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube.com/embed/${youtubeId}`}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
+                      {youtubePlaying ? (
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${youtubeId}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setYoutubePlaying(true)}
+                          className="relative block h-full w-full"
+                          aria-label="Play YouTube video"
+                        >
+                          <img
+                            src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white text-lg shadow-lg">
+                              ▶
+                            </span>
+                          </span>
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -327,7 +362,7 @@ const MessageBubble = React.memo(function MessageBubble({
               </div>
 
                   <div className={cn(
-                      "flex flex-row gap-2 mt-1.5 transition-all duration-200 z-10",
+                      "flex flex-row gap-2 mt-1.5 z-10",
                       isSender ? "justify-end mr-1" : "justify-start ml-1"
                   )}>
                   <Popover>
@@ -350,7 +385,7 @@ const MessageBubble = React.memo(function MessageBubble({
                   </Popover>
 
                   <button 
-                      onClick={onReply}
+                      onClick={() => onOpenThread?.(message.id)}
                       className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
                   >
                       <CornerUpLeft className="h-3 w-3 text-foreground/40" />
@@ -395,13 +430,12 @@ const MessageBubble = React.memo(function MessageBubble({
                   message={message}
                   chat={chat}
                   usersById={usersById}
-                  onOpenThread={onReply}
+                  onOpenThread={() => onOpenThread?.(message.id)}
               />
           ) : null}
-      </motion.div>
-    </TooltipProvider>
+      </div>
   );
-});
+}, messageBubblePropsEqual);
 
 function ThreadReplyBadge({
   message,

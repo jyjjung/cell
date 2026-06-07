@@ -20,7 +20,7 @@ import { db } from '@/lib/firebase';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
-  mergeMessageLists,
+  mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
   syncAllMessagesToDeviceCache,
   threadMessagesCacheKey,
@@ -44,7 +44,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
-    setMessages((prev) => mergeMessageLists(latestWindow, prev));
+    setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev));
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
   }, []);
@@ -86,14 +86,14 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
       if (syncSignal.aborted || cached.length === 0) return;
-      setMessages((prev) => mergeMessageLists(prev, cached));
+      setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
       setLoading(false);
       primeMediaUrls(cached.map((m) => m.imageUrl));
     });
 
     void syncAllMessagesToDeviceCache(messagesCol, cacheKey, (batch) => {
       if (syncSignal.aborted) return;
-      setMessages((prev) => mergeMessageLists(prev, batch));
+      setMessages((prev) => mergeMessageListsStable(prev, batch, prev));
       setLoading(false);
       primeMediaUrls(batch.map((m) => m.imageUrl));
     }, syncSignal);

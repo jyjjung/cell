@@ -587,7 +587,11 @@
   background: hsl(var(--muted-foreground) / 0.4);
 }
 
-/* Chat */
+.custom-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
