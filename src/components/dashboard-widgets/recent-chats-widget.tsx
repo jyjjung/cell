@@ -10,7 +10,8 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { MessageCircle, ArrowRight, Loader2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PixelAvatar } from '../avatar/PixelAvatar';
-import { getMemberFullName } from '@/lib/chat-utils';
+import { getMemberDisplayName } from '@/lib/chat-utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function RecentChatsWidget() {
     const { chats, loading } = useChats();
@@ -65,9 +66,9 @@ export default function RecentChatsWidget() {
                             if (isGroup) {
                                 name = chat.name || 'Unnamed Group';
                             } else if (peerProfile && peerProfile.firstName) {
-                                name = `${peerProfile.firstName} ${peerProfile.lastName || ''}`.trim();
+                                name = formatUserDisplayName(peerProfile);
                             } else if (infoFromChat) {
-                                name = getMemberFullName(infoFromChat) || 'Private Chat';
+                                name = getMemberDisplayName(infoFromChat, 'Private Chat');
                             }
 
                             const avatar = isGroup ? null : (peerProfile?.avatar || infoFromChat?.avatar);

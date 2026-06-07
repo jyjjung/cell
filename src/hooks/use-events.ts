@@ -28,11 +28,16 @@ function toIsoString(v: unknown): string | undefined {
   return undefined;
 }
 
-export function useEvents() {
+export function useEvents(enabled = true) {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
     const q = query(collection(db, EVENTS_COLLECTION), orderBy("date", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const eventsData: AppEvent[] = [];
@@ -66,7 +71,7 @@ export function useEvents() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [enabled]);
 
   const addEvent = useCallback(async (eventData: Omit<AppEvent, 'id'>): Promise<string> => {
     try {

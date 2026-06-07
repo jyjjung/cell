@@ -18,12 +18,17 @@ import { useAuth } from '@/contexts/auth-context';
 
 const CLEANING_DAYS_COLLECTION = 'cleaningDays';
 
-export function useCleaningDays() {
+export function useCleaningDays(enabled = true) {
   const { isAdmin } = useAuth();
   const [cleaningDays, setCleaningDays] = useState<CleaningDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) {
+      setCleaningDays([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const q = query(collection(db, CLEANING_DAYS_COLLECTION), orderBy('order', 'asc'));
 
@@ -37,7 +42,7 @@ export function useCleaningDays() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [enabled]);
 
   const addCleaningDay = useCallback(async (name: string) => {
     if (!isAdmin) throw new Error("Not authorized");

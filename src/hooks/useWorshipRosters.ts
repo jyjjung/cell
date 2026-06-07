@@ -11,20 +11,20 @@ import { useAuth } from '@/contexts/auth-context';
 
 const ROSTERS_COLLECTION = 'worshipRosters';
 
-export function useWorshipRosters() {
+export function useWorshipRosters(enabled = true) {
   const { currentUser } = useAuth();
   const [rosters, setRosters] = useState<WorshipRoster[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) { setRosters([]); setLoading(false); return; }
+    if (!enabled || !currentUser) { setRosters([]); setLoading(false); return; }
     const q = query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       setRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipRoster)));
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
-  }, [currentUser]);
+  }, [enabled, currentUser]);
 
   const createRoster = useCallback(async (
     name: string,

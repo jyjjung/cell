@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { AvatarData } from '@/types';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 interface RosterUser {
   uid: string;
@@ -29,7 +30,7 @@ interface RosterCardProps {
   rightElement?: React.ReactNode;
   onClick?: () => void;
   isCompleted?: boolean;
-  completedBy?: { firstName: string; avatar?: AvatarData };
+  completedBy?: { firstName: string; lastName?: string | null; avatar?: AvatarData };
   index?: number;
   showLine?: boolean;
   animate?: boolean;
@@ -133,7 +134,7 @@ export function RosterCard({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs font-bold">Completed by {completedBy.firstName}</p>
+                    <p className="text-xs font-bold">Completed by {formatUserDisplayName(completedBy)}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

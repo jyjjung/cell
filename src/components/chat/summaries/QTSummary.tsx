@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { 
   Calendar, 
   ChevronRight,
   BookOpen,
 } from 'lucide-react';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
-import { useQTRoster } from '@/hooks/useQTRoster';
-import { useAllUsers } from '@/hooks/use-all-users';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
+import { useUsersById } from '@/contexts/users-context';
+import type { QTRosterEntry } from '@/types';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { format } from 'date-fns';
@@ -20,23 +22,22 @@ interface QTSummaryProps {
 }
 
 export default function QTSummary({ date, isSender }: QTSummaryProps) {
-  const { roster } = useQTRoster();
-  const { allUsers } = useAllUsers();
+  const { data: entry, loading } = useFirestoreDoc<QTRosterEntry>('qtRosters', date);
+  const usersById = useUsersById();
   const router = useRouter();
-  
-  const entry = useMemo(() => 
-    roster.find(r => r.date === date), 
-    [roster, date]
-  );
 
-  if (!entry) return (
-    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
+  if (loading || !entry) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading QT Entry...
-    </div>
-  );
+      </div>
+    );
+  }
 
-  const user = entry.userId ? allUsers.find(u => u.uid === entry.userId) : null;
-  const name = entry.personName || user?.firstName || 'TBD';
+  const user = entry.userId ? usersById.get(entry.userId) : undefined;
+  const name = entry.personName
+    ? formatNameString(entry.personName, 'TBD')
+    : formatUserDisplayName(user, 'TBD');
 
   const formatDateText = (dateStr: string) => {
     try {

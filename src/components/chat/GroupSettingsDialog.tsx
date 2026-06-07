@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, Save, Trash2, UserPlus, Users } from 'lucide-react';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/contexts/auth-context';
 import type { Chat, UserProfileData } from '@/types';
@@ -18,6 +18,7 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import UserSelector from './UserSelector';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, LogOut, Save, Trash2, UserPlus } from 'lucide-react';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 
 const renameSchema = z.object({
@@ -134,9 +135,9 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Remove {member.firstName}?</AlertDialogTitle>
+                                <AlertDialogTitle>Remove {formatUserDisplayName(member)}?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                   This will remove {member.firstName} from the group. They will need to be added back to rejoin.
+                                   This will remove {formatUserDisplayName(member)} from the group. They will need to be added back to rejoin.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

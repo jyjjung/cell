@@ -11,20 +11,20 @@ import { useAuth } from '@/contexts/auth-context';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
 
-export function useWorshipSetlists() {
+export function useWorshipSetlists(enabled = true) {
   const { currentUser } = useAuth();
   const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) { setSetlists([]); setLoading(false); return; }
+    if (!enabled || !currentUser) { setSetlists([]); setLoading(false); return; }
     const q = query(collection(db, SETLISTS_COLLECTION), orderBy('date', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       setSetlists(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist)));
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
-  }, [currentUser]);
+  }, [enabled, currentUser]);
 
   const createSetlist = useCallback(async (name: string, date: string): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');

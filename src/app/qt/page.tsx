@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
 import { useAuth } from '@/contexts/auth-context';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 
 export default function QTRosterPage() {
     const { currentUser } = useAuth();
@@ -109,7 +110,9 @@ export default function QTRosterPage() {
                                         <div className="flex flex-col gap-3">
                                             {entries.map((entry) => {
                                                 const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                                                const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
+                                                const displayName = entry.personName
+                                                    ? formatNameString(entry.personName, 'Unknown User')
+                                                    : formatUserDisplayName(user, 'Unknown User');
                                                 const entryDate = parseDay(entry.date);
                                                 const currentIndex = globalIdx++;
 
@@ -163,7 +166,9 @@ export default function QTRosterPage() {
                                         <div className="flex flex-col gap-3">
                                             {entries.map((entry) => {
                                                 const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                                                const displayName = entry.personName || (user ? `${user.firstName} ${user.lastName}` : 'Unknown User');
+                                                const displayName = entry.personName
+                                                    ? formatNameString(entry.personName, 'Unknown User')
+                                                    : formatUserDisplayName(user, 'Unknown User');
                                                 const entryDate = parseDay(entry.date);
                                                 const currentIndex = globalIdx++;
 

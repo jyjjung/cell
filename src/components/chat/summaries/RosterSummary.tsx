@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { 
   ClipboardList, 
   ChevronRight,
   Users
 } from 'lucide-react';
+import { formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
-import { useWorshipRosters } from '@/hooks/useWorshipRosters';
-import { useAllUsers } from '@/hooks/use-all-users';
+import { useUsersById } from '@/contexts/users-context';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { formatAppDate, getAppLocale } from '@/lib/formatting';
+import type { WorshipRoster } from '@/types';
 import Link from 'next/link';
 
 interface RosterSummaryProps {
@@ -20,36 +22,23 @@ interface RosterSummaryProps {
 }
 
 export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps) {
-  const { rosters } = useWorshipRosters();
-  const { allUsers } = useAllUsers();
+  const { data: roster, loading } = useFirestoreDoc<WorshipRoster>('worshipRosters', rosterId);
+  const usersById = useUsersById();
   const { currentUser } = useAuth();
-  const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const locale = getAppLocale(currentUser?.preferredLanguage);
-  
-  const roster = useMemo(() => 
-    rosters.find(r => r.id === rosterId), 
-    [rosters, rosterId]
-  );
 
-  if (!roster) return (
-    <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
+  if (loading || !roster) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...
-    </div>
-  );
+      </div>
+    );
+  }
 
   const slots = roster.slots || [];
   const totalPositions = slots.reduce((acc, slot) => acc + (slot.members?.length || 0), 0);
   const assignedSlots = slots.filter((slot) => (slot.members || []).length > 0);
-
-  const toFirstLastInitial = (rawName: string) => {
-    const parts = rawName.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return rawName;
-    if (parts.length === 1) return parts[0];
-    const first = parts[0];
-    const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
-    return `${first} ${lastInitial}.`;
-  };
 
   const formatDateText = (dateStr: string) => {
     try {
@@ -88,7 +77,6 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
           </div>
         </div>
 
-        {/* Roles */}
         <div className="flex flex-col gap-1.5 pt-1">
            <div className="overflow-hidden rounded-lg border border-border/50">
              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2 bg-muted/35 px-2.5 py-1.5">
@@ -97,11 +85,11 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
              </div>
              {assignedSlots.map((slot, i) => {
                const names = (slot.members || []).map((m) => {
-                 const user = m?.userId ? usersMap.get(m.userId) : null;
+                 const user = m?.userId ? usersById.get(m.userId) : undefined;
                  const rawName =
                    m?.displayName ||
                    [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
-                 return rawName ? toFirstLastInitial(rawName) : '';
+                 return rawName ? formatNameString(rawName) : '';
                });
                const uniqueNames = [...new Set(names.filter(Boolean))];
                const displayNames = uniqueNames.join(', ') || t.rosterUnassigned;

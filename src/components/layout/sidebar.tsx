@@ -10,6 +10,7 @@ import {
   CalendarCheck, Music, Library, Lightbulb
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Sidebar,
@@ -200,7 +201,7 @@ export default function AppSidebar() {
                     {currentUser ? <PixelAvatar avatar={currentUser.avatar} /> : <User className="h-full w-full p-2 text-muted-foreground" />}
                   </div>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="truncate text-[13px] font-semibold leading-tight">{currentUser?.firstName || 'Guest'}</p>
+                    <p className="truncate text-[13px] font-semibold leading-tight">{formatUserDisplayName(currentUser, 'Guest')}</p>
                     {currentUser && <p className="truncate text-[11px] text-muted-foreground">{currentUser.email}</p>}
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-data-[collapsible=icon]:hidden" />

@@ -9,7 +9,8 @@ import { useAllUsers } from "@/hooks/use-all-users";
 import { useAuth } from "@/contexts/auth-context";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { cn } from "@/lib/utils";
-import { getMemberFullName } from "@/lib/chat-utils";
+import { getMemberDisplayName } from "@/lib/chat-utils";
+import { formatUserDisplayName } from "@/lib/formatting";
 
 import { Button } from "@/components/ui/button";
 import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles } from "lucide-react";
@@ -46,9 +47,9 @@ export default function ChatList() {
 
       let fullName = 'Private Chat';
       if (peerFullProfile && peerFullProfile.firstName) {
-        fullName = `${peerFullProfile.firstName} ${peerFullProfile.lastName || ''}`.trim();
+        fullName = formatUserDisplayName(peerFullProfile);
       } else if (peerInfoFromChat) {
-        fullName = getMemberFullName(peerInfoFromChat) || 'Private Chat';
+        fullName = getMemberDisplayName(peerInfoFromChat, 'Private Chat');
       } else if (!peerId && chat.members.length === 1) {
         fullName = "Archived Conversation";
       }
@@ -187,7 +188,7 @@ export default function ChatList() {
                 const lastSentMillis = chat.lastMessageSentAt?.toMillis?.() || 0;
                 const isUnread = currentUser && !isActive && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
                 const lastSenderProfile = allUsers.find(u => u.uid === chat.lastMessageSenderId);
-                const lastSenderName = lastSenderProfile?.firstName || 'Someone';
+                const lastSenderName = formatUserDisplayName(lastSenderProfile);
 
                 return (
                   <motion.div

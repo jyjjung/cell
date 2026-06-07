@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import HiddenAchievements from '@/components/profile/hidden-achievements';
@@ -66,7 +67,7 @@ export default function LeaderboardPage() {
         if (!user?.firstName) return null;
         const completedCount = c.completedPassages.length;
         const progressPercentage = totalPassagesToDate > 0 ? parseFloat(((completedCount / totalPassagesToDate) * 100).toFixed(1)) : 0;
-        return { userId: c.userId, displayName: `${user.firstName} ${user.lastName}`, completedCount, completedPassageKeys: c.completedPassages, progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
+        return { userId: c.userId, displayName: formatUserDisplayName(user), completedCount, completedPassageKeys: c.completedPassages, progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);

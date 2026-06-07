@@ -1,10 +1,21 @@
-/** Merge a live snapshot window with older paginated messages. */
+/** Merge message lists (first list wins ordering for duplicates). */
+export function mergeMessageLists<T extends { id: string }>(...lists: T[][]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const list of lists) {
+    for (const item of list) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+/** @deprecated Use mergeMessageLists */
 export function mergeLatestMessageWindow<T extends { id: string }>(
   latestWindow: T[],
-  previous: T[]
+  previous: T[],
 ): T[] {
-  if (previous.length === 0) return latestWindow;
-  const latestIds = new Set(latestWindow.map((m) => m.id));
-  const older = previous.filter((m) => !latestIds.has(m.id));
-  return [...latestWindow, ...older];
+  return mergeMessageLists(latestWindow, previous);
 }

@@ -16,6 +16,7 @@ import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
@@ -118,7 +119,7 @@ export default function CleaningRosterPage() {
                                                             </p>
                                                             {assignedUsers.map((user, uidx) => (
                                                                 <span key={user.uid} className="text-[10px] font-medium text-muted-foreground/70">
-                                                                    {user.firstName}{uidx < assignedUsers.length - 1 ? ',' : ''}
+                                                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
                                                                 </span>
                                                             ))}
                                                         </div>
@@ -126,7 +127,7 @@ export default function CleaningRosterPage() {
                                                     rightElement={
                                                         <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
                                                             <p className="text-[9px] font-black uppercase tracking-wider text-primary whitespace-nowrap">
-                                                                {entry.isCompleted ? `Completed${completer ? ` by ${completer.firstName}` : ''}` : 'Scheduled'}
+                                                                {entry.isCompleted ? `Completed${completer ? ` by ${formatUserDisplayName(completer)}` : ''}` : 'Scheduled'}
                                                             </p>
                                                         </div>
                                                     }
@@ -168,7 +169,7 @@ export default function CleaningRosterPage() {
                                                         </p>
                                                         {assignedUsers.map((user, uidx) => (
                                                             <span key={user.uid} className="text-[10px] font-medium text-muted-foreground/70">
-                                                                {user.firstName}{uidx < assignedUsers.length - 1 ? ',' : ''}
+                                                                {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
                                                             </span>
                                                         ))}
                                                     </div>
@@ -176,7 +177,7 @@ export default function CleaningRosterPage() {
                                                 rightElement={
                                                     <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
                                                         <p className="text-[9px] font-black uppercase tracking-wider text-primary whitespace-nowrap">
-                                                            {entry.isCompleted ? `Completed${completer ? ` by ${completer.firstName}` : ''}` : 'Scheduled'}
+                                                            {entry.isCompleted ? `Completed${completer ? ` by ${formatUserDisplayName(completer)}` : ''}` : 'Scheduled'}
                                                         </p>
                                                     </div>
                                                 }

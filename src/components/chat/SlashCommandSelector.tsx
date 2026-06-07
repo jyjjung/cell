@@ -56,14 +56,21 @@ export default function SlashCommandSelector({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
-  
-  const { events } = useEvents();
-  const { setlists } = useWorshipSetlists();
-  const { rosters } = useWorshipRosters();
-  const { roster: qtRoster } = useQTRoster();
-  const { roster: cleaningRoster } = useCleaningRoster();
-  const { cleaningDays } = useCleaningDays();
-  const { songs } = useWorshipSongs();
+
+  const needsEvents = activeCommand === 'event';
+  const needsSetlists = activeCommand === 'setlist';
+  const needsRosters = activeCommand === 'roster';
+  const needsQt = activeCommand === 'qt';
+  const needsCleaning = activeCommand === 'cleaning';
+  const needsSongs = activeCommand === 'song' || activeCommand === 'chords' || !!selectedSongId;
+
+  const { events } = useEvents(needsEvents);
+  const { setlists } = useWorshipSetlists(needsSetlists);
+  const { rosters } = useWorshipRosters(needsRosters);
+  const { roster: qtRoster } = useQTRoster(needsQt);
+  const { roster: cleaningRoster } = useCleaningRoster(needsCleaning);
+  const { cleaningDays } = useCleaningDays(needsCleaning);
+  const { songs } = useWorshipSongs(needsSongs);
 
   const selectedSong = useMemo(() => 
     selectedSongId ? songs.find(s => s.id === selectedSongId) : null,

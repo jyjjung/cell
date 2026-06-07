@@ -10,8 +10,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { useWorshipData } from '@/contexts/worship-data-context';
+import type { WorshipSetlist, WorshipSong } from '@/types';
 import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -57,19 +59,16 @@ function isOfflineReadyLocally(setlistId: string, urls: string[]): boolean {
 }
 
 export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: SetlistSummaryProps) {
-  const { setlists } = useWorshipSetlists();
-  const { songs: worshipSongs } = useWorshipSongs();
+  const { data: setlist, loading: setlistLoading } = useFirestoreDoc<WorshipSetlist>('worshipSetlists', setlistId);
+  const worshipData = useWorshipData();
+  const songHook = useWorshipSongs(!!setlist && !worshipData);
+  const worshipSongs = worshipData?.songs ?? songHook.songs;
   const { toast } = useToast();
   const router = useRouter();
   const [offlineCaching, setOfflineCaching] = useState(false);
   const [offlineProgress, setOfflineProgress] = useState({ done: 0, total: 0 });
   const [offlineCached, setOfflineCached] = useState<{ cached: number; total: number } | null>(null);
   const offlineAbortRef = useRef<AbortController | null>(null);
-
-  const setlist = useMemo(
-    () => setlists.find((s) => s.id === setlistId),
-    [setlists, setlistId],
-  );
 
   const setlistSongs = setlist?.songs ?? [];
 
@@ -190,7 +189,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
     }
   };
 
-  if (!setlist) {
+  if (setlistLoading || !setlist) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Setlist...

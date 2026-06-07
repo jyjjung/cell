@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { PageHeader } from '@/components/ui/page-layout';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
@@ -312,7 +313,7 @@ export default function AdminCleaningRosterPage() {
                                                         <PixelAvatar avatar={user.avatar} />
                                                     </div>
                                                     <span className="text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px]">
-                                                        {user.firstName}
+                                                        {formatUserDisplayName(user)}
                                                     </span>
                                                     <button 
                                                         onClick={() => {

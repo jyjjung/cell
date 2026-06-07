@@ -14,6 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
 import { cn } from '@/lib/utils';
+import { formatNameString } from '@/lib/formatting';
+import { formatNameString } from '@/lib/formatting';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
@@ -1200,7 +1202,7 @@ function RosterDetailView({
                       m.userId ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600' : 'bg-muted border-border/50 text-muted-foreground'
                     )}>
                       {m.userId ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
-                      {m.displayName}
+                      {formatNameString(m.displayName, 'Guest')}
                       <button onClick={() => removeMember(slotIdx, mi)}
                         className="ml-0.5 hover:text-destructive transition-colors">
                         <X className="h-2.5 w-2.5" />

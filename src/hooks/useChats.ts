@@ -19,8 +19,8 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { getPrivateChatId } from '@/lib/chat-utils';
+import { formatUserDisplayName } from '@/lib/formatting';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
-import { prefetchChatMessagesCache } from '@/lib/prefetch-chat-cache';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -66,7 +66,6 @@ export function useChats() {
 
       setChats(chatsData);
       setLoading(false);
-      prefetchChatMessagesCache(db, chatsData.map((chat) => chat.id));
     }, (error) => {
       console.error("Error fetching user chats:", error);
       setLoading(false);
@@ -150,7 +149,7 @@ export function useChats() {
       memberInfo,
       admins: [currentUser.uid], // Creator is the first admin
       createdAt: serverTimestamp() as Timestamp,
-      lastMessageText: `${currentUser.firstName} created the circle.`,
+      lastMessageText: `${formatUserDisplayName(currentUser)} created the circle.`,
       lastMessageSentAt: serverTimestamp() as Timestamp,
       memberSeen,
     };
