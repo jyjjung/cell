@@ -55,6 +55,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.20",
+    subtitle: "Multi-Photo Chat",
+    date: "Early-June 2026",
+    changes: [
+      "Send multiple photos at once in chat — select several images from the picker and each is posted as its own message",
+    ],
+  },
+  {
     version: "v1.3.19",
     subtitle: "Faster Desktop Load",
     date: "Late-May 2026",

@@ -190,32 +190,57 @@ export default function MessageInput({
     fileInputRef.current?.click();
   };
 
+  const uploadChatImage = (file: File, index: number): Promise<string> => {
+    const storagePath = `chats/${chatId}/${Date.now()}_${index}_${file.name}`;
+    const storageRef = ref(storage, storagePath);
+
+    return new Promise((resolve, reject) => {
+      const uploadTask = uploadBytesResumable(storageRef, file, {
+        contentType: file.type || 'image/jpeg',
+        cacheControl: STORAGE_CACHE_CONTROL,
+      });
+      uploadTask.on(
+        'state_changed',
+        null,
+        (error) => reject(error),
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        },
+      );
+    });
+  };
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !chatId || !currentUser) return;
-    if (!file.type.startsWith('image/')) {
-        toast({ variant: "destructive", title: "Invalid file type", description: "Please select an image file." });
-        return;
+    const files = e.target.files;
+    if (!files?.length || !chatId || !currentUser) return;
+
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      toast({ variant: 'destructive', title: 'Invalid file type', description: 'Please select image files.' });
+      return;
     }
+    if (imageFiles.length < files.length) {
+      toast({
+        variant: 'destructive',
+        title: 'Some files skipped',
+        description: 'Only image files were uploaded.',
+      });
+    }
+
     try {
-        setIsUploading(true);
-        const storagePath = `chats/${chatId}/${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file, {
-            contentType: file.type || 'image/jpeg',
-            cacheControl: STORAGE_CACHE_CONTROL
-        });
-        uploadTask.on('state_changed', null, (error) => {
-            setIsUploading(false);
-            toast({ variant: "destructive", title: "Upload failed", description: error.message });
-        }, async () => {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            sendImageMessage(downloadURL, replyToMessage?.id);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            setIsUploading(false);
-        });
+      setIsUploading(true);
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const downloadURL = await uploadChatImage(file, i);
+        sendImageMessage(downloadURL, i === 0 ? replyToMessage?.id : undefined);
+      }
     } catch (error) {
-        setIsUploading(false);
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      toast({ variant: 'destructive', title: 'Upload failed', description: message });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsUploading(false);
     }
   };
 
@@ -233,7 +258,7 @@ export default function MessageInput({
         </div>
       )}
       <div className="relative group flex items-center gap-2">
-        <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+        <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden" />
         <button 
             type="button" 
             onClick={() => setShowSlashCommands(!showSlashCommands)} 
