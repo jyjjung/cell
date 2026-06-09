@@ -6,14 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones } from 'lucide-react';
 
 import { cn, isPdfUrl } from '@/lib/utils';
-import type { ChordKey } from '@/types';
-import { YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
+import type { ChordKey, ReferenceTrack } from '@/types';
+import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 
 export interface ViewerSlide {
   songTitle: string;
   key: ChordKey;
   imageUrls: string[];
-  youtubeUrl?: string;
+  referenceTracks?: ReferenceTrack[];
 }
 
 async function downloadFile(url: string, filename: string) {
@@ -56,6 +56,7 @@ export function FullScreenViewer({
 }: { slides: ViewerSlide[]; startIndex?: number; onClose: () => void }) {
   const [idx, setIdx] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
+  const [activeTrackIdx, setActiveTrackIdx] = useState(0);
 
   // Pixel width of images — drives zoom. null = CSS-contained (loading state).
   // We use pixel width (not CSS transform) so the scroll container always
@@ -84,6 +85,7 @@ export function FullScreenViewer({
     fitWidthRef.current = 0;
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     setListenOpen(false);
+    setActiveTrackIdx(0);
   }, [idx]);
 
   // Calculate the "fit the whole page" pixel width from the first image's natural dims
@@ -363,19 +365,32 @@ export function FullScreenViewer({
 
         {/* Footer nav + listen */}
         <div className="shrink-0 flex flex-col gap-2 pb-6 pt-2 px-4">
-          {listenOpen && slide.youtubeUrl && (
-            <YoutubePlayerPanel
-              url={slide.youtubeUrl}
-              enabled={listenOpen}
-              onClose={() => setListenOpen(false)}
-            />
-          )}
+          {listenOpen && slide.referenceTracks && slide.referenceTracks.length > 0 && (() => {
+            const activeTrack = slide.referenceTracks[activeTrackIdx] ?? slide.referenceTracks[0];
+            return (
+              <div className="space-y-2 max-w-lg mx-auto w-full">
+                <TrackPicker
+                  tracks={slide.referenceTracks}
+                  activeIndex={activeTrackIdx}
+                  onSelect={setActiveTrackIdx}
+                  theme="dark"
+                />
+                <YoutubePlayerPanel
+                  key={activeTrack.url}
+                  url={activeTrack.url}
+                  note={activeTrack.note}
+                  enabled={listenOpen}
+                  onClose={() => setListenOpen(false)}
+                />
+              </div>
+            );
+          })()}
           <div className="flex items-center justify-center gap-3">
             <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
               className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
               <ChevronLeft className="h-6 w-6" />
             </button>
-            {slide.youtubeUrl && (
+            {slide.referenceTracks && slide.referenceTracks.length > 0 && (
               <button
                 type="button"
                 onClick={() => setListenOpen((open) => !open)}
@@ -385,7 +400,7 @@ export function FullScreenViewer({
                 )}
               >
                 <Headphones className="h-5 w-5" />
-                Listen
+                Listen{slide.referenceTracks.length > 1 ? ` (${slide.referenceTracks.length})` : ''}
               </button>
             )}
             {slides.length > 1 && (

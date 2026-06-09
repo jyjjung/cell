@@ -35,10 +35,12 @@ import {
   NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog,
   SetlistSongConfigPanel,
 } from '@/components/worship/WorshipDialogs';
-import { YoutubeReferenceEmbed } from '@/components/worship/YoutubeReferenceEmbed';
+import { ReferenceTracksListen } from '@/components/worship/YoutubeReferenceEmbed';
 import {
   resolveChordSheetsForSetlistSong, chordSheetsForKey,
-  parseYoutubeVideoId, normalizeYoutubeUrl,
+  hasReferenceTracks, getReferenceTracks,
+  referenceTracksToDrafts, normalizeReferenceTrackDrafts,
+  referenceTrackDraftsInvalid, type ReferenceTrackDraft,
 } from '@/lib/worship-utils';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -495,7 +497,7 @@ function AddSongToSetlistDialog({
   const [search, setSearch] = useState('');
   const [selectedSong, setSelectedSong] = useState<WorshipSong | null>(null);
   const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [referenceTracks, setReferenceTracks] = useState<ReferenceTrackDraft[]>([{ url: '', note: '' }]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -509,21 +511,21 @@ function AddSongToSetlistDialog({
       (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist?.toLowerCase().includes(search.toLowerCase()))
     ), [songs, search, alreadyAdded]);
 
-  const youtubeInvalid = youtubeUrl.trim().length > 0 && !parseYoutubeVideoId(youtubeUrl);
+  const tracksInvalid = referenceTrackDraftsInvalid(referenceTracks);
 
   const handleKeyChange = (key: ChordKey) => {
     setSelectedKey(key);
   };
 
   const handleAdd = async () => {
-    if (!liveSong || youtubeInvalid) return;
+    if (!liveSong || tracksInvalid) return;
     setAdding(true);
     try {
-      const normalizedYoutube = youtubeUrl.trim() ? normalizeYoutubeUrl(youtubeUrl) ?? undefined : undefined;
+      const normalizedTracks = normalizeReferenceTrackDrafts(referenceTracks);
       const chordSheetIds = buildChordSheetIdsOption(liveSong, selectedKey, selectedSheetIds);
 
       await addSongToSetlist(playlist, liveSong.id, liveSong.title, selectedKey, {
-        youtubeUrl: normalizedYoutube,
+        referenceTracks: normalizedTracks,
         chordSheetIds,
       });
       toast({ title: 'Song added', description: `${liveSong.title} (${selectedKey === 'numbers' ? '#' : selectedKey}) added to setlist.` });
@@ -537,7 +539,7 @@ function AddSongToSetlistDialog({
   const reset = () => {
     setSelectedSong(null);
     setSelectedKey('numbers');
-    setYoutubeUrl('');
+    setReferenceTracks([{ url: '', note: '' }]);
     setSearch('');
   };
 
@@ -545,7 +547,7 @@ function AddSongToSetlistDialog({
     setSelectedSong(song);
     const keys = Array.from(new Set(song.chordSheets.map(s => s.key)));
     setSelectedKey(keys.length > 0 ? keys[0] : 'numbers');
-    setYoutubeUrl('');
+    setReferenceTracks([{ url: '', note: '' }]);
   };
 
   return (
@@ -598,7 +600,7 @@ function AddSongToSetlistDialog({
                     <p className="font-bold text-sm">{liveSong.title}</p>
                     {liveSong.artist && <p className="text-xs text-muted-foreground/60">{liveSong.artist}</p>}
                   </div>
-                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setYoutubeUrl(''); }}
+                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setReferenceTracks([{ url: '', note: '' }]); }}
                     className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -610,8 +612,8 @@ function AddSongToSetlistDialog({
                   onKeyChange={handleKeyChange}
                   selectedSheetIds={selectedSheetIds}
                   onSheetIdsChange={setSelectedSheetIds}
-                  youtubeUrl={youtubeUrl}
-                  onYoutubeUrlChange={setYoutubeUrl}
+                  referenceTracks={referenceTracks}
+                  onReferenceTracksChange={setReferenceTracks}
                   onRequestUpload={() => setUploadOpen(true)}
                   idPrefix="add-song"
                 />
@@ -621,7 +623,7 @@ function AddSongToSetlistDialog({
             <div className="flex gap-2 pt-1">
               <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
               <Button className="flex-1 rounded-xl"
-                onClick={handleAdd} disabled={!liveSong || adding || youtubeInvalid}>
+                onClick={handleAdd} disabled={!liveSong || adding || tracksInvalid}>
                 {adding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Add to Setlist
               </Button>
             </div>
@@ -655,7 +657,7 @@ function EditSetlistSongDialog({
   const { toast } = useToast();
   const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
   const [selectedSheetIds, setSelectedSheetIds] = useState<string[]>([]);
-  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [referenceTracks, setReferenceTracks] = useState<ReferenceTrackDraft[]>([{ url: '', note: '' }]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const prevKeyRef = useRef<ChordKey | null>(null);
@@ -673,7 +675,7 @@ function EditSetlistSongDialog({
     if (initRef.current === token) return;
     initRef.current = token;
     setSelectedKey(setlistSong.key);
-    setYoutubeUrl(setlistSong.youtubeUrl ?? '');
+    setReferenceTracks(referenceTracksToDrafts(setlistSong));
     prevKeyRef.current = setlistSong.key;
     const sheets = chordSheetsForKey(libSong, setlistSong.key);
     if (setlistSong.chordSheetIds?.length) {
@@ -694,18 +696,18 @@ function EditSetlistSongDialog({
     }
   };
 
-  const youtubeInvalid = youtubeUrl.trim().length > 0 && !parseYoutubeVideoId(youtubeUrl);
+  const tracksInvalid = referenceTrackDraftsInvalid(referenceTracks);
 
   const handleSave = async () => {
-    if (!setlistSong || !libSong || youtubeInvalid) return;
+    if (!setlistSong || !libSong || tracksInvalid) return;
     setSaving(true);
     try {
-      const normalizedYoutube = youtubeUrl.trim() ? normalizeYoutubeUrl(youtubeUrl) ?? undefined : undefined;
+      const normalizedTracks = normalizeReferenceTrackDrafts(referenceTracks);
       const chordSheetIds = buildChordSheetIdsOption(libSong, selectedKey, selectedSheetIds);
 
       await updateSetlistSong(playlist, setlistSong.songId, {
         key: selectedKey,
-        youtubeUrl: normalizedYoutube ?? '',
+        referenceTracks: normalizedTracks ?? [],
         chordSheetIds: chordSheetIds ?? [],
       });
       toast({ title: 'Song updated' });
@@ -733,15 +735,15 @@ function EditSetlistSongDialog({
               onKeyChange={handleKeyChange}
               selectedSheetIds={selectedSheetIds}
               onSheetIdsChange={setSelectedSheetIds}
-              youtubeUrl={youtubeUrl}
-              onYoutubeUrlChange={setYoutubeUrl}
+              referenceTracks={referenceTracks}
+              onReferenceTracksChange={setReferenceTracks}
               onRequestUpload={() => setUploadOpen(true)}
               idPrefix="edit-song"
             />
 
             <div className="flex gap-2 pt-1">
               <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-              <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving || youtubeInvalid}>
+              <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving || tracksInvalid}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save
               </Button>
             </div>
@@ -851,13 +853,13 @@ function SetlistDetailView({
     for (const ps of orderedSongs) {
       const libSong = songs.find(s => s.id === ps.songId);
       const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
-      const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
-      if (sheets.length > 0 || hasYoutube) {
+      const tracks = getReferenceTracks(ps);
+      if (sheets.length > 0 || tracks.length > 0) {
         slides.push({
           songTitle: ps.title,
           key: ps.key,
           imageUrls: sheets.map(s => s.imageUrl),
-          youtubeUrl: hasYoutube ? ps.youtubeUrl : undefined,
+          referenceTracks: tracks.length > 0 ? tracks : undefined,
         });
       }
     }
@@ -882,8 +884,8 @@ function SetlistDetailView({
   const openSheets = (ps: SetlistSong) => {
     const libSong = songs.find(s => s.id === ps.songId);
     const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
-    const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
-    if (sheets.length === 0 && !hasYoutube) {
+    const tracks = getReferenceTracks(ps);
+    if (sheets.length === 0 && tracks.length === 0) {
       toast({ title: 'No chord sheets', description: `No sheets saved for key ${ps.key}.` });
       return;
     }
@@ -946,8 +948,8 @@ function SetlistDetailView({
           {orderedSongs.map((ps, i) => {
             const libSong = songs.find(s => s.id === ps.songId);
             const sheetsForKey = resolveChordSheetsForSetlistSong(libSong, ps);
-            const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
-            const canOpenViewer = sheetsForKey.length > 0 || hasYoutube;
+            const refTracks = getReferenceTracks(ps);
+            const canOpenViewer = sheetsForKey.length > 0 || refTracks.length > 0;
             return (
               <div
                 key={ps.songId}
@@ -989,9 +991,10 @@ function SetlistDetailView({
                     ) : (
                       <span className="text-[10px] font-bold text-muted-foreground/40">no sheet</span>
                     )}
-                    {ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl) && (
+                    {hasReferenceTracks(ps) && (
                       <span className="text-[10px] font-bold text-red-500 flex items-center gap-0.5">
-                        <Youtube className="h-2.5 w-2.5" /> ref track
+                        <Youtube className="h-2.5 w-2.5" />
+                        {refTracks.length > 1 ? `${refTracks.length} ref tracks` : 'ref track'}
                       </span>
                     )}
                   </div>
@@ -999,8 +1002,8 @@ function SetlistDetailView({
                 <div className="flex items-center gap-1">
                   {!reorderMode && (
                     <>
-                      {ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl) && (
-                        <YoutubeReferenceEmbed url={ps.youtubeUrl} theme="light" compact />
+                      {hasReferenceTracks(ps) && (
+                        <ReferenceTracksListen tracks={ps} theme="light" compact />
                       )}
                       {sheetsForKey.length > 0 && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"

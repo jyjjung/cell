@@ -1,4 +1,4 @@
-import type { WorshipSong, SetlistSong, SongChordSheet } from '@/types';
+import type { WorshipSong, SetlistSong, SongChordSheet, ReferenceTrack } from '@/types';
 
 const YOUTUBE_ID_REGEX =
   /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/i;
@@ -39,6 +39,56 @@ export async function fetchYoutubeVideoTitle(videoId: string): Promise<string | 
     /* offline or blocked */
   }
   return null;
+}
+
+/** Resolve reference tracks from a setlist song (supports legacy youtubeUrl). */
+export function getReferenceTracks(
+  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+): ReferenceTrack[] {
+  if (song.referenceTracks?.length) {
+    return song.referenceTracks.filter((t) => parseYoutubeVideoId(t.url));
+  }
+  if (song.youtubeUrl && parseYoutubeVideoId(song.youtubeUrl)) {
+    return [{ url: song.youtubeUrl }];
+  }
+  return [];
+}
+
+export function hasReferenceTracks(
+  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+): boolean {
+  return getReferenceTracks(song).length > 0;
+}
+
+export type ReferenceTrackDraft = { url: string; note: string };
+
+/** Editor rows from saved setlist song data (always at least one row). */
+export function referenceTracksToDrafts(
+  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+): ReferenceTrackDraft[] {
+  const tracks = getReferenceTracks(song);
+  if (tracks.length === 0) return [{ url: '', note: '' }];
+  return tracks.map((t) => ({ url: t.url, note: t.note ?? '' }));
+}
+
+/** Normalize editor rows for persistence; drops empty/invalid URLs. */
+export function normalizeReferenceTrackDrafts(
+  drafts: ReferenceTrackDraft[],
+): ReferenceTrack[] | undefined {
+  const tracks = drafts
+    .map((d) => {
+      const url = normalizeYoutubeUrl(d.url.trim());
+      if (!url) return null;
+      const note = d.note.trim();
+      return { url, ...(note ? { note } : {}) };
+    })
+    .filter((t): t is ReferenceTrack => t !== null);
+  return tracks.length > 0 ? tracks : undefined;
+}
+
+/** True if any non-empty draft URL is invalid. */
+export function referenceTrackDraftsInvalid(drafts: ReferenceTrackDraft[]): boolean {
+  return drafts.some((d) => d.url.trim().length > 0 && !parseYoutubeVideoId(d.url));
 }
 
 /** Resolve which chord sheets to use for a setlist song entry. */

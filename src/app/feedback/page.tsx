@@ -55,6 +55,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.33",
+    date: "Early-June 2026",
+    changes: [
+      "Setlist songs can have multiple YouTube reference links, each with an optional note (e.g. For intro only)",
+    ],
+  },
+  {
     version: "v1.3.32",
     date: "Early-June 2026",
     changes: [
