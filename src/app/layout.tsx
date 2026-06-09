@@ -13,6 +13,7 @@ import AppLayout from '@/components/layout/app-layout';
 import { Toaster } from '@/components/ui/toaster';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-context';
+import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { OfflineBanner } from '@/components/layout/offline-banner';
 import { ThemePreferenceSync } from '@/components/layout/theme-preference-sync';
@@ -69,9 +70,11 @@ export default function RootLayout({
                 <TypographyProvider>
                 <AppearanceFirebaseBootstrap />
                 <GlobalBibleReaderProvider>
+                  <SetlistPlaylistProvider>
                   <AppLayout>
                     {children}
                   </AppLayout>
+                  </SetlistPlaylistProvider>
                   <Analytics />
                   <SpeedInsights />
                   <Toaster />

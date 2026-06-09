@@ -19,6 +19,7 @@ import {
 import { PageHeader, FeedCard } from '@/components/ui/page-layout';
 import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { incrementUserFeedbackCount } from '@/lib/user-achievement-counts';
 
 /* ── Animation variants ─────────────────────────────────── */
 
@@ -54,6 +55,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.35",
+    date: "Early-June 2026",
+    changes: [
+      "Chat setlist widgets have a Playlist button that queues reference tracks and keeps playing in the background",
+      "Removed message-count achievements; feedback stats still load from your profile",
+    ],
+  },
   {
     version: "v1.3.34",
     date: "Early-June 2026",
@@ -453,6 +462,7 @@ export default function FeedbackPage() {
         status: 'pending',
         createdAt: serverTimestamp(),
       });
+      if (currentUser?.uid) incrementUserFeedbackCount(currentUser.uid);
       toast({ title: "Success", description: "Suggestion submitted! Thank you." });
       setSuggestion('');
     } catch {

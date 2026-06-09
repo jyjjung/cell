@@ -1098,7 +1098,11 @@ function SetlistDetailView({
 
       {/* Full-screen viewer — slides across ALL songs in the setlist */}
       {viewerStart !== null && allSlides.length > 0 && (
-        <FullScreenViewer slides={allSlides} startIndex={viewerStart} onClose={() => setViewerStart(null)} />
+        <FullScreenViewer
+          slides={allSlides}
+          startIndex={viewerStart}
+          onClose={() => setViewerStart(null)}
+        />
       )}
     </motion.div>
   );

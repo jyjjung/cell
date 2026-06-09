@@ -1,6 +1,6 @@
 export type AchievementId = string;
 
-export type AchievementMetric = 'bible' | 'messages' | 'feedback' | 'click' | 'hybrid' | 'secret';
+export type AchievementMetric = 'bible' | 'feedback' | 'click' | 'hybrid' | 'secret';
 
 export interface AchievementDefinition {
   id: AchievementId;
@@ -10,7 +10,6 @@ export interface AchievementDefinition {
   requirements?: {
     /** Bible & hybrid achievements: minimum % of the full reading plan completed. */
     planProgressPercent?: number;
-    messageCount?: number;
     feedbackCount?: number;
     clickMeCount?: number;
   };
@@ -20,7 +19,6 @@ export interface AchievementDefinition {
 
 export interface AchievementStats {
   planProgressPercent: number;
-  messageCount: number | null;
   feedbackCount: number | null;
   clickMeCount: number | null;
   unlockedSecrets?: string[];
@@ -180,62 +178,6 @@ export const HIDDEN_ACHIEVEMENTS: AchievementDefinition[] = [
     description: 'Complete 100% of the reading plan.',
     metric: 'bible',
     requirements: { planProgressPercent: 100 },
-  },
-  {
-    id: 'messages-1',
-    title: 'First Message',
-    description: 'Send your first chat message.',
-    metric: 'messages',
-    requirements: { messageCount: 1 },
-  },
-  {
-    id: 'messages-25',
-    title: 'Conversation Starter',
-    description: 'Send 25 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 25 },
-  },
-  {
-    id: 'messages-50',
-    title: 'Circle Talker',
-    description: 'Send 50 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 50 },
-  },
-  {
-    id: 'messages-100',
-    title: 'Encourager',
-    description: 'Send 100 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 100 },
-  },
-  {
-    id: 'messages-250',
-    title: 'Fellowship Friend',
-    description: 'Send 250 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 250 },
-  },
-  {
-    id: 'messages-500',
-    title: 'Shepherd Heart',
-    description: 'Send 500 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 500 },
-  },
-  {
-    id: 'messages-1000',
-    title: 'Always Present',
-    description: 'Send 1,000 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 1000 },
-  },
-  {
-    id: 'messages-2000',
-    title: 'Voice of Fellowship',
-    description: 'Send 2,000 chat messages.',
-    metric: 'messages',
-    requirements: { messageCount: 2000 },
   },
   {
     id: 'feedback-1',
@@ -527,130 +469,130 @@ export const HIDDEN_ACHIEVEMENTS: AchievementDefinition[] = [
   {
     id: 'community-spark',
     title: 'Community Spark',
-    description: 'Reach 5% of the reading plan, send 10 messages, and submit 1 feedback suggestion.',
+    description: 'Reach 5% of the reading plan and submit 1 feedback suggestion.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 5, messageCount: 10, feedbackCount: 1 },
+    requirements: { planProgressPercent: 5, feedbackCount: 1 },
   },
   {
     id: 'community-rhythm',
     title: 'Steady Rhythm',
-    description: 'Reach 10% of the reading plan, send 25 messages, and press "Click me!" 5 times.',
+    description: 'Reach 10% of the reading plan and press "Click me!" 5 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 10, messageCount: 25, clickMeCount: 5 },
+    requirements: { planProgressPercent: 10, clickMeCount: 5 },
   },
   {
     id: 'community-harmony',
     title: 'Harmony Seeker',
-    description: 'Reach 15% of the reading plan, send 50 messages, and submit 2 feedback suggestions.',
+    description: 'Reach 15% of the reading plan and submit 2 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 15, messageCount: 50, feedbackCount: 2 },
+    requirements: { planProgressPercent: 15, feedbackCount: 2 },
   },
   {
     id: 'community-allrounder',
     title: 'All-Round Servant',
-    description: 'Reach 20% of the reading plan, send 25 messages, submit 1 feedback suggestion, and press "Click me!" once.',
+    description: 'Reach 20% of the reading plan, submit 1 feedback suggestion, and press "Click me!" once.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 20, messageCount: 25, feedbackCount: 1, clickMeCount: 1 },
+    requirements: { planProgressPercent: 20, feedbackCount: 1, clickMeCount: 1 },
   },
   {
     id: 'community-torch',
     title: 'Torch Bearer',
-    description: 'Reach 25% of the reading plan, send 50 messages, submit 3 feedback suggestions, and press "Click me!" 7 times.',
+    description: 'Reach 25% of the reading plan, submit 3 feedback suggestions, and press "Click me!" 7 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 25, messageCount: 50, feedbackCount: 3, clickMeCount: 7 },
+    requirements: { planProgressPercent: 25, feedbackCount: 3, clickMeCount: 7 },
   },
   {
     id: 'community-diplomat',
     title: 'Circle Diplomat',
-    description: 'Reach 30% of the reading plan, send 100 messages, submit 4 feedback suggestions, and press "Click me!" 10 times.',
+    description: 'Reach 30% of the reading plan, submit 4 feedback suggestions, and press "Click me!" 10 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 30, messageCount: 100, feedbackCount: 4, clickMeCount: 10 },
+    requirements: { planProgressPercent: 30, feedbackCount: 4, clickMeCount: 10 },
   },
   {
     id: 'community-builder',
     title: 'Community Builder',
-    description: 'Reach 35% of the reading plan, send 100 messages, and submit 3 feedback suggestions.',
+    description: 'Reach 35% of the reading plan and submit 3 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 35, messageCount: 100, feedbackCount: 3 },
+    requirements: { planProgressPercent: 35, feedbackCount: 3 },
   },
   {
     id: 'community-pillar',
     title: 'Community Pillar',
-    description: 'Reach 50% of the reading plan, send 150 messages, and submit 5 feedback suggestions.',
+    description: 'Reach 50% of the reading plan and submit 5 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 50, messageCount: 150, feedbackCount: 5 },
+    requirements: { planProgressPercent: 50, feedbackCount: 5 },
   },
   {
     id: 'community-steward',
     title: 'House Steward',
-    description: 'Reach 55% of the reading plan, send 200 messages, submit 8 feedback suggestions, and press "Click me!" 14 times.',
+    description: 'Reach 55% of the reading plan, submit 8 feedback suggestions, and press "Click me!" 14 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 55, messageCount: 200, feedbackCount: 8, clickMeCount: 14 },
+    requirements: { planProgressPercent: 55, feedbackCount: 8, clickMeCount: 14 },
   },
   {
     id: 'community-sentinel',
     title: 'Watchful Sentinel',
-    description: 'Reach 65% of the reading plan, send 250 messages, submit 10 feedback suggestions, and press "Click me!" 21 times.',
+    description: 'Reach 65% of the reading plan, submit 10 feedback suggestions, and press "Click me!" 21 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 65, messageCount: 250, feedbackCount: 10, clickMeCount: 21 },
+    requirements: { planProgressPercent: 65, feedbackCount: 10, clickMeCount: 21 },
   },
   {
     id: 'community-legacy',
     title: 'Legacy of Service',
-    description: 'Reach 75% of the reading plan, send 1,000 messages, and submit 10 feedback suggestions.',
+    description: 'Reach 75% of the reading plan and submit 10 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 75, messageCount: 1000, feedbackCount: 10 },
+    requirements: { planProgressPercent: 75, feedbackCount: 10 },
   },
   {
     id: 'community-covenant',
     title: 'Fourfold Covenant',
-    description: 'Reach 80% of the reading plan, send 1,000 messages, submit 15 feedback suggestions, and press "Click me!" 30 times.',
+    description: 'Reach 80% of the reading plan, submit 15 feedback suggestions, and press "Click me!" 30 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 80, messageCount: 1000, feedbackCount: 15, clickMeCount: 30 },
+    requirements: { planProgressPercent: 80, feedbackCount: 15, clickMeCount: 30 },
   },
   {
     id: 'community-shepherd',
     title: 'Shepherd of the House',
-    description: 'Reach 85% of the reading plan, send 500 messages, and submit 20 feedback suggestions.',
+    description: 'Reach 85% of the reading plan and submit 20 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 85, messageCount: 500, feedbackCount: 20 },
+    requirements: { planProgressPercent: 85, feedbackCount: 20 },
   },
   {
     id: 'community-cornerstone',
     title: 'Cornerstone Contributor',
-    description: 'Reach 95% of the reading plan, send 1,000 messages, and submit 30 feedback suggestions.',
+    description: 'Reach 95% of the reading plan and submit 30 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 95, messageCount: 1000, feedbackCount: 30 },
+    requirements: { planProgressPercent: 95, feedbackCount: 30 },
   },
   {
     id: 'community-flame',
     title: 'Flame Keeper',
-    description: 'Complete the reading plan, send 1,000 messages, and submit 40 feedback suggestions.',
+    description: 'Complete the reading plan and submit 40 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 100, messageCount: 1000, feedbackCount: 40 },
+    requirements: { planProgressPercent: 100, feedbackCount: 40 },
   },
   {
     id: 'community-jubilee',
     title: 'Jubilee Herald',
-    description: 'Complete the reading plan, send 2,000 messages, and submit 75 feedback suggestions.',
+    description: 'Complete the reading plan and submit 75 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 75 },
+    requirements: { planProgressPercent: 100, feedbackCount: 75 },
   },
   {
     id: 'community-evergreen',
     title: 'Evergreen Witness',
-    description: 'Complete the reading plan, send 2,000 messages, and submit 100 feedback suggestions.',
+    description: 'Complete the reading plan and submit 100 feedback suggestions.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 100 },
+    requirements: { planProgressPercent: 100, feedbackCount: 100 },
   },
   {
     id: 'community-immortal',
     title: 'Immortal Witness',
-    description: 'Complete the reading plan, send 2,000 messages, submit 150 feedback suggestions, and press "Click me!" 365 times.',
+    description: 'Complete the reading plan, submit 150 feedback suggestions, and press "Click me!" 365 times.',
     metric: 'hybrid',
-    requirements: { planProgressPercent: 100, messageCount: 2000, feedbackCount: 150, clickMeCount: 365 },
+    requirements: { planProgressPercent: 100, feedbackCount: 150, clickMeCount: 365 },
   },
-  // ── Secret easter eggs (not tied to bible / messages / feedback / clicks) ──
+  // ── Secret easter eggs (not tied to bible / feedback / clicks) ──
   {
     id: 'secret-midnight',
     title: 'Midnight Oil',
@@ -803,12 +745,6 @@ export function getUnlockedAchievements(stats: AchievementStats): AchievementDef
       return false;
     }
 
-    if (typeof requirements.messageCount === 'number') {
-      if (typeof stats.messageCount !== 'number' || stats.messageCount < requirements.messageCount) {
-        return false;
-      }
-    }
-
     if (typeof requirements.feedbackCount === 'number') {
       if (typeof stats.feedbackCount !== 'number' || stats.feedbackCount < requirements.feedbackCount) {
         return false;
@@ -839,11 +775,6 @@ export function getAchievementProgress(stats: AchievementStats, achievement: Ach
 
   if (typeof requirements.planProgressPercent === 'number') {
     const ratio = planProgressPercent / requirements.planProgressPercent;
-    fractions.push(Math.max(0, Math.min(1, ratio)));
-  }
-
-  if (typeof requirements.messageCount === 'number') {
-    const ratio = typeof stats.messageCount === 'number' ? stats.messageCount / requirements.messageCount : 0;
     fractions.push(Math.max(0, Math.min(1, ratio)));
   }
 

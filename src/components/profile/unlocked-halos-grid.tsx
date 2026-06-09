@@ -40,7 +40,7 @@ export function UnlockedHalosGrid({
 }: UnlockedHalosGridProps) {
   const { currentUser } = useAuth();
   const { plan } = useBiblePlan();
-  const { messageCount, feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
+  const { feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
 
   const effectiveUnlockedSecrets =
     userId === currentUser?.uid ? (currentUser?.unlockedSecrets ?? unlockedSecrets) : unlockedSecrets;
@@ -49,7 +49,6 @@ export function UnlockedHalosGrid({
     const planProgressPercent = calculatePlanProgressPercent(plan?.dailyReadings, completedPassageKeys);
     return getUnlockedAchievements({
       planProgressPercent,
-      messageCount,
       feedbackCount,
       clickMeCount,
       unlockedSecrets: effectiveUnlockedSecrets,
@@ -57,7 +56,6 @@ export function UnlockedHalosGrid({
   }, [
     plan?.dailyReadings,
     completedPassageKeys,
-    messageCount,
     feedbackCount,
     clickMeCount,
     effectiveUnlockedSecrets,

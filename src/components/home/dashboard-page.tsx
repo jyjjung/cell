@@ -98,7 +98,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const [optimisticNextClaimAtMs, setOptimisticNextClaimAtMs] = useState<number | null>(null);
   const { toast } = useToast();
   const { createNotification } = useNotifications();
-  const { messageCount, feedbackCount, clickMeCount } = useUserAchievementStats(currentUser.uid, true);
+  const { feedbackCount, clickMeCount } = useUserAchievementStats(currentUser.uid, true);
   const lastSyncedTierRef = useRef<string | null>(null);
 
   const isLoading = planLoading || eventsLoading || loadingChecklist;
@@ -357,7 +357,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     try {
       const currentStats = {
         planProgressPercent: overallPct,
-        messageCount,
         feedbackCount,
         clickMeCount: typeof clickMeCount === 'number' ? clickMeCount : (currentUser.clickMeCount || 0),
       };
@@ -414,7 +413,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     currentUser.clickMeCount,
     overallPct,
     completedPassages.length,
-    messageCount,
     feedbackCount,
     clickMeCount,
     createNotification,
@@ -422,17 +420,12 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   ]);
 
   useEffect(() => {
-    if (
-      typeof messageCount !== 'number' ||
-      typeof feedbackCount !== 'number' ||
-      typeof clickMeCount !== 'number'
-    ) {
+    if (typeof feedbackCount !== 'number' || typeof clickMeCount !== 'number') {
       return;
     }
 
     const unlocked = getUnlockedAchievements({
       planProgressPercent: overallPct,
-      messageCount,
       feedbackCount,
       clickMeCount,
     });
@@ -452,7 +445,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     currentUser.avatar?.cosmeticTier,
     overallPct,
     completedPassages.length,
-    messageCount,
     feedbackCount,
     clickMeCount,
   ]);

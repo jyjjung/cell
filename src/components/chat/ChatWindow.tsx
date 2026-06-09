@@ -423,10 +423,10 @@ function ChatWindowBody({
         }
 
         return (
-          <FullScreenViewer 
-            slides={slides} 
-            startIndex={startIndex} 
-            onClose={() => setWorshipViewer(null)} 
+          <FullScreenViewer
+            slides={slides}
+            startIndex={startIndex}
+            onClose={() => setWorshipViewer(null)}
           />
         );
       })()}

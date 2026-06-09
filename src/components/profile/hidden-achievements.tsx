@@ -51,7 +51,7 @@ export default function HiddenAchievements({
 }: HiddenAchievementsProps) {
   const { currentUser } = useAuth();
   const { plan } = useBiblePlan();
-  const { messageCount, feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
+  const { feedbackCount, clickMeCount, loading } = useUserAchievementStats(userId, true);
   const effectiveUnlockedSecrets =
     userId === currentUser?.uid ? (currentUser?.unlockedSecrets ?? unlockedSecrets) : unlockedSecrets;
   const planProgressPercent = useMemo(
@@ -60,7 +60,6 @@ export default function HiddenAchievements({
   );
   const stats = {
     planProgressPercent,
-    messageCount,
     feedbackCount,
     clickMeCount,
     unlockedSecrets: effectiveUnlockedSecrets,
