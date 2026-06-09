@@ -893,11 +893,13 @@ function SetlistDetailView({
     for (const ps of orderedSongs) {
       const libSong = songs.find(s => s.id === ps.songId);
       const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
-      if (sheets.length > 0) {
+      const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
+      if (sheets.length > 0 || hasYoutube) {
         slides.push({
           songTitle: ps.title,
           key: ps.key,
           imageUrls: sheets.map(s => s.imageUrl),
+          youtubeUrl: hasYoutube ? ps.youtubeUrl : undefined,
         });
       }
     }
@@ -922,7 +924,11 @@ function SetlistDetailView({
   const openSheets = (ps: SetlistSong) => {
     const libSong = songs.find(s => s.id === ps.songId);
     const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
-    if (sheets.length === 0) { toast({ title: 'No chord sheets', description: `No sheets saved for key ${ps.key}.` }); return; }
+    const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
+    if (sheets.length === 0 && !hasYoutube) {
+      toast({ title: 'No chord sheets', description: `No sheets saved for key ${ps.key}.` });
+      return;
+    }
     const startIdx = allSlides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
     setViewerStart(Math.max(0, startIdx));
   };
@@ -982,6 +988,8 @@ function SetlistDetailView({
           {orderedSongs.map((ps, i) => {
             const libSong = songs.find(s => s.id === ps.songId);
             const sheetsForKey = resolveChordSheetsForSetlistSong(libSong, ps);
+            const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
+            const canOpenViewer = sheetsForKey.length > 0 || hasYoutube;
             return (
               <div
                 key={ps.songId}
@@ -1006,13 +1014,13 @@ function SetlistDetailView({
                 <div
                   className={cn(
                     'flex-1 min-w-0',
-                    !reorderMode && sheetsForKey.length > 0 && 'cursor-pointer'
+                    !reorderMode && canOpenViewer && 'cursor-pointer'
                   )}
-                  onClick={!reorderMode && sheetsForKey.length > 0 ? () => openSheets(ps) : undefined}
+                  onClick={!reorderMode && canOpenViewer ? () => openSheets(ps) : undefined}
                 >
                   <p className={cn(
                     'font-bold text-sm truncate transition-colors',
-                    !reorderMode && sheetsForKey.length > 0 && 'group-hover:text-primary'
+                    !reorderMode && canOpenViewer && 'group-hover:text-primary'
                   )}>{ps.title}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <KeyBadge keyName={ps.key} accent />

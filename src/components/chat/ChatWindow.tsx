@@ -24,7 +24,7 @@ import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatPhotoUploadButton from './ChatPhotoUploadButton';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
-import { resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
+import { resolveChordSheetsForSetlistSong, parseYoutubeVideoId } from '@/lib/worship-utils';
 import { ChatImageGallery } from './ImageLightbox';
 import { downloadChatImage } from '@/lib/chat-image-download';
 import { 
@@ -379,11 +379,13 @@ function ChatWindowBody({
           for (const ps of orderedSongs) {
             const libSong = songs.find(s => s.id === ps.songId);
             const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
-            if (sheets.length > 0) {
+            const hasYoutube = !!(ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl));
+            if (sheets.length > 0 || hasYoutube) {
               slides.push({
                 imageUrls: sheets.map(s => s.imageUrl),
                 songTitle: ps.title,
                 key: ps.key,
+                youtubeUrl: hasYoutube ? ps.youtubeUrl : undefined,
               });
             }
           }

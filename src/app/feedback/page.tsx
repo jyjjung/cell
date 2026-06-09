@@ -55,6 +55,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.26",
+    date: "Early-June 2026",
+    changes: [
+      "Setlist chart viewer in chat now shows YouTube reference tracks for each song",
+    ],
+  },
+  {
     version: "v1.3.25",
     subtitle: "Setlist Song Options",
     date: "Early-June 2026",
