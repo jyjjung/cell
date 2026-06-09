@@ -346,6 +346,10 @@ export interface SetlistSong {
   title: string;
   key: ChordKey;
   order: number;
+  /** Per-setlist reference track (YouTube watch or youtu.be URL) */
+  youtubeUrl?: string;
+  /** Explicit chord sheet IDs from the song library for this key; omit = all sheets for key */
+  chordSheetIds?: string[];
 }
 
 export interface WorshipSetlist {

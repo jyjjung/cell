@@ -9,7 +9,7 @@ import {
   Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
   Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
   Users, UserPlus, Link2, UserCheck, UserX, Shield, Download,
-  ChevronUp, ChevronDown, RefreshCw
+  ChevronUp, ChevronDown, RefreshCw, Youtube, Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -21,7 +21,7 @@ import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
 import type {
-  WorshipSong, WorshipSetlist, ChordKey, SongChordSheet,
+  WorshipSong, WorshipSetlist, SetlistSong, ChordKey, SongChordSheet,
   WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole
 } from '@/types';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
@@ -31,9 +31,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog 
+import {
+  NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog,
+  SetlistSongConfigPanel,
 } from '@/components/worship/WorshipDialogs';
+import {
+  resolveChordSheetsForSetlistSong, chordSheetsForKey,
+  parseYoutubeVideoId, normalizeYoutubeUrl,
+} from '@/lib/worship-utils';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -429,6 +434,99 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
   );
 }
 
+// ── YoutubeEmbedButton ───────────────────────────────────────────────────────
+function YoutubeEmbedButton({ youtubeUrl, compact = false }: { youtubeUrl: string; compact?: boolean }) {
+  const [playing, setPlaying] = useState(false);
+  const videoId = parseYoutubeVideoId(youtubeUrl);
+  if (!videoId) return null;
+
+  if (playing) {
+    return (
+      <div className={cn('rounded-xl overflow-hidden bg-black', compact ? 'w-40 h-24' : 'w-full aspect-video max-w-sm')}>
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title="YouTube reference track"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setPlaying(true); }}
+      className={cn(
+        'relative rounded-xl overflow-hidden border border-border/50 group/yt shrink-0',
+        compact ? 'w-10 h-10' : 'w-full max-w-sm aspect-video',
+      )}
+      aria-label="Play reference track"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+        alt="YouTube thumbnail"
+        className={cn('object-cover', compact ? 'w-full h-full' : 'w-full h-full')}
+      />
+      <span className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/yt:bg-black/40 transition-colors">
+        <Play className={cn('text-white fill-white', compact ? 'h-4 w-4' : 'h-10 w-10')} />
+      </span>
+    </button>
+  );
+}
+
+function buildChordSheetIdsOption(
+  libSong: WorshipSong,
+  key: ChordKey,
+  selectedSheetIds: string[],
+): string[] | undefined {
+  const sheetsForKey = chordSheetsForKey(libSong, key);
+  if (sheetsForKey.length <= 1) return undefined;
+  if (selectedSheetIds.length > 0 && selectedSheetIds.length < sheetsForKey.length) {
+    return selectedSheetIds;
+  }
+  return undefined;
+}
+
+function useSetlistSongSheetSelection(song: WorshipSong | null, selectedKey: ChordKey) {
+  const [selectedSheetIds, setSelectedSheetIds] = useState<string[]>([]);
+  const prevKeyRef = useRef<ChordKey | null>(null);
+  const prevSongIdRef = useRef<string | null>(null);
+  const prevSheetCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!song) {
+      setSelectedSheetIds([]);
+      prevKeyRef.current = null;
+      prevSongIdRef.current = null;
+      prevSheetCountRef.current = 0;
+      return;
+    }
+    const sheets = chordSheetsForKey(song, selectedKey);
+    const keyOrSongChanged =
+      prevKeyRef.current !== selectedKey || prevSongIdRef.current !== song.id;
+    const sheetsAdded = sheets.length > prevSheetCountRef.current;
+
+    prevKeyRef.current = selectedKey;
+    prevSongIdRef.current = song.id;
+    prevSheetCountRef.current = sheets.length;
+
+    if (keyOrSongChanged) {
+      setSelectedSheetIds(sheets.map((s) => s.id));
+    } else if (sheetsAdded) {
+      setSelectedSheetIds((prev) => {
+        const kept = prev.filter((id) => sheets.some((s) => s.id === id));
+        const added = sheets.filter((s) => !prev.includes(s.id)).map((s) => s.id);
+        return [...kept, ...added];
+      });
+    }
+  }, [song, selectedKey]);
+
+  return { selectedSheetIds, setSelectedSheetIds };
+}
+
 // ── AddSongToSetlistDialog ───────────────────────────────────────────────────
 function AddSongToSetlistDialog({
   open, playlist, onClose,
@@ -439,7 +537,12 @@ function AddSongToSetlistDialog({
   const [search, setSearch] = useState('');
   const [selectedSong, setSelectedSong] = useState<WorshipSong | null>(null);
   const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+
+  const liveSong = selectedSong ? (songs.find((s) => s.id === selectedSong.id) ?? selectedSong) : null;
+  const { selectedSheetIds, setSelectedSheetIds } = useSetlistSongSheetSelection(liveSong, selectedKey);
 
   const alreadyAdded = new Set(playlist.songs.map(s => s.songId));
   const filtered = useMemo(() =>
@@ -448,141 +551,255 @@ function AddSongToSetlistDialog({
       (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist?.toLowerCase().includes(search.toLowerCase()))
     ), [songs, search, alreadyAdded]);
 
-  // Auto-detect available keys when song is selected
-  const availableKeys = useMemo(() => {
-    if (!selectedSong) return [] as ChordKey[];
-    return Array.from(new Set(selectedSong.chordSheets.map(s => s.key)));
-  }, [selectedSong]);
+  const youtubeInvalid = youtubeUrl.trim().length > 0 && !parseYoutubeVideoId(youtubeUrl);
+
+  const handleKeyChange = (key: ChordKey) => {
+    setSelectedKey(key);
+  };
 
   const handleAdd = async () => {
-    if (!selectedSong) return;
+    if (!liveSong || youtubeInvalid) return;
     setAdding(true);
     try {
-      await addSongToSetlist(playlist, selectedSong.id, selectedSong.title, selectedKey);
-      toast({ title: 'Song added', description: `${selectedSong.title} (${selectedKey === 'numbers' ? '#' : selectedKey}) added to setlist.` });
-      setSelectedSong(null); setSelectedKey('numbers'); setSearch('');
+      const normalizedYoutube = youtubeUrl.trim() ? normalizeYoutubeUrl(youtubeUrl) ?? undefined : undefined;
+      const chordSheetIds = buildChordSheetIdsOption(liveSong, selectedKey, selectedSheetIds);
+
+      await addSongToSetlist(playlist, liveSong.id, liveSong.title, selectedKey, {
+        youtubeUrl: normalizedYoutube,
+        chordSheetIds,
+      });
+      toast({ title: 'Song added', description: `${liveSong.title} (${selectedKey === 'numbers' ? '#' : selectedKey}) added to setlist.` });
+      reset();
       onClose();
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally { setAdding(false); }
   };
 
-  const reset = () => { setSelectedSong(null); setSelectedKey('numbers'); setSearch(''); };
+  const reset = () => {
+    setSelectedSong(null);
+    setSelectedKey('numbers');
+    setYoutubeUrl('');
+    setSearch('');
+  };
+
+  const selectSong = (song: WorshipSong) => {
+    setSelectedSong(song);
+    const keys = Array.from(new Set(song.chordSheets.map(s => s.key)));
+    setSelectedKey(keys.length > 0 ? keys[0] : 'numbers');
+    setYoutubeUrl('');
+  };
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
-      <DialogContent className="rounded-3xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Add Song</DialogTitle>
-          <DialogDescription>Choose a song from the library and select the key for this service.</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
+        <DialogContent className="rounded-3xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Add Song</DialogTitle>
+            <DialogDescription>Choose a song, key, charts, and an optional reference track.</DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          {!selectedSong ? (
-            <>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                <Input placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 rounded-xl" />
-              </div>
-              <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">
-                    {songs.length === 0 ? 'No songs in library yet.' : 'No matching songs.'}
-                  </p>
-                ) : filtered.map(song => (
-                  <button key={song.id} onClick={() => {
-                    setSelectedSong(song);
-                    // Auto-select first available key if any
-                    const keys = Array.from(new Set(song.chordSheets.map(s => s.key)));
-                    if (keys.length > 0) setSelectedKey(keys[0]);
-                    else setSelectedKey('numbers');
-                  }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted hover:border-border border border-transparent transition-all text-left">
-                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Music2 className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{song.title}</p>
-                      {song.artist && <p className="text-xs text-muted-foreground/60 truncate">{song.artist}</p>}
-                    </div>
-                    <div className="flex gap-1">
-                      {Array.from(new Set(song.chordSheets.map(s => s.key))).slice(0, 3).map(k => (
-                        <KeyBadge key={k} keyName={k} />
-                      ))}
-                    </div>
+          <div className="space-y-4 mt-4">
+            {!liveSong ? (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                  <Input placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 rounded-xl" />
+                </div>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {filtered.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">
+                      {songs.length === 0 ? 'No songs in library yet.' : 'No matching songs.'}
+                    </p>
+                  ) : filtered.map(song => (
+                    <button key={song.id} onClick={() => selectSong(song)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted hover:border-border border border-transparent transition-all text-left">
+                      <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                        <Music2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{song.title}</p>
+                        {song.artist && <p className="text-xs text-muted-foreground/60 truncate">{song.artist}</p>}
+                      </div>
+                      <div className="flex gap-1">
+                        {Array.from(new Set(song.chordSheets.map(s => s.key))).slice(0, 3).map(k => (
+                          <KeyBadge key={k} keyName={k} />
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
+                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Music2 className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{liveSong.title}</p>
+                    {liveSong.artist && <p className="text-xs text-muted-foreground/60">{liveSong.artist}</p>}
+                  </div>
+                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setYoutubeUrl(''); }}
+                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
+                    <X className="h-3.5 w-3.5" />
                   </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Selected song confirmation + key picker */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                  <Music2 className="h-4 w-4 text-primary" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm">{selectedSong.title}</p>
-                  {selectedSong.artist && <p className="text-xs text-muted-foreground/60">{selectedSong.artist}</p>}
-                </div>
-                <button onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); }}
-                  className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Select Key</Label>
-                {availableKeys.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground/60 font-medium">
-                    ✓ Chord sheets available for highlighted keys
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-1.5">
-                  {ALL_KEYS.map(k => {
-                    const hasSheet = availableKeys.includes(k);
-                    return (
-                      <button key={k} onClick={() => setSelectedKey(k)}
-                        className={cn(
-                          'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all relative',
-                          selectedKey === k
-                            ? 'bg-muted border-border text-white shadow-md shadow-rose-500/20'
-                            : hasSheet
-                            ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600 hover:border-border'
-                            : 'bg-muted border-border/40 text-muted-foreground hover:border-border'
-                        )}>
-                        {k === 'numbers' ? '#' : k}
-                        {hasSheet && selectedKey !== k && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500/10 rounded-full" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {availableKeys.includes(selectedKey) && (
-                  <p className="text-xs text-green-600 dark:text-green-600 font-semibold flex items-center gap-1">
-                    <Check className="h-3 w-3" /> Chord sheet available for this key
-                  </p>
-                )}
-                {!availableKeys.includes(selectedKey) && availableKeys.length > 0 && (
-                  <p className="text-xs text-muted-foreground/60 font-medium">
-                    No chord sheet for this key — it can still be added.
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+                <SetlistSongConfigPanel
+                  song={liveSong}
+                  selectedKey={selectedKey}
+                  onKeyChange={handleKeyChange}
+                  selectedSheetIds={selectedSheetIds}
+                  onSheetIdsChange={setSelectedSheetIds}
+                  youtubeUrl={youtubeUrl}
+                  onYoutubeUrlChange={setYoutubeUrl}
+                  onRequestUpload={() => setUploadOpen(true)}
+                  idPrefix="add-song"
+                />
+              </>
+            )}
 
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
-            <Button className="flex-1 rounded-xl"
-              onClick={handleAdd} disabled={!selectedSong || adding}>
-              {adding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Add to Setlist
-            </Button>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
+              <Button className="flex-1 rounded-xl"
+                onClick={handleAdd} disabled={!liveSong || adding || youtubeInvalid}>
+                {adding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Add to Setlist
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <AddChordSheetDialog
+        open={uploadOpen}
+        song={liveSong}
+        defaultKey={selectedKey}
+        lockKey
+        onUploaded={(ids) => setSelectedSheetIds((prev) => [...new Set([...prev, ...ids])])}
+        onClose={() => setUploadOpen(false)}
+      />
+    </>
+  );
+}
+
+// ── EditSetlistSongDialog ──────────────────────────────────────────────────────
+function EditSetlistSongDialog({
+  open, playlist, setlistSong, onClose,
+}: {
+  open: boolean;
+  playlist: WorshipSetlist;
+  setlistSong: SetlistSong | null;
+  onClose: () => void;
+}) {
+  const { songs } = useWorshipSongs();
+  const { updateSetlistSong } = useWorshipSetlists();
+  const { toast } = useToast();
+  const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
+  const [selectedSheetIds, setSelectedSheetIds] = useState<string[]>([]);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const prevKeyRef = useRef<ChordKey | null>(null);
+  const initRef = useRef<string | null>(null);
+
+  const libSong = setlistSong ? songs.find((s) => s.id === setlistSong.songId) : null;
+
+  useEffect(() => {
+    if (!open) {
+      initRef.current = null;
+      return;
+    }
+    if (!setlistSong || !libSong) return;
+    const token = setlistSong.songId;
+    if (initRef.current === token) return;
+    initRef.current = token;
+    setSelectedKey(setlistSong.key);
+    setYoutubeUrl(setlistSong.youtubeUrl ?? '');
+    prevKeyRef.current = setlistSong.key;
+    const sheets = chordSheetsForKey(libSong, setlistSong.key);
+    if (setlistSong.chordSheetIds?.length) {
+      const valid = setlistSong.chordSheetIds.filter((id) => sheets.some((s) => s.id === id));
+      setSelectedSheetIds(valid.length > 0 ? valid : sheets.map((s) => s.id));
+    } else {
+      setSelectedSheetIds(sheets.map((s) => s.id));
+    }
+  }, [open, setlistSong, libSong]);
+
+  const handleKeyChange = (key: ChordKey) => {
+    setSelectedKey(key);
+    if (!libSong) return;
+    if (prevKeyRef.current !== key) {
+      prevKeyRef.current = key;
+      const sheets = chordSheetsForKey(libSong, key);
+      setSelectedSheetIds(sheets.map((s) => s.id));
+    }
+  };
+
+  const youtubeInvalid = youtubeUrl.trim().length > 0 && !parseYoutubeVideoId(youtubeUrl);
+
+  const handleSave = async () => {
+    if (!setlistSong || !libSong || youtubeInvalid) return;
+    setSaving(true);
+    try {
+      const normalizedYoutube = youtubeUrl.trim() ? normalizeYoutubeUrl(youtubeUrl) ?? undefined : undefined;
+      const chordSheetIds = buildChordSheetIdsOption(libSong, selectedKey, selectedSheetIds);
+
+      await updateSetlistSong(playlist, setlistSong.songId, {
+        key: selectedKey,
+        youtubeUrl: normalizedYoutube ?? '',
+        chordSheetIds: chordSheetIds ?? [],
+      });
+      toast({ title: 'Song updated' });
+      onClose();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  if (!setlistSong || !libSong) return null;
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={v => !v && onClose()}>
+        <DialogContent className="rounded-3xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Edit Song</DialogTitle>
+            <DialogDescription>{setlistSong.title} — key, charts, and reference track for this setlist.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <SetlistSongConfigPanel
+              song={libSong}
+              selectedKey={selectedKey}
+              onKeyChange={handleKeyChange}
+              selectedSheetIds={selectedSheetIds}
+              onSheetIdsChange={setSelectedSheetIds}
+              youtubeUrl={youtubeUrl}
+              onYoutubeUrlChange={setYoutubeUrl}
+              onRequestUpload={() => setUploadOpen(true)}
+              idPrefix="edit-song"
+            />
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
+              <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving || youtubeInvalid}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AddChordSheetDialog
+        open={uploadOpen}
+        song={libSong}
+        defaultKey={selectedKey}
+        lockKey
+        onUploaded={(ids) => setSelectedSheetIds((prev) => [...new Set([...prev, ...ids])])}
+        onClose={() => setUploadOpen(false)}
+      />
+    </>
   );
 }
 
@@ -594,11 +811,12 @@ function SetlistDetailView({
   const { songs } = useWorshipSongs();
   const { toast } = useToast();
   const [addSongOpen, setAddSongOpen] = useState(false);
+  const [editSong, setEditSong] = useState<SetlistSong | null>(null);
   // Full-screen viewer: flat slide index across ALL songs, or null if closed
   const [viewerStart, setViewerStart] = useState<number | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   // Chord sheet from playlist
-  const [addSheetFor, setAddSheetFor] = useState<WorshipSong | null>(null);
+  const [addSheetFor, setAddSheetFor] = useState<{ song: WorshipSong; key: ChordKey } | null>(null);
   const [orderedSongs, setOrderedSongs] = useState(() => [...playlist.songs].sort((a, b) => a.order - b.order));
   const [reorderMode, setReorderMode] = useState(false);
   const [reorderDirty, setReorderDirty] = useState(false);
@@ -674,13 +892,12 @@ function SetlistDetailView({
     const slides: ViewerSlide[] = [];
     for (const ps of orderedSongs) {
       const libSong = songs.find(s => s.id === ps.songId);
-      if (!libSong) continue;
-      const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-      if (forKey.length > 0) {
+      const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
+      if (sheets.length > 0) {
         slides.push({
           songTitle: ps.title,
           key: ps.key,
-          imageUrls: forKey.map(s => s.imageUrl),
+          imageUrls: sheets.map(s => s.imageUrl),
         });
       }
     }
@@ -702,12 +919,10 @@ function SetlistDetailView({
     }
   }, [initialSongId, songs, playlist.songs, allSlides]);
 
-  const openSheets = (ps: (typeof playlist.songs)[0]) => {
+  const openSheets = (ps: SetlistSong) => {
     const libSong = songs.find(s => s.id === ps.songId);
-    if (!libSong) return;
-    const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-    if (forKey.length === 0) { toast({ title: 'No chord sheets', description: `No sheets saved for key ${ps.key}.` }); return; }
-    // Find the index of the first sheet belonging to this song in the flat allSlides array
+    const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
+    if (sheets.length === 0) { toast({ title: 'No chord sheets', description: `No sheets saved for key ${ps.key}.` }); return; }
     const startIdx = allSlides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
     setViewerStart(Math.max(0, startIdx));
   };
@@ -766,7 +981,7 @@ function SetlistDetailView({
           )}
           {orderedSongs.map((ps, i) => {
             const libSong = songs.find(s => s.id === ps.songId);
-            const sheetsForKey = libSong?.chordSheets.filter(s => s.key === ps.key) || [];
+            const sheetsForKey = resolveChordSheetsForSetlistSong(libSong, ps);
             return (
               <div
                 key={ps.songId}
@@ -799,7 +1014,7 @@ function SetlistDetailView({
                     'font-bold text-sm truncate transition-colors',
                     !reorderMode && sheetsForKey.length > 0 && 'group-hover:text-primary'
                   )}>{ps.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <KeyBadge keyName={ps.key} accent />
                     {sheetsForKey.length > 0 ? (
                       <span className="text-[10px] font-bold text-green-600 dark:text-green-600 flex items-center gap-0.5">
@@ -808,34 +1023,52 @@ function SetlistDetailView({
                     ) : (
                       <span className="text-[10px] font-bold text-muted-foreground/40">no sheet</span>
                     )}
+                    {ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl) && (
+                      <span className="text-[10px] font-bold text-red-500 flex items-center gap-0.5">
+                        <Youtube className="h-2.5 w-2.5" /> ref track
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   {!reorderMode && (
                     <>
+                      {ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl) && (
+                        <YoutubeEmbedButton youtubeUrl={ps.youtubeUrl} compact />
+                      )}
                       {sheetsForKey.length > 0 && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                           title="Download sheet(s)"
                           onClick={(e) => {
                             e.stopPropagation();
-                            sheetsForKey.forEach((sheet, i) => {
+                            sheetsForKey.forEach((sheet, idx) => {
                               setTimeout(() => {
-                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${sheetsForKey.length > 1 ? ` (Pg ${i + 1})` : ''}.png`);
-                              }, i * 300);
+                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${sheetsForKey.length > 1 ? ` (Pg ${idx + 1})` : ''}.png`);
+                              }, idx * 300);
                             });
                           }}>
                           <Download className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       {libSong && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                          title="Add chord sheet"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAddSheetFor(libSong);
-                          }}>
-                          <Upload className="h-3.5 w-3.5" />
-                        </Button>
+                        <>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                            title="Edit song settings"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditSong(ps);
+                            }}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                            title="Add chord sheet"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAddSheetFor({ song: libSong, key: ps.key });
+                            }}>
+                            <Upload className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       )}
                     </>
                   )}
@@ -881,7 +1114,18 @@ function SetlistDetailView({
       )}
 
       <AddSongToSetlistDialog open={addSongOpen} playlist={playlist} onClose={() => setAddSongOpen(false)} />
-      <AddChordSheetDialog open={!!addSheetFor} song={addSheetFor} onClose={() => setAddSheetFor(null)} />
+      <EditSetlistSongDialog
+        open={!!editSong}
+        playlist={playlist}
+        setlistSong={editSong}
+        onClose={() => setEditSong(null)}
+      />
+      <AddChordSheetDialog
+        open={!!addSheetFor}
+        song={addSheetFor?.song ?? null}
+        defaultKey={addSheetFor?.key}
+        onClose={() => setAddSheetFor(null)}
+      />
 
       {/* Full-screen viewer — slides across ALL songs in the setlist */}
       {viewerStart !== null && allSlides.length > 0 && (

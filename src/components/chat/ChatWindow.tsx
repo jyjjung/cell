@@ -24,6 +24,7 @@ import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatPhotoUploadButton from './ChatPhotoUploadButton';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
+import { resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
 import { ChatImageGallery } from './ImageLightbox';
 import { downloadChatImage } from '@/lib/chat-image-download';
 import { 
@@ -377,11 +378,10 @@ function ChatWindowBody({
           const orderedSongs = [...setlist.songs].sort((a, b) => a.order - b.order);
           for (const ps of orderedSongs) {
             const libSong = songs.find(s => s.id === ps.songId);
-            if (!libSong) continue;
-            const forKey = libSong.chordSheets.filter(s => s.key === ps.key);
-            if (forKey.length > 0) {
+            const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
+            if (sheets.length > 0) {
               slides.push({
-                imageUrls: forKey.map(s => s.imageUrl),
+                imageUrls: sheets.map(s => s.imageUrl),
                 songTitle: ps.title,
                 key: ps.key,
               });
