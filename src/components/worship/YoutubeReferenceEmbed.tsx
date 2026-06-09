@@ -1,86 +1,334 @@
 "use client";
 
-import { useState } from 'react';
-import { Play, Youtube } from 'lucide-react';
-import { parseYoutubeVideoId } from '@/lib/worship-utils';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Headphones, Pause, Play, X, Youtube } from 'lucide-react';
+import { fetchYoutubeVideoTitle, parseYoutubeVideoId } from '@/lib/worship-utils';
+import {
+  loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer,
+} from '@/lib/youtube-player-api';
 import { cn } from '@/lib/utils';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+
+function formatTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function useYoutubeVideoTitle(videoId: string | null) {
+  const [title, setTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!videoId) {
+      setTitle(null);
+      return;
+    }
+    let cancelled = false;
+    setTitle(null);
+    void fetchYoutubeVideoTitle(videoId).then((t) => {
+      if (!cancelled && t) setTitle(t);
+    });
+    return () => { cancelled = true; };
+  }, [videoId]);
+
+  return title;
+}
+
+function useYoutubePlayer(
+  videoId: string | null,
+  containerId: string,
+  enabled: boolean,
+  onTitle?: (title: string) => void,
+) {
+  const playerRef = useRef<YTPlayer | null>(null);
+  const onTitleRef = useRef(onTitle);
+  onTitleRef.current = onTitle;
+  const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!videoId || !enabled) return;
+    let cancelled = false;
+    let tick: ReturnType<typeof setInterval> | null = null;
+
+    const mount = document.getElementById(containerId);
+    if (!mount) return;
+
+    void loadYoutubeIframeApi().then((YT) => {
+      if (cancelled || !document.getElementById(containerId)) return;
+      new YT.Player(containerId, {
+        videoId,
+        height: '0',
+        width: '0',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1,
+        },
+        events: {
+          onReady: (event) => {
+            if (cancelled) return;
+            playerRef.current = event.target;
+            const d = event.target.getDuration();
+            if (Number.isFinite(d) && d > 0) setDuration(d);
+            try {
+              const videoTitle = event.target.getVideoData()?.title?.trim();
+              if (videoTitle) onTitleRef.current?.(videoTitle);
+            } catch { /* ignore */ }
+            setReady(true);
+          },
+          onStateChange: (event) => {
+            if (event.data === YT_PLAYING) {
+              setPlaying(true);
+              if (tick) clearInterval(tick);
+              tick = setInterval(() => {
+                const t = playerRef.current?.getCurrentTime() ?? 0;
+                const d = playerRef.current?.getDuration() ?? 0;
+                setCurrentTime(t);
+                if (Number.isFinite(d) && d > 0) setDuration(d);
+              }, 250);
+            } else {
+              setPlaying(false);
+              if (tick) {
+                clearInterval(tick);
+                tick = null;
+              }
+              if (event.data === YT_PAUSED || event.data === YT_ENDED) {
+                setCurrentTime(playerRef.current?.getCurrentTime() ?? 0);
+              }
+              if (event.data === YT_ENDED) {
+                setCurrentTime(0);
+              }
+            }
+          },
+        },
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (tick) clearInterval(tick);
+      try { playerRef.current?.destroy(); } catch { /* already destroyed */ }
+      playerRef.current = null;
+      setReady(false);
+      setPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+    };
+  }, [videoId, containerId, enabled]);
+
+  const togglePlay = useCallback(() => {
+    if (!playerRef.current || !ready) return;
+    if (playing) playerRef.current.pauseVideo();
+    else playerRef.current.playVideo();
+  }, [playing, ready]);
+
+  const seek = useCallback((time: number) => {
+    if (!playerRef.current || !ready) return;
+    playerRef.current.seekTo(time, true);
+    setCurrentTime(time);
+  }, [ready]);
+
+  return { ready, playing, currentTime, duration, togglePlay, seek };
+}
+
+/** Full audio player panel with title, play/pause, and scrubber. */
+export function YoutubePlayerPanel({
+  url,
+  theme = 'dark',
+  className,
+  enabled = true,
+  onClose,
+}: {
+  url: string;
+  theme?: 'dark' | 'light';
+  className?: string;
+  enabled?: boolean;
+  onClose?: () => void;
+}) {
+  const videoId = parseYoutubeVideoId(url);
+  const reactId = useId().replace(/:/g, '');
+  const containerId = `yt-ref-${reactId}`;
+  const oembedTitle = useYoutubeVideoTitle(videoId);
+  const [playerTitle, setPlayerTitle] = useState<string | null>(null);
+  const { ready, playing, currentTime, duration, togglePlay, seek } = useYoutubePlayer(
+    videoId,
+    containerId,
+    enabled,
+    setPlayerTitle,
+  );
+  const displayTitle = playerTitle ?? oembedTitle;
+
+  if (!videoId) return null;
+
+  const isDark = theme === 'dark';
+
+  const shell = cn(
+    'relative rounded-xl border transition-colors px-3 py-2.5 space-y-2',
+    isDark
+      ? 'border-white/15 bg-white/10 backdrop-blur-md'
+      : 'border-border/50 bg-muted/40',
+    className,
+  );
+
+  const titleClass = cn(
+    'text-xs font-semibold truncate flex items-center gap-1.5 min-w-0 flex-1',
+    isDark ? 'text-white/85' : 'text-foreground',
+  );
+
+  const timeClass = cn(
+    'text-[10px] font-semibold tabular-nums shrink-0',
+    isDark ? 'text-white/60' : 'text-muted-foreground',
+  );
+
+  return (
+    <div className={shell}>
+      <div id={containerId} className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none" aria-hidden />
+
+      <div className="flex items-center gap-2">
+        <p className={titleClass} title={displayTitle ?? undefined}>
+          <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
+          <span className="truncate">{displayTitle ?? 'Loading…'}</span>
+        </p>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={cn(
+              'p-1 rounded-lg shrink-0 transition-colors',
+              isDark ? 'text-white/60 hover:bg-white/10' : 'text-muted-foreground hover:bg-muted',
+            )}
+            aria-label="Close player"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={togglePlay}
+          disabled={!ready}
+          className={cn(
+            'p-2.5 rounded-xl shrink-0 transition-colors disabled:opacity-40',
+            isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-background text-foreground hover:bg-muted border border-border/50',
+          )}
+          aria-label={playing ? 'Pause' : 'Play'}
+        >
+          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+        </button>
+
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className={timeClass}>{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration > 0 ? duration : 100}
+            step={0.1}
+            value={duration > 0 ? currentTime : 0}
+            disabled={!ready || duration <= 0}
+            onChange={(e) => seek(Number(e.target.value))}
+            className={cn(
+              'flex-1 h-1.5 appearance-none rounded-full cursor-pointer disabled:opacity-40',
+              '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500',
+              '[&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-red-500',
+              isDark ? 'bg-white/15' : 'bg-muted',
+            )}
+            aria-label="Track position"
+          />
+          <span className={timeClass}>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListenButtonPlayer({
+  url,
+  theme,
+  className,
+}: {
+  url: string;
+  theme: 'dark' | 'light';
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const videoTitle = useYoutubeVideoTitle(parseYoutubeVideoId(url));
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    setOpen(false);
+  }, [url]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors',
+            isDark
+              ? 'bg-white/10 text-white hover:bg-white/15 border border-white/10'
+              : 'bg-muted text-foreground hover:bg-muted/80 border border-border/50',
+            className,
+          )}
+          aria-label={videoTitle ? `Listen to ${videoTitle}` : 'Listen to reference track'}
+        >
+          <Headphones className="h-3.5 w-3.5" />
+          Listen
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="z-[400] w-[min(20rem,calc(100vw-2rem))] p-2 rounded-2xl"
+        side="top"
+        align="end"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <YoutubePlayerPanel
+          url={url}
+          theme={theme}
+          enabled={open}
+          onClose={() => setOpen(false)}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function YoutubeReferenceEmbed({
   url,
-  variant = 'bar',
+  theme = 'dark',
+  compact = false,
+  className,
 }: {
   url: string;
-  variant?: 'bar' | 'large';
+  theme?: 'dark' | 'light';
+  compact?: boolean;
+  className?: string;
 }) {
-  const [playing, setPlaying] = useState(false);
   const videoId = parseYoutubeVideoId(url);
   if (!videoId) return null;
 
-  if (playing) {
-    return (
-      <div
-        className={cn(
-          'rounded-xl overflow-hidden bg-black w-full',
-          variant === 'large' ? 'aspect-video max-w-2xl mx-auto' : 'aspect-video max-w-md',
-        )}
-      >
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-          title="YouTube reference track"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </div>
-    );
-  }
-
-  if (variant === 'large') {
-    return (
-      <button
-        type="button"
-        onClick={() => setPlaying(true)}
-        className="relative w-full max-w-2xl mx-auto aspect-video rounded-xl overflow-hidden border border-white/20 group"
-        aria-label="Play reference track"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-          alt="YouTube thumbnail"
-          className="w-full h-full object-cover"
-        />
-        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 group-hover:bg-black/50 transition-colors">
-          <Play className="h-12 w-12 text-white fill-white" />
-          <span className="text-sm font-bold text-white">Play reference track</span>
-        </span>
-      </button>
-    );
+  if (compact) {
+    return <ListenButtonPlayer url={url} theme={theme} className={className} />;
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => setPlaying(true)}
-      className="flex items-center gap-3 w-full rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors text-left"
-      aria-label="Play reference track"
-    >
-      <div className="relative w-14 h-10 rounded-lg overflow-hidden shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-          alt=""
-          className="w-full h-full object-cover"
-        />
-        <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-          <Play className="h-4 w-4 text-white fill-white" />
-        </span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 flex items-center gap-1">
-          <Youtube className="h-3 w-3 text-red-400" /> Reference track
-        </p>
-        <p className="text-xs font-semibold text-white truncate">Tap to play</p>
-      </div>
-    </button>
+    <YoutubePlayerPanel
+      url={url}
+      theme={theme}
+      className={cn('w-full', className)}
+    />
   );
 }

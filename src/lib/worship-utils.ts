@@ -16,6 +16,31 @@ export function normalizeYoutubeUrl(url: string): string | null {
   return id ? `https://www.youtube.com/watch?v=${id}` : null;
 }
 
+const youtubeTitleCache = new Map<string, string>();
+
+/** Fetch a YouTube video title via oEmbed (no API key required). */
+export async function fetchYoutubeVideoTitle(videoId: string): Promise<string | null> {
+  const cached = youtubeTitleCache.get(videoId);
+  if (cached) return cached;
+
+  try {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`,
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { title?: string };
+    const title = data.title?.trim();
+    if (title) {
+      youtubeTitleCache.set(videoId, title);
+      return title;
+    }
+  } catch {
+    /* offline or blocked */
+  }
+  return null;
+}
+
 /** Resolve which chord sheets to use for a setlist song entry. */
 export function resolveChordSheetsForSetlistSong(
   libSong: WorshipSong | undefined,

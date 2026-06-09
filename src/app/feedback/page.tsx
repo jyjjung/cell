@@ -55,6 +55,50 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.32",
+    date: "Early-June 2026",
+    changes: [
+      "Listen button moved next to chart viewer navigation with a working play/pause scrubber panel",
+    ],
+  },
+  {
+    version: "v1.3.31",
+    date: "Early-June 2026",
+    changes: [
+      "Deleted messages no longer show a placeholder in chat",
+      "Setlist reference tracks use a Listen button that opens the audio player on tap",
+    ],
+  },
+  {
+    version: "v1.3.30",
+    date: "Early-June 2026",
+    changes: [
+      "Worship setlist cards in chat fit narrow screens without clipping",
+      "Deleted message notices stay visible and no longer get covered by nearby messages",
+    ],
+  },
+  {
+    version: "v1.3.29",
+    date: "Early-June 2026",
+    changes: [
+      "Setlist reference player shows the YouTube video title instead of a generic label",
+    ],
+  },
+  {
+    version: "v1.3.28",
+    date: "Early-June 2026",
+    changes: [
+      "Reference track player stays expanded at the bottom of the setlist chart viewer",
+    ],
+  },
+  {
+    version: "v1.3.27",
+    date: "Early-June 2026",
+    changes: [
+      "Reference tracks in the setlist viewer now use an audio-style player with play/pause, seek slider, and collapse",
+    ],
+  },
+  {
     version: "v1.3.26",
     date: "Early-June 2026",
     changes: [

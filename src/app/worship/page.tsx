@@ -9,7 +9,7 @@ import {
   Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
   Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
   Users, UserPlus, Link2, UserCheck, UserX, Shield, Download,
-  ChevronUp, ChevronDown, RefreshCw, Youtube, Play
+  ChevronUp, ChevronDown, RefreshCw, Youtube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -35,6 +35,7 @@ import {
   NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog,
   SetlistSongConfigPanel,
 } from '@/components/worship/WorshipDialogs';
+import { YoutubeReferenceEmbed } from '@/components/worship/YoutubeReferenceEmbed';
 import {
   resolveChordSheetsForSetlistSong, chordSheetsForKey,
   parseYoutubeVideoId, normalizeYoutubeUrl,
@@ -431,49 +432,6 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-// ── YoutubeEmbedButton ───────────────────────────────────────────────────────
-function YoutubeEmbedButton({ youtubeUrl, compact = false }: { youtubeUrl: string; compact?: boolean }) {
-  const [playing, setPlaying] = useState(false);
-  const videoId = parseYoutubeVideoId(youtubeUrl);
-  if (!videoId) return null;
-
-  if (playing) {
-    return (
-      <div className={cn('rounded-xl overflow-hidden bg-black', compact ? 'w-40 h-24' : 'w-full aspect-video max-w-sm')}>
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}`}
-          title="YouTube reference track"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); setPlaying(true); }}
-      className={cn(
-        'relative rounded-xl overflow-hidden border border-border/50 group/yt shrink-0',
-        compact ? 'w-10 h-10' : 'w-full max-w-sm aspect-video',
-      )}
-      aria-label="Play reference track"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-        alt="YouTube thumbnail"
-        className={cn('object-cover', compact ? 'w-full h-full' : 'w-full h-full')}
-      />
-      <span className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover/yt:bg-black/40 transition-colors">
-        <Play className={cn('text-white fill-white', compact ? 'h-4 w-4' : 'h-10 w-10')} />
-      </span>
-    </button>
   );
 }
 
@@ -1042,7 +1000,7 @@ function SetlistDetailView({
                   {!reorderMode && (
                     <>
                       {ps.youtubeUrl && parseYoutubeVideoId(ps.youtubeUrl) && (
-                        <YoutubeEmbedButton youtubeUrl={ps.youtubeUrl} compact />
+                        <YoutubeReferenceEmbed url={ps.youtubeUrl} theme="light" compact />
                       )}
                       {sheetsForKey.length > 0 && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"

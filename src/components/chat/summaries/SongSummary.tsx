@@ -19,7 +19,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
   if (loading) {
     return (
       <div className={cn(
-        "flex min-w-[200px] items-center justify-center rounded-2xl border border-border/50 bg-muted/30 p-4"
+        "flex w-full min-w-0 items-center justify-center rounded-2xl border border-border/50 bg-muted/30 p-4"
       )}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
@@ -29,7 +29,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
   if (!song) {
     return (
       <div className={cn(
-        "flex min-w-[200px] items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 p-4"
+        "flex w-full min-w-0 items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 p-4"
       )}>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/50 bg-muted grayscale opacity-70">
           <Music2 className="w-5 h-5" />
@@ -45,7 +45,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
     <div
       onClick={() => onOpenViewer?.(songId)}
       className={cn(
-        "group flex min-w-[200px] cursor-pointer items-center gap-3 rounded-2xl border p-4 shadow-sm transition-all duration-200 active:scale-95",
+        "group flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-2xl border p-4 shadow-sm transition-all duration-200 active:scale-95",
         isSender
           ? "border-primary/30 bg-primary/5"
           : "border-border/60 bg-card"

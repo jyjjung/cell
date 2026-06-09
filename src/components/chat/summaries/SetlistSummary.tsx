@@ -218,11 +218,11 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
           router.push(`/worship?tab=playlists&id=${setlistId}${firstSongId ? `&songId=${firstSongId}` : ''}`);
         }
       }}
-      className="block transition-transform active:scale-95 cursor-pointer"
+      className="block w-full min-w-0 max-w-full transition-transform active:scale-95 cursor-pointer"
     >
       <div
         className={cn(
-          'group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200',
+          'group flex w-full min-w-0 max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200 overflow-hidden',
           isSender
             ? 'border-primary/30 bg-primary/5 text-foreground'
             : 'border-border/60 bg-card text-foreground',
@@ -285,29 +285,29 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
                   router.push(`/worship?tab=playlists&id=${setlistId}&songId=${song.songId}`);
                 }
               }}
-              className="pointer-events-auto flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
+              className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50 min-w-0"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="w-4 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
-                <p className="truncate text-[13px] font-medium text-foreground">{song.title}</p>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="w-4 shrink-0 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
+                <p className="truncate text-[13px] font-medium text-foreground min-w-0">{song.title}</p>
                 {song.youtubeUrl && parseYoutubeVideoId(song.youtubeUrl) && (
                   <Youtube className="h-3 w-3 shrink-0 text-red-500" aria-label="Has reference track" />
                 )}
               </div>
-              <div className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <div className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {song.key === 'numbers' ? '#' : song.key}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-1 flex items-center gap-2">
+        <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
           {mediaUrls.length > 0 && (
             <button
               type="button"
               onClick={handleCacheOffline}
               disabled={offlineCaching}
-              className="pointer-events-auto flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-60"
+              className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-60"
             >
               {offlineCaching ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -325,8 +325,8 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
                     : 'Save offline'}
             </button>
           )}
-          <div className="flex flex-1 items-center justify-between min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+            <span className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
               Open Chart Viewer
             </span>
             <ChevronRight

@@ -53,9 +53,9 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
   const dateText = formatDateText(roster.date);
 
   return (
-    <Link href={`/worship?tab=rosters&id=${rosterId}`} className="block transition-transform active:scale-95">
+    <Link href={`/worship?tab=rosters&id=${rosterId}`} className="block w-full min-w-0 max-w-full transition-transform active:scale-95">
       <div className={cn(
-        "group flex w-full max-w-full flex-col gap-2.5 rounded-2xl border p-3 shadow-sm transition-all duration-200",
+        "group flex w-full min-w-0 max-w-full flex-col gap-2.5 overflow-hidden rounded-2xl border p-3 shadow-sm transition-all duration-200",
         isSender 
           ? "border-primary/30 bg-primary/5 text-foreground" 
           : "border-border/60 bg-card text-foreground"

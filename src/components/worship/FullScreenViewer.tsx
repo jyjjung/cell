@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon } from 'lucide-react';
+import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones } from 'lucide-react';
 
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
-import { YoutubeReferenceEmbed } from '@/components/worship/YoutubeReferenceEmbed';
+import { YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 
 export interface ViewerSlide {
   songTitle: string;
@@ -55,6 +55,7 @@ export function FullScreenViewer({
   slides, startIndex = 0, onClose,
 }: { slides: ViewerSlide[]; startIndex?: number; onClose: () => void }) {
   const [idx, setIdx] = useState(startIndex);
+  const [listenOpen, setListenOpen] = useState(false);
 
   // Pixel width of images — drives zoom. null = CSS-contained (loading state).
   // We use pixel width (not CSS transform) so the scroll container always
@@ -82,6 +83,7 @@ export function FullScreenViewer({
     setImgPxWidth(null); // trigger re-fit on image load
     fitWidthRef.current = 0;
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    setListenOpen(false);
   }, [idx]);
 
   // Calculate the "fit the whole page" pixel width from the first image's natural dims
@@ -305,12 +307,6 @@ export function FullScreenViewer({
           </div>
         </div>
 
-        {slide.youtubeUrl && (slide.imageUrls?.length ?? 0) > 0 && (
-          <div className="px-4 pb-2 shrink-0">
-            <YoutubeReferenceEmbed url={slide.youtubeUrl} />
-          </div>
-        )}
-
         {/* Scroll container — always the right size, no blank overflow */}
         <div
           ref={containerRef}
@@ -323,9 +319,6 @@ export function FullScreenViewer({
           >
             {/* Center column — images stack vertically, centered horizontally */}
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
-              {(slide.imageUrls ?? []).length === 0 && slide.youtubeUrl && (
-                <YoutubeReferenceEmbed url={slide.youtubeUrl} variant="large" />
-              )}
               {(slide.imageUrls ?? []).map((url, i) => {
                 if (isPdfUrl(url)) {
                   return (
@@ -368,25 +361,47 @@ export function FullScreenViewer({
           </div>
         </div>
 
-        {/* Footer nav */}
-        <div className="shrink-0 flex items-center justify-center gap-4 pb-6 pt-2 px-6">
-          <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          {slides.length > 1 && (
-            <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[55vw]">
-              {slides.map((s, i) => (
-                <button key={i} onClick={() => setIdx(i)} title={`${s.songTitle} (${s.key})`}
-                  className={cn('rounded-full transition-all',
-                    i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50')} />
-              ))}
-            </div>
+        {/* Footer nav + listen */}
+        <div className="shrink-0 flex flex-col gap-2 pb-6 pt-2 px-4">
+          {listenOpen && slide.youtubeUrl && (
+            <YoutubePlayerPanel
+              url={slide.youtubeUrl}
+              enabled={listenOpen}
+              onClose={() => setListenOpen(false)}
+            />
           )}
-          <button onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))} disabled={idx === slides.length - 1}
-            className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
-            <ChevronRight className="h-6 w-6" />
-          </button>
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            {slide.youtubeUrl && (
+              <button
+                type="button"
+                onClick={() => setListenOpen((open) => !open)}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-white backdrop-blur-sm transition-colors',
+                  listenOpen ? 'bg-rose-500/90 hover:bg-rose-500' : 'bg-white/10 hover:bg-white/20',
+                )}
+              >
+                <Headphones className="h-5 w-5" />
+                Listen
+              </button>
+            )}
+            {slides.length > 1 && (
+              <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[30vw]">
+                {slides.map((s, i) => (
+                  <button key={i} onClick={() => setIdx(i)} title={`${s.songTitle} (${s.key})`}
+                    className={cn('rounded-full transition-all',
+                      i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50')} />
+                ))}
+              </div>
+            )}
+            <button onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))} disabled={idx === slides.length - 1}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </div>
         </div>
         {/* Swipe-and-Hold Indicator */}
         <AnimatePresence>
