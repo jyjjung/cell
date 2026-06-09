@@ -5,7 +5,7 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images } from 'lucide-react';
+import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images, Link2 } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
 import { getMemberDisplayName } from '@/lib/chat-utils';
@@ -21,6 +21,7 @@ import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
 import { translations } from '@/lib/translations';
 import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
 import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
+import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatPhotoUploadButton from './ChatPhotoUploadButton';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
 import { ChatImageGallery } from './ImageLightbox';
@@ -120,11 +121,16 @@ function ChatWindowBody({
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [chatTab, setChatTab] = useState<'messages' | 'photos'>('messages');
+  const [chatTab, setChatTab] = useState<'messages' | 'photos' | 'links'>('messages');
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
 
   const photoCount = useMemo(
     () => extractChatPhotos(messages, usersById).length,
+    [messages, usersById],
+  );
+
+  const linkCount = useMemo(
+    () => extractChatLinks(messages, usersById).length,
     [messages, usersById],
   );
 
@@ -319,6 +325,18 @@ function ChatWindowBody({
           <Images className="h-3.5 w-3.5" />
           Photos{photoCount > 0 ? ` (${photoCount})` : ''}
         </button>
+        <button
+          type="button"
+          onClick={() => setChatTab('links')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            chatTab === 'links'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted/30'
+          }`}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          Links{linkCount > 0 ? ` (${linkCount})` : ''}
+        </button>
       </div>
 
       <div className="flex-1 min-h-0 relative">
@@ -336,12 +354,14 @@ function ChatWindowBody({
             onOpenImage={handleOpenImage}
             onOpenWorshipViewer={handleOpenWorshipViewer}
           />
-        ) : (
+        ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
             messages={messages}
             allUsers={allUsers}
             onOpenImage={setOpenImageUrl}
           />
+        ) : (
+          <ChatLinksList messages={messages} allUsers={allUsers} />
         )}
       </div>
 
@@ -418,6 +438,7 @@ function ChatWindowBody({
         />
       )}
 
+      {chatTab !== 'links' && (
       <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
         {chatTab === 'messages' ? (
         <MessageInput
@@ -444,6 +465,7 @@ function ChatWindowBody({
           />
         )}
       </div>
+      )}
 
       <NewSongDialog 
         open={showNewSong} 

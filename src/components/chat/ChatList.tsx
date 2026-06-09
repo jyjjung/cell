@@ -13,7 +13,7 @@ import { getMemberDisplayName } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
 
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles } from "lucide-react";
+import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles, Images, Link2 } from "lucide-react";
 import { PageHeader, EmptyState } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import CreateChatDialog from "./CreateChatDialog";
@@ -96,6 +96,29 @@ export default function ChatList() {
       {!online && chats.length > 0 && (
         <p className="px-1 text-xs font-medium text-muted-foreground">{t.chatOfflineBanner}</p>
       )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          asChild
+          variant="outline"
+          className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
+        >
+          <Link href="/chat/photos" onClick={() => handleLinkClick('/chat/photos')}>
+            <Images className="mr-2 h-4 w-4" />
+            All Photos
+          </Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
+        >
+          <Link href="/chat/links" onClick={() => handleLinkClick('/chat/links')}>
+            <Link2 className="mr-2 h-4 w-4" />
+            All Links
+          </Link>
+        </Button>
+      </div>
 
       {/* Content Section */}
       <div className="relative">

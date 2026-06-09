@@ -11,6 +11,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const routeLabels: Record<string, string> = {
   '/': 'Home',
   '/chat': 'Chat',
+  '/chat/photos': 'All Photos',
+  '/chat/links': 'All Links',
   '/bible-checklist': 'Reading Plan',
   '/full-plan': 'Full Plan',
   '/memorize': 'Memory Verses',

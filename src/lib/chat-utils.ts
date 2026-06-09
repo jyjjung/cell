@@ -38,6 +38,41 @@ export function getMemberDisplayName(memberInfo: ChatMemberInfo | null | undefin
     return formatUserDisplayName(memberInfo, fallback);
 }
 
+export function getChatDisplayDetails(
+  chat: Chat,
+  currentUserId: string,
+  allUsers: UserProfileData[],
+): { name: string; avatar: UserProfileData['avatar'] | null } | null {
+  if (chat.type === 'private') {
+    const peerId = chat.members.find((id) => id !== currentUserId);
+    const peerInfoFromChat = peerId ? chat.memberInfo[peerId] : null;
+    const peerFullProfile = peerId ? allUsers.find((u) => u.uid === peerId) : null;
+
+    let name = 'Private Chat';
+    if (peerFullProfile?.firstName) {
+      name = formatUserDisplayName(peerFullProfile);
+    } else if (peerInfoFromChat) {
+      name = getMemberDisplayName(peerInfoFromChat, 'Private Chat');
+    } else if (!peerId && chat.members.length === 1) {
+      name = 'Archived Conversation';
+    }
+
+    return {
+      name,
+      avatar: peerFullProfile?.avatar || peerInfoFromChat?.avatar || null,
+    };
+  }
+
+  if (chat.type === 'group') {
+    return {
+      name: chat.name || 'Unnamed Circle',
+      avatar: null,
+    };
+  }
+
+  return null;
+}
+
 export function resolveChatUserName(
   uid: string,
   chat: Chat,

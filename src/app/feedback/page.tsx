@@ -55,6 +55,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.24",
+    subtitle: "Chat Links & Shared Media",
+    date: "Early-June 2026",
+    changes: [
+      "Links tab in each chat — browse URLs shared in messages with favicons and sender info",
+      "All Photos and All Links pages on the chat list — see shared media across every conversation",
+      "Fixed scrolling on the global photos and links pages",
+    ],
+  },
+  {
     version: "v1.3.23",
     subtitle: "Smoother Chat Scrolling",
     date: "Early-June 2026",
