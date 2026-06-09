@@ -18,7 +18,9 @@ import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import type { WorshipSong, WorshipSetlist, ChordKey, SongChordSheet } from '@/types';
 import { cn } from '@/lib/utils';
-import { chordSheetsForKey, parseYoutubeVideoId } from '@/lib/worship-utils';
+import {
+  chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft,
+} from '@/lib/worship-utils';
 
 export const WORSHIP_ALL_KEYS: ChordKey[] = [
   'numbers',
@@ -229,8 +231,8 @@ export function SetlistSongConfigPanel({
   onKeyChange,
   selectedSheetIds,
   onSheetIdsChange,
-  youtubeUrl,
-  onYoutubeUrlChange,
+  referenceTracks,
+  onReferenceTracksChange,
   onRequestUpload,
   idPrefix = 'ssc',
 }: {
@@ -239,8 +241,8 @@ export function SetlistSongConfigPanel({
   onKeyChange: (key: ChordKey) => void;
   selectedSheetIds: string[];
   onSheetIdsChange: (ids: string[]) => void;
-  youtubeUrl: string;
-  onYoutubeUrlChange: (url: string) => void;
+  referenceTracks: ReferenceTrackDraft[];
+  onReferenceTracksChange: (tracks: ReferenceTrackDraft[]) => void;
   onRequestUpload: () => void;
   idPrefix?: string;
 }) {
@@ -253,8 +255,20 @@ export function SetlistSongConfigPanel({
     [song, selectedKey],
   );
 
-  const youtubeId = youtubeUrl.trim() ? parseYoutubeVideoId(youtubeUrl) : null;
-  const youtubeInvalid = youtubeUrl.trim().length > 0 && !youtubeId;
+  const updateTrack = (index: number, patch: Partial<ReferenceTrackDraft>) => {
+    onReferenceTracksChange(
+      referenceTracks.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  };
+
+  const addTrack = () => {
+    onReferenceTracksChange([...referenceTracks, { url: '', note: '' }]);
+  };
+
+  const removeTrack = (index: number) => {
+    const next = referenceTracks.filter((_, i) => i !== index);
+    onReferenceTracksChange(next.length > 0 ? next : [{ url: '', note: '' }]);
+  };
 
   const toggleSheet = (sheetId: string) => {
     if (selectedSheetIds.includes(sheetId)) {
@@ -345,20 +359,55 @@ export function SetlistSongConfigPanel({
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-youtube`} className="flex items-center gap-1.5">
-          <Youtube className="h-3.5 w-3.5" /> Reference Track <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-        </Label>
-        <Input
-          id={`${idPrefix}-youtube`}
-          placeholder="https://youtube.com/watch?v=…"
-          value={youtubeUrl}
-          onChange={(e) => onYoutubeUrlChange(e.target.value)}
-          className={cn('rounded-xl', youtubeInvalid && 'border-destructive')}
-        />
-        {youtubeInvalid && (
-          <p className="text-xs text-destructive">Enter a valid YouTube link</p>
-        )}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="flex items-center gap-1.5">
+            <Youtube className="h-3.5 w-3.5" /> Reference Tracks <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </Label>
+          <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg text-xs gap-1"
+            onClick={addTrack}>
+            <Plus className="h-3 w-3" /> Add link
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {referenceTracks.map((row, index) => {
+            const urlInvalid = row.url.trim().length > 0 && !parseYoutubeVideoId(row.url);
+            return (
+              <div key={`${idPrefix}-ref-${index}`} className="rounded-xl border border-border/50 p-2.5 space-y-2 bg-muted/20">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <Input
+                      id={`${idPrefix}-youtube-${index}`}
+                      placeholder="https://youtube.com/watch?v=…"
+                      value={row.url}
+                      onChange={(e) => updateTrack(index, { url: e.target.value })}
+                      className={cn('rounded-xl', urlInvalid && 'border-destructive')}
+                    />
+                    <Input
+                      placeholder="Note (e.g. For intro only)"
+                      value={row.note}
+                      onChange={(e) => updateTrack(index, { note: e.target.value })}
+                      className="rounded-xl text-sm"
+                    />
+                  </div>
+                  {referenceTracks.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeTrack(index)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      aria-label="Remove link"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {urlInvalid && (
+                  <p className="text-xs text-destructive">Enter a valid YouTube link</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

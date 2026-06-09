@@ -16,7 +16,7 @@ import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { useWorshipData } from '@/contexts/worship-data-context';
 import type { WorshipSetlist, WorshipSong } from '@/types';
 import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
-import { resolveChordSheetsForSetlistSong, parseYoutubeVideoId } from '@/lib/worship-utils';
+import { resolveChordSheetsForSetlistSong, hasReferenceTracks, getReferenceTracks } from '@/lib/worship-utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -290,8 +290,11 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="w-4 shrink-0 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
                 <p className="truncate text-[13px] font-medium text-foreground min-w-0">{song.title}</p>
-                {song.youtubeUrl && parseYoutubeVideoId(song.youtubeUrl) && (
-                  <Youtube className="h-3 w-3 shrink-0 text-red-500" aria-label="Has reference track" />
+                {hasReferenceTracks(song) && (
+                  <Youtube
+                    className="h-3 w-3 shrink-0 text-red-500"
+                    aria-label={getReferenceTracks(song).length > 1 ? 'Has reference tracks' : 'Has reference track'}
+                  />
                 )}
               </div>
               <div className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">

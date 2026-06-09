@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Headphones, Pause, Play, X, Youtube } from 'lucide-react';
-import { fetchYoutubeVideoTitle, parseYoutubeVideoId } from '@/lib/worship-utils';
+import type { ReferenceTrack, SetlistSong } from '@/types';
+import { fetchYoutubeVideoTitle, getReferenceTracks, parseYoutubeVideoId } from '@/lib/worship-utils';
 import {
   loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer,
 } from '@/lib/youtube-player-api';
@@ -144,12 +145,14 @@ function useYoutubePlayer(
 /** Full audio player panel with title, play/pause, and scrubber. */
 export function YoutubePlayerPanel({
   url,
+  note,
   theme = 'dark',
   className,
   enabled = true,
   onClose,
 }: {
   url: string;
+  note?: string;
   theme?: 'dark' | 'light';
   className?: string;
   enabled?: boolean;
@@ -190,15 +193,23 @@ export function YoutubePlayerPanel({
     isDark ? 'text-white/60' : 'text-muted-foreground',
   );
 
+  const noteClass = cn(
+    'text-[10px] font-medium truncate',
+    isDark ? 'text-white/55' : 'text-muted-foreground',
+  );
+
   return (
     <div className={shell}>
       <div id={containerId} className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none" aria-hidden />
 
-      <div className="flex items-center gap-2">
-        <p className={titleClass} title={displayTitle ?? undefined}>
-          <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
-          <span className="truncate">{displayTitle ?? 'Loading…'}</span>
-        </p>
+      <div className="flex items-start gap-2 min-w-0">
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <p className={titleClass} title={displayTitle ?? undefined}>
+            <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
+            <span className="truncate">{displayTitle ?? 'Loading…'}</span>
+          </p>
+          {note && <p className={noteClass}>{note}</p>}
+        </div>
         {onClose && (
           <button
             type="button"
@@ -253,22 +264,70 @@ export function YoutubePlayerPanel({
   );
 }
 
-function ListenButtonPlayer({
-  url,
+export function TrackPicker({
+  tracks,
+  activeIndex,
+  onSelect,
+  theme,
+}: {
+  tracks: ReferenceTrack[];
+  activeIndex: number;
+  onSelect: (index: number) => void;
+  theme: 'dark' | 'light';
+}) {
+  if (tracks.length <= 1) return null;
+  const isDark = theme === 'dark';
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {tracks.map((track, index) => {
+        const label = track.note?.trim() || `Link ${index + 1}`;
+        const active = index === activeIndex;
+        return (
+          <button
+            key={`${track.url}-${index}`}
+            type="button"
+            onClick={() => onSelect(index)}
+            className={cn(
+              'px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors max-w-full truncate',
+              active
+                ? isDark
+                  ? 'bg-rose-500/90 text-white'
+                  : 'bg-primary text-primary-foreground'
+                : isDark
+                  ? 'bg-white/10 text-white/75 hover:bg-white/15'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80',
+            )}
+            title={label}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReferenceTracksPopover({
+  tracks,
   theme,
   className,
 }: {
-  url: string;
+  tracks: ReferenceTrack[];
   theme: 'dark' | 'light';
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const videoTitle = useYoutubeVideoTitle(parseYoutubeVideoId(url));
+  const [activeIndex, setActiveIndex] = useState(0);
   const isDark = theme === 'dark';
+  const activeTrack = tracks[activeIndex] ?? tracks[0];
 
   useEffect(() => {
     setOpen(false);
-  }, [url]);
+    setActiveIndex(0);
+  }, [tracks]);
+
+  if (!activeTrack) return null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -283,20 +342,28 @@ function ListenButtonPlayer({
               : 'bg-muted text-foreground hover:bg-muted/80 border border-border/50',
             className,
           )}
-          aria-label={videoTitle ? `Listen to ${videoTitle}` : 'Listen to reference track'}
+          aria-label="Listen to reference tracks"
         >
           <Headphones className="h-3.5 w-3.5" />
-          Listen
+          Listen{tracks.length > 1 ? ` (${tracks.length})` : ''}
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="z-[400] w-[min(20rem,calc(100vw-2rem))] p-2 rounded-2xl"
+        className="z-[400] w-[min(20rem,calc(100vw-2rem))] p-2 rounded-2xl space-y-2"
         side="top"
         align="end"
         onClick={(e) => e.stopPropagation()}
       >
+        <TrackPicker
+          tracks={tracks}
+          activeIndex={activeIndex}
+          onSelect={setActiveIndex}
+          theme={theme}
+        />
         <YoutubePlayerPanel
-          url={url}
+          key={activeTrack.url}
+          url={activeTrack.url}
+          note={activeTrack.note}
           theme={theme}
           enabled={open}
           onClose={() => setOpen(false)}
@@ -306,13 +373,52 @@ function ListenButtonPlayer({
   );
 }
 
+/** Listen UI for one or more reference tracks (compact popover or inline panel). */
+export function ReferenceTracksListen({
+  tracks: tracksInput,
+  theme = 'light',
+  compact = true,
+  className,
+}: {
+  tracks: ReferenceTrack[] | Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>;
+  theme?: 'dark' | 'light';
+  compact?: boolean;
+  className?: string;
+}) {
+  const tracks = useMemo(() => {
+    if (Array.isArray(tracksInput)) return tracksInput.filter((t) => parseYoutubeVideoId(t.url));
+    return getReferenceTracks(tracksInput);
+  }, [tracksInput]);
+
+  if (tracks.length === 0) return null;
+
+  if (compact) {
+    return <ReferenceTracksPopover tracks={tracks} theme={theme} className={className} />;
+  }
+
+  if (tracks.length === 1) {
+    return (
+      <YoutubePlayerPanel
+        url={tracks[0].url}
+        note={tracks[0].note}
+        theme={theme}
+        className={cn('w-full', className)}
+      />
+    );
+  }
+
+  return <ReferenceTracksPopover tracks={tracks} theme={theme} className={className} />;
+}
+
 export function YoutubeReferenceEmbed({
   url,
+  note,
   theme = 'dark',
   compact = false,
   className,
 }: {
   url: string;
+  note?: string;
   theme?: 'dark' | 'light';
   compact?: boolean;
   className?: string;
@@ -321,12 +427,20 @@ export function YoutubeReferenceEmbed({
   if (!videoId) return null;
 
   if (compact) {
-    return <ListenButtonPlayer url={url} theme={theme} className={className} />;
+    return (
+      <ReferenceTracksListen
+        tracks={[{ url, ...(note ? { note } : {}) }]}
+        theme={theme}
+        compact
+        className={className}
+      />
+    );
   }
 
   return (
     <YoutubePlayerPanel
       url={url}
+      note={note}
       theme={theme}
       className={cn('w-full', className)}
     />

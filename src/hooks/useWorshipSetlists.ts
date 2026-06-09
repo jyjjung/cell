@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { WorshipSetlist, SetlistSong, ChordKey } from '@/types';
+import type { WorshipSetlist, SetlistSong, ChordKey, ReferenceTrack } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
@@ -53,14 +53,16 @@ export function useWorshipSetlists(enabled = true) {
     songId: string,
     songTitle: string,
     key: ChordKey,
-    options?: { youtubeUrl?: string; chordSheetIds?: string[] },
+    options?: { referenceTracks?: ReferenceTrack[]; chordSheetIds?: string[] },
   ) => {
     const newSong: SetlistSong = {
       songId,
       title: songTitle,
       key,
       order: setlist.songs.length,
-      ...(options?.youtubeUrl ? { youtubeUrl: options.youtubeUrl } : {}),
+      ...(options?.referenceTracks && options.referenceTracks.length > 0
+        ? { referenceTracks: options.referenceTracks }
+        : {}),
       ...(options?.chordSheetIds && options.chordSheetIds.length > 0
         ? { chordSheetIds: options.chordSheetIds }
         : {}),
@@ -75,15 +77,19 @@ export function useWorshipSetlists(enabled = true) {
   const updateSetlistSong = useCallback(async (
     setlist: WorshipSetlist,
     songId: string,
-    patch: Partial<Pick<SetlistSong, 'key' | 'youtubeUrl' | 'chordSheetIds'>>,
+    patch: Partial<Pick<SetlistSong, 'key' | 'referenceTracks' | 'chordSheetIds'>>,
   ) => {
     const updated = setlist.songs.map((s) => {
       if (s.songId !== songId) return s;
       const next: SetlistSong = { ...s };
       if (patch.key !== undefined) next.key = patch.key;
-      if ('youtubeUrl' in patch) {
-        if (patch.youtubeUrl) next.youtubeUrl = patch.youtubeUrl;
-        else delete next.youtubeUrl;
+      if ('referenceTracks' in patch) {
+        if (patch.referenceTracks && patch.referenceTracks.length > 0) {
+          next.referenceTracks = patch.referenceTracks;
+        } else {
+          delete next.referenceTracks;
+        }
+        delete next.youtubeUrl;
       }
       if ('chordSheetIds' in patch) {
         if (patch.chordSheetIds && patch.chordSheetIds.length > 0) {

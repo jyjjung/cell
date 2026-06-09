@@ -341,13 +341,21 @@ export interface WorshipSong {
   updatedAt?: Timestamp;
 }
 
+/** Per-setlist YouTube reference link with an optional label (e.g. "For intro only"). */
+export interface ReferenceTrack {
+  url: string;
+  note?: string;
+}
+
 export interface SetlistSong {
   songId: string;
   title: string;
   key: ChordKey;
   order: number;
-  /** Per-setlist reference track (YouTube watch or youtu.be URL) */
+  /** @deprecated Use referenceTracks — kept for older setlist entries */
   youtubeUrl?: string;
+  /** Per-setlist reference tracks (YouTube watch or youtu.be URLs) */
+  referenceTracks?: ReferenceTrack[];
   /** Explicit chord sheet IDs from the song library for this key; omit = all sheets for key */
   chordSheetIds?: string[];
 }
