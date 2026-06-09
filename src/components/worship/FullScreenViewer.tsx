@@ -7,11 +7,13 @@ import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, File
 
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
+import { YoutubeReferenceEmbed } from '@/components/worship/YoutubeReferenceEmbed';
 
 export interface ViewerSlide {
   songTitle: string;
   key: ChordKey;
   imageUrls: string[];
+  youtubeUrl?: string;
 }
 
 async function downloadFile(url: string, filename: string) {
@@ -303,6 +305,12 @@ export function FullScreenViewer({
           </div>
         </div>
 
+        {slide.youtubeUrl && (slide.imageUrls?.length ?? 0) > 0 && (
+          <div className="px-4 pb-2 shrink-0">
+            <YoutubeReferenceEmbed url={slide.youtubeUrl} />
+          </div>
+        )}
+
         {/* Scroll container — always the right size, no blank overflow */}
         <div
           ref={containerRef}
@@ -315,6 +323,9 @@ export function FullScreenViewer({
           >
             {/* Center column — images stack vertically, centered horizontally */}
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
+              {(slide.imageUrls ?? []).length === 0 && slide.youtubeUrl && (
+                <YoutubeReferenceEmbed url={slide.youtubeUrl} variant="large" />
+              )}
               {(slide.imageUrls ?? []).map((url, i) => {
                 if (isPdfUrl(url)) {
                   return (
