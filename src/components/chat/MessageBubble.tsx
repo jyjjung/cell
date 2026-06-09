@@ -87,21 +87,13 @@ const MessageBubble = React.memo(function MessageBubble({
     return match ? match[1] : null;
   }, [message.text]);
 
-  // --- DELETED MESSAGE PLACEHOLDER (must be after all hooks) ---
   if (message.isDeleted) {
-    const deleterName = resolveChatUserName(message.deletedBy || message.senderId, chat, usersById, senderName || 'Someone');
-    return (
-      <div className="flex w-full py-1 justify-center">
-        <p className="text-[11px] italic text-muted-foreground/40 px-3 py-0.5">
-          {deleterName} deleted a message
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
-      <div className={cn('chat-message-row flex w-full relative py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}>
-          <div className={cn("flex items-end gap-2 w-full", isSender ? 'flex-row-reverse' : 'flex-row')}>
+      <div className={cn('chat-message-row isolate relative z-[1] flex w-full min-w-0 py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}>
+          <div className={cn("flex items-end gap-2 w-full min-w-0", isSender ? 'flex-row-reverse' : 'flex-row')}>
               {!isSender && isGroup && (
                   <div className="w-7 h-7 flex-shrink-0 mb-0.5">
                       {showAvatar ? (
@@ -114,8 +106,8 @@ const MessageBubble = React.memo(function MessageBubble({
                   </div>
               )}
               <div className={cn(
-                  "flex flex-col min-w-0",
-                  isSpecialContent ? "max-w-[90%] md:max-w-[85%]" : "max-w-[62%] md:max-w-[75%]",
+                  "flex flex-col min-w-0 flex-1",
+                  isSpecialContent ? "max-w-full sm:max-w-[92%] md:max-w-[85%]" : "max-w-[85%] sm:max-w-[75%]",
                   isSender ? "items-end" : "items-start"
               )}>
                   {!isSender && isGroup && senderName && showName && (
@@ -123,8 +115,9 @@ const MessageBubble = React.memo(function MessageBubble({
                   )}
                   <div
                       className={cn(
-                      'relative rounded-[1.25rem] w-fit min-w-[40px]',
-                      youtubeId && "w-full sm:min-w-[300px] max-w-full",
+                      'relative rounded-[1.25rem] min-w-0 max-w-full',
+                      isSpecialContent ? 'w-full' : 'w-fit min-w-[40px]',
+                      youtubeId && !isSpecialContent && "w-full sm:min-w-[300px] max-w-full",
                       !isSpecialContent && (
                           isSender
                           ? cn('bg-primary text-primary-foreground ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
@@ -190,7 +183,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                   onOpenWorshipViewer(message.setlistId, message.songId, message.imageUrl);
                                 }
                             }}
-                            className="flex flex-col gap-0 mb-2 group/sheet cursor-pointer active:scale-[0.98] transition-transform"
+                            className="flex w-full min-w-0 max-w-full flex-col gap-0 mb-2 overflow-hidden group/sheet cursor-pointer active:scale-[0.98] transition-transform"
                           >
                              <div className="flex items-center gap-3 p-3 bg-foreground/5 border border-border/10 border-b-0 rounded-t-[1.25rem] backdrop-blur-xl group-hover/sheet:bg-foreground/10 transition-colors">
                                 <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
@@ -359,7 +352,6 @@ const MessageBubble = React.memo(function MessageBubble({
                           })}
                       </div>
                   )}
-              </div>
 
                   <div className={cn(
                       "flex flex-row gap-2 mt-1.5 z-10",
@@ -413,9 +405,10 @@ const MessageBubble = React.memo(function MessageBubble({
                           </PopoverContent>
                       </Popover>
                   )}
+                  </div>
               </div>
           </div>
-          
+
           {seenByNamesString && (
             <div className={cn(
                 "mt-1 px-4 text-[8px] font-medium text-muted-foreground/60 transition-opacity",

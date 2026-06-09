@@ -1,0 +1,85 @@
+type YTPlayer = {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getPlayerState: () => number;
+  getVideoData: () => { video_id: string; title: string; author: string };
+  destroy: () => void;
+};
+
+type YTNamespace = {
+  Player: new (
+    elementId: string,
+    options: {
+      videoId: string;
+      height?: string;
+      width?: string;
+      playerVars?: Record<string, string | number>;
+      events?: {
+        onReady?: (event: { target: YTPlayer }) => void;
+        onStateChange?: (event: { data: number; target: YTPlayer }) => void;
+      };
+    },
+  ) => YTPlayer;
+  PlayerState: {
+    PLAYING: number;
+    PAUSED: number;
+    ENDED: number;
+    BUFFERING: number;
+  };
+};
+
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+let apiReadyPromise: Promise<YTNamespace> | null = null;
+
+export function loadYoutubeIframeApi(): Promise<YTNamespace> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('YouTube API is browser-only'));
+  }
+  if (window.YT?.Player) {
+    return Promise.resolve(window.YT);
+  }
+  if (!apiReadyPromise) {
+    apiReadyPromise = new Promise((resolve, reject) => {
+      const finish = () => {
+        if (window.YT?.Player) resolve(window.YT);
+        else reject(new Error('YouTube API failed to load'));
+      };
+      const existing = document.querySelector<HTMLScriptElement>('script[src*="youtube.com/iframe_api"]');
+      const previousReady = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        previousReady?.();
+        finish();
+      };
+      if (!existing) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.async = true;
+        tag.onerror = () => reject(new Error('YouTube API script failed'));
+        document.head.appendChild(tag);
+      } else {
+        // Script tag already present — poll briefly if ready callback already ran
+        const check = () => {
+          if (window.YT?.Player) finish();
+          else setTimeout(check, 50);
+        };
+        check();
+      }
+    });
+  }
+  return apiReadyPromise;
+}
+
+export type { YTPlayer, YTNamespace };
+
+export const YT_PLAYING = 1;
+export const YT_PAUSED = 2;
+export const YT_ENDED = 0;

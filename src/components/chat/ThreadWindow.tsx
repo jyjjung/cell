@@ -121,9 +121,9 @@ export default function ThreadWindow({
       <div className="flex-1 min-h-0 relative">
         <div 
             ref={listRef} 
-            className="absolute inset-0 overflow-y-auto px-4 py-4 flex flex-col-reverse custom-scrollbar"
+            className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar"
         >
-            <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full">
+            <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
                 {renderContent()}
 
                 {/* Parent Message Separator */}
