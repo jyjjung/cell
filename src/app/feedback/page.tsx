@@ -55,6 +55,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.34",
+    date: "Early-June 2026",
+    changes: [
+      "Reaction popover and pills are easier to read with clearer text and background contrast",
+    ],
+  },
+  {
     version: "v1.3.33",
     date: "Early-June 2026",
     changes: [

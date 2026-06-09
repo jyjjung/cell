@@ -311,39 +311,47 @@ const MessageBubble = React.memo(function MessageBubble({
                               const reactionNames = uids.map(uid =>
                                 resolveChatUserName(uid, chat, usersById),
                               ).join(', ');
+                              const userReacted = uids.includes(currentUser?.uid || '');
 
                               return (
                                   <Popover key={emoji}>
                                       <PopoverTrigger asChild>
                                           <button
                                               className={cn(
-                                                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
-                                                  uids.includes(currentUser?.uid || '')
-                                                      ? "bg-primary/20 border border-primary/30 text-primary"
-                                                      : "bg-foreground/5 border border-border/10 text-foreground/60 hover:bg-foreground/10"
+                                                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border",
+                                                  isSender
+                                                    ? userReacted
+                                                      ? "bg-white/25 border-white/40 text-primary-foreground"
+                                                      : "bg-black/15 border-white/20 text-primary-foreground/90 hover:bg-black/25"
+                                                    : userReacted
+                                                      ? "bg-primary/15 border-primary/35 text-primary"
+                                                      : "bg-muted/80 border-border text-foreground hover:bg-muted",
                                               )}
                                           >
                                               <span>{emoji}</span>
                                               <span className="font-bold text-[10px]">{uids.length}</span>
                                           </button>
                                       </PopoverTrigger>
-                                      <PopoverContent 
-                                          side="top" 
-                                          className="text-[11px] font-medium bg-foreground/90 backdrop-blur-xl text-background border-none rounded-xl px-2.5 py-2 shadow-xl w-auto max-w-[200px]"
+                                      <PopoverContent
+                                          side="top"
+                                          className="w-auto max-w-[220px] rounded-xl border border-border !bg-popover px-3 py-2.5 text-popover-foreground shadow-xl"
                                       >
                                           <div className="flex flex-col gap-2">
-                                              <div className="break-words">
-                                                  <span className="opacity-70 mr-1">Reacted:</span>
-                                                  {reactionNames}
+                                              <div className="break-words text-xs leading-snug">
+                                                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                    {t.reactedBy}
+                                                  </span>
+                                                  <span className="font-medium text-foreground">{reactionNames}</span>
                                               </div>
-                                              <button 
+                                              <button
+                                                  type="button"
                                                   onClick={(e) => {
                                                       e.stopPropagation();
                                                       toggleReaction(message.id, emoji);
                                                   }}
-                                                  className="text-[10px] font-bold opacity-70 hover:opacity-100 transition-opacity bg-background/20 py-1 rounded-md w-full"
+                                                  className="w-full rounded-md bg-muted py-1.5 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted/80"
                                               >
-                                                  {uids.includes(currentUser?.uid || '') ? "Remove Reaction" : "Add Reaction"}
+                                                  {userReacted ? "Remove Reaction" : "Add Reaction"}
                                               </button>
                                           </div>
                                       </PopoverContent>
