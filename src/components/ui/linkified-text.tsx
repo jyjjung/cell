@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { URL_REGEX, normalizeChatUrl } from '@/lib/chat-url-utils';
 
 interface LinkifiedTextProps {
   text: string;
@@ -11,13 +12,6 @@ interface LinkifiedTextProps {
   isSender?: boolean;
   truncate?: boolean;
 }
-
-/**
- * Robust regex for URLs:
- * 1. Starts with http:// or https://
- * 2. Or starts with www.
- */
-const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 
 /**
  * LinkifiedText component detects hyperlinks in text and wraps them in 
@@ -39,11 +33,7 @@ export function LinkifiedText({ text, className, linkClassName, isSender, trunca
       const matches = part.match(/^(https?:\/\/[^\s]+|www\.[^\s]+)$/i);
       
       if (matches) {
-        let href = part;
-        // Prepend https:// if it's just a www. URL
-        if (href.toLowerCase().startsWith('www.')) {
-          href = `https://${href}`;
-        }
+        const href = normalizeChatUrl(part);
 
         let isInternal = false;
         let internalPath = '';

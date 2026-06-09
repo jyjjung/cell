@@ -44,7 +44,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
-  const isIndividualChat = pathname.startsWith('/chat/') && pathname !== '/chat';
+  const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
+  const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
+  const isIndividualChat = !!chatSubpath && !isChatListSubpage;
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);

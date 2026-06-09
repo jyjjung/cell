@@ -1,0 +1,128 @@
+"use client";
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowLeft, ImageIcon, Loader2 } from 'lucide-react';
+import { useChats } from '@/hooks/useChats';
+import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
+import { useAllChatMessages } from '@/hooks/use-all-chat-messages';
+import { useAuth } from '@/contexts/auth-context';
+import { getChatDisplayDetails } from '@/lib/chat-utils';
+import { extractChatPhotos } from '@/lib/chat-media-extract';
+import { PageHeader } from '@/components/ui/page-layout';
+import { Button } from '@/components/ui/button';
+import { ChatImageGallery } from '@/components/chat/ImageLightbox';
+import { downloadChatImage } from '@/lib/chat-image-download';
+
+type GlobalPhoto = {
+  id: string;
+  imageUrl: string;
+  senderLabel: string;
+  chatId: string;
+  chatName: string;
+};
+
+export default function AllChatPhotosPage() {
+  const { currentUser } = useAuth();
+  const { chats, loading: loadingChats } = useChats();
+  const { allUsers } = useAllUsers();
+  const usersById = useUsersById();
+  const chatIds = useMemo(() => chats.map((c) => c.id), [chats]);
+  const { messagesByChatId, loading: loadingMessages } = useAllChatMessages(chatIds);
+  const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
+
+  const photos = useMemo(() => {
+    if (!currentUser) return [];
+
+    const items: GlobalPhoto[] = [];
+
+    for (const chat of chats) {
+      const details = getChatDisplayDetails(chat, currentUser.uid, allUsers);
+      if (!details) continue;
+
+      const messages = messagesByChatId[chat.id] ?? [];
+      const chatPhotos = extractChatPhotos(messages, usersById);
+
+      for (const photo of chatPhotos) {
+        items.push({
+          ...photo,
+          chatId: chat.id,
+          chatName: details.name,
+        });
+      }
+    }
+
+    return items.sort(
+      (a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0),
+    );
+  }, [chats, messagesByChatId, usersById, allUsers, currentUser]);
+
+  const imageUrls = useMemo(() => photos.map((p) => p.imageUrl), [photos]);
+  const openImageIndex = openImageUrl ? imageUrls.indexOf(openImageUrl) : 0;
+  const loading = loadingChats || (chatIds.length > 0 && loadingMessages);
+
+  return (
+    <div className="page-container space-y-6 pb-32">
+      <PageHeader
+        title="All Photos"
+        action={
+          <Button asChild variant="outline" className="h-9 rounded-xl px-3 text-[10px] font-semibold uppercase tracking-[0.16em]">
+            <Link href="/chat">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      ) : photos.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 py-16 text-center">
+          <ImageIcon className="mb-3 h-10 w-10 text-muted-foreground/30" />
+          <p className="font-semibold text-foreground">No photos yet</p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            Photos shared across your chats will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          {photos.map((photo, i) => (
+            <motion.button
+              key={`${photo.chatId}-${photo.id}`}
+              type="button"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: Math.min(i * 0.02, 0.3) }}
+              onClick={() => setOpenImageUrl(photo.imageUrl)}
+              className="group relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-muted/30"
+            >
+              <img
+                src={photo.imageUrl}
+                alt={`Photo from ${photo.chatName}`}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <p className="truncate text-[9px] font-bold text-white">{photo.chatName}</p>
+                <p className="truncate text-[8px] text-white/70">{photo.senderLabel}</p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      )}
+
+      {openImageUrl && imageUrls.length > 0 && (
+        <ChatImageGallery
+          images={imageUrls}
+          initialIndex={Math.max(0, openImageIndex)}
+          onClose={() => setOpenImageUrl(null)}
+          onDownload={downloadChatImage}
+        />
+      )}
+    </div>
+  );
+}

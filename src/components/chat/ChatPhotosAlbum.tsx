@@ -4,30 +4,10 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '@/types';
-import { formatUserDisplayName } from '@/lib/formatting';
 import type { UserProfileData } from '@/types';
+import { extractChatPhotos } from '@/lib/chat-media-extract';
 
-type ChatPhoto = {
-  id: string;
-  imageUrl: string;
-  senderLabel: string;
-  createdAt?: ChatMessage['createdAt'];
-};
-
-export function extractChatPhotos(
-  messages: ChatMessage[],
-  usersById: Map<string, UserProfileData>,
-): ChatPhoto[] {
-  return [...messages]
-    .filter((m) => m.imageUrl && !m.songId && !m.isDeleted)
-    .reverse()
-    .map((m) => ({
-      id: m.id,
-      imageUrl: m.imageUrl!,
-      senderLabel: formatUserDisplayName(usersById.get(m.senderId), 'Someone'),
-      createdAt: m.createdAt,
-    }));
-}
+export { extractChatPhotos } from '@/lib/chat-media-extract';
 
 export default function ChatPhotosAlbum({
   messages,
