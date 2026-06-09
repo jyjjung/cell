@@ -8,6 +8,7 @@ import {
   CloudDownload,
   Check,
   Loader2,
+  Youtube,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
@@ -15,6 +16,7 @@ import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { useWorshipData } from '@/contexts/worship-data-context';
 import type { WorshipSetlist, WorshipSong } from '@/types';
 import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
+import { resolveChordSheetsForSetlistSong, parseYoutubeVideoId } from '@/lib/worship-utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -77,10 +79,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
     const urls: string[] = [];
     for (const ps of setlist.songs) {
       const libSong = worshipSongs.find((s) => s.id === ps.songId);
-      if (!libSong) continue;
-      libSong.chordSheets
-        .filter((sheet) => sheet.key === ps.key)
-        .forEach((sheet) => urls.push(sheet.imageUrl));
+      resolveChordSheetsForSetlistSong(libSong, ps).forEach((sheet) => urls.push(sheet.imageUrl));
     }
     return urls;
   }, [setlist, worshipSongs]);
@@ -291,9 +290,12 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-4 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
                 <p className="truncate text-[13px] font-medium text-foreground">{song.title}</p>
+                {song.youtubeUrl && parseYoutubeVideoId(song.youtubeUrl) && (
+                  <Youtube className="h-3 w-3 shrink-0 text-red-500" aria-label="Has reference track" />
+                )}
               </div>
               <div className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {song.key}
+                {song.key === 'numbers' ? '#' : song.key}
               </div>
             </div>
           ))}

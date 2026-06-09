@@ -55,6 +55,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.25",
+    subtitle: "Setlist Song Options",
+    date: "Early-June 2026",
+    changes: [
+      "Add YouTube reference tracks per song when building a setlist",
+      "Upload chord sheets while adding songs to a setlist",
+      "Choose which chart pages to use when a key has multiple sheets",
+    ],
+  },
+  {
     version: "v1.3.24",
     subtitle: "Chat Links & Shared Media",
     date: "Early-June 2026",

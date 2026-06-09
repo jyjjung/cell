@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
   Plus, Loader2, Music, ListMusic, Calendar, Search, 
-  ChevronRight, Trash2, Key as KeyIcon, Check
+  ChevronRight, Trash2, Key as KeyIcon, Check, Upload, Youtube
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
@@ -18,6 +18,13 @@ import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import type { WorshipSong, WorshipSetlist, ChordKey, SongChordSheet } from '@/types';
 import { cn } from '@/lib/utils';
+import { chordSheetsForKey, parseYoutubeVideoId } from '@/lib/worship-utils';
+
+export const WORSHIP_ALL_KEYS: ChordKey[] = [
+  'numbers',
+  'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
+  'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
+];
 
 // ── NewSongDialog ─────────────────────────────────────────────────────────────
 export function NewSongDialog({
@@ -215,43 +222,195 @@ export function NewRosterDialog({
   );
 }
 
+// ── SetlistSongConfigPanel ────────────────────────────────────────────────────
+export function SetlistSongConfigPanel({
+  song,
+  selectedKey,
+  onKeyChange,
+  selectedSheetIds,
+  onSheetIdsChange,
+  youtubeUrl,
+  onYoutubeUrlChange,
+  onRequestUpload,
+  idPrefix = 'ssc',
+}: {
+  song: WorshipSong;
+  selectedKey: ChordKey;
+  onKeyChange: (key: ChordKey) => void;
+  selectedSheetIds: string[];
+  onSheetIdsChange: (ids: string[]) => void;
+  youtubeUrl: string;
+  onYoutubeUrlChange: (url: string) => void;
+  onRequestUpload: () => void;
+  idPrefix?: string;
+}) {
+  const availableKeys = useMemo(
+    () => Array.from(new Set(song.chordSheets.map((s) => s.key))),
+    [song.chordSheets],
+  );
+  const sheetsForKey = useMemo(
+    () => chordSheetsForKey(song, selectedKey),
+    [song, selectedKey],
+  );
+
+  const youtubeId = youtubeUrl.trim() ? parseYoutubeVideoId(youtubeUrl) : null;
+  const youtubeInvalid = youtubeUrl.trim().length > 0 && !youtubeId;
+
+  const toggleSheet = (sheetId: string) => {
+    if (selectedSheetIds.includes(sheetId)) {
+      const next = selectedSheetIds.filter((id) => id !== sheetId);
+      if (next.length > 0) onSheetIdsChange(next);
+    } else {
+      onSheetIdsChange([...selectedSheetIds, sheetId]);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Select Key</Label>
+        {availableKeys.length > 0 && (
+          <p className="text-[11px] text-muted-foreground/60 font-medium">
+            Chord sheets available for highlighted keys
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1.5">
+          {WORSHIP_ALL_KEYS.map((k) => {
+            const hasSheet = availableKeys.includes(k);
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => onKeyChange(k)}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all relative',
+                  selectedKey === k
+                    ? 'bg-muted border-border text-white shadow-md shadow-rose-500/20'
+                    : hasSheet
+                    ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600 hover:border-border'
+                    : 'bg-muted border-border/40 text-muted-foreground hover:border-border',
+                )}
+              >
+                {k === 'numbers' ? '#' : k}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label>Chord Sheets</Label>
+          <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg text-xs gap-1"
+            onClick={onRequestUpload}>
+            <Upload className="h-3 w-3" /> Upload
+          </Button>
+        </div>
+        {sheetsForKey.length === 0 ? (
+          <p className="text-xs text-muted-foreground/60 font-medium">
+            No chart for this key — upload one or pick a different key.
+          </p>
+        ) : sheetsForKey.length === 1 ? (
+          <p className="text-xs text-green-600 dark:text-green-600 font-semibold flex items-center gap-1">
+            <Check className="h-3 w-3" /> 1 page selected
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {sheetsForKey.map((sheet, i) => {
+              const selected = selectedSheetIds.includes(sheet.id);
+              return (
+                <button
+                  key={sheet.id}
+                  type="button"
+                  onClick={() => toggleSheet(sheet.id)}
+                  className={cn(
+                    'relative w-16 h-20 rounded-lg border-2 overflow-hidden transition-all',
+                    selected ? 'border-primary ring-2 ring-primary/30' : 'border-border/40 opacity-50',
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sheet.imageUrl} alt={`Page ${i + 1}`} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white font-bold text-center py-0.5">
+                    Pg {i + 1}
+                  </span>
+                  {selected && (
+                    <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-2.5 w-2.5 text-white" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-youtube`} className="flex items-center gap-1.5">
+          <Youtube className="h-3.5 w-3.5" /> Reference Track <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+        </Label>
+        <Input
+          id={`${idPrefix}-youtube`}
+          placeholder="https://youtube.com/watch?v=…"
+          value={youtubeUrl}
+          onChange={(e) => onYoutubeUrlChange(e.target.value)}
+          className={cn('rounded-xl', youtubeInvalid && 'border-destructive')}
+        />
+        {youtubeInvalid && (
+          <p className="text-xs text-destructive">Enter a valid YouTube link</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── AddChordSheetDialog ───────────────────────────────────────────────────────
 export function AddChordSheetDialog({
-  open, song, onClose,
-}: { open: boolean; song: WorshipSong | null; onClose: () => void }) {
+  open, song, onClose, defaultKey, lockKey, onUploaded,
+}: {
+  open: boolean;
+  song: WorshipSong | null;
+  onClose: () => void;
+  defaultKey?: ChordKey;
+  lockKey?: boolean;
+  onUploaded?: (sheetIds: string[]) => void;
+}) {
   const { addChordSheet } = useWorshipSongs();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [key, setKey] = useState<ChordKey>('numbers');
+  const [key, setKey] = useState<ChordKey>(defaultKey ?? 'numbers');
   const [saving, setSaving] = useState(false);
 
-  const ALL_KEYS: ChordKey[] = [
-    'numbers',
-    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
-    'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
-  ];
+  useEffect(() => {
+    if (open && defaultKey) setKey(defaultKey);
+  }, [open, defaultKey]);
 
   const handleUpload = async () => {
     if (!song || !file) return;
     setSaving(true);
+    const uploadedIds: string[] = [];
     try {
       if (file.type === 'application/pdf') {
         toast({ title: 'Processing PDF', description: 'Converting pages to images...' });
         const { convertPdfToImages } = await import('@/lib/pdfUtils');
         const blobs = await convertPdfToImages(file, 2);
-        
+
         toast({ title: 'Uploading', description: `Uploading ${blobs.length} page(s)...` });
         for (let i = 0; i < blobs.length; i++) {
-            const pageFile = new File([blobs[i]], `${file.name.replace('.pdf', '')}_pg${i+1}.jpg`, { type: 'image/jpeg' });
-            await addChordSheet(song.id, pageFile, key);
+          const pageFile = new File([blobs[i]], `${file.name.replace('.pdf', '')}_pg${i + 1}.jpg`, { type: 'image/jpeg' });
+          const sheet = await addChordSheet(song.id, pageFile, key);
+          uploadedIds.push(sheet.id);
         }
         toast({ title: 'Chord sheet uploaded', description: `Added ${blobs.length} pages for ${key === 'numbers' ? '#' : key} chart to ${song.title}.` });
       } else {
-        await addChordSheet(song.id, file, key);
+        const sheet = await addChordSheet(song.id, file, key);
+        uploadedIds.push(sheet.id);
         toast({ title: 'Chord sheet uploaded', description: `Added ${key === 'numbers' ? '#' : key} chart to ${song.title}.` });
       }
 
-      setFile(null); setKey('numbers');
+      setFile(null);
+      if (!defaultKey) setKey('numbers');
+      onUploaded?.(uploadedIds);
       onClose();
     } catch (e: any) {
       toast({ title: 'Upload failed', description: e.message, variant: 'destructive' });
@@ -277,10 +436,11 @@ export function AddChordSheetDialog({
             <select
               id="cs-key"
               value={key}
+              disabled={lockKey}
               onChange={e => setKey(e.target.value as ChordKey)}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40 disabled:opacity-60"
             >
-              {ALL_KEYS.map(k => (
+              {WORSHIP_ALL_KEYS.map(k => (
                 <option key={k} value={k}>{k === 'numbers' ? '#' : k}</option>
               ))}
             </select>

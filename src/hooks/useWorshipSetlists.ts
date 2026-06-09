@@ -53,14 +53,47 @@ export function useWorshipSetlists(enabled = true) {
     songId: string,
     songTitle: string,
     key: ChordKey,
+    options?: { youtubeUrl?: string; chordSheetIds?: string[] },
   ) => {
     const newSong: SetlistSong = {
       songId,
       title: songTitle,
       key,
       order: setlist.songs.length,
+      ...(options?.youtubeUrl ? { youtubeUrl: options.youtubeUrl } : {}),
+      ...(options?.chordSheetIds && options.chordSheetIds.length > 0
+        ? { chordSheetIds: options.chordSheetIds }
+        : {}),
     };
     const updated = [...setlist.songs, newSong];
+    await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
+      songs: updated,
+      updatedAt: serverTimestamp(),
+    });
+  }, []);
+
+  const updateSetlistSong = useCallback(async (
+    setlist: WorshipSetlist,
+    songId: string,
+    patch: Partial<Pick<SetlistSong, 'key' | 'youtubeUrl' | 'chordSheetIds'>>,
+  ) => {
+    const updated = setlist.songs.map((s) => {
+      if (s.songId !== songId) return s;
+      const next: SetlistSong = { ...s };
+      if (patch.key !== undefined) next.key = patch.key;
+      if ('youtubeUrl' in patch) {
+        if (patch.youtubeUrl) next.youtubeUrl = patch.youtubeUrl;
+        else delete next.youtubeUrl;
+      }
+      if ('chordSheetIds' in patch) {
+        if (patch.chordSheetIds && patch.chordSheetIds.length > 0) {
+          next.chordSheetIds = patch.chordSheetIds;
+        } else {
+          delete next.chordSheetIds;
+        }
+      }
+      return next;
+    });
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
       songs: updated,
       updatedAt: serverTimestamp(),
@@ -97,7 +130,7 @@ export function useWorshipSetlists(enabled = true) {
   return {
     setlists, loading,
     createSetlist, updateSetlist,
-    addSongToSetlist, removeSongFromSetlist, reorderSetlistSongs,
+    addSongToSetlist, updateSetlistSong, removeSongFromSetlist, reorderSetlistSongs,
     deleteSetlist,
   };
 }
