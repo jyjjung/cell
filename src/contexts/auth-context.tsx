@@ -102,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               fcmTokens: profileData.fcmTokens || [],
               clickMeCount: profileData.clickMeCount || 0,
               clickMeLastClaimAt: profileData.clickMeLastClaimAt,
+              feedbackCount: profileData.feedbackCount ?? 0,
               unlockedSecrets: profileData.unlockedSecrets || [],
             } as AppUser);
             setIsAdmin(profileData.isAdmin || false);

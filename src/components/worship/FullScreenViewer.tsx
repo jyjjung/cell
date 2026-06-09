@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText, ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones } from 'lucide-react';
+import {
+  X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, FileText,
+  ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones,
+} from 'lucide-react';
 
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey, ReferenceTrack } from '@/types';
@@ -31,11 +34,17 @@ async function downloadFile(url: string, filename: string) {
   } catch { window.open(url, '_blank'); }
 }
 
-function KeyBadge({ keyName, accent = false }: { keyName: ChordKey; accent?: boolean }) {
+function KeyBadge({
+  keyName, accent = false, onDark = false,
+}: { keyName: ChordKey; accent?: boolean; onDark?: boolean }) {
   return (
     <span className={cn(
       'inline-flex items-center justify-center min-w-[2rem] h-6 px-1.5 rounded-lg text-[11px] font-black tracking-tight border',
-      accent ? 'bg-rose-500/15 border-rose-500/30 text-rose-500' : 'bg-muted/40 border-border/40 text-muted-foreground'
+      accent
+        ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+        : onDark
+          ? 'bg-white/10 border-white/20 text-white/70'
+          : 'bg-muted/40 border-border/40 text-muted-foreground',
     )}>
       {keyName === 'numbers' ? '#' : keyName}
     </span>
@@ -53,7 +62,11 @@ function useImagePreloader(slides: ViewerSlide[]) {
 
 export function FullScreenViewer({
   slides, startIndex = 0, onClose,
-}: { slides: ViewerSlide[]; startIndex?: number; onClose: () => void }) {
+}: {
+  slides: ViewerSlide[];
+  startIndex?: number;
+  onClose: () => void;
+}) {
   const [idx, setIdx] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);

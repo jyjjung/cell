@@ -21,6 +21,7 @@ import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { UsersProvider } from '@/contexts/users-context';
+import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 
 const DynamicLakeWallpaper = dynamic(() => import('./dynamic-lake-wallpaper'), {
   ssr: false,
@@ -150,6 +151,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {showScheduleTabs && <ScheduleHubTabs />}
         {showAdminTabs && <AdminHubTabs />}
         <PWAInstallPrompt />
+        <SetlistPlaylistBar />
 
         {showPermissionBanner && (
           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">

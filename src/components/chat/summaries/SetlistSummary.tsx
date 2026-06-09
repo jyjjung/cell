@@ -9,6 +9,8 @@ import {
   Check,
   Loader2,
   Youtube,
+  ListMusic,
+  Pause,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
@@ -17,6 +19,8 @@ import { useWorshipData } from '@/contexts/worship-data-context';
 import type { WorshipSetlist, WorshipSong } from '@/types';
 import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
 import { resolveChordSheetsForSetlistSong, hasReferenceTracks, getReferenceTracks } from '@/lib/worship-utils';
+import { buildSetlistPlaylistQueue } from '@/lib/setlist-playlist-queue';
+import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -71,8 +75,17 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
   const [offlineProgress, setOfflineProgress] = useState({ done: 0, total: 0 });
   const [offlineCached, setOfflineCached] = useState<{ cached: number; total: number } | null>(null);
   const offlineAbortRef = useRef<AbortController | null>(null);
+  const playlist = useSetlistPlaylistOptional();
 
   const setlistSongs = setlist?.songs ?? [];
+
+  const playlistQueue = useMemo(
+    () => (setlist ? buildSetlistPlaylistQueue(setlist) : []),
+    [setlist],
+  );
+
+  const playlistActiveForSetlist =
+    playlist?.setlistId === setlistId && playlist.isActive;
 
   const mediaUrls = useMemo(() => {
     if (!setlist) return [];
@@ -133,6 +146,23 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
     offlineCached && offlineCached.total > 0
       ? Math.round((offlineCached.cached / offlineCached.total) * 100)
       : 0;
+
+  const handlePlayPlaylist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!setlist || playlistQueue.length === 0) {
+      toast({
+        title: 'No reference tracks',
+        description: 'Add YouTube reference links to setlist songs to use the playlist.',
+      });
+      return;
+    }
+    if (playlistActiveForSetlist) {
+      playlist?.togglePlay();
+      playlist?.setExpanded(true);
+      return;
+    }
+    playlist?.startPlaylist(setlistId, setlist.name, playlistQueue);
+  };
 
   const handleCacheOffline = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -305,6 +335,29 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
         </div>
 
         <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
+          {playlistQueue.length > 0 && (
+            <button
+              type="button"
+              onClick={handlePlayPlaylist}
+              className={cn(
+                'pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors',
+                playlistActiveForSetlist
+                  ? 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/20'
+                  : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              )}
+            >
+              {playlistActiveForSetlist && playlist?.playing ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <ListMusic className="h-3.5 w-3.5" />
+              )}
+              {playlistActiveForSetlist
+                ? playlist?.playing
+                  ? 'Playing'
+                  : 'Paused'
+                : `Playlist (${playlistQueue.length})`}
+            </button>
+          )}
           {mediaUrls.length > 0 && (
             <button
               type="button"

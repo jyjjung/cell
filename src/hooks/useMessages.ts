@@ -178,7 +178,6 @@ export function useMessages(chatId: string | null) {
             lastMessageSentAt: serverTimestamp(),
             lastMessageSenderId: currentUser.uid,
         });
-
         fetch('/api/send-chat-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

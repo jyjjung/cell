@@ -188,6 +188,7 @@ export interface AppUser extends FirebaseUser {
   bibleTextVersion?: BibleTextVersion;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
+  feedbackCount?: number;
   unlockedSecrets?: string[];
 }
 
@@ -217,6 +218,7 @@ export interface UserProfileData {
   bibleTextVersion?: BibleTextVersion;
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
+  feedbackCount?: number;
   unlockedSecrets?: string[];
 }
 

@@ -180,7 +180,6 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         lastMessageSentAt: serverTimestamp(),
         lastMessageSenderId: currentUser.uid,
       });
-
       fetch('/api/send-chat-push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

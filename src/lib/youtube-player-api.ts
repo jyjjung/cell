@@ -1,6 +1,8 @@
 type YTPlayer = {
   playVideo: () => void;
   pauseVideo: () => void;
+  stopVideo: () => void;
+  loadVideoById: (videoId: string | { videoId: string; startSeconds?: number }) => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
@@ -9,19 +11,21 @@ type YTPlayer = {
   destroy: () => void;
 };
 
+type YTPlayerOptions = {
+  videoId?: string;
+  height?: string;
+  width?: string;
+  playerVars?: Record<string, string | number>;
+  events?: {
+    onReady?: (event: { target: YTPlayer }) => void;
+    onStateChange?: (event: { data: number; target: YTPlayer }) => void;
+  };
+};
+
 type YTNamespace = {
   Player: new (
-    elementId: string,
-    options: {
-      videoId: string;
-      height?: string;
-      width?: string;
-      playerVars?: Record<string, string | number>;
-      events?: {
-        onReady?: (event: { target: YTPlayer }) => void;
-        onStateChange?: (event: { data: number; target: YTPlayer }) => void;
-      };
-    },
+    element: string | HTMLElement,
+    options: YTPlayerOptions,
   ) => YTPlayer;
   PlayerState: {
     PLAYING: number;
