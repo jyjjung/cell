@@ -14,9 +14,10 @@ import {
   updateDoc,
   arrayUnion,
   deleteField,
-  getDoc,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
@@ -163,13 +164,18 @@ export function useMessages(chatId: string | null) {
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
 
-    let lastText = trimmedText || "📷 Image";
-    if (eventId) lastText = "📅 Event";
-    if (setlistId) lastText = "🎵 Setlist";
-    if (rosterId) lastText = "📋 Roster";
-    if (qtDate) lastText = "📖 QT Roster";
-    if (cleaningDate) lastText = "🧹 Cleaning Roster";
-    if (songId) lastText = `🎵 Chord Sheet: ${songTitle || 'Song'} (${sheetKey || ''})`;
+    const lastText = formatChatMessagePreview({
+      text: trimmedText,
+      imageUrl,
+      eventId,
+      setlistId,
+      rosterId,
+      qtDate,
+      cleaningDate,
+      songId,
+      songTitle,
+      sheetKey,
+    });
 
     try {
         const docRef = await addDoc(messagesColRef, messageData);
@@ -235,7 +241,9 @@ export function useMessages(chatId: string | null) {
 
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!chatId || !currentUser) return;
+    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
+    const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
     try {
       await updateDoc(messageRef, {
         isDeleted: true,
@@ -253,6 +261,17 @@ export function useMessages(chatId: string | null) {
         threadParentId: deleteField(),
         reactions: deleteField(),
       });
+
+      const latestSnap = await getDocs(
+        query(messagesColRef, orderBy('createdAt', 'desc'), limit(1)),
+      );
+      if (!latestSnap.empty) {
+        const latest = { id: latestSnap.docs[0].id, ...latestSnap.docs[0].data() } as ChatMessage;
+        await updateDoc(chatDocRef, {
+          lastMessageText: formatChatMessagePreview(latest),
+          lastMessageSenderId: latest.isDeleted ? (latest.deletedBy || latest.senderId) : latest.senderId,
+        });
+      }
     } catch (error) {
       console.error("Failed to delete message:", error);
       toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });

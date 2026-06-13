@@ -14,9 +14,11 @@ import {
   updateDoc,
   arrayUnion,
   deleteField,
-  increment
+  increment,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
@@ -150,10 +152,13 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const mainColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
 
-    let lastText = trimmedText || '📷 Image';
-    if (eventId) lastText = '📅 Event';
-    if (setlistId) lastText = '🎵 Setlist';
-    if (rosterId) lastText = '📋 Roster';
+    const lastText = formatChatMessagePreview({
+      text: trimmedText,
+      imageUrl,
+      eventId,
+      setlistId,
+      rosterId,
+    });
 
     try {
       await addDoc(threadColRef, messageData);
@@ -219,7 +224,11 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!chatId || !parentMessageId || !currentUser) return;
+    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+    const parentDocRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
+    const threadColRef = collection(parentDocRef, THREAD_SUBCOLLECTION);
+    const mainColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
     try {
       await updateDoc(messageRef, {
         isDeleted: true,
@@ -231,6 +240,37 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         rosterId: deleteField(),
         reactions: deleteField(),
       });
+
+      const latestThreadSnap = await getDocs(
+        query(threadColRef, orderBy('createdAt', 'desc'), limit(1)),
+      );
+      if (!latestThreadSnap.empty) {
+        const latestReply = { id: latestThreadSnap.docs[0].id, ...latestThreadSnap.docs[0].data() } as ChatMessage;
+        const parentUpdate: Record<string, unknown> = {
+          latestReplySenderId: latestReply.isDeleted
+            ? (latestReply.deletedBy || latestReply.senderId)
+            : latestReply.senderId,
+        };
+        if (latestReply.isDeleted) {
+          parentUpdate.latestReplyText = formatChatMessagePreview(latestReply);
+          parentUpdate.latestReplyImageUrl = deleteField();
+        } else {
+          if (latestReply.text) parentUpdate.latestReplyText = latestReply.text;
+          if (latestReply.imageUrl) parentUpdate.latestReplyImageUrl = latestReply.imageUrl;
+        }
+        await updateDoc(parentDocRef, parentUpdate);
+      }
+
+      const latestMainSnap = await getDocs(
+        query(mainColRef, orderBy('createdAt', 'desc'), limit(1)),
+      );
+      if (!latestMainSnap.empty) {
+        const latest = { id: latestMainSnap.docs[0].id, ...latestMainSnap.docs[0].data() } as ChatMessage;
+        await updateDoc(chatDocRef, {
+          lastMessageText: formatChatMessagePreview(latest),
+          lastMessageSenderId: latest.isDeleted ? (latest.deletedBy || latest.senderId) : latest.senderId,
+        });
+      }
     } catch (error) {
       console.error("Failed to delete thread message:", error);
       toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });

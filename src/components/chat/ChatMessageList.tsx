@@ -30,6 +30,13 @@ interface ChatMessageListProps {
   onOpenWorshipViewer: (setlistId?: string, songId?: string, imageUrl?: string) => void;
 }
 
+function findVisibleNeighbor(messages: ChatMessage[], startIndex: number, direction: 1 | -1): ChatMessage | undefined {
+  for (let j = startIndex + direction; j >= 0 && j < messages.length; j += direction) {
+    if (!messages[j].isDeleted) return messages[j];
+  }
+  return undefined;
+}
+
 export default function ChatMessageList({
   messages,
   chat,
@@ -48,22 +55,24 @@ export default function ChatMessageList({
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
-      const olderMsg = messages[i + 1];
-      const newerMsg = messages[i - 1];
+      const olderVisible = findVisibleNeighbor(messages, i, 1);
+      const newerVisible = findVisibleNeighbor(messages, i, -1);
 
       const showName =
-        !olderMsg ||
-        olderMsg.senderId !== msg.senderId ||
+        msg.isDeleted ||
+        !olderVisible ||
+        olderVisible.senderId !== msg.senderId ||
         (msg.createdAt &&
-          olderMsg.createdAt &&
-          msg.createdAt.toMillis() - olderMsg.createdAt.toMillis() > 3600000);
+          olderVisible.createdAt &&
+          msg.createdAt.toMillis() - olderVisible.createdAt.toMillis() > 3600000);
 
       const showAvatar =
-        !newerMsg ||
-        newerMsg.senderId !== msg.senderId ||
-        (newerMsg.createdAt &&
+        msg.isDeleted ||
+        !newerVisible ||
+        newerVisible.senderId !== msg.senderId ||
+        (newerVisible.createdAt &&
           msg.createdAt &&
-          newerMsg.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000);
+          newerVisible.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000);
 
       content.push(
         <MessageBubble
@@ -90,6 +99,7 @@ export default function ChatMessageList({
         />,
       );
 
+      const olderMsg = messages[i + 1];
       if (olderMsg && msg.createdAt && olderMsg.createdAt) {
         const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
         if (diff > 3600000) {
