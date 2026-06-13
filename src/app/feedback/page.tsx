@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.36",
+    date: "Mid-June 2026",
+    changes: [
+      "Deleted chat messages now show who removed them instead of disappearing",
+      "Chat list previews update to \"deleted a message.\" when the last message is deleted",
+    ],
+  },
+  {
     version: "v1.3.35",
     date: "Early-June 2026",
     changes: [

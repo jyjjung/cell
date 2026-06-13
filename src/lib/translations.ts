@@ -111,6 +111,7 @@ export const translations = {
     at: "at",
     uploadingImage: "Uploading Image...",
     image: "Image",
+    deletedMessage: "deleted a message.",
 
     // Rosters & Community
     qtTitle: "QT Roster",
@@ -331,6 +332,7 @@ export const translations = {
     at: "",
     uploadingImage: "이미지 업로드 중...",
     image: "이미지",
+    deletedMessage: "메시지를 삭제했습니다.",
 
     // Rosters & Community
     qtTitle: "QT 순서",

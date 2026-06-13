@@ -88,7 +88,15 @@ const MessageBubble = React.memo(function MessageBubble({
   }, [message.text]);
 
   if (message.isDeleted) {
-    return null;
+    const deletedByUid = message.deletedBy || message.senderId;
+    const deletedByName = resolveChatUserName(deletedByUid, chat, usersById);
+    return (
+      <div className="chat-message-row py-2 flex justify-center w-full">
+        <p className="text-[11px] italic text-muted-foreground/60">
+          {deletedByName} {t.deletedMessage}
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -1,6 +1,36 @@
 
-import type { Chat, ChatMemberInfo, UserProfileData } from '@/types';
+import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
 import { formatUserDisplayName } from '@/lib/formatting';
+
+export const DELETED_MESSAGE_PREVIEW = 'deleted a message.';
+
+type MessagePreviewFields = Pick<
+  ChatMessage,
+  | 'text'
+  | 'imageUrl'
+  | 'eventId'
+  | 'setlistId'
+  | 'rosterId'
+  | 'qtDate'
+  | 'cleaningDate'
+  | 'songId'
+  | 'songTitle'
+  | 'sheetKey'
+  | 'isDeleted'
+>;
+
+export function formatChatMessagePreview(message: MessagePreviewFields): string {
+  if (message.isDeleted) return DELETED_MESSAGE_PREVIEW;
+
+  let preview = message.text?.trim() || '📷 Image';
+  if (message.eventId) preview = '📅 Event';
+  if (message.setlistId) preview = '🎵 Setlist';
+  if (message.rosterId) preview = '📋 Roster';
+  if (message.qtDate) preview = '📖 QT Roster';
+  if (message.cleaningDate) preview = '🧹 Cleaning Roster';
+  if (message.songId) preview = `🎵 Chord Sheet: ${message.songTitle || 'Song'} (${message.sheetKey || ''})`;
+  return preview;
+}
 
 /**
  * Generates a deterministic, consistent chat ID for a private (one-to-one) chat
