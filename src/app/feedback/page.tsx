@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.38",
+    date: "Mid-June 2026",
+    changes: [
+      "Duty reminders now catch up if a roster is published late, so you still get a heads-up before serving",
+      "Fixed server-side Firebase Admin setup for cron jobs and API routes",
+    ],
+  },
+  {
     version: "v1.3.37",
     date: "Mid-June 2026",
     changes: [
