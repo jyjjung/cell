@@ -56,6 +56,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.37",
+    date: "Mid-June 2026",
+    changes: [
+      "Push notifications now remind you one day and one week before QT, cleaning, or worship team duty",
+    ],
+  },
+  {
     version: "v1.3.36",
     date: "Mid-June 2026",
     changes: [
