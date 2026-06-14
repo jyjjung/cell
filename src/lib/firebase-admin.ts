@@ -1,35 +1,60 @@
 
-import { type App, getApps, initializeApp, cert } from 'firebase-admin/app';
+import { type App, getApps, initializeApp, cert, type ServiceAccount } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
+function loadServiceAccountFromEnv(): ServiceAccount | null {
+  const raw =
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+
+  const trimmed = raw.trim();
+  const candidates = [
+    trimmed,
+    trimmed.replace(/^"|"$/g, ''),
+    trimmed.replace(/^"|"$/g, '').replace(/\\"/g, '"'),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as ServiceAccount;
+    } catch {
+      // try next parse strategy
+    }
+  }
+
+  return null;
+}
+
+function loadServiceAccountFromParts(): ServiceAccount | null {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!projectId || !clientEmail || !privateKey) return null;
+  return { projectId, clientEmail, privateKey };
+}
+
 /**
  * Singleton helper to initialize Firebase Admin reliably across all API routes.
- * Includes robust JSON parsing for environment variables.
+ * Supports full JSON service account env vars or split project/email/key vars.
  */
 export function getAdminApp(): App {
   const UNIFIED_APP_NAME = 'firebase-admin-unified';
   const existingApp = getApps().find(app => app.name === UNIFIED_APP_NAME);
   if (existingApp) return existingApp;
 
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccountKey) {
-    throw new Error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_KEY is missing from environment variables.');
+  const serviceAccount =
+    loadServiceAccountFromEnv() ?? loadServiceAccountFromParts();
+
+  if (!serviceAccount) {
+    throw new Error(
+      'Firebase Admin credentials missing. Set FIREBASE_SERVICE_ACCOUNT_KEY (JSON) or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.',
+    );
   }
 
-  try {
-    // Remove whitespace and handle potential literal \n characters from shell environments
-    const sanitizedKey = serviceAccountKey.trim();
-    const parsedKey = JSON.parse(sanitizedKey);
-    
-    return initializeApp({
-      credential: cert(parsedKey)
-    }, UNIFIED_APP_NAME);
-  } catch (e: any) {
-    console.error('[Admin Init] Fatal Parse Error:', e.message);
-    throw new Error(`Admin SDK Initialization Failed: ${e.message}. Ensure your Service Account JSON is correctly formatted in Vercel.`);
-  }
+  return initializeApp({ credential: cert(serviceAccount) }, UNIFIED_APP_NAME);
 }
 
 export const getAdminDb = (app: App) => getFirestore(app);
