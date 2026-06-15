@@ -20,6 +20,7 @@ import { PageHeader, FeedCard } from '@/components/ui/page-layout';
 import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { incrementUserFeedbackCount } from '@/lib/user-achievement-counts';
+import { notifyFeedbackChange } from '@/lib/feedback-notify';
 
 /* ── Animation variants ─────────────────────────────────── */
 
@@ -55,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.39",
+    subtitle: "Halo Fix, Lighting Role & Notifications",
+    date: "Mid-June 2026",
+    changes: [
+      "Equipped avatar halos now stay saved — your manual halo choice is no longer overwritten on the home screen",
+      "Added Lighting to the worship roster with a dedicated slot on new and existing rosters",
+      "Push notifications for feedback submissions, status updates, and admin replies",
+      "Day-of push reminders when you have an event scheduled for today",
+    ],
+  },
   {
     version: "v1.3.38",
     date: "Mid-June 2026",
@@ -478,7 +490,7 @@ export default function FeedbackPage() {
     if (!suggestion.trim()) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'suggestions'), {
+      const docRef = await addDoc(collection(db, 'suggestions'), {
         text: suggestion,
         userId: currentUser?.uid || 'anonymous',
         userName: currentUser?.firstName || 'Anonymous',
@@ -486,6 +498,11 @@ export default function FeedbackPage() {
         createdAt: serverTimestamp(),
       });
       if (currentUser?.uid) incrementUserFeedbackCount(currentUser.uid);
+      void notifyFeedbackChange({
+        action: 'submitted',
+        suggestionId: docRef.id,
+        previewText: suggestion.trim(),
+      });
       toast({ title: "Success", description: "Suggestion submitted! Thank you." });
       setSuggestion('');
     } catch {
@@ -502,6 +519,12 @@ export default function FeedbackPage() {
         payload.completedAt = serverTimestamp();
       }
       await updateDoc(doc(db, 'suggestions', item.id), payload);
+      void notifyFeedbackChange({
+        action: 'status_updated',
+        suggestionId: item.id,
+        previewText: item.text,
+        status: newStatus,
+      });
       toast({ title: "Status Updated", description: "Feedback status has been updated." });
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Failed to update status." });
@@ -513,6 +536,12 @@ export default function FeedbackPage() {
       await updateDoc(doc(db, 'suggestions', id), {
         adminNote: adminNoteText,
         respondedAt: adminNoteText.trim() ? serverTimestamp() : null,
+      });
+      const item = suggestionsList.find((s) => s.id === id);
+      void notifyFeedbackChange({
+        action: 'admin_note_updated',
+        suggestionId: id,
+        previewText: item?.text,
       });
       toast({ title: "Note Saved", description: "Admin response has been added." });
       setEditingNoteId(null);

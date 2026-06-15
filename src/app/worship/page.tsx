@@ -22,8 +22,9 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
 import type {
   WorshipSong, WorshipSetlist, SetlistSong, ChordKey, SongChordSheet,
-  WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole
+  WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole,
 } from '@/types';
+import { mergeWorshipRosterSlots } from '@/types';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -1232,6 +1233,7 @@ function roleBadgeClass(role: WorshipRole) {
   if (role === 'A/G') return 'bg-muted border-border text-primary';
   if (role === 'PPT') return 'bg-muted border-border text-primary';
   if (role === 'Sound') return 'bg-muted border-border text-primary';
+  if (role === 'Lighting') return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-500';
   return 'bg-muted border-border/40 text-muted-foreground';
 }
 
@@ -1250,7 +1252,7 @@ function RosterDetailView({
 
   // Local editable slots state
   const [slots, setSlots] = useState<WorshipRosterSlot[]>(() =>
-    [...roster.slots].sort((a, b) => a.order - b.order)
+    mergeWorshipRosterSlots(roster.slots),
   );
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1265,7 +1267,7 @@ function RosterDetailView({
   const prevRosterRef = useRef(roster);
   if (prevRosterRef.current !== roster && !dirty) {
     prevRosterRef.current = roster;
-    setSlots([...roster.slots].sort((a, b) => a.order - b.order));
+    setSlots(mergeWorshipRosterSlots(roster.slots));
   }
 
   // Worship-team users: all users who are members with roleIds (we show all site users)

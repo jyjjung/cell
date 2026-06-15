@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { WorshipRoster, WorshipRosterSlot } from '@/types';
+import type { WorshipRoster, WorshipRosterSlot, WorshipRole } from '@/types';
+import { WORSHIP_ROLES } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
@@ -32,12 +33,11 @@ export function useWorshipRosters(enabled = true) {
     setlistId?: string | null,
   ): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');
-    // Build default slots for all 13 roles
-    const slots: WorshipRosterSlot[] = [
-      'Lead', 'Drums', 'Keys 1', 'Keys 2', 'Bass',
-      'Vox 1', 'Vox 2', 'Vox 3', 'E/G 1', 'E/G 2',
-      'A/G', 'PPT', 'Sound',
-    ].map((role, i) => ({ role: role as WorshipRosterSlot['role'], members: [], order: i }));
+    const slots: WorshipRosterSlot[] = WORSHIP_ROLES.map((role, i) => ({
+      role: role as WorshipRole,
+      members: [],
+      order: i,
+    }));
 
     const docRef = await addDoc(collection(db, ROSTERS_COLLECTION), {
       name: name.trim(),
