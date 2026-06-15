@@ -58,6 +58,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.41",
+    subtitle: "Privacy & How It Works",
+    date: "Mid-June 2026",
+    changes: [
+      "Privacy Policy rewritten with clearer sections, data table, and your rights",
+      "How It Works page updated with getting-started steps, notifications, and feedback guides",
+    ],
+  },
+  {
     version: "v1.3.40",
     date: "Mid-June 2026",
     changes: [
