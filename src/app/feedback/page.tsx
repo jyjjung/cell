@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Clock, Check, MessageSquare } from 'lucide-react';
+import { Send, Loader2, Clock, Check, MessageSquare, XCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from '@/lib/firebase';
@@ -38,6 +38,7 @@ const fadeUp = {
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; classes: string }> = {
   completed: { icon: Check, classes: 'bg-success/10 text-success' },
+  'not-possible': { icon: XCircle, classes: 'bg-destructive/10 text-destructive' },
   'in-progress': { icon: Loader2, classes: 'bg-muted text-primary' },
   pending: { icon: Clock, classes: 'bg-muted text-muted-foreground' },
 };
@@ -56,6 +57,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.40",
+    date: "Mid-June 2026",
+    changes: [
+      "Admins can mark feedback as Not Possible when a suggestion cannot be implemented",
+    ],
+  },
   {
     version: "v1.3.39",
     subtitle: "Halo Fix, Lighting Role & Notifications",
@@ -515,8 +523,8 @@ export default function FeedbackPage() {
   const handleUpdateStatus = async (item: any, newStatus: string) => {
     try {
       const payload: Record<string, any> = { status: newStatus };
-      if (newStatus === 'completed' && !item.completedAt) {
-        payload.completedAt = serverTimestamp();
+      if (newStatus === 'completed' || newStatus === 'not-possible') {
+        if (!item.completedAt) payload.completedAt = serverTimestamp();
       }
       await updateDoc(doc(db, 'suggestions', item.id), payload);
       void notifyFeedbackChange({
@@ -638,6 +646,9 @@ export default function FeedbackPage() {
                                       <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'completed')} className="text-xs font-bold rounded-lg cursor-pointer text-success focus:text-success focus:bg-success/10">
                                         <Check className="w-3.5 h-3.5 mr-2" /> Mark Completed
                                       </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'not-possible')} className="text-xs font-bold rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
+                                        <XCircle className="w-3.5 h-3.5 mr-2" /> Not Possible
+                                      </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 ) : (
@@ -686,7 +697,7 @@ export default function FeedbackPage() {
                                   <span className="text-foreground/90">{formatAppDateTime(item.respondedAt?.toDate?.() ?? null, locale)}</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-3">
-                                  <span>Completed</span>
+                                  <span>{item.status === 'not-possible' ? 'Closed' : 'Completed'}</span>
                                   <span className="text-foreground/90">{formatAppDateTime(item.completedAt?.toDate?.() ?? null, locale)}</span>
                                 </div>
                               </div>

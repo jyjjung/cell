@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
+import { getStatusLabel } from '@/lib/formatting';
 import { resolveUserIdByEmail, sendUserNotification } from '@/lib/server-notifications';
 
 const FEEDBACK_ADMIN_EMAIL =
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'status_updated') {
-      const statusLabel = status.replace('-', ' ');
+      const statusLabel = getStatusLabel(status);
       await record(
         posterUserId,
         'Your feedback was updated',
