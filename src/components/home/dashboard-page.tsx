@@ -18,7 +18,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
-import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, startOfToday, compareAsc, isSameDay, startOfMonth, endOfMonth, addMonths, addDays } from 'date-fns';
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
@@ -37,7 +37,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useUserAchievementStats } from '@/hooks/use-user-achievement-stats';
 import { getUnlockedAchievements } from '@/lib/achievements';
-import { getAvatarTierByUnlocked } from '@/lib/avatar-cosmetics';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from '@/components/ui/dialog';
@@ -99,8 +98,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const { toast } = useToast();
   const { createNotification } = useNotifications();
   const { feedbackCount, clickMeCount } = useUserAchievementStats(currentUser.uid, true);
-  const lastSyncedTierRef = useRef<string | null>(null);
-
   const isLoading = planLoading || eventsLoading || loadingChecklist;
 
   // Hooks moved above early return
@@ -417,36 +414,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     clickMeCount,
     createNotification,
     toast,
-  ]);
-
-  useEffect(() => {
-    if (typeof feedbackCount !== 'number' || typeof clickMeCount !== 'number') {
-      return;
-    }
-
-    const unlocked = getUnlockedAchievements({
-      planProgressPercent: overallPct,
-      feedbackCount,
-      clickMeCount,
-    });
-    const targetTier = getAvatarTierByUnlocked(unlocked.length).id;
-    const currentTier = currentUser.avatar?.cosmeticTier || 'none';
-
-    if (targetTier === currentTier || targetTier === lastSyncedTierRef.current) return;
-    lastSyncedTierRef.current = targetTier;
-
-    updateDoc(doc(db, 'users', currentUser.uid), {
-      'avatar.cosmeticTier': targetTier,
-    }).catch(() => {
-      lastSyncedTierRef.current = null;
-    });
-  }, [
-    currentUser.uid,
-    currentUser.avatar?.cosmeticTier,
-    overallPct,
-    completedPassages.length,
-    feedbackCount,
-    clickMeCount,
   ]);
 
   return (

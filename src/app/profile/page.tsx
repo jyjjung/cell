@@ -235,7 +235,13 @@ export default function ProfilePage() {
      if (!currentUser) return;
      setIsSaving(true);
      try {
-       await updateUserProfile(currentUser.uid, { avatar: avatarInEditor });
+       await updateUserProfile(currentUser.uid, {
+         avatar: {
+           ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
+           ...avatarInEditor,
+           cosmeticTier: avatarInEditor.cosmeticTier ?? currentUser.avatar?.cosmeticTier ?? 'none',
+         },
+       });
        setIsAvatarEditorOpen(false); 
      } catch (error) { console.error("Failed to update avatar:", error); } 
      finally { setIsSaving(false); }

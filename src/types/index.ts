@@ -388,13 +388,23 @@ export type WorshipRole =
   | 'E/G 2'
   | 'A/G'
   | 'PPT'
-  | 'Sound';
+  | 'Sound'
+  | 'Lighting';
 
 export const WORSHIP_ROLES: WorshipRole[] = [
   'Lead', 'Drums', 'Keys 1', 'Keys 2', 'Bass',
   'Vox 1', 'Vox 2', 'Vox 3', 'E/G 1', 'E/G 2',
-  'A/G', 'PPT', 'Sound',
+  'A/G', 'PPT', 'Sound', 'Lighting',
 ];
+
+/** Ensures every defined role exists (e.g. after new roles are added). */
+export function mergeWorshipRosterSlots(slots: WorshipRosterSlot[]): WorshipRosterSlot[] {
+  const byRole = new Map(slots.map((s) => [s.role, s]));
+  return WORSHIP_ROLES.map((role, order) => {
+    const existing = byRole.get(role);
+    return existing ? { ...existing, order } : { role, members: [], order };
+  });
+}
 
 export interface WorshipRosterMember {
   /** uid of the site user, or null for guests */
