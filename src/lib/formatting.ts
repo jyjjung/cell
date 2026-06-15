@@ -41,6 +41,7 @@ export function formatAppDate(
 
 const STATUS_LABELS: Record<string, Record<AppLocale, string>> = {
   completed: { en: 'Completed', ko: '완료' },
+  'not-possible': { en: 'Not Possible', ko: '구현 불가' },
   'in-progress': { en: 'In Progress', ko: '진행 중' },
   pending: { en: 'Pending', ko: '대기 중' },
 };
