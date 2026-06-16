@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMessages } from '@/hooks/useMessages';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
@@ -70,9 +70,34 @@ export default function MessageInput({
   } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
+  const [isTouchKeyboardMode, setIsTouchKeyboardMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const MAX_TEXTAREA_HEIGHT = 120;
   
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const adjustTextareaHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [text, adjustTextareaHeight]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(pointer: coarse)');
+    const updateTouchMode = () => {
+      setIsTouchKeyboardMode(media.matches);
+    };
+    updateTouchMode();
+    media.addEventListener('change', updateTouchMode);
+    return () => media.removeEventListener('change', updateTouchMode);
+  }, []);
 
   const handleSend = () => {
     const trimmedText = text.trim();
@@ -108,6 +133,7 @@ export default function MessageInput({
 
     setText('');
     setShowSlashCommands(false);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (onCancelReply) onCancelReply();
   };
 
@@ -171,8 +197,16 @@ export default function MessageInput({
     setShowSlashCommands(false);
   };
   
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Desktop hardware keyboard: Enter sends, Shift+Enter inserts a newline.
+    // Touch/on-screen keyboard: Enter keeps newline behavior.
+    if (
+      e.key === 'Enter' &&
+      !isTouchKeyboardMode &&
+      !e.shiftKey &&
+      !e.nativeEvent.isComposing &&
+      !showSlashCommands
+    ) {
       e.preventDefault();
       handleSend();
     }
@@ -268,7 +302,7 @@ export default function MessageInput({
             {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
         </button>
 
-        <div className="flex flex-1 items-center overflow-hidden rounded-[1.25rem] border border-border/60 bg-card px-3 py-1 transition-colors focus-within:border-ring">
+        <div className="flex flex-1 items-end overflow-hidden rounded-[1.25rem] border border-border/60 bg-card px-3 py-1 transition-colors focus-within:border-ring">
           {stagedCommand && (
             <div className="mr-2 flex max-w-[120px] shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
                <span className="truncate text-[10px] font-semibold uppercase text-foreground">{stagedCommand.label}</span>
@@ -277,8 +311,9 @@ export default function MessageInput({
                </button>
             </div>
           )}
-          <input
-              type="text"
+          <textarea
+              ref={textareaRef}
+              rows={1}
               placeholder={stagedCommand ? "" : (isUploading ? "Uploading..." : "Message")}
               value={text}
               disabled={disabled || isUploading}
@@ -302,13 +337,13 @@ export default function MessageInput({
               }}
               onKeyDown={handleKeyDown}
               style={{ fontSize: '16px' }}
-              className="flex-1 border-none bg-transparent py-1.5 text-foreground outline-none placeholder:text-muted-foreground"
+              className="flex-1 resize-none border-none bg-transparent py-1.5 text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[120px]"
           />
           <button 
               type="button" 
               onClick={handleSend} 
               disabled={disabled || (!text.trim() && !stagedCommand) || isUploading}
-              className={cn("flex h-7 w-7 items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-foreground text-background" : "bg-muted text-muted-foreground opacity-40")}
+              className={cn("mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-foreground text-background" : "bg-muted text-muted-foreground opacity-40")}
           >
               <ArrowUp className="h-4 w-4" strokeWidth={3} />
           </button>
