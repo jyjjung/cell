@@ -58,6 +58,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.42",
+    subtitle: "Chat Input Keyboard Behavior",
+    date: "Mid-June 2026",
+    changes: [
+      "Desktop chat now sends on Enter while Shift+Enter inserts a new line",
+      "Mobile/on-screen keyboards keep Return as a line break and use the send button to post",
+    ],
+  },
+  {
     version: "v1.3.41",
     subtitle: "Privacy & How It Works",
     date: "Mid-June 2026",
