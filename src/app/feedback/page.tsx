@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.44",
+    subtitle: "Stability Fix",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed a crash on app load caused by Bible checklist sync running before it was initialized",
+      "Hardened cached notifications so timestamps and read state no longer break the dashboard",
+      "YouTube reference playlist now loads only when you start listening, not on every page",
+    ],
+  },
+  {
     version: "v1.3.43",
     subtitle: "Faster Loads",
     date: "Mid-June 2026",

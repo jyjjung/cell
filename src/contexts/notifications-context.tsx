@@ -37,6 +37,7 @@ import {
   readLocalCollectionCacheStale,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
+import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 const CACHE_KEY_PREFIX = 'notifications_v2';
@@ -45,22 +46,33 @@ function cacheKey(uid: string, mode: 'app' | 'admin') {
   return `${CACHE_KEY_PREFIX}_${mode}_${uid}`;
 }
 
+function normalizeNotification(raw: AppNotification): AppNotification {
+  const createdAt = reviveTimestamp(raw.createdAt);
+  return {
+    ...raw,
+    createdAt: createdAt ?? raw.createdAt,
+    readBy: Array.isArray(raw.readBy) ? raw.readBy : [],
+  };
+}
+
+function normalizeNotifications(items: AppNotification[]): AppNotification[] {
+  return items.map(normalizeNotification);
+}
+
 function mergeById(...lists: AppNotification[][]): AppNotification[] {
   const map = new Map<string, AppNotification>();
   for (const list of lists) {
     for (const item of list) {
-      map.set(item.id, item);
+      map.set(item.id, normalizeNotification(item));
     }
   }
-  return [...map.values()].sort((a, b) => {
-    const aMs = a.createdAt?.toMillis?.() ?? 0;
-    const bMs = b.createdAt?.toMillis?.() ?? 0;
-    return bMs - aMs;
-  });
+  return [...map.values()].sort((a, b) => toMillisSafe(b.createdAt) - toMillisSafe(a.createdAt));
 }
 
 function mapSnapshot(docs: { id: string; data: () => Record<string, unknown> }[]): AppNotification[] {
-  return docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification));
+  return normalizeNotifications(
+    docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification)),
+  );
 }
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {
@@ -100,7 +112,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     if (!currentUser) return [];
-    return readLocalCollectionCacheStale<AppNotification[]>(cacheKey(currentUser.uid, mode)) ?? [];
+    const cached = readLocalCollectionCacheStale<AppNotification[]>(cacheKey(currentUser.uid, mode));
+    return cached ? normalizeNotifications(cached) : [];
   });
   const [loading, setLoading] = useState(notifications.length === 0);
   const notificationsRef = useRef(notifications);
@@ -119,12 +132,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const key = cacheKey(currentUser.uid, mode);
     const cached = readLocalCollectionCache<AppNotification[]>(key, NOTIFICATIONS_CACHE_TTL_MS);
     if (cached) {
-      setNotifications(cached);
+      setNotifications(normalizeNotifications(cached));
       setLoading(false);
     } else {
       const stale = readLocalCollectionCacheStale<AppNotification[]>(key);
       if (stale) {
-        setNotifications(stale);
+        setNotifications(normalizeNotifications(stale));
         setLoading(false);
       } else {
         setLoading(true);
@@ -278,7 +291,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     const notificationsToUpdate = notificationIdsToMark
       ? notificationsRef.current.filter((n) => notificationIdsToMark.includes(n.id))
-      : notificationsRef.current.filter((n) => !n.readBy.includes(currentUser.uid));
+      : notificationsRef.current.filter((n) => !(n.readBy || []).includes(currentUser.uid));
 
     if (notificationsToUpdate.length === 0) return;
 

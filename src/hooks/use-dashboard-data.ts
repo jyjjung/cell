@@ -72,7 +72,7 @@ export function useDashboardData() {
   const nextUnreadReading = useMemo(() => plan?.dailyReadings ? findNextUnreadReading(plan.dailyReadings, completedPassages) : null, [plan, completedPassages]);
 
   const unreadAnnouncements = useMemo(() => {
-    return notifications.filter(n => n.type === 'announcement' && !n.readBy.includes(currentUser?.uid || ''));
+    return notifications.filter(n => n.type === 'announcement' && !(n.readBy || []).includes(currentUser?.uid || ''));
   }, [notifications, currentUser?.uid]);
 
   const recentChats = useMemo(() => chats.slice(0, 3), [chats]);

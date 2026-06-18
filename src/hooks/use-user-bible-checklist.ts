@@ -70,6 +70,17 @@ export function useUserBibleChecklist() {
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
   const { plan: currentGlobalPlan } = useBiblePlan(); 
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleCommunityProgressSync = useCallback((passages: string[]) => {
+    if (!currentUser?.uid) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      void syncCommunityProgress(currentUser.uid, passages).catch((e) => {
+        console.error('[BibleChecklist] communityProgress sync failed:', e);
+      });
+    }, 800);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -111,17 +122,6 @@ export function useUserBibleChecklist() {
   // second occurrence to appear pre-checked. We migrate each bare key to its
   // first-occurrence scoped key (e.g. "2025-01-01::Matthew 1") exactly once.
   const migrationRunRef = useRef(false);
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleCommunityProgressSync = useCallback((passages: string[]) => {
-    if (!currentUser?.uid) return;
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => {
-      void syncCommunityProgress(currentUser.uid, passages).catch((e) => {
-        console.error('[BibleChecklist] communityProgress sync failed:', e);
-      });
-    }, 800);
-  }, [currentUser?.uid]);
 
   useEffect(() => {
     if (migrationRunRef.current) return;

@@ -75,6 +75,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [trackTitle, setTrackTitle] = useState<string | null>(null);
+  const [playerEnabled, setPlayerEnabled] = useState(false);
 
   const currentItem = queue[currentIndex] ?? null;
 
@@ -189,6 +190,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
 
   const startPlaylist = useCallback((id: string, name: string, items: PlaylistQueueItem[], startIndex = 0) => {
     if (items.length === 0) return;
+    setPlayerEnabled(true);
     queueRef.current = items;
     setlistIdRef.current = id;
     setlistNameRef.current = name;
@@ -213,6 +215,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     setSetlistName(null);
     setCurrentIndex(0);
     setExpanded(false);
+    setPlayerEnabled(false);
     playingRef.current = false;
     setPlaying(false);
     clearTick();
@@ -221,6 +224,8 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
   }, [clearTick]);
 
   useEffect(() => {
+    if (!playerEnabled) return;
+
     let cancelled = false;
 
     // Mount outside React's tree — YouTube replaces this node's children and
@@ -297,7 +302,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
       mount.replaceChildren();
       mount.remove();
     };
-  }, [clearTick, startTick]);
+  }, [clearTick, startTick, playerEnabled]);
 
   useEffect(() => {
     if (!currentItem || !setlistName) return;
