@@ -51,7 +51,7 @@ export default function NotificationsWidget() {
 
   const unreadNotifications = useMemo(() => {
     if (!currentUser || !notifications) return [];
-    return notifications.filter(n => n.type !== 'announcement' && !n.readBy.includes(currentUser.uid));
+    return notifications.filter(n => n.type !== 'announcement' && !(n.readBy || []).includes(currentUser.uid));
   }, [notifications, currentUser]);
   
   const handleGoToNotifications = () => {

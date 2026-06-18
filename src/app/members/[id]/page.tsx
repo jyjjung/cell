@@ -24,6 +24,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { format, parseISO, isValid, startOfDay, isBefore, isSameDay } from 'date-fns';
+import { toDateSafe } from '@/lib/firestore-timestamp';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import HiddenAchievements from '@/components/profile/hidden-achievements';
@@ -253,7 +254,7 @@ export default function MemberProfilePage() {
       </motion.div>
 
       {/* Extra Info */}
-      {user.showInCommunityProgress !== false && progress?.updatedAt && (
+      {user.showInCommunityProgress !== false && toDateSafe(progress?.updatedAt) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -265,7 +266,7 @@ export default function MemberProfilePage() {
             <div className="min-w-0">
               <p className="text-[10px] uppercase font-black text-zinc-800 dark:text-zinc-200 tracking-widest">Last Reading</p>
               <p className="text-xs font-bold truncate">
-                {format(progress.updatedAt.toDate(), 'MMM d, h:mm a')}
+                {format(toDateSafe(progress.updatedAt)!, 'MMM d, h:mm a')}
               </p>
             </div>
           </div>

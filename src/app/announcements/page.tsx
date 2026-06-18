@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translations } from '@/lib/translations';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { LinkifiedText } from '@/components/ui/linkified-text';
+import { toDateSafe } from '@/lib/firestore-timestamp';
 
 function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notification: any; isRead: boolean; onMarkRead?: () => void; index: number }) {
   return (
@@ -33,7 +34,9 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notific
         <p className={cn("font-semibold text-sm", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
         <LinkifiedText text={notification.message} className="block text-sm text-muted-foreground leading-relaxed" />
         <p className="text-[11px] text-muted-foreground/40 font-medium">
-          {notification.createdAt ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true }) : 'Just now'}
+          {toDateSafe(notification.createdAt)
+            ? formatDistanceToNow(toDateSafe(notification.createdAt)!, { addSuffix: true })
+            : 'Just now'}
         </p>
       </div>
       {!isRead && onMarkRead && (
