@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { ColorPaletteProvider } from '@/contexts/color-palette-context';
 import { TypographyProvider } from '@/contexts/typography-context';
 import AppLayout from '@/components/layout/app-layout';
+import { AppDataProviders } from '@/components/layout/app-data-providers';
 import { Toaster } from '@/components/ui/toaster';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-context';
@@ -65,6 +66,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <PageLoadingProvider>
               <AuthProvider>
+                <AppDataProviders>
                 <ThemePreferenceSync />
                 <ColorPaletteProvider>
                 <TypographyProvider>
@@ -83,6 +85,7 @@ export default function RootLayout({
                 </GlobalBibleReaderProvider>
                 </TypographyProvider>
                 </ColorPaletteProvider>
+                </AppDataProviders>
               </AuthProvider>
             </PageLoadingProvider>
         </ThemeProvider>

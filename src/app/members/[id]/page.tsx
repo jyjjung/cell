@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
+import { useMemberCommunityProgress } from '@/hooks/use-community-progress';
 import { useRoles } from '@/hooks/use-roles';
 import { useEvents } from '@/hooks/use-events';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
@@ -32,8 +32,8 @@ export default function MemberProfilePage() {
   const params = useParams();
   const userId = params.id as string;
   const router = useRouter();
-  const { allUsers, loading: usersLoading } = useAllUsers();
-  const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
+  const { allUsers, loading: usersLoading, ensureUsers } = useAllUsers();
+  const { progress, loading: progressLoading } = useMemberCommunityProgress(userId);
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
   const { plan, loading: planLoading } = useBiblePlan();
@@ -44,8 +44,12 @@ export default function MemberProfilePage() {
 
   useEffect(() => { setIsMounted(true); }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    void ensureUsers([userId]);
+  }, [userId, ensureUsers]);
+
   const user = useMemo(() => allUsers.find(u => u.uid === userId), [allUsers, userId]);
-  const checklist = useMemo(() => allChecklists.find(c => c.userId === userId), [allChecklists, userId]);
   const rolesMap = useMemo(() => new Map(roles.map(r => [r.id, r.name])), [roles]);
   
   const userBirthday = useMemo(() => {
@@ -74,12 +78,14 @@ export default function MemberProfilePage() {
       .reduce((acc, day) => acc + (day.passages?.filter(p => p?.displayText && !p.displayText.startsWith('Error:'))?.length ?? 0), 0);
   }, [plan]);
 
-  const progressPercentage = useMemo(() => {
-    if (!checklist || totalPassagesToDate === 0) return 0;
-    return parseFloat(((checklist.completedPassages.length / totalPassagesToDate) * 100).toFixed(1));
-  }, [checklist, totalPassagesToDate]);
+  const completedCount = progress?.completedCount ?? progress?.completedPassages?.length ?? 0;
 
-  const isLoading = !isMounted || usersLoading || checklistsLoading || rolesLoading || eventsLoading || planLoading;
+  const progressPercentage = useMemo(() => {
+    if (!progress || totalPassagesToDate === 0) return 0;
+    return parseFloat(((completedCount / totalPassagesToDate) * 100).toFixed(1));
+  }, [progress, completedCount, totalPassagesToDate]);
+
+  const isLoading = !isMounted || usersLoading || progressLoading || rolesLoading || eventsLoading || planLoading;
 
   if (isLoading) {
     return (
@@ -167,7 +173,7 @@ export default function MemberProfilePage() {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <span className="text-2xl font-black">{checklist?.completedPassages.length || 0}</span>
+                <span className="text-2xl font-black">{completedCount}</span>
                 <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1">/ {totalPassagesToDate} {t.passages || 'passages'}</span>
               </div>
               <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
@@ -240,14 +246,14 @@ export default function MemberProfilePage() {
       >
         <HiddenAchievements
           userId={user.uid}
-          completedPassageKeys={checklist?.completedPassages || []}
+          completedPassageKeys={progress?.completedPassages || []}
           unlockedSecrets={user.unlockedSecrets}
           lockedLimit={6}
         />
       </motion.div>
 
       {/* Extra Info */}
-      {user.showInCommunityProgress !== false && checklist?.updatedAt && (
+      {user.showInCommunityProgress !== false && progress?.updatedAt && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,7 +265,7 @@ export default function MemberProfilePage() {
             <div className="min-w-0">
               <p className="text-[10px] uppercase font-black text-zinc-800 dark:text-zinc-200 tracking-widest">Last Reading</p>
               <p className="text-xs font-bold truncate">
-                {format(checklist.updatedAt.toDate(), 'MMM d, h:mm a')}
+                {format(progress.updatedAt.toDate(), 'MMM d, h:mm a')}
               </p>
             </div>
           </div>

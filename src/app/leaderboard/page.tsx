@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
-import { useAllUserChecklists } from '@/hooks/use-all-user-checklists';
+import { useCommunityProgress } from '@/hooks/use-community-progress';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
 import { Trophy, Medal, Award, Users } from 'lucide-react';
@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
   const { currentUser } = useAuth();
   useGrantSecretAchievement('leaderboard', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
-  const { allChecklists, loading: checklistsLoading } = useAllUserChecklists();
+  const { allProgress, loading: progressLoading } = useCommunityProgress();
   const { allUsers, loading: usersLoading } = useAllUsers();
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -57,23 +57,23 @@ export default function LeaderboardPage() {
   }, [plan]);
 
   const userProgressData = useMemo((): UserProgressDisplay[] => {
-    if (checklistsLoading || usersLoading || !allChecklists || !allUsers) return [];
+    if (progressLoading || usersLoading || !allProgress || !allUsers) return [];
     const visibleUids = new Set(allUsers.filter(u => u.showInCommunityProgress ?? true).map(u => u.uid));
     const usersMap = new Map(allUsers.map(u => [u.uid, u]));
-    return allChecklists
+    return allProgress
       .filter(c => visibleUids.has(c.userId))
       .map(c => {
         const user = usersMap.get(c.userId);
         if (!user?.firstName) return null;
-        const completedCount = c.completedPassages.length;
+        const completedCount = c.completedCount ?? c.completedPassages?.length ?? 0;
         const progressPercentage = totalPassagesToDate > 0 ? parseFloat(((completedCount / totalPassagesToDate) * 100).toFixed(1)) : 0;
-        return { userId: c.userId, displayName: formatUserDisplayName(user), completedCount, completedPassageKeys: c.completedPassages, progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
+        return { userId: c.userId, displayName: formatUserDisplayName(user), completedCount, completedPassageKeys: c.completedPassages || [], progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);
-  }, [allChecklists, allUsers, totalPassagesToDate, checklistsLoading, usersLoading, currentUser?.uid]);
+  }, [allProgress, allUsers, totalPassagesToDate, progressLoading, usersLoading, currentUser?.uid]);
 
-  if (!isMounted || planLoading || checklistsLoading || usersLoading) return null;
+  if (!isMounted || planLoading || progressLoading || usersLoading) return null;
 
   return (
     <div className="page-container space-y-8 pb-32">

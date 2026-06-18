@@ -21,11 +21,10 @@ import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
-  chatMessagesCacheKey,
   chatMessagesCollection,
   mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
-  syncAllMessagesToDeviceCache,
+  fetchOlderMessagesPage,
 } from '@/lib/chat-messages-device-cache';
 import type { ChatMessage, Chat } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
@@ -39,12 +38,20 @@ export function useMessages(chatId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chat, setChat] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const { toast } = useToast();
-  const syncAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
+  const loadingOlderRef = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
     setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev));
+    setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
   }, []);
@@ -78,25 +85,17 @@ export function useMessages(chatId: string | null) {
 
     setLoading(true);
     setMessages([]);
-    syncAbortRef.current.aborted = false;
-    const syncSignal = syncAbortRef.current;
+    setHasMoreOlder(false);
+    const aborted = { value: false };
 
     const messagesCol = chatMessagesCollection(chatId);
-    const cacheKey = chatMessagesCacheKey(chatId);
 
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
-      if (syncSignal.aborted || cached.length === 0) return;
+      if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
       setLoading(false);
       primeMediaUrls(cached.map((m) => m.imageUrl));
     });
-
-    void syncAllMessagesToDeviceCache(messagesCol, cacheKey, (batch) => {
-      if (syncSignal.aborted) return;
-      setMessages((prev) => mergeMessageListsStable(prev, batch, prev));
-      setLoading(false);
-      primeMediaUrls(batch.map((m) => m.imageUrl));
-    }, syncSignal);
 
     const messagesQuery = query(
       collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION),
@@ -121,10 +120,37 @@ export function useMessages(chatId: string | null) {
     );
 
     return () => {
-      syncSignal.aborted = true;
+      aborted.value = true;
       unsubscribe();
     };
   }, [chatId, applySnapshot, toast]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!chatId || loadingOlderRef.current) return;
+
+    const current = messagesRef.current;
+    const oldest = current[current.length - 1];
+    if (!oldest?.id) return;
+
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const { messages: older, hasMore } = await fetchOlderMessagesPage(
+        chatMessagesCollection(chatId),
+        oldest.id,
+      );
+      setHasMoreOlder(hasMore);
+      if (older.length > 0) {
+        setMessages((prev) => mergeMessageListsStable(prev, older, prev));
+        primeMediaUrls(older.map((m) => m.imageUrl));
+      }
+    } catch (error) {
+      console.error('[useMessages] Failed to load older messages:', error);
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [chatId]);
 
   const sendMessage = useCallback(async (
     text?: string, 
@@ -282,7 +308,10 @@ export function useMessages(chatId: string | null) {
   return { 
     messages, 
     chat, 
-    loading, 
+    loading,
+    loadingOlder,
+    hasMoreOlder,
+    loadOlderMessages,
     sendMessage, 
     sendImageMessage,
     markAsSeen,

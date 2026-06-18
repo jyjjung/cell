@@ -7,7 +7,7 @@ import { Send, Loader2, Clock, Check, MessageSquare, XCircle } from 'lucide-reac
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, doc, updateDoc, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -57,6 +57,18 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.43",
+    subtitle: "Faster Loads",
+    date: "Mid-June 2026",
+    changes: [
+      "Chat loads only the latest messages first — scroll up for older history",
+      "Users, events, notifications, and announcements are cached on your device to cut repeat Firestore reads",
+      "Leaderboard and member profiles use shared community progress instead of loading every private checklist",
+      "Dashboard custom rosters use one query instead of many live listeners",
+      "Feedback suggestions list is capped to the 50 most recent entries",
+    ],
+  },
   {
     version: "v1.3.42",
     subtitle: "Chat Input Keyboard Behavior",
@@ -502,7 +514,7 @@ export default function FeedbackPage() {
   /* ── Firestore listener ───────────────────────────────── */
 
   useEffect(() => {
-    const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setSuggestionsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });

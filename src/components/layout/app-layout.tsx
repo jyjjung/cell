@@ -20,7 +20,6 @@ import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
-import { UsersProvider } from '@/contexts/users-context';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 
 const DynamicLakeWallpaper = dynamic(() => import('./dynamic-lake-wallpaper'), {
@@ -109,7 +108,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-      <UsersProvider>
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
       <SidebarInset className="min-w-0 bg-background h-svh overflow-hidden flex flex-col">
@@ -190,7 +188,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </SidebarInset>
-      </UsersProvider>
     </SidebarProvider>
   );
 }
