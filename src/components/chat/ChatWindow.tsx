@@ -105,6 +105,9 @@ function ChatWindowBody({
     messages,
     chat,
     loading: loadingMessages,
+    loadingOlder,
+    hasMoreOlder,
+    loadOlderMessages,
     updateSeenTimestamp,
     toggleReaction,
     sendMessage,
@@ -354,6 +357,9 @@ function ChatWindowBody({
             onOpenThread={handleOpenThread}
             onOpenImage={handleOpenImage}
             onOpenWorshipViewer={handleOpenWorshipViewer}
+            onLoadOlder={loadOlderMessages}
+            loadingOlder={loadingOlder}
+            hasMoreOlder={hasMoreOlder}
           />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum

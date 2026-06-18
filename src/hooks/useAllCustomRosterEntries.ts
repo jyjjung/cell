@@ -1,99 +1,124 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { CustomRosterEntry, RosterDefinition } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import {
+  collection,
+  collectionGroup,
+  getDocs,
+  getDocsFromCache,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore';
+import { format } from 'date-fns';
+import {
+  COLLECTION_CACHE_TTL_MS,
+  readLocalCollectionCache,
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 const ENTRIES_SUBCOLLECTION = 'entries';
+const CACHE_KEY = 'custom_roster_entries_v1';
 
 export interface CustomRosterEntryWithMeta extends CustomRosterEntry {
   rosterDefId: string;
   rosterName: string;
 }
 
-/**
- * Fetches ALL custom roster entries across every roster definition,
- * enriched with the definition id and name. Used by the dashboard to
- * show a user's personal assignments without calling a variable number
- * of hooks conditionally.
- */
-export function useAllCustomRosterEntries() {
-  const [definitions, setDefinitions] = useState<RosterDefinition[]>([]);
-  const [entries, setEntries] = useState<CustomRosterEntryWithMeta[]>([]);
-  const [loading, setLoading] = useState(true);
+function todayDateString() {
+  return format(new Date(), 'yyyy-MM-dd');
+}
 
-  // Step 1 – subscribe to all roster definitions
-  useEffect(() => {
-    const q = query(
-      collection(db, ROSTER_DEFINITIONS_COLLECTION),
-      orderBy('name', 'asc'),
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setDefinitions(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition)),
-        );
-      },
-      (err) => {
-        console.error('[useAllCustomRosterEntries] definitions error:', err);
+async function loadDefinitions(): Promise<RosterDefinition[]> {
+  const q = query(collection(db, ROSTER_DEFINITIONS_COLLECTION), orderBy('name', 'asc'));
+  try {
+    const cached = await getDocsFromCache(q);
+    if (!cached.empty) {
+      return cached.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
+    }
+  } catch {
+    /* cache miss */
+  }
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
+}
+
+async function loadEntriesWithMeta(
+  fromDate: string,
+  definitions: RosterDefinition[],
+): Promise<CustomRosterEntryWithMeta[]> {
+  const defMap = new Map(definitions.map((d) => [d.id, d.name]));
+  const q = query(
+    collectionGroup(db, ENTRIES_SUBCOLLECTION),
+    where('date', '>=', fromDate),
+    orderBy('date', 'asc'),
+  );
+
+  let snap;
+  try {
+    snap = await getDocsFromCache(q);
+    if (snap.empty) snap = await getDocs(q);
+  } catch {
+    snap = await getDocs(q);
+  }
+
+  return snap.docs.map((docSnap) => {
+    const defId = docSnap.ref.parent.parent?.id ?? '';
+    return {
+      id: docSnap.id,
+      ...(docSnap.data() as Omit<CustomRosterEntry, 'id'>),
+      rosterDefId: defId,
+      rosterName: defMap.get(defId) ?? 'Roster',
+    };
+  });
+}
+
+/** Dashboard helper: cached definitions + one collection-group entries query. */
+export function useAllCustomRosterEntries() {
+  const [entries, setEntries] = useState<CustomRosterEntryWithMeta[]>(() => {
+    return readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(CACHE_KEY) ?? [];
+  });
+  const [loading, setLoading] = useState(entries.length === 0);
+
+  const load = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const fresh = readLocalCollectionCache<CustomRosterEntryWithMeta[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+      if (fresh) {
+        setEntries(fresh);
         setLoading(false);
-      },
-    );
-    return unsub;
+        return fresh;
+      }
+    }
+
+    const definitions = await loadDefinitions();
+    const enriched = await loadEntriesWithMeta(todayDateString(), definitions);
+    writeLocalCollectionCache(CACHE_KEY, enriched);
+    setEntries(enriched);
+    setLoading(false);
+    return enriched;
   }, []);
 
-  // Step 2 – for each definition, subscribe to its entries subcollection
   useEffect(() => {
-    if (definitions.length === 0) {
-      setEntries([]);
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    // Map of defId → raw entries
-    const entriesByDef = new Map<string, CustomRosterEntry[]>();
-    const unsubscribers: (() => void)[] = [];
-    let pending = definitions.length;
-
-    function flush() {
-      const all: CustomRosterEntryWithMeta[] = [];
-      definitions.forEach((def) => {
-        const defEntries = entriesByDef.get(def.id) ?? [];
-        defEntries.forEach((e) =>
-          all.push({ ...e, rosterDefId: def.id, rosterName: def.name }),
-        );
-      });
-      setEntries(all);
-    }
-
-    definitions.forEach((def) => {
-      const q = query(
-        collection(db, ROSTER_DEFINITIONS_COLLECTION, def.id, ENTRIES_SUBCOLLECTION),
-      );
-      const unsub = onSnapshot(
-        q,
-        (snap) => {
-          entriesByDef.set(
-            def.id,
-            snap.docs.map((d) => ({ id: d.id, ...d.data() } as CustomRosterEntry)),
-          );
-          if (pending > 0) pending--;
-          if (pending === 0) setLoading(false);
-          flush();
-        },
-        (err) => {
-          console.error(`[useAllCustomRosterEntries] entries error for ${def.id}:`, err);
-          if (pending > 0) { pending--; if (pending === 0) setLoading(false); }
-        },
-      );
-      unsubscribers.push(unsub);
+    void load().catch((err) => {
+      console.error('[useAllCustomRosterEntries] load error:', err);
+      if (!cancelled) setLoading(false);
     });
 
-    return () => unsubscribers.forEach((u) => u());
-  }, [definitions]);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [load]);
 
-  return { entries, loading };
+  return { entries, loading, refresh: () => load(true) };
 }

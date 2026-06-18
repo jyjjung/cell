@@ -3,11 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { ChatMessage } from '@/types';
 import {
-  chatMessagesCacheKey,
   chatMessagesCollection,
-  mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
-  syncAllMessagesToDeviceCache,
 } from '@/lib/chat-messages-device-cache';
 
 export function useAllChatMessages(chatIds: string[]) {
@@ -35,21 +32,7 @@ export function useAllChatMessages(chatIds: string[]) {
       await Promise.all(
         chatIds.map(async (chatId) => {
           const col = chatMessagesCollection(chatId);
-          const cached = await readAllMessagesFromDeviceCache(col);
-          results[chatId] = cached;
-
-          void syncAllMessagesToDeviceCache(
-            col,
-            chatMessagesCacheKey(chatId),
-            (batch) => {
-              if (abort.aborted) return;
-              setMessagesByChatId((prev) => ({
-                ...prev,
-                [chatId]: mergeMessageListsStable(prev[chatId] ?? [], batch, prev[chatId] ?? []),
-              }));
-            },
-            abort,
-          );
+          results[chatId] = await readAllMessagesFromDeviceCache(col);
         }),
       );
 

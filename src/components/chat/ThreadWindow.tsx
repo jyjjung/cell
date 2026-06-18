@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useRef, useMemo, useEffect, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
+import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
@@ -34,10 +35,10 @@ export default function ThreadWindow({
   onClose: () => void;
   onDeleteParentMessage?: (id: string) => void;
 }) {
-  const { messages, parentMessage, loading, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
+  const { messages, parentMessage, loading, loadingOlder, hasMoreOlder, loadOlderMessages, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
   const usersById = useUsersById();
-  const listRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useChatScrollLoadOlder({ onLoadOlder: loadOlderMessages, hasMoreOlder, loadingOlder });
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -120,10 +121,15 @@ export default function ThreadWindow({
 
       <div className="flex-1 min-h-0 relative">
         <div 
-            ref={listRef} 
+            ref={scrollRef} 
             className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar"
         >
             <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
+                {loadingOlder && (
+                  <div className="flex justify-center py-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+                  </div>
+                )}
                 {renderContent()}
 
                 {/* Parent Message Separator */}

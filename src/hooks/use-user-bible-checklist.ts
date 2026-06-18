@@ -16,6 +16,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { syncCommunityProgress } from '@/lib/community-progress';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
 import { useBiblePlan } from './use-bible-plan'; 
 import { useNotifications } from './use-notifications';
@@ -84,11 +85,14 @@ export function useUserBibleChecklist() {
     const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const data = docSnapshot.data() as UserBibleChecklist;
-        setCompletedPassages(data.completedPassages || []);
+        const passages = data.completedPassages || [];
+        setCompletedPassages(passages);
         setChecklistDocExists(true);
+        scheduleCommunityProgressSync(passages);
       } else {
         setCompletedPassages([]);
         setChecklistDocExists(false);
+        scheduleCommunityProgressSync([]);
       }
       setLoadingChecklist(false);
     }, (error) => {
@@ -99,7 +103,7 @@ export function useUserBibleChecklist() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, scheduleCommunityProgressSync]);
 
   // ── One-time migration: bare keys → date-scoped keys ──────────────────────
   // Legacy completedPassages stored bare displayText (e.g. "Matthew 1").
@@ -107,6 +111,17 @@ export function useUserBibleChecklist() {
   // second occurrence to appear pre-checked. We migrate each bare key to its
   // first-occurrence scoped key (e.g. "2025-01-01::Matthew 1") exactly once.
   const migrationRunRef = useRef(false);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleCommunityProgressSync = useCallback((passages: string[]) => {
+    if (!currentUser?.uid) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      void syncCommunityProgress(currentUser.uid, passages).catch((e) => {
+        console.error('[BibleChecklist] communityProgress sync failed:', e);
+      });
+    }, 800);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     if (migrationRunRef.current) return;

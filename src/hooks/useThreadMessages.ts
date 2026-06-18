@@ -24,8 +24,7 @@ import {
   CHAT_MESSAGES_LIVE_LIMIT,
   mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
-  syncAllMessagesToDeviceCache,
-  threadMessagesCacheKey,
+  fetchOlderMessagesPage,
   threadMessagesCollection,
 } from '@/lib/chat-messages-device-cache';
 import type { ChatMessage } from '@/types';
@@ -41,12 +40,20 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [parentMessage, setParentMessage] = useState<ChatMessage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const { toast } = useToast();
-  const syncAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
+  const loadingOlderRef = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
     setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev));
+    setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
   }, []);
@@ -80,25 +87,17 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     setLoading(true);
     setMessages([]);
-    syncAbortRef.current.aborted = false;
-    const syncSignal = syncAbortRef.current;
+    setHasMoreOlder(false);
+    const aborted = { value: false };
 
     const messagesCol = threadMessagesCollection(chatId, parentMessageId);
-    const cacheKey = threadMessagesCacheKey(chatId, parentMessageId);
 
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
-      if (syncSignal.aborted || cached.length === 0) return;
+      if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
       setLoading(false);
       primeMediaUrls(cached.map((m) => m.imageUrl));
     });
-
-    void syncAllMessagesToDeviceCache(messagesCol, cacheKey, (batch) => {
-      if (syncSignal.aborted) return;
-      setMessages((prev) => mergeMessageListsStable(prev, batch, prev));
-      setLoading(false);
-      primeMediaUrls(batch.map((m) => m.imageUrl));
-    }, syncSignal);
 
     const messagesQuery = query(
       collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION),
@@ -118,10 +117,37 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     );
 
     return () => {
-      syncSignal.aborted = true;
+      aborted.value = true;
       unsubscribe();
     };
   }, [chatId, parentMessageId, applySnapshot]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!chatId || !parentMessageId || loadingOlderRef.current) return;
+
+    const current = messagesRef.current;
+    const oldest = current[current.length - 1];
+    if (!oldest?.id) return;
+
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      const { messages: older, hasMore } = await fetchOlderMessagesPage(
+        threadMessagesCollection(chatId, parentMessageId),
+        oldest.id,
+      );
+      setHasMoreOlder(hasMore);
+      if (older.length > 0) {
+        setMessages((prev) => mergeMessageListsStable(prev, older, prev));
+        primeMediaUrls(older.map((m) => m.imageUrl));
+      }
+    } catch (error) {
+      console.error('[useThreadMessages] Failed to load older messages:', error);
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [chatId, parentMessageId]);
 
   const sendMessage = useCallback(async (
     text?: string, 
@@ -280,7 +306,10 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   return { 
     messages, 
     parentMessage,
-    loading, 
+    loading,
+    loadingOlder,
+    hasMoreOlder,
+    loadOlderMessages,
     sendMessage, 
     sendImageMessage,
     toggleReaction,
