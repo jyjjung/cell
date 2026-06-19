@@ -27,16 +27,17 @@ export type CommunityProgressDoc = {
   updatedAt: Timestamp;
 };
 
-const CACHE_KEY = 'community_progress_v1';
+const CACHE_KEY = 'community_progress_v2';
 
 export function getCachedCommunityProgress(): CommunityProgressDoc[] {
-  return readLocalCollectionCacheStale<CommunityProgressDoc[]>(CACHE_KEY) ?? [];
+  const cached = readLocalCollectionCacheStale<CommunityProgressDoc[]>(CACHE_KEY) ?? [];
+  return cached.length > 0 ? cached : [];
 }
 
 export async function loadCommunityProgress(options?: { forceRefresh?: boolean }): Promise<CommunityProgressDoc[]> {
   if (!options?.forceRefresh) {
     const fresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
-    if (fresh) return fresh;
+    if (fresh && fresh.length > 0) return fresh;
 
     try {
       const cachedSnap = await getDocsFromCache(query(collection(db, COMMUNITY_PROGRESS_COLLECTION)));

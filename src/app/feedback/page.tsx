@@ -58,6 +58,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.46",
+    subtitle: "Leaderboard Fix",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed the community progress leaderboard showing no data after the read-reduction update",
+      "Leaderboard now refreshes on open and no longer caches an empty result",
+    ],
+  },
+  {
     version: "v1.3.45",
     subtitle: "Chat Fix",
     date: "Mid-June 2026",
