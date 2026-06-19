@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.47",
+    subtitle: "Profile & Chat Fixes",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed creating new DMs and group chats when the chat didn't exist yet",
+      "Profile photos and equipped halos now update across chats, members, and the leaderboard without waiting on stale cache",
+      "Avatar initials and uploaded photos render more reliably when profile data is incomplete",
+    ],
+  },
+  {
     version: "v1.3.46",
     subtitle: "Leaderboard Fix",
     date: "Mid-June 2026",

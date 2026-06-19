@@ -117,6 +117,29 @@ export async function adminUpdateUserProfileAction(
 
     const batch = db.batch();
     batch.update(userDocRef, cleanUpdateData);
+
+    const shouldSyncMemberInfo =
+      profileData.avatar !== undefined
+      || profileData.firstName !== undefined
+      || profileData.lastName !== undefined;
+
+    if (shouldSyncMemberInfo) {
+      const mergedProfile = { ...oldProfileData, ...finalDataToUpdate } as UserProfileData;
+      const memberInfo = {
+        firstName: mergedProfile.firstName,
+        lastName: mergedProfile.lastName,
+        avatar: mergedProfile.avatar || DEFAULT_AVATAR_DATA,
+      };
+
+      const chatsSnap = await db
+        .collection(CHATS_COLLECTION)
+        .where('members', 'array-contains', userId)
+        .get();
+
+      for (const chatDoc of chatsSnap.docs) {
+        batch.update(chatDoc.ref, { [`memberInfo.${userId}`]: memberInfo });
+      }
+    }
     
     for (const roleId of rolesAdded) {
       const roleData = allRolesMap.get(roleId);

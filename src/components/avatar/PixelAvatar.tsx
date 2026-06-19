@@ -4,6 +4,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { AvatarData } from '@/types';
 import { HAIR_STYLES, ACCESSORIES, OUTFITS, MOUTHS, FACIAL_HAIR_STYLES, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { resolveInitialsDisplaySeed, type AvatarNameHint } from '@/lib/avatar-utils';
 import { cn } from '@/lib/utils';
 import { getAvatarTierConfig, HALO_AVATAR_SCALE } from '@/lib/avatar-cosmetics';
 import { HaloRing } from '@/components/avatar/halo-ring';
@@ -11,13 +12,15 @@ import { HaloRing } from '@/components/avatar/halo-ring';
 interface PixelAvatarProps {
   avatar?: AvatarData | null;
   className?: string;
+  nameHint?: AvatarNameHint;
 }
 
-export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
+export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const finalAvatar = { ...DEFAULT_AVATAR_DATA, ...(avatar || {}) };
   const tierConfig = getAvatarTierConfig(finalAvatar.cosmeticTier);
   const haloScale = HALO_AVATAR_SCALE[tierConfig.powerLevel];
   const hasHalo = tierConfig.powerLevel > 0;
+  const avatarRenderKey = `${finalAvatar.mode}-${finalAvatar.imageUrl ?? ''}-${finalAvatar.cosmeticTier ?? 'none'}`;
 
   const { 
     mode,
@@ -41,7 +44,10 @@ export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
   const bgStyle = { background: `linear-gradient(to bottom, ${stops})` };
 
   const withHalo = (content: ReactNode, extraClassName?: string, style?: CSSProperties) => (
-    <div className={cn("relative flex items-center justify-center aspect-square overflow-visible", extraClassName, className)}>
+    <div
+      key={avatarRenderKey}
+      className={cn("relative flex items-center justify-center aspect-square overflow-visible", extraClassName, className)}
+    >
       {hasHalo ? (
         <HaloRing preset={tierConfig.stylePreset} powerLevel={tierConfig.powerLevel} />
       ) : null}
@@ -62,6 +68,7 @@ export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
     return withHalo(
       finalAvatar.imageUrl ? (
         <img
+          key={finalAvatar.imageUrl}
           src={finalAvatar.imageUrl}
           alt="Custom Profile"
           className="w-full h-full object-cover"
@@ -87,9 +94,13 @@ export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
         case 'pixel-art': style = 'pixel-art'; break;
     }
 
-    // Force transparency from API side so our CSS background takes precedence
-    const seedToUse = mode === 'initials' ? (initials || seed || '??') : (seed || 'spark');
-    const url = `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seedToUse)}&backgroundColor=transparent`;
+    const seedToUse = mode === 'initials'
+      ? resolveInitialsDisplaySeed(finalAvatar, nameHint)
+      : (seed || 'spark');
+    // Initials style needs DiceBear's own background for readable contrast.
+    const url = mode === 'initials'
+      ? `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seedToUse)}`
+      : `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seedToUse)}&backgroundColor=transparent`;
     
     return withHalo(
       <img
@@ -113,7 +124,7 @@ export function PixelAvatar({ avatar, className }: PixelAvatarProps) {
   const backgroundId = `background-${backgroundColor}`;
 
   return (
-    <div className={cn("aspect-square relative", className)}>
+    <div key={avatarRenderKey} className={cn("aspect-square relative", className)}>
         {hasHalo ? (
           <HaloRing preset={tierConfig.stylePreset} powerLevel={tierConfig.powerLevel} />
         ) : null}

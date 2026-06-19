@@ -120,7 +120,7 @@ export default function MembersPage() {
                     className="flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm group-hover:bg-card group-hover:shadow-md group-hover:border-border/70 transition-all cursor-pointer"
                   >
                     <div className="h-14 w-14 rounded-full bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                      <PixelAvatar avatar={user.avatar} />
+                      <PixelAvatar avatar={user.uid === currentUser?.uid ? currentUser?.avatar : user.avatar} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>

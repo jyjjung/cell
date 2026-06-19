@@ -11,7 +11,8 @@ service cloud.firestore {
     }
 
     function isYouth(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.isYouth == true;
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.isYouth == true;
     }
 
     match /users/{userId} {
@@ -119,7 +120,12 @@ service cloud.firestore {
       }
 
       // Admins cannot see all chats; strictly member-only.
-      allow read: if isMember();
+      // Allow get on non-existent docs so private-chat creation can check existence.
+      allow get: if request.auth != null
+                 && (!exists(/databases/$(database)/documents/chats/$(chatId))
+                     || request.auth.uid in chatDoc().data.members);
+      allow list: if request.auth != null
+                  && request.auth.uid in resource.data.members;
       allow delete: if isMember() || isAppAdmin(request.auth.uid);
 
       allow create: if isCreatingMember()

@@ -2,6 +2,7 @@
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
+import { useAllUsers } from '@/hooks/use-all-users';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import { ProfileHubTabs, type ProfileTabId } from '@/components/profile/profile-
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { grantSecretAchievement } from '@/lib/achievement-secrets';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { sanitizeAvatarData } from '@/lib/avatar-utils';
 
 
 
@@ -38,6 +40,7 @@ type PushSupportState = 'SUPPORTED' | 'NEEDS_PWA_INSTALL' | 'NEEDS_PERMISSION' |
 
 export default function ProfilePage() {
   const { currentUser, loadingAuth, signOutUser, updateUserProfile, registerSecretUnlock } = useAuth();
+  const { patchUsers } = useAllUsers();
   const { events, loading: loadingEvents } = useEvents();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
@@ -235,15 +238,23 @@ export default function ProfilePage() {
      if (!currentUser) return;
      setIsSaving(true);
      try {
-       await updateUserProfile(currentUser.uid, {
-         avatar: {
+       const nextAvatar = sanitizeAvatarData(
+         {
            ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
            ...avatarInEditor,
            cosmeticTier: avatarInEditor.cosmeticTier ?? currentUser.avatar?.cosmeticTier ?? 'none',
          },
-       });
-       setIsAvatarEditorOpen(false); 
-     } catch (error) { console.error("Failed to update avatar:", error); } 
+         { firstName: currentUser.firstName, lastName: currentUser.lastName },
+       );
+       await updateUserProfile(currentUser.uid, { avatar: nextAvatar });
+       patchUsers([{
+         uid: currentUser.uid,
+         firstName: currentUser.firstName ?? undefined,
+         lastName: currentUser.lastName ?? undefined,
+         avatar: nextAvatar,
+       }]);
+       setIsAvatarEditorOpen(false);
+     } catch (error) { console.error("Failed to update avatar:", error); }
      finally { setIsSaving(false); }
   };
 
@@ -260,13 +271,18 @@ export default function ProfilePage() {
 
   const handleHaloTierSelect = async (tier: AvatarCosmeticTier) => {
     if (!currentUser) return;
+    const nextAvatar = {
+      ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
+      cosmeticTier: tier,
+    };
     try {
-      await updateUserProfile(currentUser.uid, {
-        avatar: {
-          ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
-          cosmeticTier: tier,
-        },
-      });
+      await updateUserProfile(currentUser.uid, { avatar: nextAvatar });
+      patchUsers([{
+        uid: currentUser.uid,
+        firstName: currentUser.firstName ?? undefined,
+        lastName: currentUser.lastName ?? undefined,
+        avatar: nextAvatar,
+      }]);
       if (tier !== 'none') {
         const achievement = await grantSecretAchievement(currentUser.uid, 'halo');
         if (achievement) {

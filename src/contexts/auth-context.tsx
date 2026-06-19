@@ -17,6 +17,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
 import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRole } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { syncProfileToChats } from '@/lib/sync-profile-chats';
 
 interface AuthContextType {
   isAdmin: boolean;
@@ -294,6 +295,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     await setDoc(userDocRef, dataToWrite, { merge: true });
+
+    if (profileData.avatar || profileData.firstName || profileData.lastName) {
+      void syncProfileToChats().catch((error) => {
+        console.error('[updateUserProfile] Failed to sync profile to chats:', error);
+      });
+    }
 
     if (profileData.firstName || profileData.lastName) {
       const userDocSnap = await getDoc(userDocRef);

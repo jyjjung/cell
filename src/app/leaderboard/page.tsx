@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
         if (!user?.firstName) return null;
         const completedCount = c.completedCount ?? c.completedPassages?.length ?? 0;
         const progressPercentage = totalPassagesToDate > 0 ? parseFloat(((completedCount / totalPassagesToDate) * 100).toFixed(1)) : 0;
-        return { userId: c.userId, displayName: formatUserDisplayName(user), completedCount, completedPassageKeys: c.completedPassages || [], progressPercentage, totalPassagesToDate, avatar: user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
+        return { userId: c.userId, displayName: formatUserDisplayName(user), completedCount, completedPassageKeys: c.completedPassages || [], progressPercentage, totalPassagesToDate, avatar: c.userId === currentUser?.uid ? (currentUser?.avatar ?? user.avatar) : user.avatar, isCurrentUser: c.userId === currentUser?.uid, unlockedSecrets: user.unlockedSecrets } as UserProgressDisplay;
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);

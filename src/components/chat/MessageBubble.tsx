@@ -106,7 +106,11 @@ const MessageBubble = React.memo(function MessageBubble({
                   <div className="w-7 h-7 flex-shrink-0 mb-0.5">
                       {showAvatar ? (
                            <div className="w-7 h-7 rounded-full bg-muted border border-border/50 shadow-sm ring-1 ring-border/10">
-                               <PixelAvatar avatar={sender?.avatar} className="w-full h-full" />
+                               <PixelAvatar
+                                 avatar={sender?.avatar}
+                                 className="w-full h-full"
+                                 nameHint={{ firstName: sender?.firstName, lastName: sender?.lastName }}
+                               />
                            </div>
                       ) : (
                           <div className="w-7" />

@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { useUsersById } from '@/contexts/users-context';
 import type { CleaningDay, CleaningRosterEntry } from '@/types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -75,15 +74,13 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
 
         <div className="flex -space-x-3 mt-2">
             {assignedUsers.map((user, i) => (
-                <Avatar key={i} className="h-10 w-10 shrink-0 overflow-hidden border-2 border-background">
-                    {user?.avatar ? (
-                        <PixelAvatar avatar={user.avatar} className="w-full h-full" />
-                    ) : (
-                        <AvatarFallback className="bg-muted text-[10px] font-semibold uppercase text-foreground">
-                        {user?.firstName?.[0] || '?'}
-                        </AvatarFallback>
-                    )}
-                </Avatar>
+                <div key={user?.uid ?? i} className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-background">
+                    <PixelAvatar
+                      avatar={user?.avatar}
+                      className="w-full h-full"
+                      nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
+                    />
+                </div>
             ))}
             {assignedUsers.length === 0 && (
                 <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-2 text-[10px] font-medium text-muted-foreground">No assigned personnel</div>

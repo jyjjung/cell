@@ -8,7 +8,7 @@ import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images, Link2 } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
-import { getMemberDisplayName } from '@/lib/chat-utils';
+import { getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 import ChatMessageList from './ChatMessageList';
@@ -203,7 +203,7 @@ function ChatWindowBody({
 
       return {
         name: name,
-        avatar: peerProfile?.avatar || peerInfoFromChat?.avatar,
+        avatar: resolveChatAvatar(peerProfile, peerInfoFromChat),
       };
     }
     return { name: chat.name, avatar: null };
@@ -251,7 +251,11 @@ function ChatWindowBody({
       map.set(
         msg.senderId,
         senderProfile
-          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
+          ? {
+              firstName: senderProfile.firstName,
+              lastName: senderProfile.lastName,
+              avatar: resolveChatAvatar(senderProfile, senderInfoFromChat) as any,
+            }
           : senderInfoFromChat,
       );
     }
