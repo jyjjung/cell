@@ -4,9 +4,8 @@ import {
   collection,
   doc,
   getDoc,
-  getDocFromCache,
+  getDocFromServer,
   getDocs,
-  getDocsFromCache,
   query,
   serverTimestamp,
   setDoc,
@@ -27,7 +26,7 @@ export type CommunityProgressDoc = {
   updatedAt: Timestamp;
 };
 
-const CACHE_KEY = 'community_progress_v2';
+const CACHE_KEY = 'community_progress_v3';
 
 export function getCachedCommunityProgress(): CommunityProgressDoc[] {
   const cached = readLocalCollectionCacheStale<CommunityProgressDoc[]>(CACHE_KEY) ?? [];
@@ -38,17 +37,6 @@ export async function loadCommunityProgress(options?: { forceRefresh?: boolean }
   if (!options?.forceRefresh) {
     const fresh = readNonEmptyCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
     if (fresh) return fresh;
-
-    try {
-      const cachedSnap = await getDocsFromCache(query(collection(db, COMMUNITY_PROGRESS_COLLECTION)));
-      if (!cachedSnap.empty) {
-        const rows = cachedSnap.docs.map((d) => ({ userId: d.id, ...d.data() } as CommunityProgressDoc));
-        writeLocalCollectionCache(CACHE_KEY, rows);
-        return rows;
-      }
-    } catch {
-      /* persistent cache not warm yet */
-    }
   }
 
   const serverSnap = await getDocs(query(collection(db, COMMUNITY_PROGRESS_COLLECTION)));
@@ -64,7 +52,7 @@ export async function fetchCommunityProgressForUser(userId: string): Promise<Com
   try {
     let snap;
     try {
-      snap = await getDocFromCache(ref);
+      snap = await getDocFromServer(ref);
     } catch {
       snap = await getDoc(ref);
     }

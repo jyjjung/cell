@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase';
 import {
   collection,
   getDocs,
-  getDocsFromCache,
   query,
   orderBy,
   Timestamp,
@@ -56,19 +55,6 @@ export async function loadEventsDirectory(options?: { forceRefresh?: boolean }):
   if (!options?.forceRefresh) {
     const fresh = readLocalCollectionCache<AppEvent[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
     if (fresh) return fresh;
-
-    try {
-      const cachedSnap = await getDocsFromCache(
-        query(collection(db, EVENTS_COLLECTION), orderBy('date', 'asc')),
-      );
-      if (!cachedSnap.empty) {
-        const events = cachedSnap.docs.map(docToEvent);
-        writeLocalCollectionCache(CACHE_KEY, events);
-        return events;
-      }
-    } catch {
-      /* persistent cache not warm yet */
-    }
   }
 
   const serverSnap = await getDocs(query(collection(db, EVENTS_COLLECTION), orderBy('date', 'asc')));

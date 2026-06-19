@@ -4,9 +4,8 @@ import {
   collection,
   doc,
   getDoc,
-  getDocFromCache,
+  getDocFromServer,
   getDocs,
-  getDocsFromCache,
   query,
 } from 'firebase/firestore';
 import {
@@ -18,7 +17,7 @@ import {
 import { mergeAvatarData } from '@/lib/avatar-utils';
 
 const USERS_COLLECTION = 'users';
-const CACHE_KEY = 'users_directory_v1';
+const CACHE_KEY = 'users_directory_v2';
 
 function docToUser(docSnap: { id: string; data: () => Record<string, unknown> }): UserProfileData {
   return { uid: docSnap.id, ...docSnap.data() } as UserProfileData;
@@ -32,17 +31,6 @@ export async function loadUsersDirectory(options?: { forceRefresh?: boolean }): 
   if (!options?.forceRefresh) {
     const fresh = readNonEmptyCollectionCache<UserProfileData[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
     if (fresh) return fresh;
-
-    try {
-      const cachedSnap = await getDocsFromCache(query(collection(db, USERS_COLLECTION)));
-      if (!cachedSnap.empty) {
-        const users = cachedSnap.docs.map(docToUser);
-        writeLocalCollectionCache(CACHE_KEY, users);
-        return users;
-      }
-    } catch {
-      /* persistent cache not warm yet */
-    }
   }
 
   const serverSnap = await getDocs(query(collection(db, USERS_COLLECTION)));
@@ -71,7 +59,7 @@ export async function fetchUserProfilesByIds(
       try {
         let snap;
         try {
-          snap = await getDocFromCache(ref);
+          snap = await getDocFromServer(ref);
         } catch {
           snap = await getDoc(ref);
         }
@@ -111,12 +99,12 @@ export function patchUsersDirectoryCache(patches: UserDirectoryPatch[]): UserPro
   const byId = new Map(getCachedUsersDirectory().map((u) => [u.uid, u]));
   for (const patch of patches) {
     const existing = byId.get(patch.uid);
-    if (!existing) continue;
+    const base = existing ?? ({ uid: patch.uid } as UserProfileData);
     byId.set(patch.uid, {
-      ...existing,
+      ...base,
       ...(patch.firstName !== undefined ? { firstName: patch.firstName } : {}),
       ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
-      ...(patch.avatar !== undefined ? { avatar: mergeAvatarData(existing.avatar, patch.avatar) } : {}),
+      ...(patch.avatar !== undefined ? { avatar: mergeAvatarData(existing?.avatar, patch.avatar) } : {}),
     });
   }
 

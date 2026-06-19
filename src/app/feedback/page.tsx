@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.49",
+    subtitle: "Members & Progress Sync",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed members and leaderboard showing only yourself on new devices",
+      "Profile photos and halos refresh from the server when you open the app",
+      "Stopped partial offline cache from being mistaken for the full member list",
+    ],
+  },
+  {
     version: "v1.3.48",
     subtitle: "New Device & Cache Fixes",
     date: "Mid-June 2026",
