@@ -91,16 +91,31 @@ service cloud.firestore {
 
     // Chat Rules
     match /chats/{chatId} {
+      function chatDoc() {
+        return get(/databases/$(database)/documents/chats/$(chatId));
+      }
+
       function isMember() {
-        return request.auth.uid in resource.data.members;
+        return request.auth != null
+          && request.auth.uid in chatDoc().data.members;
       }
 
       function isCreatingMember() {
-        return request.auth.uid in request.resource.data.members;
+        return request.auth != null
+          && request.auth.uid in request.resource.data.members;
       }
 
       function isChatAdmin() {
-        return request.auth.uid in resource.data.admins;
+        return request.auth != null
+          && chatDoc().data.keys().hasAny(['admins'])
+          && request.auth.uid in chatDoc().data.admins;
+      }
+
+      function hasMessagePayload() {
+        return request.resource.data.keys().hasAny([
+          'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId',
+          'qtDate', 'cleaningDate', 'songId', 'threadParentId',
+        ]);
       }
 
       // Admins cannot see all chats; strictly member-only.
@@ -142,16 +157,39 @@ service cloud.firestore {
         allow create: if isMember()
                        && request.auth.uid == request.resource.data.senderId
                        && request.resource.data.createdAt == request.time
-                       && request.resource.data.seenBy == [request.auth.uid]
-                       && request.resource.data.keys().has('text');
+                       && request.resource.data.seenBy.size() == 1
+                       && request.resource.data.seenBy[0] == request.auth.uid
+                       && hasMessagePayload();
 
         allow update: if isMember()
                         && (
                            // Allow updating 'seenBy' only by adding oneself
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                            // Allow updating 'reactions'
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
+                           // Thread summary on parent message
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
+                           // Soft delete
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions']))
                         );
+
+        match /thread/{threadMessageId} {
+          allow read: if isMember();
+
+          allow create: if isMember()
+                         && request.auth.uid == request.resource.data.senderId
+                         && request.resource.data.createdAt == request.time
+                         && request.resource.data.seenBy.size() == 1
+                         && request.resource.data.seenBy[0] == request.auth.uid
+                         && hasMessagePayload();
+
+          allow update: if isMember()
+                          && (
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'reactions']))
+                          );
+        }
       }
     }
   }
