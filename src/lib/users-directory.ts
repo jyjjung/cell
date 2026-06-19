@@ -15,6 +15,7 @@ import {
   readLocalCollectionCacheStale,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
+import { mergeAvatarData } from '@/lib/avatar-utils';
 
 const USERS_COLLECTION = 'users';
 const CACHE_KEY = 'users_directory_v1';
@@ -88,6 +89,36 @@ export async function fetchUserProfilesByIds(
     else merged.push(user);
   }
 
+  writeLocalCollectionCache(CACHE_KEY, merged);
+  return merged;
+}
+
+export type UserDirectoryPatch = {
+  uid: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: UserProfileData['avatar'];
+};
+
+/** Merge profile patches into the cached users directory (e.g. from chat memberInfo). */
+export function patchUsersDirectoryCache(patches: UserDirectoryPatch[]): UserProfileData[] {
+  if (patches.length === 0) {
+    return getCachedUsersDirectory();
+  }
+
+  const byId = new Map(getCachedUsersDirectory().map((u) => [u.uid, u]));
+  for (const patch of patches) {
+    const existing = byId.get(patch.uid);
+    if (!existing) continue;
+    byId.set(patch.uid, {
+      ...existing,
+      ...(patch.firstName !== undefined ? { firstName: patch.firstName } : {}),
+      ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
+      ...(patch.avatar !== undefined ? { avatar: mergeAvatarData(existing.avatar, patch.avatar) } : {}),
+    });
+  }
+
+  const merged = [...byId.values()];
   writeLocalCollectionCache(CACHE_KEY, merged);
   return merged;
 }

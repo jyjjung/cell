@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import type { Chat, AppUser, UserProfileData, ChatMemberInfo } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -18,7 +18,9 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { UsersContext } from '@/contexts/users-context';
 import { getPrivateChatId } from '@/lib/chat-utils';
+import { mergeAvatarData } from '@/lib/avatar-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 
@@ -26,6 +28,8 @@ const CHATS_COLLECTION = 'chats';
 
 export function useChats() {
   const { currentUser } = useAuth();
+  const usersContext = useContext(UsersContext);
+  const patchUsers = usersContext?.patchUsers;
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,13 +70,29 @@ export function useChats() {
 
       setChats(chatsData);
       setLoading(false);
+
+      if (patchUsers) {
+        const byUid = new Map<string, { uid: string; firstName?: string; lastName?: string; avatar?: ChatMemberInfo['avatar'] }>();
+        for (const chat of chatsData) {
+          for (const [uid, info] of Object.entries(chat.memberInfo || {})) {
+            const prev = byUid.get(uid);
+            byUid.set(uid, {
+              uid,
+              firstName: info.firstName ?? prev?.firstName,
+              lastName: info.lastName ?? prev?.lastName,
+              avatar: prev?.avatar ? mergeAvatarData(prev.avatar, info.avatar) : info.avatar,
+            });
+          }
+        }
+        patchUsers([...byUid.values()]);
+      }
     }, (error) => {
       console.error("Error fetching user chats:", error);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, patchUsers]);
 
   const createPrivateChat = useCallback(async (peerUser: UserProfileData): Promise<string> => {
     if (!currentUser || !currentUser.firstName || !currentUser.lastName) throw new Error("Current user not found or profile incomplete.");
@@ -114,7 +134,7 @@ export function useChats() {
       }
     };
 
-    setDoc(chatDocRef, newChat).catch(e => console.error("Error creating private chat:", e));
+    await setDoc(chatDocRef, newChat);
     return chatId;
   }, [currentUser]);
 
@@ -157,11 +177,7 @@ export function useChats() {
     const chatDocRef = doc(collection(db, CHATS_COLLECTION));
     const chatId = chatDocRef.id;
     
-    // We do not await this to ensure the UI can transition immediately
-    setDoc(chatDocRef, newChat).catch(e => {
-        console.error("[useChats] Fatal error during circle establishment:", e);
-    });
-    
+    await setDoc(chatDocRef, newChat);
     return chatId;
   }, [currentUser]);
 

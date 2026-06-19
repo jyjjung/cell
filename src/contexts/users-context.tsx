@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { UserProfileData } from '@/types';
 import { useAllUsersSubscription } from '@/hooks/use-all-users-subscription';
+import type { UserDirectoryPatch } from '@/lib/users-directory';
 
 type UsersContextValue = {
   allUsers: UserProfileData[];
@@ -11,12 +12,15 @@ type UsersContextValue = {
   error: Error | null;
   ensureUsers: (userIds: string[]) => Promise<UserProfileData[]>;
   refreshUsers: () => Promise<UserProfileData[]>;
+  patchUsers: (patches: UserDirectoryPatch[]) => void;
 };
 
 const UsersContext = createContext<UsersContextValue | null>(null);
 
+export { UsersContext };
+
 export function UsersProvider({ children }: { children: ReactNode }) {
-  const { allUsers, loading, error, ensureUsers, refreshUsers } = useAllUsersSubscription();
+  const { allUsers, loading, error, ensureUsers, refreshUsers, patchUsers } = useAllUsersSubscription();
 
   const usersById = useMemo(
     () => new Map(allUsers.map((u) => [u.uid, u])),
@@ -24,8 +28,8 @@ export function UsersProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ allUsers, usersById, loading, error, ensureUsers, refreshUsers }),
-    [allUsers, usersById, loading, error, ensureUsers, refreshUsers],
+    () => ({ allUsers, usersById, loading, error, ensureUsers, refreshUsers, patchUsers }),
+    [allUsers, usersById, loading, error, ensureUsers, refreshUsers, patchUsers],
   );
 
   return <UsersContext.Provider value={value}>{children}</UsersContext.Provider>;
@@ -47,6 +51,7 @@ export function useAllUsers() {
     error: ctx.error,
     ensureUsers: ctx.ensureUsers,
     refreshUsers: ctx.refreshUsers,
+    patchUsers: ctx.patchUsers,
   };
 }
 

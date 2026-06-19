@@ -10,7 +10,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { MessageCircle, ArrowRight, Loader2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PixelAvatar } from '../avatar/PixelAvatar';
-import { getMemberDisplayName } from '@/lib/chat-utils';
+import { getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function RecentChatsWidget() {
@@ -71,7 +71,7 @@ export default function RecentChatsWidget() {
                                 name = getMemberDisplayName(infoFromChat, 'Private Chat');
                             }
 
-                            const avatar = isGroup ? null : (peerProfile?.avatar || infoFromChat?.avatar);
+                            const avatar = isGroup ? null : resolveChatAvatar(peerProfile, infoFromChat);
 
                             return (
                                 <motion.button

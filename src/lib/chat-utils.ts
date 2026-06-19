@@ -1,6 +1,7 @@
 
-import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
+import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData, AvatarData } from '@/types';
 import { formatUserDisplayName } from '@/lib/formatting';
+import { mergeAvatarData } from '@/lib/avatar-utils';
 
 export const DELETED_MESSAGE_PREVIEW = 'deleted a message.';
 
@@ -68,6 +69,15 @@ export function getMemberDisplayName(memberInfo: ChatMemberInfo | null | undefin
     return formatUserDisplayName(memberInfo, fallback);
 }
 
+/** Prefer the freshest avatar between the users directory and chat memberInfo. */
+export function resolveChatAvatar(
+  peerProfile?: UserProfileData | null,
+  memberInfo?: ChatMemberInfo | null,
+): AvatarData | undefined {
+  const merged = mergeAvatarData(peerProfile?.avatar, memberInfo?.avatar);
+  return merged;
+}
+
 export function getChatDisplayDetails(
   chat: Chat,
   currentUserId: string,
@@ -89,7 +99,7 @@ export function getChatDisplayDetails(
 
     return {
       name,
-      avatar: peerFullProfile?.avatar || peerInfoFromChat?.avatar || null,
+      avatar: resolveChatAvatar(peerFullProfile, peerInfoFromChat) || null,
     };
   }
 

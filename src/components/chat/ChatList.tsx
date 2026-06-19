@@ -9,7 +9,7 @@ import { useAllUsers } from "@/hooks/use-all-users";
 import { useAuth } from "@/contexts/auth-context";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { cn } from "@/lib/utils";
-import { getMemberDisplayName } from "@/lib/chat-utils";
+import { getMemberDisplayName, resolveChatAvatar } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
 
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export default function ChatList() {
 
       return {
         name: fullName,
-        avatarData: peerFullProfile?.avatar || peerInfoFromChat?.avatar,
+        avatarData: resolveChatAvatar(peerFullProfile, peerInfoFromChat),
       };
     }
 

@@ -77,14 +77,12 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
         </div>
 
         <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
-            <Avatar className="h-8 w-8 shrink-0 border border-border/60">
-                {user?.avatar ? (
-                  <PixelAvatar avatar={user.avatar} className="w-full h-full" />
-                ) : (
-                  <AvatarFallback className="bg-muted text-[10px] font-semibold uppercase text-foreground">
-                    {name[0]}
-                  </AvatarFallback>
-                )}
+            <Avatar className="h-8 w-8 shrink-0 border border-border/60 overflow-hidden">
+                <PixelAvatar
+                  avatar={user?.avatar}
+                  className="w-full h-full"
+                  nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
+                />
             </Avatar>
             <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">{name}</p>

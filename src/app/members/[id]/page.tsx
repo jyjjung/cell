@@ -142,7 +142,7 @@ export default function MemberProfilePage() {
       >
         <div className="relative group">
           <div className="h-32 w-32 rounded-full border-4 border-card shadow-2xl bg-muted relative z-10">
-            <PixelAvatar avatar={user.avatar} />
+            <PixelAvatar avatar={user.uid === currentUser?.uid ? currentUser?.avatar : user.avatar} />
           </div>
           <div className="absolute -inset-4 bg-primary/10 rounded-full blur-2xl -z-0 opacity-50 group-hover:opacity-100 transition-opacity" />
         </div>

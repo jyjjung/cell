@@ -68,10 +68,15 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
           goToChat(chatId);
         }
     } catch (error: any) {
+        const code = error?.code as string | undefined;
+        const description =
+          code === 'permission-denied'
+            ? 'You do not have permission to start this chat. Youth accounts cannot message other youth or create group chats.'
+            : error.message || 'Could not establish private circle.';
         toast({
             variant: "destructive",
             title: "Connection Failed",
-            description: error.message || "Could not establish private circle."
+            description,
         });
     } finally {
         setIsLoading(false);
@@ -86,10 +91,15 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
         goToChat(chatId);
     } catch (error: any) {
         console.error("[CreateChatDialog] Error:", error);
+        const code = error?.code as string | undefined;
+        const description =
+          code === 'permission-denied'
+            ? 'You do not have permission to create this group. Youth accounts cannot create group chats.'
+            : error.message || 'An unexpected error occurred during circle establishment.';
         toast({
             variant: "destructive",
             title: "Establishment Failed",
-            description: error.message || "An unexpected error occurred during circle establishment."
+            description,
         });
     } finally {
         setIsLoading(false);

@@ -4,6 +4,8 @@
 import type { AvatarData, AvatarMode } from '@/types';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { PixelAvatar } from './PixelAvatar';
+import { useAuth } from '@/contexts/auth-context';
+import { deriveInitialsFromName, normalizeAvatarInitials } from '@/lib/avatar-utils';
 import { SKIN_TONES, HAIR_STYLES, HAIR_COLORS, OUTFITS, ACCESSORIES, OUTFIT_COLORS, ACCESSORY_COLORS, MOUTHS, FACIAL_HAIR_STYLES, FACIAL_HAIR_COLORS, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
@@ -11,7 +13,6 @@ import { Input } from '../ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, User, Dog, Type, Eraser, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
-import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
@@ -177,7 +178,7 @@ function InitialsControls({
             <div className="w-full max-w-[200px]">
                 <Input 
                     value={currentData.initials || ''} 
-                    onChange={(e) => onDataChange({ ...currentData, initials: e.target.value.substring(0, 2).toUpperCase() })}
+                    onChange={(e) => onDataChange({ ...currentData, initials: e.target.value.trim().substring(0, 2).toUpperCase() })}
                     placeholder="AA"
                     className="h-14 text-center text-2xl font-black rounded-2xl border-2 bg-muted/20"
                 />

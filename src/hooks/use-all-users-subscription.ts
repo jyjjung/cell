@@ -9,6 +9,8 @@ import {
   fetchUserProfilesByIds,
   getCachedUsersDirectory,
   loadUsersDirectory,
+  patchUsersDirectoryCache,
+  type UserDirectoryPatch,
 } from '@/lib/users-directory';
 
 const USERS_COLLECTION = 'users';
@@ -96,5 +98,9 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
     return users;
   }, []);
 
-  return { allUsers, loading, error, ensureUsers, refreshUsers };
+  const patchUsers = useCallback((patches: UserDirectoryPatch[]) => {
+    setAllUsers(patchUsersDirectoryCache(patches));
+  }, []);
+
+  return { allUsers, loading, error, ensureUsers, refreshUsers, patchUsers };
 }
