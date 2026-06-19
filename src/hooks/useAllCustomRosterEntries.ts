@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import type { CustomRosterEntry, RosterDefinition } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -15,8 +16,8 @@ import {
 import { format } from 'date-fns';
 import {
   COLLECTION_CACHE_TTL_MS,
-  readLocalCollectionCache,
   readLocalCollectionCacheStale,
+  readNonEmptyCollectionCache,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
 
@@ -79,6 +80,7 @@ async function loadEntriesWithMeta(
 
 /** Dashboard helper: cached definitions + one collection-group entries query. */
 export function useAllCustomRosterEntries() {
+  const { currentUser, loadingAuth } = useAuth();
   const [entries, setEntries] = useState<CustomRosterEntryWithMeta[]>(() => {
     return readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(CACHE_KEY) ?? [];
   });
@@ -86,7 +88,7 @@ export function useAllCustomRosterEntries() {
 
   const load = useCallback(async (forceRefresh = false) => {
     if (!forceRefresh) {
-      const fresh = readLocalCollectionCache<CustomRosterEntryWithMeta[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+      const fresh = readNonEmptyCollectionCache<CustomRosterEntryWithMeta[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
       if (fresh) {
         setEntries(fresh);
         setLoading(false);
@@ -103,6 +105,14 @@ export function useAllCustomRosterEntries() {
   }, []);
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     void load().catch((err) => {
@@ -111,14 +121,14 @@ export function useAllCustomRosterEntries() {
     });
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void load();
+      if (document.visibilityState === 'visible' && currentUser) void load();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [load]);
+  }, [load, loadingAuth, currentUser?.uid]);
 
   return { entries, loading, refresh: () => load(true) };
 }

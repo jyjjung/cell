@@ -148,6 +148,12 @@ export default function LinksPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    if (!currentUser) {
+      setLinks([]);
+      setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, LINKS_COLLECTION), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, snap => {
       setLinks(snap.docs.map(d => ({ id: d.id, ...d.data() } as CommunityLink)));
@@ -157,7 +163,7 @@ export default function LinksPage() {
       setLoading(false);
     });
     return unsub;
-  }, []);
+  }, [currentUser?.uid]);
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;

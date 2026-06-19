@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 import type { UserProfileData } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
@@ -24,6 +25,7 @@ type UseAllUsersOptions = {
 
 export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   const { enabled = true } = options;
+  const { currentUser, loadingAuth } = useAuth();
   const pathname = usePathname();
   const realtime = enabled && (options.realtime ?? pathname.startsWith('/admin'));
   const [allUsers, setAllUsers] = useState<UserProfileData[]>(() => getCachedUsersDirectory());
@@ -36,7 +38,13 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   }, [allUsers]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || loadingAuth) return;
+
+    if (!currentUser) {
+      setAllUsers([]);
+      setLoading(false);
+      return;
+    }
 
     if (realtime) {
       setLoading(true);
@@ -73,7 +81,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
     });
 
     const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || !currentUser) return;
       void loadUsersDirectory().then((users) => {
         if (!cancelled) setAllUsers(users);
       }).catch(() => {});
@@ -84,7 +92,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [enabled, realtime]);
+  }, [enabled, realtime, loadingAuth, currentUser?.uid]);
 
   const ensureUsers = useCallback(async (userIds: string[]) => {
     const merged = await fetchUserProfilesByIds(userIds, usersRef.current);
@@ -93,10 +101,11 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   }, []);
 
   const refreshUsers = useCallback(async () => {
+    if (!currentUser) return usersRef.current;
     const users = await loadUsersDirectory({ forceRefresh: true });
     setAllUsers(users);
     return users;
-  }, []);
+  }, [currentUser]);
 
   const patchUsers = useCallback((patches: UserDirectoryPatch[]) => {
     setAllUsers(patchUsersDirectoryCache(patches));

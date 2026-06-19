@@ -22,11 +22,19 @@ import { useAuth } from '@/contexts/auth-context';
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 
 export function useRosterDefinitions() {
-  const { isAdmin } = useAuth();
+  const { currentUser, loadingAuth, isAdmin } = useAuth();
   const [definitions, setDefinitions] = useState<RosterDefinition[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setDefinitions([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const q = query(collection(db, ROSTER_DEFINITIONS_COLLECTION), orderBy("name", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -42,7 +50,7 @@ export function useRosterDefinitions() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadingAuth, currentUser?.uid]);
 
   const addDefinition = useCallback(async (name: string): Promise<string> => {
     if (!isAdmin) throw new Error("User is not authorized.");

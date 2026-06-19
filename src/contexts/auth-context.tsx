@@ -17,6 +17,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
 import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRole } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
 import { syncProfileToChats } from '@/lib/sync-profile-chats';
 
 interface AuthContextType {
@@ -258,6 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOutUser = async (): Promise<void> => {
     try {
+      clearSharedDirectoryCaches();
       await signOut(auth);
       if (pathname !== '/') {
         router.push('/');

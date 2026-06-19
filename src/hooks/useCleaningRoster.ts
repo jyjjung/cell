@@ -20,12 +20,14 @@ import { useNotifications } from '@/hooks/use-notifications';
 const CLEANING_ROSTERS_COLLECTION = 'cleaningRosters';
 
 export function useCleaningRoster(enabled = true) {
-  const { currentUser } = useAuth();
+  const { currentUser, loadingAuth } = useAuth();
   const [roster, setRoster] = useState<CleaningRosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!enabled || !currentUser) {
+    if (!enabled || loadingAuth) return;
+
+    if (!currentUser) {
       setRoster([]);
       setLoading(false);
       return;
@@ -44,7 +46,7 @@ export function useCleaningRoster(enabled = true) {
     });
 
     return () => unsubscribe();
-  }, [enabled, currentUser]);
+  }, [enabled, loadingAuth, currentUser?.uid]);
 
   const { createNotification } = useNotifications();
 

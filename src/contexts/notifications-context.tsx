@@ -197,6 +197,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
             getDocsFromCache(personalQuery),
             getDocsFromCache(announcementsQuery),
           ]);
+          if (personalDocs.empty && announcementDocs.empty) {
+            [personalDocs, announcementDocs] = await Promise.all([
+              getDocs(personalQuery),
+              getDocs(announcementsQuery),
+            ]);
+          }
         } catch {
           [personalDocs, announcementDocs] = await Promise.all([
             getDocs(personalQuery),

@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.48",
+    subtitle: "New Device & Cache Fixes",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed empty members, resources, and worship data on new devices and fresh sign-ins",
+      "Cached directories now wait for sign-in and retry from the server instead of sticking on empty results",
+      "Added Firestore and storage rules for worship, community links, and media uploads",
+    ],
+  },
+  {
     version: "v1.3.47",
     subtitle: "Profile & Chat Fixes",
     date: "Mid-June 2026",

@@ -26,12 +26,20 @@ const LORDS_PRAYER_TEXT = "Our Father in heaven,\nhallowed be your name.\nYour k
 const LORDS_PRAYER_REFERENCE_TITLE = "The Lord's Prayer";
 
 export function useMemoryVerses() {
-  const { isAdmin } = useAuth();
+  const { currentUser, loadingAuth, isAdmin } = useAuth();
   const [memoryVerses, setMemoryVerses] = useState<MemoryVerse[]>([]);
   const [loading, setLoading] = useState(true);
   const { createNotification } = useNotifications();
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setMemoryVerses([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const q = query(collection(db, MEMORY_VERSES_COLLECTION), orderBy("addedAt", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -56,7 +64,7 @@ export function useMemoryVerses() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadingAuth, currentUser?.uid]);
 
   const addMemoryVerse = useCallback(async (reference: string): Promise<string> => {
     if (!isAdmin) throw new Error("User is not authorized to add memory verses.");
