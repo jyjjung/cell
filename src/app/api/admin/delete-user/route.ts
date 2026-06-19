@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const batch = adminDb.batch();
     batch.delete(adminDb.collection('users').doc(uidToDelete));
     batch.delete(adminDb.collection('userBibleChecklists').doc(uidToDelete));
+    batch.delete(adminDb.collection('communityProgress').doc(uidToDelete));
     
     const chatsSnap = await adminDb.collection('chats').where('members', 'array-contains', uidToDelete).get();
     chatsSnap.forEach(doc => {

@@ -41,12 +41,16 @@ export default function LeaderboardPage() {
   const { currentUser } = useAuth();
   useGrantSecretAchievement('leaderboard', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
-  const { allProgress, loading: progressLoading } = useCommunityProgress();
+  const { allProgress, loading: progressLoading, refresh: refreshProgress } = useCommunityProgress();
   const { allUsers, loading: usersLoading } = useAllUsers();
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  useEffect(() => {
+    void refreshProgress();
+  }, [refreshProgress]);
 
   const totalPassagesToDate = useMemo(() => {
     if (!plan?.dailyReadings) return 0;
