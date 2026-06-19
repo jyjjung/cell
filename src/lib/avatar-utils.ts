@@ -16,10 +16,13 @@ export function mergeAvatarData(existing?: AvatarData, incoming?: AvatarData): A
 
   const merged: AvatarData = { ...base, ...incoming };
 
-  if (incoming.cosmeticTier === undefined) {
-    merged.cosmeticTier = base.cosmeticTier;
+  if (incoming.cosmeticTier !== undefined) {
+    merged.cosmeticTier = incoming.cosmeticTier;
   }
-  if (!incoming.imageUrl && base.imageUrl) {
+  if (incoming.imageUrl) {
+    merged.imageUrl = incoming.imageUrl;
+    if (incoming.mode) merged.mode = incoming.mode;
+  } else if (base.imageUrl) {
     merged.imageUrl = base.imageUrl;
     if (base.mode === 'image') merged.mode = base.mode;
   }

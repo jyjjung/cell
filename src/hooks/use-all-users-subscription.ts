@@ -70,7 +70,16 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
     let cancelled = false;
     setLoading(usersRef.current.length === 0);
 
+    // Show localStorage cache immediately, then always refresh from server.
     void loadUsersDirectory().then((users) => {
+      if (cancelled) return;
+      if (users.length > 0) {
+        setAllUsers(users);
+        setLoading(false);
+      }
+    }).catch(() => {});
+
+    void loadUsersDirectory({ forceRefresh: true }).then((users) => {
       if (cancelled) return;
       setAllUsers(users);
       setLoading(false);
@@ -82,7 +91,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !currentUser) return;
-      void loadUsersDirectory().then((users) => {
+      void loadUsersDirectory({ forceRefresh: true }).then((users) => {
         if (!cancelled) setAllUsers(users);
       }).catch(() => {});
     };

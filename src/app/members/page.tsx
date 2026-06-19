@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function MembersPage() {
-  const { allUsers, loading: usersLoading } = useAllUsers();
+  const { allUsers, loading: usersLoading, refreshUsers } = useAllUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
   const { currentUser } = useAuth();
@@ -28,6 +28,10 @@ export default function MembersPage() {
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  useEffect(() => {
+    if (currentUser) void refreshUsers();
+  }, [currentUser?.uid, refreshUsers]);
 
   const rolesMap = useMemo(() => new Map(roles.map(r => [r.id, r.name])), [roles]);
 

@@ -27,6 +27,13 @@ export function useCommunityProgress() {
     setLoading(allProgress.length === 0);
 
     void loadCommunityProgress().then((rows) => {
+      if (!cancelled && rows.length > 0) {
+        setAllProgress(rows);
+        setLoading(false);
+      }
+    }).catch(() => {});
+
+    void loadCommunityProgress({ forceRefresh: true }).then((rows) => {
       if (!cancelled) {
         setAllProgress(rows);
         setLoading(false);
@@ -38,7 +45,7 @@ export function useCommunityProgress() {
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !currentUser) return;
-      void loadCommunityProgress().then((rows) => {
+      void loadCommunityProgress({ forceRefresh: true }).then((rows) => {
         if (!cancelled) setAllProgress(rows);
       }).catch(() => {});
     };
