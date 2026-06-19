@@ -3,7 +3,25 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Fallback for any other files - deny all
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /avatars/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && fileName.matches('^' + request.auth.uid + '_.*');
+    }
+
+    match /chats/{chatId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /worshipChordSheets/{songId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

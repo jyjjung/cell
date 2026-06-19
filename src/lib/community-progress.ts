@@ -13,8 +13,8 @@ import {
 } from 'firebase/firestore';
 import {
   COLLECTION_CACHE_TTL_MS,
-  readLocalCollectionCache,
   readLocalCollectionCacheStale,
+  readNonEmptyCollectionCache,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
 
@@ -36,8 +36,8 @@ export function getCachedCommunityProgress(): CommunityProgressDoc[] {
 
 export async function loadCommunityProgress(options?: { forceRefresh?: boolean }): Promise<CommunityProgressDoc[]> {
   if (!options?.forceRefresh) {
-    const fresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
-    if (fresh && fresh.length > 0) return fresh;
+    const fresh = readNonEmptyCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+    if (fresh) return fresh;
 
     try {
       const cachedSnap = await getDocsFromCache(query(collection(db, COMMUNITY_PROGRESS_COLLECTION)));
@@ -53,7 +53,9 @@ export async function loadCommunityProgress(options?: { forceRefresh?: boolean }
 
   const serverSnap = await getDocs(query(collection(db, COMMUNITY_PROGRESS_COLLECTION)));
   const rows = serverSnap.docs.map((d) => ({ userId: d.id, ...d.data() } as CommunityProgressDoc));
-  writeLocalCollectionCache(CACHE_KEY, rows);
+  if (rows.length > 0) {
+    writeLocalCollectionCache(CACHE_KEY, rows);
+  }
   return rows;
 }
 

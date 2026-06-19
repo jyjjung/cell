@@ -14,6 +14,7 @@ import {
   addDoc,
   updateDoc
 } from 'firebase/firestore';
+import { useAuth } from '@/contexts/auth-context';
 
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 const ENTRIES_SUBCOLLECTION = 'entries';
@@ -25,11 +26,14 @@ type NewEntryData = {
 };
 
 export function useCustomRoster(rosterDefId: string | null) {
+  const { currentUser, loadingAuth } = useAuth();
   const [roster, setRoster] = useState<CustomRosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!rosterDefId) {
+    if (loadingAuth) return;
+
+    if (!currentUser || !rosterDefId) {
       setRoster([]);
       setLoading(false);
       return;
@@ -48,7 +52,7 @@ export function useCustomRoster(rosterDefId: string | null) {
     });
 
     return () => unsubscribe();
-  }, [rosterDefId]);
+  }, [rosterDefId, loadingAuth, currentUser?.uid]);
 
   const addEntry = useCallback(async (entryData: NewEntryData, rosterName: string) => {
     if (!rosterDefId) throw new Error("No roster definition selected.");

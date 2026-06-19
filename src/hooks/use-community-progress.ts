@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import type { CommunityProgressDoc } from '@/lib/community-progress';
 import {
   fetchCommunityProgressForUser,
@@ -9,10 +10,19 @@ import {
 } from '@/lib/community-progress';
 
 export function useCommunityProgress() {
+  const { currentUser, loadingAuth } = useAuth();
   const [allProgress, setAllProgress] = useState<CommunityProgressDoc[]>(() => getCachedCommunityProgress());
   const [loading, setLoading] = useState(allProgress.length === 0);
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setAllProgress([]);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(allProgress.length === 0);
 
@@ -21,20 +31,23 @@ export function useCommunityProgress() {
         setAllProgress(rows);
         setLoading(false);
       }
+    }).catch((err) => {
+      console.error('[useCommunityProgress] load error:', err);
+      if (!cancelled) setLoading(false);
     });
 
     const onVisible = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible' || !currentUser) return;
       void loadCommunityProgress().then((rows) => {
         if (!cancelled) setAllProgress(rows);
-      });
+      }).catch(() => {});
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, []);
+  }, [loadingAuth, currentUser?.uid]);
 
   const refresh = useCallback(async () => {
     const rows = await loadCommunityProgress({ forceRefresh: true });

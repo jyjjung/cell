@@ -31,11 +31,19 @@ const CHATS_COLLECTION = 'chats';
 const USERS_COLLECTION = 'users';
 
 export function useRoles() {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, loadingAuth } = useAuth();
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setRoles([]);
+      setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, ROLES_COLLECTION), orderBy("name", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const rolesData: AppRole[] = [];
@@ -51,7 +59,7 @@ export function useRoles() {
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [loadingAuth, currentUser?.uid]);
 
   const addRole = useCallback(async (name: string, createChat: boolean): Promise<string> => {
     if (!isAdmin || !currentUser || !currentUser.firstName || !currentUser.lastName) throw new Error("User is not authorized or profile is incomplete.");

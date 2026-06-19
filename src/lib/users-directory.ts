@@ -11,8 +11,8 @@ import {
 } from 'firebase/firestore';
 import {
   COLLECTION_CACHE_TTL_MS,
-  readLocalCollectionCache,
   readLocalCollectionCacheStale,
+  readNonEmptyCollectionCache,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
 import { mergeAvatarData } from '@/lib/avatar-utils';
@@ -30,7 +30,7 @@ export function getCachedUsersDirectory(): UserProfileData[] {
 
 export async function loadUsersDirectory(options?: { forceRefresh?: boolean }): Promise<UserProfileData[]> {
   if (!options?.forceRefresh) {
-    const fresh = readLocalCollectionCache<UserProfileData[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+    const fresh = readNonEmptyCollectionCache<UserProfileData[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
     if (fresh) return fresh;
 
     try {
@@ -47,7 +47,9 @@ export async function loadUsersDirectory(options?: { forceRefresh?: boolean }): 
 
   const serverSnap = await getDocs(query(collection(db, USERS_COLLECTION)));
   const users = serverSnap.docs.map(docToUser);
-  writeLocalCollectionCache(CACHE_KEY, users);
+  if (users.length > 0) {
+    writeLocalCollectionCache(CACHE_KEY, users);
+  }
   return users;
 }
 

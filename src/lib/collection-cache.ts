@@ -44,3 +44,30 @@ export const COLLECTION_CACHE_TTL_MS = 30 * 60 * 1000;
 
 /** Shorter TTL for notifications and announcements. */
 export const NOTIFICATIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** Fresh TTL cache; treats empty arrays as a miss so failed/cold loads retry from the server. */
+export function readNonEmptyCollectionCache<T extends unknown[]>(
+  key: string,
+  maxAgeMs: number,
+): T | null {
+  const fresh = readLocalCollectionCache<T>(key, maxAgeMs);
+  if (!fresh || fresh.length === 0) return null;
+  return fresh;
+}
+
+const SHARED_DIRECTORY_CACHE_KEYS = [
+  'users_directory_v1',
+  'community_progress_v2',
+  'custom_roster_entries_v1',
+] as const;
+
+export function clearSharedDirectoryCaches(): void {
+  if (typeof window === 'undefined') return;
+  for (const key of SHARED_DIRECTORY_CACHE_KEYS) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* private mode */
+    }
+  }
+}
