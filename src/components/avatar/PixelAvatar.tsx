@@ -1,10 +1,9 @@
-
 "use client";
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
 import type { AvatarData } from '@/types';
 import { HAIR_STYLES, ACCESSORIES, OUTFITS, MOUTHS, FACIAL_HAIR_STYLES, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
-import { resolveInitialsDisplaySeed, type AvatarNameHint } from '@/lib/avatar-utils';
+import { avatarWithoutBrokenImage, resolveInitialsDisplaySeed, type AvatarNameHint } from '@/lib/avatar-utils';
 import { cn } from '@/lib/utils';
 import { getAvatarTierConfig, HALO_AVATAR_SCALE } from '@/lib/avatar-cosmetics';
 import { HaloRing } from '@/components/avatar/halo-ring';
@@ -16,11 +15,20 @@ interface PixelAvatarProps {
 }
 
 export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
-  const finalAvatar = { ...DEFAULT_AVATAR_DATA, ...(avatar || {}) };
-  const tierConfig = getAvatarTierConfig(finalAvatar.cosmeticTier);
+  const [imageFailed, setImageFailed] = useState(false);
+  const normalized = avatarWithoutBrokenImage(avatar);
+  const finalAvatar = imageFailed && normalized.mode === 'image'
+    ? { ...normalized, mode: 'custom' as const }
+    : normalized;
+  const resolved = { ...DEFAULT_AVATAR_DATA, ...finalAvatar };
+  const tierConfig = getAvatarTierConfig(resolved.cosmeticTier);
   const haloScale = HALO_AVATAR_SCALE[tierConfig.powerLevel];
   const hasHalo = tierConfig.powerLevel > 0;
-  const avatarRenderKey = `${finalAvatar.mode}-${finalAvatar.imageUrl ?? ''}-${finalAvatar.cosmeticTier ?? 'none'}`;
+  const avatarRenderKey = `${resolved.mode}-${resolved.imageUrl ?? ''}-${resolved.cosmeticTier ?? 'none'}-${imageFailed}`;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [avatar?.imageUrl, avatar?.mode]);
 
   const { 
     mode,
@@ -37,7 +45,7 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
     facialHair,
     facialHairColor,
     backgroundColor
-  } = finalAvatar;
+  } = resolved;
 
   const bg = BACKGROUNDS[backgroundColor || 'blue-gradient'] || BACKGROUNDS['blue-gradient'];
   const stops = bg.stops.map(s => `${s.color} ${s.offset}`).join(', ');
@@ -66,12 +74,13 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   // Handle custom uploaded image
   if (mode === 'image') {
     return withHalo(
-      finalAvatar.imageUrl ? (
+      resolved.imageUrl ? (
         <img
-          key={finalAvatar.imageUrl}
-          src={finalAvatar.imageUrl}
-          alt="Custom Profile"
+          key={resolved.imageUrl}
+          src={resolved.imageUrl}
+          alt=""
           className="w-full h-full object-cover"
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/20">
@@ -95,7 +104,7 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
     }
 
     const seedToUse = mode === 'initials'
-      ? resolveInitialsDisplaySeed(finalAvatar, nameHint)
+      ? resolveInitialsDisplaySeed(resolved, nameHint)
       : (seed || 'spark');
     // Initials style needs DiceBear's own background for readable contrast.
     const url = mode === 'initials'

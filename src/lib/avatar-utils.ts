@@ -64,12 +64,28 @@ export function sanitizeAvatarData(
   avatar: AvatarData,
   nameHint?: AvatarNameHint,
 ): AvatarData {
-  if (avatar.mode !== 'initials') return avatar;
+  let next = avatar;
 
-  const initials = normalizeAvatarInitials(avatar.initials)
+  if (next.mode === 'image' && !next.imageUrl?.trim()) {
+    next = { ...next, mode: 'custom' };
+    delete next.imageUrl;
+  }
+
+  if (next.mode !== 'initials') return next;
+
+  const initials = normalizeAvatarInitials(next.initials)
     || deriveInitialsFromName(nameHint?.firstName, nameHint?.lastName);
 
-  if (!initials) return avatar;
+  if (!initials) return next;
 
-  return { ...avatar, initials };
+  return { ...next, initials };
+}
+
+/** Use custom builder fields when an uploaded photo fails to load. */
+export function avatarWithoutBrokenImage(avatar?: AvatarData | null): AvatarData {
+  const merged = { ...DEFAULT_AVATAR_DATA, ...(avatar || {}) };
+  if (merged.mode === 'image' && !merged.imageUrl?.trim()) {
+    return { ...merged, mode: 'custom' };
+  }
+  return merged;
 }

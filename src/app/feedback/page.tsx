@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.50",
+    subtitle: "Profile Photo Fix",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed broken profile photos when the stored image file was missing from storage",
+      "Uploading a new photo no longer deletes your old one until the new upload succeeds",
+      "Avatars fall back to your pixel character if a photo fails to load",
+    ],
+  },
+  {
     version: "v1.3.49",
     subtitle: "Members & Progress Sync",
     date: "Mid-June 2026",
