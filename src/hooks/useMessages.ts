@@ -24,6 +24,7 @@ import {
   chatMessagesCollection,
   mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
+  fetchLatestMessagesWindow,
   fetchOlderMessagesPage,
 } from '@/lib/chat-messages-device-cache';
 import type { ChatMessage, Chat } from '@/types';
@@ -77,8 +78,10 @@ export function useMessages(chatId: string | null) {
   }, [chatId]);
 
   useEffect(() => {
-    if (!chatId) {
-      setMessages([]);
+    if (!chatId || !currentUser?.uid) {
+      if (!chatId) {
+        setMessages([]);
+      }
       setLoading(false);
       return;
     }
@@ -93,8 +96,19 @@ export function useMessages(chatId: string | null) {
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
       if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
+      setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
       setLoading(false);
       primeMediaUrls(cached.map((m) => m.imageUrl));
+    });
+
+    void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
+      if (aborted.value || latest.length === 0) return;
+      setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+      setHasMoreOlder(hasMore);
+      setLoading(false);
+      primeMediaUrls(latest.map((m) => m.imageUrl));
+    }).catch((error) => {
+      console.error('[useMessages] Initial messages fetch failed:', error);
     });
 
     const messagesQuery = query(
@@ -110,11 +124,29 @@ export function useMessages(chatId: string | null) {
       },
       (error) => {
         console.error('[useMessages] Messages listener error:', error);
-        setLoading(false);
-        toast({
-          variant: 'destructive',
-          title: 'Could not load messages',
-          description: 'Check your connection and try reopening the chat.',
+        void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
+          if (aborted.value) return;
+          if (latest.length > 0) {
+            setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+            setHasMoreOlder(hasMore);
+            setLoading(false);
+            primeMediaUrls(latest.map((m) => m.imageUrl));
+            return;
+          }
+          setLoading(false);
+          toast({
+            variant: 'destructive',
+            title: 'Could not load messages',
+            description: 'Check your connection and try reopening the chat.',
+          });
+        }).catch(() => {
+          if (aborted.value) return;
+          setLoading(false);
+          toast({
+            variant: 'destructive',
+            title: 'Could not load messages',
+            description: 'Check your connection and try reopening the chat.',
+          });
         });
       }
     );
@@ -123,7 +155,7 @@ export function useMessages(chatId: string | null) {
       aborted.value = true;
       unsubscribe();
     };
-  }, [chatId, applySnapshot, toast]);
+  }, [chatId, currentUser?.uid, applySnapshot, toast]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!chatId || loadingOlderRef.current) return;

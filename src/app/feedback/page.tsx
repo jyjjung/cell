@@ -58,6 +58,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.45",
+    subtitle: "Chat Fix",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed chat messages not loading or sending due to Firestore membership checks on the wrong document",
+      "Added thread message security rules and support for image-only and special message types",
+    ],
+  },
+  {
     version: "v1.3.44",
     subtitle: "Stability Fix",
     date: "Mid-June 2026",

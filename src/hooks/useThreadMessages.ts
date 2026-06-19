@@ -24,6 +24,7 @@ import {
   CHAT_MESSAGES_LIVE_LIMIT,
   mergeMessageListsStable,
   readAllMessagesFromDeviceCache,
+  fetchLatestMessagesWindow,
   fetchOlderMessagesPage,
   threadMessagesCollection,
 } from '@/lib/chat-messages-device-cache';
@@ -79,8 +80,10 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   }, [chatId, parentMessageId]);
 
   useEffect(() => {
-    if (!chatId || !parentMessageId) {
-      setMessages([]);
+    if (!chatId || !parentMessageId || !currentUser?.uid) {
+      if (!chatId || !parentMessageId) {
+        setMessages([]);
+      }
       setLoading(false);
       return;
     }
@@ -95,8 +98,19 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
       if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
+      setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
       setLoading(false);
       primeMediaUrls(cached.map((m) => m.imageUrl));
+    });
+
+    void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
+      if (aborted.value || latest.length === 0) return;
+      setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+      setHasMoreOlder(hasMore);
+      setLoading(false);
+      primeMediaUrls(latest.map((m) => m.imageUrl));
+    }).catch((error) => {
+      console.error('[useThreadMessages] Initial thread fetch failed:', error);
     });
 
     const messagesQuery = query(
@@ -112,7 +126,16 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       },
       (error) => {
         console.error('[useThreadMessages] Thread listener error:', error);
-        setLoading(false);
+        void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
+          if (aborted.value) return;
+          if (latest.length > 0) {
+            setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+            setHasMoreOlder(hasMore);
+          }
+          setLoading(false);
+        }).catch(() => {
+          if (!aborted.value) setLoading(false);
+        });
       }
     );
 
@@ -120,7 +143,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       aborted.value = true;
       unsubscribe();
     };
-  }, [chatId, parentMessageId, applySnapshot]);
+  }, [chatId, parentMessageId, currentUser?.uid, applySnapshot]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!chatId || !parentMessageId || loadingOlderRef.current) return;

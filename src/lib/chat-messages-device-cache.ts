@@ -92,6 +92,31 @@ export async function readAllMessagesFromDeviceCache(
   return all;
 }
 
+/** Load the latest live window (cache first, then server). */
+export async function fetchLatestMessagesWindow(
+  messagesCol: CollectionReference,
+): Promise<{ messages: ChatMessage[]; hasMore: boolean }> {
+  const q = query(messagesCol, orderBy('createdAt', 'desc'), limit(CHAT_MESSAGES_LIVE_LIMIT));
+
+  let snap;
+  try {
+    const cached = await getDocsFromCache(q);
+    if (!cached.empty) {
+      snap = cached;
+    } else {
+      snap = await getDocs(q);
+    }
+  } catch {
+    snap = await getDocs(q);
+  }
+
+  const messages = snap.docs.map(docToMessage);
+  return {
+    messages,
+    hasMore: snap.docs.length >= CHAT_MESSAGES_LIVE_LIMIT,
+  };
+}
+
 /** Load the next page of older messages (cache first, then server). */
 export async function fetchOlderMessagesPage(
   messagesCol: CollectionReference,
