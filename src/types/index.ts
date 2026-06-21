@@ -190,6 +190,7 @@ export interface AppUser extends FirebaseUser {
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   feedbackCount?: number;
+  prayerRequestsLastSeenAt?: Timestamp;
   unlockedSecrets?: string[];
 }
 
@@ -221,6 +222,7 @@ export interface UserProfileData {
   clickMeCount?: number;
   clickMeLastClaimAt?: Timestamp;
   feedbackCount?: number;
+  prayerRequestsLastSeenAt?: Timestamp;
   unlockedSecrets?: string[];
 }
 
@@ -277,6 +279,7 @@ export interface PrayerRequest {
   submitterId: string;
   submitterDisplayName?: string | null;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface ChatMemberInfo {

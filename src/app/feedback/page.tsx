@@ -58,6 +58,24 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.54",
+    subtitle: "Birthday Reminders",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed birthday push reminders — birthdays now match by month and day every year, not just the stored birth year",
+      "Birthday notifications use a clearer title and message on the day",
+    ],
+  },
+  {
+    version: "v1.3.53",
+    subtitle: "Prayer Requests",
+    date: "Mid-June 2026",
+    changes: [
+      "You can edit or delete your own prayer requests after submitting",
+      "Shepherd Claire gets push notifications and sidebar badges for new requests",
+    ],
+  },
+  {
     version: "v1.3.52",
     subtitle: "Prayer Requests",
     date: "Mid-June 2026",

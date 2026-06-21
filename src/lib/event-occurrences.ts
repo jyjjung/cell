@@ -1,5 +1,5 @@
 import { addDays, format, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
-import type { AppEvent, EventRecurrence } from '@/types';
+import { EventCategory, type AppEvent, type EventRecurrence } from '@/types';
 
 function day(d: Date): Date {
   return startOfDay(d);
@@ -10,10 +10,29 @@ export function parseDay(iso: string): Date {
   return day(parseISO(s));
 }
 
+function isBirthdayEvent(event: AppEvent): boolean {
+  return event.category === EventCategory.Birthday;
+}
+
+function birthdayMonthDay(event: AppEvent): { month: number; day: number } {
+  const start = parseDay(event.date);
+  return { month: start.getMonth(), day: start.getDate() };
+}
+
+function birthdayOnDate(event: AppEvent, targetDay: Date): boolean {
+  const { month, day: dom } = birthdayMonthDay(event);
+  const target = day(targetDay);
+  return target.getMonth() === month && target.getDate() === dom;
+}
+
 /**
  * Whether `targetDay` falls on an occurrence of this event (non-recurring span, recurrence, or weekday filter).
  */
 export function eventOccursOnDate(event: AppEvent, targetDay: Date): boolean {
+  if (isBirthdayEvent(event)) {
+    return birthdayOnDate(event, targetDay);
+  }
+
   const target = day(targetDay);
   const recurrence: EventRecurrence = event.recurrence ?? 'none';
   const start = parseDay(event.date);
@@ -42,11 +61,30 @@ export function eventOccursOnDate(event: AppEvent, targetDay: Date): boolean {
 /** Sorted YYYY-MM-DD occurrence strings from start through end of relevant range (for listing / grouping). */
 export function getOccurrenceDateStrings(
   event: AppEvent,
-  options?: { listUntil?: Date }
+  options?: { listUntil?: Date; listFrom?: Date }
 ): string[] {
+  const cap = options?.listUntil ? day(options.listUntil) : null;
+  const listFrom = options?.listFrom ? day(options.listFrom) : null;
+
+  if (isBirthdayEvent(event)) {
+    const { month, day: dom } = birthdayMonthDay(event);
+    const out: string[] = [];
+    const capDay = cap ?? day(addDays(new Date(), 365 * 2));
+    const startYear = listFrom?.getFullYear() ?? parseDay(event.date).getFullYear();
+    const endYear = capDay.getFullYear();
+
+    for (let year = startYear; year <= endYear; year++) {
+      const occurrence = day(new Date(year, month, dom));
+      if (listFrom && isBefore(occurrence, listFrom)) continue;
+      if (isAfter(occurrence, capDay)) break;
+      out.push(format(occurrence, 'yyyy-MM-dd'));
+    }
+
+    return out;
+  }
+
   const recurrence: EventRecurrence = event.recurrence ?? 'none';
   const start = parseDay(event.date);
-  const cap = options?.listUntil ? day(options.listUntil) : null;
 
   const pushRange = (from: Date, to: Date, weekdays: number[] | undefined) => {
     const out: string[] = [];
@@ -80,6 +118,14 @@ export function getOccurrenceDateStrings(
 }
 
 export function getLatestOccurrenceDay(event: AppEvent): Date {
+  if (isBirthdayEvent(event)) {
+    const { month, day: dom } = birthdayMonthDay(event);
+    const today = day(new Date());
+    const thisYear = day(new Date(today.getFullYear(), month, dom));
+    if (!isBefore(thisYear, today)) return thisYear;
+    return day(new Date(today.getFullYear() + 1, month, dom));
+  }
+
   const recurrence: EventRecurrence = event.recurrence ?? 'none';
   if (recurrence === 'daily' || recurrence === 'weekly') {
     return event.recurrenceUntil ? parseDay(event.recurrenceUntil) : parseDay(event.date);
@@ -137,7 +183,7 @@ export function expandEventsToOccurrenceRows(
 
   for (const event of events) {
     const listUntil = until ?? addDays(new Date(), 365 * 2);
-    const ymds = getOccurrenceDateStrings(event, { listUntil });
+    const ymds = getOccurrenceDateStrings(event, { listUntil, listFrom: from });
     for (const ymd of ymds) {
       const d = parseDay(ymd);
       if (from && isBefore(d, from)) continue;

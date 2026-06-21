@@ -29,6 +29,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 
 import { useChats } from '@/hooks/useChats';
+import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
 import { translations } from '@/lib/translations';
 import { isChatUnread } from '@/lib/notification-utils';
 import {
@@ -55,6 +56,7 @@ export default function AppSidebar() {
   const { setIsPageLoading } = usePageLoading();
 
   const { chats } = useChats();
+  const { unreadCount: unreadPrayerRequests, isShepherd } = usePrayerRequestBadge();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -85,7 +87,7 @@ export default function AppSidebar() {
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
     { href: '/media', label: 'Resources', icon: Library },
     { href: '/members', label: t.members, icon: Users },
-    { href: '/prayer-requests', label: 'Prayer Requests', icon: HeartHandshake, requiresAuth: true },
+    { href: '/prayer-requests', label: 'Prayer Requests', icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
     { href: '/feedback', label: 'Feedback & Updates', icon: Lightbulb },
   ];
 
