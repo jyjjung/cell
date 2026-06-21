@@ -112,6 +112,8 @@ export const translations = {
     uploadingImage: "Uploading Image...",
     image: "Image",
     deletedMessage: "deleted a message.",
+    changedGroupPhoto: "changed the group chat picture.",
+    removedGroupPhoto: "removed the group chat picture.",
 
     // Rosters & Community
     qtTitle: "QT Roster",
@@ -333,6 +335,8 @@ export const translations = {
     uploadingImage: "이미지 업로드 중...",
     image: "이미지",
     deletedMessage: "메시지를 삭제했습니다.",
+    changedGroupPhoto: "그룹 채팅 사진을 변경했습니다.",
+    removedGroupPhoto: "그룹 채팅 사진을 삭제했습니다.",
 
     // Rosters & Community
     qtTitle: "QT 순서",

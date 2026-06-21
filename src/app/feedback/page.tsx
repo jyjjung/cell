@@ -58,6 +58,21 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.57",
+    date: "Mid-June 2026",
+    changes: [
+      "Fixed read receipts jumping between messages in chat",
+    ],
+  },
+  {
+    version: "v1.3.56",
+    subtitle: "Group Chat Photos",
+    date: "Mid-June 2026",
+    changes: [
+      "Group photo changes now appear as centered system lines in chat, like deleted messages",
+    ],
+  },
+  {
     version: "v1.3.55",
     subtitle: "Group Chat Photos",
     date: "Mid-June 2026",

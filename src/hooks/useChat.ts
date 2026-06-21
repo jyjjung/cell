@@ -19,6 +19,10 @@ import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { formatUserDisplayName } from '@/lib/formatting';
+import {
+  GROUP_PHOTO_CHANGED_PREVIEW,
+  GROUP_PHOTO_REMOVED_PREVIEW,
+} from '@/lib/chat-utils';
 import { primeMediaUrl } from '@/lib/media-cache';
 import type { UserProfileData } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
@@ -128,14 +132,14 @@ export function useChat(chatId: string) {
       if (!currentUser) return;
       const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
       const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
-      const announcement = `${actorLabel(currentUser)} changed the group chat picture`;
+      const announcement = GROUP_PHOTO_CHANGED_PREVIEW;
 
       try {
         const batch = writeBatch(db);
         const messageRef = doc(messagesColRef);
         batch.set(messageRef, {
           senderId: currentUser.uid,
-          text: announcement,
+          systemEvent: 'groupPhotoChanged',
           createdAt: serverTimestamp(),
           seenBy: [currentUser.uid],
         });
@@ -148,7 +152,8 @@ export function useChat(chatId: string) {
         await batch.commit();
 
         primeMediaUrl(photoURL);
-        void dispatchChatPush(chatId, messageRef.id, announcement, currentUser.uid);
+        const pushBody = `${actorLabel(currentUser)} ${announcement}`;
+        void dispatchChatPush(chatId, messageRef.id, pushBody, currentUser.uid);
         toast({ title: "Group photo updated" });
       } catch (error) {
         console.error("Error updating group photo:", error);
@@ -161,14 +166,14 @@ export function useChat(chatId: string) {
       if (!currentUser) return;
       const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
       const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
-      const announcement = `${actorLabel(currentUser)} removed the group chat picture`;
+      const announcement = GROUP_PHOTO_REMOVED_PREVIEW;
 
       try {
         const batch = writeBatch(db);
         const messageRef = doc(messagesColRef);
         batch.set(messageRef, {
           senderId: currentUser.uid,
-          text: announcement,
+          systemEvent: 'groupPhotoRemoved',
           createdAt: serverTimestamp(),
           seenBy: [currentUser.uid],
         });
@@ -180,7 +185,8 @@ export function useChat(chatId: string) {
         });
         await batch.commit();
 
-        void dispatchChatPush(chatId, messageRef.id, announcement, currentUser.uid);
+        const pushBody = `${actorLabel(currentUser)} ${announcement}`;
+        void dispatchChatPush(chatId, messageRef.id, pushBody, currentUser.uid);
         toast({ title: "Group photo removed" });
       } catch (error) {
         console.error("Error removing group photo:", error);

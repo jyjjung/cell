@@ -5,7 +5,7 @@ import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { resolveChatUserName } from '@/lib/chat-utils';
+import { resolveChatUserName, isMutedChatEvent } from '@/lib/chat-utils';
 import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
 import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
 
@@ -37,7 +37,7 @@ interface ChatMessageListProps {
 
 function findVisibleNeighbor(messages: ChatMessage[], startIndex: number, direction: 1 | -1): ChatMessage | undefined {
   for (let j = startIndex + direction; j >= 0 && j < messages.length; j += direction) {
-    if (!messages[j].isDeleted) return messages[j];
+    if (!isMutedChatEvent(messages[j])) return messages[j];
   }
   return undefined;
 }
@@ -69,7 +69,7 @@ export default function ChatMessageList({
       const newerVisible = findVisibleNeighbor(messages, i, -1);
 
       const showName =
-        msg.isDeleted ||
+        isMutedChatEvent(msg) ||
         !olderVisible ||
         olderVisible.senderId !== msg.senderId ||
         (msg.createdAt &&
@@ -77,7 +77,7 @@ export default function ChatMessageList({
           msg.createdAt.toMillis() - olderVisible.createdAt.toMillis() > 3600000);
 
       const showAvatar =
-        msg.isDeleted ||
+        isMutedChatEvent(msg) ||
         !newerVisible ||
         newerVisible.senderId !== msg.senderId ||
         (newerVisible.createdAt &&

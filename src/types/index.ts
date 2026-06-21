@@ -327,6 +327,8 @@ export interface ChatMessage {
   sheetKey?: string;
   isDeleted?: boolean;
   deletedBy?: string;
+  /** Centered system line in chat (e.g. group photo changed). */
+  systemEvent?: 'groupPhotoChanged' | 'groupPhotoRemoved';
   /** Main-chat message mirroring a thread reply; opens thread on parent. */
   threadParentId?: string;
 }
