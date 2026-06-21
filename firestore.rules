@@ -113,6 +113,28 @@ service cloud.firestore {
       allow update, delete: if isAppAdmin(request.auth.uid);
     }
 
+    function isPrayerShepherd() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == 's.claire86@hotmail.com';
+    }
+
+    match /prayerRequests/{requestId} {
+      allow create: if request.auth != null
+                    && request.resource.data.submitterId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['text', 'isAnonymous', 'submitterId', 'createdAt'])
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.isAnonymous is bool
+                    && request.resource.data.createdAt == request.time;
+
+      allow get, list: if isPrayerShepherd()
+                      || (request.auth != null && resource.data.submitterId == request.auth.uid);
+
+      allow update, delete: if false;
+    }
+
     match /invites/{inviteId} {
       allow read: if request.auth != null;
       allow write: if isAppAdmin(request.auth.uid);

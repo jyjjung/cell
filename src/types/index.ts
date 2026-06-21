@@ -270,6 +270,15 @@ export interface AppNotification {
   scheduledFor?: Timestamp | null;
 }
 
+export interface PrayerRequest {
+  id: string;
+  text: string;
+  isAnonymous: boolean;
+  submitterId: string;
+  submitterDisplayName?: string | null;
+  createdAt: Timestamp;
+}
+
 export interface ChatMemberInfo {
   firstName?: string;
   lastName?: string;
