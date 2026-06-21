@@ -30,7 +30,9 @@ type ProfileIdentityCardProps = {
     profileNameChangeAdminOnly: string;
     cancel: string;
     save: string;
+    avatarEditingLocked?: string;
   };
+  avatarEditingDisabled?: boolean;
 };
 
 export function ProfileIdentityCard({
@@ -42,6 +44,7 @@ export function ProfileIdentityCard({
   onAvatarInEditorChange,
   onAvatarSave,
   labels,
+  avatarEditingDisabled = false,
 }: ProfileIdentityCardProps) {
   return (
     <motion.div
@@ -61,14 +64,20 @@ export function ProfileIdentityCard({
       </div>
 
       <Dialog open={isAvatarEditorOpen} onOpenChange={onAvatarEditorOpenChange}>
-        <Button
-          type="button"
-          className="w-full max-w-xs rounded-2xl h-11 font-semibold gap-2"
-          onClick={() => onAvatarEditorOpenChange(true)}
-        >
-          <Palette className="h-4 w-4" />
-          {labels.editAvatar}
-        </Button>
+        {avatarEditingDisabled ? (
+          <p className="text-xs text-muted-foreground max-w-xs">
+            {labels.avatarEditingLocked || 'Your profile photo is managed by a curator. Contact them to request a change.'}
+          </p>
+        ) : (
+          <Button
+            type="button"
+            className="w-full max-w-xs rounded-2xl h-11 font-semibold gap-2"
+            onClick={() => onAvatarEditorOpenChange(true)}
+          >
+            <Palette className="h-4 w-4" />
+            {labels.editAvatar}
+          </Button>
+        )}
 
         <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>

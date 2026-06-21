@@ -178,6 +178,7 @@ export interface AppUser extends FirebaseUser {
   isApproved?: boolean;
   isYouth?: boolean;
   avatar?: AvatarData;
+  avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;
@@ -208,6 +209,7 @@ export interface UserProfileData {
   isApproved?: boolean;
   isYouth?: boolean;
   avatar?: AvatarData;
+  avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;

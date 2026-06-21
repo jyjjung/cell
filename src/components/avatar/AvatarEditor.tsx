@@ -218,10 +218,12 @@ function GenerativeControls({
 
 function ImageUploadControls({
     currentData,
-    onDataChange
+    onDataChange,
+    uploadUid,
 }: {
     currentData: AvatarData,
-    onDataChange: (data: AvatarData) => void
+    onDataChange: (data: AvatarData) => void,
+    uploadUid?: string,
 }) {
     const { currentUser } = useAuth();
     const { toast } = useToast();
@@ -276,7 +278,7 @@ function ImageUploadControls({
                 throw new Error("Failed to crop image");
             }
 
-            const uid = currentUser?.uid;
+            const uid = uploadUid || currentUser?.uid;
             if (!uid) {
                 throw new Error('You must be signed in to upload a profile photo.');
             }
@@ -415,11 +417,14 @@ function ImageUploadControls({
 interface AvatarEditorProps {
     value: AvatarData;
     onChange: (data: AvatarData) => void;
+    /** Upload profile photos under this uid (for avatar curator editing another member). */
+    uploadUid?: string;
 }
 
 export function AvatarEditor({
     value,
     onChange,
+    uploadUid,
 }: AvatarEditorProps) {
   const currentMode = value.mode || 'custom';
 
@@ -457,7 +462,7 @@ export function AvatarEditor({
                     <InitialsControls currentData={value} onDataChange={onChange} />
                 </TabsContent>
                 <TabsContent value="image">
-                    <ImageUploadControls currentData={value} onDataChange={onChange} />
+                    <ImageUploadControls currentData={value} onDataChange={onChange} uploadUid={uploadUid} />
                 </TabsContent>
             </div>
         </Tabs>

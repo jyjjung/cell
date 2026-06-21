@@ -33,6 +33,7 @@ import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { grantSecretAchievement } from '@/lib/achievement-secrets';
 import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { sanitizeAvatarData } from '@/lib/avatar-utils';
+import { canMemberChangeOwnAvatar } from '@/lib/avatar-curator';
 
 
 
@@ -236,6 +237,14 @@ export default function ProfilePage() {
   
   const handleAvatarSave = async () => {
      if (!currentUser) return;
+     if (!canMemberChangeOwnAvatar(currentUser.avatarChangesEnabled)) {
+       toast({
+         variant: 'destructive',
+         title: 'Photo locked',
+         description: 'Your profile photo is managed by a curator.',
+       });
+       return;
+     }
      setIsSaving(true);
      try {
        const nextAvatar = sanitizeAvatarData(
@@ -363,6 +372,7 @@ export default function ProfilePage() {
               onAvatarEditorOpenChange={setIsAvatarEditorOpen}
               onAvatarInEditorChange={setAvatarInEditor}
               onAvatarSave={handleAvatarSave}
+              avatarEditingDisabled={!canMemberChangeOwnAvatar(currentUser.avatarChangesEnabled)}
               labels={{
                 customizeAvatarTitle: t.customizeAvatarTitle,
                 customizeAvatarDesc: t.customizeAvatarDesc,
@@ -370,6 +380,7 @@ export default function ProfilePage() {
                 profileNameChangeAdminOnly: t.profileNameChangeAdminOnly,
                 cancel: t.cancel,
                 save: t.save,
+                avatarEditingLocked: 'Your profile photo is managed by a curator. Contact them to request a change.',
               }}
             />
 

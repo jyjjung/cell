@@ -9,7 +9,9 @@ service firebase.storage {
 
     match /avatars/{fileName} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && fileName.matches('^' + request.auth.uid + '_.*');
+      allow write: if isSignedIn()
+        && (fileName.matches('^' + request.auth.uid + '_.*')
+            || request.auth.token.email == 'yejoon7154@gmail.com');
     }
 
     match /chats/{chatId}/{fileName} {
