@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.52",
+    subtitle: "Prayer Requests",
+    date: "Mid-June 2026",
+    changes: [
+      "New Prayer Requests page — share needs privately with Shepherd Claire",
+      "Anonymous submissions are the default; only Claire and you can see your request",
+      "Dashboard button and sidebar link to submit a prayer request",
+    ],
+  },
+  {
     version: "v1.3.51",
     subtitle: "Avatar Curator",
     date: "Mid-June 2026",

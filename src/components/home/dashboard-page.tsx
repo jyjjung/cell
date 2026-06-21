@@ -23,7 +23,7 @@ import { format, parseISO, isValid, differenceInDays, startOfDay, isBefore, star
 import {
   BookOpen, MessageCircle, Calendar, CheckCircle, ChevronRight,
   Sparkles, ArrowRight, ShieldCheck, BookOpenText, Users, Flame, Clock, MapPin,
-  Music2, ListChecks
+  Music2, ListChecks, HeartHandshake
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -422,6 +422,31 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       <PageHeader
         title={`${getGreeting(currentUser.preferredLanguage || 'en')}, ${formatUserDisplayName(currentUser, 'Guest')}${currentUser.preferredLanguage === 'ko' ? '님' : ''}`}
       />
+
+      <motion.section custom={0.25} variants={fadeUp} initial="hidden" animate="visible">
+        <div className="glass-card rounded-2xl border-primary/20 bg-primary/5 p-4 md:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
+                <HeartHandshake className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-bold">Prayer Requests</p>
+                <p className="text-sm text-muted-foreground leading-snug">
+                  Share a need privately — only Shepherd Claire can read submitted requests.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              className="rounded-xl shrink-0 w-full sm:w-auto"
+              onClick={() => go('/prayer-requests')}
+            >
+              Submit a prayer request
+            </Button>
+          </div>
+        </div>
+      </motion.section>
 
       {imminentDuties.length > 0 && (
         <motion.section custom={0.5} variants={fadeUp} initial="hidden" animate="visible">
