@@ -7,10 +7,10 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { MessageCircle, ArrowRight, Loader2, Users } from 'lucide-react';
+import { MessageCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PixelAvatar } from '../avatar/PixelAvatar';
 import { getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
+import { GroupChatAvatar } from '@/components/chat/GroupChatAvatar';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function RecentChatsWidget() {
@@ -72,6 +72,7 @@ export default function RecentChatsWidget() {
                             }
 
                             const avatar = isGroup ? null : resolveChatAvatar(peerProfile, infoFromChat);
+                            const photoURL = isGroup ? (chat.photoURL || null) : null;
 
                             return (
                                 <motion.button
@@ -82,8 +83,8 @@ export default function RecentChatsWidget() {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="w-full flex items-center gap-4 p-3 rounded-2xl glass-thin hover:ring-blue-500/30 transition-all group overflow-hidden"
                                 >
-                                    <div className="h-10 w-10 shrink-0 rounded-full glass-thin">
-                                        {avatar ? <PixelAvatar avatar={avatar} /> : <div className="h-full w-full bg-muted flex items-center justify-center"><Users className="h-5 w-5 text-muted-foreground group-hover:text-white" /></div>}
+                                    <div className="h-10 w-10 shrink-0 rounded-full glass-thin overflow-hidden">
+                                        <GroupChatAvatar avatar={avatar} photoURL={photoURL} />
                                     </div>
                                     <div className="flex-grow min-w-0 text-left overflow-hidden">
                                         <p className="font-bold text-sm truncate text-foreground group-hover:text-white">{name}</p>

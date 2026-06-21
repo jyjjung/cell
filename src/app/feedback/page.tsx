@@ -58,6 +58,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.55",
+    subtitle: "Group Chat Photos",
+    date: "Mid-June 2026",
+    changes: [
+      "Any group member can change the group chat photo from chat settings",
+      "Changing the photo posts a message like \"Alex changed the group chat picture\"",
+      "Group photos are cached for faster loading and offline use",
+    ],
+  },
+  {
     version: "v1.3.54",
     subtitle: "Birthday Reminders",
     date: "Mid-June 2026",

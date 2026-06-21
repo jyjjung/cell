@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { UsersContext } from '@/contexts/users-context';
 import { getPrivateChatId } from '@/lib/chat-utils';
 import { mergeAvatarData } from '@/lib/avatar-utils';
+import { primeMediaUrls } from '@/lib/media-cache';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 
@@ -70,6 +71,12 @@ export function useChats() {
 
       setChats(chatsData);
       setLoading(false);
+
+      primeMediaUrls(
+        chatsData
+          .filter((c) => c.type === 'group')
+          .map((c) => c.photoURL),
+      );
 
       if (patchUsers) {
         const byUid = new Map<string, { uid: string; firstName?: string; lastName?: string; avatar?: ChatMemberInfo['avatar'] }>();

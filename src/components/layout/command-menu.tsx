@@ -28,7 +28,7 @@ import { usePageLoading } from "@/contexts/page-loading-context";
 import { useChats } from "@/hooks/useChats";
 import { useAllUsers } from "@/hooks/use-all-users";
 import { translations } from "@/lib/translations";
-import { PixelAvatar } from "@/components/avatar/PixelAvatar";
+import { GroupChatAvatar } from "@/components/chat/GroupChatAvatar";
 import { formatUserDisplayName } from "@/lib/formatting";
 
 interface CommandMenuProps {
@@ -99,6 +99,7 @@ export function CommandMenu({ open: controlledOpen, onOpenChange: controlledOnOp
         name: chat.name || 'Group Chat',
         preview: chat.lastMessageText || '',
         avatarData: null,
+        photoURL: chat.photoURL || null,
         isGroup: true,
       };
     });
@@ -181,9 +182,14 @@ export function CommandMenu({ open: controlledOpen, onOpenChange: controlledOnOp
               >
                 {/* Avatar */}
                 <div className="relative h-10 w-10 shrink-0">
-                    <div className="h-full w-full rounded-full border border-border/40 bg-primary/5 flex items-center justify-center">
-                    {chat.avatarData ? (
-                        <PixelAvatar avatar={chat.avatarData} className="!w-full !h-full [&>svg]:!w-full [&>svg]:!h-full" />
+                    <div className="h-full w-full rounded-full border border-border/40 bg-primary/5 flex items-center justify-center overflow-hidden">
+                    {chat.avatarData || chat.photoURL ? (
+                        <GroupChatAvatar
+                          avatar={chat.avatarData}
+                          photoURL={chat.photoURL}
+                          className="!w-full !h-full"
+                          iconClassName="h-4 w-4"
+                        />
                     ) : chat.isGroup ? (
                         <Users className="h-4 w-4 text-primary/50" />
                     ) : (
