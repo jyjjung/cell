@@ -8,7 +8,7 @@ import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images, Link2 } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
-import { getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
+import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 import ChatMessageList from './ChatMessageList';
@@ -160,30 +160,15 @@ function ChatWindowBody({
   }, [messages]);
 
   const lastSeenNamesPerMessage = useMemo(() => {
-    if (!chat?.memberSeen || !messages.length || !allUsers.length) return {};
+    if (!chat?.memberSeen || !messages.length || !allUsers.length || !currentUser) return {};
 
-    const map: Record<string, string[]> = {};
-    const activeMemberIds = new Set(chat.members);
-
-    Object.entries(chat.memberSeen).forEach(([uid, lastSeenTimestamp]) => {
-      if (uid === currentUser?.uid) return;
-      if (!activeMemberIds.has(uid)) return;
-      if (!lastSeenTimestamp) return;
-
-      const lastReadMessage = messages.find(m =>
-        m.createdAt && m.createdAt.toMillis() <= lastSeenTimestamp.toMillis()
-      );
-
-      if (lastReadMessage) {
-        const name = formatUserDisplayName(usersById.get(uid));
-        if (!map[lastReadMessage.id]) map[lastReadMessage.id] = [];
-        if (!map[lastReadMessage.id].includes(name)) {
-          map[lastReadMessage.id].push(name);
-        }
-      }
+    return getLastSeenNamesPerMessage({
+      messages,
+      memberSeen: chat.memberSeen,
+      members: chat.members,
+      currentUserId: currentUser.uid,
+      getDisplayName: (uid) => formatUserDisplayName(usersById.get(uid)),
     });
-
-    return map;
   }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser]);
 
   const chatDetails = useMemo(() => {

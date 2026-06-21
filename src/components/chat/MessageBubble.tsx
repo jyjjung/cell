@@ -99,6 +99,21 @@ const MessageBubble = React.memo(function MessageBubble({
     );
   }
 
+  if (message.systemEvent) {
+    const actorName = resolveChatUserName(message.senderId, chat, usersById);
+    const eventLabel =
+      message.systemEvent === 'groupPhotoChanged'
+        ? t.changedGroupPhoto
+        : t.removedGroupPhoto;
+    return (
+      <div className="chat-message-row py-2 flex justify-center w-full">
+        <p className="text-[11px] italic text-muted-foreground/60">
+          {actorName} {eventLabel}
+        </p>
+      </div>
+    );
+  }
+
   return (
       <div className={cn('chat-message-row isolate relative z-[1] flex w-full min-w-0 py-[1px] flex-col group', isSender ? 'items-end' : 'items-start')}>
           <div className={cn("flex items-end gap-2 w-full min-w-0", isSender ? 'flex-row-reverse' : 'flex-row')}>

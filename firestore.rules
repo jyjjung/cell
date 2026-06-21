@@ -197,7 +197,7 @@ service cloud.firestore {
       function hasMessagePayload() {
         return request.resource.data.keys().hasAny([
           'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId',
-          'qtDate', 'cleaningDate', 'songId', 'threadParentId',
+          'qtDate', 'cleaningDate', 'songId', 'threadParentId', 'systemEvent',
         ]);
       }
 
