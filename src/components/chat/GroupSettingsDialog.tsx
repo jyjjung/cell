@@ -18,8 +18,12 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import UserSelector from './UserSelector';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, LogOut, Save, Trash2, UserPlus } from 'lucide-react';
+import { Loader2, LogOut, Save, Trash2, UserPlus, Camera, X } from 'lucide-react';
 import { PixelAvatar } from '../avatar/PixelAvatar';
+import { GroupChatAvatar } from './GroupChatAvatar';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 
 const renameSchema = z.object({
   groupName: z.string().min(3, "Group name must be at least 3 characters.").max(50),
@@ -27,11 +31,12 @@ const renameSchema = z.object({
 
 export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { isOpen: boolean; onOpenChange: (open: boolean) => void; chat: Chat }) {
   const { currentUser, isAdmin } = useAuth();
-  const { renameGroup, leaveGroup, deleteChat, addMembers, removeMember } = useChat(chat.id);
+  const { renameGroup, leaveGroup, deleteChat, addMembers, removeMember, updateGroupPhoto, removeGroupPhoto } = useChat(chat.id);
   const { allUsers, loading: loadingUsers } = useAllUsers();
   
   const [isSaving, setIsSaving] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [usersToAdd, setUsersToAdd] = useState<string[]>([]);
 
   const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser!.uid);
@@ -78,6 +83,44 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
     await removeMember(uid);
   };
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const storagePath = `chats/${chat.id}/group_photo_${Date.now()}.jpg`;
+      const storageRef = ref(storage, storagePath);
+      const downloadURL = await new Promise<string>((resolve, reject) => {
+        const uploadTask = uploadBytesResumable(storageRef, file, {
+          contentType: file.type || 'image/jpeg',
+          cacheControl: STORAGE_CACHE_CONTROL,
+        });
+        uploadTask.on(
+          'state_changed',
+          undefined,
+          reject,
+          async () => resolve(await getDownloadURL(uploadTask.snapshot.ref)),
+        );
+      });
+      await updateGroupPhoto(downloadURL);
+    } catch {
+      // toast handled in hook
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setIsUploadingPhoto(true);
+    try {
+      await removeGroupPhoto();
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -87,6 +130,52 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
 
         {chat.type === 'group' ? (
           <div className="space-y-6">
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative h-20 w-20 shrink-0 rounded-full border border-border/50 bg-muted/20 overflow-hidden">
+                {isUploadingPhoto ? (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+                  </div>
+                ) : (
+                  <GroupChatAvatar photoURL={chat.photoURL} className="!rounded-full" />
+                )}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl"
+                  disabled={isUploadingPhoto}
+                  onClick={() => document.getElementById(`group-photo-${chat.id}`)?.click()}
+                >
+                  <Camera className="mr-1.5 h-4 w-4" />
+                  Change photo
+                </Button>
+                {chat.photoURL && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl text-muted-foreground"
+                    disabled={isUploadingPhoto}
+                    onClick={handleRemovePhoto}
+                  >
+                    <X className="mr-1.5 h-4 w-4" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <input
+                id={`group-photo-${chat.id}`}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </div>
+            <Separator />
+
             {isGroupAdmin && (
               <>
                 <Form {...form}>

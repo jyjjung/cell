@@ -17,7 +17,7 @@ import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles, Images, Link
 import { PageHeader, EmptyState } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import CreateChatDialog from "./CreateChatDialog";
-import { PixelAvatar } from "../avatar/PixelAvatar";
+import { GroupChatAvatar } from "./GroupChatAvatar";
 import type { Chat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
@@ -64,6 +64,7 @@ export default function ChatList() {
       return {
         name: chat.name || 'Unnamed Circle',
         avatarData: null,
+        photoURL: chat.photoURL || null,
       };
     }
 
@@ -239,8 +240,12 @@ export default function ChatList() {
                           "h-full w-full rounded-full border transition-all duration-300",
                           isActive ? "border-primary-foreground/30" : "border-border/40 bg-muted/20"
                         )}>
-                          {details.avatarData ? (
-                            <PixelAvatar avatar={details.avatarData} />
+                          {details.avatarData || details.photoURL ? (
+                            <GroupChatAvatar
+                              avatar={details.avatarData}
+                              photoURL={details.photoURL}
+                              active={isActive}
+                            />
                           ) : (
                             <div className={cn(
                               "h-full w-full flex items-center justify-center",

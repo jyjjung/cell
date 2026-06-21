@@ -82,7 +82,7 @@ export function getChatDisplayDetails(
   chat: Chat,
   currentUserId: string,
   allUsers: UserProfileData[],
-): { name: string; avatar: UserProfileData['avatar'] | null } | null {
+): { name: string; avatar: UserProfileData['avatar'] | null; photoURL?: string | null } | null {
   if (chat.type === 'private') {
     const peerId = chat.members.find((id) => id !== currentUserId);
     const peerInfoFromChat = peerId ? chat.memberInfo[peerId] : null;
@@ -107,6 +107,7 @@ export function getChatDisplayDetails(
     return {
       name: chat.name || 'Unnamed Circle',
       avatar: null,
+      photoURL: chat.photoURL || null,
     };
   }
 

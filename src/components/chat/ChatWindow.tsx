@@ -15,6 +15,7 @@ import ChatMessageList from './ChatMessageList';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
+import { GroupChatAvatar } from './GroupChatAvatar';
 import { Button } from '../ui/button';
 import GroupSettingsDialog from './GroupSettingsDialog';
 import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
@@ -186,10 +187,10 @@ function ChatWindowBody({
   }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser]);
 
   const chatDetails = useMemo(() => {
-    if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null };
+    if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null, photoURL: null as string | null };
     if (chat.type === 'private') {
       const peerId = chat.members.find(id => id !== currentUser.uid);
-      if (!peerId) return { name: 'Private Chat', avatar: null };
+      if (!peerId) return { name: 'Private Chat', avatar: null, photoURL: null };
 
       const peerProfile = allUsers.find(u => u.uid === peerId);
       const peerInfoFromChat = chat.memberInfo[peerId];
@@ -204,9 +205,10 @@ function ChatWindowBody({
       return {
         name: name,
         avatar: resolveChatAvatar(peerProfile, peerInfoFromChat),
+        photoURL: null,
       };
     }
-    return { name: chat.name, avatar: null };
+    return { name: chat.name || 'Unnamed Circle', avatar: null, photoURL: chat.photoURL || null };
   }, [chat, currentUser, allUsers]);
 
   const chatImages = useMemo(
@@ -292,8 +294,8 @@ function ChatWindowBody({
         </Link>
 
         <div className="flex flex-col items-center gap-1 min-w-0">
-          <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm">
-            <PixelAvatar avatar={chatDetails.avatar} />
+          <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
+            <GroupChatAvatar avatar={chatDetails.avatar} photoURL={chatDetails.photoURL} />
           </div>
           <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>
         </div>
