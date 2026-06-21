@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { eventOccursOnDate, parseDay } from '@/lib/event-occurrences';
-import type { AppEvent, UserProfileData } from '@/types';
+import { EventCategory, type AppEvent, type UserProfileData } from '@/types';
 
 export interface EventDayReminderPayload {
   userId: string;
@@ -36,11 +36,14 @@ export function collectEventDayReminders(params: {
   for (const event of events) {
     if (!eventOccursOnDate(event, today)) continue;
 
+    const isBirthday = event.category === EventCategory.Birthday;
     const timeLabel = formatEventTime(event);
     const locationLabel = event.location ? ` at ${event.location}` : '';
-    const message = timeLabel
-      ? `${event.title} is today (${timeLabel})${locationLabel}.`
-      : `${event.title} is today${locationLabel}.`;
+    const message = isBirthday
+      ? `${event.title} has a birthday today!`
+      : timeLabel
+        ? `${event.title} is today (${timeLabel})${locationLabel}.`
+        : `${event.title} is today${locationLabel}.`;
 
     for (const user of users) {
       if (!user.uid) continue;
@@ -50,7 +53,7 @@ export function collectEventDayReminders(params: {
         userId: user.uid,
         eventId: event.id,
         occurrenceDate: todayIso,
-        title: 'Event today',
+        title: isBirthday ? 'Birthday today' : 'Event today',
         message,
         relatedUrl: '/events',
         dedupeId: `${user.uid}_event_${event.id}_${todayIso}_0d`,

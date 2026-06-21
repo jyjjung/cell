@@ -3,17 +3,39 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { HeartHandshake, Loader2, Send, Shield, Lock } from 'lucide-react';
+import {
+  HeartHandshake,
+  Loader2,
+  Send,
+  Shield,
+  Lock,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+} from 'lucide-react';
 import { PageHeader, FeedCard, EmptyState } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/auth-context';
 import { usePrayerRequests } from '@/hooks/use-prayer-requests';
 import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
+import type { PrayerRequest } from '@/types';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -24,10 +46,196 @@ const fadeUp = {
   }),
 };
 
+function PrayerRequestItem({
+  item,
+  index,
+  isShepherd,
+  currentUserId,
+  locale,
+  onUpdate,
+  onDelete,
+}: {
+  item: PrayerRequest;
+  index: number;
+  isShepherd: boolean;
+  currentUserId: string;
+  locale: 'en' | 'ko';
+  onUpdate: (id: string, text: string, isAnonymous: boolean) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const { toast } = useToast();
+  const canManage = item.submitterId === currentUserId;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(item.text);
+  const [editAnonymous, setEditAnonymous] = useState(item.isAnonymous);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const createdAt = toDateSafe(item.createdAt);
+  const authorLabel = isShepherd
+    ? (item.isAnonymous ? 'Anonymous' : (item.submitterDisplayName || 'Member'))
+    : (item.isAnonymous ? 'Submitted anonymously' : 'Submitted with your name');
+
+  const handleSave = async () => {
+    if (!editText.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onUpdate(item.id, editText, editAnonymous);
+      setIsEditing(false);
+      toast({ title: 'Prayer request updated' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Could not update request';
+      toast({ variant: 'destructive', title: 'Update failed', description: message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(item.id);
+      toast({ title: 'Prayer request deleted' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Could not delete request';
+      toast({ variant: 'destructive', title: 'Delete failed', description: message });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <FeedCard key={item.id} index={index} className="p-4 space-y-3">
+      {isEditing ? (
+        <div className="space-y-3">
+          <Textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            className="min-h-[120px] resize-none rounded-xl"
+            maxLength={2000}
+          />
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
+            <div className="space-y-0.5">
+              <Label htmlFor={`anonymous-${item.id}`} className="text-sm font-semibold">
+                Submit anonymously
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {editAnonymous ? 'Shepherd Claire will not see your name' : 'Your name will be shown to Claire'}
+              </p>
+            </div>
+            <Switch
+              id={`anonymous-${item.id}`}
+              checked={editAnonymous}
+              onCheckedChange={setEditAnonymous}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-xl"
+              disabled={isSaving}
+              onClick={() => {
+                setEditText(item.text);
+                setEditAnonymous(item.isAnonymous);
+                setIsEditing(false);
+              }}
+            >
+              <X className="mr-1.5 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="rounded-xl"
+              disabled={!editText.trim() || isSaving}
+              onClick={handleSave}
+            >
+              {isSaving ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-1.5 h-4 w-4" />
+              )}
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{item.text}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">{authorLabel}</span>
+            <span>{formatAppDateTime(createdAt, locale)}</span>
+          </div>
+          {canManage && (
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-xl h-8 px-2.5"
+                onClick={() => {
+                  setEditText(item.text);
+                  setEditAnonymous(item.isAnonymous);
+                  setIsEditing(true);
+                }}
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl h-8 px-2.5 text-destructive hover:text-destructive"
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this prayer request?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This cannot be undone. Shepherd Claire will no longer see this request.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </>
+      )}
+    </FeedCard>
+  );
+}
+
 export default function PrayerRequestsPage() {
   const router = useRouter();
   const { currentUser, loadingAuth } = useAuth();
-  const { requests, loading, isShepherd, submitRequest } = usePrayerRequests();
+  const {
+    requests,
+    loading,
+    isShepherd,
+    markShepherdSeen,
+    submitRequest,
+    updateRequest,
+    deleteRequest,
+  } = usePrayerRequests();
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
@@ -39,6 +247,12 @@ export default function PrayerRequestsPage() {
       router.push('/login');
     }
   }, [loadingAuth, currentUser, router]);
+
+  useEffect(() => {
+    if (isShepherd && !loading) {
+      void markShepherdSeen();
+    }
+  }, [isShepherd, loading, markShepherdSeen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +296,7 @@ export default function PrayerRequestsPage() {
               <p className="text-sm font-bold">Private to Shepherd Claire</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Only <strong className="text-foreground font-semibold">Shepherd Claire</strong> can read
-                submitted prayer requests. Other members cannot see them. You can also view your own
+                submitted prayer requests. Other members cannot see them. You can edit or delete your own
                 submissions here.
               </p>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -161,22 +375,18 @@ export default function PrayerRequestsPage() {
           />
         ) : (
           <div className="space-y-3">
-            {requests.map((item, index) => {
-              const createdAt = toDateSafe(item.createdAt);
-              const authorLabel = isShepherd
-                ? (item.isAnonymous ? 'Anonymous' : (item.submitterDisplayName || 'Member'))
-                : (item.isAnonymous ? 'Submitted anonymously' : 'Submitted with your name');
-
-              return (
-                <FeedCard key={item.id} index={index} className="p-4 space-y-2">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{item.text}</p>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="font-medium">{authorLabel}</span>
-                    <span>{formatAppDateTime(createdAt, locale)}</span>
-                  </div>
-                </FeedCard>
-              );
-            })}
+            {requests.map((item, index) => (
+              <PrayerRequestItem
+                key={item.id}
+                item={item}
+                index={index}
+                isShepherd={isShepherd}
+                currentUserId={currentUser.uid}
+                locale={locale}
+                onUpdate={updateRequest}
+                onDelete={deleteRequest}
+              />
+            ))}
           </div>
         )}
       </motion.div>

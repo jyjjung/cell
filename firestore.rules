@@ -132,7 +132,19 @@ service cloud.firestore {
       allow get, list: if isPrayerShepherd()
                       || (request.auth != null && resource.data.submitterId == request.auth.uid);
 
-      allow update, delete: if false;
+      allow update: if request.auth != null
+                    && resource.data.submitterId == request.auth.uid
+                    && request.resource.data.submitterId == resource.data.submitterId
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.isAnonymous is bool
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['text', 'isAnonymous', 'submitterDisplayName', 'updatedAt']);
+
+      allow delete: if request.auth != null
+                    && resource.data.submitterId == request.auth.uid;
     }
 
     match /invites/{inviteId} {
