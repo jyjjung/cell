@@ -58,6 +58,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.51",
+    subtitle: "Avatar Curator",
+    date: "Mid-June 2026",
+    changes: [
+      "Curator account can edit any member's profile photo from their member page",
+      "Curator can lock or unlock whether a member may change their own photo (unlocked by default)",
+    ],
+  },
+  {
     version: "v1.3.50",
     subtitle: "Profile Photo Fix",
     date: "Mid-June 2026",

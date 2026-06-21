@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isApproved: profileData.isApproved || false,
               isYouth: profileData.isYouth || false,
               avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+              avatarChangesEnabled: profileData.avatarChangesEnabled,
               fcmTokens: profileData.fcmTokens || [],
               clickMeCount: profileData.clickMeCount || 0,
               clickMeLastClaimAt: profileData.clickMeLastClaimAt,

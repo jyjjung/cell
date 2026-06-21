@@ -8,6 +8,8 @@ import { useRoles } from '@/hooks/use-roles';
 import { useEvents } from '@/hooks/use-events';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useAuth } from '@/contexts/auth-context';
+import { isAvatarCurator } from '@/lib/avatar-curator';
+import { MemberAvatarCuratorPanel } from '@/components/members/member-avatar-curator-panel';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { translations } from '@/lib/translations';
 import { PageHeader } from '@/components/ui/page-layout';
@@ -33,7 +35,7 @@ export default function MemberProfilePage() {
   const params = useParams();
   const userId = params.id as string;
   const router = useRouter();
-  const { allUsers, loading: usersLoading, ensureUsers } = useAllUsers();
+  const { allUsers, loading: usersLoading, ensureUsers, patchUsers } = useAllUsers();
   const { progress, loading: progressLoading } = useMemberCommunityProgress(userId);
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
@@ -115,6 +117,7 @@ export default function MemberProfilePage() {
   }
 
   const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
+  const showCuratorPanel = isAvatarCurator(currentUser?.email);
 
   return (
     <div className="page-container max-w-3xl space-y-8 pb-32">
@@ -156,6 +159,15 @@ export default function MemberProfilePage() {
           )}
         </div>
       </motion.div>
+
+      {showCuratorPanel && (
+        <MemberAvatarCuratorPanel
+          member={user}
+          onUpdated={(patch) => {
+            patchUsers([{ uid: user.uid, ...patch }]);
+          }}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className={`grid grid-cols-1 ${user.showInCommunityProgress !== false ? 'sm:grid-cols-2' : ''} gap-4`}>

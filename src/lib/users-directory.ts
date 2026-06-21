@@ -88,6 +88,7 @@ export type UserDirectoryPatch = {
   firstName?: string;
   lastName?: string;
   avatar?: UserProfileData['avatar'];
+  avatarChangesEnabled?: boolean;
 };
 
 /** Merge profile patches into the cached users directory (e.g. from chat memberInfo). */
@@ -105,6 +106,7 @@ export function patchUsersDirectoryCache(patches: UserDirectoryPatch[]): UserPro
       ...(patch.firstName !== undefined ? { firstName: patch.firstName } : {}),
       ...(patch.lastName !== undefined ? { lastName: patch.lastName } : {}),
       ...(patch.avatar !== undefined ? { avatar: mergeAvatarData(existing?.avatar, patch.avatar) } : {}),
+      ...(patch.avatarChangesEnabled !== undefined ? { avatarChangesEnabled: patch.avatarChangesEnabled } : {}),
     });
   }
 
