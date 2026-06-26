@@ -101,7 +101,7 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
               data: toSafeStringMap({
                 title: title,
                 body: bodyText,
-                icon: '/icon.svg',
+                icon: '/icon-192x192-v4.png',
                 tag: String(chat.id),
                 link: `/chat/${chat.id}`,
                 badge: String(badgeCount), // Used by SW to update home screen badge when app is closed

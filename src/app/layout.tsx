@@ -32,12 +32,15 @@ export const metadata: Metadata = {
   description: "A simple app for community and faith.",
   icons: {
     icon: [
-        { url: "/icon.svg", type: "image/svg+xml" },
+      { url: '/icon-v4.svg', type: 'image/svg+xml' },
+      { url: '/favicon-16x16-v4.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32-v4.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192x192-v4.png', sizes: '192x192', type: 'image/png' },
     ],
-    shortcut: "/icon.svg",
+    shortcut: '/favicon-v4.ico',
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-      { url: '/icon-192x192-v2.png', sizes: '192x192', type: 'image/png' },
+      { url: '/apple-touch-icon-v4.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon-192x192-v4.png', sizes: '192x192', type: 'image/png' },
     ],
   },
 };

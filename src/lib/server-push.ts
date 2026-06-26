@@ -20,7 +20,7 @@ async function deliverToUser(
     data: toSafeStringMap({
       title: notification.title || 'New Notification',
       body: notification.message || '',
-      icon: '/icon.svg',
+      icon: '/icon-192x192-v4.png',
       tag: notification.id,
       link: notification.relatedUrl || '/',
       badge: String(badgeCount),
