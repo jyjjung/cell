@@ -39,7 +39,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.data?.title || 'New Message';
   const notificationOptions = {
     body: payload.data?.body || 'You have a new update.',
-    icon: payload.data?.icon || '/icon.svg',
+    icon: payload.data?.icon || '/icon-192x192-v4.png',
     tag: payload.data?.tag || 'default-tag',
     data: {
         link: payload.data?.link || '/'

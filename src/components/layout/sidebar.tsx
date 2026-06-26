@@ -102,7 +102,7 @@ export default function AppSidebar() {
         <Link href="/" onClick={() => navigate('/')}
           className="flex h-full items-center justify-start transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
-            <img src="/icon.svg" alt="em." className="h-full w-full" />
+            <img src="/icon-v4.svg" alt="em." className="h-full w-full" />
           </div>
         </Link>
       </SidebarHeader>

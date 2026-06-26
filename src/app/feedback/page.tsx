@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.59",
+    subtitle: "New EM logo",
+    date: "Late-June 2026",
+    changes: [
+      "Updated favicon, app icon, and home screen tiles to the new EM logo",
+      "Icons refresh for all users, including installed PWAs",
+    ],
+  },
+  {
     version: "v1.3.58",
     subtitle: "Look, layout & performance",
     date: "Late-June 2026",

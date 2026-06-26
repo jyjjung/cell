@@ -85,7 +85,7 @@ async function main() {
     data: {
       title,
       body: message,
-      icon: '/icon.svg',
+      icon: '/icon-192x192-v4.png',
       tag: notifRef.id,
       link: relatedUrl,
       badge: '1',
