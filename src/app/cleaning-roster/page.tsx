@@ -8,19 +8,17 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import type { CleaningRosterEntry, UserProfileData } from '@/types';
 import { startOfToday, format, compareAsc, isBefore } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
-import { Loader2, ListTodo, ShieldCheck, CalendarClock, History } from 'lucide-react';
+import { Loader2, ListTodo, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RosterFeedCard } from '@/components/ui/roster-feed-card';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
-    useGrantSecretAchievement('cleaning', !!currentUser);
     const { roster, loading: rosterLoading } = useCleaningRoster();
     const { cleaningDays, loading: daysLoading } = useCleaningDays();
     const { allUsers, loading: usersLoading } = useAllUsers();
@@ -36,9 +34,9 @@ export default function CleaningRosterPage() {
             const element = document.getElementById(`date-${targetDate}`);
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                element.classList.add('ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+                element.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background');
                 setTimeout(() => {
-                    element.classList.remove('ring-2', 'ring-primary', 'ring-offset-4', 'ring-offset-background');
+                    element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background');
                 }, 3000);
             }
         }
@@ -66,7 +64,7 @@ export default function CleaningRosterPage() {
             }
         }
         
-        pastEntries.reverse(); // Show most recent past entries first
+        pastEntries.reverse();
 
         return { upcoming: upcomingEntries, past: pastEntries };
     }, [roster]);
@@ -75,59 +73,62 @@ export default function CleaningRosterPage() {
 
     let globalIdx = 0;
 
+    const statusLabel = (entry: CleaningRosterEntry, completer: UserProfileData | null | undefined) => {
+        if (entry.isCompleted) {
+            return completer ? `${t.done} ${formatUserDisplayName(completer)}` : t.done;
+        }
+        return t.scheduled;
+    };
+
     return (
-        <div className="page-container space-y-6">
-            <PageHeader 
-                title={t.cleaningRosterTitle} 
-            />
+        <div className="page-container">
+            <NavPageHeader />
             
             {(rosterLoading || daysLoading || usersLoading) ? (
-                 <div className="flex flex-col items-center justify-center py-32 gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Loading roster...</p>
+                 <div className="empty-inline py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mb-3" />
+                    <p className="text-sm text-muted-foreground">{t.loadingRoster}</p>
                  </div>
             ) : (
                 <Tabs defaultValue="upcoming" className="w-full">
-                    <TabsList className="h-10">
-                        <TabsTrigger value="upcoming" className="rounded-md text-sm font-medium">Upcoming</TabsTrigger>
-                        <TabsTrigger value="past" className="rounded-md text-sm font-medium">Past</TabsTrigger>
+                    <TabsList className="h-9">
+                        <TabsTrigger value="upcoming" className="rounded-md text-sm">{t.upcoming}</TabsTrigger>
+                        <TabsTrigger value="past" className="rounded-md text-sm">{t.past}</TabsTrigger>
                     </TabsList>
                     {roster.length > 0 ? (
                         <>
-                        <TabsContent value="upcoming" className="mt-6 space-y-4">
+                        <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
                             {upcoming.length > 0 ? (
-                                <div className="flex flex-col gap-3">
+                                <div className="stack-gap-sm">
                                     {upcoming.map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || 'Unknown Day';
+                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
                                         const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
                                         const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        
                                         const currentIndex = globalIdx++;
 
                                         return (
-                                            <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-24 transition-all duration-700">
+                                            <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20">
                                                 <RosterFeedCard 
-                                                    key={entry.id}
                                                     index={currentIndex}
                                                     date={parseDay(entry.date)}
-                                                    label="Cleaning Roster"
+                                                    label={t.cleaningRosterTitle}
                                                     title={dayName}
                                                     description={(
                                                         <div className="flex flex-wrap items-center gap-2">
-                                                            <p className="text-[10px] font-medium text-muted-foreground/60">
+                                                            <p className="text-micro-label">
                                                                 {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
                                                             </p>
                                                             {assignedUsers.map((user, uidx) => (
-                                                                <span key={user.uid} className="text-[10px] font-medium text-muted-foreground/70">
+                                                                <span key={user.uid} className="text-micro-label">
                                                                     {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
                                                                 </span>
                                                             ))}
                                                         </div>
                                                     )}
                                                     rightElement={
-                                                        <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
-                                                            <p className="text-[9px] font-black uppercase tracking-wider text-primary whitespace-nowrap">
-                                                                {entry.isCompleted ? `Completed${completer ? ` by ${formatUserDisplayName(completer)}` : ''}` : 'Scheduled'}
+                                                        <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+                                                            <p className="text-micro-label text-primary whitespace-nowrap">
+                                                                {statusLabel(entry, completer)}
                                                             </p>
                                                         </div>
                                                     }
@@ -145,14 +146,13 @@ export default function CleaningRosterPage() {
                             )}
                         </TabsContent>
 
-                        <TabsContent value="past" className="mt-6 space-y-4 opacity-80">
+                        <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
                             {past.length > 0 ? (
-                                <div className="flex flex-col gap-3">
+                                <div className="stack-gap-sm">
                                     {past.slice(0, 10).map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || 'Unknown Day';
+                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
                                         const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
                                         const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        
                                         const currentIndex = globalIdx++;
 
                                         return (
@@ -160,24 +160,24 @@ export default function CleaningRosterPage() {
                                                 key={entry.id}
                                                 index={currentIndex}
                                                 date={parseDay(entry.date)}
-                                                label="Cleaning Roster"
+                                                label={t.cleaningRosterTitle}
                                                 title={dayName}
                                                 description={(
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="text-[10px] font-medium text-muted-foreground/60">
+                                                        <p className="text-micro-label">
                                                             {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
                                                         </p>
                                                         {assignedUsers.map((user, uidx) => (
-                                                            <span key={user.uid} className="text-[10px] font-medium text-muted-foreground/70">
+                                                            <span key={user.uid} className="text-micro-label">
                                                                 {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
                                                             </span>
                                                         ))}
                                                     </div>
                                                 )}
                                                 rightElement={
-                                                    <div className="bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">
-                                                        <p className="text-[9px] font-black uppercase tracking-wider text-primary whitespace-nowrap">
-                                                            {entry.isCompleted ? `Completed${completer ? ` by ${formatUserDisplayName(completer)}` : ''}` : 'Scheduled'}
+                                                    <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+                                                        <p className="text-micro-label text-primary whitespace-nowrap">
+                                                            {statusLabel(entry, completer)}
                                                         </p>
                                                     </div>
                                                 }
@@ -188,7 +188,7 @@ export default function CleaningRosterPage() {
                             ) : (
                                 <EmptyState
                                     icon={ListTodo}
-                                    title="No past cleaning entries"
+                                    title={t.noPastCleaningEntries}
                                 />
                             )}
                         </TabsContent>

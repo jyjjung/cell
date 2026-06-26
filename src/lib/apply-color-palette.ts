@@ -42,7 +42,7 @@ const TOKEN_CSS_MAP: Record<keyof ColorPaletteTokens, string> = {
   sidebarRing: '--sidebar-ring',
 };
 
-export function applyColorPaletteTokens(tokens: ColorPaletteTokens, paletteId: ColorPaletteId) {
+export function applyColorPaletteTokens(tokens: ColorPaletteTokens, paletteId: string) {
   if (typeof document === 'undefined') return;
 
   const root = document.documentElement;

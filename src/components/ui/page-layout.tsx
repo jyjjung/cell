@@ -1,54 +1,117 @@
-// Shared page layout primitives for consistent cross-page design
 "use client";
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useNavLabel } from '@/hooks/use-nav-label';
 
 interface PageHeaderProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
-  delay?: number;
+  className?: string;
 }
 
-export function PageHeader({ title, description, action, delay = 0 }: PageHeaderProps) {
+export function PageHeader({ title, description, action, className }: PageHeaderProps) {
   return (
-    <motion.header
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-nav flex flex-col gap-1 rounded-2xl px-4 py-2 sm:flex-row sm:items-start sm:justify-between sm:px-5"
-    >
-      <div className="min-w-0">
-        <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl capitalize">
-          {title}
-        </h1>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+    <header className={cn('flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between', className)}>
+      <div className="min-w-0 space-y-1">
+        <h1 className="text-page-title">{title}</h1>
+        {description ? <p className="text-body-hero max-w-lg">{description}</p> : null}
       </div>
-      {action && <div className="mt-0.5 shrink-0 sm:mt-0">{action}</div>}
-    </motion.header>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </header>
+  );
+}
+
+/** Page header with title derived from the current route (matches sidebar / navbar). */
+export function NavPageHeader({
+  title,
+  description,
+  action,
+  className,
+}: Omit<PageHeaderProps, 'title'> & { title?: string }) {
+  const navTitle = useNavLabel();
+  return (
+    <PageHeader
+      title={title ?? navTitle}
+      description={description}
+      action={action}
+      className={className}
+    />
+  );
+}
+
+type PageSectionProps = {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+  variant?: 'plain' | 'card' | 'muted' | 'accent';
+};
+
+export function PageSection({
+  title,
+  description,
+  action,
+  children,
+  className,
+  variant = 'card',
+}: PageSectionProps) {
+  const header =
+    title || description || action ? (
+      <div className={cn('ui-section-header', variant !== 'plain' && children ? 'mb-1' : '')}>
+        <div className="min-w-0 space-y-0.5">
+          {title ? <h2 className="text-section-title">{title}</h2> : null}
+          {description ? <p className="text-stat-label">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+    ) : null;
+
+  if (variant === 'plain') {
+    return (
+      <section className={cn('ui-section', className)}>
+        {header}
+        {children}
+      </section>
+    );
+  }
+
+  const surfaceClass =
+    variant === 'muted'
+      ? 'ui-surface'
+      : variant === 'accent'
+        ? 'ui-callout'
+        : 'ui-card';
+
+  return (
+    <section className={cn('ui-section', className)}>
+      <div className={surfaceClass}>
+        {header}
+        {children}
+      </div>
+    </section>
   );
 }
 
 interface EmptyStateProps {
-  icon: React.ElementType;
+  icon?: React.ElementType;
   title: string;
   description?: string;
 }
 
 export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 px-6 py-12 text-center"
-    >
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-muted/45">
-        <Icon className="h-5 w-5 text-muted-foreground/70" />
-      </div>
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      {description && <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>}
-    </motion.div>
+    <div className="ui-empty">
+      {Icon ? (
+        <div className="ui-empty-icon">
+          <Icon className="h-5 w-5" />
+        </div>
+      ) : null}
+      <h3 className="text-sm font-medium text-foreground">{title}</h3>
+      {description ? <p className="mt-1 max-w-sm text-stat-label">{description}</p> : null}
+    </div>
   );
 }
 
@@ -56,15 +119,16 @@ interface FeedCardProps {
   children: React.ReactNode;
   className?: string;
   index?: number;
+  animate?: boolean;
 }
 
-export function FeedCard({ children, className, index = 0, animate = true }: FeedCardProps & { animate?: boolean }) {
+export function FeedCard({ children, className, index = 0, animate = true }: FeedCardProps) {
   return (
     <motion.div
-      initial={animate ? { opacity: 0, y: 12 } : false}
+      initial={animate ? { opacity: 0, y: 6 } : false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: animate ? index * 0.04 : 0, ease: [0.22, 1, 0.36, 1] }}
-      className={cn("glass-card rounded-2xl p-4 transition-shadow", className)}
+      transition={{ duration: 0.2, delay: animate ? index * 0.025 : 0 }}
+      className={cn('ui-card', className)}
     >
       {children}
     </motion.div>

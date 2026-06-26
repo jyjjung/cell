@@ -18,23 +18,23 @@ export default function Footer() {
   if (!isPublic) return null;
 
   return (
-    <footer className="py-6 border-t border-border/50 bg-background/5 backdrop-blur-2xl mt-auto shrink-0 w-full relative z-10">
-      <div className="max-w-7xl mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">
-          em. @2026
+    <footer className="app-main-footer w-full relative z-10">
+      <div className="flex w-full flex-col items-center justify-between gap-3 sm:flex-row">
+        <p className="text-xs text-muted-foreground">
+          em. © 2026
         </p>
         
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
           <Link 
             href="/features" 
-            className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            How It Works
+            How it works
           </Link>
 
           <Link 
             href="/privacy" 
-            className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Privacy Policy
           </Link>

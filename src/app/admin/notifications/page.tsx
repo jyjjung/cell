@@ -12,10 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/ui/page-layout';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 export default function AdminNotificationsPage() {
   const { notifications, loading, deleteNotification } = useNotifications();
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const announcements = useMemo(() => notifications.filter(n => n.type === 'announcement'), [notifications]);
 
@@ -41,116 +45,111 @@ export default function AdminNotificationsPage() {
 
   return (
     <div className="admin-page">
-      <header className="space-y-4">
-        <PageHeader
-          title="Announcements"
-        />
+      <header className="space-y-3">
+        <PageHeader title={t.announcements} />
       </header>
 
-      <section className="max-w-2xl space-y-8">
-        <div className="p-8 rounded-[2.5rem] bg-card/20 backdrop-blur-md border border-white/5 space-y-6">
-            <h2 className="text-xl font-black tracking-tight uppercase tracking-widest flex items-center gap-3">
-                <Send className="h-5 w-5 text-primary" /> Dispatch New
+      <section className="max-w-2xl">
+        <div className="widget-surface space-y-4">
+          <div className="panel-header !mb-0">
+            <h2 className="panel-title flex items-center gap-2">
+              <Send className="h-4 w-4 text-primary" />
+              {t.adminNewAnnouncement}
             </h2>
-            <NotificationAdminForm />
+          </div>
+          <NotificationAdminForm />
         </div>
       </section>
       
       <Separator className="opacity-50" />
 
-      <section className="space-y-8">
-        <div className="flex justify-between items-center px-4">
-            <div className="space-y-1">
-                <h2 className="text-2xl font-black tracking-tighter uppercase">Announcements Archive</h2>
-            </div>
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="h-10 rounded-xl font-bold px-6" disabled={isDeletingAll || loading || announcements.length === 0}>
-                  {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4 mr-2" />}
-                    Purge All
-                </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-[2.5rem]">
-                <AlertDialogHeader>
-                    <AlertDialogTitle className="text-2xl font-black tracking-tighter">Purge Archive?</AlertDialogTitle>
-                    <AlertDialogDescription className="font-medium leading-relaxed">
-                        This will permanently delete all announcements for all members. This action is irreversible.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-2xl h-12 font-bold">Abort</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll} className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90">
-                        {isDeletingAll ? 'Purging...' : 'Confirm Purge'}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+      <section className="space-y-3">
+        <div className="panel-header">
+          <h2 className="text-section-title">{t.adminArchive}</h2>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isDeletingAll || loading || announcements.length === 0}>
+                {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                {t.adminDeleteAll}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-section-title">{t.adminPurgeAll}</AlertDialogTitle>
+                <AlertDialogDescription>{t.adminPurgeAllDesc}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll} className="bg-destructive hover:bg-destructive/90">
+                  {isDeletingAll ? t.adminDeleting : t.adminYesDelete}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {loading ? (
-          <div className="h-60 flex flex-col items-center justify-center gap-4 opacity-30">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Scanning Archive</p>
+          <div className="empty-inline gap-3">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <p className="text-micro-label">{t.loading}</p>
           </div>
         ) : announcements.length === 0 ? (
-          <div className="py-24 text-center border-2 border-dashed border-border/50 rounded-[3rem] opacity-30">
-            <Megaphone className="h-12 w-12 mx-auto mb-6" />
-            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Silence in the Air</p>
+          <div className="empty-inline border border-dashed border-border/50 rounded-2xl">
+            <Megaphone className="h-8 w-8 mb-2 opacity-40" />
+            <p className="text-micro-label">{t.adminNoAnnouncements}</p>
           </div>
         ) : (
-            <div className="admin-table-wrap">
+          <div className="admin-table-wrap">
             <Table className="admin-table">
-                <TableHeader className="bg-muted">
+              <TableHeader className="bg-muted">
                 <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Announcement Payload</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Type</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px]">Sent</TableHead>
-                    <TableHead className="text-right font-black uppercase tracking-widest text-[10px]">Actions</TableHead>
+                  <TableHead>{t.adminContent}</TableHead>
+                  <TableHead>{t.adminType}</TableHead>
+                  <TableHead>{t.adminSent}</TableHead>
+                  <TableHead className="text-right">{t.adminActions}</TableHead>
                 </TableRow>
-                </TableHeader>
-                <TableBody>
+              </TableHeader>
+              <TableBody>
                 {announcements.map((notification) => (
-                    <TableRow key={notification.id} className="border-white/5 transition-colors group">
-                        <TableCell className="min-w-[260px]">
-                            <p className="truncate text-xs font-semibold">
-                              {notification.title}
-                              {notification.message ? <span className="ml-2 text-muted-foreground">- {notification.message}</span> : null}
-                            </p>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-white/10 bg-white/5 font-black text-[8px] uppercase tracking-widest">{notification.type}</Badge>
-                        </TableCell>
-                        <TableCell className="text-[10px] font-bold uppercase tracking-widest opacity-40">
-                            {notification.createdAt ? formatDistanceToNow(notification.createdAt.toDate()) : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon" className="h-10 w-10 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity" aria-label="Delete notification">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-[2.5rem]">
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-2xl font-black tracking-tighter">Purge Dispatch?</AlertDialogTitle>
-                                    <AlertDialogDescription className="font-medium">
-                                        Terminating this transmission will remove it from all member feeds instantly.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel className="rounded-2xl h-12 font-bold">Abort</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(notification.id)} className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90">
-                                        Execute Purge
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                    </TableRow>
+                  <TableRow key={notification.id} className="border-white/5 transition-colors group">
+                    <TableCell className="min-w-[260px]">
+                      <p className="truncate text-xs font-semibold">
+                        {notification.title}
+                        {notification.message ? <span className="ml-2 text-muted-foreground">- {notification.message}</span> : null}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="h-5 px-2 text-micro-label !opacity-100">{notification.type}</Badge>
+                    </TableCell>
+                    <TableCell className="text-micro-label !opacity-100">
+                      {notification.createdAt ? formatDistanceToNow(notification.createdAt.toDate()) : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon" className="h-8 w-8 opacity-30 group-hover:opacity-100 transition-opacity" aria-label={t.adminYesDelete}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-2xl">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-section-title">{t.adminDeleteAnnouncement}</AlertDialogTitle>
+                            <AlertDialogDescription>{t.adminDeleteAnnouncementDesc}</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(notification.id)} className="bg-destructive hover:bg-destructive/90">
+                              {t.adminYesDelete}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
                 ))}
-                </TableBody>
+              </TableBody>
             </Table>
-            </div>
+          </div>
         )}
       </section>
     </div>

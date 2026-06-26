@@ -13,6 +13,7 @@ import {
   patchUsersDirectoryCache,
   type UserDirectoryPatch,
 } from '@/lib/users-directory';
+import { COLLECTION_CACHE_TTL_MS, readLocalCollectionCache } from '@/lib/collection-cache';
 
 const USERS_COLLECTION = 'users';
 
@@ -27,7 +28,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   const { enabled = true } = options;
   const { currentUser, loadingAuth } = useAuth();
   const pathname = usePathname();
-  const realtime = enabled && (options.realtime ?? pathname.startsWith('/admin'));
+  const realtime = enabled && (options.realtime ?? pathname.startsWith('/admin/users'));
   const [allUsers, setAllUsers] = useState<UserProfileData[]>(() => getCachedUsersDirectory());
   const [loading, setLoading] = useState(allUsers.length === 0);
   const [error, setError] = useState<Error | null>(null);
@@ -70,27 +71,31 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
     let cancelled = false;
     setLoading(usersRef.current.length === 0);
 
-    // Show localStorage cache immediately, then always refresh from server.
-    void loadUsersDirectory().then((users) => {
-      if (cancelled) return;
-      if (users.length > 0) {
-        setAllUsers(users);
-        setLoading(false);
-      }
-    }).catch(() => {});
-
-    void loadUsersDirectory({ forceRefresh: true }).then((users) => {
+    const applyUsers = (users: UserProfileData[]) => {
       if (cancelled) return;
       setAllUsers(users);
       setLoading(false);
-    }).catch((err: Error) => {
-      if (cancelled) return;
-      setError(err);
-      setLoading(false);
-    });
+    };
+
+    const cachedFresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v2', COLLECTION_CACHE_TTL_MS);
+    if (cachedFresh?.length) {
+      applyUsers(cachedFresh);
+    } else {
+      const stale = getCachedUsersDirectory();
+      if (stale.length > 0) {
+        applyUsers(stale);
+      }
+      void loadUsersDirectory({ forceRefresh: true }).then(applyUsers).catch((err: Error) => {
+        if (cancelled) return;
+        setError(err);
+        setLoading(false);
+      });
+    }
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !currentUser) return;
+      const fresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v2', COLLECTION_CACHE_TTL_MS);
+      if (fresh?.length) return;
       void loadUsersDirectory({ forceRefresh: true }).then((users) => {
         if (!cancelled) setAllUsers(users);
       }).catch(() => {});

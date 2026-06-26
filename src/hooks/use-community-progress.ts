@@ -8,6 +8,9 @@ import {
   getCachedCommunityProgress,
   loadCommunityProgress,
 } from '@/lib/community-progress';
+import { COLLECTION_CACHE_TTL_MS, readLocalCollectionCache } from '@/lib/collection-cache';
+
+const CACHE_KEY = 'community_progress_v3';
 
 export function useCommunityProgress() {
   const { currentUser, loadingAuth } = useAuth();
@@ -24,27 +27,34 @@ export function useCommunityProgress() {
     }
 
     let cancelled = false;
-    setLoading(allProgress.length === 0);
 
-    void loadCommunityProgress().then((rows) => {
-      if (!cancelled && rows.length > 0) {
-        setAllProgress(rows);
-        setLoading(false);
-      }
-    }).catch(() => {});
+    const applyRows = (rows: CommunityProgressDoc[]) => {
+      if (cancelled) return;
+      setAllProgress(rows);
+      setLoading(false);
+    };
 
-    void loadCommunityProgress({ forceRefresh: true }).then((rows) => {
-      if (!cancelled) {
-        setAllProgress(rows);
-        setLoading(false);
+    const cachedFresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+    const hasCached = getCachedCommunityProgress().length > 0;
+    setLoading(!hasCached && !cachedFresh?.length);
+
+    if (cachedFresh?.length) {
+      applyRows(cachedFresh);
+    } else {
+      const stale = getCachedCommunityProgress();
+      if (stale.length > 0) {
+        applyRows(stale);
       }
-    }).catch((err) => {
-      console.error('[useCommunityProgress] load error:', err);
-      if (!cancelled) setLoading(false);
-    });
+      void loadCommunityProgress({ forceRefresh: true }).then(applyRows).catch((err) => {
+        console.error('[useCommunityProgress] load error:', err);
+        if (!cancelled) setLoading(false);
+      });
+    }
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !currentUser) return;
+      const fresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+      if (fresh?.length) return;
       void loadCommunityProgress({ forceRefresh: true }).then((rows) => {
         if (!cancelled) setAllProgress(rows);
       }).catch(() => {});

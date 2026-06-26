@@ -8,14 +8,10 @@ import BackToTopButton from '@/components/ui/back-to-top-button';
 import { BookMarked, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { EmptyState, PageHeader } from '@/components/ui/page-layout';
-import { useAuth } from '@/contexts/auth-context';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
 
 export default function MemorizePage() {
-  const { currentUser } = useAuth();
   const { memoryVerses, loading } = useMemoryVerses();
-  useGrantSecretAchievement('memorize', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<MemoryVerse | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -25,8 +21,8 @@ export default function MemorizePage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="page-container space-y-8 pb-32">
-      <PageHeader title="Memory Verses" />
+    <div className="page-container">
+      <NavPageHeader />
 
       {memoryVerses.length === 0 ? (
         <EmptyState

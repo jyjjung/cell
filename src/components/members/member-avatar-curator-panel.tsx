@@ -102,7 +102,7 @@ export function MemberAvatarCuratorPanel({ member, onUpdated }: MemberAvatarCura
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 rounded-3xl border border-primary/30 bg-primary/5 backdrop-blur-sm space-y-5"
+      className="widget-surface border border-primary/30 bg-primary/5 space-y-4"
     >
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-xl bg-primary/15">

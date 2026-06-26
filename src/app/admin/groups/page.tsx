@@ -17,8 +17,9 @@ import { Loader2, PlusCircle, Edit, Trash2, Users, Check, RefreshCw } from 'luci
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PageHeader } from '@/components/ui/page-layout';
-import { ShieldCheck } from 'lucide-react';
+import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters."),
@@ -33,6 +34,8 @@ export default function AdminRolesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
@@ -59,11 +62,10 @@ export default function AdminRolesPage() {
     try {
       if (editingRole) {
         await updateRole(editingRole.id, data.name);
-        toast({ title: "Role Updated", description: `The role "${data.name}" has been updated.` });
+        toast({ title: "Role updated", description: `"${data.name}" saved.` });
       } else {
         await addRole(data.name, data.createChat ?? false);
-        const chatMessage = data.createChat ? " and its chat have" : " has";
-        toast({ title: "Role Created", description: `The role "${data.name}"${chatMessage} been created.` });
+        toast({ title: "Role created", description: `"${data.name}" added.` });
       }
       setIsFormOpen(false);
     } catch (error: any) {
@@ -76,10 +78,9 @@ export default function AdminRolesPage() {
   const handleDelete = async (role: AppRole) => {
     try {
       await deleteRole(role.id);
-      const toastMessage = role.chatId ? `The role "${role.name}" and its chat have been deleted.` : `The role "${role.name}" has been deleted.`;
-      toast({ title: "Role Deleted", description: toastMessage });
+      toast({ title: "Role deleted", description: `"${role.name}" removed.` });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Deletion Failed", description: error.message });
+      toast({ variant: "destructive", title: "Delete failed", description: error.message });
     }
   };
 
@@ -87,16 +88,9 @@ export default function AdminRolesPage() {
     setIsSyncing(true);
     try {
       await syncRolesAndChats();
-      toast({ 
-        title: "Sync Successful", 
-        description: "All members have been re-aligned with their role-linked circles." 
-      });
+      toast({ title: "Sync complete", description: "Members matched to role chats." });
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Sync Error", 
-        description: error.message 
-      });
+      toast({ variant: "destructive", title: "Sync failed", description: error.message });
     } finally {
       setIsSyncing(false);
     }
@@ -104,42 +98,42 @@ export default function AdminRolesPage() {
 
   return (
     <div className="admin-page">
-      <header className="space-y-4">
+      <header className="space-y-3">
         <PageHeader 
-          title="Manage Roles & Chats"
+          title={t.adminManageRoles}
           action={
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={handleSync} 
                 disabled={isSyncing || loading}
-                className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]"
               >
                 {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Sync Circles
+                {t.adminSyncCircles}
               </Button>
               
               <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={openAddDialog} className="rounded-xl h-11 px-6 font-black uppercase tracking-widest text-[10px]">
-                    <PlusCircle className="mr-2 h-4 w-4" /> New Role
+                  <Button onClick={openAddDialog} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" /> {t.adminNewRole}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="rounded-2xl">
                   <DialogHeader>
-                    <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
+                    <DialogTitle className="text-section-title">{editingRole ? t.adminEditRole : t.adminNewRole}</DialogTitle>
                     <DialogDescription>
-                      {editingRole ? 'Change the name of the role.' : 'Create a new role to assign to users. You can also choose to create a linked group chat.'}
+                      {editingRole ? 'Change the role name.' : 'Create a role for users. Optionally link a group chat.'}
                     </DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-4">
+                    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 pt-2">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Role Name</FormLabel>
+                        <FormLabel className="text-micro-label">{t.adminName}</FormLabel>
                         <FormControl>
                           <Input {...field} disabled={isSaving} />
                         </FormControl>
@@ -152,7 +146,7 @@ export default function AdminRolesPage() {
                       control={form.control}
                       name="createChat"
                       render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border p-3">
                           <FormControl>
                             <Checkbox
                               checked={field.value}
@@ -161,22 +155,20 @@ export default function AdminRolesPage() {
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Create a linked group chat
-                            </FormLabel>
-                            <FormDescription>
-                              Automatically create a group chat for this role.
+                            <FormLabel>Create linked chat</FormLabel>
+                            <FormDescription className="text-micro-label">
+                              Auto-create a group chat for this role.
                             </FormDescription>
                           </div>
                         </FormItem>
                       )}
                     />
                   )}
-                      <DialogFooter className="pt-4">
-                        <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+                      <DialogFooter className="pt-2">
+                        <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>{t.adminCancel}</Button>
                         <Button type="submit" disabled={isSaving}>
                           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          {editingRole ? 'Save Changes' : 'Create Role'}
+                          {editingRole ? t.adminSaveChanges : t.adminNewRole}
                         </Button>
                       </DialogFooter>
                     </form>
@@ -190,24 +182,20 @@ export default function AdminRolesPage() {
 
       <section>
         {loading ? (
-          <div className="h-40 flex items-center justify-center rounded-lg bg-muted border-2 border-dashed">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="empty-inline">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : roles.length === 0 ? (
-          <div className="p-10 text-center bg-muted rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
-            <Users className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="font-semibold">No roles found</h3>
-            <p className="text-muted-foreground text-sm">Click "New Role" to create one.</p>
-          </div>
+          <EmptyState icon={Users} title={t.adminNoRoles} description={t.adminNoRolesHint} />
         ) : (
           <div className="admin-table-wrap">
             <Table className="admin-table">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Linked Chat</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t.adminName}</TableHead>
+                  <TableHead>{t.adminLinkedChat}</TableHead>
+                  <TableHead>{t.adminCreatedAt}</TableHead>
+                  <TableHead className="text-right">{t.adminActions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -215,7 +203,7 @@ export default function AdminRolesPage() {
                   <TableRow key={role.id}>
                     <TableCell className="font-medium">{role.name}</TableCell>
                     <TableCell>
-                      {role.chatId && <Check className="h-5 w-5 text-primary" />}
+                      {role.chatId && <Check className="h-4 w-4 text-primary" />}
                     </TableCell>
                     <TableCell>{role.createdAt ? format(role.createdAt.toDate(), 'dd/MM/yyyy') : 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-2">
@@ -228,17 +216,17 @@ export default function AdminRolesPage() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="rounded-2xl">
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogTitle className="text-section-title">{t.adminDeleteRole}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete the role "{role.name}"{role.chatId ? " and its associated group chat" : ""}. Users will be removed from this role. This action cannot be undone.
+                              Delete &quot;{role.name}&quot;{role.chatId ? " and its chat" : ""}? {t.adminCannotUndo}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDelete(role)}>
-                              Yes, delete role
+                              {t.adminYesDelete}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

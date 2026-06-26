@@ -4,13 +4,25 @@ import type { ReactNode } from 'react';
 import { UsersProvider } from '@/contexts/users-context';
 import { NotificationsProvider } from '@/contexts/notifications-context';
 import { EventsProvider } from '@/contexts/events-context';
+import { ChatsProvider } from '@/contexts/chats-context';
+import { BiblePlanProvider } from '@/contexts/bible-plan-context';
+import { ScheduleDataProvider } from '@/contexts/schedule-data-context';
+import { PrayerRequestsProvider } from '@/contexts/prayer-requests-context';
 
-/** Shared Firestore directory providers (users, notifications, events). */
+/** Shared Firestore directory providers (users, notifications, events, chats, plan, schedule). */
 export function AppDataProviders({ children }: { children: ReactNode }) {
   return (
     <UsersProvider>
       <NotificationsProvider>
-        <EventsProvider>{children}</EventsProvider>
+        <EventsProvider>
+          <BiblePlanProvider>
+            <ChatsProvider>
+              <ScheduleDataProvider>
+                <PrayerRequestsProvider>{children}</PrayerRequestsProvider>
+              </ScheduleDataProvider>
+            </ChatsProvider>
+          </BiblePlanProvider>
+        </EventsProvider>
       </NotificationsProvider>
     </UsersProvider>
   );

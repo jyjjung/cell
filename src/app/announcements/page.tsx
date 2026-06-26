@@ -10,38 +10,36 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { translations } from '@/lib/translations';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 
-function AnnouncementItem({ notification, isRead, onMarkRead, index }: { notification: any; isRead: boolean; onMarkRead?: () => void; index: number }) {
+function AnnouncementItem({ notification, isRead, onMarkRead, index, justNowLabel }: { notification: any; isRead: boolean; onMarkRead?: () => void; index: number; justNowLabel: string }) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: 40, scale: 0.96 }}
-      transition={{ duration: 0.3, delay: index * 0.04 }}
+      exit={{ opacity: 0, x: 20, scale: 0.98 }}
+      transition={{ duration: 0.25, delay: index * 0.03 }}
       className={cn(
-        "flex items-start gap-3 rounded-2xl border p-4 transition-colors",
-        isRead
-          ? "bg-muted border-border/20 opacity-60"
-          : "bg-card/60 border-border/40 hover:bg-card/80"
+        "flow-list-item transition-colors",
+        isRead && "opacity-60"
       )}
     >
-      <div className={cn("mt-0.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/20" : "bg-muted animate-pulse")} />
-      <div className="flex-1 min-w-0 space-y-1">
+      <div className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/30" : "bg-primary")} />
+      <div className="flex-1 min-w-0 stack-gap-sm">
         <p className={cn("font-semibold text-sm", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
         <LinkifiedText text={notification.message} className="block text-sm text-muted-foreground leading-relaxed" />
-        <p className="text-[11px] text-muted-foreground/40 font-medium">
+        <p className="text-micro-label">
           {toDateSafe(notification.createdAt)
             ? formatDistanceToNow(toDateSafe(notification.createdAt)!, { addSuffix: true })
-            : 'Just now'}
+            : justNowLabel}
         </p>
       </div>
       {!isRead && onMarkRead && (
         <Button variant="ghost" size="icon" onClick={onMarkRead}
-          className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted hover:text-primary transition-colors">
+          className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted">
           <X className="h-4 w-4" />
         </Button>
       )}
@@ -65,51 +63,50 @@ export default function AnnouncementsPage() {
   if (!isMounted || loading) return null;
 
   return (
-    <div className="page-container space-y-6">
-      <PageHeader
-        title={t.announcements}
+    <div className="page-container">
+      <NavPageHeader
         action={
           unread.length > 0 ? (
-            <Button variant="outline" size="sm" className="rounded-xl h-9 gap-2 font-semibold text-xs"
+            <Button variant="outline" size="sm" className="rounded-lg h-8 gap-1.5 text-xs"
               onClick={() => markAllAsRead(unread.map(n => n.id))}>
-              <CheckCheck className="h-4 w-4" /> Dismiss all
+              <CheckCheck className="h-3.5 w-3.5" /> {t.dismissAll}
             </Button>
           ) : undefined
         }
       />
 
       {announcements.length === 0 ? (
-        <EmptyState icon={Megaphone} title="No announcements yet" description="Check back later for community updates." />
+        <EmptyState icon={Megaphone} title={t.noAnnouncementsYet} description={t.checkBackAnnouncements} />
       ) : (
-        <Tabs defaultValue="unread" className="w-full">
-          <TabsList className="h-10">
-            <TabsTrigger value="unread" className="rounded-md text-sm font-medium">
-              Unread {unread.length > 0 && <span className="ml-1.5 bg-muted text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{unread.length}</span>}
+        <Tabs defaultValue="unread" className="ui-card">
+          <TabsList className="h-9">
+            <TabsTrigger value="unread" className="rounded-md text-sm">
+              {t.unread} {unread.length > 0 && <span className="ml-1.5 bg-primary text-primary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none">{unread.length}</span>}
             </TabsTrigger>
-            <TabsTrigger value="archive" className="rounded-md text-sm font-medium">Archive</TabsTrigger>
+            <TabsTrigger value="archive" className="rounded-md text-sm">{t.archive}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="unread" className="mt-6">
+          <TabsContent value="unread" className="mt-4">
             {unread.length > 0 ? (
               <AnimatePresence mode="popLayout">
-                <div className="space-y-3">
+                <div className="flow-list">
                   {unread.map((n, i) => (
-                    <AnnouncementItem key={n.id} notification={n} isRead={false} onMarkRead={() => markAsRead(n.id)} index={i} />
+                    <AnnouncementItem key={n.id} notification={n} isRead={false} onMarkRead={() => markAsRead(n.id)} index={i} justNowLabel={t.justNow} />
                   ))}
                 </div>
               </AnimatePresence>
             ) : (
-              <EmptyState icon={Check} title="All caught up!" description="No unread announcements." />
+              <EmptyState icon={Check} title={t.allCaughtUp} description={t.noUnreadAnnouncements} />
             )}
           </TabsContent>
 
-          <TabsContent value="archive" className="mt-6">
+          <TabsContent value="archive" className="mt-4">
             {read.length > 0 ? (
-              <div className="space-y-3">
-                {read.map((n, i) => <AnnouncementItem key={n.id} notification={n} isRead={true} index={i} />)}
+              <div className="flow-list">
+                {read.map((n, i) => <AnnouncementItem key={n.id} notification={n} isRead={true} index={i} justNowLabel={t.justNow} />)}
               </div>
             ) : (
-              <EmptyState icon={Megaphone} title="Archive is empty" />
+              <EmptyState icon={Megaphone} title={t.archiveEmpty} />
             )}
           </TabsContent>
         </Tabs>

@@ -1,7 +1,8 @@
 import type { DailyReading, StructuredPassage } from '@/types';
-import { isValid, isSameDay, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, isBefore, isValid, isSameDay, startOfDay } from 'date-fns';
 import { parseDay } from './event-occurrences';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 
 export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
@@ -91,26 +92,173 @@ export function isPassageCompletedForPlan(
   return false;
 }
 
-/** Share of all plan passages marked complete (0–100, rounded). */
-export function calculatePlanProgressPercent(
+export function isCountablePlanPassage(
+  passage: StructuredPassage | null | undefined,
+): passage is StructuredPassage {
+  return !!passage?.displayText && !passage.displayText.startsWith('Error:');
+}
+
+/** Normalize plan passage metadata, parsing book/chapter from displayText when missing. */
+export function resolvePlanPassage(
+  passage: StructuredPassage | null | undefined,
+): { book: string; chapter: number; displayText: string } | null {
+  if (!isCountablePlanPassage(passage)) return null;
+
+  if (passage.book && passage.chapter) {
+    return {
+      book: passage.book,
+      chapter: passage.chapter,
+      displayText: passage.displayText,
+    };
+  }
+
+  const parsed = parsePassageReferenceForNavigation(passage.displayText);
+  if (!parsed) return null;
+
+  return {
+    book: parsed.book,
+    chapter: parsed.chapter,
+    displayText: passage.displayText,
+  };
+}
+
+export type PlanPassageProgress = {
+  total: number;
+  completed: number;
+  passagesLeft: number;
+};
+
+/** Count plan passage slots using the same completion rules as the checklist. */
+export function countPlanPassageProgress(
   dailyReadings: DailyReading[] | undefined | null,
   completedPassages: string[],
-): number {
-  if (!dailyReadings?.length) return 0;
+  options?: { allowLegacyBareKey?: boolean },
+): PlanPassageProgress {
+  if (!dailyReadings?.length) {
+    return { total: 0, completed: 0, passagesLeft: 0 };
+  }
 
   let total = 0;
   let completed = 0;
 
   dailyReadings.forEach((day) => {
     day.passages?.forEach((passage) => {
-      if (!passage.displayText || passage.displayText.startsWith('Error:')) return;
+      if (!isCountablePlanPassage(passage)) return;
       total += 1;
-      if (isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, { allowLegacyBareKey: false })) {
+      if (
+        isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, {
+          allowLegacyBareKey: options?.allowLegacyBareKey ?? true,
+        })
+      ) {
         completed += 1;
       }
     });
   });
 
+  return { total, completed, passagesLeft: Math.max(0, total - completed) };
+}
+
+/** Share of all plan passages marked complete (0–100, rounded). */
+export function calculatePlanProgressPercent(
+  dailyReadings: DailyReading[] | undefined | null,
+  completedPassages: string[],
+): number {
+  const { total, completed } = countPlanPassageProgress(dailyReadings, completedPassages, {
+    allowLegacyBareKey: false,
+  });
   if (total === 0) return 0;
   return Math.round((completed / total) * 100);
+}
+
+/** Plan passage keys for every assignment of a given chapter. */
+export function findPlanPassageKeysForChapter(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+): string[] {
+  if (!dailyReadings?.length) return [];
+
+  const keys: string[] = [];
+  dailyReadings.forEach((day) => {
+    day.passages?.forEach((passage) => {
+      const resolved = resolvePlanPassage(passage);
+      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) return;
+      keys.push(makePassageKey(day.date, resolved.displayText));
+    });
+  });
+  return keys;
+}
+
+export function isChapterMarkedCompleteInPlan(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): boolean {
+  const keys = findPlanPassageKeysForChapter(dailyReadings, book, chapter);
+  if (keys.length === 0) {
+    return completedPassages.includes(`${book} ${chapter}`);
+  }
+  return keys.every((key) => completedPassages.includes(key));
+}
+
+export function isValidPlanPassage(p: StructuredPassage | null | undefined): boolean {
+  return resolvePlanPassage(p) !== null;
+}
+
+export type PlanPaceStats = {
+  passagesLeft: number;
+  daysLeft: number;
+  passagesPerDay: number;
+  passagesToCatchUp: number;
+  catchUpPace: number;
+};
+
+const EMPTY_PLAN_PACE_STATS: PlanPaceStats = {
+  passagesLeft: 0,
+  daysLeft: 0,
+  passagesPerDay: 0,
+  passagesToCatchUp: 0,
+  catchUpPace: 0,
+};
+
+/** Pace metrics based on remaining plan passage slots (aligned with overall progress). */
+export function calculatePlanPaceStats(
+  dailyReadings: DailyReading[] | undefined | null,
+  completedPassages: string[],
+  today: Date = startOfDay(new Date()),
+): PlanPaceStats {
+  if (!dailyReadings?.length) return EMPTY_PLAN_PACE_STATS;
+
+  const readingDays = dailyReadings
+    .map((day) => ({ day, date: parseDay(day.date) }))
+    .filter((x) => isValid(x.date))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const lastReadingDate = readingDays[readingDays.length - 1]?.date;
+  if (!lastReadingDate) return EMPTY_PLAN_PACE_STATS;
+
+  const { passagesLeft } = countPlanPassageProgress(dailyReadings, completedPassages);
+
+  let passagesToCatchUp = 0;
+  readingDays.forEach(({ day, date }) => {
+    if (!isBefore(date, today)) return;
+    day.passages?.forEach((passage) => {
+      if (!isCountablePlanPassage(passage)) return;
+      const done = isPassageCompletedForPlan(day.date, passage.displayText, completedPassages);
+      if (!done) passagesToCatchUp += 1;
+    });
+  });
+
+  const daysLeft = Math.max(0, differenceInCalendarDays(lastReadingDate, today) + 1);
+  const passagesPerDay =
+    daysLeft > 0 && passagesLeft > 0
+      ? parseFloat((passagesLeft / daysLeft).toFixed(2))
+      : 0;
+  const catchUpPace =
+    daysLeft > 0 && passagesToCatchUp > 0
+      ? parseFloat((passagesToCatchUp / daysLeft).toFixed(2))
+      : 0;
+
+  return { passagesLeft, daysLeft, passagesPerDay, passagesToCatchUp, catchUpPace };
 }

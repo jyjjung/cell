@@ -2,17 +2,26 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Link2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Link2, Loader2, ExternalLink } from 'lucide-react';
+import { format } from 'date-fns';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useAllChatMessages } from '@/hooks/use-all-chat-messages';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatLinks } from '@/lib/chat-media-extract';
-import { PageHeader } from '@/components/ui/page-layout';
+import { chatLinkFaviconUrl, chatLinkHostname } from '@/lib/chat-url-utils';
+import { NavPageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
-import ChatLinkCard from '@/components/chat/ChatLinkCard';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 type GlobalLink = {
   id: string;
@@ -26,6 +35,7 @@ type GlobalLink = {
 
 export default function AllChatLinksPage() {
   const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
   const usersById = useUsersById();
@@ -68,48 +78,94 @@ export default function AllChatLinksPage() {
   const loading = loadingChats || (chatIds.length > 0 && loadingMessages);
 
   return (
-    <div className="page-container max-w-3xl space-y-6 pb-32">
-      <PageHeader
-        title="All Links"
+    <div className="page-container">
+      <NavPageHeader
         action={
-          <Button asChild variant="outline" className="h-9 rounded-xl px-3 text-[10px] font-semibold uppercase tracking-[0.16em]">
+          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
             <Link href="/chat">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t.back}
             </Link>
           </Button>
         }
       />
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="empty-inline py-12">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : links.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 py-16 text-center">
-          <Link2 className="mb-3 h-10 w-10 text-muted-foreground/30" />
-          <p className="font-semibold text-foreground">No links yet</p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            Links shared in your chats will appear here.
-          </p>
+        <div className="empty-inline">
+          <Link2 className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="font-semibold text-foreground">{t.noLinksYetChat}</p>
+          <p className="text-micro-label mt-1">{t.linksSharedHint}</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          {links.map((link, i) => (
-            <motion.div
-              key={link.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.03, 0.3) }}
-            >
-              <ChatLinkCard
-                url={link.url}
-                displayUrl={link.displayUrl}
-                senderLabel={link.senderLabel}
-                chatName={link.chatName}
-              />
-            </motion.div>
-          ))}
+        <div className="admin-table-wrap page-responsive-table">
+          <Table className="admin-table">
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead>{t.links}</TableHead>
+                <TableHead>{t.chat}</TableHead>
+                <TableHead>{t.adminName}</TableHead>
+                <TableHead>{t.date}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {links.map((link) => {
+                const favicon = chatLinkFaviconUrl(link.url);
+                const host = chatLinkHostname(link.url);
+                const label = link.displayUrl ?? link.url;
+                return (
+                  <TableRow key={link.id} className="border-white/5 hover:bg-white/5">
+                    <TableCell className="responsive-table-primary py-2 whitespace-normal">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-start gap-2.5 min-w-0"
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+                          {favicon ? (
+                            <img
+                              src={favicon}
+                              alt=""
+                              className="h-4 w-4 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <Link2 className="h-3.5 w-3.5 text-primary" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium break-words group-hover:text-primary transition-colors">
+                            {label}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground break-all">{host}</p>
+                        </div>
+                        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      </a>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.chat}>
+                      <span className="text-sm break-words">{link.chatName}</span>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.adminName}>
+                      <span className="text-sm text-muted-foreground break-words">{link.senderLabel || '—'}</span>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.date}>
+                      <span className="text-sm text-muted-foreground">
+                        {link.createdAtMillis > 0
+                          ? format(new Date(link.createdAtMillis), 'MMM d, yyyy')
+                          : '—'}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

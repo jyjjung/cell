@@ -11,15 +11,25 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { useAuth } from '@/contexts/auth-context';
 import { primeMediaUrls, STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 
+import { useWorshipData } from '@/contexts/worship-data-context';
+
 const SONGS_COLLECTION = 'worshipSongs';
 
 export function useWorshipSongs(enabled = true) {
+  const worshipData = useWorshipData();
+  const useShared = enabled && worshipData !== null;
   const { currentUser } = useAuth();
   const [songs, setSongs] = useState<WorshipSong[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!useShared);
 
   useEffect(() => {
-    if (!enabled || !currentUser) { setSongs([]); setLoading(false); return; }
+    if (useShared || !enabled || !currentUser) {
+      if (!useShared) {
+        setSongs([]);
+        setLoading(false);
+      }
+      return;
+    }
     const q = query(collection(db, SONGS_COLLECTION), orderBy('title', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
@@ -31,7 +41,7 @@ export function useWorshipSongs(enabled = true) {
       );
     }, () => setLoading(false));
     return unsub;
-  }, [enabled, currentUser]);
+  }, [useShared, enabled, currentUser?.uid]);
 
   /** Create a new song with no chord sheets yet */
   const addSong = useCallback(async (title: string, artist?: string): Promise<string> => {
@@ -106,5 +116,9 @@ export function useWorshipSongs(enabled = true) {
     await deleteDoc(doc(db, SONGS_COLLECTION, song.id));
   }, []);
 
-  return { songs, loading, addSong, updateSong, addChordSheet, removeChordSheet, deleteSong };
+  return {
+    songs: useShared ? worshipData.songs : songs,
+    loading: useShared ? worshipData.songsLoading : loading,
+    addSong, updateSong, addChordSheet, removeChordSheet, deleteSong,
+  };
 }

@@ -16,30 +16,30 @@ interface CommunityTimelineProps {
 }
 
 export const CommunityTimeline = React.memo(({ timelineItems, t, handleLink, onItemSelect }: CommunityTimelineProps) => (
-    <section className="space-y-8">
-        <div className="flex items-center justify-between border-b border-border/50 pb-4">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-success/60">{t.schedule}</p>
-            <h2 className="text-base font-black tracking-tight uppercase tracking-[0.1em]">{t.communityTimeline}</h2>
+    <section className="stack-gap">
+        <div className="panel-header border-b border-border/50 pb-3">
+          <div>
+            <p className="text-micro-label">{t.schedule}</p>
+            <h2 className="panel-title">{t.communityTimeline}</h2>
           </div>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleLink('/events')} 
-            className="rounded-xl font-black text-[10px] uppercase tracking-widest text-primary hover:bg-primary/5 transition-all"
+            className="text-primary"
           >
             {t.calendar} <ArrowRight className="ml-1 h-3 w-3"/>
           </Button>
         </div>
-        <div className="space-y-4">
+        <div className="stack-gap-sm">
           <AnimatePresence mode="popLayout">
           {timelineItems.length === 0 ? (
             <motion.p 
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.3 }}
-                className="glass-thin text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 rounded-[2rem]"
+                animate={{ opacity: 1 }}
+                className="empty-inline glass-thin rounded-lg"
             >
-                Clear Horizon
+                {t.clearHorizon}
             </motion.p>
           ) : (
             timelineItems.map((item, i) => (
@@ -48,30 +48,28 @@ export const CommunityTimeline = React.memo(({ timelineItems, t, handleLink, onI
                 initial={{ opacity: 0, scale: 0.98, x: -10 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                whileTap={{ scale: 0.98 }}
                 onClick={() => onItemSelect(item)} 
-                className="w-full flex items-center gap-6 p-6 rounded-[2.5rem] glass-thin hover:ring-primary/30 transition-all group/event text-left"
+                className="surface-row w-full hover:ring-primary/20 transition-all group/event text-left"
               >
-                <div className="text-center w-16 shrink-0 border-r border-border/30 group-hover/event:border-primary/20 pr-6 transition-colors">
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover/event:opacity-90 group-hover/event:text-primary transition-all font-mono">
+                <div className="text-center w-12 shrink-0 border-r border-border/30 pr-3">
+                  <p className="text-micro-label">
                     {format(item.date, "EEE")}
                   </p>
-                  <p className="text-3xl font-black leading-none mt-1 group-hover/event:scale-110 transition-transform tabular-nums">
+                  <p className="text-lg font-semibold leading-none mt-0.5 tabular-nums">
                     {format(item.date, "d")}
                   </p>
                 </div>
                 <div className="min-w-0">
-                  <p className="font-black text-lg tracking-tight truncate uppercase tracking-tighter text-white/90 group-hover/event:text-white">
+                  <p className="font-semibold text-sm truncate">
                     {item.title}
                   </p>
                   <span className={cn(
-                    "inline-block text-[9px] font-black uppercase tracking-[0.2em] mt-2 px-2 py-0.5 rounded-full border",
+                    "inline-block text-micro-label mt-1 px-2 py-0.5 rounded-full border",
                     item.type === 'cleaning' ? "bg-green-500/10 text-green-500 border-green-500/20" : 
                     item.type === 'qt' ? "bg-primary/10 text-primary border-primary/20" : 
                     "bg-orange-500/10 text-orange-500 border-orange-500/20"
                   )}>
-                    {item.type === 'cleaning' ? 'Cleaning Duty' : item.type === 'qt' ? 'QT Service' : item.category || 'Event'}
+                    {item.type === 'cleaning' ? t.cleaningDuty : item.type === 'qt' ? t.qtSharing : item.category || t.eventLabel}
                   </span>
                 </div>
               </motion.button>

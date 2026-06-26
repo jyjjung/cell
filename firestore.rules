@@ -197,8 +197,24 @@ service cloud.firestore {
       function hasMessagePayload() {
         return request.resource.data.keys().hasAny([
           'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId',
-          'qtDate', 'cleaningDate', 'songId', 'threadParentId', 'systemEvent',
+          'qtDate', 'cleaningDate', 'songId', 'threadParentId', 'systemEvent', 'poll',
         ]);
+      }
+
+      function isValidPollMap(poll) {
+        return poll is map
+          && poll.question is string
+          && poll.question.size() > 0
+          && poll.question.size() <= 500
+          && poll.options is list
+          && poll.options.size() >= 2
+          && poll.options.size() <= 6;
+      }
+
+      function hasValidPollPayload() {
+        return request.resource.data.keys().hasAll(['poll', 'pollVotes'])
+          && isValidPollMap(request.resource.data.poll)
+          && request.resource.data.pollVotes is map;
       }
 
       // Admins cannot see all chats; strictly member-only.
@@ -249,7 +265,8 @@ service cloud.firestore {
                        && request.resource.data.createdAt == request.time
                        && request.resource.data.seenBy.size() == 1
                        && request.resource.data.seenBy[0] == request.auth.uid
-                       && hasMessagePayload();
+                       && (hasMessagePayload() || hasValidPollPayload())
+                       && (!request.resource.data.keys().hasAny(['poll']) || hasValidPollPayload());
 
         allow update: if isMember()
                         && (
@@ -257,10 +274,13 @@ service cloud.firestore {
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                            // Allow updating 'reactions'
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
+                           // Poll votes
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes']) && resource.data.keys().hasAny(['poll'])) ||
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes', 'pollUpdatedAt']) && resource.data.keys().hasAny(['poll'])) ||
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
                            // Soft delete
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
                         );
 
         match /thread/{threadMessageId} {

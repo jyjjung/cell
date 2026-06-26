@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { format, parseISO, isValid, differenceInDays, subDays } from 'date-fns';
+import { format, parseISO, isValid, subDays } from 'date-fns';
 import { DailyReading } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -11,6 +11,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface ReadingHeatmapProps {
   dailyReadings: DailyReading[];
@@ -19,11 +21,13 @@ interface ReadingHeatmapProps {
 }
 
 export default function ReadingHeatmap({ dailyReadings, completedPassages, daysToShow = 90 }: ReadingHeatmapProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+
   const heatmapData = useMemo(() => {
     const today = new Date();
     const data = [];
 
-    // Map plan to date -> count
     const planMap = new Map<string, { total: number, complete: number }>();
 
     dailyReadings.forEach(day => {
@@ -35,7 +39,7 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
       const total = validPassages.length;
       const complete = validPassages.filter(p =>
         completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-        completedPassages.includes(p.displayText) // legacy fallback
+        completedPassages.includes(p.displayText)
       ).length;
       planMap.set(key, { total, complete });
     });
@@ -56,15 +60,13 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
     return data;
   }, [dailyReadings, completedPassages, daysToShow]);
 
-  // Split into weeks (cols of 7 days)
   type HeatmapDay = { date: Date, key: string, total: number, complete: number, hasReading: boolean };
   const columns: (HeatmapDay | null)[][] = [];
   let currentCol: (HeatmapDay | null)[] = [];
 
-  // Align to Sunday start
   const firstDay = heatmapData[0]?.date.getDay() || 0;
   for (let i = 0; i < firstDay; i++) {
-    currentCol.push(null); // pad empty
+    currentCol.push(null);
   }
 
   heatmapData.forEach(day => {
@@ -80,11 +82,22 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
     columns.push(currentCol);
   }
 
+  const getTooltipLabel = (day: HeatmapDay) => {
+    const dateStr = format(day.date, 'MMM d, yyyy');
+    if (!day.hasReading) return `${t.noAssignedReading} · ${dateStr}`;
+    const status = day.complete === day.total
+      ? t.readingCompleted
+      : day.complete > 0
+        ? t.readingPartial
+        : t.readingMissed;
+    return `${status} · ${dateStr}`;
+  };
+
   return (
-    <div className="glass-card p-6 rounded-3xl w-full overflow-x-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-black uppercase tracking-widest text-primary/80">Reading Consistency</h3>
-        <p className="text-xs text-muted-foreground font-medium">Last {daysToShow} days</p>
+    <div className="widget-surface w-full overflow-x-auto">
+      <div className="panel-header">
+        <h3 className="panel-title">{t.readingConsistency}</h3>
+        <p className="text-micro-label">{t.lastNDays(daysToShow)}</p>
       </div>
 
       <div className="flex gap-1.5 min-w-max">
@@ -94,7 +107,7 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
               {col.map((day, y) => {
                 if (!day) return <div key={y} className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm invisible" />;
 
-                let intensityClass = 'bg-muted/30 border border-transparent'; // no reading / missed
+                let intensityClass = 'bg-muted/30 border border-transparent';
                 if (day.hasReading) {
                   if (day.complete === day.total) {
                     intensityClass = "bg-primary border border-primary/50";
@@ -106,17 +119,14 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
                 }
 
                 const ratio = day.hasReading ? `${day.complete}/${day.total}` : '0/0';
-                const label = day.hasReading
-                  ? `${day.complete === day.total ? 'Completed' : day.complete > 0 ? 'Partial' : 'No'} reading on ${format(day.date, 'MMM d, yyyy')}`
-                  : `No assigned reading on ${format(day.date, 'MMM d, yyyy')}`;
 
                 return (
                   <Tooltip key={day.key} delayDuration={0}>
                     <TooltipTrigger asChild>
                       <div className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[4px] sm:rounded-[5px] transition-all hover:scale-125 cursor-pointer z-10", intensityClass)} />
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs rounded-xl font-medium px-3 py-1.5 bg-card border-border shadow-xl">
-                      {label} <span className="text-muted-foreground ml-1">({ratio})</span>
+                    <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
+                      {getTooltipLabel(day)} <span className="text-muted-foreground ml-1">({ratio})</span>
                     </TooltipContent>
                   </Tooltip>
                 );
@@ -126,15 +136,15 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
         </TooltipProvider>
       </div>
 
-      <div className="flex items-center gap-2 mt-4 text-[10px] uppercase font-bold text-muted-foreground tracking-wider justify-end">
-        Less
+      <div className="flex items-center gap-2 mt-3 text-micro-label justify-end">
+        {t.less}
         <div className="flex gap-1">
           <div className="w-3 h-3 rounded-sm bg-muted/30" />
           <div className="w-3 h-3 rounded-sm bg-muted/50 border border-input" />
           <div className="w-3 h-3 rounded-sm bg-primary/40" />
           <div className="w-3 h-3 rounded-sm bg-primary" />
         </div>
-        More
+        {t.more}
       </div>
     </div>
   );

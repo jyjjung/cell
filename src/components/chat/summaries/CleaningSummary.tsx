@@ -65,10 +65,10 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
                 <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
                     <ListTodo className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Facility Roster</span>
+                <span className="text-micro-label">Cleaning roster</span>
             </div>
-            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{day?.name || 'Cleaning Session'}</h3>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{formatDateText(date)}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{day?.name || 'Cleaning'}</h3>
+            <p className="text-micro-label">{formatDateText(date)}</p>
           </div>
         </div>
 
@@ -83,13 +83,13 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
                 </div>
             ))}
             {assignedUsers.length === 0 && (
-                <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-2 text-[10px] font-medium text-muted-foreground">No assigned personnel</div>
+                <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-2 text-micro-label text-muted-foreground">No one assigned</div>
             )}
         </div>
 
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
-            Access System Status
+          <span className="text-micro-label transition-colors group-hover:text-foreground">
+            View schedule
           </span>
         </div>
       </div>

@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -18,22 +17,19 @@ import { CommandMenu } from './command-menu';
 import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 
-const DynamicLakeWallpaper = dynamic(() => import('./dynamic-lake-wallpaper'), {
-  ssr: false,
-});
-
 function GuestShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isLanding = pathname === '/';
+
   return (
     <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col bg-background">
-      <DynamicLakeWallpaper />
-      <div className="relative z-10 flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="flex-grow flex flex-col">{children}</div>
-        <Footer />
+      <div className="relative z-10 flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden">
+        <div className={cn('flex-grow flex flex-col', !isLanding && 'page-shell')}>{children}</div>
       </div>
+      <Footer />
     </main>
   );
 }
@@ -50,12 +46,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
-  const hour = new Date().getHours();
-  const isSunday = new Date().getDay() === 0;
-  useGrantSecretAchievement('midnight', !!currentUser && !loadingAuth && hour === 0);
-  useGrantSecretAchievement('early-bird', !!currentUser && !loadingAuth && hour >= 5 && hour < 7);
-  useGrantSecretAchievement('sunday', !!currentUser && !loadingAuth && isSunday);
-  useGrantSecretAchievement('command-menu', !!currentUser && !loadingAuth && commandMenuOpen);
   const showReadingsTabs =
     pathname.startsWith('/bible-checklist') ||
     pathname.startsWith('/full-plan') ||
@@ -111,9 +101,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
       <SidebarInset className="min-w-0 bg-background h-svh overflow-hidden flex flex-col">
-        <DynamicLakeWallpaper />
-
-        <div className="flex-1 flex flex-col min-h-0 relative z-10">
+        <div className="flex-1 flex flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
@@ -142,8 +130,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </main>
-            <Footer />
           </div>
+          <Footer />
         </div>
         {showReadingsTabs && <ReadingsHubTabs />}
         {showScheduleTabs && <ScheduleHubTabs />}
@@ -156,15 +144,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="glass-elevated p-4 rounded-2xl flex items-center justify-between gap-4"
+              className="notice-surface flex items-center justify-between gap-4 p-4"
             >
               <div className="flex items-center gap-3">
-                <div className="glass-thin p-2 rounded-xl">
+                <div className="rounded-lg bg-muted p-2">
                   <Bell className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <p className="text-foreground font-bold text-sm">Stay Updated</p>
-                  <p className="text-muted-foreground text-xs">Enable push notifications.</p>
+                  <p className="text-foreground font-semibold text-sm">Turn on notifications</p>
+                  <p className="text-muted-foreground text-xs">Get alerts for chat and duties.</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -179,7 +167,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     setShowPermissionBanner(false);
                     router.push('/profile');
                   }}
-                  className="glass-thin px-4 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-all"
+                  className="bg-primary px-4 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground active:scale-95 transition-all"
                 >
                   Set Up
                 </button>

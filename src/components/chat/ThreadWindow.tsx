@@ -87,7 +87,7 @@ export default function ThreadWindow({
         if (diff > 3600000) {
           content.push(
             <div key={`time-${msg.id}`} className="py-6 flex justify-center w-full">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+              <span className="text-micro-label text-muted-foreground/40">
                 {formatMessageDate(msg.createdAt.toDate())}
               </span>
             </div>
@@ -115,7 +115,7 @@ export default function ThreadWindow({
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-[12px] font-black text-foreground uppercase tracking-widest">Thread</h1>
+        <h1 className="text-micro-label font-semibold text-foreground">{t.thread}</h1>
         <div className="w-10" />
       </header>
 
@@ -151,7 +151,7 @@ export default function ThreadWindow({
                       </div>
                       <div className="flex items-center gap-4 mt-6 mb-4">
                         <div className="h-px bg-border flex-1" />
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{messages.length} Replies</span>
+                        <span className="text-micro-label text-muted-foreground">{t.replyCount(messages.length)}</span>
                         <div className="h-px bg-border flex-1" />
                       </div>
                   </div>
@@ -166,12 +166,13 @@ export default function ThreadWindow({
         </div>
       </div>
 
-      <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
+      <div className="px-3 pb-3 pt-1 shrink-0">
           {/* We need to pass parentMessageId down to MessageInput so it uses useThreadMessages instead */}
           <MessageInput 
               chatId={chatId}
               parentMessageId={parentMessageId}
               messageActions={{ sendMessage, sendImageMessage }}
+              attachmentsOnlyPhoto
           />
       </div>
 

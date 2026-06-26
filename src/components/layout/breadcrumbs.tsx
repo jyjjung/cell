@@ -1,94 +1,68 @@
 "use client";
 
 import React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavLabel, useChatNavLabel } from '@/hooks/use-nav-label';
+import { getNavLabelForPath } from '@/lib/nav-labels';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
-const routeLabels: Record<string, string> = {
-  '/': 'Home',
-  '/chat': 'Chat',
-  '/chat/photos': 'All Photos',
-  '/chat/links': 'All Links',
-  '/bible-checklist': 'Reading Plan',
-  '/full-plan': 'Full Plan',
-  '/memorize': 'Memory Verses',
-  '/members': 'Members',
-  '/events': 'Events',
-  '/qt': 'QT Roster',
-  '/cleaning-roster': 'Cleaning Roster',
-  '/leaderboard': 'Community Progress',
-  '/announcements': 'Announcements',
-  '/notifications': 'Notifications',
-  '/profile': 'Profile',
-  '/admin': 'Admin',
-  '/worship': 'Worship Portal',
-  '/media': 'Resources',
-};
+const CHAT_SUBPAGES = new Set(['photos', 'links']);
 
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const router = useRouter();
   const isMobile = useIsMobile();
+  const currentLabel = useNavLabel();
+  const { currentUser } = useAuth();
+  const lang = (currentUser?.preferredLanguage || 'en') as 'en' | 'ko';
+  const t = translations[lang];
   const pathsegments = pathname.split('/').filter(Boolean);
+  const chatId = pathname.startsWith('/chat/') ? pathsegments[1] : null;
+  const chatLabel = useChatNavLabel(chatId);
 
   const crumbs = React.useMemo(() => {
-    const items = [{ href: '/', label: 'Home', icon: Home }];
+    const items: { href: string; label: string; icon?: typeof Home }[] = [
+      { href: '/', label: t.home, icon: Home },
+    ];
     let currentPath = '';
 
-    pathsegments.forEach((segment) => {
+    pathsegments.forEach((segment, index) => {
       currentPath += `/${segment}`;
-      let label = routeLabels[currentPath];
-
-      if (!label && currentPath.startsWith('/chat/') && segment.length > 5) {
-        label = 'Conversation';
-      }
+      const isChatIdCrumb =
+        currentPath.startsWith('/chat/') &&
+        !CHAT_SUBPAGES.has(segment) &&
+        index === pathsegments.length - 1;
 
       items.push({
         href: currentPath,
-        label: label || segment.charAt(0).toUpperCase() + segment.slice(1)
-      } as any);
+        label: isChatIdCrumb ? chatLabel : getNavLabelForPath(currentPath, lang),
+      });
     });
 
     return items;
-  }, [pathsegments]);
+  }, [pathsegments, lang, t.home, chatLabel]);
 
   if (pathname === '/') return null;
 
-  // Mobile: show only current page name + back button
   if (isMobile) {
-    const parentCrumb = crumbs.length >= 2 ? crumbs[crumbs.length - 2] : null;
-    const currentCrumb = crumbs[crumbs.length - 1];
-    const showBackButton = pathsegments.length > 1;
-
     return (
-      <nav aria-label="Breadcrumb" className="flex items-center">
-        {showBackButton && parentCrumb && (
-          <motion.button
-            initial={{ opacity: 0, x: -4 }}
-            animate={{ opacity: 1, x: 0 }}
-            onClick={() => router.back()}
-            className="glass-thin flex items-center gap-1 h-9 px-2 rounded-xl text-muted-foreground hover:text-foreground transition-all active:scale-95"
-            aria-label={`Back to ${parentCrumb.label}`}
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" />
-          </motion.button>
-        )}
+      <nav aria-label="Breadcrumb" className="flex items-center min-w-0">
         <motion.span
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={cn("text-sm font-bold text-foreground", showBackButton ? "ml-1" : "ml-0.5")}
+          className="text-sm font-bold text-foreground truncate"
         >
-          {currentCrumb.label}
+          {currentLabel}
         </motion.span>
       </nav>
     );
   }
 
-  // Desktop: full breadcrumbs trail
   return (
     <nav aria-label="Breadcrumb" className="flex items-center">
       <ol className="flex items-center gap-1.5">
@@ -110,7 +84,7 @@ export function Breadcrumbs() {
               <Link
                 href={crumb.href}
                 className={cn(
-                  "glass-thin text-xs font-bold uppercase tracking-wider transition-all hover:text-primary active:scale-95 px-1 py-0.5 rounded-md border-transparent",
+                  "text-xs font-medium transition-colors hover:text-primary active:scale-95 px-1 py-0.5 rounded-md max-w-[12rem] truncate",
                   isLast
                     ? "text-foreground"
                     : "text-muted-foreground/60 hover:bg-background/35"

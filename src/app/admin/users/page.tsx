@@ -46,6 +46,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-layout';
+import { translations } from '@/lib/translations';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -58,8 +59,9 @@ type EditUserFormValues = z.infer<typeof editUserSchema>;
 export default function AdminUsersPage() {
   const { allUsers, loading: usersLoading } = useAllUsers();
   const { roles, loading: rolesLoading } = useRoles();
-  const { adminUpdateUserProfile } = useAuth();
+  const { adminUpdateUserProfile, currentUser } = useAuth();
   const { toast } = useToast();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const [editingUser, setEditingUser] = useState<UserProfileData | null>(null);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -234,17 +236,17 @@ export default function AdminUsersPage() {
               {size === "icon" ? <Trash2 className="h-4 w-4" /> : "Delete"}
           </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="rounded-[2.5rem]">
+          <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-black tracking-tighter">Delete User?</AlertDialogTitle>
-              <AlertDialogDescription className="font-medium">
-              Deleting <strong>{user.email}</strong> is irreversible.
+              <AlertDialogTitle className="text-section-title">{t.adminDeleteUser}</AlertDialogTitle>
+              <AlertDialogDescription>
+              {t.adminDeleteUserDesc} <strong>{user.email}</strong>
               </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-2xl h-12 font-bold">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => handleDeleteUser(user)} disabled={isDeleting} className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90">
-              {isDeleting ? 'Deleting...' : 'Delete User'}
+              <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleDeleteUser(user)} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+              {isDeleting ? t.adminDeleting : t.adminYesDelete}
               </AlertDialogAction>
           </AlertDialogFooter>
           </AlertDialogContent>
@@ -258,8 +260,8 @@ export default function AdminUsersPage() {
 
     return (
       <div className={cn(
-        "p-4 rounded-2xl bg-card/20 backdrop-blur-md border border-white/5 space-y-4",
-        isDuplicate && "bg-muted/[0.03] border-border"
+        "widget-surface space-y-3",
+        isDuplicate && "border-primary/20"
       )}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -314,38 +316,38 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="admin-page max-w-6xl">
-      <header className="space-y-4">
+    <div className="admin-page page-container-wide">
+      <header className="space-y-3">
         <PageHeader 
-          title="Users"
+          title={t.adminUsers}
         />
-        <div className="flex flex-col md:flex-row items-center gap-3 w-full">
+        <div className="flex flex-col md:flex-row items-center gap-2 w-full">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search users..."
+              placeholder={t.adminSearchUsers}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-10 rounded-lg bg-card/20 backdrop-blur-xl border-white/5 focus:border-primary/30 transition-all text-sm font-medium"
+              className="pl-9 h-9 rounded-lg text-sm"
             />
           </div>
 
           {selectedUserIds.size > 0 && (
-              <Button onClick={handleBulkApprove} disabled={isBulkApproving} className="h-10 rounded-lg px-4 bg-muted hover:bg-card text-foreground font-semibold whitespace-nowrap shrink-0">
+              <Button onClick={handleBulkApprove} disabled={isBulkApproving} size="sm" className="whitespace-nowrap shrink-0">
                   {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
-                  Approve ({selectedUserIds.size})
+                  {t.adminApproveSelected.replace('{count}', String(selectedUserIds.size))}
               </Button>
           )}
         </div>
       </header>
 
       {duplicateNameSet.size > 0 && (
-        <Alert className="rounded-[2rem] border-border bg-muted p-6 shadow-xl">
+        <Alert className="rounded-2xl border-border bg-muted app-card-sm">
           <AlertTriangle className="h-5 w-5 text-primary" />
           <div className="ml-2">
-            <AlertTitle className="text-lg font-black tracking-tight uppercase">Duplicate Users Detected</AlertTitle>
-            <AlertDescription className="text-sm font-medium opacity-70 mt-1 leading-relaxed">
-              Potential duplicates: <strong className="text-foreground">{Array.from(duplicateNameSet).join(', ')}</strong>. 
+            <AlertTitle className="text-section-title">{t.adminDuplicateUsers}</AlertTitle>
+            <AlertDescription className="text-sm mt-1">
+              {Array.from(duplicateNameSet).join(', ')}
             </AlertDescription>
           </div>
         </Alert>
@@ -353,14 +355,14 @@ export default function AdminUsersPage() {
       
       <section>
         {loading ? (
-            <div className="h-60 flex flex-col items-center justify-center gap-4 opacity-30">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Loading Users</p>
+            <div className="empty-inline gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-micro-label">{t.loading}</p>
             </div>
         ) : filteredUsers.length === 0 ? (
-            <div className="py-24 text-center border-2 border-dashed border-border/50 rounded-[3rem] opacity-30">
-                <Users className="h-12 w-12 mx-auto mb-6" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">No Users Found</p>
+            <div className="empty-inline border border-dashed border-border/50 rounded-2xl">
+                <Users className="h-8 w-8 mb-2 opacity-40" />
+                <p className="text-micro-label">{t.adminNoUsersFound}</p>
             </div>
         ) : (
           <>
@@ -382,11 +384,11 @@ export default function AdminUsersPage() {
                         disabled={pendingUsers.length === 0}
                       />
                     </TableHead>
-                    <TableHead className="font-bold text-xs min-w-[200px]">User</TableHead>
-                    <TableHead className="font-bold text-xs min-w-[120px]">Authorization</TableHead>
-                    <TableHead className="font-bold text-xs min-w-[150px]">Roles</TableHead>
-                    <TableHead className="font-bold text-xs min-w-[100px]">Tier</TableHead>
-                    <TableHead className="text-right font-bold text-xs min-w-[120px]">Actions</TableHead>
+                    <TableHead className="min-w-[200px]">{t.adminUser}</TableHead>
+                    <TableHead className="min-w-[120px]">{t.adminAuthorization}</TableHead>
+                    <TableHead className="min-w-[150px]">{t.adminRoles}</TableHead>
+                    <TableHead className="min-w-[100px]">{t.adminTier}</TableHead>
+                    <TableHead className="text-right min-w-[120px]">{t.adminActions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -430,12 +432,12 @@ export default function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="py-2">
                           {(user.isApproved || user.isAdmin) ? (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border/50 bg-muted text-primary font-bold text-[10px]">
-                                <ShieldCheck className="h-3 w-3 mr-1" /> Authorized
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border/50 bg-muted text-primary text-[10px]">
+                                <ShieldCheck className="h-3 w-3 mr-1" /> {t.adminApproved}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border bg-muted text-primary font-bold text-[10px] animate-pulse">
-                                <Clock className="h-3 w-3 mr-1" /> Pending
+                            <Badge variant="outline" className="h-5 px-2 rounded-lg border-border bg-muted text-primary text-[10px] animate-pulse">
+                                <Clock className="h-3 w-3 mr-1" /> {t.adminPending}
                             </Badge>
                           )}
                       </TableCell>
@@ -448,7 +450,7 @@ export default function AdminUsersPage() {
                                   </Badge>
                                 ))
                               ) : (
-                                <span className="text-xs font-medium text-muted-foreground">Standard</span>
+                                <span className="text-xs font-medium text-muted-foreground">{t.adminStandard}</span>
                               )}
                           </div>
                       </TableCell>
@@ -456,12 +458,12 @@ export default function AdminUsersPage() {
                         {user.isAdmin ? (
                             <div className="flex items-center gap-1.5 text-primary">
                                 <ShieldAlert className="h-3 w-3" />
-                                <span className="text-xs font-semibold">Admin</span>
+                                <span className="text-xs font-semibold">{t.admin}</span>
                             </div>
                         ) : (
                             <div className="flex items-center gap-1.5 text-muted-foreground">
                                 <BadgeCheck className="h-3 w-3" />
-                                <span className="text-xs font-medium">Member</span>
+                                <span className="text-xs font-medium">{t.adminMember}</span>
                             </div>
                         )}
                       </TableCell>
@@ -475,7 +477,7 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
+            <div className="md:hidden space-y-3">
               {filteredUsers.map((user) => (
                 <UserMobileCard key={user.uid} user={user} />
               ))}
@@ -486,28 +488,28 @@ export default function AdminUsersPage() {
 
       {/* Edit User Dialog */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-        <DialogContent className="rounded-[2.5rem] shadow-2xl">
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tighter">Edit User</DialogTitle>
-            <DialogDescription className="font-medium">
-              Update details for {editingUser?.email}.
+            <DialogTitle className="text-section-title">{t.adminEditUser}</DialogTitle>
+            <DialogDescription>
+              {editingUser?.email}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-6 pt-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">First Name</FormLabel>
-                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted" disabled={isSaving} /></FormControl>
+                      <FormLabel className="text-micro-label">{t.firstName}</FormLabel>
+                      <FormControl><Input {...field} className="h-10 rounded-lg" disabled={isSaving} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField control={form.control} name="lastName" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Last Name</FormLabel>
-                      <FormControl><Input {...field} className="h-12 rounded-xl bg-muted" disabled={isSaving} /></FormControl>
+                      <FormLabel className="text-micro-label">{t.lastName}</FormLabel>
+                      <FormControl><Input {...field} className="h-10 rounded-lg" disabled={isSaving} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -515,18 +517,18 @@ export default function AdminUsersPage() {
               </div>
               <FormField control={form.control} name="roleIds" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Roles</FormLabel>
+                    <FormLabel className="text-micro-label">{t.adminRoles}</FormLabel>
                     <FormControl>
-                      <MultiSelect options={roleOptions} selected={field.value || []} onChange={field.onChange} placeholder="Select permissions..." />
+                      <MultiSelect options={roleOptions} selected={field.value || []} onChange={field.onChange} placeholder="Select roles…" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <DialogFooter className="pt-4 flex gap-2">
-                <Button type="button" variant="outline" className="rounded-2xl h-12 font-bold px-8 flex-grow" onClick={() => setIsEditUserOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={isSaving} className="rounded-2xl h-12 font-black px-8 flex-grow">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+              <DialogFooter className="pt-2 flex gap-2">
+                <Button type="button" variant="outline" className="flex-grow" onClick={() => setIsEditUserOpen(false)}>{t.adminCancel}</Button>
+                <Button type="submit" disabled={isSaving} className="flex-grow">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t.adminSaveChanges}
                 </Button>
               </DialogFooter>
             </form>

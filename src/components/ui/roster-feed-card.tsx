@@ -37,17 +37,17 @@ export function RosterFeedCard({
         )}
       >
         <div className="w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border shadow-inner bg-muted border-border">
-          <span className="text-[9px] font-black uppercase tracking-widest leading-none text-primary">
+          <span className="text-micro-label leading-none text-primary">
             {format(date, "MMM")}
           </span>
-          <span className="text-2xl font-black leading-tight text-primary">{format(date, "d")}</span>
+          <span className="text-2xl font-semibold leading-tight text-primary">{format(date, "d")}</span>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary">{label}</span>
+            <span className="text-micro-label text-primary">{label}</span>
           </div>
-          <p className="font-bold text-sm text-foreground tracking-tight">{title}</p>
+          <p className="font-semibold text-sm text-foreground tracking-tight">{title}</p>
           {description && <div className="mt-1">{description}</div>}
         </div>
 

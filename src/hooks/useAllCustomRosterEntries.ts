@@ -6,7 +6,6 @@ import type { CustomRosterEntry, RosterDefinition } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
-  collectionGroup,
   getDocs,
   getDocsFromCache,
   orderBy,
@@ -48,13 +47,12 @@ async function loadDefinitions(): Promise<RosterDefinition[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
 }
 
-async function loadEntriesWithMeta(
+async function loadEntriesForDefinition(
+  def: RosterDefinition,
   fromDate: string,
-  definitions: RosterDefinition[],
 ): Promise<CustomRosterEntryWithMeta[]> {
-  const defMap = new Map(definitions.map((d) => [d.id, d.name]));
   const q = query(
-    collectionGroup(db, ENTRIES_SUBCOLLECTION),
+    collection(db, ROSTER_DEFINITIONS_COLLECTION, def.id, ENTRIES_SUBCOLLECTION),
     where('date', '>=', fromDate),
     orderBy('date', 'asc'),
   );
@@ -67,15 +65,24 @@ async function loadEntriesWithMeta(
     snap = await getDocs(q);
   }
 
-  return snap.docs.map((docSnap) => {
-    const defId = docSnap.ref.parent.parent?.id ?? '';
-    return {
-      id: docSnap.id,
-      ...(docSnap.data() as Omit<CustomRosterEntry, 'id'>),
-      rosterDefId: defId,
-      rosterName: defMap.get(defId) ?? 'Roster',
-    };
-  });
+  return snap.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<CustomRosterEntry, 'id'>),
+    rosterDefId: def.id,
+    rosterName: def.name,
+  }));
+}
+
+async function loadEntriesWithMeta(
+  fromDate: string,
+  definitions: RosterDefinition[],
+): Promise<CustomRosterEntryWithMeta[]> {
+  if (definitions.length === 0) return [];
+
+  const batches = await Promise.all(
+    definitions.map((def) => loadEntriesForDefinition(def, fromDate)),
+  );
+  return batches.flat().sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Dashboard helper: cached definitions + one collection-group entries query. */
@@ -121,7 +128,11 @@ export function useAllCustomRosterEntries() {
     });
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && currentUser) void load();
+      if (document.visibilityState === 'visible' && currentUser) {
+        void load().catch((err) => {
+          console.error('[useAllCustomRosterEntries] refresh error:', err);
+        });
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {

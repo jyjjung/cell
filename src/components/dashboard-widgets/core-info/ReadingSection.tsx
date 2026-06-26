@@ -21,30 +21,30 @@ interface ReadingSectionProps {
 }
 
 export const ReadingSection = React.memo(({ title, reading, completedPassages, togglePassageCompletion, handlePassageClick, t, handleLink, emptyMsg, showArchiveLink }: ReadingSectionProps) => (
-    <section className="space-y-8">
-        <div className="flex items-center justify-between border-b border-border/50 pb-4">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{t[title.labelKey]}</p>
-            <h2 className="text-base font-black tracking-tight uppercase tracking-[0.1em]">{t[title.titleKey]}</h2>
+    <section className="stack-gap">
+        <div className="panel-header border-b border-border/50 pb-3">
+          <div>
+            <p className="text-micro-label">{t[title.labelKey]}</p>
+            <h2 className="panel-title">{t[title.titleKey]}</h2>
           </div>
           {showArchiveLink && (
             <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => handleLink('/bible-checklist')} 
-                className="rounded-xl font-black text-[10px] uppercase tracking-widest text-primary hover:bg-primary/5 transition-all"
+                className="text-primary"
             >
                 {t.fullPlan} <ArrowRight className="ml-1 h-3 w-3"/>
             </Button>
           )}
         </div>
-        <div className="space-y-3">
+        <div className="stack-gap-sm">
           <AnimatePresence mode="popLayout">
           {!reading ? (
             <motion.p 
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.3 }}
-                className="glass-thin text-[10px] font-black uppercase tracking-[0.4em] opacity-30 text-center py-10 border-dashed border-border/50 rounded-[2rem]"
+                animate={{ opacity: 1 }}
+                className="empty-inline glass-thin border-dashed border-border/50 rounded-lg"
             >
                 {t[emptyMsg]}
             </motion.p>
@@ -55,26 +55,26 @@ export const ReadingSection = React.memo(({ title, reading, completedPassages, t
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="flex items-center gap-5 p-6 rounded-[2rem] glass-thin hover:ring-primary/30 transition-all group/passage"
+                className="surface-row group/passage"
               >
                 <Checkbox 
                     checked={reading.date 
                       ? completedPassages.includes(makePassageKey(reading.date, p.displayText)) || completedPassages.includes(p.displayText)
                       : completedPassages.includes(p.displayText)} 
                     onCheckedChange={() => togglePassageCompletion(p.displayText, reading.date)} 
-                    className="h-6 w-6 rounded-lg border-primary/20 bg-background/50 hover:bg-primary/10 transition-all" 
+                    className="h-4 w-4" 
                 />
                 <button 
                     onClick={() => handlePassageClick(p.displayText)} 
                     className={cn(
-                        "text-lg font-black tracking-tighter hover:text-primary transition-all text-left flex items-center gap-2", 
+                        "text-sm font-medium hover:text-primary transition-all text-left flex items-center gap-2 flex-grow", 
                         (reading.date
                           ? completedPassages.includes(makePassageKey(reading.date, p.displayText)) || completedPassages.includes(p.displayText)
-                          : completedPassages.includes(p.displayText)) && "line-through opacity-40"
+                          : completedPassages.includes(p.displayText)) && "line-through opacity-50"
                     )}
                 >
                     {p.displayText}
-                    <BookOpenText className="h-4 w-4 opacity-0 group-hover/passage:opacity-40 transition-opacity ml-1" />
+                    <BookOpenText className="h-4 w-4 opacity-0 group-hover/passage:opacity-40 transition-opacity" />
                 </button>
               </motion.div>
             ))

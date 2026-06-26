@@ -16,6 +16,8 @@ import {
 import { expandEventsToOccurrenceRows, parseDay } from "@/lib/event-occurrences";
 import type { AppEvent, CleaningRosterEntry, QTRosterEntry } from "@/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { translations } from "@/lib/translations";
 
 interface CalendarWidgetProps {
   selectedDate: Date;
@@ -23,9 +25,10 @@ interface CalendarWidgetProps {
   events: AppEvent[];
   cleaningRoster: CleaningRosterEntry[];
   qtRoster: QTRosterEntry[];
+  myDutyDateKeys?: Set<string>;
 }
 
-type DayActivity = { event: boolean; cleaning: boolean; qt: boolean };
+type DayActivity = { event: boolean; cleaning: boolean; qt: boolean; myDuty: boolean };
 
 function dateKey(date: Date) {
   return format(date, "yyyy-MM-dd");
@@ -37,7 +40,10 @@ export default function CalendarWidget({
   events,
   cleaningRoster,
   qtRoster,
+  myDutyDateKeys,
 }: CalendarWidgetProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const [month, setMonth] = useState<Date>(startOfMonth(selectedDate));
   const today = startOfToday();
 
@@ -53,7 +59,7 @@ export default function CalendarWidget({
     const map = new Map<string, DayActivity>();
     const touch = (date: Date, key: keyof DayActivity) => {
       const k = dateKey(date);
-      const cur = map.get(k) ?? { event: false, cleaning: false, qt: false };
+      const cur = map.get(k) ?? { event: false, cleaning: false, qt: false, myDuty: false };
       cur[key] = true;
       map.set(k, cur);
     };
@@ -75,20 +81,26 @@ export default function CalendarWidget({
       if (!isBefore(d, today)) touch(d, "qt");
     });
 
+    myDutyDateKeys?.forEach((key) => {
+      const d = parseDay(key);
+      if (!isBefore(d, today)) touch(d, "myDuty");
+    });
+
     return map;
-  }, [events, cleaningRoster, qtRoster, month, today]);
+  }, [events, cleaningRoster, qtRoster, myDutyDateKeys, month, today]);
 
   const modifiers = useMemo(
     () => ({
       hasEvent: (date: Date) => activityByDate.get(dateKey(date))?.event ?? false,
       hasCleaning: (date: Date) => activityByDate.get(dateKey(date))?.cleaning ?? false,
       hasQT: (date: Date) => activityByDate.get(dateKey(date))?.qt ?? false,
+      hasMyDuty: (date: Date) => activityByDate.get(dateKey(date))?.myDuty ?? false,
     }),
     [activityByDate]
   );
 
   return (
-    <div className="glass-card overflow-hidden rounded-xl">
+    <div>
       <Calendar
         mode="single"
         month={month}
@@ -105,12 +117,12 @@ export default function CalendarWidget({
           caption_label: "text-sm font-semibold text-foreground",
           nav: "flex items-center gap-1",
           nav_button:
-            "glass-thin inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground",
+            "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           nav_button_previous: "absolute left-0",
           nav_button_next: "absolute right-0",
           table: "w-full border-collapse",
           head_row: "grid grid-cols-7",
-          head_cell: "py-1 text-center text-[10px] font-medium uppercase text-muted-foreground",
+          head_cell: "py-1 text-center text-micro-label",
           row: "mt-0.5 grid grid-cols-7",
           cell: "relative p-0 text-center focus-within:z-10",
           day: "hidden",
@@ -129,7 +141,8 @@ export default function CalendarWidget({
             const hasEvent = activity?.event;
             const hasCleaning = activity?.cleaning;
             const hasQT = activity?.qt;
-            const hasDots = hasEvent || hasCleaning || hasQT;
+            const hasMyDuty = activity?.myDuty;
+            const hasDots = hasEvent || hasCleaning || hasQT || hasMyDuty;
 
             return (
               <button
@@ -171,6 +184,14 @@ export default function CalendarWidget({
                         )}
                       />
                     )}
+                    {hasMyDuty && (
+                      <span
+                        className={cn(
+                          "h-1 w-1 rounded-full",
+                          isSelected ? "bg-primary-foreground/90" : "bg-violet-500"
+                        )}
+                      />
+                    )}
                   </span>
                 )}
               </button>
@@ -179,19 +200,25 @@ export default function CalendarWidget({
         }}
       />
 
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/40 px-3 py-2 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/40 px-3 py-2 text-micro-label">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-          Event
+          {t.legendEvent}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Cleaning
+          {t.legendCleaning}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-          QT
+          {t.legendQt}
         </span>
+        {myDutyDateKeys && myDutyDateKeys.size > 0 && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+            {t.legendMyDuty}
+          </span>
+        )}
       </div>
     </div>
   );

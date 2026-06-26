@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { translations } from '@/lib/translations';
 
 export default function ChatPhotoUploadButton({
   chatId,
@@ -23,6 +24,7 @@ export default function ChatPhotoUploadButton({
 }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -92,17 +94,17 @@ export default function ChatPhotoUploadButton({
         type="button"
         onClick={() => !disabled && !isUploading && fileInputRef.current?.click()}
         disabled={disabled || isUploading}
-        className="w-full h-12 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] gap-2"
+        className="w-full h-12 rounded-2xl font-semibold text-micro-label gap-2"
       >
         {isUploading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading...
+            {t.uploading}
           </>
         ) : (
           <>
             <ImagePlus className="h-4 w-4" />
-            Add Photos
+            {t.addPhotos}
           </>
         )}
       </Button>

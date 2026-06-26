@@ -26,6 +26,7 @@ import { useAllUsers } from "@/hooks/use-all-users";
 import { useQTRoster } from "@/hooks/useQTRoster";
 import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
+import { translations } from "@/lib/translations";
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState("");
@@ -34,8 +35,8 @@ export default function AdminHubPage() {
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const [isMounted, setIsMounted] = useState(false);
+  const t = translations[currentUser?.preferredLanguage || "en"];
 
-  // --- LIVE DATA SUBSCRIPTIONS ---
   const { allUsers } = useAllUsers();
   const { roster } = useQTRoster();
   const { notifications } = useNotifications();
@@ -60,7 +61,7 @@ export default function AdminHubPage() {
     e.preventDefault();
     setError("");
     const success = await adminPasswordLogin(password);
-    if (!success) setError("Invalid Access Key.");
+    if (!success) setError(t.adminInvalidAccessKey);
   };
 
   const handleLaunch = (path: string) => {
@@ -73,19 +74,19 @@ export default function AdminHubPage() {
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-3">
-            <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
-              <Shield className="h-7 w-7 text-primary" />
+        <div className="w-full max-w-md space-y-4">
+          <div className="text-center space-y-2">
+            <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+              <Shield className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-page-title">Admin</h1>
+            <h1 className="text-page-title">{t.admin}</h1>
           </div>
 
           {currentUser ? (
-            <form onSubmit={handleAdminAuth} className="space-y-6">
+            <form onSubmit={handleAdminAuth} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password" title="Access Key" className="sr-only">
-                  Access Key
+                <Label htmlFor="password" className="sr-only">
+                  {t.adminAccessKey}
                 </Label>
                 <Input
                   id="password"
@@ -93,8 +94,8 @@ export default function AdminHubPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Enter Access Key"
-                  className="h-14 rounded-xl border-border text-center text-lg"
+                  placeholder={t.adminAccessKey}
+                  className="h-11 rounded-xl border-border text-center"
                 />
               </div>
               {error && (
@@ -102,14 +103,14 @@ export default function AdminHubPage() {
                   {error}
                 </p>
               )}
-              <Button type="submit" className="h-12 w-full">
+              <Button type="submit" className="h-10 w-full">
                 <Lock className="mr-2 h-4 w-4" />
-                Authenticate
+                {t.signIn}
               </Button>
             </form>
           ) : (
-            <Button onClick={() => handleLaunch("/login")} className="h-12 w-full">
-              Sign In to Portal
+            <Button onClick={() => handleLaunch("/login")} className="h-10 w-full">
+              {t.adminSignInFirst}
             </Button>
           )}
         </div>
@@ -118,26 +119,26 @@ export default function AdminHubPage() {
   }
 
   const quickActions = [
-    { title: "Announcements", href: "/admin/notifications", icon: Megaphone, badge: scheduledNotifs },
-    { title: "QT Roster", href: "/admin/qt-roster", icon: ListChecks, badge: unassignedRosterDays },
-    { title: "Cleaning Roster", href: "/admin/cleaning-roster", icon: ListTodo },
-    { title: "Events", href: "/admin/events", icon: Calendar },
+    { title: t.announcements, href: "/admin/notifications", icon: Megaphone, badge: scheduledNotifs },
+    { title: t.qtRoster, href: "/admin/qt-roster", icon: ListChecks, badge: unassignedRosterDays },
+    { title: t.cleaningRoster, href: "/admin/cleaning-roster", icon: ListTodo },
+    { title: t.events, href: "/admin/events", icon: Calendar },
   ];
 
   const allSections = [
-    { title: "Users", href: "/admin/users", icon: Users, badge: pendingApprovals },
-    { title: "Roles", href: "/admin/groups", icon: ShieldCheck },
-    { title: "Bible Plan", href: "/admin/bible-plan", icon: BookOpen },
-    { title: "Memory Verses", href: "/admin/memory-verses", icon: Brain },
-    { title: "Chats", href: "/admin/chats", icon: MessageCircle },
+    { title: t.adminUsers, href: "/admin/users", icon: Users, badge: pendingApprovals },
+    { title: t.adminRoles, href: "/admin/groups", icon: ShieldCheck },
+    { title: t.adminBiblePlan, href: "/admin/bible-plan", icon: BookOpen },
+    { title: t.adminMemorization, href: "/admin/memory-verses", icon: Brain },
+    { title: t.adminManageChats, href: "/admin/chats", icon: MessageCircle },
   ];
 
   const NavCard = ({ icon: Icon, title, href, badge }: { icon: React.ElementType; title: string; href: string; badge?: number }) => (
     <button
       onClick={() => handleLaunch(href)}
-      className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+      className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-medium">{title}</span>
       </div>
@@ -150,30 +151,30 @@ export default function AdminHubPage() {
   );
 
   return (
-    <div className="admin-page max-w-4xl">
-      <PageHeader title="Admin" description="Manage community operations from one place." />
+    <div className="admin-page">
+      <PageHeader title={t.admin} description={t.adminHubDesc} />
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">Quick actions</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <section className="space-y-2">
+        <h2 className="text-micro-label">{t.adminQuickActions}</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {quickActions.map((action) => (
             <NavCard key={action.href} {...action} />
           ))}
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">All sections</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <section className="space-y-2">
+        <h2 className="text-micro-label">{t.adminAllSections}</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {allSections.map((section) => (
             <NavCard key={section.href} {...section} />
           ))}
         </div>
       </section>
 
-      <Button onClick={() => handleLaunch("/chat/system")} className="h-12 w-full sm:w-auto">
+      <Button onClick={() => handleLaunch("/chat/system")} className="h-10 w-full sm:w-auto">
         <MessageSquarePlus className="mr-2 h-4 w-4" />
-        Open system chat creator
+        {t.adminOpenSystemChat}
       </Button>
     </div>
   );

@@ -62,7 +62,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
             <span className="truncate">{song.artist}</span>
           </div>
         )}
-        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground group-hover:text-foreground">
+        <p className="mt-1 text-micro-label group-hover:text-foreground">
           {song.chordSheets.length} chart{song.chordSheets.length !== 1 ? 's' : ''}
         </p>
       </div>

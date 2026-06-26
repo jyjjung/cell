@@ -33,54 +33,48 @@ export default function PendingApprovalPage() {
   if (!isMounted || loadingAuth) {
     return (
         <div className="flex h-screen items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-8 text-center max-w-2xl mx-auto space-y-12">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-6 text-center max-w-lg mx-auto stack-gap-sm">
         <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="stack-gap-sm w-full"
         >
-            <div className="relative inline-flex">
-                <div className="p-6 rounded-[2.5rem] bg-primary/5 border border-primary/10">
-                    <ShieldCheck className="h-16 w-16 text-primary animate-pulse" />
+            <div className="relative inline-flex mx-auto">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                    <ShieldCheck className="h-10 w-10 text-primary" />
                 </div>
-                <motion.div 
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                    className="absolute -top-2 -right-2 p-2 rounded-full bg-background border-2 border-primary/20 shadow-xl"
-                >
-                    <Clock className="h-5 w-5 text-primary" />
-                </motion.div>
+                <div className="absolute -top-1 -right-1 p-1.5 rounded-full bg-background border border-primary/20 shadow-sm">
+                    <Clock className="h-4 w-4 text-primary" />
+                </div>
             </div>
 
-            <div className="space-y-4">
-                <h1 className="text-2xl sm:text-2xl font-black tracking-tighter leading-none uppercase">
-                    {t.awaitingAuth}.
+            <div className="stack-gap-sm">
+                <h1 className="text-page-title">
+                    {t.pendingApproval}
                 </h1>
-                <p className="text-lg md:text-xl text-muted-foreground font-medium leading-tight">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                     {t.approvalDesc}
                 </p>
             </div>
 
-            <div className="p-6 rounded-[2rem] bg-muted border border-white/5 italic text-sm text-muted-foreground">
-                "{t.contactAdmin}"
+            <div className="widget-surface p-4 text-sm text-muted-foreground italic">
+                {t.contactAdmin}
             </div>
 
-            <div className="pt-8">
-                <Button 
-                    variant="outline" 
-                    onClick={() => signOutUser()}
-                    className="h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] bg-card/20 backdrop-blur-md border-white/10 hover:bg-destructive hover:text-white transition-all group active:scale-95"
-                >
-                    <LogOut className="mr-3 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                    {t.signOut}
-                </Button>
-            </div>
+            <Button 
+                variant="outline" 
+                onClick={() => signOutUser()}
+                className="h-10 px-6 rounded-lg text-sm"
+            >
+                <LogOut className="mr-2 h-4 w-4" />
+                {t.signOut}
+            </Button>
         </motion.div>
     </div>
   );

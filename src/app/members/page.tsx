@@ -10,19 +10,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search, Users, Cake } from 'lucide-react';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from '@/lib/translations';
 import { format, parseISO, isValid } from 'date-fns';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { PageLoading } from '@/components/ui/loading-spinner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export default function MembersPage() {
   const { allUsers, loading: usersLoading, refreshUsers } = useAllUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
   const { currentUser } = useAuth();
-  useGrantSecretAchievement('members', !!currentUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -61,94 +66,77 @@ export default function MembersPage() {
   const isLoading = !isMounted || usersLoading || rolesLoading || eventsLoading;
 
   if (isLoading) {
-    return (
-      <div className="page-container space-y-8 pb-32">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-14 w-14 rounded-2xl" />
-          <Skeleton className="h-10 w-48 rounded-xl" />
-        </div>
-        {/* Search skeleton */}
-        <Skeleton className="h-12 w-full rounded-2xl" />
-        {/* Grid skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-border/30 bg-card/30">
-              <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-3/4 rounded-lg" />
-                <Skeleton className="h-3 w-1/2 rounded-lg" />
-                <Skeleton className="h-5 w-16 rounded-lg" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (
-    <div className="page-container space-y-8 pb-32">
-      <PageHeader
-        title={t.members}
-      />
+    <div className="page-container">
+      <NavPageHeader />
 
-      {/* Search */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-700 dark:text-zinc-300" />
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder={t.searchMembers}
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="pl-11 h-12 rounded-2xl bg-card/50 border-border/40 focus:border-primary/40 font-medium text-sm backdrop-blur-sm"
+          className="pl-9 h-10 rounded-lg"
         />
-      </motion.div>
+      </div>
 
-      {/* Grid */}
-      <AnimatePresence mode="popLayout">
-        {filteredUsers.length === 0 ? (
-          <EmptyState icon={Users} title={t.noMembersFound} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredUsers.map((user, i) => {
-              const birthday = userBirthdays.get(user.uid);
-              const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
-              return (
-                <Link href={`/members/${user.uid}`} key={user.uid} className="block group">
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.94 }}
-                    transition={{ duration: 0.28, delay: Math.min(i * 0.03, 0.3), ease: [0.22, 1, 0.36, 1] }}
-                    className="flex items-center gap-4 p-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm group-hover:bg-card group-hover:shadow-md group-hover:border-border/70 transition-all cursor-pointer"
-                  >
-                    <div className="h-14 w-14 rounded-full bg-muted border border-border/30 shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                      <PixelAvatar avatar={user.uid === currentUser?.uid ? currentUser?.avatar : user.avatar} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{user.firstName} {user.lastName}</p>
-                      {birthday && (
-                        <div className="flex items-center gap-1.5 mt-0.5 text-primary">
-                          <Cake className="h-3 w-3 shrink-0" />
-                          <span className="text-[11px] font-medium">{birthday}</span>
+      {filteredUsers.length === 0 ? (
+        <EmptyState icon={Users} title={t.noMembersFound} />
+      ) : (
+        <div className="admin-table-wrap page-responsive-table">
+          <Table className="admin-table">
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead>{t.adminName}</TableHead>
+                <TableHead>{t.adminRoles}</TableHead>
+                <TableHead>{t.birthday}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => {
+                const birthday = userBirthdays.get(user.uid);
+                const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
+                return (
+                  <TableRow key={user.uid} className="border-white/5 hover:bg-white/5">
+                    <TableCell className="responsive-table-primary py-2 whitespace-normal">
+                      <Link href={`/members/${user.uid}`} className="flex items-center gap-2.5 group">
+                        <div className="h-8 w-8 rounded-full bg-muted border border-border/30 shrink-0">
+                          <PixelAvatar avatar={user.uid === currentUser?.uid ? currentUser?.avatar : user.avatar} />
                         </div>
-                      )}
-                      <div className="flex flex-wrap gap-1 mt-2">
+                        <span className="text-sm font-semibold break-words group-hover:text-primary transition-colors">
+                          {user.firstName} {user.lastName}
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.adminRoles}>
+                      <div className="flex flex-wrap gap-1">
                         {userRoles.length > 0 ? userRoles.map(name => (
-                          <Badge key={name} variant="secondary" className="h-5 px-2 text-[10px] font-semibold rounded-lg">{name}</Badge>
+                          <Badge key={name} variant="secondary" className="h-5 px-1.5 text-[10px] font-medium rounded-md">{name}</Badge>
                         )) : (
-                          <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium rounded-lg text-zinc-900 dark:text-zinc-100">Member</Badge>
+                          <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium rounded-md">{t.member}</Badge>
                         )}
                       </div>
-                    </div>
-                  </motion.div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </AnimatePresence>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.birthday}>
+                      {birthday ? (
+                        <div className="flex items-center gap-1 text-primary">
+                          <Cake className="h-3.5 w-3.5 shrink-0" />
+                          <span className="text-sm">{birthday}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

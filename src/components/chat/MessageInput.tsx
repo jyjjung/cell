@@ -12,8 +12,8 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { ChatMessage } from '@/types';
-import SlashCommandSelector from './SlashCommandSelector';
+import type { ChatMessage, ChatPoll } from '@/types';
+import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
 
 type MessageActions = {
   sendMessage: (
@@ -27,9 +27,17 @@ type MessageActions = {
     cleaningDate?: string,
     songId?: string,
     songTitle?: string,
-    sheetKey?: string
+    sheetKey?: string,
+    poll?: ChatPoll,
   ) => void | Promise<void>;
   sendImageMessage: (imageUrl: string, replyToId?: string) => void;
+};
+
+type StagedAttachment = {
+  type: 'setlist' | 'roster' | 'song';
+  id: string;
+  label: string;
+  metadata?: Record<string, unknown>;
 };
 
 export default function MessageInput({ 
@@ -37,17 +45,17 @@ export default function MessageInput({
   disabled = false, 
   replyToMessage, 
   onCancelReply,
-  onOpenWorshipCreate,
   parentMessageId,
   messageActions,
+  attachmentsOnlyPhoto = false,
 }: { 
   chatId: string; 
   disabled?: boolean; 
   replyToMessage?: ChatMessage; 
   onCancelReply?: () => void;
-  onOpenWorshipCreate?: (type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => void;
   parentMessageId?: string;
   messageActions?: MessageActions;
+  attachmentsOnlyPhoto?: boolean;
 }) {
   const useOwnHooks = !messageActions;
   const mainChat = useMessages(!parentMessageId && useOwnHooks ? chatId : null);
@@ -61,19 +69,13 @@ export default function MessageInput({
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [text, setText] = useState('');
-  const [showSlashCommands, setShowSlashCommands] = useState(false);
-  const [stagedCommand, setStagedCommand] = useState<{
-    type: string;
-    id: string;
-    label: string;
-    metadata?: any;
-  } | null>(null);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [stagedAttachment, setStagedAttachment] = useState<StagedAttachment | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
   const [isTouchKeyboardMode, setIsTouchKeyboardMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const MAX_TEXTAREA_HEIGHT = 120;
+  const MAX_TEXTAREA_HEIGHT = 100;
   
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -101,117 +103,49 @@ export default function MessageInput({
 
   const handleSend = () => {
     const trimmedText = text.trim();
-    if (!trimmedText && !stagedCommand && !isUploading) return;
-    if (showSlashCommands) return;
+    if (!trimmedText && !stagedAttachment && !isUploading) return;
+    if (showAttachmentMenu) return;
 
-    if (stagedCommand) {
-      // Send with metadata
-      const args: [string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?] = [
-        trimmedText || undefined, 
-        stagedCommand.metadata?.imageUrl, 
-        replyToMessage?.id
-      ];
-      
-      const { type, id, metadata } = stagedCommand;
-      if (type === 'event') args[3] = id;
-      else if (type === 'setlist') args[4] = id;
-      else if (type === 'roster') args[5] = id;
-      else if (type === 'qt') args[6] = id;
-      else if (type === 'cleaning') args[7] = id;
-      else if (type === 'song') {
-          args[8] = id;
-          if (metadata?.songTitle) args[9] = metadata.songTitle;
-          if (metadata?.sheetKey) args[10] = metadata.sheetKey;
+    if (stagedAttachment) {
+      const args: [
+        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?,
+      ] = [trimmedText || undefined, undefined, replyToMessage?.id];
+
+      if (stagedAttachment.type === 'setlist') args[4] = stagedAttachment.id;
+      else if (stagedAttachment.type === 'roster') args[5] = stagedAttachment.id;
+      else if (stagedAttachment.type === 'song') {
+        args[8] = stagedAttachment.id;
+        const meta = stagedAttachment.metadata;
+        if (meta?.songTitle) args[9] = meta.songTitle as string;
+        if (meta?.sheetKey) args[10] = meta.sheetKey as string;
+        if (meta?.imageUrl) args[1] = meta.imageUrl as string;
       }
 
       sendMessage(...args);
-      setStagedCommand(null);
+      setStagedAttachment(null);
     } else {
-      // Plain text message
       sendMessage(trimmedText, undefined, replyToMessage?.id);
     }
 
     setText('');
-    setShowSlashCommands(false);
+    setShowAttachmentMenu(false);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (onCancelReply) onCancelReply();
   };
-
-  const handleSlashSelect = (
-    type: 'event' | 'setlist' | 'roster' | 'qt' | 'cleaning' | 'song' | 'chords' | 'new-song' | 'new-setlist' | 'new-roster' | 'image', 
-    id: string,
-    metadata?: any
-  ) => {
-    // Check if it's a creation command
-    if (type === 'image') {
-       handleImageClick();
-       setShowSlashCommands(false);
-       return;
-    }
-    if (type === 'new-song') {
-      onOpenWorshipCreate?.('song');
-      setText('');
-      setShowSlashCommands(false);
-      return;
-    }
-    if (type === 'new-setlist') {
-      onOpenWorshipCreate?.('setlist');
-      setText('');
-      setShowSlashCommands(false);
-      return;
-    }
-    if (type === 'new-roster') {
-      onOpenWorshipCreate?.('roster');
-      setText('');
-      setShowSlashCommands(false);
-      return;
-    }
-    if (type === 'chords') {
-      onOpenWorshipCreate?.('chords', id);
-      setText('');
-      setShowSlashCommands(false);
-      return;
-    }
-
-    // If it's a shared item, stage it
-    setStagedCommand({
-        type,
-        id,
-        label: metadata?.label || type,
-        metadata
-    });
-    
-    // Smart replacement: Replace the portion from triggerIndex to current selection
-    if (triggerIndex !== null) {
-        const before = text.substring(0, triggerIndex);
-        // We find the end of the "command" part which likely ends at current length or space
-        // For simplicity, we'll just clear from the triggerIndex onwards if it was just a command
-        // But a better way is to keep anything typed AFTER the cursor if we were in the middle
-        const after = text.substring(text.indexOf(' ', triggerIndex) === -1 ? text.length : text.indexOf(' ', triggerIndex));
-        setText(before.trim() + (after ? ' ' + after.trim() : ''));
-    } else if (text.startsWith('/')) {
-        setText('');
-    }
-    
-    setTriggerIndex(null);
-    setShowSlashCommands(false);
-  };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Desktop hardware keyboard: Enter sends, Shift+Enter inserts a newline.
-    // Touch/on-screen keyboard: Enter keeps newline behavior.
     if (
       e.key === 'Enter' &&
       !isTouchKeyboardMode &&
       !e.shiftKey &&
       !e.nativeEvent.isComposing &&
-      !showSlashCommands
+      !showAttachmentMenu
     ) {
       e.preventDefault();
       handleSend();
     }
     if (e.key === 'Escape') {
-      setShowSlashCommands(false);
+      setShowAttachmentMenu(false);
     }
   };
 
@@ -274,10 +208,35 @@ export default function MessageInput({
     }
   };
 
+  const handleAttachmentPick = (pick: AttachmentPick) => {
+    if (pick.type === 'photo') {
+      handleImageClick();
+      return;
+    }
+    if (pick.type === 'poll') {
+      sendMessage(undefined, undefined, replyToMessage?.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, pick.poll);
+      setShowAttachmentMenu(false);
+      if (onCancelReply) onCancelReply();
+      return;
+    }
+    if (pick.type === 'setlist' || pick.type === 'roster') {
+      setStagedAttachment({ type: pick.type, id: pick.id, label: pick.label });
+      return;
+    }
+    if (pick.type === 'song') {
+      setStagedAttachment({
+        type: 'song',
+        id: pick.id,
+        label: pick.label,
+        metadata: pick.metadata,
+      });
+    }
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto px-4 flex flex-col gap-2">
+    <div className="w-full max-w-md mx-auto flex flex-col gap-2">
       {replyToMessage && (
-        <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-2 text-xs">
+        <div className="flex items-center justify-between rounded-full border border-border/50 bg-muted/30 px-4 py-1.5 text-xs mx-1">
           <div className="flex items-center gap-2 truncate opacity-70">
             <span className="font-bold">Replying to message:</span>
             <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
@@ -287,86 +246,61 @@ export default function MessageInput({
           </button>
         </div>
       )}
-      <div className="relative group flex items-center gap-2">
+      <div className="relative flex items-center gap-1.5">
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden" />
         <button 
             type="button" 
-            onClick={() => setShowSlashCommands(!showSlashCommands)} 
+            onClick={() => setShowAttachmentMenu((v) => !v)} 
             disabled={disabled || isUploading}
             className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-foreground transition-all active:scale-90", 
-                showSlashCommands && "bg-foreground text-background rotate-45",
+                "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95", 
+                showAttachmentMenu ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 isUploading && "animate-pulse"
             )}
         >
-            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={3} />}
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
         </button>
 
-        <div className="flex flex-1 items-end overflow-hidden rounded-[1.25rem] border border-border/60 bg-card px-3 py-1 transition-colors focus-within:border-ring">
-          {stagedCommand && (
-            <div className="mr-2 flex max-w-[120px] shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-2 py-1">
-               <span className="truncate text-[10px] font-semibold uppercase text-foreground">{stagedCommand.label}</span>
-               <button onClick={() => setStagedCommand(null)} className="text-muted-foreground transition-colors hover:text-foreground">
-                 <X className="w-3 h-3" />
+        <div className="flex flex-1 items-center overflow-hidden rounded-full border border-border/50 bg-muted/30 px-3 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40">
+          {stagedAttachment && (
+            <div className="mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border/50 bg-background/60 px-2.5 py-1">
+               <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
+               <button onClick={() => setStagedAttachment(null)} className="text-muted-foreground transition-colors hover:text-foreground">
+                 <X className="w-3.5 h-3.5" />
                </button>
             </div>
           )}
           <textarea
               ref={textareaRef}
               rows={1}
-              placeholder={stagedCommand ? "" : (isUploading ? "Uploading..." : "Message")}
+              placeholder={stagedAttachment ? "" : (isUploading ? "Uploading..." : "Message")}
               value={text}
               disabled={disabled || isUploading}
-              onChange={(e) => {
-                  const val = e.target.value;
-                  const cursor = e.target.selectionStart || 0;
-                  setText(val);
-                  
-                  // Global slash trigger logic
-                  const lastSlash = val.lastIndexOf('/', cursor - 1);
-                  if (lastSlash !== -1) {
-                      // Check if there's a space before the slash or it's at start
-                      if (lastSlash === 0 || val[lastSlash - 1] === ' ') {
-                          setShowSlashCommands(true);
-                          setTriggerIndex(lastSlash);
-                      }
-                  } else if (val === '' || !val.includes('/')) {
-                      setShowSlashCommands(false);
-                      setTriggerIndex(null);
-                  }
-              }}
+              onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
-              style={{ fontSize: '16px' }}
-              className="flex-1 resize-none border-none bg-transparent py-1.5 text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[120px]"
+              className="flex-1 resize-none border-none bg-transparent py-2 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
           <button 
               type="button" 
               onClick={handleSend} 
-              disabled={disabled || (!text.trim() && !stagedCommand) || isUploading}
-              className={cn("mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all", (!disabled && (text.trim() || stagedCommand)) ? "bg-foreground text-background" : "bg-muted text-muted-foreground opacity-40")}
+              disabled={disabled || (!text.trim() && !stagedAttachment) || isUploading}
+              className={cn(
+                "ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all",
+                (!disabled && (text.trim() || stagedAttachment))
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground opacity-40",
+              )}
           >
-              <ArrowUp className="h-4 w-4" strokeWidth={3} />
+              <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
           </button>
         </div>
 
         <AnimatePresence>
-          {showSlashCommands && (
-              <SlashCommandSelector 
-                  inputValue={triggerIndex !== null ? text.substring(triggerIndex) : text} 
-                  onSelect={handleSlashSelect} 
-                  onClose={() => {
-                    setShowSlashCommands(false);
-                    setTriggerIndex(null);
-                  }} 
-                  onCategoryClick={(cat) => {
-                    if (triggerIndex !== null) {
-                        const before = text.substring(0, triggerIndex);
-                        setText(`${before}/${cat} `);
-                    } else {
-                        setText(`/${cat} `);
-                    }
-                  }}
-                  showWorshipCreation={!!onOpenWorshipCreate}
+          {showAttachmentMenu && (
+              <ChatAttachmentMenu
+                onPick={handleAttachmentPick}
+                onClose={() => setShowAttachmentMenu(false)}
+                photoOnly={attachmentsOnlyPhoto}
               />
           )}
         </AnimatePresence>

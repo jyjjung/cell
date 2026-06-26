@@ -26,11 +26,13 @@ import { Badge } from '@/components/ui/badge';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { PageHeader } from '@/components/ui/page-layout';
 import { formatUserDisplayName } from '@/lib/formatting';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
 
-function ManageCleaningDays() {
+function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
     const { cleaningDays, loading, addCleaningDay, updateCleaningDay, deleteCleaningDay } = useCleaningDays();
     const [editingDay, setEditingDay] = useState<{ id: string; name: string } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +44,7 @@ function ManageCleaningDays() {
         setIsSaving(true);
         try {
             await addCleaningDay(data.name);
-            toast({ title: "Module Added" });
+            toast({ title: "Duty added" });
             form.reset({ name: "" });
         } catch (e: any) {
             toast({ variant: "destructive", title: "Error", description: e.message });
@@ -56,7 +58,7 @@ function ManageCleaningDays() {
         setIsSaving(true);
         try {
             await updateCleaningDay(editingDay.id, data.name);
-            toast({ title: "Module Re-synced" });
+            toast({ title: "Duty updated" });
             setEditingDay(null);
             form.reset({ name: "" });
         } catch (e: any) {
@@ -67,26 +69,24 @@ function ManageCleaningDays() {
     };
 
     return (
-        <section className="space-y-8">
-            <div className="space-y-1">
-                <h2 className="text-2xl font-black tracking-tighter uppercase">Duty Modules.</h2>
-            </div>
+        <section className="space-y-4">
+            <h2 className="text-section-title">{t.adminDutyModules}</h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <div className="p-8 border border-white/5 rounded-[2.5rem] bg-card/20 backdrop-blur-md space-y-6">
-                    <form onSubmit={form.handleSubmit(editingDay ? handleUpdate : handleAdd)} className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+                <div className="widget-surface space-y-4">
+                    <form onSubmit={form.handleSubmit(editingDay ? handleUpdate : handleAdd)} className="space-y-3">
                         <div className="space-y-2">
-                            <label htmlFor="dayName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                                {editingDay ? `Renaming: ${editingDay.name}` : "Module Name"}
+                            <label htmlFor="dayName" className="text-micro-label ml-1">
+                                {editingDay ? t.adminRenameModule.replace('{name}', editingDay.name) : t.adminModuleName}
                             </label>
-                            <Input id="dayName" {...form.register("name")} placeholder="e.g. Wednesday Refresh" className="h-14 rounded-2xl bg-background/50 border-2" />
-                            {form.formState.errors.name && <p className="text-[10px] font-black text-destructive uppercase tracking-widest ml-1">{form.formState.errors.name.message}</p>}
+                            <Input id="dayName" {...form.register("name")} placeholder="e.g. Wednesday" className="h-10 rounded-lg" />
+                            {form.formState.errors.name && <p className="text-micro-label text-destructive ml-1">{form.formState.errors.name.message}</p>}
                         </div>
                         <div className="flex gap-2">
-                            <Button type="submit" disabled={isSaving} className="h-14 rounded-2xl flex-grow font-black uppercase tracking-widest text-[10px]">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingDay ? <><Save className="h-4 w-4 mr-2" /> Commit</> : <><PlusCircle className="h-4 w-4 mr-2" /> Initialize Module</>)}
+                            <Button type="submit" disabled={isSaving} size="sm" className="flex-grow">
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingDay ? <><Save className="h-4 w-4 mr-2" /> {t.adminSaveModule}</> : <><PlusCircle className="h-4 w-4 mr-2" /> {t.adminAddModule}</>)}
                             </Button>
-                            {editingDay && <Button type="button" variant="ghost" className="h-14 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px]" onClick={() => { setEditingDay(null); form.reset({ name: "" }); }}>Abort</Button>}
+                            {editingDay && <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingDay(null); form.reset({ name: "" }); }}>{t.adminCancel}</Button>}
                         </div>
                     </form>
                 </div>
@@ -95,29 +95,29 @@ function ManageCleaningDays() {
                     <Table className="admin-table">
                         <TableHeader className="bg-muted">
                             <TableRow className="hover:bg-transparent border-white/5">
-                                <TableHead className="font-black uppercase tracking-widest text-[10px]">Designation</TableHead>
-                                <TableHead className="text-right font-black uppercase tracking-widest text-[10px]">Control</TableHead>
+                                <TableHead>{t.adminDesignation}</TableHead>
+                                <TableHead className="text-right">{t.adminControl}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {cleaningDays.map(day => (
                                 <TableRow key={day.id} className="group">
-                                    <TableCell className="font-semibold uppercase text-xs">{day.name}</TableCell>
+                                    <TableCell className="font-medium text-sm">{day.name}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" onClick={() => { setEditingDay(day); form.setValue("name", day.name); }}>
+                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setEditingDay(day); form.setValue("name", day.name); }}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-10 w-10 rounded-xl opacity-20 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                <AlertDialogContent className="rounded-[2.5rem]">
+                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-8 w-8 opacity-30 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                <AlertDialogContent className="rounded-2xl">
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle className="text-2xl font-black tracking-tighter uppercase">Purge Module?</AlertDialogTitle>
-                                                        <AlertDialogDescription className="font-medium">Terminating "{day.name}" will orphan existing schedule points linked to this classification.</AlertDialogDescription>
+                                                        <AlertDialogTitle className="text-section-title">{t.adminDeleteModule}</AlertDialogTitle>
+                                                        <AlertDialogDescription>{t.adminDeleteModuleDesc}</AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
-                                                        <AlertDialogCancel className="rounded-2xl h-12 font-bold">Abort</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => deleteCleaningDay(day.id)} className="rounded-2xl h-12 font-black bg-destructive hover:bg-destructive/90">Execute Purge</AlertDialogAction>
+                                                        <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => deleteCleaningDay(day.id)} className="bg-destructive hover:bg-destructive/90">{t.adminYesDelete}</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -148,6 +148,8 @@ export default function AdminCleaningRosterPage() {
   const [localChanges, setLocalChanges] = useState<Record<string, Partial<CleaningRosterEntry>>>({});
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
 
@@ -180,7 +182,7 @@ export default function AdminCleaningRosterPage() {
     const changes = localChanges[date];
 
     if (!changes || (!changes.dayId && !existingEntry?.dayId) || (!changes.assignedUserIds && !existingEntry?.assignedUserIds)) {
-        toast({ variant: "destructive", title: "Incomplete Parameters", description: `Identify identity pool and module for ${format(new Date(date), "MMM d")}` });
+        toast({ variant: "destructive", title: "Incomplete", description: `Pick duty and members for ${format(new Date(date), "MMM d")}` });
         setSavingStates(prev => ({ ...prev, [date]: false }));
         return;
     }
@@ -193,14 +195,14 @@ export default function AdminCleaningRosterPage() {
 
     try {
       await upsertEntry(dataToSave);
-      toast({ title: "Sync Successful", description: `Timeline updated for ${format(new Date(date), "MMM d")}.` });
+      toast({ title: "Saved", description: format(new Date(date), "MMM d") });
       setLocalChanges(prev => {
         const newChanges = { ...prev };
         delete newChanges[date];
         return newChanges;
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "Sync Error", description: "Database rejected the transmission." });
+      toast({ variant: "destructive", title: "Save failed" });
     } finally {
       setSavingStates(prev => ({ ...prev, [date]: false }));
     }
@@ -210,7 +212,7 @@ export default function AdminCleaningRosterPage() {
     if (!rosterMap.has(date)) return;
     try {
         await deleteEntry(date);
-        toast({ title: "Temporal Point Purged" });
+        toast({ title: "Entry removed" });
     } catch (error) {
         toast({ variant: "destructive", title: "Purge Error" });
     }
@@ -221,55 +223,51 @@ export default function AdminCleaningRosterPage() {
   return (
     <div className="admin-page">
       <header className="space-y-4">
-        <PageHeader
-          title="Service Rota"
-        />
+        <PageHeader title={t.adminCleaningRoster} />
       </header>
 
-      <ManageCleaningDays />
+      <ManageCleaningDays t={t} />
       
       <Separator className="opacity-50" />
 
-      <section className="space-y-12">
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-8">
-                <div className="space-y-1">
-                    <h2 className="text-2xl font-black tracking-tighter uppercase">Timeline View.</h2>
-                </div>
-                <div className="flex items-center gap-4 bg-muted p-1.5 rounded-2xl border border-white/5">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+      <section className="space-y-4">
+        <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
+                <h2 className="text-section-title">{t.adminTimelineView}</h2>
+                <div className="flex items-center gap-2 bg-muted p-1 rounded-xl border border-border/50">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
                         <ChevronsLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-xs font-black uppercase tracking-widest px-4">{monthLabel}</span>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                    <span className="text-micro-label px-2">{monthLabel}</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
                         <ChevronsRight className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
-            <div className="flex justify-center py-4">
-                <ToggleGroup type="multiple" value={selectedDaysOfWeek} onValueChange={(val) => setSelectedDaysOfWeek(val.length > 0 ? val : [])} aria-label="Filter by day of week" className="bg-muted p-1.5 rounded-2xl border border-white/5">
+            <div className="flex justify-center py-2">
+                <ToggleGroup type="multiple" value={selectedDaysOfWeek} onValueChange={(val) => setSelectedDaysOfWeek(val.length > 0 ? val : [])} aria-label="Filter by day of week" className="bg-muted p-1 rounded-xl border border-border/50">
                     {daysOfWeek.map(day => (
-                        <ToggleGroupItem key={day.value} value={day.value} className="h-10 w-10 rounded-xl font-black text-xs transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">{day.label}</ToggleGroupItem>
+                        <ToggleGroupItem key={day.value} value={day.value} className="h-8 w-8 rounded-lg text-xs font-medium transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">{day.label}</ToggleGroupItem>
                     ))}
                 </ToggleGroup>
             </div>
         </div>
 
         {loading ? (
-            <div className="h-[40vh] flex flex-col items-center justify-center gap-4 opacity-30">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Compiling Timeline</p>
+            <div className="empty-inline gap-3">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="text-micro-label">{t.loading}</p>
             </div>
         ) : (
             <div className="admin-table-wrap">
                 <Table className="admin-table">
                     <TableHeader className="bg-muted">
                         <TableRow className="hover:bg-transparent border-white/5">
-                            <TableHead className="w-[140px] font-black uppercase tracking-widest text-[10px]">Spatial Date</TableHead>
-                            <TableHead className="w-[220px] font-black uppercase tracking-widest text-[10px]">Module Type</TableHead>
-                            <TableHead className="font-black uppercase tracking-widest text-[10px]">Assigned Identities</TableHead>
-                            <TableHead className="w-[120px] text-right font-black uppercase tracking-widest text-[10px]">Control</TableHead>
+                            <TableHead className="w-[140px]">{t.adminCleaningDate}</TableHead>
+                            <TableHead className="w-[220px]">{t.adminDutyType}</TableHead>
+                            <TableHead>{t.adminAssignedTo}</TableHead>
+                            <TableHead className="w-[120px] text-right">{t.adminActions}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -291,15 +289,15 @@ export default function AdminCleaningRosterPage() {
 
                             return (
                                 <TableRow key={dateStr} className={cn("group transition-colors", isDirty && "bg-primary/5")}>
-                                    <TableCell className="font-black tracking-tighter">
+                                    <TableCell>
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-40">{format(dateObj, 'EEE')}</span>
+                                            <span className="text-micro-label">{format(dateObj, 'EEE')}</span>
                                             <span className="text-sm font-semibold">{format(dateObj, 'MMM d')}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
                                         <Select value={displayData.dayId} onValueChange={(val) => handleFieldChange(dateStr, 'dayId', val)}>
-                                            <SelectTrigger className="h-9 rounded-lg bg-muted border-white/5 text-xs"><SelectValue placeholder="Identify Module" /></SelectTrigger>
+                                            <SelectTrigger className="h-9 rounded-lg bg-muted border-white/5 text-xs"><SelectValue placeholder={t.adminDutyType} /></SelectTrigger>
                                             <SelectContent className="rounded-2xl">
                                                 {cleaningDays.map(day => <SelectItem key={day.id} value={day.id} className="rounded-xl">{day.name}</SelectItem>)}
                                             </SelectContent>
@@ -312,7 +310,7 @@ export default function AdminCleaningRosterPage() {
                                                     <div className="h-6 w-6 rounded-full bg-muted border border-white/10 shrink-0">
                                                         <PixelAvatar avatar={user.avatar} />
                                                     </div>
-                                                    <span className="text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px]">
+                                                    <span className="text-[10px] font-medium truncate max-w-[80px]">
                                                         {formatUserDisplayName(user)}
                                                     </span>
                                                     <button 
@@ -331,10 +329,10 @@ export default function AdminCleaningRosterPage() {
                                                 <PopoverTrigger asChild>
                                                     <Button variant="outline" size="sm" className="h-8 rounded-lg border-dashed border-white/20 bg-transparent hover:bg-muted px-3">
                                                         <UserPlus className="h-3 w-3 mr-2" />
-                                                        <span className="text-[9px] font-black uppercase tracking-widest">Assign</span>
+                                                        <span className="text-micro-label">{t.adminAssign}</span>
                                                     </Button>
                                                 </PopoverTrigger>
-                                                <PopoverContent className="w-80 p-0 rounded-3xl overflow-hidden border-white/5 bg-card/95 backdrop-blur-2xl shadow-2xl" align="start">
+                                                <PopoverContent className="w-80 p-0 overflow-hidden" align="start">
                                                     <UserSelector
                                                         users={allUsers.filter(u => u.firstName)}
                                                         loading={usersLoading}

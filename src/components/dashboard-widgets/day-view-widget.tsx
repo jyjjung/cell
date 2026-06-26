@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { format, parseISO, startOfToday, isValid, isSameDay } from 'date-fns';
+import { format, parseISO, startOfToday, isSameDay } from 'date-fns';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 import type { AppEvent, UserProfileData } from '@/types';
@@ -10,6 +10,17 @@ import { eventOccursOnDate } from '@/lib/event-occurrences';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
+import {
+  ArrowRight,
+  ShieldCheck,
+  BookOpenText,
+  Calendar,
+  Clock,
+  Users,
+  Info,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -42,44 +53,44 @@ type TimelineItem = {
     dayName?: string;
 };
 
-const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void }) => {
+type EventItemProps = {
+    item: TimelineItem;
+    onClick: () => void;
+    t: Record<string, any>;
+};
+
+const EventItem = ({ item, onClick, t }: EventItemProps) => {
     const getLabel = () => {
         switch (item.type) {
             case 'cleaning':
-                return "Cleaning Duty";
+                return t.cleaningDuty;
             case 'qt':
-                return "QT Roster";
+                return t.qtRoster;
             case 'event':
             default:
-                return item.category || "Event";
+                return item.category || t.eventLabel;
         }
     };
 
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-3 p-3 rounded-2xl glass-thin hover:ring-primary/30 transition-all group text-left"
+            className="event-row group"
         >
-            <div className="flex-grow min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
-                   {!item.allDay && item.startTime && (
-                    <span className="text-micro-label !opacity-100 px-1.5 py-0.5 rounded-md glass-thin text-muted-foreground group-hover:text-white shrink-0 !tracking-tight">
-                      {item.startTime}
-                    </span>
-                  )}
-                </div>
-                <p className="text-micro-label !opacity-100 text-zinc-700 dark:text-zinc-300 group-hover:text-white/80 !tracking-widest">{getLabel()}</p>
-            </div>
-            <div className="text-right shrink-0">
-                <p className="text-[10px] font-black uppercase text-foreground leading-none group-hover:text-white">{format(item.date, "MMM d")}</p>
-                <p className="text-[9px] font-bold text-zinc-700 dark:text-zinc-300 uppercase mt-1 tracking-tighter group-hover:text-white/70">{format(item.date, "EEEE")}</p>
+            <span className="event-row-time">
+              {!item.allDay && item.startTime ? item.startTime : '—'}
+            </span>
+            <div className="event-row-body">
+                <p className="event-row-title">{item.title}</p>
+                <p className="event-row-meta">{getLabel()}</p>
             </div>
         </button>
     )
 }
 
 export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUsers, cleaningDays }: DayViewWidgetProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const today = startOfToday();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
@@ -112,13 +123,13 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
         const firstNames = e.assignedUserIds
             .map((uid: string) => usersMap.get(uid))
             .filter(Boolean)
-            .map((u) => formatUserDisplayName(u!))
+            .map((u: UserProfileData) => formatUserDisplayName(u!))
             .join(', ');
 
         items.push({
           id: e.id,
           date: today,
-          title: 'Church Cleaning',
+          title: t.churchCleaning,
           allDay: true,
           type: 'cleaning',
           assignedNames: firstNames,
@@ -133,7 +144,7 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
         items.push({
           id: e.id,
           date: today,
-          title: e.personName ? formatNameString(e.personName, 'QT Sharing') : 'QT Sharing',
+          title: e.personName ? formatNameString(e.personName, t.qtSharing) : t.qtSharing,
           allDay: true,
           type: 'qt',
           passage: e.passage,
@@ -150,7 +161,7 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
       }
       return 0;
     });
-  }, [events, cleaningRoster, qtRoster, today, usersMap, cleaningDaysMap]);
+  }, [events, cleaningRoster, qtRoster, today, usersMap, cleaningDaysMap, t]);
 
   if (todaysItems.length === 0) return null;
 
@@ -161,62 +172,56 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
 
   return (
     <>
-        <div className="relative p-5 rounded-[2.5rem] bg-card border border-border/50 shadow-xl overflow-hidden h-fit">
-            <div className="flex items-center justify-between mb-4">
-                <div className="min-w-0 px-1">
-                    <h3 className="text-base font-bold tracking-tight">Today</h3>
-                </div>
+        <div className="flow-section">
+            <div className="section-heading">
+                <h3 className="section-heading-title">{t.todayLabel}</h3>
             </div>
 
-            <div className="space-y-2 mb-4">
-                <div className="space-y-3">
-                    <AnimatePresence mode="popLayout">
-                        {todaysItems.map(item => (
-                            <motion.div
-                                key={`${item.type}-${item.id}`}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                            >
-                                <EventItem item={item} onClick={() => setSelectedItem(item)} />
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
+            <div className="data-table mb-2">
+                <AnimatePresence mode="popLayout">
+                    {todaysItems.map(item => (
+                        <motion.div
+                            key={`${item.type}-${item.id}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                        >
+                            <EventItem item={item} onClick={() => setSelectedItem(item)} t={t} />
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
             
-            <div className="mt-4">
-                <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest bg-background/50 border-border/50 hover:bg-primary hover:text-white transition-all shadow-none group" 
-                    onClick={handleGoToEvents}
-                >
-                    Schedule View
-                    <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                </Button>
-            </div>
+            <Button 
+                variant="outline" 
+                size="sm"
+                className="w-full"
+                onClick={handleGoToEvents}
+            >
+                {t.scheduleView}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
         </div>
 
         <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
-                <DialogContent className="sm:max-w-[425px] rounded-[2.5rem]">
+                <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <div className="flex items-center gap-2 mb-2">
                             <div className={cn(
-                                "p-2 rounded-xl bg-opacity-10",
-                                selectedItem?.type === 'cleaning' ? "bg-green-500 text-green-500" : 
-                                selectedItem?.type === 'qt' ? "bg-primary text-primary" : "bg-orange-500 text-orange-500"
+                                "p-2 rounded-lg",
+                                selectedItem?.type === 'cleaning' ? "bg-green-500/10 text-green-500" : 
+                                selectedItem?.type === 'qt' ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500"
                             )}>
                                 {selectedItem?.type === 'cleaning' ? <ShieldCheck className="h-5 w-5" /> : 
                                  selectedItem?.type === 'qt' ? <BookOpenText className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                {selectedItem?.type === 'cleaning' ? 'Service Assignment' : 
-                                 selectedItem?.type === 'qt' ? 'Spiritual Rota' : selectedItem?.category}
+                            <span className="text-micro-label">
+                                {selectedItem?.type === 'cleaning' ? t.cleaningDuty : 
+                                 selectedItem?.type === 'qt' ? t.qtRoster : selectedItem?.category}
                             </span>
                         </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight">{selectedItem?.title}</DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase tracking-widest pt-1">
+                        <DialogTitle className="text-section-title">{selectedItem?.title}</DialogTitle>
+                        <DialogDescription className="text-micro-label pt-1">
                             {selectedItem && (
                                 <div className="flex flex-col gap-1">
                                     <span>
@@ -233,49 +238,49 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-6 pt-4">
+                    <div className="stack-gap pt-3">
                         {selectedItem?.type === 'event' && selectedItem.details && (
-                            <div className="space-y-2">
+                            <div className="stack-gap-sm">
                                 <div className="flex items-center gap-2 text-primary">
                                     <Info className="h-4 w-4" />
-                                    <h4 className="text-xs font-black uppercase tracking-widest">Details</h4>
+                                    <h4 className="text-micro-label font-semibold text-foreground">{t.details}</h4>
                                 </div>
-                                <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                     {selectedItem.details}
                                 </p>
                             </div>
                         )}
 
                         {selectedItem?.type === 'qt' && (
-                            <div className="space-y-4">
+                            <div className="stack-gap-sm">
                                 {selectedItem.qtTitle && (
-                                    <div className="glass-thin p-4 rounded-2xl">
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Message Title</h4>
-                                        <p className="font-bold text-lg leading-tight">{selectedItem.qtTitle}</p>
+                                    <div className="glass-thin p-3 rounded-lg">
+                                        <h4 className="text-micro-label mb-1">{t.topic}</h4>
+                                        <p className="font-semibold text-sm leading-tight">{selectedItem.qtTitle}</p>
                                     </div>
                                 )}
-                                <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
+                                <div className="glass-thin flex items-center justify-between p-3 rounded-lg">
                                     <div>
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-1">Passage</h4>
-                                        <p className="font-mono text-sm font-bold">{selectedItem.passage}</p>
+                                        <h4 className="text-micro-label text-primary mb-1">{t.passage}</h4>
+                                        <p className="font-mono text-sm font-medium">{selectedItem.passage}</p>
                                     </div>
-                                    <BookOpenText className="h-6 w-6 text-primary/40" />
+                                    <BookOpenText className="h-5 w-5 text-primary/40" />
                                 </div>
                             </div>
                         )}
 
                         {selectedItem?.type === 'cleaning' && (
-                            <div className="space-y-4">
-                                <div className="glass-thin p-4 rounded-2xl">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Day Type</h4>
-                                    <p className="font-bold text-lg leading-tight">{selectedItem.dayName || 'Standard Cleaning'}</p>
+                            <div className="stack-gap-sm">
+                                <div className="glass-thin p-3 rounded-lg">
+                                    <h4 className="text-micro-label mb-1">{t.dayType}</h4>
+                                    <p className="font-semibold text-sm leading-tight">{selectedItem.dayName || t.standardCleaning}</p>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="stack-gap-sm">
                                     <div className="flex items-center gap-2 text-green-500">
                                         <Users className="h-4 w-4" />
-                                        <h4 className="text-xs font-black uppercase tracking-widest">Assigned Team</h4>
+                                        <h4 className="text-micro-label font-semibold text-foreground">{t.team}</h4>
                                     </div>
-                                    <p className="text-sm text-muted-foreground font-bold px-1">
+                                    <p className="text-sm text-muted-foreground px-1">
                                         {selectedItem.assignedNames}
                                     </p>
                                 </div>
@@ -283,12 +288,12 @@ export default function DayViewWidget({ events, cleaningRoster, qtRoster, allUse
                         )}
                     </div>
 
-                    <div className="pt-6">
+                    <div className="pt-3">
                         <Button 
-                            className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-widest"
+                            className="w-full"
                             onClick={() => setSelectedItem(null)}
                         >
-                            Confirm View
+                            {t.confirm}
                         </Button>
                     </div>
                 </DialogContent>

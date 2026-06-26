@@ -68,7 +68,7 @@ export function RosterCard({
       {/* Date Side */}
       <div className="flex sm:flex-col items-center justify-start sm:justify-center w-full sm:w-12 shrink-0 sm:border-r border-border/40 sm:pr-3 gap-2 sm:gap-0">
         <p className={cn("text-micro-label !opacity-100", accentColor)}>{format(date, 'EEE')}</p>
-        <p className="text-xl font-black tracking-tighter text-foreground leading-none">{format(date, 'd')}</p>
+        <p className="text-xl font-semibold text-foreground leading-none">{format(date, 'd')}</p>
       </div>
 
       {/* Avatars & Content Block */}

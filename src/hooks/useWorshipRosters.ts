@@ -9,23 +9,34 @@ import {
   serverTimestamp, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { useScheduleData } from '@/contexts/schedule-data-context';
 
 const ROSTERS_COLLECTION = 'worshipRosters';
 
 export function useWorshipRosters(enabled = true) {
   const { currentUser } = useAuth();
-  const [rosters, setRosters] = useState<WorshipRoster[]>([]);
-  const [loading, setLoading] = useState(true);
+  const schedule = useScheduleData();
+  const [localRosters, setLocalRosters] = useState<WorshipRoster[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
 
   useEffect(() => {
-    if (!enabled || !currentUser) { setRosters([]); setLoading(false); return; }
+    if (schedule || !enabled || !currentUser) {
+      if (!schedule && !currentUser) {
+        setLocalRosters([]);
+        setLocalLoading(false);
+      }
+      return;
+    }
     const q = query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
-      setRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipRoster)));
-      setLoading(false);
-    }, () => setLoading(false));
+      setLocalRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipRoster)));
+      setLocalLoading(false);
+    }, () => setLocalLoading(false));
     return unsub;
-  }, [enabled, currentUser]);
+  }, [schedule, enabled, currentUser]);
+
+  const rosters = schedule?.worshipRosters ?? localRosters;
+  const loading = schedule ? schedule.worshipRostersLoading : localLoading;
 
   const createRoster = useCallback(async (
     name: string,

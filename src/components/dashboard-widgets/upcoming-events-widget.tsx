@@ -6,17 +6,19 @@ import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useCleaningDays } from '@/hooks/useCleaningDays';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { parseISO, startOfToday, isValid, format, compareAsc, isBefore, addDays, isAfter } from 'date-fns';
+import { parseISO, startOfToday, isValid, format, compareAsc, addDays, isAfter } from 'date-fns';
 import { nextOccurrenceOnOrAfter } from '@/lib/event-occurrences';
-import { Loader2, Calendar, Users, Coffee, Cake, CalendarOff, ArrowRight, ShieldCheck, BookOpenText, Info, Clock } from 'lucide-react';
+import { Loader2, Calendar, Users, BookOpenText, CalendarOff, ArrowRight, ShieldCheck, Info, Clock } from 'lucide-react';
 import type { AppEvent } from '@/types';
 import { EventCategory } from '@/types';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { translations } from '@/lib/translations';
 import {
   Dialog,
   DialogContent,
@@ -42,44 +44,52 @@ type TimelineItem = {
     dayName?: string;
 };
 
-const EventItem = ({ item, onClick }: { item: TimelineItem, onClick: () => void }) => {
+type EventItemProps = {
+    item: TimelineItem;
+    onClick: () => void;
+    t: Record<string, any>;
+};
+
+const EventItem = ({ item, onClick, t }: EventItemProps) => {
     const getLabel = () => {
         switch (item.type) {
             case 'cleaning':
-                return "Cleaning Duty";
+                return t.cleaningDuty;
             case 'qt':
-                return "QT Roster";
+                return t.qtRoster;
             case 'event':
             default:
-                return item.category || "Event";
+                return item.category || t.eventLabel;
         }
     };
 
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl glass-thin hover:ring-primary/30 transition-all group text-left"
+            className="surface-row w-full hover:ring-primary/20 transition-all group text-left"
         >
             <div className="flex-grow min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-bold text-base tracking-tight truncate text-foreground group-hover:text-white">{item.title}</p>
+                  <p className="font-semibold text-sm truncate text-foreground">{item.title}</p>
                    {!item.allDay && item.startTime && (
-                    <span className="text-micro-label !opacity-100 px-1.5 py-0.5 rounded-md glass-thin text-muted-foreground group-hover:text-white shrink-0 !tracking-tight">
+                    <span className="text-micro-label px-1.5 py-0.5 rounded-md glass-thin shrink-0">
                       {item.startTime}
                     </span>
                   )}
                 </div>
-                <p className="text-micro-label !opacity-100 text-zinc-700 dark:text-zinc-300 group-hover:text-white/80 !tracking-widest">{getLabel()}</p>
+                <p className="text-micro-label">{getLabel()}</p>
             </div>
             <div className="text-right shrink-0">
-                <p className="text-[10px] font-black uppercase text-foreground leading-none group-hover:text-white">{format(item.date, "MMM d")}</p>
-                <p className="text-[9px] font-bold text-zinc-700 dark:text-zinc-300 uppercase mt-1 tracking-tighter group-hover:text-white/70">{format(item.date, "EEEE")}</p>
+                <p className="text-xs font-semibold text-foreground leading-none">{format(item.date, "MMM d")}</p>
+                <p className="text-micro-label mt-0.5">{format(item.date, "EEE")}</p>
             </div>
         </button>
     )
 }
 
 export default function UpcomingEventsWidget() {
+    const { currentUser } = useAuth();
+    const t = translations[currentUser?.preferredLanguage || 'en'];
     const { events, loading: loadingEvents } = useEvents();
     const { roster: cleaningRoster, loading: loadingCleaning } = useCleaningRoster();
     const { cleaningDays } = useCleaningDays();
@@ -119,7 +129,6 @@ export default function UpcomingEventsWidget() {
             });
         });
 
-        // Add cleaning duties
         cleaningRoster.forEach(entry => {
             const date = parseISO(entry.date);
             if (isValid(date) && isAfter(date, today)) {
@@ -133,7 +142,7 @@ export default function UpcomingEventsWidget() {
                     id: entry.id, 
                     date, 
                     allDay: true,
-                    title: firstNames || "Church Cleaning", 
+                    title: firstNames || t.churchCleaning, 
                     type: 'cleaning',
                     assignedNames: firstNames,
                     dayName: cleaningDaysMap.get(entry.dayId)
@@ -141,7 +150,6 @@ export default function UpcomingEventsWidget() {
             }
         });
 
-        // Add QT assignments
         qtRoster.forEach(entry => {
             const date = parseISO(entry.date);
             if (isValid(date) && isAfter(date, today)) {
@@ -149,7 +157,7 @@ export default function UpcomingEventsWidget() {
                     id: entry.id, 
                     date, 
                     allDay: true,
-                    title: entry.personName ? formatNameString(entry.personName, 'QT Sharing') : 'QT Sharing', 
+                    title: entry.personName ? formatNameString(entry.personName, t.qtSharing) : t.qtSharing, 
                     type: 'qt',
                     passage: entry.passage,
                     qtTitle: entry.title
@@ -158,7 +166,7 @@ export default function UpcomingEventsWidget() {
         });
 
         return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 5);
-    }, [events, cleaningRoster, qtRoster, usersMap, cleaningDaysMap]);
+    }, [events, cleaningRoster, qtRoster, usersMap, cleaningDaysMap, t]);
 
     const handleGoToEvents = () => {
         setIsPageLoading(true);
@@ -169,74 +177,70 @@ export default function UpcomingEventsWidget() {
 
     return (
         <>
-            <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
-                <div className="flex items-center justify-between mb-6">
+            <div className="widget-surface relative h-fit overflow-hidden">
+                <div className="panel-header">
                     <div className="min-w-0">
-                        <h3 className="text-base font-bold tracking-tight">Timeline</h3>
-                        <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Community Schedule</p>
+                        <h3 className="panel-title">{t.timelineTitle}</h3>
+                        <p className="panel-subtitle">{t.communitySchedule}</p>
                     </div>
                 </div>
 
-                <div className="space-y-3 mb-6 min-h-[120px]">
+                <div className="stack-gap-sm mb-3">
                     {loading ? (
-                        <div className="h-32 flex items-center justify-center">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" />
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
                         </div>
                     ) : timelineItems.length === 0 ? (
-                        <div className="h-32 flex flex-col items-center justify-center text-center opacity-40 py-4">
-                            <CalendarOff className="h-8 w-8 mb-3" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Clear Roster</p>
+                        <div className="empty-inline">
+                            <CalendarOff className="h-6 w-6 mb-2 text-muted-foreground" />
+                            <p>{t.horizonIsClear}</p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            <AnimatePresence mode="popLayout">
-                                {timelineItems.map(item => (
-                                    <motion.div
-                                        key={`${item.type}-${item.id}`}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                    >
-                                        <EventItem item={item} onClick={() => setSelectedItem(item)} />
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
+                        <AnimatePresence mode="popLayout">
+                            {timelineItems.map(item => (
+                                <motion.div
+                                    key={`${item.type}-${item.id}`}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                >
+                                    <EventItem item={item} onClick={() => setSelectedItem(item)} t={t} />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     )}
                 </div>
                 
-                <div className="mt-8">
-                    <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest transition-all shadow-none group"
-                        onClick={handleGoToEvents}
-                    >
-                        Schedule View
-                        <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                </div>
+                <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full"
+                    onClick={handleGoToEvents}
+                >
+                    {t.scheduleView}
+                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                </Button>
             </div>
 
             <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
-                <DialogContent className="sm:max-w-[425px] rounded-[2.5rem]">
+                <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <div className="flex items-center gap-2 mb-2">
                             <div className={cn(
-                                "p-2 rounded-xl bg-opacity-10",
-                                selectedItem?.type === 'cleaning' ? "bg-green-500 text-green-500" : 
-                                selectedItem?.type === 'qt' ? "bg-primary text-primary" : "bg-orange-500 text-orange-500"
+                                "p-2 rounded-lg",
+                                selectedItem?.type === 'cleaning' ? "bg-green-500/10 text-green-500" : 
+                                selectedItem?.type === 'qt' ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500"
                             )}>
                                 {selectedItem?.type === 'cleaning' ? <ShieldCheck className="h-5 w-5" /> : 
                                  selectedItem?.type === 'qt' ? <BookOpenText className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                {selectedItem?.type === 'cleaning' ? 'Service Assignment' : 
-                                 selectedItem?.type === 'qt' ? 'Spiritual Rota' : selectedItem?.category}
+                            <span className="text-micro-label">
+                                {selectedItem?.type === 'cleaning' ? t.cleaningDuty : 
+                                 selectedItem?.type === 'qt' ? t.qtRoster : selectedItem?.category}
                             </span>
                         </div>
-                        <DialogTitle className="text-2xl font-black tracking-tight">{selectedItem?.title}</DialogTitle>
-                        <DialogDescription className="text-xs font-bold uppercase tracking-widest pt-1">
+                        <DialogTitle className="text-section-title">{selectedItem?.title}</DialogTitle>
+                        <DialogDescription className="text-micro-label pt-1">
                             {selectedItem && (
                                 <div className="flex flex-col gap-1">
                                     <span>
@@ -255,49 +259,49 @@ export default function UpcomingEventsWidget() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-6 pt-4">
+                    <div className="stack-gap pt-3">
                         {selectedItem?.type === 'event' && selectedItem.details && (
-                            <div className="space-y-2">
+                            <div className="stack-gap-sm">
                                 <div className="flex items-center gap-2 text-primary">
                                     <Info className="h-4 w-4" />
-                                    <h4 className="text-xs font-black uppercase tracking-widest">Details</h4>
+                                    <h4 className="text-micro-label font-semibold text-foreground">{t.details}</h4>
                                 </div>
-                                <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                     {selectedItem.details}
                                 </p>
                             </div>
                         )}
 
                         {selectedItem?.type === 'qt' && (
-                            <div className="space-y-4">
+                            <div className="stack-gap-sm">
                                 {selectedItem.qtTitle && (
-                                    <div className="glass-thin p-4 rounded-2xl">
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Message Title</h4>
-                                        <p className="font-bold text-lg leading-tight">{selectedItem.qtTitle}</p>
+                                    <div className="glass-thin p-3 rounded-lg">
+                                        <h4 className="text-micro-label mb-1">{t.topic}</h4>
+                                        <p className="font-semibold text-sm leading-tight">{selectedItem.qtTitle}</p>
                                     </div>
                                 )}
-                                <div className="glass-thin flex items-center justify-between p-4 rounded-2xl">
+                                <div className="glass-thin flex items-center justify-between p-3 rounded-lg">
                                     <div>
-                                        <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-1">Passage</h4>
-                                        <p className="font-mono text-sm font-bold">{selectedItem.passage}</p>
+                                        <h4 className="text-micro-label text-primary mb-1">{t.passage}</h4>
+                                        <p className="font-mono text-sm font-medium">{selectedItem.passage}</p>
                                     </div>
-                                    <BookOpenText className="h-6 w-6 text-primary/40" />
+                                    <BookOpenText className="h-5 w-5 text-primary/40" />
                                 </div>
                             </div>
                         )}
 
                         {selectedItem?.type === 'cleaning' && (
-                            <div className="space-y-4">
-                                <div className="glass-thin p-4 rounded-2xl">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Day Type</h4>
-                                    <p className="font-bold text-lg leading-tight">{selectedItem.dayName || 'Standard Cleaning'}</p>
+                            <div className="stack-gap-sm">
+                                <div className="glass-thin p-3 rounded-lg">
+                                    <h4 className="text-micro-label mb-1">{t.dayType}</h4>
+                                    <p className="font-semibold text-sm leading-tight">{selectedItem.dayName || t.standardCleaning}</p>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="stack-gap-sm">
                                     <div className="flex items-center gap-2 text-green-500">
                                         <Users className="h-4 w-4" />
-                                        <h4 className="text-xs font-black uppercase tracking-widest">Assigned Team</h4>
+                                        <h4 className="text-micro-label font-semibold text-foreground">{t.team}</h4>
                                     </div>
-                                    <p className="text-sm text-muted-foreground font-bold px-1">
+                                    <p className="text-sm text-muted-foreground px-1">
                                         {selectedItem.assignedNames}
                                     </p>
                                 </div>
@@ -305,12 +309,12 @@ export default function UpcomingEventsWidget() {
                         )}
                     </div>
 
-                    <div className="pt-6">
+                    <div className="pt-3">
                         <Button 
-                            className="w-full h-12 rounded-2xl font-black text-xs uppercase tracking-widest"
+                            className="w-full"
                             onClick={() => setSelectedItem(null)}
                         >
-                            Confirm View
+                            {t.confirm}
                         </Button>
                     </div>
                 </DialogContent>

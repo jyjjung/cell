@@ -5,6 +5,8 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 interface GlobalBibleReaderContextType {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  isExpanded: boolean;
+  setIsExpanded: (expanded: boolean) => void;
   openBibleReader: (book: string, chapter: number) => void;
   targetPassage: { book: string; chapter: number; timestamp: number } | null;
 }
@@ -12,16 +14,22 @@ interface GlobalBibleReaderContextType {
 const GlobalBibleReaderContext = createContext<GlobalBibleReaderContextType | undefined>(undefined);
 
 export function GlobalBibleReaderProvider({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpenState] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [targetPassage, setTargetPassage] = useState<{ book: string; chapter: number; timestamp: number } | null>(null);
+
+  const setIsOpen = useCallback((open: boolean) => {
+    setIsOpenState(open);
+    if (!open) setIsExpanded(false);
+  }, []);
 
   const openBibleReader = useCallback((book: string, chapter: number) => {
     setTargetPassage({ book, chapter, timestamp: Date.now() });
     setIsOpen(true);
-  }, []);
+  }, [setIsOpen]);
 
   return (
-    <GlobalBibleReaderContext.Provider value={{ isOpen, setIsOpen, openBibleReader, targetPassage }}>
+    <GlobalBibleReaderContext.Provider value={{ isOpen, setIsOpen, isExpanded, setIsExpanded, openBibleReader, targetPassage }}>
       {children}
     </GlobalBibleReaderContext.Provider>
   );

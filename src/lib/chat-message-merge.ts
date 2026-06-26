@@ -12,6 +12,87 @@ export function mergeMessageLists<T extends { id: string }>(...lists: T[][]): T[
   return result;
 }
 
+function messageSortMillis(m: {
+  createdAt?: { toMillis?: () => number };
+  pollUpdatedAt?: { toMillis?: () => number };
+}): number {
+  const created = m.createdAt?.toMillis?.() ?? 0;
+  const pollUpdated = m.pollUpdatedAt?.toMillis?.() ?? 0;
+  return Math.max(created, pollUpdated);
+}
+
+/** Newest first; pending messages (no createdAt yet) stay at the live end of the thread. */
+export function sortChatMessagesDesc<T extends {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+  pollUpdatedAt?: { toMillis?: () => number };
+}>(
+  messages: T[],
+): T[] {
+  return [...messages].sort((a, b) => {
+    const aMs = messageSortMillis(a);
+    const bMs = messageSortMillis(b);
+    const aPending = aMs === 0;
+    const bPending = bMs === 0;
+    if (aPending && !bPending) return -1;
+    if (!aPending && bPending) return 1;
+    if (aPending && bPending) return b.id.localeCompare(a.id);
+    const diff = bMs - aMs;
+    return diff !== 0 ? diff : b.id.localeCompare(a.id);
+  });
+}
+
+function pollVotesEqual(
+  a?: Record<string, string[]>,
+  b?: Record<string, string[]>,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    const va = a[key] ?? [];
+    const vb = b[key] ?? [];
+    if (va.length !== vb.length) return false;
+    for (let i = 0; i < va.length; i++) {
+      if (va[i] !== vb[i]) return false;
+    }
+  }
+  return true;
+}
+
+function pollsEqual(
+  a?: { question: string; options: string[]; allowMultiple?: boolean },
+  b?: { question: string; options: string[]; allowMultiple?: boolean },
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  return (
+    a.question === b.question &&
+    !!a.allowMultiple === !!b.allowMultiple &&
+    a.options.length === b.options.length &&
+    a.options.every((option, index) => option === b.options[index])
+  );
+}
+
+function carryOlderMessages<T extends {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+  pollUpdatedAt?: { toMillis?: () => number };
+}>(primary: T[], previous: T[]): T[] {
+  const primaryIds = new Set(primary.map((m) => m.id));
+  if (primary.length === 0) return previous;
+
+  const oldestInWindowMs = messageSortMillis(primary[primary.length - 1]);
+  return previous.filter((m) => {
+    if (primaryIds.has(m.id)) return false;
+    const ms = messageSortMillis(m);
+    if (ms === 0) return false;
+    return ms < oldestInWindowMs;
+  });
+}
+
 function reactionsEqual(
   a?: { [key: string]: string[] },
   b?: { [key: string]: string[] },
@@ -66,6 +147,16 @@ export function chatMessagesShallowEqual(
       ma.reactions as { [key: string]: string[] } | undefined,
       mb.reactions as { [key: string]: string[] } | undefined,
     ) &&
+    pollsEqual(
+      ma.poll as { question: string; options: string[]; allowMultiple?: boolean } | undefined,
+      mb.poll as { question: string; options: string[]; allowMultiple?: boolean } | undefined,
+    ) &&
+    pollVotesEqual(
+      ma.pollVotes as Record<string, string[]> | undefined,
+      mb.pollVotes as Record<string, string[]> | undefined,
+    ) &&
+    (ma.pollUpdatedAt as { toMillis?: () => number } | undefined)?.toMillis?.() ===
+      (mb.pollUpdatedAt as { toMillis?: () => number } | undefined)?.toMillis?.() &&
     (ma.createdAt as { toMillis?: () => number } | undefined)?.toMillis?.() ===
       (mb.createdAt as { toMillis?: () => number } | undefined)?.toMillis?.()
   );
@@ -85,14 +176,22 @@ export function stabilizeMessages<T extends { id: string }>(
 }
 
 /** Merge while preserving references for messages that did not change. */
-export function mergeMessageListsStable<T extends { id: string }>(
+export function mergeMessageListsStable<T extends {
+  id: string;
+  createdAt?: { toMillis?: () => number };
+  pollUpdatedAt?: { toMillis?: () => number };
+}>(
   primary: T[],
   secondary: T[],
   previous: T[],
+  options?: { retainOnlyOlderSecondary?: boolean },
   isEqual: (a: T, b: T) => boolean = chatMessagesShallowEqual as (a: T, b: T) => boolean,
 ): T[] {
   const stabilizedPrimary = stabilizeMessages(primary, previous, isEqual);
-  return mergeMessageLists(stabilizedPrimary, secondary);
+  const secondaryMessages = options?.retainOnlyOlderSecondary
+    ? carryOlderMessages(stabilizedPrimary, secondary)
+    : secondary;
+  return sortChatMessagesDesc(mergeMessageLists(stabilizedPrimary, secondaryMessages));
 }
 
 /** @deprecated Use mergeMessageLists */

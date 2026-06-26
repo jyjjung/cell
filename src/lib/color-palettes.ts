@@ -1,6 +1,16 @@
+export const SPECTRUM_HUES = [
+  0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165,
+  180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345,
+] as const;
+
+export type SpectrumHue = (typeof SPECTRUM_HUES)[number];
+export type SpectrumPaletteId = `spectrum-${SpectrumHue}`;
+
 export type ColorPaletteId =
   | 'monochrome'
   | 'warm-paper'
+  | 'high-contrast'
+  | SpectrumPaletteId
   | 'cool-slate'
   | 'azure'
   | 'forest'
@@ -13,10 +23,7 @@ export type ColorPaletteId =
   | 'blossom'
   | 'lunar'
   | 'verdant'
-  | 'midnight'
-  | 'high-contrast';
-
-export type BackgroundMode = 'scenic' | 'minimal' | 'gradient';
+  | 'midnight';
 
 export type ColorPaletteTokens = {
   background: string;
@@ -65,8 +72,6 @@ export type ColorPaletteDefinition = {
   description: string;
   previewLight: string;
   previewDark: string;
-  defaultBackgroundMode: BackgroundMode;
-  overlayScale: number;
   light: ColorPaletteTokens;
   dark: ColorPaletteTokens;
 };
@@ -83,8 +88,6 @@ type PaletteConfig = {
   accentLightDark: number;
   surfaceHue?: number;
   surfaceSat?: number;
-  defaultBackgroundMode?: BackgroundMode;
-  overlayScale?: number;
   highContrast?: boolean;
 };
 
@@ -325,7 +328,56 @@ function buildMonochromeTokens(isDark: boolean): ColorPaletteTokens {
   };
 }
 
-const PALETTE_CONFIGS: PaletteConfig[] = [
+export const SPECTRUM_LABELS: Record<SpectrumHue, string> = {
+  0: 'Crimson',
+  15: 'Vermillion',
+  30: 'Tangerine',
+  45: 'Gold',
+  60: 'Chartreuse',
+  75: 'Lime',
+  90: 'Spring',
+  105: 'Mint',
+  120: 'Forest',
+  135: 'Jade',
+  150: 'Teal',
+  165: 'Cyan',
+  180: 'Sky',
+  195: 'Ocean',
+  210: 'Azure',
+  225: 'Indigo',
+  240: 'Violet',
+  255: 'Purple',
+  270: 'Lavender',
+  285: 'Orchid',
+  300: 'Fuchsia',
+  315: 'Magenta',
+  330: 'Rose',
+  345: 'Cherry',
+};
+
+function spectrumPreview(hue: number, isDark: boolean): string {
+  const surface = `hsl(${hue}, ${isDark ? 22 : 16}%, ${isDark ? 6 : 97}%)`;
+  const accent = `hsl(${hue}, 78%, ${isDark ? 62 : 46}%)`;
+  return `linear-gradient(135deg, ${surface} 50%, ${accent} 50%)`;
+}
+
+function createSpectrumConfig(hue: SpectrumHue): PaletteConfig {
+  return {
+    id: `spectrum-${hue}` as SpectrumPaletteId,
+    label: SPECTRUM_LABELS[hue],
+    description: `${SPECTRUM_LABELS[hue]} accent and tinted surfaces.`,
+    previewLight: spectrumPreview(hue, false),
+    previewDark: spectrumPreview(hue, true),
+    accentHue: hue,
+    accentSat: 72 + (hue % 45 === 0 ? 10 : 0),
+    accentLight: 46,
+    accentLightDark: 62,
+    surfaceHue: hue,
+    surfaceSat: 14 + (hue % 18),
+  };
+}
+
+const SPECIAL_PALETTE_CONFIGS: PaletteConfig[] = [
   {
     id: 'monochrome',
     label: 'Monochrome',
@@ -336,7 +388,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentSat: 6,
     accentLight: 10,
     accentLightDark: 98,
-    defaultBackgroundMode: 'scenic',
   },
   {
     id: 'warm-paper',
@@ -350,9 +401,11 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 65,
     surfaceHue: 35,
     surfaceSat: 18,
-    defaultBackgroundMode: 'scenic',
-    overlayScale: 0.7,
   },
+];
+
+/** Legacy palette IDs kept so saved preferences still resolve. */
+const LEGACY_PALETTE_CONFIGS: PaletteConfig[] = [
   {
     id: 'cool-slate',
     label: 'Cool Slate',
@@ -365,7 +418,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 72,
     surfaceHue: 215,
     surfaceSat: 22,
-    defaultBackgroundMode: 'minimal',
   },
   {
     id: 'azure',
@@ -379,7 +431,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 65,
     surfaceHue: 224,
     surfaceSat: 35,
-    defaultBackgroundMode: 'scenic',
   },
   {
     id: 'forest',
@@ -393,8 +444,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 55,
     surfaceHue: 150,
     surfaceSat: 18,
-    defaultBackgroundMode: 'minimal',
-    overlayScale: 0.6,
   },
   {
     id: 'rose',
@@ -408,7 +457,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 68,
     surfaceHue: 350,
     surfaceSat: 15,
-    defaultBackgroundMode: 'scenic',
   },
   {
     id: 'amber',
@@ -422,8 +470,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 62,
     surfaceHue: 40,
     surfaceSat: 20,
-    defaultBackgroundMode: 'scenic',
-    overlayScale: 0.75,
   },
   {
     id: 'lavender',
@@ -437,7 +483,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 72,
     surfaceHue: 270,
     surfaceSat: 18,
-    defaultBackgroundMode: 'gradient',
   },
   {
     id: 'ocean',
@@ -451,7 +496,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 58,
     surfaceHue: 195,
     surfaceSat: 25,
-    defaultBackgroundMode: 'scenic',
   },
   {
     id: 'ember',
@@ -465,7 +509,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 62,
     surfaceHue: 25,
     surfaceSat: 18,
-    defaultBackgroundMode: 'gradient',
   },
   {
     id: 'mint',
@@ -479,7 +522,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 55,
     surfaceHue: 170,
     surfaceSat: 20,
-    defaultBackgroundMode: 'minimal',
   },
   {
     id: 'blossom',
@@ -493,8 +535,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 70,
     surfaceHue: 330,
     surfaceSat: 15,
-    defaultBackgroundMode: 'scenic',
-    overlayScale: 0.65,
   },
   {
     id: 'lunar',
@@ -508,7 +548,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 85,
     surfaceHue: 220,
     surfaceSat: 18,
-    defaultBackgroundMode: 'minimal',
   },
   {
     id: 'verdant',
@@ -522,7 +561,6 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 58,
     surfaceHue: 145,
     surfaceSat: 20,
-    defaultBackgroundMode: 'gradient',
   },
   {
     id: 'midnight',
@@ -536,9 +574,13 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLightDark: 68,
     surfaceHue: 230,
     surfaceSat: 35,
-    defaultBackgroundMode: 'minimal',
-    overlayScale: 0.5,
   },
+];
+
+const PALETTE_CONFIGS: PaletteConfig[] = [
+  ...SPECIAL_PALETTE_CONFIGS,
+  ...SPECTRUM_HUES.map(createSpectrumConfig),
+  ...LEGACY_PALETTE_CONFIGS,
   {
     id: 'high-contrast',
     label: 'High Contrast',
@@ -550,9 +592,38 @@ const PALETTE_CONFIGS: PaletteConfig[] = [
     accentLight: 52,
     accentLightDark: 65,
     highContrast: true,
-    defaultBackgroundMode: 'minimal',
   },
 ];
+
+export const COLOR_PALETTE_GROUPS = [
+  {
+    id: 'special' as const,
+    label: 'Special',
+    paletteIds: ['monochrome', 'warm-paper', 'high-contrast'] as ColorPaletteId[],
+  },
+  {
+    id: 'spectrum' as const,
+    label: 'Spectrum',
+    paletteIds: SPECTRUM_HUES.map((hue) => `spectrum-${hue}` as SpectrumPaletteId),
+  },
+];
+
+/** Maps retired palette IDs to the nearest spectrum equivalent. */
+export const LEGACY_PALETTE_MIGRATION: Record<string, ColorPaletteId> = {
+  'cool-slate': 'spectrum-210',
+  azure: 'spectrum-210',
+  forest: 'spectrum-150',
+  rose: 'spectrum-345',
+  amber: 'spectrum-45',
+  lavender: 'spectrum-270',
+  ocean: 'spectrum-195',
+  ember: 'spectrum-30',
+  mint: 'spectrum-165',
+  blossom: 'spectrum-330',
+  lunar: 'spectrum-225',
+  verdant: 'spectrum-120',
+  midnight: 'spectrum-240',
+};
 
 function configToPalette(config: PaletteConfig): ColorPaletteDefinition {
   const build = config.id === 'monochrome'
@@ -565,8 +636,6 @@ function configToPalette(config: PaletteConfig): ColorPaletteDefinition {
     description: config.description,
     previewLight: config.previewLight,
     previewDark: config.previewDark,
-    defaultBackgroundMode: config.defaultBackgroundMode ?? 'scenic',
-    overlayScale: config.overlayScale ?? 1,
     light: build(false),
     dark: build(true),
   };
@@ -579,18 +648,18 @@ export const COLOR_PALETTES: Record<ColorPaletteId, ColorPaletteDefinition> =
 
 export const COLOR_PALETTE_LIST = PALETTE_CONFIGS.map((config) => configToPalette(config));
 
-export const DEFAULT_COLOR_PALETTE_ID: ColorPaletteId = 'monochrome';
-export const DEFAULT_BACKGROUND_MODE: BackgroundMode = 'scenic';
+export const DEFAULT_COLOR_PALETTE_ID: ColorPaletteId = 'azure';
 
 export const COLOR_PALETTE_STORAGE_KEY = 'colorPalette';
-export const BACKGROUND_MODE_STORAGE_KEY = 'backgroundMode';
 
 export function isColorPaletteId(value: string | undefined | null): value is ColorPaletteId {
   return !!value && value in COLOR_PALETTES;
 }
 
-export function isBackgroundMode(value: string | undefined | null): value is BackgroundMode {
-  return value === 'scenic' || value === 'minimal' || value === 'gradient';
+export function normalizeColorPaletteId(value: string | undefined | null): ColorPaletteId {
+  if (!value) return DEFAULT_COLOR_PALETTE_ID;
+  if (isColorPaletteId(value)) return value;
+  return LEGACY_PALETTE_MIGRATION[value] ?? DEFAULT_COLOR_PALETTE_ID;
 }
 
 export function getPaletteTokens(id: ColorPaletteId, isDark: boolean): ColorPaletteTokens {

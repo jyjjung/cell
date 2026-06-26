@@ -22,81 +22,74 @@ interface TimelineDetailsDialogProps {
 
 export const TimelineDetailsDialog = ({ item, onClose, t }: TimelineDetailsDialogProps) => (
   <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
-    <DialogContent className="rounded-[3rem] p-10 overflow-hidden">
-      {/* Decorative background glow */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -z-10 rounded-full" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/5 blur-3xl -z-10 rounded-full" />
-
-      <DialogHeader className="space-y-6">
-        <div className="flex items-center gap-4">
+    <DialogContent>
+      <DialogHeader>
+        <div className="flex items-center gap-3">
             <div className={cn(
-                "p-3 rounded-2xl",
+                "p-2 rounded-lg",
                 item?.type === 'cleaning' ? "bg-green-500/10 text-green-500" : 
                 item?.type === 'qt' ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500"
             )}>
-                {item?.type === 'cleaning' ? <ShieldCheck className="h-6 w-6" /> : item?.type === 'qt' ? <BookOpenText className="h-6 w-6" /> : <Calendar className="h-6 w-6" />}
+                {item?.type === 'cleaning' ? <ShieldCheck className="h-5 w-5" /> : item?.type === 'qt' ? <BookOpenText className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
             </div>
-            <div className="space-y-0.5">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">Community Timeline</p>
-                <DialogDescription className="text-xs font-bold uppercase tracking-[0.1em] text-primary">
-                    Record ID: {item?.id.slice(0, 8)}
+            <div>
+                <p className="text-micro-label">{t.communityTimeline}</p>
+                <DialogDescription className="text-micro-label text-primary">
+                    {item?.type === 'cleaning' ? t.cleaningDuty : item?.type === 'qt' ? t.qtRoster : item?.category || t.eventLabel}
                 </DialogDescription>
             </div>
         </div>
-        <DialogTitle className="text-3xl font-black tracking-tighter uppercase leading-tight text-white/95">
+        <DialogTitle className="text-section-title pt-2">
             {item?.title}
         </DialogTitle>
-        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] opacity-60">
+        <div className="flex items-center gap-2 text-micro-label">
             <Calendar className="h-3 w-3" />
             {item && format(item.date, "EEEE, MMMM do, yyyy")}
         </div>
       </DialogHeader>
       
-      <div className="mt-10 space-y-8">
+      <div className="stack-gap pt-3">
         {item?.type === 'event' && item.details && (
-          <div className="glass-thin p-8 rounded-[2.5rem]">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Brief Context</p>
-            <p className="text-sm font-medium leading-relaxed opacity-90 text-white/80">{item.details}</p>
+          <div className="glass-thin p-3 rounded-lg">
+            <p className="text-micro-label mb-2">{t.details}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{item.details}</p>
           </div>
         )}
         
         {item?.type === 'qt' && (
-          <div className="space-y-4">
+          <div className="stack-gap-sm">
             {item.qtTitle && (
-              <div className="glass-thin p-8 rounded-[2.5rem]">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Teaching Topic</p>
-                <p className="text-xl font-black leading-tight text-white/90">{item.qtTitle}</p>
+              <div className="glass-thin p-3 rounded-lg">
+                <p className="text-micro-label mb-1">{t.topic}</p>
+                <p className="font-semibold text-sm leading-tight">{item.qtTitle}</p>
               </div>
             )}
-            <div className="glass-thin flex items-center justify-between p-8 rounded-[2.5rem]">
+            <div className="glass-thin flex items-center justify-between p-3 rounded-lg">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-3">Scripture Assignment</p>
-                <p className="text-2xl font-black tracking-tighter text-white/90">{item.passage}</p>
+                <p className="text-micro-label text-primary mb-1">{t.passage}</p>
+                <p className="text-sm font-medium">{item.passage}</p>
               </div>
-              <BookOpenText className="h-10 w-10 text-primary/20" />
+              <BookOpenText className="h-5 w-5 text-primary/30" />
             </div>
           </div>
         )}
         
         {item?.type === 'cleaning' && (
-          <div className="grid grid-cols-1 gap-4">
-            <div className="glass-thin p-8 rounded-[2.5rem]">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">Duty Classification</p>
-              <p className="text-xl font-black text-white/90">{item.dayName || 'Standard Roster'}</p>
+          <div className="stack-gap-sm">
+            <div className="glass-thin p-3 rounded-lg">
+              <p className="text-micro-label mb-1">{t.dayType}</p>
+              <p className="font-semibold text-sm">{item.dayName || t.standardCleaning}</p>
             </div>
-            <div className="glass-thin p-8 rounded-[2.5rem]">
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-green-500 mb-3">Assigned Stewards</p>
-              <p className="text-xl font-black text-white/90">{item.assignedNames}</p>
+            <div className="glass-thin p-3 rounded-lg">
+              <p className="text-micro-label text-green-500 mb-1">{t.team}</p>
+              <p className="text-sm font-medium">{item.assignedNames}</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-12">
-        <Button 
-            className="w-full h-16 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 active:scale-[0.98] transition-all bg-primary hover:bg-primary/90" 
-            onClick={onClose}
-        >
+      <div className="pt-3">
+        <Button className="w-full" onClick={onClose}>
             {t.confirm}
         </Button>
       </div>

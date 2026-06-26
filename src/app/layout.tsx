@@ -17,7 +17,6 @@ import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-contex
 import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { OfflineBanner } from '@/components/layout/offline-banner';
-import { ThemePreferenceSync } from '@/components/layout/theme-preference-sync';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 
 const GlobalPageLoader = dynamic(() => import('@/components/layout/global-page-loader'), { ssr: false });
@@ -59,15 +58,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-glass="on" className={appFontVariableClasses}>
+    <html lang="en" suppressHydrationWarning data-glass="off" className={appFontVariableClasses}>
       <body className="antialiased">
         <ChunkErrorListener />
         <OfflineBanner />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
             <PageLoadingProvider>
               <AuthProvider>
                 <AppDataProviders>
-                <ThemePreferenceSync />
                 <ColorPaletteProvider>
                 <TypographyProvider>
                 <AppearanceFirebaseBootstrap />

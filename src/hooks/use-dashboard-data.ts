@@ -22,7 +22,7 @@ import {
   startOfToday 
 } from 'date-fns';
 import { nextOccurrenceOnOrAfter, parseDay } from '@/lib/event-occurrences';
-import { findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { findTodaysReading, findNextUnreadReading, calculatePlanPaceStats } from '@/lib/reading-utils';
 
 export type InternalTimelineItem = {
     id: string;
@@ -55,17 +55,8 @@ export function useDashboardData() {
   const bibleStats = useMemo(() => {
     if (!plan?.dailyReadings || plan.dailyReadings.length === 0) return null;
     const today = startOfDay(new Date());
-    const allPassages = plan.dailyReadings.flatMap(day => day.passages || []);
-    const uniqueChaptersInPlan = new Set(allPassages.map(p => `${p.book} ${p.chapter}`));
-    const completedChapters = new Set<string>();
-    completedPassages.forEach(cp => {
-      const passage = allPassages.find(p => p.displayText === cp);
-      if (passage) completedChapters.add(`${passage.book} ${passage.chapter}`);
-    });
-    const chaptersLeft = Math.max(0, uniqueChaptersInPlan.size - completedChapters.size);
-    const lastReadingDate = parseDay(plan.dailyReadings[plan.dailyReadings.length - 1].date);
-    const daysLeft = isValid(lastReadingDate) ? Math.max(0, differenceInDays(lastReadingDate, today)) : 0;
-    return { chaptersLeft, daysLeft };
+    const { passagesLeft, daysLeft } = calculatePlanPaceStats(plan.dailyReadings, completedPassages, today);
+    return { passagesLeft, daysLeft };
   }, [plan, completedPassages]);
 
   const todaysReading = useMemo(() => plan?.dailyReadings ? findTodaysReading(plan.dailyReadings) : null, [plan]);

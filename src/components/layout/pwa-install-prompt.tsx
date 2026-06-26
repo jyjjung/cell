@@ -39,7 +39,7 @@ export function PWAInstallPrompt() {
           exit={{ opacity: 0, y: 100 }}
           className="fixed bottom-6 left-4 right-4 z-[150] md:left-auto md:right-8 md:w-[400px]"
         >
-          <div className="relative p-6 rounded-[2.5rem] bg-card/80 backdrop-blur-3xl border border-primary/20 shadow-2xl overflow-hidden">
+          <div className="relative p-6 rounded-2xl widget-surface overflow-hidden">
             <button 
               onClick={handleDismiss}
               className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors"
@@ -52,18 +52,18 @@ export function PWAInstallPrompt() {
                 <Download className="h-6 w-6" />
               </div>
               <div className="space-y-3 pr-6">
-                <h3 className="text-lg font-black tracking-tight uppercase leading-none">Enable Sync.</h3>
-                <p className="text-xs font-medium text-muted-foreground leading-relaxed">
-                  To receive real-time notifications for chats and events on iOS, you must add the portal to your home screen.
+                <h3 className="text-section-title leading-none">Add to home screen</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Install the app to get push notifications on iOS.
                 </p>
-                <div className="pt-2 space-y-3">
-                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary/80">
+                <div className="pt-2 stack-gap-sm">
+                  <div className="flex items-center gap-3 text-micro-label text-primary/80">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">1</span>
-                    <span>Tap the Share button <Share className="inline h-3 w-3 ml-1 mb-1" /></span>
+                    <span>Tap Share <Share className="inline h-3 w-3 ml-1 mb-1" /></span>
                   </div>
-                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary/80">
+                  <div className="flex items-center gap-3 text-micro-label text-primary/80">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">2</span>
-                    <span>Select "Add to Home Screen"</span>
+                    <span>Choose &quot;Add to Home Screen&quot;</span>
                   </div>
                 </div>
               </div>

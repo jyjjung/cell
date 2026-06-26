@@ -39,7 +39,7 @@ function KeyBadge({
 }: { keyName: ChordKey; accent?: boolean; onDark?: boolean }) {
   return (
     <span className={cn(
-      'inline-flex items-center justify-center min-w-[2rem] h-6 px-1.5 rounded-lg text-[11px] font-black tracking-tight border',
+      'inline-flex items-center justify-center min-w-[2rem] h-6 px-1.5 rounded-lg text-[11px] font-semibold tracking-tight border',
       accent
         ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
         : onDark
@@ -297,7 +297,7 @@ export function FullScreenViewer({
                 )}
                 {isZoomed && (
                   <button onClick={resetZoom}
-                    className="text-[10px] font-black text-amber-400/90 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                    className="text-micro-label text-amber-400/90 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
                     {zoomPct}% · Reset
                   </button>
                 )}
@@ -343,8 +343,8 @@ export function FullScreenViewer({
                       <div className="flex flex-col items-center py-8 px-6 bg-black/20 sm:hidden">
                         <FileText className="h-10 w-10 text-rose-500/50 mb-3" />
                         <button onClick={() => window.open(url, '_blank')}
-                          className="w-full py-4 rounded-2xl bg-rose-500 text-white font-black flex items-center justify-center gap-3">
-                          <Maximize className="h-5 w-5" /> OPEN PDF
+                          className="w-full py-4 rounded-2xl bg-rose-500 text-white font-semibold flex items-center justify-center gap-3">
+                          <Maximize className="h-5 w-5" /> Open PDF
                         </button>
                       </div>
                     </div>
@@ -439,7 +439,7 @@ export function FullScreenViewer({
               animate={{ opacity: 1, scale: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.9, x: holdDir === 'next' ? 40 : -40 }}
               className={cn(
-                "fixed top-1/2 -translate-y-1/2 z-[400] flex flex-col items-center gap-3 p-6 rounded-3xl backdrop-blur-2xl border-2 shadow-2xl",
+                "fixed top-1/2 -translate-y-1/2 z-[400] flex flex-col items-center gap-2 p-4 rounded-xl backdrop-blur-xl border shadow-lg",
                 holdDir === 'next' 
                   ? "right-8 bg-rose-500/20 border-rose-500/40" 
                   : "left-8 bg-amber-500/20 border-amber-500/40"
@@ -452,10 +452,10 @@ export function FullScreenViewer({
                 {holdDir === 'next' ? <ArrowRight className="h-8 w-8" /> : <ArrowLeftIcon className="h-8 w-8" />}
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60 text-white mb-1">
-                  {holdDir === 'next' ? 'Next Song' : 'Previous Song'}
+                <p className="text-micro-label opacity-60 text-white mb-1">
+                  {holdDir === 'next' ? 'Next song' : 'Previous song'}
                 </p>
-                <p className="text-white font-black text-lg max-w-[160px] leading-tight">
+                <p className="text-white font-semibold text-lg max-w-[160px] leading-tight">
                   {holdDir === 'next' ? slides[idx + 1]?.songTitle : slides[idx - 1]?.songTitle}
                 </p>
               </div>

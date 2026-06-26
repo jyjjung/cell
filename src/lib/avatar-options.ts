@@ -25,49 +25,7 @@ export const OUTFIT_COLORS = [
 
 export const ACCESSORY_COLORS = ['#222222', '#5A6978', '#FFFFFF', '#D95763', '#F5A623', '#FFEB3B', '#4A90E2'];
 
-export const BACKGROUNDS: { [key: string]: { stops: { offset: string; color: string }[] } } = {
-  'none': {
-    stops: [{ offset: '0%', color: 'transparent' }, { offset: '100%', color: 'transparent' }]
-  },
-  // Gradients
-  'blue-gradient': {
-    stops: [{ offset: '0%', color: '#6280D5' }, { offset: '100%', color: '#3A508C' }]
-  },
-  'teal-gradient': {
-    stops: [{ offset: '0%', color: '#64C4D8' }, { offset: '100%', color: '#3A8D5B' }]
-  },
-  'orange-gradient': {
-    stops: [{ offset: '0%', color: '#F5A623' }, { offset: '100%', color: '#D95763' }]
-  },
-  'sunset-gradient': {
-    stops: [{ offset: '0%', color: '#FF5F6D' }, { offset: '100%', color: '#FFC371' }]
-  },
-  'forest-gradient': {
-    stops: [{ offset: '0%', color: '#134E5E' }, { offset: '100%', color: '#71B280' }]
-  },
-  // Solid Colors - Neutral
-  'white': { stops: [{ offset: '0%', color: '#FFFFFF' }, { offset: '100%', color: '#FFFFFF' }] },
-  'black': { stops: [{ offset: '0%', color: '#000000' }, { offset: '100%', color: '#000000' }] },
-  'slate': { stops: [{ offset: '0%', color: '#64748B' }, { offset: '100%', color: '#64748B' }] },
-  // Solid Colors - Vibrant
-  'red': { stops: [{ offset: '0%', color: '#EF4444' }, { offset: '100%', color: '#EF4444' }] },
-  'orange': { stops: [{ offset: '0%', color: '#F97316' }, { offset: '100%', color: '#F97316' }] },
-  'amber': { stops: [{ offset: '0%', color: '#F59E0B' }, { offset: '100%', color: '#F59E0B' }] },
-  'yellow': { stops: [{ offset: '0%', color: '#EAB308' }, { offset: '100%', color: '#EAB308' }] },
-  'lime': { stops: [{ offset: '0%', color: '#84CC16' }, { offset: '100%', color: '#84CC16' }] },
-  'green': { stops: [{ offset: '0%', color: '#22C55E' }, { offset: '100%', color: '#22C55E' }] },
-  'emerald': { stops: [{ offset: '0%', color: '#10B981' }, { offset: '100%', color: '#10B981' }] },
-  'teal': { stops: [{ offset: '0%', color: '#14B8A6' }, { offset: '100%', color: '#14B8A6' }] },
-  'cyan': { stops: [{ offset: '0%', color: '#06B6D4' }, { offset: '100%', color: '#06B6D4' }] },
-  'sky': { stops: [{ offset: '0%', color: '#0EA5E9' }, { offset: '100%', color: '#0EA5E9' }] },
-  'blue': { stops: [{ offset: '0%', color: '#3B82F6' }, { offset: '100%', color: '#3B82F6' }] },
-  'indigo': { stops: [{ offset: '0%', color: '#6366F1' }, { offset: '100%', color: '#6366F1' }] },
-  'violet': { stops: [{ offset: '0%', color: '#8B5CF6' }, { offset: '100%', color: '#8B5CF6' }] },
-  'purple': { stops: [{ offset: '0%', color: '#A855F7' }, { offset: '100%', color: '#A855F7' }] },
-  'fuchsia': { stops: [{ offset: '0%', color: '#D946EF' }, { offset: '100%', color: '#D946EF' }] },
-  'pink': { stops: [{ offset: '0%', color: '#EC4899' }, { offset: '100%', color: '#EC4899' }] },
-  'rose': { stops: [{ offset: '0%', color: '#F43F5E' }, { offset: '100%', color: '#F43F5E' }] },
-};
+export { BACKGROUNDS } from '@/lib/avatar-backgrounds';
 
 export const DEFAULT_AVATAR_DATA: Required<AvatarData> = {
     mode: 'custom',
@@ -84,6 +42,8 @@ export const DEFAULT_AVATAR_DATA: Required<AvatarData> = {
     facialHairColor: '#342319',
     backgroundColor: 'blue-gradient',
     initials: '',
+    imageUrl: '',
+    cosmeticTier: 'none',
 };
 
 
