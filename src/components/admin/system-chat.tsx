@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +47,7 @@ type Message = {
 
 export default function SystemChat() {
   const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { addEvent } = useEvents();
   const { createNotification } = useNotifications();
   const { addSong } = useWorshipSongs();
@@ -325,7 +327,7 @@ export default function SystemChat() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      <header className="flex-shrink-0 flex items-center justify-between py-6 px-12 z-20">
+      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 z-20">
         <button 
           onClick={() => router.back()}
           className="h-10 w-10 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
@@ -334,7 +336,7 @@ export default function SystemChat() {
         </button>
         <div className="flex flex-col items-center gap-1 opacity-40">
            <MessageSquarePlus className="h-4 w-4 text-white" />
-           <h2 className="text-[9px] font-black uppercase tracking-[0.3em] font-inter text-white">Creation Assistant</h2>
+           <h2 className="text-micro-label">{t.adminCreationAssistant}</h2>
         </div>
         <div className="w-10" /> {/* Spacer */}
       </header>
@@ -371,7 +373,7 @@ export default function SystemChat() {
                     <div className={cn(
                         "px-6 py-4 rounded-[1.8rem] group relative transition-all duration-300",
                         msg.sender === 'user' 
-                            ? "bg-primary text-primary-foreground font-black rounded-tr-xl shadow-xl shadow-black/10" 
+                            ? "bg-primary text-primary-foreground font-semibold rounded-tr-xl shadow-lg shadow-black/10" 
                             : "bg-card/40 border border-border text-foreground font-inter rounded-tl-xl"
                     )}>
                         <p className="text-[15px] leading-relaxed relative z-10 !text-white" style={{ color: 'white' }}>
@@ -388,7 +390,7 @@ export default function SystemChat() {
                             </button>
                         )}
                     </div>
-                    <span className="text-[9px] text-muted-foreground/30 font-bold uppercase tracking-widest px-2">
+                    <span className="text-micro-label px-2">
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                 </div>
@@ -405,43 +407,43 @@ export default function SystemChat() {
                     <Button 
                         onClick={startEventFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-9 px-4 rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-micro-label !opacity-100"
                     >
                         <Calendar className="mr-2 h-3.5 w-3.5 text-primary" />
-                        Event
+                        {t.events}
                     </Button>
                     <Button 
                         onClick={startAnnouncementFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-9 px-4 rounded-xl bg-white/5 border-white/10 hover:bg-white/10 text-micro-label !opacity-100"
                     >
                         <Bell className="mr-2 h-3.5 w-3.5 text-primary" />
-                        Broadcast
+                        {t.adminBroadcast}
                     </Button>
-                    <div className="w-full h-px bg-white/5 my-2" />
+                    <div className="w-full h-px bg-white/5 my-1" />
                     <Button 
                         onClick={startSongFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-9 px-4 rounded-xl bg-white/5 border-border hover:bg-white/10 text-micro-label !opacity-100"
                     >
                         <Music className="mr-2 h-3.5 w-3.5 text-primary" />
-                        New Song
+                        {t.adminNewSong}
                     </Button>
                     <Button 
                         onClick={startSetlistFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-9 px-4 rounded-xl bg-white/5 border-border hover:bg-white/10 text-micro-label !opacity-100"
                     >
                         <ListMusic className="mr-2 h-3.5 w-3.5 text-primary" />
-                        Setlist
+                        {t.adminSetlist}
                     </Button>
                     <Button 
                         onClick={startRosterFlow}
                         variant="outline"
-                        className="h-10 px-6 rounded-2xl bg-white/5 border-border hover:bg-white/10 hover:border-border transition-all group scale-100 active:scale-95 text-[10px] font-black uppercase tracking-widest"
+                        className="h-9 px-4 rounded-xl bg-white/5 border-border hover:bg-white/10 text-micro-label !opacity-100"
                     >
                         <ClipboardList className="mr-2 h-3.5 w-3.5 text-primary" />
-                        Team Roster
+                        {t.adminTeamRoster}
                     </Button>
                 </motion.div>
             )}
@@ -462,14 +464,14 @@ export default function SystemChat() {
       </div>
 
       {/* Fixed Input Bar Matching Main App */}
-      <div className="px-4 py-8 bg-gradient-to-t from-background via-background/90 to-transparent shrink-0 z-20">
+      <div className="px-4 py-6 bg-gradient-to-t from-background via-background/90 to-transparent shrink-0 z-20">
         <div className="max-w-2xl mx-auto flex flex-col gap-3">
             <div className="flex justify-end px-6">
                 <button 
                     onClick={() => { setWizardState('IDLE'); setMessages([]); focusInput(); }} 
-                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 hover:text-destructive/70 transition-colors"
+                    className="text-micro-label hover:text-destructive/70 transition-colors"
                 >
-                    Reset Chat
+                    {t.adminResetChat}
                 </button>
             </div>
             

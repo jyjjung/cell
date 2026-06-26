@@ -6,45 +6,43 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
-import { formatDistanceToNow } from 'date-fns';
 import { Check, Loader2, Bell, ArrowRight } from 'lucide-react';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { useRouter } from 'next/navigation';
 import { LinkifiedText } from '@/components/ui/linkified-text';
+import { translations } from '@/lib/translations';
 
-const NotificationItem = ({ notification, onMarkRead }: { notification: any, onMarkRead: () => void }) => (
+const NotificationItem = ({ notification, onMarkRead, markReadLabel }: { notification: any, onMarkRead: () => void, markReadLabel: string }) => (
   <motion.div
     layout
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-    className="relative p-4 glass-thin hover:ring-destructive/30 transition-all rounded-[1.5rem] group"
+    className="surface-row group"
   >
-    <div className="flex items-center justify-between gap-4">
-        <div className="flex-grow min-w-0 space-y-0.5">
-            <p className="font-bold text-sm tracking-tight truncate text-foreground group-hover:text-white transition-colors">{notification.title}</p>
-            <LinkifiedText 
-              text={notification.message} 
-              truncate 
-              className="text-muted-foreground text-xs font-medium group-hover:text-white/80 transition-colors"
-              linkClassName="group-hover:text-white group-hover:decoration-white/40"
-            />
-        </div>
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 shrink-0 rounded-xl hover:bg-white hover:text-destructive transition-all" 
-            onClick={onMarkRead} 
-            aria-label="Mark as read"
-        >
-            <Check className="h-4 w-4" />
-        </Button>
+    <div className="flex-grow min-w-0 space-y-0.5">
+        <p className="font-semibold text-sm truncate text-foreground">{notification.title}</p>
+        <LinkifiedText 
+          text={notification.message} 
+          truncate 
+          className="text-muted-foreground text-xs"
+        />
     </div>
+    <Button 
+        variant="ghost" 
+        size="icon" 
+        className="h-8 w-8 shrink-0" 
+        onClick={onMarkRead} 
+        aria-label={markReadLabel}
+    >
+        <Check className="h-4 w-4" />
+    </Button>
   </motion.div>
 );
 
 export default function NotificationsWidget() {
   const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
@@ -60,26 +58,26 @@ export default function NotificationsWidget() {
   }
 
   return (
-    <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
-        <div className="flex items-center justify-between mb-6">
+    <div className="widget-surface relative h-fit overflow-hidden">
+        <div className="panel-header">
             <div className="min-w-0">
-                <h3 className="text-lg font-black tracking-tight">Activity Feed</h3>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Real-time Pulse</p>
+                <h3 className="panel-title">{t.activityFeed}</h3>
+                <p className="panel-subtitle">{t.realtimePulse}</p>
             </div>
-            <div className="p-2.5 rounded-xl glass-thin text-destructive ring-1 ring-destructive/20">
-                <Bell className="h-5 w-5" />
+            <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                <Bell className="h-4 w-4" />
             </div>
         </div>
 
-        <div className="space-y-3 mb-6 min-h-[120px]">
+        <div className="stack-gap-sm mb-3">
             {loading ? (
-                <div className="h-32 flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" />
+                <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
                 </div>
             ) : unreadNotifications.length === 0 ? (
-                <div className="h-32 flex flex-col items-center justify-center text-center opacity-40 py-4">
-                    <Bell className="h-8 w-8 mb-3" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">All Settled</p>
+                <div className="empty-inline">
+                    <Bell className="h-6 w-6 mb-2 text-muted-foreground" />
+                    <p>{t.allSettled}</p>
                 </div>
             ) : (
                 <>
@@ -89,33 +87,36 @@ export default function NotificationsWidget() {
                             key={notification.id}
                             notification={notification}
                             onMarkRead={() => markAsRead(notification.id)}
+                            markReadLabel={t.markAsRead}
                         />
                         ))}
                     </AnimatePresence>
                     {unreadNotifications.length > 3 && (
-                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest pl-2 pt-2 text-center">
-                            + {unreadNotifications.length - 3} further alerts
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                            + {unreadNotifications.length - 3} {t.furtherAlerts}
                         </p>
                     )}
                 </>
             )}
         </div>
         
-        <div className="flex flex-col gap-3 mt-8">
+        <div className="stack-gap-sm">
             <Button 
                 variant="outline" 
-                className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group" 
+                size="sm"
+                className="w-full" 
                 onClick={handleGoToNotifications}
             >
-                Alert Vault
-                <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                {t.alertVault}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
             {unreadNotifications.length > 1 && (
                 <button 
-                    className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground hover:text-destructive transition-colors py-2" 
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1" 
                     onClick={() => markAllAsRead(unreadNotifications.map(n => n.id))}
                 >
-                    Dismiss All
+                    {t.dismissAll}
                 </button>
             )}
         </div>

@@ -54,9 +54,9 @@ export function NewSongDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+      <DialogContent className="max-w-sm">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Song</DialogTitle>
+          <DialogTitle className="text-section-title">New song</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Add a new song to the worship music library.
           </DialogDescription>
@@ -107,9 +107,9 @@ export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; 
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+      <DialogContent className="max-w-sm">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Setlist</DialogTitle>
+          <DialogTitle className="text-section-title">New setlist</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Create a setlist for a worship service.
           </DialogDescription>
@@ -175,9 +175,9 @@ export function NewRosterDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+      <DialogContent className="max-w-sm">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">New Roster</DialogTitle>
+          <DialogTitle className="text-section-title">New roster</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Create a worship team roster for a service.
           </DialogDescription>
@@ -468,9 +468,9 @@ export function AddChordSheetDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+      <DialogContent className="max-w-sm">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">Upload Chart</DialogTitle>
+          <DialogTitle className="text-section-title">Upload chart</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Add a chord sheet image or PDF for {song?.title}.
           </DialogDescription>

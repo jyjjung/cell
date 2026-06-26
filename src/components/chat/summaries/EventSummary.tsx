@@ -23,8 +23,8 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
 
   if (loading || !event) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading Event Summary...
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
+        Loading…
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
       const date = new Date(event.date);
       if (isNaN(date.getTime())) throw new Error();
       return {
-        dayOfWeek: format(date, 'EEE').toUpperCase(),
+        dayOfWeek: format(date, 'EEE'),
         dayOfMonth: format(date, 'd')
       };
     } catch {
@@ -55,21 +55,21 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
       )}>
         <div className="flex items-start gap-4">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
-             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{dayOfWeek}</span>
+             <span className="text-micro-label">{dayOfWeek}</span>
              <span className="text-2xl font-semibold leading-none text-foreground">{dayOfMonth}</span>
           </div>
           
           <div className="flex-1 min-w-0">
             <div className="mb-1 flex items-center gap-2">
                 <Star className="h-3 w-3 text-primary" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{event.category || 'Event'}</span>
+                <span className="text-micro-label">{event.category || 'Event'}</span>
             </div>
             <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{event.title}</h3>
             
             <div className="flex flex-col gap-1.5 text-muted-foreground">
               <div className="flex items-center gap-2 text-xs font-medium">
                 <Clock className="w-3.5 h-3.5" />
-                <span>{event.startTime ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}` : 'All Day'}</span>
+                <span>{event.startTime ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}` : 'All day'}</span>
               </div>
               {event.location && (
                 <div className="flex items-center gap-2 text-xs font-medium">
@@ -88,8 +88,8 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
         )}
 
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
-            See Calendar
+          <span className="text-micro-label transition-colors group-hover:text-foreground">
+            View calendar
           </span>
           <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>

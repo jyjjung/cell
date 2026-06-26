@@ -4,6 +4,7 @@
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useRouter } from 'next/navigation';
+import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, LogOut, BellRing, BellOff, AlertTriangle, Download, Send, Languages, Cake } from 'lucide-react';
@@ -21,17 +22,17 @@ import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
 import { parseISO } from 'date-fns';
 import { motion } from 'framer-motion';
-import { PageHeader } from '@/components/ui/page-layout';
+import { NavPageHeader, PageSection } from '@/components/ui/page-layout';
 import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import HiddenAchievements from '@/components/profile/hidden-achievements';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { calculatePlanProgressPercent } from '@/lib/reading-utils';
 import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
 import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
 import { AppearanceSettings } from '@/components/profile/appearance-settings';
-import { ProfileHubTabs, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
+import { ProfileHubTabs, isProfileTabId, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
-import { grantSecretAchievement } from '@/lib/achievement-secrets';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
+import { AVATAR_COSMETIC_TIERS, isHaloTierUnlocked } from '@/lib/avatar-cosmetics';
 import { sanitizeAvatarData } from '@/lib/avatar-utils';
 import { canMemberChangeOwnAvatar } from '@/lib/avatar-curator';
 
@@ -40,10 +41,11 @@ import { canMemberChangeOwnAvatar } from '@/lib/avatar-curator';
 type PushSupportState = 'SUPPORTED' | 'NEEDS_PWA_INSTALL' | 'NEEDS_PERMISSION' | 'DENIED' | 'UNSUPPORTED' | 'LOADING';
 
 export default function ProfilePage() {
-  const { currentUser, loadingAuth, signOutUser, updateUserProfile, registerSecretUnlock } = useAuth();
+  const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
   const { patchUsers } = useAllUsers();
   const { events, loading: loadingEvents } = useEvents();
   const router = useRouter();
+  const searchParams = useClientSearchParams();
   const [isMounted, setIsMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -60,11 +62,22 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTabId>('profile');
   const { createNotification } = useNotifications();
   const { completedPassages } = useUserBibleChecklist();
+  const { plan } = useBiblePlan();
 
-  useGrantSecretAchievement('avatar-studio', !!currentUser && isAvatarEditorOpen);
-  
+  const planProgressPercent = useMemo(
+    () => calculatePlanProgressPercent(plan?.dailyReadings, completedPassages),
+    [plan?.dailyReadings, completedPassages],
+  );
+
   const t = translations[preferredLanguage || 'en'];
   const locale = getAppLocale(preferredLanguage);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (isProfileTabId(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -280,6 +293,15 @@ export default function ProfilePage() {
 
   const handleHaloTierSelect = async (tier: AvatarCosmeticTier) => {
     if (!currentUser) return;
+    const tierConfig = AVATAR_COSMETIC_TIERS.find((candidate) => candidate.id === tier);
+    if (tierConfig && !isHaloTierUnlocked(planProgressPercent, tierConfig)) {
+      toast({
+        variant: 'destructive',
+        title: 'Halo locked',
+        description: `Complete ${tierConfig.minPlanProgressPercent}% of the reading plan to unlock this halo.`,
+      });
+      return;
+    }
     const nextAvatar = {
       ...(currentUser.avatar || DEFAULT_AVATAR_DATA),
       cosmeticTier: tier,
@@ -292,12 +314,6 @@ export default function ProfilePage() {
         lastName: currentUser.lastName ?? undefined,
         avatar: nextAvatar,
       }]);
-      if (tier !== 'none') {
-        const achievement = await grantSecretAchievement(currentUser.uid, 'halo');
-        if (achievement) {
-          registerSecretUnlock('halo');
-        }
-      }
       toast({ title: "Halo Updated", description: "Avatar halo selection saved." });
     } catch (error) {
       console.error("Failed to update halo tier:", error);
@@ -321,8 +337,11 @@ export default function ProfilePage() {
 
   const handleTabChange = useCallback((tab: ProfileTabId) => {
     setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.replace(`/profile?${params.toString()}`, { scroll: false });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [router, searchParams]);
 
   const pushButtonClass = "w-full sm:w-auto";
 
@@ -352,8 +371,8 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   return (
-    <div className="page-container stack-gap-lg pb-32">
-      <PageHeader title={t.myProfile} />
+    <div className="page-container">
+      <NavPageHeader />
 
       <motion.div
         key={activeTab}
@@ -384,25 +403,8 @@ export default function ProfilePage() {
               }}
             />
 
-            <UnlockedHalosGrid
-              userId={currentUser.uid}
-              completedPassageKeys={completedPassages}
-              unlockedSecrets={currentUser.unlockedSecrets}
-              selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
-              onHaloTierSelect={handleHaloTierSelect}
-              previewAvatar={currentUser.avatar}
-              labels={{
-                yourHalos: t.yourHalos,
-                yourHalosDesc: t.yourHalosDesc,
-                haloEquipped: t.haloEquipped,
-                haloTapToEquip: t.haloTapToEquip,
-                noHalosYet: t.noHalosYet,
-              }}
-            />
-
-            <div className="glass-card app-card rounded-3xl stack-gap">
-              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.significantDates}</h2>
-              <div className="glass-thin flex items-center justify-between app-card-sm rounded-2xl">
+            <PageSection>
+              <div className="setting-row sm:items-center">
                 <div className="flex items-center gap-3">
                   <Cake className="h-4 w-4 text-primary" />
                   <div>
@@ -412,55 +414,51 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 </div>
-                {birthdayEvent && <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />}
               </div>
               {!birthdayEvent && (
-                <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground/60 px-1">{t.profileBirthdayLinkHint}</p>
+                <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.profileBirthdayLinkHint}</p>
               )}
-            </div>
+            </PageSection>
+
+            <UnlockedHalosGrid
+              planProgressPercent={planProgressPercent}
+              selectedHaloTier={currentUser.avatar?.cosmeticTier || 'none'}
+              onHaloTierSelect={handleHaloTierSelect}
+              previewAvatar={currentUser.avatar}
+              labels={{
+                yourHalos: t.yourHalos,
+                yourHalosDesc: t.yourHalosDesc,
+                haloEquipped: t.haloEquipped,
+                haloTapToEquip: t.haloTapToEquip,
+                haloUnlockAt: t.haloUnlockAt,
+                haloPlanProgress: t.haloPlanProgress,
+                haloNextUnlock: t.haloNextUnlock,
+              }}
+            />
           </>
         )}
 
-        {activeTab === 'rewards' && (
-          <div className="glass-card app-card rounded-3xl">
-            <HiddenAchievements
-              userId={currentUser.uid}
-              completedPassageKeys={completedPassages}
-              unlockedSecrets={currentUser.unlockedSecrets}
-              showDescriptions
-              previewAvatar={currentUser.avatar}
-            />
-          </div>
-        )}
 
         {activeTab === 'appearance' && (
-          <div className="glass-card app-card-responsive rounded-3xl stack-gap min-w-0 overflow-hidden">
-            <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.appearance}</h2>
+          <PageSection title={t.appearance} variant="plain" className="min-w-0 overflow-hidden">
             <AppearanceSettings
               labels={{
-                colors: t.colors,
-                background: t.background,
-                scenic: t.scenic,
-                minimal: t.minimal,
-                gradient: t.gradient,
+                theme: t.theme,
+                themeDesc: t.themeDesc,
                 typography: t.typography,
                 websiteFont: t.websiteFont,
                 websiteFontSize: t.websiteFontSize,
                 bibleFont: t.bibleFont,
                 bibleFontSize: t.bibleFontSize,
-                glassEffects: t.glassEffects,
-                glassEffectsDesc: t.glassEffectsDesc,
               }}
             />
-          </div>
+          </PageSection>
         )}
 
         {activeTab === 'settings' && (
           <>
-            <div className="glass-card app-card rounded-3xl stack-gap">
-              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.settings}</h2>
-
-              <div className="glass-thin flex flex-col gap-3 app-card-sm rounded-2xl sm:flex-row sm:items-center sm:justify-between">
+            <PageSection title={t.settings}>
+              <div className="setting-row sm:items-center">
                 <div className="flex items-center gap-3 min-w-0">
                   <Languages className="h-4 w-4 text-primary shrink-0" />
                   <div className="min-w-0">
@@ -477,16 +475,16 @@ export default function ProfilePage() {
                 </Select>
               </div>
 
-              <div className="glass-thin flex flex-col gap-3 app-card-sm rounded-2xl sm:flex-row sm:items-center sm:justify-between">
+              <div className="setting-row sm:items-center">
                 <div className="flex-1 min-w-0">
                   <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.communityProgressTitle}</p>
-                  <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.communityProgress}</p>
+                  <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.communityVisibilityDesc}</p>
                 </div>
                 <Switch id="community-progress-switch" checked={showProgress} onCheckedChange={handleProgressToggle} className="shrink-0" />
               </div>
 
-              <div className="glass-thin app-card-sm rounded-2xl stack-gap">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="ui-surface stack-gap">
+                <div className="setting-row">
                   <div className="flex-1 min-w-0">
                     <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.pushNotifications}</p>
                     <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.pushNotificationsDesc}</p>
@@ -511,20 +509,16 @@ export default function ProfilePage() {
                   </Alert>
                 )}
               </div>
-            </div>
+            </PageSection>
 
-            <div className="glass-card app-card rounded-3xl stack-gap">
-              <h2 className="text-[length:var(--app-ui-font-base)] font-semibold">{t.account}</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[length:var(--app-ui-font-xs)] font-medium text-muted-foreground">User ID</p>
-                  <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground/50 break-all font-mono mt-0.5">{currentUser.uid}</p>
-                </div>
-              </div>
-              <Button onClick={handleSignOut} variant="destructive" size="sm" className="w-full rounded-xl font-semibold gap-2">
-                <LogOut className="h-4 w-4" /> {t.signOut}
-              </Button>
-            </div>
+            <Button
+              onClick={handleSignOut}
+              variant="ghost"
+              size="sm"
+              className="w-full rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 font-medium gap-2"
+            >
+              <LogOut className="h-4 w-4" /> {t.signOut}
+            </Button>
           </>
         )}
       </motion.div>
@@ -534,7 +528,6 @@ export default function ProfilePage() {
         onTabChange={handleTabChange}
         labels={{
           profile: t.profileTabProfile,
-          rewards: t.profileTabRewards,
           appearance: t.profileTabAppearance,
           settings: t.profileTabSettings,
         }}

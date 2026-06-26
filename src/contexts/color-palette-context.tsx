@@ -12,148 +12,129 @@ import {
 import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/auth-context';
 import {
-  BACKGROUND_MODE_STORAGE_KEY,
   COLOR_PALETTE_STORAGE_KEY,
-  COLOR_PALETTES,
-  DEFAULT_BACKGROUND_MODE,
-  DEFAULT_COLOR_PALETTE_ID,
-  type BackgroundMode,
   type ColorPaletteId,
-  isBackgroundMode,
-  isColorPaletteId,
 } from '@/lib/color-palettes';
-import { applyColorPalette } from '@/lib/apply-color-palette';
 import {
-  applyGlassEffect,
-  GLASS_ENABLED_STORAGE_KEY,
-  readStoredGlassEnabled,
-} from '@/lib/glass-effect';
+  APP_THEME_STORAGE_KEY,
+  APP_THEMES,
+  DEFAULT_APP_THEME_ID,
+  normalizeAppThemeId,
+  type AppThemeId,
+} from '@/lib/app-themes';
+import { applyAppTheme } from '@/lib/apply-app-theme';
+import { applyGlassEffect } from '@/lib/glass-effect';
+import {
+  SURFACE_BACKGROUND_STORAGE_KEY,
+  type SurfaceBackgroundId,
+} from '@/lib/surface-backgrounds';
 
 type ColorPaletteContextValue = {
+  themeId: AppThemeId;
+  /** @deprecated Use themeId */
   paletteId: ColorPaletteId;
-  backgroundMode: BackgroundMode;
-  glassEnabled: boolean;
+  /** @deprecated Use themeId */
+  surfaceBackgroundId: SurfaceBackgroundId;
+  setThemeId: (id: AppThemeId) => Promise<void>;
+  /** @deprecated Use setThemeId */
   setPaletteId: (id: ColorPaletteId) => Promise<void>;
-  setBackgroundMode: (mode: BackgroundMode) => Promise<void>;
-  setGlassEnabled: (enabled: boolean) => Promise<void>;
-  overlayScale: number;
+  /** @deprecated Use setThemeId */
+  setSurfaceBackgroundId: (id: SurfaceBackgroundId) => Promise<void>;
   isReady: boolean;
 };
 
 const ColorPaletteContext = createContext<ColorPaletteContextValue | undefined>(undefined);
 
-function readStoredPalette(): ColorPaletteId {
-  if (typeof window === 'undefined') return DEFAULT_COLOR_PALETTE_ID;
-  const stored = localStorage.getItem(COLOR_PALETTE_STORAGE_KEY);
-  return isColorPaletteId(stored) ? stored : DEFAULT_COLOR_PALETTE_ID;
-}
-
-function readStoredBackgroundMode(): BackgroundMode {
-  if (typeof window === 'undefined') return DEFAULT_BACKGROUND_MODE;
-  const stored = localStorage.getItem(BACKGROUND_MODE_STORAGE_KEY);
-  return isBackgroundMode(stored) ? stored : DEFAULT_BACKGROUND_MODE;
+function readStoredTheme(): AppThemeId {
+  if (typeof window === 'undefined') return DEFAULT_APP_THEME_ID;
+  const storedTheme = localStorage.getItem(APP_THEME_STORAGE_KEY);
+  const storedPalette = localStorage.getItem(COLOR_PALETTE_STORAGE_KEY);
+  const storedSurface = localStorage.getItem(SURFACE_BACKGROUND_STORAGE_KEY);
+  return normalizeAppThemeId(storedTheme, storedPalette, storedSurface);
 }
 
 export function ColorPaletteProvider({ children }: { children: ReactNode }) {
   const { resolvedTheme } = useTheme();
   const { currentUser, updateUserProfile } = useAuth();
-  const [paletteId, setPaletteIdState] = useState<ColorPaletteId>(() => readStoredPalette());
-  const [backgroundMode, setBackgroundModeState] = useState<BackgroundMode>(() => readStoredBackgroundMode());
-  const [glassEnabled, setGlassEnabledState] = useState(() => readStoredGlassEnabled());
+  const [themeId, setThemeIdState] = useState<AppThemeId>(() => readStoredTheme());
   const [isReady, setIsReady] = useState(() => typeof window !== 'undefined');
 
+  const activeTheme = APP_THEMES[themeId];
+
   useEffect(() => {
-    const nextPalette = currentUser?.colorPalette ?? readStoredPalette();
-    const nextBackground = currentUser?.backgroundMode ?? readStoredBackgroundMode();
-    const nextGlass =
-      currentUser?.glassEnabled !== undefined
-        ? currentUser.glassEnabled
-        : readStoredGlassEnabled();
-    setPaletteIdState(nextPalette);
-    setBackgroundModeState(nextBackground);
-    setGlassEnabledState(nextGlass);
+    const nextTheme = normalizeAppThemeId(
+      currentUser?.appTheme ?? localStorage.getItem(APP_THEME_STORAGE_KEY),
+      currentUser?.colorPalette,
+      currentUser?.surfaceBackground,
+    );
+    setThemeIdState(nextTheme);
     setIsReady(true);
-  }, [currentUser?.colorPalette, currentUser?.backgroundMode, currentUser?.glassEnabled]);
+  }, [currentUser?.appTheme, currentUser?.colorPalette, currentUser?.surfaceBackground]);
 
   useEffect(() => {
     if (!isReady || !resolvedTheme) return;
     const isDark = resolvedTheme === 'dark';
-    applyColorPalette(paletteId, isDark);
-  }, [paletteId, resolvedTheme, isReady]);
-
-  useEffect(() => {
-    if (!isReady) return;
-    applyGlassEffect(glassEnabled);
-  }, [glassEnabled, isReady]);
+    applyAppTheme(themeId, isDark);
+    applyGlassEffect(false);
+  }, [themeId, resolvedTheme, isReady]);
 
   const persistPreferences = useCallback(
-    async (
-      nextPalette: ColorPaletteId,
-      nextBackground: BackgroundMode,
-      nextGlassEnabled: boolean
-    ) => {
-      localStorage.setItem(COLOR_PALETTE_STORAGE_KEY, nextPalette);
-      localStorage.setItem(BACKGROUND_MODE_STORAGE_KEY, nextBackground);
-      localStorage.setItem(GLASS_ENABLED_STORAGE_KEY, String(nextGlassEnabled));
+    async (nextTheme: AppThemeId) => {
+      const theme = APP_THEMES[nextTheme];
+      localStorage.setItem(APP_THEME_STORAGE_KEY, nextTheme);
+      localStorage.setItem(COLOR_PALETTE_STORAGE_KEY, theme.legacyPalette);
+      localStorage.setItem(SURFACE_BACKGROUND_STORAGE_KEY, theme.legacySurface);
 
       if (currentUser) {
         await updateUserProfile(currentUser.uid, {
-          colorPalette: nextPalette,
-          backgroundMode: nextBackground,
-          glassEnabled: nextGlassEnabled,
+          appTheme: nextTheme,
+          colorPalette: theme.legacyPalette as ColorPaletteId,
+          surfaceBackground: theme.legacySurface as SurfaceBackgroundId,
+          glassEnabled: false,
         });
       }
     },
-    [currentUser, updateUserProfile]
+    [currentUser, updateUserProfile],
+  );
+
+  const setThemeId = useCallback(
+    async (id: AppThemeId) => {
+      setThemeIdState(id);
+      await persistPreferences(id);
+    },
+    [persistPreferences],
   );
 
   const setPaletteId = useCallback(
     async (id: ColorPaletteId) => {
-      setPaletteIdState(id);
-      await persistPreferences(id, backgroundMode, glassEnabled);
+      const next = normalizeAppThemeId(null, id, APP_THEMES[themeId].legacySurface);
+      await setThemeId(next);
     },
-    [backgroundMode, glassEnabled, persistPreferences]
+    [setThemeId, themeId],
   );
 
-  const setBackgroundMode = useCallback(
-    async (mode: BackgroundMode) => {
-      setBackgroundModeState(mode);
-      await persistPreferences(paletteId, mode, glassEnabled);
+  const setSurfaceBackgroundId = useCallback(
+    async (id: SurfaceBackgroundId) => {
+      const next = normalizeAppThemeId(null, APP_THEMES[themeId].legacyPalette, id);
+      await setThemeId(next);
     },
-    [paletteId, glassEnabled, persistPreferences]
+    [setThemeId, themeId],
   );
 
-  const setGlassEnabled = useCallback(
-    async (enabled: boolean) => {
-      setGlassEnabledState(enabled);
-      await persistPreferences(paletteId, backgroundMode, enabled);
-    },
-    [paletteId, backgroundMode, persistPreferences]
-  );
-
-  const overlayScale = COLOR_PALETTES[paletteId].overlayScale;
+  const paletteId = activeTheme.legacyPalette as ColorPaletteId;
+  const surfaceBackgroundId = activeTheme.legacySurface as SurfaceBackgroundId;
 
   const value = useMemo(
     () => ({
+      themeId,
       paletteId,
-      backgroundMode,
-      glassEnabled,
+      surfaceBackgroundId,
+      setThemeId,
       setPaletteId,
-      setBackgroundMode,
-      setGlassEnabled,
-      overlayScale,
+      setSurfaceBackgroundId,
       isReady,
     }),
-    [
-      paletteId,
-      backgroundMode,
-      glassEnabled,
-      setPaletteId,
-      setBackgroundMode,
-      setGlassEnabled,
-      overlayScale,
-      isReady,
-    ]
+    [themeId, paletteId, surfaceBackgroundId, setThemeId, setPaletteId, setSurfaceBackgroundId, isReady],
   );
 
   return (

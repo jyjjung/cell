@@ -66,10 +66,10 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
                 <div className="flex h-5 w-5 items-center justify-center rounded-md border border-border/60 bg-muted/40">
                     <ClipboardList className="h-3 w-3 text-primary" />
                 </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t.serviceRoster}</span>
+                <span className="text-micro-label">{t.serviceRoster}</span>
             </div>
             <h3 className="mb-1 truncate text-sm font-semibold leading-tight text-foreground">{roster.name}</h3>
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{dateText}</p>
+            <p className="text-micro-label">{dateText}</p>
           </div>
           <div className="flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/40">
              <Users className="h-3.5 w-3.5 text-muted-foreground" />
@@ -80,8 +80,8 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
         <div className="flex flex-col gap-1.5 pt-1">
            <div className="overflow-hidden rounded-lg border border-border/50">
              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2 bg-muted/35 px-2.5 py-1.5">
-               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t.rosterRole}</p>
-               <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t.rosterPerson}</p>
+               <p className="text-micro-label">{t.rosterRole}</p>
+               <p className="text-micro-label">{t.rosterPerson}</p>
              </div>
              {assignedSlots.map((slot, i) => {
                const names = (slot.members || []).map((m) => {
@@ -119,7 +119,7 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
         </div>
 
         <div className="mt-0.5 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">{t.rosterTapToView}</span>
+          <span className="text-micro-label transition-colors group-hover:text-foreground">{t.rosterTapToView}</span>
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>

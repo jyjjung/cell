@@ -1,0 +1,37 @@
+---
+description: Update the in-app changelog before every git push to GitHub
+alwaysApply: true
+---
+
+# Changelog on Push
+
+Before running `git push`, update the changelog in `src/app/feedback/page.tsx`.
+
+## When to update
+
+Update the changelog whenever a push includes user-facing changes (features, fixes, UI, docs shown in-app). Skip only for purely internal or tooling-only commits with no user-visible effect.
+
+## How to update
+
+Add a **new object at the top** of the `changelogs` array (before the existing first entry):
+
+```typescript
+{
+  version: "v1.3.6",           // increment patch from the current latest entry
+  subtitle: "Short Title",   // optional but preferred for feature releases
+  date: "Late-May 2026",       // match existing date style
+  changes: [
+    "User-facing change written in plain language",
+    "Another bullet if needed",
+  ],
+},
+```
+
+## Workflow
+
+1. Finish code changes and commit them.
+2. Add the changelog entry summarizing what shipped.
+3. Commit the changelog update (same commit or a follow-up `chore: update changelog` commit).
+4. Push to GitHub.
+
+Never push code changes without a matching changelog entry in the same push.

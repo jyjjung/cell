@@ -8,23 +8,22 @@ import { useChats } from '@/hooks/useChats';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useAllChatMessages } from '@/hooks/use-all-chat-messages';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
-import { extractChatPhotos } from '@/lib/chat-media-extract';
-import { PageHeader } from '@/components/ui/page-layout';
+import { extractChatPhotos, type ChatPhoto } from '@/lib/chat-media-extract';
+import { NavPageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { ChatImageGallery } from '@/components/chat/ImageLightbox';
 import { downloadChatImage } from '@/lib/chat-image-download';
 
-type GlobalPhoto = {
-  id: string;
-  imageUrl: string;
-  senderLabel: string;
+type GlobalPhoto = ChatPhoto & {
   chatId: string;
   chatName: string;
 };
 
 export default function AllChatPhotosPage() {
   const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
   const usersById = useUsersById();
@@ -63,30 +62,27 @@ export default function AllChatPhotosPage() {
   const loading = loadingChats || (chatIds.length > 0 && loadingMessages);
 
   return (
-    <div className="page-container space-y-6 pb-32">
-      <PageHeader
-        title="All Photos"
+    <div className="page-container">
+      <NavPageHeader
         action={
-          <Button asChild variant="outline" className="h-9 rounded-xl px-3 text-[10px] font-semibold uppercase tracking-[0.16em]">
+          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
             <Link href="/chat">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t.back}
             </Link>
           </Button>
         }
       />
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="empty-inline py-12">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : photos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 py-16 text-center">
-          <ImageIcon className="mb-3 h-10 w-10 text-muted-foreground/30" />
-          <p className="font-semibold text-foreground">No photos yet</p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            Photos shared across your chats will appear here.
-          </p>
+        <div className="empty-inline">
+          <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="font-semibold text-foreground">{t.noPhotosYet}</p>
+          <p className="text-micro-label mt-1">{t.photosSharedHint}</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">

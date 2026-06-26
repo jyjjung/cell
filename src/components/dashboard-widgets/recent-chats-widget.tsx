@@ -12,10 +12,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
 import { GroupChatAvatar } from '@/components/chat/GroupChatAvatar';
 import { formatUserDisplayName } from '@/lib/formatting';
+import { translations } from '@/lib/translations';
 
 export default function RecentChatsWidget() {
     const { chats, loading } = useChats();
     const { currentUser } = useAuth();
+    const t = translations[currentUser?.preferredLanguage || 'en'];
     const { allUsers } = useAllUsers();
     const router = useRouter();
     const { setIsPageLoading } = usePageLoading();
@@ -32,26 +34,26 @@ export default function RecentChatsWidget() {
     if (!currentUser) return null;
 
     return (
-        <div className="glass-card relative p-6 md:p-8 rounded-[2.5rem] overflow-hidden h-fit">
-            <div className="flex items-center justify-between mb-6">
+        <div className="widget-surface relative h-fit overflow-hidden">
+            <div className="panel-header">
                 <div className="min-w-0">
-                    <h3 className="text-lg font-black tracking-tight">Active Circles</h3>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Recent Messenger</p>
+                    <h3 className="panel-title">{t.activeCircles}</h3>
+                    <p className="panel-subtitle">{t.recentMessenger}</p>
                 </div>
-                <div className="p-2.5 rounded-xl glass-thin text-blue-500 ring-1 ring-blue-500/20">
-                    <MessageCircle className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                    <MessageCircle className="h-4 w-4" />
                 </div>
             </div>
 
-            <div className="space-y-3 mb-6 min-h-[120px]">
+            <div className="stack-gap-sm mb-3">
                 {loading ? (
-                    <div className="h-32 flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" />
+                    <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
                     </div>
                 ) : recentChats.length === 0 ? (
-                    <div className="h-32 flex flex-col items-center justify-center text-center opacity-40 py-4">
-                        <MessageCircle className="h-8 w-8 mb-3" />
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">No Circles</p>
+                    <div className="empty-inline">
+                        <MessageCircle className="h-6 w-6 mb-2 text-muted-foreground" />
+                        <p>{t.noCircles}</p>
                     </div>
                 ) : (
                     <AnimatePresence mode="popLayout">
@@ -62,13 +64,13 @@ export default function RecentChatsWidget() {
                             const peerProfile = peerId ? allUsers.find(u => u.uid === peerId) : null;
                             const infoFromChat = peerId ? chat.memberInfo[peerId] : null;
                             
-                            let name = 'Private Chat';
+                            let name = t.privateChat;
                             if (isGroup) {
-                                name = chat.name || 'Unnamed Group';
+                                name = chat.name || t.unnamedCircle;
                             } else if (peerProfile && peerProfile.firstName) {
                                 name = formatUserDisplayName(peerProfile);
                             } else if (infoFromChat) {
-                                name = getMemberDisplayName(infoFromChat, 'Private Chat');
+                                name = getMemberDisplayName(infoFromChat, t.privateChat);
                             }
 
                             const avatar = isGroup ? null : resolveChatAvatar(peerProfile, infoFromChat);
@@ -81,14 +83,14 @@ export default function RecentChatsWidget() {
                                     onClick={() => handleGoToChat(chat.id)}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className="w-full flex items-center gap-4 p-3 rounded-2xl glass-thin hover:ring-blue-500/30 transition-all group overflow-hidden"
+                                    className="surface-row w-full hover:ring-primary/20 transition-all group text-left"
                                 >
-                                    <div className="h-10 w-10 shrink-0 rounded-full glass-thin overflow-hidden">
+                                    <div className="h-9 w-9 shrink-0 rounded-full glass-thin overflow-hidden">
                                         <GroupChatAvatar avatar={avatar} photoURL={photoURL} />
                                     </div>
                                     <div className="flex-grow min-w-0 text-left overflow-hidden">
-                                        <p className="font-bold text-sm truncate text-foreground group-hover:text-white">{name}</p>
-                                        <p className="text-xs text-zinc-700 dark:text-zinc-300 truncate font-semibold group-hover:text-white/80 block w-full">{chat.lastMessageText || 'No messages yet'}</p>
+                                        <p className="font-semibold text-sm truncate text-foreground">{name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{chat.lastMessageText || t.noMessagesYet}</p>
                                     </div>
                                 </motion.button>
                             );
@@ -97,16 +99,15 @@ export default function RecentChatsWidget() {
                 )}
             </div>
 
-            <div className="mt-8">
-                <Button
-                    variant="outline"
-                    className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group"
-                    onClick={() => { setIsPageLoading(true); router.push('/chat'); }}
-                >
-                    Circle Hub
-                    <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                </Button>
-            </div>
+            <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => { setIsPageLoading(true); router.push('/chat'); }}
+            >
+                {t.circleHub}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            </Button>
         </div>
     );
 }

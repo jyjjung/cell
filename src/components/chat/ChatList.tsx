@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -11,11 +10,10 @@ import { usePageLoading } from "@/contexts/page-loading-context";
 import { cn } from "@/lib/utils";
 import { getMemberDisplayName, resolveChatAvatar } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
-
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, MessageCircle, ArrowRight, Plus, Sparkles, Images, Link2 } from "lucide-react";
-import { PageHeader, EmptyState } from "@/components/ui/page-layout";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MessageCircle, ArrowRight, Plus, Sparkles, Images, Link2 } from "lucide-react";
+import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import CreateChatDialog from "./CreateChatDialog";
 import { GroupChatAvatar } from "./GroupChatAvatar";
 import type { Chat } from "@/types";
@@ -31,9 +29,7 @@ export default function ChatList() {
   const online = useOnlineStatus();
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
-
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-
   const loading = loadingChats && chats.length === 0;
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -45,13 +41,13 @@ export default function ChatList() {
       const peerInfoFromChat = peerId ? chat.memberInfo[peerId] : null;
       const peerFullProfile = peerId ? allUsers.find(u => u.uid === peerId) : null;
 
-      let fullName = 'Private Chat';
+      let fullName = t.privateChat;
       if (peerFullProfile && peerFullProfile.firstName) {
         fullName = formatUserDisplayName(peerFullProfile);
       } else if (peerInfoFromChat) {
-        fullName = getMemberDisplayName(peerInfoFromChat, 'Private Chat');
+        fullName = getMemberDisplayName(peerInfoFromChat, t.privateChat);
       } else if (!peerId && chat.members.length === 1) {
-        fullName = "Archived Conversation";
+        fullName = t.archivedConversation;
       }
 
       return {
@@ -62,7 +58,7 @@ export default function ChatList() {
 
     if (chat.type === 'group') {
       return {
-        name: chat.name || 'Unnamed Circle',
+        name: chat.name || t.unnamedCircle,
         avatarData: null,
         photoURL: chat.photoURL || null,
       };
@@ -80,126 +76,74 @@ export default function ChatList() {
   };
 
   return (
-    <div className="page-container space-y-8 pb-32">
-      <PageHeader
-        title="Messages"
+    <div className="page-container stack-gap-sm pb-20">
+      <NavPageHeader
         action={
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
+            className="h-8 rounded-lg px-3 text-sm"
           >
             <Plus className="mr-2 h-4 w-4" />
-            New Chat
+            {t.newChat}
           </Button>
         }
       />
 
       {!online && chats.length > 0 && (
-        <p className="px-1 text-xs font-medium text-muted-foreground">{t.chatOfflineBanner}</p>
+        <p className="text-micro-label px-1">{t.chatOfflineBanner}</p>
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          asChild
-          variant="outline"
-          className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
-        >
+        <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
           <Link href="/chat/photos" onClick={() => handleLinkClick('/chat/photos')}>
             <Images className="mr-2 h-4 w-4" />
-            All Photos
+            {t.allPhotos}
           </Link>
         </Button>
-        <Button
-          asChild
-          variant="outline"
-          className="h-9 rounded-xl px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
-        >
+        <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
           <Link href="/chat/links" onClick={() => handleLinkClick('/chat/links')}>
             <Link2 className="mr-2 h-4 w-4" />
-            All Links
+            {t.allLinks}
           </Link>
         </Button>
       </div>
 
-      {/* Content Section */}
       <div className="relative">
         {loading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-5 rounded-2xl border border-border/30 bg-card/30">
-                <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-32 rounded-lg" />
-                    <Skeleton className="h-3 w-16 rounded-lg" />
-                  </div>
-                  <Skeleton className="h-3 w-48 rounded-lg" />
-                </div>
-              </div>
-            ))}
+          <div className="flex min-h-[240px] items-center justify-center">
+            <LoadingSpinner size="lg" />
           </div>
         ) : filteredChats.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
             title={t.silenceInTheAir}
-            description="Start a new conversation to get connected."
+            description={t.startConversation}
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <AnimatePresence mode="popLayout">
               {isAdmin && (
-                <motion.div
-                    key="system-assistant"
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0 }}
-                    className="w-full"
-                >
-                    <Link
-                      href={`/chat/system`}
-                      onClick={() => handleLinkClick(`/chat/system`)}
-                      className={cn(
-                        "group relative flex items-center gap-4 p-5 rounded-2xl border transition-all w-full overflow-hidden",
-                        pathname === '/chat/system'
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10 border-primary"
-                          : "bg-card/50 border-border/40 backdrop-blur-sm hover:bg-card hover:border-border/60 hover:shadow-md"
-                      )}
-                    >
-                      <div className="relative h-12 w-12 shrink-0">
-                        <div className={cn(
-                          "h-full w-full rounded-xl flex items-center justify-center border transition-all duration-300",
-                          pathname === '/chat/system' ? "border-primary-foreground/30 bg-primary-foreground/10" : "border-border/40 bg-primary/5"
-                        )}>
-                            <Sparkles className={cn("h-5 w-5", pathname === '/chat/system' ? "text-primary-foreground" : "text-primary/60")} />
-                        </div>
+                <motion.div key="system-assistant" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+                  <Link
+                    href={`/chat/system`}
+                    onClick={() => handleLinkClick(`/chat/system`)}
+                    className={cn(
+                      "ui-card flex items-center gap-3 p-3 transition-shadow hover:shadow-md w-full",
+                      pathname === '/chat/system' && "ring-1 ring-primary bg-primary/5"
+                    )}
+                  >
+                    <div className="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center border border-border/40 bg-primary/5">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p className="font-semibold truncate text-sm">{t.systemAssistant}</p>
+                        <span className="text-micro-label text-primary shrink-0">{t.adminTool}</span>
                       </div>
-
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between gap-3 mb-1">
-                          <p className={cn(
-                            "font-bold truncate text-sm leading-none",
-                            pathname === '/chat/system' ? "text-primary-foreground" : "text-foreground"
-                          )}>
-                            System Assistant
-                          </p>
-                          <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest opacity-40 italic px-2 py-0.5 rounded-full",
-                              pathname === '/chat/system' ? "bg-primary-foreground/10 text-primary-foreground" : "bg-primary/10 text-primary"
-                          )}>
-                            Admin Tool
-                          </span>
-                        </div>
-                        <p className={cn(
-                          "text-xs truncate leading-relaxed font-medium opacity-50",
-                          pathname === '/chat/system' ? "text-primary-foreground/70" : "text-muted-foreground"
-                        )}>
-                          Launch creation wizard
-                        </p>
-                      </div>
-
-                      <ArrowRight className={cn("h-4 w-4 transition-all", pathname === '/chat/system' ? "text-primary-foreground/40" : "text-muted-foreground/20 group-hover:text-primary")} />
-                    </Link>
+                      <p className="text-micro-label truncate">{t.launchWizard}</p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </Link>
                 </motion.div>
               )}
 
@@ -218,7 +162,7 @@ export default function ChatList() {
                   <motion.div
                     key={chat.id}
                     layout
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ delay: i * 0.02 }}
@@ -228,86 +172,49 @@ export default function ChatList() {
                       href={`/chat/${chat.id}`}
                       onClick={() => handleLinkClick(`/chat/${chat.id}`)}
                       className={cn(
-                        "group relative flex items-center gap-4 p-5 rounded-2xl border transition-all w-full overflow-hidden",
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/10 border-primary"
-                          : "bg-card/50 border-border/40 backdrop-blur-sm hover:bg-card hover:border-border/60 hover:shadow-md"
+                        "ui-card flex items-center gap-3 p-3 transition-shadow hover:shadow-md w-full",
+                        isActive && "ring-1 ring-primary bg-primary/5",
+                        isUnread && !isActive && "ring-1 ring-primary/20"
                       )}
                     >
-                      {/* Avatar Section */}
-                      <div className="relative h-12 w-12 shrink-0">
-                        <div className={cn(
-                          "h-full w-full rounded-full border transition-all duration-300",
-                          isActive ? "border-primary-foreground/30" : "border-border/40 bg-muted/20"
-                        )}>
+                      <div className="relative h-10 w-10 shrink-0">
+                        <div className="h-full w-full rounded-full border border-border/40 bg-muted/20">
                           {details.avatarData || details.photoURL ? (
-                            <GroupChatAvatar
-                              avatar={details.avatarData}
-                              photoURL={details.photoURL}
-                              active={isActive}
-                            />
+                            <GroupChatAvatar avatar={details.avatarData} photoURL={details.photoURL} active={isActive} />
                           ) : (
-                            <div className={cn(
-                              "h-full w-full flex items-center justify-center",
-                              isActive ? "bg-primary-foreground/10" : "bg-primary/5"
-                            )}>
-                              <Users className={cn("h-5 w-5", isActive ? "text-primary-foreground" : "text-primary/60")} />
+                            <div className="h-full w-full flex items-center justify-center bg-primary/5 rounded-full">
+                              <MessageCircle className="h-5 w-5 text-primary/60" />
                             </div>
                           )}
                         </div>
-
-                        <AnimatePresence>
-                          {isUnread && (
-                            <motion.span
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              exit={{ scale: 0 }}
-                              className="absolute -top-1 -right-1 flex h-4 w-4 z-20"
-                            >
-                              <span className={cn(
-                                "relative inline-flex h-4 w-4 rounded-full border-2 bg-foreground",
-                                isActive ? "border-primary" : "border-background"
-                              )}></span>
-                            </motion.span>
-                          )}
-                        </AnimatePresence>
+                        {isUnread && (
+                          <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background" />
+                        )}
                       </div>
 
-                      {/* Content Section */}
                       <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between gap-3 mb-1">
-                          <p className={cn(
-                            "font-bold truncate text-sm leading-none",
-                            isActive ? "text-primary-foreground" : "text-foreground"
-                          )}>
-                            {details.name}
-                          </p>
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="font-semibold truncate text-sm">{details.name}</p>
                           {chat.lastMessageSentAt && (
-                          <span className={cn(
-                              "text-[10px] whitespace-nowrap font-semibold",
-                              isActive ? "text-primary-foreground" : "text-muted-foreground"
-                            )}>
+                            <span className="text-micro-label whitespace-nowrap shrink-0">
                               {formatDistanceToNow(chat.lastMessageSentAt.toDate(), { addSuffix: true })}
                             </span>
                           )}
                         </div>
                         <p className={cn(
-                          "text-xs truncate leading-relaxed",
-                          isActive ? "text-primary-foreground/70" : "text-muted-foreground",
-                          isUnread && !isActive ? "font-bold text-foreground opacity-100" : "font-semibold text-zinc-700 dark:text-zinc-300 opacity-90"
+                          "text-xs truncate",
+                          isUnread ? "font-medium text-foreground" : "text-muted-foreground"
                         )}>
                           {chat.lastMessageText ? (
                             <>
-                              <span className={cn("font-bold mr-1", isActive ? "opacity-100 text-primary-foreground" : "text-primary/80")}>
-                                {lastSenderName}:
-                              </span>
+                              <span className="font-medium text-primary/80 mr-1">{lastSenderName}:</span>
                               {chat.lastMessageText}
                             </>
                           ) : t.messenger}
                         </p>
                       </div>
 
-                      <ArrowRight className={cn("h-4 w-4 transition-all", isActive ? "text-primary-foreground/40" : "text-muted-foreground/20 group-hover:text-primary")} />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                     </Link>
                   </motion.div>
                 );
@@ -320,6 +227,3 @@ export default function ChatList() {
     </div>
   );
 }
-
-
-

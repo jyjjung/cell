@@ -2,7 +2,9 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
-import type { BackgroundMode, ColorPaletteId } from '@/lib/color-palettes';
+import type { ColorPaletteId } from '@/lib/color-palettes';
+import type { AppThemeId } from '@/lib/app-themes';
+import type { SurfaceBackgroundId } from '@/lib/surface-backgrounds';
 import type { TypographyPreferences } from '@/lib/typography-preferences';
 import type { BibleTextVersion } from '@/lib/bible-versions';
 
@@ -182,7 +184,8 @@ export interface AppUser extends FirebaseUser {
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;
-  backgroundMode?: BackgroundMode;
+  surfaceBackground?: SurfaceBackgroundId;
+  appTheme?: AppThemeId;
   glassEnabled?: boolean;
   typography?: TypographyPreferences;
   colorScheme?: ColorSchemePreference;
@@ -214,7 +217,8 @@ export interface UserProfileData {
   fcmTokens?: string[];
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;
-  backgroundMode?: BackgroundMode;
+  surfaceBackground?: SurfaceBackgroundId;
+  appTheme?: AppThemeId;
   glassEnabled?: boolean;
   typography?: TypographyPreferences;
   colorScheme?: ColorSchemePreference;
@@ -331,6 +335,17 @@ export interface ChatMessage {
   systemEvent?: 'groupPhotoChanged' | 'groupPhotoRemoved';
   /** Main-chat message mirroring a thread reply; opens thread on parent. */
   threadParentId?: string;
+  poll?: ChatPoll;
+  /** Option index (string) → voter user ids */
+  pollVotes?: Record<string, string[]>;
+  /** Bumped when someone votes so the poll sorts to the latest activity. */
+  pollUpdatedAt?: Timestamp;
+}
+
+export interface ChatPoll {
+  question: string;
+  options: string[];
+  allowMultiple?: boolean;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

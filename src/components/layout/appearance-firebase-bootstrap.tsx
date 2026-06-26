@@ -10,7 +10,7 @@ import { readStoredBibleVersion } from '@/lib/bible-versions';
 export function AppearanceFirebaseBootstrap() {
   const { currentUser, updateUserProfile } = useAuth();
   const { typography, isReady: typographyReady } = useTypography();
-  const { paletteId, backgroundMode, glassEnabled, isReady: paletteReady } = useColorPalette();
+  const { themeId, paletteId, surfaceBackgroundId, isReady: paletteReady } = useColorPalette();
   const bootstrappedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -20,9 +20,9 @@ export function AppearanceFirebaseBootstrap() {
 
     const patch: Record<string, unknown> = {};
     if (!currentUser.typography) patch.typography = typography;
+    if (!currentUser.appTheme) patch.appTheme = themeId;
     if (!currentUser.colorPalette) patch.colorPalette = paletteId;
-    if (!currentUser.backgroundMode) patch.backgroundMode = backgroundMode;
-    if (currentUser.glassEnabled === undefined) patch.glassEnabled = glassEnabled;
+    if (!currentUser.surfaceBackground) patch.surfaceBackground = surfaceBackgroundId;
     if (!currentUser.bibleTextVersion) patch.bibleTextVersion = readStoredBibleVersion();
 
     if (Object.keys(patch).length > 0) {
@@ -33,9 +33,9 @@ export function AppearanceFirebaseBootstrap() {
     typographyReady,
     paletteReady,
     typography,
+    themeId,
     paletteId,
-    backgroundMode,
-    glassEnabled,
+    surfaceBackgroundId,
     updateUserProfile,
   ]);
 

@@ -47,20 +47,20 @@ export function ProfileIdentityCard({
   avatarEditingDisabled = false,
 }: ProfileIdentityCardProps) {
   return (
-    <motion.div
+    <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="glass-card flex flex-col items-center gap-[var(--app-inner-gap)] app-card rounded-3xl text-center"
+      className="flex flex-col items-center text-center gap-4 py-2"
     >
-      <div className="h-28 w-28 shrink-0 rounded-full border-2 border-primary/30 bg-muted shadow-md">
-        <PixelAvatar avatar={user.avatar} className="h-full w-full" />
+      <div className="h-24 w-24 shrink-0">
+        <PixelAvatar avatar={user.avatar} className="h-24 w-24" />
       </div>
 
       <div className="min-w-0 space-y-1">
-        <p className="text-xl font-bold">{user.displayName}</p>
+        <p className="text-xl font-semibold tracking-tight">{user.displayName}</p>
         <p className="text-sm text-muted-foreground">{user.email}</p>
-        <p className="text-xs text-muted-foreground/60">{labels.profileNameChangeAdminOnly}</p>
+        <p className="text-xs text-muted-foreground/70">{labels.profileNameChangeAdminOnly}</p>
       </div>
 
       <Dialog open={isAvatarEditorOpen} onOpenChange={onAvatarEditorOpenChange}>
@@ -71,7 +71,8 @@ export function ProfileIdentityCard({
         ) : (
           <Button
             type="button"
-            className="w-full max-w-xs rounded-2xl h-11 font-semibold gap-2"
+            variant="outline"
+            className="rounded-full h-10 px-5 font-medium gap-2"
             onClick={() => onAvatarEditorOpenChange(true)}
           >
             <Palette className="h-4 w-4" />
@@ -102,6 +103,6 @@ export function ProfileIdentityCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </motion.section>
   );
 }

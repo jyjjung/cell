@@ -5,9 +5,10 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, Info, WifiOff, MessageSquare, Images, Link2 } from 'lucide-react';
+import { Loader2, Info, WifiOff, MessageSquare, Images, Link2, ChevronLeft } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 
@@ -23,7 +24,6 @@ import { translations } from '@/lib/translations';
 import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
 import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
-import ChatPhotoUploadButton from './ChatPhotoUploadButton';
 import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
 import { resolveChordSheetsForSetlistSong, getReferenceTracks } from '@/lib/worship-utils';
 import { ChatImageGallery } from './ImageLightbox';
@@ -111,11 +111,13 @@ function ChatWindowBody({
     loadOlderMessages,
     updateSeenTimestamp,
     toggleReaction,
+    votePoll,
     sendMessage,
     sendImageMessage,
     deleteMessage,
   } = messageState;
   const worshipData = useWorshipData();
+  const router = useRouter();
   const setlists = worshipData?.setlists ?? [];
   const songs = worshipData?.songs ?? [];
   const { currentUser } = useAuth();
@@ -256,8 +258,8 @@ function ChatWindowBody({
   if (!chat) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center text-center">
-        <h2 className="text-2xl font-black tracking-tighter mb-4">{t.circleCommand}</h2>
-        <Button asChild variant="outline" className="h-14 px-12 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em]">
+        <h2 className="text-section-title mb-4">{t.circleCommand}</h2>
+        <Button asChild variant="outline" className="h-14 px-12 rounded-2xl font-semibold text-micro-label">
           <Link href="/chat">{t.returnToList}</Link>
         </Button>
       </div>
@@ -273,16 +275,22 @@ function ChatWindowBody({
         </div>
       )}
 
-      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
-        <Link href="/chat" className="h-10 w-10 flex items-center justify-center rounded-full bg-muted/20 hover:bg-muted/40 transition-all">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+      <header className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push('/chat')}
+          className="h-10 w-10 rounded-full bg-muted/20 hover:bg-muted/40"
+          aria-label={t.back}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
 
         <div className="flex flex-col items-center gap-1 min-w-0">
           <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
             <GroupChatAvatar avatar={chatDetails.avatar} photoURL={chatDetails.photoURL} />
           </div>
-          <h1 className="text-[11px] font-black text-foreground uppercase tracking-tight truncate">{chatDetails.name}</h1>
+          <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
         </div>
 
         <Button
@@ -299,38 +307,38 @@ function ChatWindowBody({
         <button
           type="button"
           onClick={() => setChatTab('messages')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
             chatTab === 'messages'
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <MessageSquare className="h-3.5 w-3.5" />
-          Messages
+          {t.messagesTab}
         </button>
         <button
           type="button"
           onClick={() => setChatTab('photos')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
             chatTab === 'photos'
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <Images className="h-3.5 w-3.5" />
-          Photos{photoCount > 0 ? ` (${photoCount})` : ''}
+          {t.photosTab}{photoCount > 0 ? ` (${photoCount})` : ''}
         </button>
         <button
           type="button"
           onClick={() => setChatTab('links')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
             chatTab === 'links'
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <Link2 className="h-3.5 w-3.5" />
-          Links{linkCount > 0 ? ` (${linkCount})` : ''}
+          {t.linksTab}{linkCount > 0 ? ` (${linkCount})` : ''}
         </button>
       </div>
 
@@ -344,6 +352,7 @@ function ChatWindowBody({
             messagesById={messagesById}
             lastSeenNamesPerMessage={lastSeenNamesPerMessage}
             toggleReaction={toggleReaction}
+            votePoll={votePoll}
             deleteMessage={deleteMessage}
             onOpenThread={handleOpenThread}
             onOpenImage={handleOpenImage}
@@ -437,32 +446,15 @@ function ChatWindowBody({
         />
       )}
 
-      {chatTab !== 'links' && (
-      <div className="p-4 bg-gradient-to-t from-background via-background/80 to-transparent shrink-0">
-        {chatTab === 'messages' ? (
+      {chatTab === 'messages' && (
+      <div className="px-3 pb-3 pt-1 shrink-0">
         <MessageInput
           chatId={chatId}
           disabled={!online}
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
           messageActions={{ sendMessage, sendImageMessage }}
-          onOpenWorshipCreate={(type: 'song' | 'setlist' | 'roster' | 'chords', songId?: string) => {
-            if (type === 'song') setShowNewSong(true);
-            if (type === 'setlist') setShowNewSetlist(true);
-            if (type === 'roster') setShowNewRoster(true);
-            if (type === 'chords' && songId) {
-              const song = songs.find(s => s.id === songId);
-              if (song) setAddSheetSong(song);
-            }
-          }}
         />
-        ) : (
-          <ChatPhotoUploadButton
-            chatId={chatId}
-            disabled={!online}
-            sendImageMessage={sendImageMessage}
-          />
-        )}
       </div>
       )}
 

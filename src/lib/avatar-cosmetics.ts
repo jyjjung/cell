@@ -1,131 +1,101 @@
-export type AvatarCosmeticTier =
-  | 'none'
-  | 'bronze'
-  | 'copper'
-  | 'pewter'
-  | 'silver'
-  | 'jade'
-  | 'mint'
-  | 'gold'
-  | 'rose'
-  | 'ruby'
-  | 'coral'
-  | 'sapphire'
-  | 'frost'
-  | 'diamond'
-  | 'amethyst'
-  | 'nebula'
-  | 'celestial'
-  | 'prism'
-  | 'radiant'
-  | 'sovereign'
-  | 'master';
+import { HALO_TIER_DEFINITIONS, type GeneratedHaloTierId, type HaloPowerLevel } from '@/lib/halo-tier-definitions';
 
-export type HaloStylePreset =
-  | 'none'
-  | 'ember'
-  | 'blossom'
-  | 'slate'
-  | 'lunar'
-  | 'verdant'
-  | 'mint'
-  | 'aurora'
-  | 'rosegold'
-  | 'crimson'
-  | 'sunset'
-  | 'ocean'
-  | 'frost'
-  | 'cosmic'
-  | 'violet'
-  | 'nebula'
-  | 'stellar'
-  | 'prism'
-  | 'radiant'
-  | 'sovereign'
-  | 'ethereal';
+export type { HaloPowerLevel };
 
-/** Visual intensity: 0 = none, 1 = whisper … 5 = ascended (master). */
-export type HaloPowerLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export type AvatarCosmeticTier = 'none' | GeneratedHaloTierId;
+
+export type HaloStylePreset = GeneratedHaloTierId;
 
 export type TierConfig = {
   id: AvatarCosmeticTier;
   label: string;
-  minUnlocked: number;
+  /** Minimum full-plan reading progress (0–100) required to equip this halo. */
+  minPlanProgressPercent: number;
   stylePreset: HaloStylePreset;
   powerLevel: HaloPowerLevel;
 };
 
 export const AVATAR_COSMETIC_TIERS: TierConfig[] = [
-  { id: 'none', label: 'Standard', minUnlocked: 0, stylePreset: 'none', powerLevel: 0 },
-  { id: 'bronze', label: 'Bronze Halo', minUnlocked: 2, stylePreset: 'ember', powerLevel: 1 },
-  { id: 'copper', label: 'Copper Halo', minUnlocked: 4, stylePreset: 'blossom', powerLevel: 1 },
-  { id: 'pewter', label: 'Pewter Halo', minUnlocked: 6, stylePreset: 'slate', powerLevel: 2 },
-  { id: 'silver', label: 'Silver Halo', minUnlocked: 9, stylePreset: 'lunar', powerLevel: 2 },
-  { id: 'jade', label: 'Jade Halo', minUnlocked: 12, stylePreset: 'verdant', powerLevel: 2 },
-  { id: 'mint', label: 'Mint Halo', minUnlocked: 15, stylePreset: 'mint', powerLevel: 3 },
-  { id: 'gold', label: 'Gold Halo', minUnlocked: 18, stylePreset: 'aurora', powerLevel: 3 },
-  { id: 'rose', label: 'Rose Gold Halo', minUnlocked: 22, stylePreset: 'rosegold', powerLevel: 3 },
-  { id: 'ruby', label: 'Ruby Halo', minUnlocked: 26, stylePreset: 'crimson', powerLevel: 3 },
-  { id: 'coral', label: 'Coral Halo', minUnlocked: 30, stylePreset: 'sunset', powerLevel: 3 },
-  { id: 'sapphire', label: 'Sapphire Halo', minUnlocked: 34, stylePreset: 'ocean', powerLevel: 4 },
-  { id: 'frost', label: 'Frost Halo', minUnlocked: 38, stylePreset: 'frost', powerLevel: 4 },
-  { id: 'diamond', label: 'Diamond Halo', minUnlocked: 42, stylePreset: 'cosmic', powerLevel: 4 },
-  { id: 'amethyst', label: 'Amethyst Halo', minUnlocked: 48, stylePreset: 'violet', powerLevel: 4 },
-  { id: 'nebula', label: 'Nebula Halo', minUnlocked: 54, stylePreset: 'nebula', powerLevel: 4 },
-  { id: 'celestial', label: 'Celestial Halo', minUnlocked: 60, stylePreset: 'stellar', powerLevel: 5 },
-  { id: 'prism', label: 'Prism Halo', minUnlocked: 68, stylePreset: 'prism', powerLevel: 5 },
-  { id: 'radiant', label: 'Radiant Halo', minUnlocked: 76, stylePreset: 'radiant', powerLevel: 5 },
-  { id: 'sovereign', label: 'Sovereign Halo', minUnlocked: 88, stylePreset: 'sovereign', powerLevel: 5 },
-  { id: 'master', label: 'Master Halo', minUnlocked: 100, stylePreset: 'ethereal', powerLevel: 5 },
+  {
+    id: 'none',
+    label: 'Standard',
+    minPlanProgressPercent: 0,
+    stylePreset: 'bronze',
+    powerLevel: 0,
+  },
+  ...HALO_TIER_DEFINITIONS.map((tier) => ({
+    id: tier.id as AvatarCosmeticTier,
+    label: tier.label,
+    minPlanProgressPercent: tier.minPlanProgressPercent,
+    stylePreset: tier.id,
+    powerLevel: tier.powerLevel,
+  })),
 ];
 
-/** Avatar diameter as % of container — lower = more halo visible around the face. */
+/** Avatar diameter as % of container — lower = more halo visible around the face. Even 5% steps. */
 export const HALO_AVATAR_SCALE: Record<HaloPowerLevel, string> = {
   0: '100%',
-  1: '94%',
-  2: '91%',
-  3: '87%',
-  4: '82%',
-  5: '76%',
+  1: '95%',
+  2: '90%',
+  3: '85%',
+  4: '80%',
+  5: '75%',
 };
 
-export function getAvatarTierByUnlocked(unlockedCount: number): TierConfig {
+export function isHaloTierUnlocked(planProgressPercent: number, tier: TierConfig): boolean {
+  return planProgressPercent >= tier.minPlanProgressPercent;
+}
+
+/** Progress toward unlocking a specific halo (0–1), measured from the previous tier's threshold. */
+export function getHaloTierUnlockProgress(planProgressPercent: number, tier: TierConfig): number {
+  if (tier.minPlanProgressPercent <= 0) return 1;
+  if (planProgressPercent >= tier.minPlanProgressPercent) return 1;
+
+  const tierIndex = AVATAR_COSMETIC_TIERS.findIndex((candidate) => candidate.id === tier.id);
+  const prevThreshold = tierIndex > 0 ? AVATAR_COSMETIC_TIERS[tierIndex - 1].minPlanProgressPercent : 0;
+  const span = tier.minPlanProgressPercent - prevThreshold;
+  if (span <= 0) return 1;
+
+  return Math.min(1, Math.max(0, (planProgressPercent - prevThreshold) / span));
+}
+
+export function getAvatarTierByPlanProgress(planProgressPercent: number): TierConfig {
   let current = AVATAR_COSMETIC_TIERS[0];
   for (const tier of AVATAR_COSMETIC_TIERS) {
-    if (unlockedCount >= tier.minUnlocked) current = tier;
+    if (planProgressPercent >= tier.minPlanProgressPercent) current = tier;
   }
   return current;
 }
 
-export function getNextAvatarTier(unlockedCount: number): TierConfig | null {
-  return AVATAR_COSMETIC_TIERS.find((tier) => unlockedCount < tier.minUnlocked) || null;
+export function getNextAvatarTierByPlanProgress(planProgressPercent: number): TierConfig | null {
+  return AVATAR_COSMETIC_TIERS.find((tier) => planProgressPercent < tier.minPlanProgressPercent) || null;
 }
 
 export function getAvatarTierConfig(tier: AvatarCosmeticTier | undefined | null): TierConfig {
   return AVATAR_COSMETIC_TIERS.find((candidate) => candidate.id === tier) || AVATAR_COSMETIC_TIERS[0];
 }
 
-export function getCosmeticTierProgress(unlockedCount: number) {
-  const current = getAvatarTierByUnlocked(unlockedCount);
-  const next = getNextAvatarTier(unlockedCount);
+export function getCosmeticTierProgress(planProgressPercent: number) {
+  const current = getAvatarTierByPlanProgress(planProgressPercent);
+  const next = getNextAvatarTierByPlanProgress(planProgressPercent);
 
   if (!next) {
     return {
       current,
       next: null,
       progressToNext: 1,
-      achievementsNeededForNext: 0,
+      percentNeededForNext: 0,
     };
   }
 
-  const rangeStart = current.minUnlocked;
-  const rangeEnd = next.minUnlocked;
+  const rangeStart = current.minPlanProgressPercent;
+  const rangeEnd = next.minPlanProgressPercent;
   const span = Math.max(1, rangeEnd - rangeStart);
 
   return {
     current,
     next,
-    progressToNext: Math.min(1, Math.max(0, (unlockedCount - rangeStart) / span)),
-    achievementsNeededForNext: Math.max(0, rangeEnd - unlockedCount),
+    progressToNext: Math.min(1, Math.max(0, (planProgressPercent - rangeStart) / span)),
+    percentNeededForNext: Math.max(0, rangeEnd - planProgressPercent),
   };
 }

@@ -16,10 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PageHeader, FeedCard } from '@/components/ui/page-layout';
+import { NavPageHeader, FeedCard } from '@/components/ui/page-layout';
 import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
-import { incrementUserFeedbackCount } from '@/lib/user-achievement-counts';
 import { notifyFeedbackChange } from '@/lib/feedback-notify';
 
 /* ── Animation variants ─────────────────────────────────── */
@@ -47,7 +45,7 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${cfg.classes}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-micro-label font-medium ${cfg.classes}`}>
       <Icon className={`spinner-standard w-3 h-3 ${status === 'in-progress' ? 'animate-spin' : ''}`} />
       {getStatusLabel(status, locale)}
     </span>
@@ -57,6 +55,22 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 /* ── Changelogs ──────────────────────────────────────────── */
 
 const changelogs = [
+  {
+    version: "v1.3.58",
+    subtitle: "Look, layout & performance",
+    date: "Late-June 2026",
+    changes: [
+      "New unified accent themes on Profile → Look — saved to your account and sync across devices",
+      "Light, dark, and system mode stay on this device only (header toggle)",
+      "Faster loading with shared data providers — fewer duplicate Firestore listeners across the app",
+      "Dashboard, chat, bible reader, and command menu layout polish",
+      "Landing, How it works, and Privacy pages rewritten for members",
+      "Halos updated; legacy achievements removed",
+      "Chat polls and attachment menu; slash commands removed",
+      "Fixed dashboard permission errors for custom rosters",
+      "Fixed profile page crash when switching tabs",
+    ],
+  },
   {
     version: "v1.3.57",
     date: "Mid-June 2026",
@@ -639,8 +653,6 @@ export default function FeedbackPage() {
   const [adminNoteText, setAdminNoteText] = useState('');
   const [activeTab, setActiveTab] = useState('suggestions');
 
-  useGrantSecretAchievement('changelog', !!currentUser && activeTab === 'changelog');
-
   /* ── Firestore listener ───────────────────────────────── */
 
   useEffect(() => {
@@ -665,7 +677,6 @@ export default function FeedbackPage() {
         status: 'pending',
         createdAt: serverTimestamp(),
       });
-      if (currentUser?.uid) incrementUserFeedbackCount(currentUser.uid);
       void notifyFeedbackChange({
         action: 'submitted',
         suggestionId: docRef.id,
@@ -721,12 +732,10 @@ export default function FeedbackPage() {
   /* ── Render ───────────────────────────────────────────── */
 
   return (
-    <div className="page-container max-w-4xl space-y-6">
+    <div className="page-container">
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
 
-          <PageHeader
-            title="Feedback & Updates"
-          />
+          <NavPageHeader />
 
           {/* Tabs */}
           <motion.div variants={fadeUp}>
@@ -822,7 +831,7 @@ export default function FeedbackPage() {
                               <div className="w-full rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
                                 <div className="mb-1.5 flex items-center gap-1.5">
                                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">Admin Response</span>
+                                  <span className="text-micro-label text-primary">Admin response</span>
                                 </div>
                                 <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">{item.adminNote}</p>
                               </div>
@@ -846,7 +855,7 @@ export default function FeedbackPage() {
 
                             {/* Timeline */}
                             <div className="rounded-xl border border-border/40 bg-muted/30 p-3">
-                              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Timeline</p>
+                              <p className="mb-2 text-micro-label text-muted-foreground">Timeline</p>
                               <div className="space-y-1.5 text-xs text-muted-foreground">
                                 <div className="flex items-center justify-between gap-3">
                                   <span>Posted</span>

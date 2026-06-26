@@ -11,15 +11,14 @@ import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { translations } from '@/lib/translations';
 import { formatUserDisplayName } from '@/lib/formatting';
 
-// Modular Components
 import { BroadcastSection } from './core-info/BroadcastSection';
 import { ScriptureProgressionSection } from './core-info/ScriptureProgressionSection';
 import { ReadingSection } from './core-info/ReadingSection';
 import { ActiveCircles } from './core-info/ActiveCircles';
 import { CommunityTimeline } from './core-info/CommunityTimeline';
 import { TimelineDetailsDialog } from './core-info/TimelineDetailsDialog';
-import { CoreInfoSkeleton } from './core-info-skeleton';
-import { motion, AnimatePresence } from 'framer-motion';
+import { PageLoading } from '@/components/ui/loading-spinner';
+import { motion } from 'framer-motion';
 
 export default function CoreInfoWidget() {
   const {
@@ -56,31 +55,24 @@ export default function CoreInfoWidget() {
   }, [router, setIsPageLoading]);
 
   if (!isMounted || !currentUser) return null;
-  if (!bibleStats) return <CoreInfoSkeleton />;
+  if (!bibleStats) return <PageLoading className="min-h-[320px]" />;
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="glass-elevated relative w-full p-8 md:p-12 rounded-[3.5rem] overflow-hidden space-y-24"
+      className="widget-surface relative w-full overflow-hidden stack-gap-lg"
     >
-      {/* Decorative radial gradient for depth */}
-      <div className="absolute top-0 right-[-20%] w-[80%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full -z-10" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[40%] bg-primary/5 blur-[100px] rounded-full -z-10" />
-
-      {/* 1. Header & Greeting */}
-      <section className="space-y-6">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30 leading-none">Perspective Session</p>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tighter leading-none text-white/95 uppercase tracking-[-0.04em]">
+      <section className="stack-gap-sm">
+        <div>
+          <p className="text-micro-label">{t.sessionPulse}</p>
+          <h2 className="text-page-title">
             {t.hello}, {formatUserDisplayName(currentUser, 'Guest')}{currentUser.preferredLanguage === 'ko' ? '님' : ''}
           </h2>
         </div>
-        <div className="h-1 w-24 bg-primary/40 rounded-full" />
       </section>
 
-      {/* Modularized Components with Sequential Animations */}
-      <div className="space-y-24">
+      <div className="stack-gap-lg">
         <BroadcastSection
           unreadAnnouncements={unreadAnnouncements}
           t={t}
@@ -93,7 +85,7 @@ export default function CoreInfoWidget() {
           t={t}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ReadingSection
             title={{ labelKey: 'dailyBread', titleKey: 'todaysReading' }}
             reading={todaysReading}
@@ -114,7 +106,7 @@ export default function CoreInfoWidget() {
             handlePassageClick={handlePassageClick}
             t={t}
             handleLink={handleLink}
-            emptyMsg="confirm"
+            emptyMsg="horizonClear"
           />
         </div>
 

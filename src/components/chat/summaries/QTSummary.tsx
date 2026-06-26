@@ -66,10 +66,10 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
                 <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
                     <BookOpen className="w-3.5 h-3.5 text-primary" />
                 </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">QT Roster</span>
+                <span className="text-micro-label">QT roster</span>
             </div>
             <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{entry.passage}</h3>
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{formatDateText(date)}</p>
+            <p className="text-micro-label">{formatDateText(date)}</p>
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
              <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -86,13 +86,13 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
             </Avatar>
             <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-foreground">{name}</p>
-                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Assigned Reader</p>
+                <p className="truncate text-micro-label">Reader</p>
             </div>
         </div>
 
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
-            View Full Roster
+          <span className="text-micro-label transition-colors group-hover:text-foreground">
+            View roster
           </span>
           <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>

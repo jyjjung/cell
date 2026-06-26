@@ -9,22 +9,32 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
+import { useWorshipData } from '@/contexts/worship-data-context';
+
 const SETLISTS_COLLECTION = 'worshipSetlists';
 
 export function useWorshipSetlists(enabled = true) {
+  const worshipData = useWorshipData();
+  const useShared = enabled && worshipData !== null;
   const { currentUser } = useAuth();
   const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!useShared);
 
   useEffect(() => {
-    if (!enabled || !currentUser) { setSetlists([]); setLoading(false); return; }
+    if (useShared || !enabled || !currentUser) {
+      if (!useShared) {
+        setSetlists([]);
+        setLoading(false);
+      }
+      return;
+    }
     const q = query(collection(db, SETLISTS_COLLECTION), orderBy('date', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       setSetlists(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlist)));
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
-  }, [enabled, currentUser]);
+  }, [useShared, enabled, currentUser?.uid]);
 
   const createSetlist = useCallback(async (name: string, date: string): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');
@@ -134,7 +144,8 @@ export function useWorshipSetlists(enabled = true) {
   }, []);
 
   return {
-    setlists, loading,
+    setlists: useShared ? worshipData.setlists : setlists,
+    loading: useShared ? worshipData.setlistsLoading : loading,
     createSetlist, updateSetlist,
     addSongToSetlist, updateSetlistSong, removeSongFromSetlist, reorderSetlistSongs,
     deleteSetlist,

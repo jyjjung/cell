@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { LinkifiedText } from "@/components/ui/linkified-text";
+import { translations } from "@/lib/translations";
 
 interface HeaderProps {
   onOpenCommandMenu?: () => void;
@@ -26,6 +27,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
   const [activeTab, setActiveTab] = useState<'announcements' | 'notifications'>('announcements');
   const panelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const t = translations[currentUser?.preferredLanguage || "en"];
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -92,7 +94,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full">
-      <div className="glass-nav flex h-14 items-center justify-between gap-3 px-3 md:px-4 border-b border-border/50">
+      <div className="app-header-bar">
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">
           {(isMobile || state === "collapsed") && (
@@ -114,7 +116,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
               aria-label="Open command menu"
             >
               <Search className="h-4 w-4 md:h-3.5 md:w-3.5" />
-              <span className="hidden md:inline text-xs font-medium">Quick search</span>
+              <span className="hidden md:inline text-xs font-medium">{t.quickSearch}</span>
               <kbd className="hidden lg:inline-flex ml-1 text-[10px] font-mono bg-background/80 text-muted-foreground px-1.5 py-0.5 rounded-md border border-border/60 leading-none">
                 ⌘K
               </kbd>
@@ -180,7 +182,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                       <div className="flex justify-end px-4 py-1.5 border-b border-border bg-muted">
                         <button
                           onClick={() => markAllAsRead(unreadAnnouncements.map(n => n.id))}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors uppercase tracking-widest"
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro-label text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                         >
                           <CheckCheck className="h-3 w-3" />
                           Mark all read
@@ -191,7 +193,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
                       <div className="flex justify-end px-4 py-1.5 border-b border-border bg-muted">
                         <button
                           onClick={() => markAllAsRead(unreadGeneralNotifications.map(n => n.id))}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors uppercase tracking-widest"
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-micro-label text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                         >
                           <CheckCheck className="h-3 w-3" />
                           Mark all read

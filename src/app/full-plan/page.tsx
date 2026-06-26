@@ -9,16 +9,12 @@ import type { DailyReading } from '@/types';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 
 import { RosterCard } from '@/components/ui/roster-card';
-import { useAuth } from '@/contexts/auth-context';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 export default function FullBiblePlanPage() {
-  const { currentUser } = useAuth();
   const { plan, loading: planLoading } = useBiblePlan();
-  useGrantSecretAchievement('full-plan', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
@@ -82,9 +78,8 @@ export default function FullBiblePlanPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="page-container space-y-8 pb-32">
-      <PageHeader 
-        title="Full Plan" 
+    <div className="page-container">
+      <NavPageHeader 
         action={
           <Button variant="outline" size="sm" onClick={handleCopyToClipboard} disabled={!planAsText || planLoading} className="rounded-xl font-bold">
             <Copy className="mr-2 h-4 w-4" />

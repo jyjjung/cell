@@ -9,6 +9,8 @@ import {
   doc,
   getDoc,
   type CollectionReference,
+  type DocumentData,
+  type Query,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -54,7 +56,7 @@ export function threadMessagesCollection(
   );
 }
 
-function docToMessage(docSnap: QueryDocumentSnapshot): ChatMessage {
+function docToMessage(docSnap: QueryDocumentSnapshot<DocumentData>): ChatMessage {
   return { id: docSnap.id, ...docSnap.data() } as ChatMessage;
 }
 
@@ -63,10 +65,10 @@ export async function readAllMessagesFromDeviceCache(
   messagesCol: CollectionReference,
 ): Promise<ChatMessage[]> {
   const all: ChatMessage[] = [];
-  let lastDoc: QueryDocumentSnapshot | null = null;
+  let lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
 
   while (true) {
-    const q = lastDoc
+    const q: Query<DocumentData> = lastDoc
       ? query(
           messagesCol,
           orderBy('createdAt', 'desc'),
@@ -100,14 +102,13 @@ export async function fetchLatestMessagesWindow(
 
   let snap;
   try {
-    const cached = await getDocsFromCache(q);
-    if (!cached.empty) {
-      snap = cached;
-    } else {
-      snap = await getDocs(q);
-    }
-  } catch {
     snap = await getDocs(q);
+  } catch {
+    try {
+      snap = await getDocsFromCache(q);
+    } catch {
+      return { messages: [], hasMore: false };
+    }
   }
 
   const messages = snap.docs.map(docToMessage);

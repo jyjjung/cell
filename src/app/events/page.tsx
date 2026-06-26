@@ -5,20 +5,24 @@ import { useEvents } from '@/hooks/use-events';
 import { format, isBefore, startOfToday, compareAsc, subYears, addYears } from 'date-fns';
 import { CalendarOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { motion } from 'framer-motion';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
+import { userCanSeeEvent } from '@/lib/event-visibility';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
-    <div className="space-y-2">
-      <p className="text-micro-label !opacity-100 text-zinc-700 dark:text-zinc-300 px-1 mb-3">{month}</p>
-      {rows.map((row, i) => (
-        <EventOccurrenceCard key={row.occurrenceKey} row={row} index={i} />
-      ))}
+    <div className="ui-card !p-0">
+      <div className="border-b border-border/60 px-4 py-3">
+        <p className="text-eyebrow">{month}</p>
+      </div>
+      <div className="ui-list px-2">
+        {rows.map((row, i) => (
+          <EventOccurrenceCard key={row.occurrenceKey} row={row} index={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -26,19 +30,19 @@ function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[]
 export default function EventsPage() {
   const { events, loading } = useEvents();
   const { currentUser, isAdmin } = useAuth();
-  useGrantSecretAchievement('events', !!currentUser);
   const [isMounted, setIsMounted] = useState(false);
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+
   useEffect(() => { setIsMounted(true); }, []);
 
   const { upcomingEventsByMonth, pastEventsByMonth } = useMemo(() => {
     const today = startOfToday();
     if (!events?.length) return { upcomingEventsByMonth: [] as [string, EventOccurrenceRow[]][], pastEventsByMonth: [] as [string, EventOccurrenceRow[]][] };
 
-    const filteredEvents = (events || []).filter(e => {
+    const filteredEvents = (events || []).filter((e) => {
       if (isAdmin) return true;
-      if (!e.allowedRoleIds || e.allowedRoleIds.length === 0) return true;
-      const userRoles = currentUser?.roleIds || [];
-      return e.allowedRoleIds.some(rid => userRoles.includes(rid));
+      if (!currentUser) return !e.allowedRoleIds?.length;
+      return userCanSeeEvent(currentUser, e);
     });
 
     const rows = expandEventsToOccurrenceRows(filteredEvents, {
@@ -76,32 +80,30 @@ export default function EventsPage() {
       upcomingEventsByMonth: groupRows(upcomingRows, true),
       pastEventsByMonth: groupRows(pastRows, false),
     };
-  }, [events]);
+  }, [events, currentUser, isAdmin]);
 
   if (!isMounted || loading) return null;
 
   return (
-    <div className="page-container space-y-6">
-      <PageHeader
-        title="Events"
-      />
+    <div className="page-container">
+      <NavPageHeader />
 
       <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="h-10">
-          <TabsTrigger value="upcoming" className="rounded-md text-sm font-medium">Upcoming</TabsTrigger>
-          <TabsTrigger value="past" className="rounded-md text-sm font-medium">Past</TabsTrigger>
+        <TabsList className="h-9">
+          <TabsTrigger value="upcoming" className="rounded-md text-sm">{t.upcoming}</TabsTrigger>
+          <TabsTrigger value="past" className="rounded-md text-sm">{t.past}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upcoming" className="mt-6 space-y-8">
+        <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
           {upcomingEventsByMonth.length > 0
             ? upcomingEventsByMonth.map(([month, evs]) => <MonthGroup key={`up-${month}`} month={month} rows={evs} />)
-            : <EmptyState icon={CalendarOff} title="No upcoming events" description="Check back later." />}
+            : <EmptyState icon={CalendarOff} title={t.noUpcomingEvents} description={t.checkBackLater} />}
         </TabsContent>
 
-        <TabsContent value="past" className="mt-6 space-y-8 opacity-80">
+        <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
           {pastEventsByMonth.length > 0
             ? pastEventsByMonth.map(([month, evs]) => <MonthGroup key={`past-${month}`} month={month} rows={evs} />)
-            : <EmptyState icon={CalendarOff} title="No past events" />}
+            : <EmptyState icon={CalendarOff} title={t.noPastEvents} />}
         </TabsContent>
       </Tabs>
     </div>

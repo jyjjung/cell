@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useAuth } from '@/contexts/auth-context';
@@ -17,12 +17,14 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { translations } from '@/lib/translations';
 
 
 export default function TodayReadingWidget() {
-  const { plan, loading: planLoading } = useBiblePlan();
   const { currentUser, loadingAuth } = useAuth();
-  const { completedPassages, togglePassageCompletion, markMultiplePassages } = useUserBibleChecklist();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+  const { plan, loading: planLoading } = useBiblePlan();
+  const { completedPassages, togglePassageCompletion } = useUserBibleChecklist();
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
@@ -60,43 +62,42 @@ export default function TodayReadingWidget() {
   }, [passagesToShow, completedPassages, todaysReading?.date]);
 
   return (
-     <>
       <div className={cn(
-        "glass-card relative flex flex-col p-6 md:p-8 rounded-[2.5rem] transition-all duration-500 overflow-hidden h-full min-h-[240px]",
-        isAllComplete && "ring-1 ring-success/30"
+        "widget-surface relative flex flex-col h-full",
+        isAllComplete && "ring-1 ring-success/25"
       )}>
-        <div className="flex items-center justify-between mb-6">
+        <div className="panel-header">
             <div className="min-w-0">
                 <h3 className={cn(
-                    "text-base font-bold tracking-tight",
-                    isAllComplete ? "text-success" : "text-foreground"
-                )}>Daily Bread</h3>
-                <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Today's Journey</p>
+                    "panel-title",
+                    isAllComplete && "text-success"
+                )}>{t.dailyBread}</h3>
+                <p className="panel-subtitle">{t.todaysReading}</p>
             </div>
         </div>
 
         <div className="flex-grow">
             {planLoading || loadingAuth ? (
-                <div className="h-24 flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground opacity-20" />
+                <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
                 </div>
             ) : !todaysReading ? (
-                <div className="flex flex-col items-start gap-2 opacity-40 py-4">
-                    <p className="text-micro-label !opacity-100 text-muted-foreground !tracking-widest">Sabbath Rest</p>
-                    <p className="text-xs font-medium text-muted-foreground">No assigned readings for today.</p>
+                <div className="flex flex-col items-start gap-1 py-2">
+                    <p className="text-sm font-medium text-foreground">{t.sabbathRest}</p>
+                    <p className="text-sm text-muted-foreground">{t.noReadingsToday}</p>
                 </div>
             ) : isAllComplete ? (
                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-start gap-2 text-success py-4"
+                    className="flex flex-col items-start gap-1 text-success py-2"
                 >
-                    <CheckCircle className="h-10 w-10 mb-2" />
-                    <p className="text-2xl font-black tracking-tight leading-none italic">Sustained.</p>
-                    <p className="text-micro-label !opacity-100 !tracking-widest opacity-70">Daily readings complete</p>
+                    <CheckCircle className="h-6 w-6 mb-1" />
+                    <p className="text-base font-semibold leading-tight">{t.sustained}</p>
+                    <p className="text-sm text-muted-foreground">{t.dailyReadingsComplete}</p>
                 </motion.div>
             ) : (
-                <div className="space-y-2">
+                <div className="stack-gap-sm">
                 <AnimatePresence mode="popLayout">
                     {passagesToShow.map(passage => {
                         const date = todaysReading?.date;
@@ -108,8 +109,8 @@ export default function TodayReadingWidget() {
                             layout
                             key={passage.displayText} 
                             className={cn(
-                                "group flex items-center gap-3 p-3 rounded-2xl transition-all glass-thin cursor-pointer",
-                                isChecked ? "opacity-60 hover:opacity-100 hover:ring-primary/10" : "hover:ring-primary/30"
+                                "surface-row group cursor-pointer",
+                                isChecked && "opacity-70"
                             )}
                         >
                             {currentUser && (
@@ -117,13 +118,14 @@ export default function TodayReadingWidget() {
                                 id={`today-reading-${passage.displayText}`}
                                 checked={isChecked}
                                 onCheckedChange={() => togglePassageCompletion(passage.displayText, todaysReading?.date)}
-                                className="h-5 w-5 rounded-lg border-primary/20 group-hover:border-primary-foreground/50"
+                                className="h-4 w-4"
                             />
                             )}
                             <button
+                                type="button"
                                 className={cn(
-                                    "flex-grow text-left font-bold text-sm truncate transition-colors",
-                                    isChecked ? "line-through text-muted-foreground group-hover:text-primary-foreground" : "text-foreground group-hover:text-primary-foreground"
+                                    "flex-grow text-left text-sm truncate transition-colors",
+                                    isChecked ? "line-through text-muted-foreground" : "text-foreground font-medium"
                                 )}
                                 onClick={() => handlePassageClick(passage)}
                             >
@@ -137,18 +139,17 @@ export default function TodayReadingWidget() {
             )}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-3">
             <Button 
                 variant="outline" 
                 size="sm"
-                className="h-11 w-full rounded-2xl text-micro-label !opacity-100 !tracking-widest transition-all shadow-none group" 
+                className="w-full" 
                 onClick={handleGoToPlan}
             >
-                Reading Archive
-                <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                {t.readingArchive}
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
         </div>
       </div>
-    </>
   );
 }

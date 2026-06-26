@@ -16,37 +16,42 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useScheduleData } from '@/contexts/schedule-data-context';
 
 const CLEANING_ROSTERS_COLLECTION = 'cleaningRosters';
 
 export function useCleaningRoster(enabled = true) {
   const { currentUser, loadingAuth } = useAuth();
-  const [roster, setRoster] = useState<CleaningRosterEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const schedule = useScheduleData();
+  const [localRoster, setLocalRoster] = useState<CleaningRosterEntry[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
 
   useEffect(() => {
-    if (!enabled || loadingAuth) return;
+    if (schedule || !enabled || loadingAuth) return;
 
     if (!currentUser) {
-      setRoster([]);
-      setLoading(false);
+      setLocalRoster([]);
+      setLocalLoading(false);
       return;
     }
 
-    setLoading(true);
+    setLocalLoading(true);
     const q = query(collection(db, CLEANING_ROSTERS_COLLECTION));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const rosterData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CleaningRosterEntry));
-      setRoster(rosterData);
-      setLoading(false);
+      setLocalRoster(rosterData);
+      setLocalLoading(false);
     }, (error) => {
       console.error("[useCleaningRoster] Error fetching roster:", error);
-      setLoading(false);
+      setLocalLoading(false);
     });
 
     return () => unsubscribe();
-  }, [enabled, loadingAuth, currentUser?.uid]);
+  }, [schedule, enabled, loadingAuth, currentUser?.uid]);
+
+  const roster = schedule?.cleaningRoster ?? localRoster;
+  const loading = schedule ? schedule.cleaningRosterLoading : localLoading;
 
   const { createNotification } = useNotifications();
 

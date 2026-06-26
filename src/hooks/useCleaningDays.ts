@@ -15,37 +15,42 @@ import {
   doc,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { useScheduleData } from '@/contexts/schedule-data-context';
 
 const CLEANING_DAYS_COLLECTION = 'cleaningDays';
 
 export function useCleaningDays(enabled = true) {
   const { currentUser, loadingAuth, isAdmin } = useAuth();
-  const [cleaningDays, setCleaningDays] = useState<CleaningDay[]>([]);
-  const [loading, setLoading] = useState(true);
+  const schedule = useScheduleData();
+  const [localCleaningDays, setLocalCleaningDays] = useState<CleaningDay[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
 
   useEffect(() => {
-    if (!enabled || loadingAuth) return;
+    if (schedule || !enabled || loadingAuth) return;
 
     if (!currentUser) {
-      setCleaningDays([]);
-      setLoading(false);
+      setLocalCleaningDays([]);
+      setLocalLoading(false);
       return;
     }
 
-    setLoading(true);
+    setLocalLoading(true);
     const q = query(collection(db, CLEANING_DAYS_COLLECTION), orderBy('order', 'asc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const days = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CleaningDay));
-      setCleaningDays(days);
-      setLoading(false);
+      setLocalCleaningDays(days);
+      setLocalLoading(false);
     }, (error) => {
       console.error("[useCleaningDays] Error fetching cleaning days:", error);
-      setLoading(false);
+      setLocalLoading(false);
     });
 
     return () => unsubscribe();
-  }, [enabled, loadingAuth, currentUser?.uid]);
+  }, [schedule, enabled, loadingAuth, currentUser?.uid]);
+
+  const cleaningDays = schedule?.cleaningDays ?? localCleaningDays;
+  const loading = schedule ? schedule.cleaningDaysLoading : localLoading;
 
   const addCleaningDay = useCallback(async (name: string) => {
     if (!isAdmin) throw new Error("Not authorized");

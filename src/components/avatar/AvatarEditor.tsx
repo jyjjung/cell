@@ -6,7 +6,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { PixelAvatar } from './PixelAvatar';
 import { useAuth } from '@/contexts/auth-context';
 import { deriveInitialsFromName, normalizeAvatarInitials } from '@/lib/avatar-utils';
-import { SKIN_TONES, HAIR_STYLES, HAIR_COLORS, OUTFITS, ACCESSORIES, OUTFIT_COLORS, ACCESSORY_COLORS, MOUTHS, FACIAL_HAIR_STYLES, FACIAL_HAIR_COLORS, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { SKIN_TONES, HAIR_STYLES, HAIR_COLORS, OUTFITS, ACCESSORIES, OUTFIT_COLORS, ACCESSORY_COLORS, MOUTHS, FACIAL_HAIR_STYLES, FACIAL_HAIR_COLORS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { AVATAR_BACKGROUND_GROUPS, AVATAR_BACKGROUNDS } from '@/lib/avatar-backgrounds';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -61,16 +62,26 @@ function BackgroundSelector({
   };
 
   return (
-    <div className="mb-6 md:mb-8">
-        <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Background Canvas</h4>
-        <ScrollArea className="w-full whitespace-nowrap pb-2">
-            <div className="flex gap-3 px-1 py-2">
-                {Object.entries(BACKGROUNDS).map(([key, gradient]) => (
-                    <BackgroundSwatch key={key} bgKey={key} gradient={gradient} />
-                ))}
+    <div className="mb-6 md:mb-8 space-y-5">
+        <h4 className="text-sm font-medium text-muted-foreground">Background</h4>
+        {AVATAR_BACKGROUND_GROUPS.map((group) => {
+          const entries = Object.entries(AVATAR_BACKGROUNDS).filter(([, def]) => def.group === group.id);
+          if (entries.length === 0) return null;
+
+          return (
+            <div key={group.id} className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground/80 px-1">{group.label}</p>
+              <ScrollArea className="w-full whitespace-nowrap pb-2">
+                <div className="flex gap-3 px-1 py-1">
+                  {entries.map(([key, def]) => (
+                    <BackgroundSwatch key={key} bgKey={key} gradient={{ stops: def.stops }} />
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </div>
-            <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+          );
+        })}
     </div>
   );
 }
@@ -110,49 +121,49 @@ function CustomBuilderControls({
     <ScrollArea className="h-[300px] md:h-[450px] pr-4">
         <div className="space-y-6 md:space-y-8 pb-8">
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Skin Complexion</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Skin tone</h4>
                 <div className="flex flex-wrap gap-3 p-1">
                     {SKIN_TONES.map(color => <ColorSwatch key={color} color={color} field="skinTone" value={color} />)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Mouth Expression</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Mouth</h4>
                 <div className="flex flex-wrap gap-2 p-1">
                     {Object.keys(MOUTHS).map(mouthStyle => <StyleButton key={mouthStyle} field="mouth" value={mouthStyle}>{mouthStyle}</StyleButton>)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Hair Architecture</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Hair style</h4>
                 <div className="flex flex-wrap gap-2 p-1">
                     {Object.keys(HAIR_STYLES).map(hairStyle => <StyleButton key={hairStyle} field="hairStyle" value={hairStyle}>{hairStyle}</StyleButton>)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Hair Pigment</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Hair colour</h4>
                 <div className="flex flex-wrap gap-3 p-1">
                     {HAIR_COLORS.map(color => <ColorSwatch key={color} color={color} field="hairColor" value={color} />)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Facial Grooming</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Facial hair</h4>
                 <div className="flex flex-wrap gap-2 p-1">
                     {Object.keys(FACIAL_HAIR_STYLES).map(style => <StyleButton key={style} field="facialHair" value={style}>{style}</StyleButton>)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Outfit Specification</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Outfit</h4>
                 <div className="flex flex-wrap gap-2 p-1">
                     {Object.keys(OUTFITS).map(outfitStyle => <StyleButton key={outfitStyle} field="outfit" value={outfitStyle}>{outfitStyle}</StyleButton>)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Outfit Color</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Outfit colour</h4>
                 <div className="flex flex-wrap gap-3 p-1">
                     {OUTFIT_COLORS.map(color => <ColorSwatch key={color} color={color} field="outfitColor" value={color} />)}
                 </div>
             </div>
             <div className="space-y-3">
-                <h4 className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Modular Accessories</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">Accessories</h4>
                 <div className="flex flex-wrap gap-2 p-1">
                     {Object.keys(ACCESSORIES).map(accessoryStyle => <StyleButton key={accessoryStyle} field="accessory" value={accessoryStyle}>{accessoryStyle}</StyleButton>)}
                 </div>
@@ -172,17 +183,17 @@ function InitialsControls({
     return (
         <div className="flex flex-col items-center justify-center h-[250px] md:h-[300px] text-center gap-6">
             <div className="space-y-2">
-                <h3 className="text-xl font-black tracking-tight">Identity Branding</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">Define your typographic signature.</p>
+                <h3 className="text-lg font-semibold">Initials</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">Up to two letters shown on your avatar.</p>
             </div>
             <div className="w-full max-w-[200px]">
                 <Input 
                     value={currentData.initials || ''} 
                     onChange={(e) => onDataChange({ ...currentData, initials: e.target.value.trim().substring(0, 2).toUpperCase() })}
                     placeholder="AA"
-                    className="h-14 text-center text-2xl font-black rounded-2xl border-2 bg-muted/20"
+                    className="h-12 text-center text-xl font-semibold rounded-xl border bg-muted/20"
                 />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Max 2 Characters</p>
+                <p className="text-xs text-muted-foreground mt-2">Max 2 characters</p>
             </div>
         </div>
     )
@@ -205,12 +216,12 @@ function GenerativeControls({
     return (
         <div className="flex flex-col items-center justify-center h-[250px] md:h-[300px] text-center gap-6">
             <div className="space-y-2">
-                <h3 className="text-xl font-black tracking-tight capitalize">{mode} Mode</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">Generate a unique digital identity based on random creative parameters.</p>
+                <h3 className="text-lg font-semibold capitalize">{mode}</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">Generate a random avatar from this style.</p>
             </div>
-            <Button onClick={shuffle} size="lg" className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest">
-                <RefreshCw className="mr-2 h-5 w-5" />
-                Shuffle Spectrum
+            <Button onClick={shuffle} size="lg" className="rounded-xl">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Shuffle
             </Button>
         </div>
     )
@@ -334,7 +345,7 @@ function ImageUploadControls({
                 </div>
                 
                 <div className="flex items-center gap-4 px-2">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Zoom</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Zoom</span>
                     <Slider 
                         value={[zoom]} 
                         min={1} 
@@ -356,7 +367,7 @@ function ImageUploadControls({
                     <Button 
                         onClick={handleUpload}
                         disabled={isUploading}
-                        className="flex-1 rounded-xl font-black uppercase tracking-widest relative overflow-hidden"
+                        className="flex-1 rounded-xl font-semibold relative overflow-hidden"
                     >
                         {isUploading ? (
                             <>
@@ -368,7 +379,7 @@ function ImageUploadControls({
                                 />
                             </>
                         ) : (
-                            "Save & Upload"
+                            "Save"
                         )}
                     </Button>
                 </div>
@@ -379,8 +390,8 @@ function ImageUploadControls({
     return (
         <div className="flex flex-col items-center justify-center h-[250px] md:h-[300px] text-center gap-6">
             <div className="space-y-2">
-                <h3 className="text-xl font-black tracking-tight">Custom Image</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">Upload your own profile picture.</p>
+                <h3 className="text-section-title">Custom image</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">Upload a profile photo.</p>
             </div>
             
             <input 
@@ -394,10 +405,10 @@ function ImageUploadControls({
             <Button 
                 onClick={() => fileInputRef.current?.click()} 
                 size="lg" 
-                className="rounded-2xl h-14 px-8 font-black uppercase tracking-widest"
+                className="rounded-2xl h-14 px-8 font-semibold"
             >
                 <Upload className="mr-2 h-5 w-5" />
-                Select Image
+                Select image
             </Button>
             
             {currentData.mode === 'image' && currentData.imageUrl && (
@@ -430,12 +441,12 @@ export function AvatarEditor({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
-      <div className="md:col-span-1 flex flex-col items-center justify-center space-y-4 md:space-y-6 p-6 md:p-8 bg-muted/20 rounded-[2rem] md:rounded-[2.5rem] border border-border/50">
+      <div className="md:col-span-1 flex flex-col items-center justify-center stack-gap-sm p-6 md:p-8 widget-surface">
         <div className="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-background shadow-2xl shadow-primary/10">
             <PixelAvatar avatar={value} className="w-full h-full" />
         </div>
         <div className="text-center space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Live Manifestation</p>
+            <p className="text-xs text-muted-foreground">Preview</p>
             <p className="text-xs text-muted-foreground font-medium italic">"{value.initials || value.seed || 'Unique Sequence'}"</p>
         </div>
       </div>

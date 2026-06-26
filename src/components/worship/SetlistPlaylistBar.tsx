@@ -54,8 +54,8 @@ export function SetlistPlaylistBar() {
           {expanded && (
             <div className="max-h-[45vh] overflow-y-auto border-b border-border/50">
               <div className="px-4 pt-3 pb-2">
-                <p className="text-sm font-black truncate">{setlistName}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-sm font-semibold truncate">{setlistName}</p>
+                <p className="text-micro-label">
                   {queue.length} tracks
                 </p>
               </div>
@@ -73,7 +73,7 @@ export function SetlistPlaylistBar() {
                       )}
                     >
                       <span className={cn(
-                        'w-5 shrink-0 text-center text-[10px] font-black tabular-nums',
+                        'w-5 shrink-0 text-center text-micro-label font-semibold tabular-nums',
                         active ? 'text-primary' : 'text-muted-foreground',
                       )}>
                         {active && playing ? '▶' : i + 1}
@@ -100,7 +100,7 @@ export function SetlistPlaylistBar() {
               className="min-w-0 flex-1 text-left"
               onClick={() => setExpanded(!expanded)}
             >
-              <p className="text-xs font-bold truncate">{displayTitle || 'Reference track'}</p>
+              <p className="text-xs font-semibold truncate">{displayTitle || 'Reference track'}</p>
               <p className="text-[10px] text-muted-foreground truncate">
                 {subtitle || setlistName}
               </p>

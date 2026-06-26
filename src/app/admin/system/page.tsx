@@ -5,10 +5,12 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { translations } from '@/lib/translations';
 
 export default function SystemAdminPage() {
-  const { isAdmin, loadingAuth } = useAuth();
+  const { isAdmin, loadingAuth, currentUser } = useAuth();
   const router = useRouter();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   useEffect(() => {
     if (!loadingAuth) {
@@ -21,9 +23,9 @@ export default function SystemAdminPage() {
   }, [isAdmin, loadingAuth, router]);
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 opacity-30">
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-3 opacity-40">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-[10px] font-bold uppercase tracking-widest leading-none text-foreground/40">Redirecting to chat assistant...</p>
+        <p className="text-micro-label">{t.adminRedirecting}</p>
     </div>
   );
 }

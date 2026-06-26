@@ -84,7 +84,7 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/20">
-          <span className="text-[10px] uppercase font-black tracking-widest">No Image</span>
+          <span className="text-micro-label">No image</span>
         </div>
       ),
       undefined,

@@ -8,10 +8,10 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { DailyReading, WeeklyProgress } from '@/types';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Loader2, Info, ArrowLeft, BookUp, CheckCircle, LocateFixed, MoreVertical } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { format, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay, differenceInCalendarDays } from 'date-fns';
+import { Loader2, Info, ArrowLeft, BookUp, CheckCircle, MoreVertical } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
+import { calculatePlanPaceStats, countPlanPassageProgress } from '@/lib/reading-utils';
 import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
@@ -24,11 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { translations } from '@/lib/translations';
-import { FeedCard, PageHeader } from '@/components/ui/page-layout';
-import BiblePlanSkeleton from '@/components/bible/bible-plan-skeleton';
+import { PageHeader, NavPageHeader, PageSection } from '@/components/ui/page-layout';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
-
 
 type ViewState = 
   | { view: 'all-weeks' }
@@ -47,31 +45,29 @@ function PaceStatCard({
   description?: string;
 }) {
   return (
-    <FeedCard animate={false} className="rounded-2xl p-3">
+    <div className="ui-metric">
       <div className="mb-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:text-zinc-300">{title}</p>
+        <p className="text-micro-label">{title}</p>
       </div>
       <div>
-        <p className="text-xl font-bold leading-none tracking-tight">
+        <p className="text-stat-value">
           {value}{' '}
-          {unit && <span className="ml-1 text-xs font-medium text-zinc-700 dark:text-zinc-300">{unit}</span>}
+          {unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}
         </p>
         {description && (
-          <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
+          <p className="mt-1 text-micro-label">
             {description}
           </p>
         )}
       </div>
-    </FeedCard>
+    </div>
   );
 }
 
 export default function BibleChecklistPage() {
   const { currentUser } = useAuth();
-  useGrantSecretAchievement('bible-checklist', !!currentUser);
   const { plan, loading: planLoading } = useBiblePlan();
   const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } = useUserBibleChecklist();
-  const { toast } = useToast();
 
   const [isMounted, setIsMounted] = useState(false);
   const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
@@ -185,125 +181,35 @@ export default function BibleChecklistPage() {
     if (!plan?.dailyReadings || loadingChecklist) {
       return { total: 0, completed: 0, percentage: 0 };
     }
-    
-    const total = plan.dailyReadings.reduce((acc, day) => acc + (day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0), 0);
-    
-    let completed = 0;
+
     if (isGuest) {
-       plan.dailyReadings.forEach(day => {
-         const dayDate = parseDay(day.date);
-         if (isValid(dayDate) && isBefore(dayDate, today)) {
-           completed += day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).length || 0;
-         }
-       });
-    } else {
-       // Count actual plan passages completed (handles both scoped and legacy bare keys)
-       plan.dailyReadings.forEach(day => {
-         day.passages?.filter(p => p.displayText && !p.displayText.startsWith("Error:")).forEach(p => {
-           if (
-             completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-             completedPassages.includes(p.displayText)
-           ) {
-             completed++;
-           }
-         });
-       });
+      let total = 0;
+      let completed = 0;
+      plan.dailyReadings.forEach((day) => {
+        const dayDate = parseDay(day.date);
+        const validPassages =
+          day.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:')) || [];
+        total += validPassages.length;
+        if (isValid(dayDate) && isBefore(dayDate, today)) {
+          completed += validPassages.length;
+        }
+      });
+      const percentage = total > 0 ? (completed / total) * 100 : 0;
+      return { total, completed, percentage };
     }
 
+    const { total, completed } = countPlanPassageProgress(plan.dailyReadings, completedPassages);
     const percentage = total > 0 ? (completed / total) * 100 : 0;
     return { total, completed, percentage };
   }, [plan, completedPassages, loadingChecklist, isGuest, today]);
 
   const paceStats = useMemo(() => {
-    if (!plan?.dailyReadings || plan.dailyReadings.length === 0 || isGuest) {
-      return { chaptersLeft: 0, passagesLeft: 0, daysLeft: 0, chaptersPerDay: 0, chaptersToCatchUp: 0, catchUpPace: 0 };
+    if (!plan?.dailyReadings || isGuest) {
+      return { passagesLeft: 0, daysLeft: 0, passagesPerDay: 0, passagesToCatchUp: 0, catchUpPace: 0 };
     }
-
-    const isValidPassage = (p: any) =>
-      !!p?.displayText &&
-      typeof p.displayText === 'string' &&
-      !p.displayText.startsWith('Error:') &&
-      !!p.book &&
-      !!p.chapter;
-
-    const readingDays = plan.dailyReadings
-      .map((day) => ({ day, date: parseDay(day.date) }))
-      .filter((x) => isValid(x.date))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    const lastReadingDate = readingDays[readingDays.length - 1]?.date;
-    if (!lastReadingDate) {
-      return { chaptersLeft: 0, passagesLeft: 0, daysLeft: 0, chaptersPerDay: 0, chaptersToCatchUp: 0, catchUpPace: 0 };
-    }
-
-    // Unique chapters in the plan (filter out invalid/error passages)
-    const planChapters = new Set<string>();
-    readingDays.forEach(({ day }) => {
-      (day.passages || []).forEach((p) => {
-        if (!isValidPassage(p)) return;
-        planChapters.add(`${p.book} ${p.chapter}`);
-      });
-    });
-
-    // Unique completed chapters, computed consistently against the plan passages
-    const completedChapters = new Set<string>();
-    readingDays.forEach(({ day }) => {
-      (day.passages || []).forEach((p) => {
-        if (!isValidPassage(p)) return;
-        const completed =
-          completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-          completedPassages.includes(p.displayText);
-        if (completed) {
-          completedChapters.add(`${p.book} ${p.chapter}`);
-        }
-      });
-    });
-
-    const chaptersLeft = Math.max(0, planChapters.size - completedChapters.size);
-
-    // Unread valid passages left in the plan.
-    let passagesLeft = 0;
-    readingDays.forEach(({ day }) => {
-      (day.passages || []).forEach((p) => {
-        if (!isValidPassage(p)) return;
-        const completed =
-          completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-          completedPassages.includes(p.displayText);
-        if (!completed) passagesLeft++;
-      });
-    });
-
-    // Calendar days left (inclusive) to finish the plan.
-    const daysLeft = Math.max(0, differenceInCalendarDays(lastReadingDate, today) + 1);
-    const chaptersPerDay = daysLeft > 0 && passagesLeft > 0 ? parseFloat((passagesLeft / daysLeft).toFixed(2)) : 0;
-
-    // Catch-up chapters: chapters scheduled before today but not completed yet
-    const chaptersToDate = new Set<string>();
-    readingDays.forEach(({ day, date }) => {
-      if (isBefore(date, today)) {
-        (day.passages || []).forEach((p) => {
-          if (!isValidPassage(p)) return;
-          chaptersToDate.add(`${p.book} ${p.chapter}`);
-        });
-      }
-    });
-    let chaptersToCatchUp = 0;
-    chaptersToDate.forEach((ch) => {
-      if (!completedChapters.has(ch)) chaptersToCatchUp++;
-    });
-
-    const catchUpPace =
-      daysLeft > 0 && chaptersToCatchUp > 0
-        ? parseFloat((chaptersToCatchUp / daysLeft).toFixed(2))
-        : 0;
-
-    return { chaptersLeft, passagesLeft, daysLeft, chaptersPerDay, chaptersToCatchUp, catchUpPace };
+    return calculatePlanPaceStats(plan.dailyReadings, completedPassages, today);
   }, [plan, completedPassages, today, isGuest]);
 
-
-  const currentWeek = useMemo(() => {
-    return weeklyProgressData.find(week => week.isCurrent) || null;
-  }, [weeklyProgressData]);
 
   const { completedWeeks, upcomingWeeks } = useMemo(() => {
     const completed: WeeklyProgress[] = [];
@@ -320,22 +226,10 @@ export default function BibleChecklistPage() {
     return { completedWeeks: completed, upcomingWeeks: upcoming };
   }, [weeklyProgressData]);
 
-
-  const handleJumpToCurrentWeek = () => {
-    if (currentWeek) {
-       setViewState({ view: 'single-week-details', week: currentWeek });
-    } else {
-      toast({
-        title: "No Current Week",
-        description: "The plan might not cover the current date.",
-      });
-    }
-  };
-
   // ... all useMemo and useCallback hooks are defined above this point ...
 
   if (!isMounted || planLoading) {
-    return <BiblePlanSkeleton />;
+    return <PageLoading />;
   }
 
   if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
@@ -351,9 +245,9 @@ export default function BibleChecklistPage() {
 
   return (
     <>
-    <div className="page-container space-y-8 pb-32">
+    <div className="page-container">
         {viewState.view === 'single-week-details' && (
-           <div className="space-y-8">
+           <div className="stack-gap-sm">
             <PageHeader 
                 title={`${t.week} ${viewState.week.weekNumber}`}
                 action={
@@ -373,6 +267,7 @@ export default function BibleChecklistPage() {
                         currentUser={currentUser}
                         completedPassages={completedPassages}
                         togglePassageCompletion={togglePassageCompletion}
+                        markMultiplePassages={isGuest ? undefined : markMultiplePassages}
                         allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
                         loading={loadingChecklist}
                         planAvailable={true}
@@ -401,12 +296,12 @@ export default function BibleChecklistPage() {
                 {viewState.weeks.map((week) => (
                   <div key={week.weekNumber}>
                     <div 
-                        className="glass-card p-4 rounded-2xl transition-all duration-200 cursor-pointer ring-1 ring-success/35"
+                        className="ui-card cursor-pointer ring-1 ring-success/35 transition-shadow hover:shadow-md"
                         onClick={() => setViewState({ view: 'single-week-details', week: week })}
                     >
                       <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-sm font-semibold text-success">{t.week.toUpperCase()} {week.weekNumber}</p>
+                                <p className="text-micro-label text-success">{t.week} {week.weekNumber}</p>
                                 <h3 className="text-lg font-semibold">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</h3>
                                 <p className="text-xs text-muted-foreground mt-1 truncate">{week.passageSummary}</p>
                             </div>
@@ -421,90 +316,66 @@ export default function BibleChecklistPage() {
         )}
 
         {viewState.view === 'all-weeks' && (
-              <div className="space-y-6">
-                  <PageHeader 
-                    title={isGuest ? "Reading Plan" : "My Readings"}
+              <div className="stack-gap-sm">
+                  <NavPageHeader
                     action={
-                        <div className="flex gap-2">
-                             {currentWeek && (
-                                <Button onClick={handleJumpToCurrentWeek} variant="outline" size="sm" className="rounded-xl font-bold text-xs">
-                                    <LocateFixed className="mr-2 h-4 w-4" /> {t.currentWeek}
-                                </Button>
-                            )}
-                            {!isGuest && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
-                                            <MoreVertical className="h-4 w-4" />
-                                            <span className="sr-only">More options</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="rounded-2xl p-2 shadow-2xl border-border/50">
-                                        <DropdownMenuItem className="rounded-xl font-black text-micro-label h-10 px-4" onSelect={() => setIsMarkRangeDialogOpen(true)}>
-                                            <BookUp className="mr-2 h-4 w-4 text-primary" />
-                                            {t.markRangeRead}
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
+                        !isGuest ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="icon" className="rounded-xl h-9 w-9">
+                                        <MoreVertical className="h-4 w-4" />
+                                        <span className="sr-only">More options</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="rounded-2xl p-2 shadow-2xl border-border/50">
+                                    <DropdownMenuItem className="rounded-lg text-micro-label h-9 px-3" onSelect={() => setIsMarkRangeDialogOpen(true)}>
+                                        <BookUp className="mr-2 h-4 w-4 text-primary" />
+                                        {t.markRangeRead}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : undefined
                     }
                   />
 
-                  <section className="space-y-4">
-                      <div className="space-y-1 pl-1">
-                        <h2 className="text-section-title">Overall Progress</h2>
-                      </div>
-      <FeedCard animate={false} className="rounded-2xl p-4 space-y-4">
+                  <PageSection title={t.overallProgress}>
+                      <div className="space-y-4">
                           <div>
                               <div className="flex items-center gap-4 mb-2">
                                   <Progress value={overallProgress.percentage} className="flex-grow h-2 bg-muted shadow-inner" />
                                   <span className="font-bold text-foreground text-xl tracking-tight">{Math.round(overallProgress.percentage)}%</span>
                               </div>
-                              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                              <p className="text-xs font-medium text-muted-foreground">
                                 {isGuest 
-                                    ? `The plan is ${Math.round(overallProgress.percentage)}% complete as of today.`
-                                    : `${overallProgress.completed} of ${overallProgress.total} passages completed.`
+                                    ? t.planProgressGuest(Math.round(overallProgress.percentage))
+                                    : t.planProgressUser(overallProgress.completed, overallProgress.total)
                                 }
                               </p>
                           </div>
-                          {!isGuest && paceStats.chaptersLeft > 0 && (
-                            <div className="pt-4 border-t border-border/40">
-                              <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{paceStats.passagesLeft} passages remaining.</p>
-                            </div>
-                          )}
-                      </FeedCard>
+                      </div>
+                  </PageSection>
                       {!isGuest && paceStats.passagesLeft > 0 && (
-                        <div className="space-y-3">
-                          <h3 className="px-1 text-xs font-semibold uppercase tracking-wider text-primary">{t.paceToFinish}</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <PaceStatCard title={t.chaptersLeft} value={paceStats.chaptersLeft} />
-                            <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} />
-                            <PaceStatCard title={t.avgPerDay} value={paceStats.chaptersPerDay} unit="passages" />
-                          </div>
+                        <div className="ui-metric-grid">
+                          <PaceStatCard title={t.passagesLeft} value={paceStats.passagesLeft} />
+                          <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} />
+                          <PaceStatCard title={t.avgPerDay} value={paceStats.passagesPerDay} unit="passages" />
                         </div>
                       )}
-                      <div className="mt-4">
-                        <ReadingHeatmap dailyReadings={plan.dailyReadings} completedPassages={completedPassages} />
-                      </div>
-                  </section>
+                      <ReadingHeatmap dailyReadings={plan.dailyReadings} completedPassages={completedPassages} />
                   
-                  <section className="space-y-4">
-                      <div className="space-y-1 pl-1">
-                        <h2 className="text-section-title">Weekly Breakdown</h2>
-                      </div>
+                  <PageSection title={t.weeklyBreakdown}>
                       <div className="space-y-3">
                         {completedWeeks.length > 0 && (
                             <div 
                                 key="completed-weeks-summary"
-                                className="glass-card p-5 rounded-3xl transition-all duration-200 cursor-pointer ring-1 ring-success/35 group"
+                                className="ui-card cursor-pointer ring-1 ring-success/35 transition-shadow hover:shadow-md"
                                 onClick={() => {
                                     setViewState({ view: 'completed-weeks-list', weeks: completedWeeks });
                                 }}
                             >
                               <div className="flex justify-between items-center">
                                     <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-success/80 mb-1">{t.completed}</p>
+                                        <p className="text-micro-label text-success mb-1">{t.completed}</p>
                                         <h3 className="text-lg font-bold">{`${t.week} ${completedWeeks[0].weekNumber} - ${completedWeeks[completedWeeks.length - 1].weekNumber}`}</h3>
                                     </div>
                                     <CheckCircle className="h-6 w-6 text-success group-hover:scale-110 transition-transform" />
@@ -516,8 +387,8 @@ export default function BibleChecklistPage() {
                             <div 
                                 key={week.weekNumber}
                                 className={cn(
-                                    "glass-card p-5 rounded-3xl transition-all duration-200 cursor-pointer group",
-                                    !isGuest && week.isCurrent ? "ring-1 ring-primary/35" :
+                                    "ui-card cursor-pointer transition-shadow hover:shadow-md",
+                                    !isGuest && week.isCurrent ? "ring-1 ring-blue-500/35" :
                                     !isGuest && week.isOverdue ? "ring-1 ring-destructive/35" : 
                                     "ring-1 ring-border/60"
                                 )}
@@ -526,8 +397,8 @@ export default function BibleChecklistPage() {
                               <div className="flex justify-between items-center gap-4">
                                     <div className="flex-1 min-w-0">
                                         <p className={cn(
-                                            "text-[11px] font-bold uppercase tracking-wider mb-1",
-                                            !isGuest && week.isCurrent ? "text-primary" :
+                                            "text-micro-label mb-1",
+                                            !isGuest && week.isCurrent ? "text-blue-600 dark:text-blue-400" :
                                             !isGuest && week.isOverdue ? "text-destructive" :
                                             "text-muted-foreground/80"
                                         )}>{t.week} {week.weekNumber}</p>
@@ -542,7 +413,7 @@ export default function BibleChecklistPage() {
                             </div>
                         ))}
                       </div>
-                  </section>
+                  </PageSection>
                   <BackToTopButton />
               </div>
         )}

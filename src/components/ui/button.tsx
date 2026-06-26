@@ -6,30 +6,32 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 text-[length:var(--app-ui-font-sm)]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "glass-elevated text-foreground hover:text-foreground active:scale-[0.98]",
+        default:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         primary:
-          "border border-primary/20 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
         destructive:
-          "glass-elevated bg-destructive/80 text-destructive-foreground hover:bg-destructive/90 active:scale-[0.98]",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
-          "glass-thin text-foreground hover:bg-accent/55 hover:text-accent-foreground active:scale-[0.98]",
+          "border border-border bg-background hover:bg-muted/60",
         secondary:
-          "glass-thin bg-secondary/75 text-secondary-foreground hover:bg-secondary/85 active:scale-[0.98]",
-        ghost: "glass-thin border-transparent bg-transparent hover:bg-accent/50 hover:text-accent-foreground active:scale-[0.95]",
+          "bg-muted text-foreground hover:bg-muted/80",
+        ghost: "hover:bg-muted/60",
         link: "text-primary underline-offset-4 hover:underline",
-        premium: "glass-elevated bg-gradient-to-br from-primary/90 to-primary text-primary-foreground hover:brightness-110 active:scale-[0.98]",
+        premium:
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
       },
       size: {
-        default: "h-[var(--app-control-height-md)] px-5 py-2 rounded-2xl",
-        sm: "h-[var(--app-control-height-sm)] rounded-xl px-3 text-[length:var(--app-ui-font-xs)]",
-        xs: "h-8 rounded-lg px-2 text-[length:var(--app-ui-font-xs)]",
-        lg: "h-[var(--app-control-height-lg)] rounded-[1.25rem] px-8 text-[length:var(--app-ui-font-base)]",
-        hero: "h-16 rounded-full px-10 text-lg font-black uppercase tracking-tight italic",
-        icon: "h-10 w-10 rounded-xl",
+        default: "h-10 px-4",
+        sm: "h-8 rounded-md px-3 text-xs",
+        xs: "h-7 rounded-md px-2 text-xs",
+        lg: "h-11 rounded-lg px-6",
+        hero: "h-12 rounded-xl px-8 text-base font-semibold",
+        icon: "h-9 w-9 rounded-lg",
       },
     },
     defaultVariants: {
@@ -60,5 +62,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
-
-    

@@ -19,7 +19,6 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  getDocsFromCache,
   limit,
   onSnapshot,
   orderBy,
@@ -32,6 +31,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import {
+  COLLECTION_CACHE_TTL_MS,
   NOTIFICATIONS_CACHE_TTL_MS,
   readLocalCollectionCache,
   readLocalCollectionCacheStale,
@@ -188,57 +188,39 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       limit(40),
     );
 
-    const loadOnce = async () => {
-      try {
-        let personalDocs;
-        let announcementDocs;
-        try {
-          [personalDocs, announcementDocs] = await Promise.all([
-            getDocsFromCache(personalQuery),
-            getDocsFromCache(announcementsQuery),
-          ]);
-          if (personalDocs.empty && announcementDocs.empty) {
-            [personalDocs, announcementDocs] = await Promise.all([
-              getDocs(personalQuery),
-              getDocs(announcementsQuery),
-            ]);
-          }
-        } catch {
-          [personalDocs, announcementDocs] = await Promise.all([
-            getDocs(personalQuery),
-            getDocs(announcementsQuery),
-          ]);
-        }
-        if (!cancelled) {
-          persist(mergeById(mapSnapshot(personalDocs.docs), mapSnapshot(announcementDocs.docs)));
-        }
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-        if (!cancelled) setLoading(false);
-      }
+    let personalItems: AppNotification[] = cached
+      ? normalizeNotifications(cached).filter((n) => n.userId === currentUser.uid)
+      : [];
+    let announcementItems: AppNotification[] = cached
+      ? normalizeNotifications(cached).filter((n) => n.type === 'announcement')
+      : [];
+
+    const mergeAndPersist = () => {
+      persist(mergeById(personalItems, announcementItems));
     };
 
-    void loadOnce();
-
-    const unsubscribers = [personalQuery, announcementsQuery].map((q) =>
+    const unsubscribers = [
       onSnapshot(
-        q,
-        () => {
-          void loadOnce();
+        personalQuery,
+        (snapshot) => {
+          personalItems = mapSnapshot(snapshot.docs);
+          mergeAndPersist();
         },
         (error) => console.error('Notification listener error:', error),
       ),
-    );
-
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void loadOnce();
-    };
-    document.addEventListener('visibilitychange', onVisible);
+      onSnapshot(
+        announcementsQuery,
+        (snapshot) => {
+          announcementItems = mapSnapshot(snapshot.docs);
+          mergeAndPersist();
+        },
+        (error) => console.error('Notification listener error:', error),
+      ),
+    ];
 
     return () => {
       cancelled = true;
       unsubscribers.forEach((u) => u());
-      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [currentUser, adminMode, mode]);
 

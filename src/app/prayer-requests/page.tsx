@@ -4,17 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  HeartHandshake,
   Loader2,
-  Send,
-  Shield,
-  Lock,
   Pencil,
   Trash2,
   Check,
   X,
 } from 'lucide-react';
-import { PageHeader, FeedCard, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, FeedCard } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -34,6 +30,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePrayerRequests } from '@/hooks/use-prayer-requests';
 import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, getAppLocale } from '@/lib/formatting';
+import { translations } from '@/lib/translations';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import type { PrayerRequest } from '@/types';
 
@@ -241,6 +238,7 @@ export default function PrayerRequestsPage() {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const locale = getAppLocale(currentUser?.preferredLanguage);
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   useEffect(() => {
     if (!loadingAuth && !currentUser) {
@@ -283,37 +281,12 @@ export default function PrayerRequestsPage() {
   }
 
   return (
-    <div className="page-container max-w-2xl space-y-6 pb-32">
-      <PageHeader title="Prayer Requests" />
+    <div className="page-container-narrow">
+      <NavPageHeader description={t.prayerRequestsDesc} />
 
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
-        <div className="glass-card rounded-2xl border-primary/25 bg-primary/5 p-5 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
-              <Shield className="h-5 w-5" />
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-sm font-bold">Private to Shepherd Claire</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Only <strong className="text-foreground font-semibold">Shepherd Claire</strong> can read
-                submitted prayer requests. Other members cannot see them. You can edit or delete your own
-                submissions here.
-              </p>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5 shrink-0" />
-                Anonymous is on by default — your name stays hidden even from Claire.
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
         <FeedCard className="p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <HeartHandshake className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Share a prayer need</h2>
-          </div>
+          <h2 className="text-base font-semibold">Prayer Request</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Textarea
@@ -342,19 +315,15 @@ export default function PrayerRequestsPage() {
 
             <div className="flex justify-end">
               <Button type="submit" variant="primary" disabled={!text.trim() || isSubmitting} className="rounded-xl">
-                {isSubmitting ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Submit prayer request
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Submit
               </Button>
             </div>
           </form>
         </FeedCard>
       </motion.div>
 
-      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
+      <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible" className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground px-1">
           {isShepherd ? 'All prayer requests' : 'Your prayer requests'}
         </h3>
@@ -365,7 +334,6 @@ export default function PrayerRequestsPage() {
           </div>
         ) : requests.length === 0 ? (
           <EmptyState
-            icon={HeartHandshake}
             title={isShepherd ? 'No requests yet' : 'No requests submitted yet'}
             description={
               isShepherd

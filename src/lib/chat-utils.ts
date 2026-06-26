@@ -19,6 +19,7 @@ type MessagePreviewFields = Pick<
   | 'songId'
   | 'songTitle'
   | 'sheetKey'
+  | 'poll'
   | 'isDeleted'
   | 'systemEvent'
 >;
@@ -35,6 +36,7 @@ export function formatChatMessagePreview(message: MessagePreviewFields): string 
   if (message.qtDate) preview = '📖 QT Roster';
   if (message.cleaningDate) preview = '🧹 Cleaning Roster';
   if (message.songId) preview = `🎵 Chord Sheet: ${message.songTitle || 'Song'} (${message.sheetKey || ''})`;
+  if (message.poll) preview = `📊 Poll: ${message.poll.question}`;
   return preview;
 }
 
@@ -165,7 +167,7 @@ export function getChatDisplayDetails(
 
   if (chat.type === 'group') {
     return {
-      name: chat.name || 'Unnamed Circle',
+      name: chat.name || 'Unnamed chat',
       avatar: null,
       photoURL: chat.photoURL || null,
     };

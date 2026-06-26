@@ -6,27 +6,28 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { QTRosterEntry } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
-
+import { useScheduleData } from '@/contexts/schedule-data-context';
 import { useNotifications } from '@/hooks/use-notifications';
 
 const QT_ROSTERS_COLLECTION = 'qtRosters';
 
 export function useQTRoster(enabled = true) {
   const { currentUser, loadingAuth } = useAuth();
-  const [roster, setRoster] = useState<QTRosterEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const schedule = useScheduleData();
+  const [localRoster, setLocalRoster] = useState<QTRosterEntry[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
   const { createNotification } = useNotifications();
 
   useEffect(() => {
-    if (!enabled || loadingAuth) return;
+    if (schedule || !enabled || loadingAuth) return;
 
     if (!currentUser) {
-      setRoster([]);
-      setLoading(false);
+      setLocalRoster([]);
+      setLocalLoading(false);
       return;
     }
 
-    setLoading(true);
+    setLocalLoading(true);
     const q = query(collection(db, QT_ROSTERS_COLLECTION), orderBy('date', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -34,15 +35,18 @@ export function useQTRoster(enabled = true) {
         id: doc.id,
         ...doc.data()
       } as QTRosterEntry));
-      setRoster(rosterData);
-      setLoading(false);
+      setLocalRoster(rosterData);
+      setLocalLoading(false);
     }, (error) => {
       console.error("[useQTRoster] Error fetching roster:", error);
-      setLoading(false);
+      setLocalLoading(false);
     });
 
     return () => unsubscribe();
-  }, [enabled, loadingAuth, currentUser?.uid]);
+  }, [schedule, enabled, loadingAuth, currentUser?.uid]);
+
+  const roster = schedule?.qtRoster ?? localRoster;
+  const loading = schedule ? schedule.qtRosterLoading : localLoading;
 
   const upsertEntry = useCallback(async (entryData: Omit<QTRosterEntry, 'id'>) => {
     const docId = entryData.date; // Use YYYY-MM-DD as the document ID

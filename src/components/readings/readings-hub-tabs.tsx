@@ -3,15 +3,11 @@
 import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, ScrollText, Brain, Trophy } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import MiniBibleReader from "@/components/bible/mini-bible-reader";
+import { translations } from "@/lib/translations";
+import { BibleReaderOverlay } from "@/components/bible/bible-reader-overlay";
 import { useGlobalBibleReader } from "@/contexts/global-bible-reader-context";
+import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
 
 type ReadingTab = {
   value: string;
@@ -26,15 +22,16 @@ export default function ReadingsHubTabs() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const { isOpen, setIsOpen } = useGlobalBibleReader();
+  const t = translations[currentUser?.preferredLanguage || "en"];
 
   const tabs = useMemo<ReadingTab[]>(
     () => [
-      { value: "plan", label: "Plan", href: "/bible-checklist", icon: BookOpen },
-      { value: "full", label: "Full", href: "/full-plan", icon: ScrollText },
-      { value: "memorize", label: "Memory", href: "/memorize", icon: Brain },
-      { value: "progress", label: "Progress", href: "/leaderboard", icon: Trophy, requiresAuth: true },
+      { value: "plan", label: t.readingPlan, href: "/bible-checklist", icon: BookOpen },
+      { value: "full", label: t.fullPlan, href: "/full-plan", icon: ScrollText },
+      { value: "memorize", label: t.memoryVerses, href: "/memorize", icon: Brain },
+      { value: "progress", label: t.communityProgress, href: "/leaderboard", icon: Trophy, requiresAuth: true },
     ],
-    []
+    [t],
   );
 
   const visibleTabs = tabs.filter((tab) => !tab.requiresAuth || !!currentUser);
@@ -44,72 +41,51 @@ export default function ReadingsHubTabs() {
 
   return (
     <>
-      <div className="fixed bottom-3 left-1/2 z-40 w-[min(680px,calc(100vw-16px))] -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)] md:w-[min(720px,calc(100vw-16rem-32px))]">
-        <div className="glass-elevated relative rounded-[1.75rem] border-transparent px-2 pb-3 pt-3">
-          <div className="grid grid-cols-5 gap-1">
-            {leftTabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.value === activeTab;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => router.push(tab.href)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
-                    active ? "bg-background/40 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-background/25"
-                  )}
-                >
-                  <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>
-                    {tab.label}
-                  </span>
-                </button>
-              );
-            })}
-            <div className="flex items-center justify-center">
-              <Popover open={isOpen} onOpenChange={setIsOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="glass-elevated border-transparent flex h-12 w-12 items-center justify-center rounded-full"
-                  >
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    <span className="sr-only">Open popup Bible</span>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="center"
-                  side="top"
-                  className="mb-2 w-[calc(100vw-1.5rem)] sm:w-[380px] p-0 h-[600px] max-h-[calc(100vh-8rem)] overflow-hidden rounded-xl flex flex-col"
-                >
-                  <MiniBibleReader onClose={() => setIsOpen(false)} />
-                </PopoverContent>
-              </Popover>
-            </div>
-            {rightTabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.value === activeTab;
-              return (
-                <button
-                  key={tab.value}
-                  type="button"
-                  onClick={() => router.push(tab.href)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
-                    active ? "bg-background/40 text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-background/25"
-                  )}
-                >
-                  <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>
-                    {tab.label}
-                  </span>
-                </button>
-              );
-            })}
+      <BottomHubBar>
+        <div className="grid grid-cols-5 gap-1">
+          {leftTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.value === activeTab;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => router.push(tab.href)}
+                className={bottomHubTabClass(active)}
+              >
+                <Icon className={bottomHubIconClass(active)} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              className="glass-elevated border-transparent flex h-10 w-10 items-center justify-center rounded-full"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <BookOpen className="h-4 w-4 text-primary" />
+              <span className="sr-only">Open popup Bible</span>
+            </button>
           </div>
+          {rightTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.value === activeTab;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => router.push(tab.href)}
+                className={bottomHubTabClass(active)}
+              >
+                <Icon className={bottomHubIconClass(active)} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </BottomHubBar>
+      <BibleReaderOverlay placement="hub" />
     </>
   );
 }

@@ -1,8 +1,7 @@
 
 "use client";
 
-import type { ReactNode } from 'react';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -35,13 +34,34 @@ interface AuthContextType {
   saveUserProfile: (userId: string, profileData: Partial<UserProfileData>) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   isWorshipTeam: boolean;
-  registerSecretUnlock: (secretKey: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USERS_COLLECTION = 'users';
 const ROLES_COLLECTION = 'roles';
+
+let cachedWorshipRoleIds: string[] | null = null;
+let worshipRoleIdsPromise: Promise<string[]> | null = null;
+
+async function getWorshipRoleIds(): Promise<string[]> {
+  if (cachedWorshipRoleIds) return cachedWorshipRoleIds;
+  if (!worshipRoleIdsPromise) {
+    worshipRoleIdsPromise = (async () => {
+      const q = query(
+        collection(db, ROLES_COLLECTION),
+        where('name', 'in', ['Worship', 'Worship Team']),
+      );
+      const snap = await getDocs(q);
+      cachedWorshipRoleIds = snap.docs.map((d) => d.id);
+      return cachedWorshipRoleIds;
+    })().catch((err) => {
+      worshipRoleIdsPromise = null;
+      throw err;
+    });
+  }
+  return worshipRoleIdsPromise;
+}
 const CHATS_COLLECTION = 'chats';
 
 
@@ -88,10 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               showInCommunityProgress: profileData.showInCommunityProgress ?? true,
               preferredLanguage: profileData.preferredLanguage || 'en',
               colorPalette: profileData.colorPalette,
-              backgroundMode: profileData.backgroundMode,
+              surfaceBackground: profileData.surfaceBackground,
+              appTheme: profileData.appTheme,
               glassEnabled: profileData.glassEnabled,
               typography: profileData.typography,
-              colorScheme: profileData.colorScheme,
               bibleTextVersion: profileData.bibleTextVersion,
               dashboard: { 
                 layouts: profileData.dashboard?.layouts || {},
@@ -103,10 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
               avatarChangesEnabled: profileData.avatarChangesEnabled,
               fcmTokens: profileData.fcmTokens || [],
-              clickMeCount: profileData.clickMeCount || 0,
-              clickMeLastClaimAt: profileData.clickMeLastClaimAt,
-              feedbackCount: profileData.feedbackCount ?? 0,
-              unlockedSecrets: profileData.unlockedSecrets || [],
             } as AppUser);
             setIsAdmin(profileData.isAdmin || false);
           }
@@ -133,27 +149,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Update isWorshipTeam whenever currentUser or roles change
+  // Update isWorshipTeam whenever roleIds change (worship role IDs cached after first fetch)
   useEffect(() => {
     if (!currentUser) {
       setIsWorshipTeam(false);
       return;
     }
 
-    const checkWorshipRole = async () => {
-      try {
-        const q = query(collection(db, ROLES_COLLECTION), where('name', 'in', ['Worship', 'Worship Team']));
-        const snap = await getDocs(q);
-        const worshipRoleIds = snap.docs.map(d => d.id);
-        const hasRole = currentUser.roleIds?.some(id => worshipRoleIds.includes(id));
+    let cancelled = false;
+    void getWorshipRoleIds()
+      .then((worshipRoleIds) => {
+        if (cancelled) return;
+        const hasRole = currentUser.roleIds?.some((id) => worshipRoleIds.includes(id));
         setIsWorshipTeam(!!hasRole);
-      } catch (e) {
-        console.error("Error checking worship role:", e);
-        setIsWorshipTeam(false);
-      }
+      })
+      .catch((e) => {
+        console.error('Error checking worship role:', e);
+        if (!cancelled) setIsWorshipTeam(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    checkWorshipRole();
-  }, [currentUser]);
+  }, [currentUser?.uid, currentUser?.roleIds]);
 
   const adminPasswordLogin = async (password: string): Promise<boolean> => {
     if (!currentUser) {
@@ -280,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (userId: string, profileData: Partial<UserProfileData>) => {
+  const updateUserProfile = useCallback(async (userId: string, profileData: Partial<UserProfileData>) => {
     if (!auth.currentUser || auth.currentUser.uid !== userId) {
       throw new Error("Not authorized to update this profile.");
     }
@@ -296,6 +314,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (fcmTokens && fcmTokens.length > 0) {
       dataToWrite.fcmTokens = arrayUnion(...fcmTokens);
     }
+
+    setCurrentUser((prev) => {
+      if (!prev || prev.uid !== userId) return prev;
+      return { ...prev, ...otherProfileData };
+    });
 
     await setDoc(userDocRef, dataToWrite, { merge: true });
 
@@ -315,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  };
+  }, []);
   
   const adminUpdateUserProfile = async (userId: string, profileData: Partial<UserProfileData>) => {
     if (!isAdmin || !currentUser) {
@@ -329,15 +352,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(result.error);
     }
   };
-
-  const registerSecretUnlock = useCallback((secretKey: string) => {
-    setCurrentUser((prev) => {
-      if (!prev) return prev;
-      const existing = prev.unlockedSecrets || [];
-      if (existing.includes(secretKey)) return prev;
-      return { ...prev, unlockedSecrets: [...existing, secretKey] };
-    });
-  }, []);
 
 
   return (
@@ -355,7 +369,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveUserProfile: updateUserProfile,
       sendPasswordReset,
       isWorshipTeam,
-      registerSecretUnlock,
     }}>
       {children}
     </AuthContext.Provider>

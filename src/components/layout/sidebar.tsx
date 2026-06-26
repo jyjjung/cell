@@ -5,8 +5,8 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home, Users, BookOpen, Shield, LogOut, User,
-  LogIn, UserPlus, MessageCircle, ChevronDown,
+  Home, Users, BookOpen, Shield, User,
+  LogIn, UserPlus, LogOut, MessageCircle, ChevronDown,
   CalendarCheck, Music, Library, Lightbulb, HeartHandshake
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ import {
   useSidebar,
   SidebarMenuBadge,
 } from '@/components/ui/sidebar';
-import { Skeleton } from '../ui/skeleton';
+import { LoadingSpinner } from '../ui/loading-spinner';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 
@@ -33,8 +33,8 @@ import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
 import { translations } from '@/lib/translations';
 import { isChatUnread } from '@/lib/notification-utils';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '../ui/button';
 
@@ -50,7 +50,7 @@ type NavItem = {
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, isAdmin, isWorshipTeam, signOutUser, loadingAuth } = useAuth();
+  const { currentUser, isAdmin, isWorshipTeam, loadingAuth, signOutUser } = useAuth();
   const { setOpenMobile } = useSidebar();
   const [isMounted, setIsMounted] = useState(false);
   const { setIsPageLoading } = usePageLoading();
@@ -77,29 +77,30 @@ export default function AppSidebar() {
     router.push(path);
   };
 
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href);
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   const navItems: NavItem[] = [
     { href: '/', label: t.home, icon: Home },
-    { href: '/bible-checklist', label: 'Readings', icon: BookOpen },
+    { href: '/bible-checklist', label: t.readingPlan, icon: BookOpen },
     { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
-    { href: '/events', label: 'Schedule', icon: CalendarCheck },
-    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: 'Worship Portal', icon: Music }] : []),
-    { href: '/media', label: 'Resources', icon: Library },
+    { href: '/events', label: t.schedule, icon: CalendarCheck },
+    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal, icon: Music }] : []),
+    { href: '/media', label: t.links, icon: Library },
     { href: '/members', label: t.members, icon: Users },
-    { href: '/prayer-requests', label: 'Prayer Requests', icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
-    { href: '/feedback', label: 'Feedback & Updates', icon: Lightbulb },
+    { href: '/prayer-requests', label: t.prayerRequests, icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
+    { href: '/feedback', label: t.feedback, icon: Lightbulb },
   ];
 
   const isVisible = (item: { requiresAuth?: boolean; requiresGuest?: boolean }) =>
     (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
 
   return (
-    <Sidebar collapsible="icon" className="glass-nav border-r border-border/40">
+    <Sidebar collapsible="icon" className="app-sidebar">
       {/* Logo */}
-      <SidebarHeader className="px-2.5 py-2.5 border-b border-border/20">
+      <SidebarHeader className="app-sidebar-header">
         <Link href="/" onClick={() => navigate('/')}
-          className="flex items-center group-data-[collapsible=icon]:justify-center transition-all active:scale-95">
+          className="flex h-full items-center justify-start transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
             <img src="/icon.svg" alt="em." className="h-full w-full" />
           </div>
@@ -109,9 +110,9 @@ export default function AppSidebar() {
       {/* Navigation */}
       <SidebarContent className="px-1.5 py-1.5 gap-1">
         {!isMounted || loadingAuth ? (
-            <div className="space-y-2 px-1">
-            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}
-          </div>
+            <div className="flex items-center justify-center py-8">
+              <LoadingSpinner />
+            </div>
         ) : (
           <SidebarMenu className="gap-0.5 p-1">
             {navItems.map(item => {
@@ -126,10 +127,10 @@ export default function AppSidebar() {
                     tooltip={item.label}
                     onClick={() => navigate(item.href)}
                     className={cn(
-                      "h-8.5 rounded-lg px-2.5 text-[13px] font-medium transition-all gap-2.5 focus-visible:ring-1 focus-visible:ring-primary/60",
+                      "h-9 rounded-lg px-2.5 text-[13px] font-medium transition-colors gap-2.5 focus-visible:ring-2 focus-visible:ring-ring/50",
                       active
-                        ? "glass-elevated text-foreground"
-                        : "text-foreground/75 hover:bg-background/35 hover:text-foreground"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <Link href={item.href}>
@@ -157,10 +158,10 @@ export default function AppSidebar() {
                     tooltip="Admin"
                     onClick={() => navigate('/admin')}
                     className={cn(
-                      "h-8.5 rounded-lg px-2.5 text-[13px] font-medium gap-2.5 transition-all focus-visible:ring-1 focus-visible:ring-primary/60",
+                      "h-9 rounded-lg px-2.5 text-[13px] font-medium gap-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
                       pathname.startsWith('/admin')
-                        ? "glass-elevated text-foreground"
-                        : "text-primary/80 hover:bg-primary/10 hover:text-primary"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <Link href="/admin">
@@ -189,48 +190,76 @@ export default function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border/30 p-2">
-        <div className="flex items-center gap-2">
+      <SidebarFooter className="app-sidebar-footer gap-0 p-0">
+        <div className="flex h-full w-full items-center px-1.5">
           {!isMounted || loadingAuth ? (
-            <div className="flex items-center gap-3 flex-1">
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-              <Skeleton className="h-4 flex-1 group-data-[collapsible=icon]:hidden" />
+            <div className="flex flex-1 items-center justify-center px-1 py-2">
+              <LoadingSpinner size="sm" />
             </div>
+          ) : currentUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="group flex h-full min-w-0 w-full items-center gap-3 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  <div className="h-8 w-8 shrink-0">
+                    <PixelAvatar avatar={currentUser.avatar} className="h-8 w-8" />
+                  </div>
+                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                    <p className="truncate text-sm font-medium leading-tight">
+                      {formatUserDisplayName(currentUser)}
+                    </p>
+                    {currentUser.email ? (
+                      <p className="truncate text-[11px] text-muted-foreground leading-tight">
+                        {currentUser.email}
+                      </p>
+                    ) : null}
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-data-[collapsible=icon]:hidden" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="center"
+                className="mb-1 w-[calc(var(--radix-dropdown-menu-trigger-width)-12px)] rounded-xl p-2"
+              >
+                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/profile')}>
+                  <User className="h-4 w-4 text-muted-foreground" /> {t.profile}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="opacity-30 my-1" />
+                <DropdownMenuItem
+                  className="rounded-lg h-9 text-sm gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                  onSelect={() => void signOutUser()}
+                >
+                  <LogOut className="h-4 w-4" /> {t.signOut}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="glass-thin group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 text-left transition-all hover:border-ring/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60">
-                  <div className="h-8 w-8 shrink-0 rounded-full border border-border/50 bg-muted shadow-sm">
-                    {currentUser ? <PixelAvatar avatar={currentUser.avatar} /> : <User className="h-full w-full p-2 text-muted-foreground" />}
+                <button className="group flex h-full min-w-0 w-full items-center gap-3 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <User className="h-4 w-4" />
                   </div>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="truncate text-[13px] font-semibold leading-tight">{formatUserDisplayName(currentUser, 'Guest')}</p>
-                    {currentUser && <p className="truncate text-[11px] text-muted-foreground">{currentUser.email}</p>}
+                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                    <p className="truncate text-sm font-medium leading-tight">Guest</p>
                   </div>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-data-[collapsible=icon]:hidden" />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-data-[collapsible=icon]:hidden" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-2 mb-1">
-                {currentUser ? (
-                  <>
-                    <DropdownMenuItem className="rounded-xl h-10 font-medium text-sm gap-2" onSelect={() => navigate('/profile')}>
-                      <User className="h-4 w-4 text-primary" /> {t.profile}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="opacity-30 my-1" />
-                    <DropdownMenuItem className="rounded-xl h-10 font-medium text-sm gap-2 text-destructive focus:text-destructive focus:bg-destructive/10" onSelect={() => signOutUser()}>
-                      <LogOut className="h-4 w-4" /> {t.signOut}
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem className="rounded-xl h-10 font-medium text-sm gap-2" onSelect={() => navigate('/login')}>
-                      <LogIn className="h-4 w-4 text-primary" /> {t.signIn}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-xl h-10 font-medium text-sm gap-2" onSelect={() => navigate('/signup')}>
-                      <UserPlus className="h-4 w-4 text-primary" /> {t.register}
-                    </DropdownMenuItem>
-                  </>
-                )}
+              <DropdownMenuContent
+                side="top"
+                align="center"
+                className="mb-1 w-[calc(var(--radix-dropdown-menu-trigger-width)-12px)] rounded-xl p-2"
+              >
+                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/login')}>
+                  <LogIn className="h-4 w-4 text-muted-foreground" /> {t.signIn}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/signup')}>
+                  <UserPlus className="h-4 w-4 text-muted-foreground" /> {t.register}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}

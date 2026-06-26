@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link2, Plus, Trash2, ExternalLink, Loader2, Pencil } from 'lucide-react';
-import { PageHeader } from '@/components/ui/page-layout';
+import { Link2, Plus, Trash2, ExternalLink, Loader2, Pencil, Check } from 'lucide-react';
+import { NavPageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import {
@@ -15,20 +16,19 @@ import {
   serverTimestamp, query, orderBy, updateDoc,
 } from 'firebase/firestore';
 import type { CommunityLink } from '@/types';
-import { useGrantSecretAchievement } from '@/hooks/use-grant-secret-achievement';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const LINKS_COLLECTION = 'communityLinks';
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
-  }),
-};
 
 // ── Hostname helper ───────────────────────────────────────────────────────────
 function hostname(url: string) {
@@ -47,6 +47,7 @@ function AddEditLinkDialog({
 }: { open: boolean; existing?: CommunityLink | null; onClose: () => void }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const [title, setTitle] = useState(existing?.title || '');
   const [url, setUrl]     = useState(existing?.url || '');
   const [desc, setDesc]   = useState(existing?.description || '');
@@ -76,7 +77,7 @@ function AddEditLinkDialog({
           url: finalUrl,
           description: desc.trim() || null,
         });
-        toast({ title: 'Link updated' });
+        toast({ title: t.linkUpdated });
       } else {
         await addDoc(collection(db, LINKS_COLLECTION), {
           title: title.trim(),
@@ -85,7 +86,7 @@ function AddEditLinkDialog({
           createdBy: currentUser!.uid,
           createdAt: serverTimestamp(),
         });
-        toast({ title: 'Link added' });
+        toast({ title: t.linkAdded });
       }
       onClose();
     } catch (e: any) {
@@ -95,38 +96,38 @@ function AddEditLinkDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="rounded-3xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-black normal-case not-italic tracking-tight">
-            {existing ? 'Edit Link' : 'Add Link'}
+      <DialogContent className="rounded-xl p-5 border-border/50 bg-card max-w-sm">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-section-title">
+            {existing ? t.editLink : t.addLink}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            {existing ? 'Update the link details below.' : 'Add a new link for the community.'}
+            {existing ? t.editLink : t.addLink}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="link-title">Title <span className="text-primary">*</span></Label>
-            <Input id="link-title" placeholder="e.g. Church Website" value={title}
-              onChange={e => setTitle(e.target.value)} className="rounded-xl" />
+        <div className="stack-gap-sm mt-3">
+          <div className="stack-gap-sm">
+            <Label htmlFor="link-title">{t.titleLabel} <span className="text-primary">*</span></Label>
+            <Input id="link-title" placeholder={t.linkTitlePlaceholder} value={title}
+              onChange={e => setTitle(e.target.value)} className="rounded-lg" />
           </div>
-          <div className="space-y-1.5">
+          <div className="stack-gap-sm">
             <Label htmlFor="link-url">URL <span className="text-primary">*</span></Label>
             <Input id="link-url" placeholder="https://example.com" value={url}
-              onChange={e => setUrl(e.target.value)} className="rounded-xl"
+              onChange={e => setUrl(e.target.value)} className="rounded-lg"
               onKeyDown={e => e.key === 'Enter' && handleSave()} />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="link-desc">Description</Label>
-            <Input id="link-desc" placeholder="Short description (optional)" value={desc}
-              onChange={e => setDesc(e.target.value)} className="rounded-xl" />
+          <div className="stack-gap-sm">
+            <Label htmlFor="link-desc">{t.details}</Label>
+            <Input id="link-desc" placeholder={t.linkDescPlaceholder} value={desc}
+              onChange={e => setDesc(e.target.value)} className="rounded-lg" />
           </div>
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" className="flex-1 rounded-xl"
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1 rounded-lg" onClick={onClose}>{t.cancel}</Button>
+            <Button variant="primary" className="flex-1 rounded-lg"
               onClick={handleSave} disabled={!title.trim() || !url.trim() || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {existing ? 'Save' : 'Add Link'}
+              {existing ? t.save : t.addLink}
             </Button>
           </div>
         </div>
@@ -138,11 +139,12 @@ function AddEditLinkDialog({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LinksPage() {
   const { currentUser, isAdmin } = useAuth();
-  useGrantSecretAchievement('media', !!currentUser);
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { toast } = useToast();
   const [links, setLinks]     = useState<CommunityLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [editLink, setEditLink] = useState<CommunityLink | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<CommunityLink | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -170,7 +172,7 @@ export default function LinksPage() {
     setDeleting(true);
     try {
       await deleteDoc(doc(db, LINKS_COLLECTION, deleteConfirm.id));
-      toast({ title: 'Link removed' });
+      toast({ title: t.linkRemoved });
       setDeleteConfirm(null);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
@@ -178,88 +180,132 @@ export default function LinksPage() {
   };
 
   return (
-    <div className="page-container max-w-4xl space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <PageHeader
-          title="Links"
+    <div className="page-container">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <NavPageHeader
           action={
             isAdmin ? (
-              <Button
-                className="h-9 rounded-xl gap-1.5 px-4 text-[10px] font-semibold uppercase tracking-[0.16em]"
-                onClick={() => setAddOpen(true)}
-              >
-                <Plus className="h-4 w-4" /> Add Link
-              </Button>
+              <div className="flex items-center gap-2">
+                {editMode && (
+                  <Button
+                    className="h-8 rounded-lg gap-1.5 px-3 text-sm"
+                    onClick={() => setAddOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" /> {t.addLink}
+                  </Button>
+                )}
+                <Button
+                  variant={editMode ? "default" : "outline"}
+                  className="h-8 rounded-lg gap-1.5 px-3 text-sm"
+                  onClick={() => setEditMode((v) => !v)}
+                >
+                  {editMode ? (
+                    <>
+                      <Check className="h-4 w-4" /> {t.doneEditing}
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-4 w-4" /> {t.editMode}
+                    </>
+                  )}
+                </Button>
+              </div>
             ) : undefined
           }
         />
       </motion.div>
 
-      {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="empty-inline py-12">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : links.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/35 py-16 text-center">
-          <Link2 className="mb-3 h-10 w-10 text-muted-foreground/30" />
-          <p className="font-semibold text-foreground">No links yet</p>
-          {isAdmin && (
-            <p className="text-xs text-muted-foreground/60 mt-1">Add your first link using the button above.</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-inline">
+          <Link2 className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="font-semibold text-foreground">{t.noLinksYet}</p>
+          {isAdmin && editMode && (
+            <p className="text-micro-label mt-1">{t.addFirstLink}</p>
           )}
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {links.map((link, i) => {
-            const favicon = faviconUrl(link.url);
-            return (
-              <motion.div key={link.id} custom={i} variants={fadeUp} initial="hidden" animate="visible"
-                className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card/60 transition-colors hover:bg-card/80">
-                {/* Clickable area */}
-                <a href={link.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-4 pr-14">
-                  {/* Favicon */}
-                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
-                    {favicon ? (
-                      <img src={favicon} alt="" className="w-6 h-6 object-contain"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    ) : (
-                      <Link2 className="h-4 w-4 text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-semibold leading-tight text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors">
-                      {link.title}
-                    </p>
-                    {link.description && (
-                      <p className="mt-1 line-clamp-2 text-xs text-zinc-700 dark:text-zinc-300">
-                        {link.description}
-                      </p>
-                    )}
-                    <p className="mt-1 truncate text-[10px] text-zinc-700 dark:text-zinc-300">
-                      {hostname(link.url)}
-                    </p>
-                  </div>
-                  <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-700 dark:text-zinc-300 group-hover:text-primary transition-colors" />
-                </a>
-
-                {/* Admin actions */}
-                {isAdmin && (
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-                    <button onClick={e => { e.preventDefault(); setEditLink(link); }}
-                      className="rounded-md border border-border/60 bg-background p-1.5 hover:text-primary transition-colors">
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                    <button onClick={e => { e.preventDefault(); setDeleteConfirm(link); }}
-                      className="rounded-md border border-border/60 bg-background p-1.5 hover:text-destructive transition-colors">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+        <div className="admin-table-wrap page-responsive-table">
+          <Table className="admin-table">
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent border-white/5">
+                <TableHead>{t.titleLabel}</TableHead>
+                <TableHead>{t.details}</TableHead>
+                {isAdmin && editMode ? (
+                  <TableHead className="text-right">{t.adminActions}</TableHead>
+                ) : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {links.map((link) => {
+                const favicon = faviconUrl(link.url);
+                return (
+                  <TableRow key={link.id} className="border-white/5 hover:bg-white/5">
+                    <TableCell className="responsive-table-primary py-2 whitespace-normal">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-start gap-2.5 min-w-0"
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+                          {favicon ? (
+                            <img
+                              src={favicon}
+                              alt=""
+                              className="h-4 w-4 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <Link2 className="h-3.5 w-3.5 text-primary" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium break-words group-hover:text-primary transition-colors">
+                            {link.title}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground break-all">{hostname(link.url)}</p>
+                        </div>
+                        <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      </a>
+                    </TableCell>
+                    <TableCell className="py-2 whitespace-normal" data-label={t.details}>
+                      <span className="text-sm text-muted-foreground break-words">
+                        {link.description || '—'}
+                      </span>
+                    </TableCell>
+                    {isAdmin && editMode ? (
+                      <TableCell className="py-2 whitespace-normal text-right" data-label={t.adminActions}>
+                        <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditLink(link)}
+                            className="rounded-md border border-border/60 bg-background p-1.5 hover:text-primary transition-colors"
+                            aria-label={t.editLink}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirm(link)}
+                            className="rounded-md border border-border/60 bg-background p-1.5 hover:text-destructive transition-colors"
+                            aria-label={t.removeLink}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -268,15 +314,15 @@ export default function LinksPage() {
       <AddEditLinkDialog open={!!editLink} existing={editLink} onClose={() => setEditLink(null)} />
 
       <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
-        <DialogContent className="max-w-sm rounded-2xl border-border/50 bg-card p-6">
+        <DialogContent className="max-w-sm rounded-xl border-border/50 bg-card p-5">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black normal-case not-italic">Remove "{deleteConfirm?.title}"?</DialogTitle>
-            <DialogDescription>This link will be removed for everyone.</DialogDescription>
+            <DialogTitle className="text-section-title">Remove &quot;{deleteConfirm?.title}&quot;?</DialogTitle>
+            <DialogDescription>{t.removeLinkConfirm}</DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Remove
+          <div className="flex gap-2 mt-3">
+            <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setDeleteConfirm(null)}>{t.cancel}</Button>
+            <Button variant="destructive" className="flex-1 rounded-lg" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} {t.removeLink}
             </Button>
           </div>
         </DialogContent>

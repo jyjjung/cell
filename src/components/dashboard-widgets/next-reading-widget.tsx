@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { findNextUnreadReading } from '@/lib/reading-utils';
@@ -14,15 +14,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import type { StructuredPassage } from '@/types';
-import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startOfDay } from 'date-fns';
 import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { translations } from '@/lib/translations';
 
 export default function NextReadingWidget() {
-    const { plan, loading: planLoading } = useBiblePlan();
     const { currentUser } = useAuth();
-    const { completedPassages, loadingChecklist, togglePassageCompletion, markMultiplePassages } = useUserBibleChecklist();
+    const t = translations[currentUser?.preferredLanguage || 'en'];
+    const { plan, loading: planLoading } = useBiblePlan();
+    const { completedPassages, loadingChecklist, togglePassageCompletion } = useUserBibleChecklist();
     const router = useRouter();
     const { setIsPageLoading } = usePageLoading();
     const { openBibleReader } = useGlobalBibleReader();
@@ -37,7 +38,7 @@ export default function NextReadingWidget() {
         const date = nextUnread.date;
         return nextUnread.passages.filter(p => 
           !completedPassages.includes(makePassageKey(date, p.displayText)) &&
-          !completedPassages.includes(p.displayText) // legacy fallback
+          !completedPassages.includes(p.displayText)
         );
     }, [nextUnread, completedPassages]);
 
@@ -55,42 +56,42 @@ export default function NextReadingWidget() {
     if (!currentUser) return null;
 
     return (
-        <>
-            <div className="glass-card relative flex flex-col p-6 md:p-8 rounded-[2.5rem] transition-all duration-500 h-full min-h-[240px]">
-                <div className="flex items-center justify-between mb-6">
+            <div className="widget-surface relative flex flex-col h-full">
+                <div className="panel-header">
                     <div className="min-w-0">
-                        <h3 className="text-lg font-black tracking-tight">Progression</h3>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">On the Horizon</p>
+                        <h3 className="panel-title">{t.nextMilestone}</h3>
+                        <p className="panel-subtitle">{t.onTheHorizon}</p>
                     </div>
                 </div>
 
                 <div className="flex-grow">
                     {loadingChecklist || planLoading ? (
-                        <div className="h-24 flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground opacity-20" />
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
                         </div>
                     ) : !nextUnread ? (
-                        <div className="flex flex-col items-start gap-2 text-green-500 py-4">
-                            <CheckCircle className="h-10 w-10 mb-2" />
-                            <p className="text-2xl font-black tracking-tight leading-none italic">Horizon Clear.</p>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">No more unread passages</p>
+                        <div className="flex flex-col items-start gap-1 text-success py-2">
+                            <CheckCircle className="h-6 w-6 mb-1" />
+                            <p className="text-base font-semibold leading-tight">{t.horizonClear}</p>
+                            <p className="text-sm text-muted-foreground">{t.noUnreadPassages}</p>
                         </div>
                     ) : (
-                        <div className="space-y-2">
+                        <div className="stack-gap-sm">
                             <AnimatePresence mode="popLayout">
                                 {unreadPassagesToShow.slice(0, 3).map(passage => (
                                     <motion.div 
                                         layout
                                         key={passage.displayText} 
-                                        className="group flex items-center gap-3 p-3 rounded-2xl glass-thin transition-all cursor-pointer"
+                                        className="surface-row group cursor-pointer"
                                     >
                                         <Checkbox
                                             id={`next-reading-${passage.displayText}`}
                                             onCheckedChange={() => togglePassageCompletion(passage.displayText, nextUnread?.date)}
-                                            className="h-5 w-5 rounded-lg border-primary/20 group-hover:border-primary-foreground/50"
+                                            className="h-4 w-4"
                                         />
                                         <button
-                                            className="flex-grow text-left font-bold text-sm truncate text-foreground group-hover:text-primary-foreground transition-colors"
+                                            type="button"
+                                            className="flex-grow text-left text-sm font-medium truncate text-foreground"
                                             onClick={() => handlePassageClick(passage)}
                                         >
                                             {passage.displayText}
@@ -99,25 +100,25 @@ export default function NextReadingWidget() {
                                 ))}
                             </AnimatePresence>
                             {unreadPassagesToShow.length > 3 && (
-                                <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest pl-2 pt-2">
-                                    + {unreadPassagesToShow.length - 3} further passages
+                                <p className="text-xs text-muted-foreground pl-1 pt-1">
+                                    + {unreadPassagesToShow.length - 3} {t.furtherPassages}
                                 </p>
                             )}
                         </div>
                     )}
                 </div>
 
-                <div className="mt-8">
+                <div className="mt-3">
                     <Button 
                         variant="outline" 
-                        className="h-12 w-full rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-none group" 
+                        size="sm"
+                        className="w-full" 
                         onClick={handleGoToPlan}
                     >
-                        Journey Log
-                        <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                        {t.journeyLog}
+                        <ArrowRight className="ml-2 h-3.5 w-3.5" />
                     </Button>
                 </div>
             </div>
-        </>
     );
 }

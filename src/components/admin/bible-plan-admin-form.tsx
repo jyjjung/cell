@@ -26,6 +26,8 @@ import {
   type ReadingUnit
 } from '@/lib/plan-generator';
 import { MCHEYNE_PLAN_DATA } from '@/lib/mcheyne-data';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const adminPlanFormSchema = z.object({
   planType: z.enum(['canonical', 'custom', 'mcheyne'], { required_error: "Please select a plan type." }),
@@ -60,6 +62,8 @@ const daysOfWeek = [
 export default function BiblePlanAdminForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { saveBiblePlan, plan: currentPlan, loading: planLoading } = useBiblePlan();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const form = useForm<AdminPlanFormValues>({
     resolver: zodResolver(adminPlanFormSchema),
@@ -151,8 +155,8 @@ export default function BiblePlanAdminForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-6 border rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="widget-surface space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
             control={form.control}
             name="planType"
@@ -249,7 +253,7 @@ export default function BiblePlanAdminForm() {
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <FormField
               control={form.control}
               name="readingsPerDay"
@@ -290,7 +294,7 @@ export default function BiblePlanAdminForm() {
         </div>
 
         <Button type="submit" className="w-full" disabled={isLoading || planLoading}>
-        {isLoading ? 'Generating & Saving Plan...' : (planLoading ? 'Loading current plan...' : 'Generate & Save Global Plan')}
+        {isLoading ? t.adminGeneratingPlan : (planLoading ? t.adminLoadingPlan : t.adminGeneratePlan)}
         </Button>
       </form>
     </Form>

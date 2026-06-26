@@ -4,13 +4,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, ChevronLeft, ChevronRight, X, Search, Languages } from 'lucide-react';
+import {
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Languages,
+  CheckSquare,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 import { getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
-import { fetchPassageHtml } from '@/lib/bible-passage-cache';
-import { bibleVersionLabel } from '@/lib/bible-versions';
+import { fetchPassageHtml, prefetchBibleVersion } from '@/lib/bible-passage-cache';
+import { bibleVersionLabel, type BibleTextVersion } from '@/lib/bible-versions';
 import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
+import { useAuth } from '@/contexts/auth-context';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { findPlanPassageKeysForChapter, isChapterMarkedCompleteInPlan } from '@/lib/reading-utils';
+import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 
 interface MiniBibleReaderProps {
@@ -18,18 +32,32 @@ interface MiniBibleReaderProps {
 }
 
 export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
-  const { targetPassage } = useGlobalBibleReader();
+  const { targetPassage, isExpanded, setIsExpanded } = useGlobalBibleReader();
+  const { currentUser } = useAuth();
   const { version, setVersion } = useBibleTextVersion();
+  const { plan } = useBiblePlan();
+  const { completedPassages, markMultiplePassages } = useUserBibleChecklist();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const [book, setBook] = useState(targetPassage?.book || 'Genesis');
   const [chapter, setChapter] = useState(targetPassage?.chapter || 1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMarkingChapter, setIsMarkingChapter] = useState(false);
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [browsingBook, setBrowsingBook] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prefetchControllerRef = useRef<AbortController | null>(null);
+
+  const chapterRef = `${book} ${chapter}`;
+  const isChapterComplete = isChapterMarkedCompleteInPlan(
+    plan?.dailyReadings,
+    book,
+    chapter,
+    completedPassages,
+  );
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,12 +77,20 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     }
   }, [targetPassage]);
 
-  const fetchPassage = useCallback(async (b: string, c: number, v: string, signal?: AbortSignal) => {
+  useEffect(() => {
+    prefetchControllerRef.current?.abort();
+    const controller = new AbortController();
+    prefetchControllerRef.current = controller;
+    void prefetchBibleVersion(version, { signal: controller.signal });
+    return () => controller.abort();
+  }, [version]);
+
+  const fetchPassage = useCallback(async (b: string, c: number, v: BibleTextVersion, signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
     try {
-      const { html } = await fetchPassageHtml(`${b} ${c}`, v, signal);
-      setHtml(html);
+      const { html: nextHtml } = await fetchPassageHtml(`${b} ${c}`, v, signal);
+      setHtml(nextHtml);
     } catch (e: any) {
       if (e.name !== 'AbortError') {
         setError(e.message || 'Connection error');
@@ -94,14 +130,27 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     }
   };
 
+  const handleMarkChapter = async () => {
+    if (!currentUser || isChapterComplete) return;
+    setIsMarkingChapter(true);
+    try {
+      const keys = findPlanPassageKeysForChapter(plan?.dailyReadings, book, chapter);
+      await markMultiplePassages(keys.length > 0 ? keys : [chapterRef], true);
+    } catch (e) {
+      console.error('Failed to mark chapter as read:', e);
+    } finally {
+      setIsMarkingChapter(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-card rounded-xl overflow-hidden shadow-2xl">
-      <div className="p-4 border-b flex items-center justify-between bg-muted/10 backdrop-blur z-20">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="font-black text-sm h-10 px-4 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95"
+    <div className="flex h-full min-h-0 flex-col bg-card overflow-hidden">
+      <div className="p-3 border-b flex items-center justify-between gap-2 bg-muted/10 backdrop-blur z-20">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="font-semibold text-sm h-9 px-3 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0"
             onClick={() => {
               setIsBrowsing(!isBrowsing);
               if (!isBrowsing) setBrowsingBook(null);
@@ -112,31 +161,51 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
           <Button
             variant="outline"
             size="sm"
-            className="h-10 px-3 rounded-full shadow-sm hover:shadow-md transition-all font-bold text-xs bg-background"
+            className="h-9 px-3 rounded-full shadow-sm hover:shadow-md transition-all font-bold text-xs bg-background shrink-0"
             onClick={() => setVersion(version === 'krv' ? 'esv' : 'krv')}
           >
-            <Languages className="h-4 w-4 mr-2 text-primary" />
+            <Languages className="h-4 w-4 mr-1.5 text-primary" />
             {bibleVersionLabel(version)}
           </Button>
         </div>
-        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={onClose}>
-          <X className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            aria-label={isExpanded ? t.shrinkBible : t.expandBible}
+          >
+            {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-muted-foreground rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative min-h-0 overflow-hidden">
         {isBrowsing ? (
           <ScrollArea className="h-full p-4">
             {!browsingBook ? (
               <div className="grid grid-cols-2 gap-3 pb-6">
                 {CANONICAL_BIBLE_ORDER.map(b => (
-                  <Button 
-                    key={b} 
-                    variant={book === b ? "default" : "outline"}
+                  <Button
+                    key={b}
+                    variant={book === b ? 'default' : 'outline'}
                     size="sm"
                     className={cn(
-                      "justify-start text-xs font-bold h-10 px-4 rounded-xl shadow-sm transition-all text-left truncate active:scale-95",
-                      book !== b && "bg-background hover:bg-primary/10 hover:border-primary/30"
+                      'justify-start text-xs font-bold h-10 px-4 rounded-xl shadow-sm transition-all text-left truncate active:scale-95',
+                      book !== b && 'bg-background hover:bg-primary/10 hover:border-primary/30',
                     )}
                     onClick={() => {
                       setBrowsingBook(b);
@@ -149,20 +218,27 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
             ) : (
               <div className="pb-6">
                 <div className="flex items-center mb-6 gap-3 border-b pb-4 sticky top-0 bg-background/95 backdrop-blur z-10 pt-2">
-                  <Button variant="outline" size="sm" className="h-9 px-3 rounded-full shadow-sm hover:bg-muted/50 transition-all font-black text-xs" onClick={() => setBrowsingBook(null)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 rounded-full shadow-sm hover:bg-muted/50 transition-all font-semibold text-xs"
+                    onClick={() => setBrowsingBook(null)}
+                  >
                     <ChevronLeft className="h-4 w-4 mr-1" /> Books
                   </Button>
-                  <h3 className="font-black tracking-tight text-lg">{browsingBook}</h3>
+                  <h3 className="font-semibold tracking-tight text-lg">{browsingBook}</h3>
                 </div>
                 <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
                   {Array.from({ length: BIBLE_BOOKS_DATA[browsingBook]?.chapters || 1 }, (_, i) => i + 1).map(c => (
                     <Button
                       key={c}
-                      variant={book === browsingBook && chapter === c ? "default" : "outline"}
+                      variant={book === browsingBook && chapter === c ? 'default' : 'outline'}
                       size="sm"
                       className={cn(
-                        "h-12 w-full font-black text-sm rounded-xl transition-all shadow-sm active:scale-95", 
-                        book === browsingBook && chapter === c ? "scale-105 shadow-md shadow-primary/20 ring-2 ring-primary ring-offset-2 ring-offset-background" : "bg-background hover:bg-primary/10 hover:border-primary/30"
+                        'h-12 w-full font-semibold text-sm rounded-xl transition-all shadow-sm active:scale-95',
+                        book === browsingBook && chapter === c
+                          ? 'scale-105 shadow-md shadow-primary/20 ring-2 ring-primary ring-offset-2 ring-offset-background'
+                          : 'bg-background hover:bg-primary/10 hover:border-primary/30',
                       )}
                       onClick={() => {
                         setBook(browsingBook);
@@ -202,28 +278,59 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       </div>
 
       {!isBrowsing && (
-        <div className="p-4 border-t flex justify-between items-center bg-background/95 backdrop-blur z-20 sticky bottom-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
-          <Button variant="outline" size="sm" className="rounded-full shadow-sm font-black text-xs h-10 px-4 hover:bg-primary/10 transition-all" onClick={handlePrev} disabled={!getPreviousChapterRef(book, chapter)}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-          </Button>
-          <div className="flex gap-1 items-center">
-            {Object.keys(BIBLE_BOOKS_DATA[book]?.chapters || {}).length > 1 && (
-               <div className="bg-muted px-4 py-2 rounded-full shadow-inner border border-border/50">
-                 <select 
-                  className="bg-transparent text-sm font-black tracking-widest focus:outline-none cursor-pointer"
-                  value={chapter}
-                  onChange={(e) => setChapter(parseInt(e.target.value))}
-                 >
-                   {Array.from({ length: BIBLE_BOOKS_DATA[book].chapters }, (_, i) => i + 1).map(c => (
-                     <option key={c} value={c}>CH. {c}</option>
-                   ))}
-                 </select>
-               </div>
-            )}
+        <div className="p-3 border-t flex flex-col gap-2 bg-background/95 backdrop-blur z-20 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
+          {currentUser ? (
+            <Button
+              type="button"
+              variant={isChapterComplete ? 'secondary' : 'default'}
+              size="sm"
+              className="w-full h-9 rounded-full text-xs font-semibold"
+              onClick={() => void handleMarkChapter()}
+              disabled={isChapterComplete || isMarkingChapter}
+            >
+              {isMarkingChapter ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckSquare className="mr-2 h-3.5 w-3.5" />
+              )}
+              {isChapterComplete ? t.chapterMarkedComplete : t.markChapterAsRead}
+            </Button>
+          ) : null}
+          <div className="flex justify-between items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full shadow-sm font-semibold text-xs h-9 px-4 hover:bg-primary/10 transition-all"
+              onClick={handlePrev}
+              disabled={!getPreviousChapterRef(book, chapter)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+            </Button>
+            <div className="flex gap-1 items-center">
+              {Object.keys(BIBLE_BOOKS_DATA[book]?.chapters || {}).length > 1 && (
+                <div className="bg-muted px-4 py-2 rounded-full shadow-inner border border-border/50">
+                  <select
+                    className="bg-transparent text-sm font-semibold focus:outline-none cursor-pointer"
+                    value={chapter}
+                    onChange={(e) => setChapter(parseInt(e.target.value))}
+                  >
+                    {Array.from({ length: BIBLE_BOOKS_DATA[book].chapters }, (_, i) => i + 1).map(c => (
+                      <option key={c} value={c}>Ch. {c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full shadow-sm font-semibold text-xs h-9 px-4 hover:bg-primary/10 transition-all"
+              onClick={handleNext}
+              disabled={!getNextChapterRef(book, chapter)}
+            >
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
-          <Button variant="outline" size="sm" className="rounded-full shadow-sm font-black text-xs h-10 px-4 hover:bg-primary/10 transition-all" onClick={handleNext} disabled={!getNextChapterRef(book, chapter)}>
-            Next <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
       )}
     </div>

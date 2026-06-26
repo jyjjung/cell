@@ -17,12 +17,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, Trash2, Shield, Users, MessageCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { PageHeader } from '@/components/ui/page-layout';
+import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { translations } from '@/lib/translations';
 
 export default function AdminChatsPage() {
   const { chats, loading: loadingChats } = useChats();
   const { allUsers, loading: loadingUsers } = useAllUsers();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
@@ -31,7 +34,7 @@ export default function AdminChatsPage() {
 
   const getChatDisplayName = (chat: Chat) => {
     if (chat.type === 'group') {
-      return chat.name || 'Unnamed Group';
+      return chat.name || t.unnamedCircle;
     }
     if (chat.type === 'private' && chat.members.length >= 2) {
       const member1 = usersMap.get(chat.members[0]);
@@ -43,9 +46,9 @@ export default function AdminChatsPage() {
      if (chat.type === 'private' && chat.members.length < 2) {
         const remainingMember = chat.members.length === 1 ? usersMap.get(chat.members[0]) : null;
         if(remainingMember) return `${remainingMember.firstName} ${remainingMember.lastName} <> (Left)`;
-        return 'Empty Private Chat';
+        return 'Empty private chat';
     }
-    return 'Private Chat';
+    return t.privateChat;
   };
 
   const handleDelete = async (chatId: string) => {
@@ -66,20 +69,18 @@ export default function AdminChatsPage() {
         if (!response.ok) {
             let errorMsg = `Deletion failed with status: ${response.status}.`;
             try {
-                // Try to get a specific error message from the JSON body
                 const errorData = await response.json();
                 errorMsg = errorData.error || errorMsg;
             } catch (jsonError) {
-                // This block will run if the response body is not valid JSON
-                console.error("Could not parse JSON from error response. This can happen on server timeouts.", jsonError);
-                errorMsg = "The server returned an unreadable error. This might be due to a timeout if the chat is very large.";
+                console.error("Could not parse JSON from error response.", jsonError);
+                errorMsg = "Server error. The chat may be too large.";
             }
             throw new Error(errorMsg);
         }
 
-        toast({ title: "Chat Deleted", description: `The chat and its messages have been permanently deleted.` });
+        toast({ title: "Chat deleted", description: "Messages removed for all members." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Deletion Failed", description: error.message });
+      toast({ variant: "destructive", title: "Delete failed", description: error.message });
     } finally {
       setIsDeleting(null);
     }
@@ -87,31 +88,27 @@ export default function AdminChatsPage() {
 
   return (
     <div className="admin-page">
-      <header className="space-y-4">
-        <PageHeader title="Manage Chats" />
+      <header className="space-y-3">
+        <PageHeader title={t.adminManageChats} />
       </header>
 
       <section>
         {loading ? (
-            <div className="h-40 flex items-center justify-center rounded-lg bg-muted border-2 border-dashed">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="empty-inline">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
         ) : chats.length === 0 ? (
-            <div className="p-10 text-center bg-muted rounded-lg border-2 border-dashed flex flex-col items-center justify-center h-40">
-                <MessageCircle className="h-10 w-10 text-muted-foreground mb-3" />
-                <h3 className="font-semibold">No chats found</h3>
-                <p className="text-muted-foreground text-sm">There are no chats in the database yet.</p>
-            </div>
+            <EmptyState icon={MessageCircle} title={t.adminNoChats} description={t.adminNoChatsDesc} />
         ) : (
           <div className="admin-table-wrap">
             <Table className="admin-table">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name / Participants</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t.adminParticipants}</TableHead>
+                  <TableHead>{t.adminType}</TableHead>
+                  <TableHead>{t.adminMembers}</TableHead>
+                  <TableHead>{t.adminLastActivity}</TableHead>
+                  <TableHead className="text-right">{t.adminActions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -135,17 +132,15 @@ export default function AdminChatsPage() {
                                 {isDeleting === chat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="rounded-2xl">
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                This will permanently delete this chat and its entire message history for all participants. This action cannot be undone.
-                                </AlertDialogDescription>
+                                <AlertDialogTitle className="text-section-title">{t.adminDeleteChat}</AlertDialogTitle>
+                                <AlertDialogDescription>{t.adminDeleteChatDesc}</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>{t.adminCancel}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDelete(chat.id)}>
-                                    Yes, delete chat
+                                    {t.adminYesDelete}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                             </AlertDialogContent>

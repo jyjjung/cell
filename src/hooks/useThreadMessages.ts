@@ -16,6 +16,8 @@ import {
   deleteField,
   increment,
   getDocs,
+  type DocumentData,
+  type UpdateData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
@@ -53,7 +55,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
-    setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev));
+    setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev, { retainOnlyOlderSecondary: true }));
     setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
@@ -105,7 +107,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
       if (aborted.value || latest.length === 0) return;
-      setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+      setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
       setHasMoreOlder(hasMore);
       setLoading(false);
       primeMediaUrls(latest.map((m) => m.imageUrl));
@@ -129,7 +131,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
           if (aborted.value) return;
           if (latest.length > 0) {
-            setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+            setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
             setHasMoreOlder(hasMore);
           }
           setLoading(false);
@@ -212,7 +214,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     try {
       await addDoc(threadColRef, messageData);
 
-      const parentUpdate: Record<string, unknown> = {
+      const parentUpdate: UpdateData<DocumentData> = {
         replyCount: increment(1),
         latestReplySenderId: currentUser.uid,
       };
@@ -295,7 +297,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       );
       if (!latestThreadSnap.empty) {
         const latestReply = { id: latestThreadSnap.docs[0].id, ...latestThreadSnap.docs[0].data() } as ChatMessage;
-        const parentUpdate: Record<string, unknown> = {
+        const parentUpdate: UpdateData<DocumentData> = {
           latestReplySenderId: latestReply.isDeleted
             ? (latestReply.deletedBy || latestReply.senderId)
             : latestReply.senderId,

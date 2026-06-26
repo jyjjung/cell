@@ -13,6 +13,8 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { Loader2, Send } from 'lucide-react';
 import type { AppNotification } from '@/types';
 import { Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const notificationFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
@@ -30,9 +32,12 @@ interface NotificationAdminFormProps {
   submitButtonText?: string;
 }
 
-export default function NotificationAdminForm({ onSuccess, onCancel, submitButtonText = "Dispatch Announcement" }: NotificationAdminFormProps) {
+export default function NotificationAdminForm({ onSuccess, onCancel, submitButtonText }: NotificationAdminFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { createNotification } = useNotifications();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+  const buttonText = submitButtonText ?? t.adminSendAnnouncement;
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationFormSchema),
@@ -76,15 +81,15 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Announcement Title</FormLabel>
+              <FormLabel className="text-micro-label">{t.adminAnnouncementTitle}</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., Important Community Update" {...field} className="h-12 rounded-xl bg-white/5 border-white/5" />
+                <Input placeholder="Community update" {...field} className="h-10 rounded-lg" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -95,27 +100,27 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Message Content</FormLabel>
+              <FormLabel className="text-micro-label">{t.adminMessage}</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Enter the announcement message... Paragraphs are supported." 
+                  placeholder="Write your message…" 
                   {...field} 
-                  className="min-h-[160px] rounded-2xl bg-white/5 border-white/5 resize-y p-4 text-base"
+                  className="min-h-[120px] rounded-lg resize-y"
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <FormField
             control={form.control}
             name="scheduledDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Scheduled Date</FormLabel>
+                <FormLabel className="text-micro-label">{t.adminScheduledDate}</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} className="h-10 rounded-xl bg-white/5 border-white/5" />
+                  <Input type="date" {...field} className="h-9 rounded-lg" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,22 +131,22 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
             name="scheduledTime"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Scheduled Time</FormLabel>
+                <FormLabel className="text-micro-label">{t.adminScheduledTime}</FormLabel>
                 <FormControl>
-                  <Input type="time" {...field} className="h-10 rounded-xl bg-white/5 border-white/5" />
+                  <Input type="time" {...field} className="h-9 rounded-lg" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        <div className="pt-4 flex items-center justify-end gap-4">
+        <div className="flex items-center justify-end gap-2 pt-2">
             {onCancel && (
-                <Button type="button" variant="ghost" onClick={onCancel} className="h-12 px-6 rounded-xl">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={onCancel}>{t.adminCancel}</Button>
             )}
-            <Button type="submit" variant="primary" className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest transition-all" disabled={isLoading}>
+            <Button type="submit" className="flex-1" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {submitButtonText}
+                {buttonText}
             </Button>
         </div>
       </form>

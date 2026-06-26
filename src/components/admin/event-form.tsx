@@ -204,10 +204,10 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 max-w-2xl mx-auto">
-        <div className="grid grid-cols-1 gap-8 p-1">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 gap-4 p-1">
           {/* Left Column: Core Identity */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -282,7 +282,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           </div>
 
           {/* Right Column: Scheduling & Targeting */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -453,7 +453,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                         <label
                           key={value}
                           className={cn(
-                            "flex items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
+                            "flex items-center gap-2 rounded-xl border px-3 py-2 text-micro-label !opacity-100 cursor-pointer transition-all",
                             field.value.includes(value) 
                               ? "bg-primary/20 border-primary/40 text-primary" 
                               : "bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10"
@@ -501,13 +501,13 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           </div>
         </div>
 
-        <div className="flex items-center gap-6 p-6 rounded-3xl bg-white/5 border border-white/5">
+        <div className="flex items-center gap-4 app-card-sm rounded-2xl bg-muted/40 border border-border/50">
           <FormField
             control={form.control}
             name="allDay"
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between gap-4 space-y-0 shrink-0">
-                <FormLabel className="text-sm font-bold">All Day</FormLabel>
+                <FormLabel className="text-sm font-medium">All day</FormLabel>
                 <FormControl>
                   <Switch
                     checked={field.value}
@@ -527,7 +527,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                   name="startTime"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Start</FormLabel>
+                      <FormLabel className="text-micro-label">Start</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input type="time" {...field} className="rounded-xl bg-white/10 border-transparent focus:bg-white/20 transition-all h-9 text-xs pl-8" />
@@ -544,7 +544,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                   name="endTime"
                   render={({ field }) => (
                     <FormItem className="space-y-1">
-                      <FormLabel className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">End</FormLabel>
+                      <FormLabel className="text-micro-label">End</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input type="time" {...field} className="rounded-xl bg-white/10 border-transparent focus:bg-white/20 transition-all h-9 text-xs pl-8" />
@@ -559,14 +559,13 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           )}
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
+        <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
           {onCancel && (
             <Button 
               type="button" 
               variant="ghost" 
               onClick={onCancel} 
               disabled={isLoading}
-              className="rounded-2xl px-8 h-12"
             >
               Cancel
             </Button>
@@ -574,7 +573,6 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="rounded-2xl px-12 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
               <span className="flex items-center gap-2">

@@ -26,6 +26,7 @@ interface ChatMessageListProps {
   messagesById: Map<string, ChatMessage>;
   lastSeenNamesPerMessage: Record<string, string[]>;
   toggleReaction: (messageId: string, emoji: string) => void;
+  votePoll?: (messageId: string, optionIndex: number) => void;
   deleteMessage: (messageId: string) => void;
   onOpenThread: (messageId: string) => void;
   onOpenImage: (imageUrl: string) => void;
@@ -50,6 +51,7 @@ export default function ChatMessageList({
   messagesById,
   lastSeenNamesPerMessage,
   toggleReaction,
+  votePoll,
   deleteMessage,
   onOpenThread,
   onOpenImage,
@@ -68,6 +70,7 @@ export default function ChatMessageList({
       const olderVisible = findVisibleNeighbor(messages, i, 1);
       const newerVisible = findVisibleNeighbor(messages, i, -1);
 
+      const isPoll = !!msg.poll;
       const showName =
         isMutedChatEvent(msg) ||
         !olderVisible ||
@@ -77,12 +80,13 @@ export default function ChatMessageList({
           msg.createdAt.toMillis() - olderVisible.createdAt.toMillis() > 3600000);
 
       const showAvatar =
-        isMutedChatEvent(msg) ||
+        !isPoll &&
+        (isMutedChatEvent(msg) ||
         !newerVisible ||
         newerVisible.senderId !== msg.senderId ||
         (newerVisible.createdAt &&
           msg.createdAt &&
-          newerVisible.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000);
+          newerVisible.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
 
       content.push(
         <MessageBubble
@@ -92,6 +96,7 @@ export default function ChatMessageList({
           sender={sendersByUserId.get(msg.senderId) ?? null}
           usersById={usersById}
           toggleReaction={toggleReaction}
+          votePoll={votePoll}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] ?? EMPTY_SEEN_NAMES}
           onOpenThread={onOpenThread}
           onOpenImage={onOpenImage}
@@ -115,7 +120,7 @@ export default function ChatMessageList({
         if (diff > 3600000) {
           content.push(
             <div key={`time-${msg.id}`} className="chat-message-row py-3 flex justify-center w-full">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">
+              <span className="text-micro-label text-muted-foreground/30">
                 {formatMessageDate(msg.createdAt.toDate())}
               </span>
             </div>,
@@ -131,6 +136,7 @@ export default function ChatMessageList({
     chat,
     usersById,
     toggleReaction,
+    votePoll,
     deleteMessage,
     lastSeenNamesPerMessage,
     onOpenThread,

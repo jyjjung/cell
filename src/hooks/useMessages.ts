@@ -15,6 +15,7 @@ import {
   arrayUnion,
   deleteField,
   getDocs,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
@@ -27,7 +28,8 @@ import {
   fetchLatestMessagesWindow,
   fetchOlderMessagesPage,
 } from '@/lib/chat-messages-device-cache';
-import type { ChatMessage, Chat } from '@/types';
+import { sortChatMessagesDesc } from '@/lib/chat-message-merge';
+import type { ChatMessage, Chat, ChatPoll } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,6 +44,10 @@ export function useMessages(chatId: string | null) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
   const loadingOlderRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
 
@@ -51,7 +57,9 @@ export function useMessages(chatId: string | null) {
 
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
-    setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev));
+    setMessages((prev) =>
+      mergeMessageListsStable(latestWindow, prev, prev, { retainOnlyOlderSecondary: true }),
+    );
     setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
     setLoading(false);
     primeMediaUrls(latestWindow.map((m) => m.imageUrl));
@@ -103,7 +111,7 @@ export function useMessages(chatId: string | null) {
 
     void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
       if (aborted.value || latest.length === 0) return;
-      setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+      setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
       setHasMoreOlder(hasMore);
       setLoading(false);
       primeMediaUrls(latest.map((m) => m.imageUrl));
@@ -127,14 +135,14 @@ export function useMessages(chatId: string | null) {
         void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
           if (aborted.value) return;
           if (latest.length > 0) {
-            setMessages((prev) => mergeMessageListsStable(latest, prev, prev));
+            setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
             setHasMoreOlder(hasMore);
             setLoading(false);
             primeMediaUrls(latest.map((m) => m.imageUrl));
             return;
           }
           setLoading(false);
-          toast({
+          toastRef.current({
             variant: 'destructive',
             title: 'Could not load messages',
             description: 'Check your connection and try reopening the chat.',
@@ -142,7 +150,7 @@ export function useMessages(chatId: string | null) {
         }).catch(() => {
           if (aborted.value) return;
           setLoading(false);
-          toast({
+          toastRef.current({
             variant: 'destructive',
             title: 'Could not load messages',
             description: 'Check your connection and try reopening the chat.',
@@ -155,7 +163,7 @@ export function useMessages(chatId: string | null) {
       aborted.value = true;
       unsubscribe();
     };
-  }, [chatId, currentUser?.uid, applySnapshot, toast]);
+  }, [chatId, currentUser?.uid, applySnapshot]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!chatId || loadingOlderRef.current) return;
@@ -195,10 +203,11 @@ export function useMessages(chatId: string | null) {
     cleaningDate?: string,
     songId?: string,
     songTitle?: string,
-    sheetKey?: string
+    sheetKey?: string,
+    poll?: ChatPoll,
   ) => {
     if (!currentUser || !chatId) return;
-    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId) return;
+    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId && !poll) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -218,6 +227,16 @@ export function useMessages(chatId: string | null) {
     if (songId) messageData.songId = songId;
     if (songTitle) messageData.songTitle = songTitle;
     if (sheetKey) messageData.sheetKey = sheetKey;
+    if (poll) {
+      messageData.poll = {
+        question: poll.question.trim(),
+        options: poll.options.map((option) => option.trim()).filter(Boolean),
+        ...(poll.allowMultiple ? { allowMultiple: true } : {}),
+      };
+      messageData.pollVotes = Object.fromEntries(
+        messageData.poll.options.map((_: string, index: number) => [String(index), [] as string[]]),
+      );
+    }
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
@@ -233,6 +252,7 @@ export function useMessages(chatId: string | null) {
       songId,
       songTitle,
       sheetKey,
+      poll,
     });
 
     try {
@@ -254,6 +274,17 @@ export function useMessages(chatId: string | null) {
         }).catch(error => console.error("Push notification dispatch failed:", error));
     } catch (error) {
         console.error("Message lifecycle failure:", error);
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: string }).code)
+          : '';
+        const isPermission = code === 'permission-denied';
+        toastRef.current({
+          variant: 'destructive',
+          title: 'Message not sent',
+          description: isPermission
+            ? 'Polls need updated chat permissions. Ask an admin to deploy Firestore rules, then try again.'
+            : error instanceof Error ? error.message : 'Could not save this message. Try again.',
+        });
     }
 
   }, [currentUser, chatId]);
@@ -297,6 +328,60 @@ export function useMessages(chatId: string | null) {
     updateDoc(messageRef, { reactions: nextReactions }).catch(() => {});
   }, [currentUser, chatId]);
 
+  const votePoll = useCallback(async (messageId: string, optionIndex: number) => {
+    if (!currentUser || !chatId) return;
+    const message = messagesRef.current.find((m) => m.id === messageId);
+    if (!message?.poll) return;
+
+    const uid = currentUser.uid;
+    const key = String(optionIndex);
+    const optionCount = message.poll.options.length;
+    if (optionIndex < 0 || optionIndex >= optionCount) return;
+
+    const allowMultiple = message.poll.allowMultiple ?? false;
+    const nextVotes: Record<string, string[]> = {};
+    for (let i = 0; i < optionCount; i++) {
+      nextVotes[String(i)] = [...(message.pollVotes?.[String(i)] || [])];
+    }
+
+    const alreadyVoted = nextVotes[key].includes(uid);
+
+    if (allowMultiple) {
+      if (alreadyVoted) {
+        nextVotes[key] = nextVotes[key].filter((id) => id !== uid);
+      } else {
+        nextVotes[key] = [...nextVotes[key], uid];
+      }
+    } else {
+      for (let i = 0; i < optionCount; i++) {
+        nextVotes[String(i)] = nextVotes[String(i)].filter((id) => id !== uid);
+      }
+      if (!alreadyVoted) {
+        nextVotes[key] = [...nextVotes[key], uid];
+      }
+    }
+
+    const now = Timestamp.now();
+
+    setMessages((prev) =>
+      sortChatMessagesDesc(
+        prev.map((m) =>
+          m.id === messageId ? { ...m, pollVotes: nextVotes, pollUpdatedAt: now } : m,
+        ),
+      ),
+    );
+
+    const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
+    updateDoc(messageRef, { pollVotes: nextVotes, pollUpdatedAt: serverTimestamp() }).catch((error) => {
+      console.error('[useMessages] Poll vote failed:', error);
+      toastRef.current({
+        variant: 'destructive',
+        title: 'Vote not saved',
+        description: error instanceof Error ? error.message : 'Could not save your vote.',
+      });
+    });
+  }, [currentUser, chatId]);
+
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!chatId || !currentUser) return;
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
@@ -318,6 +403,9 @@ export function useMessages(chatId: string | null) {
         sheetKey: deleteField(),
         threadParentId: deleteField(),
         reactions: deleteField(),
+        poll: deleteField(),
+        pollVotes: deleteField(),
+        pollUpdatedAt: deleteField(),
       });
 
       const latestSnap = await getDocs(
@@ -332,9 +420,9 @@ export function useMessages(chatId: string | null) {
       }
     } catch (error) {
       console.error("Failed to delete message:", error);
-      toast({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
+      toastRef.current({ title: 'Error', description: 'Failed to delete message.', variant: 'destructive' });
     }
-  }, [chatId, currentUser, toast]);
+  }, [chatId, currentUser]);
 
 
   return { 
@@ -349,6 +437,7 @@ export function useMessages(chatId: string | null) {
     markAsSeen,
     updateSeenTimestamp,
     toggleReaction,
+    votePoll,
     deleteMessage,
   };
 }
