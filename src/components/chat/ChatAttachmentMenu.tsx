@@ -63,7 +63,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
 
   const { setlists } = useWorshipSetlists(needsSetlists);
   const { rosters } = useWorshipRosters(needsRosters);
-  const { songs } = useWorshipSongs(needsSongs);
+  const { songs, loading: songsLoading } = useWorshipSongs(needsSongs);
 
   const selectedSong = useMemo(
     () => (selectedSongId ? songs.find((s) => s.id === selectedSongId) ?? null : null),
@@ -318,7 +318,9 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
             </div>
           </div>
           <div className="max-h-[240px] overflow-y-auto">
-            {listItems.length === 0 ? (
+            {view === "song" && songsLoading ? (
+              <p className="py-8 text-center text-base text-muted-foreground">Loading…</p>
+            ) : listItems.length === 0 ? (
               <p className="py-8 text-center text-base text-muted-foreground">No results</p>
             ) : (
               listItems.map((item) => (

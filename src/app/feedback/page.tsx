@@ -56,6 +56,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.60",
+    date: "Late-June 2026",
+    changes: [
+      "Fixed chat song picker showing no results when attaching a song from the + menu",
+    ],
+  },
+  {
     version: "v1.3.59",
     subtitle: "New EM logo",
     date: "Late-June 2026",
