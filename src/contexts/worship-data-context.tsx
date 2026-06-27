@@ -91,7 +91,9 @@ export function WorshipDataProvider({
   );
 
   return (
-    <WorshipDataContext.Provider value={value}>{children}</WorshipDataContext.Provider>
+    <WorshipDataContext.Provider value={enabled ? value : null}>
+      {children}
+    </WorshipDataContext.Provider>
   );
 }
 
