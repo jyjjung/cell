@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck, ListChecks, Sparkles } from "lucide-react";
+import { CalendarCheck, ListChecks, Sparkles, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
 import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
@@ -25,6 +25,7 @@ export default function ScheduleHubTabs() {
       { value: "events", label: t.events, href: "/events", icon: CalendarCheck },
       { value: "qt", label: t.qtSharing, href: "/qt", icon: ListChecks },
       { value: "cleaning", label: t.cleaningDuty, href: "/cleaning-roster", icon: Sparkles },
+      { value: "rosters", label: t.rostersTab, href: "/rosters", icon: ClipboardList },
     ],
     [t],
   );
@@ -33,7 +34,7 @@ export default function ScheduleHubTabs() {
 
   return (
     <BottomHubBar>
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = tab.value === activeTab;

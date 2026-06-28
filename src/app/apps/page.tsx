@@ -57,6 +57,7 @@ function getAppSections(t: T): { titleKey: string; apps: AppItem[] }[] {
         { nameKey: 'events', descKey: 'appEventsDesc', href: '/events', icon: CalendarDays },
         { nameKey: 'qtRoster', descKey: 'appQTDesc', href: '/qt', icon: ClipboardList },
         { nameKey: 'cleaningRoster', descKey: 'appCleaningDesc', href: '/cleaning-roster', icon: SprayCan },
+        { nameKey: 'customRosters', descKey: 'appCustomRostersDesc', href: '/rosters', icon: ClipboardList },
       ],
     },
     {

@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ListTodo,
   ListChecks,
+  ClipboardList,
   BookOpen,
   Brain,
   MessageCircle,
@@ -122,6 +123,7 @@ export default function AdminHubPage() {
     { title: t.announcements, href: "/admin/notifications", icon: Megaphone, badge: scheduledNotifs },
     { title: t.qtRoster, href: "/admin/qt-roster", icon: ListChecks, badge: unassignedRosterDays },
     { title: t.cleaningRoster, href: "/admin/cleaning-roster", icon: ListTodo },
+    { title: t.adminCustomRosters, href: "/admin/custom-rosters", icon: ClipboardList },
     { title: t.events, href: "/admin/events", icon: Calendar },
   ];
 

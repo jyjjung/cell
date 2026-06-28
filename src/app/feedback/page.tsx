@@ -56,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.61",
+    subtitle: "Custom rosters",
+    date: "Late-June 2026",
+    changes: [
+      "Admins can create custom rosters with their own fields (name, member, or text)",
+      "Control who can view and edit each roster by role or member",
+      "Custom rosters appear on the Schedule tab, dashboard, and Apps",
+      "Fixed community progress being cleared when a member had no bible checklist yet",
+    ],
+  },
+  {
     version: "v1.3.60",
     date: "Late-June 2026",
     changes: [

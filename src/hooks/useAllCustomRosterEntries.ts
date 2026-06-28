@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { CustomRosterEntry, RosterDefinition } from '@/types';
+import { userCanSeeRoster } from '@/lib/roster-access';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -27,6 +28,7 @@ const CACHE_KEY = 'custom_roster_entries_v1';
 export interface CustomRosterEntryWithMeta extends CustomRosterEntry {
   rosterDefId: string;
   rosterName: string;
+  rosterFields?: RosterDefinition['fields'];
 }
 
 function todayDateString() {
@@ -70,6 +72,7 @@ async function loadEntriesForDefinition(
     ...(docSnap.data() as Omit<CustomRosterEntry, 'id'>),
     rosterDefId: def.id,
     rosterName: def.name,
+    rosterFields: def.fields,
   }));
 }
 
@@ -85,9 +88,9 @@ async function loadEntriesWithMeta(
   return batches.flat().sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Dashboard helper: cached definitions + one collection-group entries query. */
+/** Dashboard helper: cached definitions + entries for visible rosters. */
 export function useAllCustomRosterEntries() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, loadingAuth, isAdmin } = useAuth();
   const [entries, setEntries] = useState<CustomRosterEntryWithMeta[]>(() => {
     return readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(CACHE_KEY) ?? [];
   });
@@ -104,12 +107,15 @@ export function useAllCustomRosterEntries() {
     }
 
     const definitions = await loadDefinitions();
-    const enriched = await loadEntriesWithMeta(todayDateString(), definitions);
+    const visibleDefs = currentUser
+      ? definitions.filter((def) => userCanSeeRoster(currentUser, def, isAdmin))
+      : [];
+    const enriched = await loadEntriesWithMeta(todayDateString(), visibleDefs);
     writeLocalCollectionCache(CACHE_KEY, enriched);
     setEntries(enriched);
     setLoading(false);
     return enriched;
-  }, []);
+  }, [currentUser, isAdmin]);
 
   useEffect(() => {
     if (loadingAuth) return;

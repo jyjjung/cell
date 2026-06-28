@@ -84,11 +84,27 @@ export interface RosterVisibility {
   allowedRoleIds?: string[];
 }
 
+export type RosterFieldType = 'text' | 'person' | 'user';
+
+export interface RosterFieldDefinition {
+  id: string;
+  label: string;
+  type: RosterFieldType;
+  order: number;
+}
+
+export interface RosterEditPermissions {
+  allowedUserIds?: string[];
+  allowedRoleIds?: string[];
+}
+
 export interface RosterDefinition {
   id: string;
   name: string;
   createdAt: Timestamp;
   visibility?: RosterVisibility;
+  fields?: RosterFieldDefinition[];
+  editPermissions?: RosterEditPermissions;
 }
 
 export interface RosterAssignment {
@@ -97,11 +113,18 @@ export interface RosterAssignment {
   userId?: string | null;
 }
 
+export interface RosterFieldValue {
+  text?: string;
+  userId?: string | null;
+}
+
 export interface CustomRosterEntry {
   id: string;
   date: string;
   time?: string;
-  assignments: RosterAssignment[];
+  /** Legacy duty/person rows — used when no field definitions exist */
+  assignments?: RosterAssignment[];
+  fieldValues?: Record<string, RosterFieldValue>;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
