@@ -65,6 +65,34 @@ function displayFieldValue(
   return value.text ? formatNameString(value.text) : '';
 }
 
+export function getCustomRosterEntryTitle(
+  entry: CustomRosterEntry,
+  def: Pick<RosterDefinition, 'fields'>,
+  usersMap?: Map<string, UserProfileData>,
+): string {
+  const fields = sortedRosterFields(def.fields);
+  for (const field of fields) {
+    const display = displayFieldValue(entry.fieldValues?.[field.id], field, usersMap);
+    if (display) return display;
+  }
+  const first = (entry.assignments ?? []).find((a) => a.person?.trim());
+  return first ? formatNameString(first.person) : '';
+}
+
+export function entryHasContent(
+  entry: CustomRosterEntry,
+  def: Pick<RosterDefinition, 'fields'>,
+): boolean {
+  const fields = sortedRosterFields(def.fields);
+  if (fields.length > 0) {
+    return fields.some((field) => {
+      const v = entry.fieldValues?.[field.id];
+      return (v?.text?.trim() ?? '') || v?.userId;
+    });
+  }
+  return (entry.assignments ?? []).some((a) => a.person?.trim() || a.duty?.trim());
+}
+
 export function getUserCustomRosterLabels(
   entry: CustomRosterEntry,
   def: Pick<RosterDefinition, 'fields'>,
