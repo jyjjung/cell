@@ -54,7 +54,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const showScheduleTabs =
     pathname.startsWith('/events') ||
     pathname.startsWith('/qt') ||
-    pathname.startsWith('/cleaning-roster');
+    pathname.startsWith('/cleaning-roster') ||
+    pathname.startsWith('/rosters');
   const showAdminTabs = pathname.startsWith('/admin');
 
   useEffect(() => {

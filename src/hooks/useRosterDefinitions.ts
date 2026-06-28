@@ -2,7 +2,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { RosterDefinition, RosterVisibility } from '@/types';
+import type {
+  RosterDefinition,
+  RosterVisibility,
+  RosterFieldDefinition,
+  RosterEditPermissions,
+} from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -39,8 +44,8 @@ export function useRosterDefinitions() {
     const q = query(collection(db, ROSTER_DEFINITIONS_COLLECTION), orderBy("name", "asc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const defsData: RosterDefinition[] = [];
-      querySnapshot.forEach((doc) => {
-        defsData.push({ ...doc.data(), id: doc.id } as RosterDefinition);
+      querySnapshot.forEach((docSnap) => {
+        defsData.push({ ...docSnap.data(), id: docSnap.id } as RosterDefinition);
       });
       setDefinitions(defsData);
       setLoading(false);
@@ -57,23 +62,35 @@ export function useRosterDefinitions() {
     const docRef = await addDoc(collection(db, ROSTER_DEFINITIONS_COLLECTION), {
       name,
       createdAt: serverTimestamp(),
-      visibility: {
-        type: 'public',
-      },
+      visibility: { type: 'public' },
+      fields: [],
+      editPermissions: {},
     });
     return docRef.id;
   }, [isAdmin]);
 
-  const updateDefinition = useCallback(async (id: string, name: string) => {
+  const updateDefinition = useCallback(async (id: string, data: Partial<Pick<RosterDefinition, 'name' | 'fields' | 'visibility' | 'editPermissions'>>) => {
     if (!isAdmin) throw new Error("User is not authorized.");
     const docRef = doc(db, ROSTER_DEFINITIONS_COLLECTION, id);
-    await updateDoc(docRef, { name });
+    await updateDoc(docRef, data);
   }, [isAdmin]);
-  
+
   const updateDefinitionVisibility = useCallback(async (id: string, visibility: RosterVisibility) => {
     if (!isAdmin) throw new Error("User is not authorized.");
     const docRef = doc(db, ROSTER_DEFINITIONS_COLLECTION, id);
     await updateDoc(docRef, { visibility });
+  }, [isAdmin]);
+
+  const updateDefinitionFields = useCallback(async (id: string, fields: RosterFieldDefinition[]) => {
+    if (!isAdmin) throw new Error("User is not authorized.");
+    const docRef = doc(db, ROSTER_DEFINITIONS_COLLECTION, id);
+    await updateDoc(docRef, { fields });
+  }, [isAdmin]);
+
+  const updateDefinitionEditPermissions = useCallback(async (id: string, editPermissions: RosterEditPermissions) => {
+    if (!isAdmin) throw new Error("User is not authorized.");
+    const docRef = doc(db, ROSTER_DEFINITIONS_COLLECTION, id);
+    await updateDoc(docRef, { editPermissions });
   }, [isAdmin]);
 
   const deleteDefinition = useCallback(async (id: string) => {
@@ -91,5 +108,14 @@ export function useRosterDefinitions() {
     await batch.commit();
   }, [isAdmin]);
 
-  return { definitions, loading, addDefinition, updateDefinition, deleteDefinition, updateDefinitionVisibility };
+  return {
+    definitions,
+    loading,
+    addDefinition,
+    updateDefinition,
+    deleteDefinition,
+    updateDefinitionVisibility,
+    updateDefinitionFields,
+    updateDefinitionEditPermissions,
+  };
 }

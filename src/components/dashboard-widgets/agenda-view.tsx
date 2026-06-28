@@ -7,6 +7,7 @@ import { Calendar, ChevronRight } from 'lucide-react';
 import { eventOccursOnDate, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import type { AppEvent, CleaningRosterEntry, QTRosterEntry, UserProfileData, CleaningDay, WorshipRoster } from '@/types';
 import type { CustomRosterEntryWithMeta } from '@/hooks/useAllCustomRosterEntries';
+import { formatCustomRosterEntrySummary } from '@/lib/roster-access';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
@@ -169,9 +170,11 @@ export default function AgendaView({
 
     customRosterEntries.forEach((entry) => {
       if (!isSameDay(parseISO(entry.date), selectedDate)) return;
-      const assignments = entry.assignments
-        .map((assignment) => `${assignment.duty}: ${formatNameString(assignment.person)}`)
-        .join(', ');
+      const assignments = formatCustomRosterEntrySummary(
+        entry,
+        { fields: entry.rosterFields },
+        usersMap,
+      );
       if (!assignments) return;
       list.push({
         kind: 'roster',

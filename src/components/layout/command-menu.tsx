@@ -224,6 +224,13 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
         keywords: ["roster", "duty"],
       },
       {
+        id: "custom-rosters",
+        href: "/rosters",
+        label: t.customRosters,
+        icon: CalendarCheck,
+        keywords: ["roster", "custom", "schedule"],
+      },
+      {
         id: "worship",
         href: "/worship",
         label: t.worshipPortal,

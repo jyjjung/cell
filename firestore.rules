@@ -85,13 +85,32 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isCompleted', 'completedBy', 'completedAt']));
     }
 
+    function rosterDefData(rosterDefId) {
+      return get(/databases/$(database)/documents/rosterDefinitions/$(rosterDefId)).data;
+    }
+
+    function canSeeRoster(userId, rosterDefId) {
+      let visibility = rosterDefData(rosterDefId).get('visibility', {'type': 'public'});
+      return visibility.type == 'public'
+        || isAppAdmin(userId)
+        || userId in visibility.get('allowedUserIds', [])
+        || visibility.get('allowedRoleIds', []).hasAny(userData(userId).get('roleIds', []));
+    }
+
+    function canEditRosterEntries(userId, rosterDefId) {
+      let perms = rosterDefData(rosterDefId).get('editPermissions', {});
+      return isAppAdmin(userId)
+        || userId in perms.get('allowedUserIds', [])
+        || perms.get('allowedRoleIds', []).hasAny(userData(userId).get('roleIds', []));
+    }
+
     match /rosterDefinitions/{rosterDefId} {
       allow read: if request.auth != null;
       allow write: if isAppAdmin(request.auth.uid);
 
       match /entries/{entryId} {
-        allow read: if request.auth != null;
-        allow write: if isAppAdmin(request.auth.uid);
+        allow read: if request.auth != null && canSeeRoster(request.auth.uid, rosterDefId);
+        allow create, update, delete: if canEditRosterEntries(request.auth.uid, rosterDefId);
       }
     }
 

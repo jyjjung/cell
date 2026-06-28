@@ -103,7 +103,8 @@ export function useUserBibleChecklist() {
       } else {
         setCompletedPassages([]);
         setChecklistDocExists(false);
-        scheduleCommunityProgressSync([]);
+        // Do not sync empty progress — that would wipe communityProgress for users
+        // who only had leaderboard data or haven't created a checklist yet.
       }
       setLoadingChecklist(false);
     }, (error) => {

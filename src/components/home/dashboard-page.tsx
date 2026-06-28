@@ -34,6 +34,7 @@ import { formatUserDisplayName } from '@/lib/formatting';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { userCanSeeEvent } from '@/lib/event-visibility';
+import { getUserCustomRosterLabels } from '@/lib/roster-access';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -277,9 +278,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     customRosterEntries.forEach(entry => {
       const d = parseISO(entry.date || '');
       if (!isValid(d) || isBefore(d, today)) return;
-      const myDuties = entry.assignments
-        .filter(a => a.userId === currentUser.uid)
-        .map(a => a.duty);
+      const myDuties = getUserCustomRosterLabels(
+        entry,
+        { fields: entry.rosterFields },
+        currentUser.uid,
+      );
       if (myDuties.length === 0) return;
       items.push({
         id: `my-custom-${entry.id}`,
@@ -287,7 +290,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         label: entry.rosterName,
         sublabel: myDuties.join(', '),
         type: 'custom',
-        href: '/rosters',
+        href: `/rosters/${entry.rosterDefId}?date=${entry.date}`,
         details: `Your assignments: ${myDuties.join(', ')}`,
       });
     });
