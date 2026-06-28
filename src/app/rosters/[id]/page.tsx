@@ -210,7 +210,7 @@ export default function CustomRosterDetailPage() {
   if (!definition) {
     return (
       <div className="page-container">
-        <EmptyState title={t.adminNoCustomRosters} description={t.customRostersDesc} />
+        <EmptyState title={t.adminNoCustomRosters} />
       </div>
     );
   }

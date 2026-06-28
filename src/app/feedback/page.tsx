@@ -56,6 +56,13 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.63",
+    date: "Late-June 2026",
+    changes: [
+      "Renamed Custom rosters to Other rosters",
+    ],
+  },
+  {
     version: "v1.3.62",
     date: "Late-June 2026",
     changes: [
