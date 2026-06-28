@@ -1,26 +1,13 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  Loader2,
-  ChevronsLeft,
-  ChevronsRight,
-  Trash2,
-  Save,
-  Users,
-  PlusCircle,
-} from "lucide-react";
-import {
-  format,
-  addMonths,
-  subMonths,
-  isSameMonth,
-  parseISO,
-} from "date-fns";
+import { Loader2, CalendarOff, PlusCircle, Trash2, Save, Users, Pencil } from "lucide-react";
+import { format, isBefore, startOfToday, compareAsc } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
 import { useRosterDefinitions } from "@/hooks/useRosterDefinitions";
@@ -30,6 +17,8 @@ import {
   userCanSeeRoster,
   sortedRosterFields,
   formatCustomRosterEntrySummary,
+  getCustomRosterEntryTitle,
+  entryHasContent,
 } from "@/lib/roster-access";
 import type { CustomRosterEntry, RosterFieldDefinition, RosterFieldValue } from "@/types";
 import { cn } from "@/lib/utils";
@@ -38,6 +27,7 @@ import UserSelector from "@/components/chat/UserSelector";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -47,6 +37,22 @@ import { parseDay } from "@/lib/event-occurrences";
 
 function emptyFieldValues(fields: RosterFieldDefinition[]): Record<string, RosterFieldValue> {
   return Object.fromEntries(fields.map((f) => [f.id, { text: "", userId: null }]));
+}
+
+function groupEntriesByMonth(entries: CustomRosterEntry[]) {
+  const groups = new Map<string, CustomRosterEntry[]>();
+  const sorted = [...entries].sort((a, b) => compareAsc(parseDay(a.date), parseDay(b.date)));
+
+  for (const entry of sorted) {
+    try {
+      const key = format(parseDay(entry.date), "MMMM yyyy");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(entry);
+    } catch {
+      /* skip invalid dates */
+    }
+  }
+  return groups;
 }
 
 export default function CustomRosterDetailPage() {
@@ -62,18 +68,17 @@ export default function CustomRosterDetailPage() {
   const { allUsers, loading: usersLoading } = useAllUsers();
   const { toast } = useToast();
 
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [localChanges, setLocalChanges] = useState<
-    Record<string, Record<string, RosterFieldValue>>
-  >({});
-  const [savingDates, setSavingDates] = useState<Record<string, boolean>>({});
+  const [isMounted, setIsMounted] = useState(false);
+  const [targetDate] = useState(() =>
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("date") : null,
+  );
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<CustomRosterEntry | null>(null);
+  const [draftDate, setDraftDate] = useState("");
+  const [draftValues, setDraftValues] = useState<Record<string, RosterFieldValue>>({});
+  const [saving, setSaving] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const [selectorContext, setSelectorContext] = useState<{
-    date: string;
-    fieldId: string;
-  } | null>(null);
-  const [addDateOpen, setAddDateOpen] = useState(false);
-  const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [selectorFieldId, setSelectorFieldId] = useState<string | null>(null);
 
   const fields = useMemo(() => sortedRosterFields(definition?.fields), [definition?.fields]);
 
@@ -88,6 +93,30 @@ export default function CustomRosterDetailPage() {
     return userCanSeeRoster(currentUser, definition, isAdmin);
   }, [currentUser, definition, isAdmin]);
 
+  const visibleEntries = useMemo(() => {
+    if (!definition) return [];
+    const list = canEdit ? roster : roster.filter((e) => entryHasContent(e, definition));
+    return list;
+  }, [roster, definition, canEdit]);
+
+  const { upcomingByMonth, pastByMonth } = useMemo(() => {
+    const today = startOfToday();
+    const upcoming = groupEntriesByMonth(
+      visibleEntries.filter((e) => !isBefore(parseDay(e.date), today)),
+    );
+    const past = groupEntriesByMonth(
+      visibleEntries.filter((e) => isBefore(parseDay(e.date), today)),
+    );
+    const pastArray = Array.from(past.entries()).reverse();
+    pastArray.forEach(([, entries]) => entries.reverse());
+    return {
+      upcomingByMonth: Array.from(upcoming.entries()),
+      pastByMonth: pastArray,
+    };
+  }, [visibleEntries]);
+
+  useEffect(() => setIsMounted(true), []);
+
   useEffect(() => {
     if (!loadingAuth && definition && currentUser && !canView) {
       router.replace("/rosters");
@@ -95,73 +124,48 @@ export default function CustomRosterDetailPage() {
   }, [loadingAuth, definition, currentUser, canView, router]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const dateParam = new URLSearchParams(window.location.search).get("date");
-    if (dateParam) {
-      try {
-        setCurrentDate(parseISO(dateParam));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
+    if (!isMounted || rosterLoading || !targetDate) return;
+    const el = document.getElementById(`date-${targetDate}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    const timer = setTimeout(() => {
+      el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isMounted, rosterLoading, targetDate]);
 
-  const rosterMap = useMemo(() => {
-    const map = new Map<string, CustomRosterEntry>();
-    roster.forEach((entry) => map.set(entry.date, entry));
-    return map;
-  }, [roster]);
-
-  const monthEntries = useMemo(
-    () =>
-      roster
-        .filter((entry) => isSameMonth(parseDay(entry.date), currentDate))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [roster, currentDate],
-  );
-
-  const getDisplayValues = useCallback(
-    (dateStr: string, entry?: CustomRosterEntry) => {
-      const local = localChanges[dateStr];
-      const base = entry?.fieldValues ?? emptyFieldValues(fields);
-      if (!local) return base;
-      return { ...base, ...local };
-    },
-    [localChanges, fields],
-  );
-
-  const handleFieldChange = (
-    dateStr: string,
-    fieldId: string,
-    value: RosterFieldValue,
-  ) => {
-    setLocalChanges((prev) => ({
-      ...prev,
-      [dateStr]: { ...(prev[dateStr] ?? {}), [fieldId]: value },
-    }));
+  const openNewEntry = () => {
+    setEditingEntry(null);
+    setDraftDate(format(new Date(), "yyyy-MM-dd"));
+    setDraftValues(emptyFieldValues(fields));
+    setEditOpen(true);
   };
 
-  const handleSaveDate = async (dateStr: string) => {
-    const entry = rosterMap.get(dateStr);
-    const fieldValues = getDisplayValues(dateStr, entry);
-    const hasContent = Object.values(fieldValues).some(
+  const openEditEntry = (entry: CustomRosterEntry) => {
+    setEditingEntry(entry);
+    setDraftDate(entry.date);
+    setDraftValues(entry.fieldValues ?? emptyFieldValues(fields));
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!draftDate.trim()) return;
+    const hasContent = Object.values(draftValues).some(
       (v) => (v.text?.trim() ?? "") || v.userId,
     );
     if (!hasContent) return;
 
-    setSavingDates((prev) => ({ ...prev, [dateStr]: true }));
+    setSaving(true);
     try {
-      if (entry) {
-        await updateEntry(entry.id, { date: dateStr, fieldValues });
+      const payload = { date: draftDate, fieldValues: draftValues };
+      if (editingEntry) {
+        await updateEntry(editingEntry.id, payload);
       } else {
-        await addEntry({ date: dateStr, fieldValues });
+        await addEntry(payload);
       }
-      setLocalChanges((prev) => {
-        const next = { ...prev };
-        delete next[dateStr];
-        return next;
-      });
       toast({ title: t.rosterSaveEntry });
+      setEditOpen(false);
     } catch (err: unknown) {
       toast({
         variant: "destructive",
@@ -169,52 +173,30 @@ export default function CustomRosterDetailPage() {
         description: err instanceof Error ? err.message : "Failed to save",
       });
     } finally {
-      setSavingDates((prev) => ({ ...prev, [dateStr]: false }));
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (dateStr: string) => {
-    const entry = rosterMap.get(dateStr);
-    if (!entry) return;
+  const handleDelete = async () => {
+    if (!editingEntry) return;
+    setSaving(true);
     try {
-      await deleteEntry(entry.id);
-      setLocalChanges((prev) => {
-        const next = { ...prev };
-        delete next[dateStr];
-        return next;
-      });
+      await deleteEntry(editingEntry.id);
+      setEditOpen(false);
     } catch (err: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to delete",
       });
-    }
-  };
-
-  const handleAddDate = async () => {
-    if (!newDate.trim()) return;
-    if (rosterMap.has(newDate)) {
-      setCurrentDate(parseISO(newDate));
-      setAddDateOpen(false);
-      return;
-    }
-    try {
-      await addEntry({ date: newDate, fieldValues: emptyFieldValues(fields) });
-      setCurrentDate(parseISO(newDate));
-      setAddDateOpen(false);
-    } catch (err: unknown) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to add date",
-      });
+    } finally {
+      setSaving(false);
     }
   };
 
   const loading = loadingAuth || defsLoading || rosterLoading || usersLoading;
 
-  if (loading) {
+  if (!isMounted || loading) {
     return (
       <div className="page-container">
         <div className="empty-inline gap-3 py-16">
@@ -233,178 +215,181 @@ export default function CustomRosterDetailPage() {
     );
   }
 
-  const monthLabel = format(currentDate, "MMMM yyyy");
+  if (fields.length === 0) {
+    return (
+      <div className="page-container">
+        <NavPageHeader title={definition.name} />
+        <EmptyState title={t.rosterNoFields} description={t.adminSelectRoster} />
+      </div>
+    );
+  }
+
+  let globalIdx = 0;
+
+  const renderEntry = (entry: CustomRosterEntry, faded = false) => {
+    const entryDate = parseDay(entry.date);
+    const title = getCustomRosterEntryTitle(entry, definition, usersMap) || definition.name;
+    const summary = formatCustomRosterEntrySummary(entry, definition, usersMap);
+    const currentIndex = globalIdx++;
+
+    return (
+      <div
+        key={entry.id}
+        id={`date-${entry.date}`}
+        className={cn("scroll-mt-20 transition-all duration-500", faded && "opacity-80")}
+      >
+        <RosterFeedCard
+          index={currentIndex}
+          date={entryDate}
+          label={definition.name}
+          title={title}
+          description={
+            <p className="text-micro-label line-clamp-4">{summary || format(entryDate, "EEEE, MMMM do, yyyy")}</p>
+          }
+          rightElement={
+            canEdit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-lg"
+                onClick={() => openEditEntry(entry)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  };
+
+  const renderMonthGroup = (month: string, entries: CustomRosterEntry[], faded = false) => (
+    <div key={month} className="stack-gap-sm">
+      <p className="text-micro-label px-1">{month}</p>
+      <div className="stack-gap-sm">{entries.map((entry) => renderEntry(entry, faded))}</div>
+    </div>
+  );
 
   return (
     <div className="page-container">
-      <NavPageHeader title={definition.name} description={t.customRostersDesc} />
+      <NavPageHeader
+        title={definition.name}
+        action={
+          canEdit ? (
+            <Button variant="outline" size="sm" onClick={openNewEntry} className="h-9 rounded-lg">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {t.rosterAddEntry}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {!canEdit && (
         <p className="mb-4 text-sm text-muted-foreground">{t.rosterEditorsOnly}</p>
       )}
 
-      <div className="mb-4 flex flex-col gap-3 border-y border-border/50 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="outline" size="sm" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
-          <ChevronsLeft className="mr-1 h-4 w-4" /> {t.adminPrevMonth}
-        </Button>
-        <h2 className="text-section-title text-center">{monthLabel}</h2>
-        <div className="flex items-center justify-end gap-2">
-          {canEdit && fields.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setAddDateOpen(true)}>
-              <PlusCircle className="mr-1 h-4 w-4" />
-              {t.rosterAddEntry}
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-            {t.adminNextMonth} <ChevronsRight className="ml-1 h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <Tabs defaultValue="upcoming" className="w-full">
+        <TabsList className="h-9">
+          <TabsTrigger value="upcoming" className="rounded-md text-sm">{t.upcoming}</TabsTrigger>
+          <TabsTrigger value="past" className="rounded-md text-sm">{t.past}</TabsTrigger>
+        </TabsList>
 
-      {fields.length === 0 ? (
-        <EmptyState title={t.rosterNoFields} description={t.adminSelectRoster} />
-      ) : canEdit ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {monthEntries.map((entry) => {
-            const dateStr = entry.date;
-            const dateObj = parseDay(dateStr);
-            const values = getDisplayValues(dateStr, entry);
-            const isDirty = !!localChanges[dateStr];
-            const isSaving = savingDates[dateStr];
-
-            return (
-              <div
-                key={dateStr}
-                className={cn(
-                  "widget-surface space-y-3",
-                  isDirty && "ring-2 ring-primary bg-primary/5",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-micro-label">{format(dateObj, "EEE")}</span>
-                    <p className="text-section-title">{format(dateObj, "MMM d")}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    {isDirty && (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8"
-                        disabled={isSaving}
-                        onClick={() => handleSaveDate(dateStr)}
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Save className="h-3 w-3" />
-                        )}
-                      </Button>
-                    )}
-                    {entry && (
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        className="h-8 w-8 opacity-30 hover:opacity-100"
-                        onClick={() => handleDelete(dateStr)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {fields.map((field) => {
-                  const value = values[field.id] ?? { text: "", userId: null };
-                  const linkedUser = value.userId ? usersMap.get(value.userId) : undefined;
-
-                  if (field.type === "user") {
-                    return (
-                      <div key={field.id} className="space-y-1">
-                        <label className="text-micro-label">{field.label}</label>
-                        <div className="relative">
-                          <Input
-                            readOnly
-                            value={
-                              linkedUser
-                                ? formatUserDisplayName(linkedUser)
-                                : value.text ?? ""
-                            }
-                            placeholder={t.adminSelectMember}
-                            className={cn(
-                              "h-10 rounded-xl pr-10",
-                              linkedUser && "border-success/30",
-                            )}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
-                            onClick={() => {
-                              setSelectorContext({ date: dateStr, fieldId: field.id });
-                              setSelectorOpen(true);
-                            }}
-                          >
-                            <Users className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={field.id} className="space-y-1">
-                      <label className="text-micro-label">{field.label}</label>
-                      <Input
-                        value={value.text ?? ""}
-                        onChange={(e) =>
-                          handleFieldChange(dateStr, field.id, {
-                            ...value,
-                            text: e.target.value,
-                          })
-                        }
-                        className="h-10 rounded-xl"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-          {monthEntries.length === 0 && (
-            <p className="col-span-full text-center text-sm text-muted-foreground">
-              {t.rosterNoEntries}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="stack-gap-sm">
-          {monthEntries.length === 0 ? (
-            <EmptyState title={t.rosterNoEntries} />
+        <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
+          {upcomingByMonth.length > 0 ? (
+            upcomingByMonth.map(([month, entries]) => renderMonthGroup(month, entries))
           ) : (
-            monthEntries.map((entry, index) => {
-              const summary = formatCustomRosterEntrySummary(
-                entry,
-                definition,
-                usersMap,
-              );
-              return (
-                <RosterFeedCard
-                  key={entry.id}
-                  date={parseDay(entry.date)}
-                  label={definition.name}
-                  title={summary.split(",")[0]?.split(":")[1]?.trim() || definition.name}
-                  description={
-                    <p className="text-xs text-muted-foreground line-clamp-3">{summary}</p>
-                  }
-                  index={index}
-                />
-              );
-            })
+            <EmptyState icon={CalendarOff} title={t.horizonIsClear} />
           )}
-        </div>
-      )}
+        </TabsContent>
+
+        <TabsContent value="past" className="mt-4 stack-gap-sm">
+          {pastByMonth.length > 0 ? (
+            pastByMonth.map(([month, entries]) => renderMonthGroup(month, entries, true))
+          ) : (
+            <EmptyState icon={CalendarOff} title={t.rosterNoPastEntries} />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingEntry ? t.adminSaveChanges : t.rosterAddEntry}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-micro-label">{t.adminDate}</label>
+              <Input
+                type="date"
+                value={draftDate}
+                onChange={(e) => setDraftDate(e.target.value)}
+                className="h-10 rounded-xl"
+              />
+            </div>
+            {fields.map((field) => {
+              const value = draftValues[field.id] ?? { text: "", userId: null };
+              const linkedUser = value.userId ? usersMap.get(value.userId) : undefined;
+
+              if (field.type === "user") {
+                return (
+                  <div key={field.id} className="space-y-1">
+                    <label className="text-micro-label">{field.label}</label>
+                    <div className="relative">
+                      <Input
+                        readOnly
+                        value={linkedUser ? formatUserDisplayName(linkedUser) : value.text ?? ""}
+                        placeholder={t.adminSelectMember}
+                        className={cn("h-10 rounded-xl pr-10", linkedUser && "border-success/30")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                        onClick={() => {
+                          setSelectorFieldId(field.id);
+                          setSelectorOpen(true);
+                        }}
+                      >
+                        <Users className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={field.id} className="space-y-1">
+                  <label className="text-micro-label">{field.label}</label>
+                  <Input
+                    value={value.text ?? ""}
+                    onChange={(e) =>
+                      setDraftValues((prev) => ({
+                        ...prev,
+                        [field.id]: { ...value, text: e.target.value },
+                      }))
+                    }
+                    className="h-10 rounded-xl"
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {editingEntry && (
+              <Button type="button" variant="destructive" onClick={handleDelete} disabled={saving}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t.adminYesDelete}
+              </Button>
+            )}
+            <Button type="button" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {t.rosterSaveEntry}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={selectorOpen} onOpenChange={setSelectorOpen}>
         <DialogContent className="rounded-2xl">
@@ -416,44 +401,25 @@ export default function CustomRosterDetailPage() {
             loading={usersLoading}
             selectionMode="single"
             selectedUsers={
-              selectorContext
-                ? [
-                    getDisplayValues(
-                      selectorContext.date,
-                      rosterMap.get(selectorContext.date),
-                    )[selectorContext.fieldId]?.userId ?? "",
-                  ].filter(Boolean)
+              selectorFieldId && draftValues[selectorFieldId]?.userId
+                ? [draftValues[selectorFieldId].userId!]
                 : []
             }
             onSelectionChange={(uids) => {
-              if (!selectorContext) return;
+              if (!selectorFieldId) return;
               const uid = uids[0];
               const user = uid ? usersMap.get(uid) : undefined;
-              handleFieldChange(selectorContext.date, selectorContext.fieldId, {
-                userId: uid ?? null,
-                text: user ? formatUserDisplayName(user) : "",
-              });
+              setDraftValues((prev) => ({
+                ...prev,
+                [selectorFieldId]: {
+                  userId: uid ?? null,
+                  text: user ? formatUserDisplayName(user) : "",
+                },
+              }));
               setSelectorOpen(false);
-              setSelectorContext(null);
+              setSelectorFieldId(null);
             }}
           />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={addDateOpen} onOpenChange={setAddDateOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>{t.rosterAddEntry}</DialogTitle>
-          </DialogHeader>
-          <Input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            className="h-10 rounded-xl"
-          />
-          <Button onClick={handleAddDate} className="w-full">
-            {t.rosterAddEntry}
-          </Button>
         </DialogContent>
       </Dialog>
     </div>

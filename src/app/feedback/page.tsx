@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.62",
+    date: "Late-June 2026",
+    changes: [
+      "Custom rosters now show as an upcoming/past list instead of a month grid",
+      "Editors add or update entries from a dialog on each roster page",
+    ],
+  },
+  {
     version: "v1.3.61",
     subtitle: "Custom rosters",
     date: "Late-June 2026",
