@@ -33,13 +33,12 @@ export default function CustomRostersIndexPage() {
 
   return (
     <div className="page-container">
-      <NavPageHeader title={t.customRosters} description={t.customRostersDesc} />
+      <NavPageHeader title={t.customRosters} />
 
       {visibleRosters.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
           title={t.adminNoCustomRosters}
-          description={t.customRostersDesc}
         />
       ) : (
         <FeedCard className="divide-y divide-border/40 p-0 overflow-hidden">

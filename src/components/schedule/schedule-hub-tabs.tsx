@@ -25,7 +25,7 @@ export default function ScheduleHubTabs() {
       { value: "events", label: t.events, href: "/events", icon: CalendarCheck },
       { value: "qt", label: t.qtSharing, href: "/qt", icon: ListChecks },
       { value: "cleaning", label: t.cleaningDuty, href: "/cleaning-roster", icon: Sparkles },
-      { value: "rosters", label: t.rostersTab, href: "/rosters", icon: ClipboardList },
+      { value: "rosters", label: t.customRosters, href: "/rosters", icon: ClipboardList },
     ],
     [t],
   );

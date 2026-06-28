@@ -365,7 +365,7 @@ export default function AdminCustomRostersPage() {
 
   return (
     <div className="admin-page">
-      <PageHeader title={t.adminCustomRosters} description={t.customRostersDesc} />
+      <PageHeader title={t.adminCustomRosters} />
 
       {loading ? (
         <div className="empty-inline gap-3">
