@@ -23,7 +23,10 @@ import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { findPlanPassageKeysForChapter, isChapterMarkedCompleteInPlan } from '@/lib/reading-utils';
+import {
+  findEarliestIncompletePlanPassageKeyForChapter,
+  isChapterMarkedCompleteInPlan,
+} from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 
@@ -134,8 +137,13 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     if (!currentUser || isChapterComplete) return;
     setIsMarkingChapter(true);
     try {
-      const keys = findPlanPassageKeysForChapter(plan?.dailyReadings, book, chapter);
-      await markMultiplePassages(keys.length > 0 ? keys : [chapterRef], true);
+      const earliestPlanKey = findEarliestIncompletePlanPassageKeyForChapter(
+        plan?.dailyReadings,
+        book,
+        chapter,
+        completedPassages,
+      );
+      await markMultiplePassages(earliestPlanKey ? [earliestPlanKey] : [chapterRef], true);
     } catch (e) {
       console.error('Failed to mark chapter as read:', e);
     } finally {
