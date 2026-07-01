@@ -5,7 +5,9 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  User, LogIn, UserPlus, LogOut, ChevronDown,
+  Home, Users, BookOpen, Shield, User,
+  LogIn, UserPlus, LogOut, MessageCircle, ChevronDown,
+  CalendarCheck, Music, Library, Lightbulb, HeartHandshake
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatUserDisplayName } from '@/lib/formatting';
@@ -39,6 +41,7 @@ import { Button } from '../ui/button';
 type NavItem = {
   href: string;
   label: string;
+  icon?: React.ElementType;
   badge?: number;
   requiresAuth?: boolean;
   requiresGuest?: boolean;
@@ -78,22 +81,22 @@ export default function AppSidebar() {
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   const navItems: NavItem[] = [
-    { href: '/', label: t.home },
-    { href: '/bible-checklist', label: t.readingPlan },
-    { href: '/chat', label: t.chat, badge: unreadChats, requiresAuth: true },
-    { href: '/events', label: t.schedule },
-    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal }] : []),
-    { href: '/media', label: t.links },
-    { href: '/members', label: t.members },
-    { href: '/prayer-requests', label: t.prayerRequests, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
-    { href: '/feedback', label: t.feedback },
+    { href: '/', label: t.home, icon: Home },
+    { href: '/bible-checklist', label: t.readingPlan, icon: BookOpen },
+    { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
+    { href: '/events', label: t.schedule, icon: CalendarCheck },
+    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal, icon: Music }] : []),
+    { href: '/media', label: t.links, icon: Library },
+    { href: '/members', label: t.members, icon: Users },
+    { href: '/prayer-requests', label: t.prayerRequests, icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
+    { href: '/feedback', label: t.feedback, icon: Lightbulb },
   ];
 
   const isVisible = (item: { requiresAuth?: boolean; requiresGuest?: boolean }) =>
     (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
 
   return (
-    <Sidebar collapsible="offcanvas" className="app-sidebar">
+    <Sidebar collapsible="icon" className="app-sidebar">
       {/* Logo */}
       <SidebarHeader className="app-sidebar-header">
         <Link href="/" onClick={() => navigate('/')}
@@ -124,13 +127,14 @@ export default function AppSidebar() {
                     tooltip={item.label}
                     onClick={() => navigate(item.href)}
                     className={cn(
-                      "h-9 rounded-lg px-2.5 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "h-9 rounded-lg px-2.5 text-[13px] font-medium transition-colors gap-2.5 focus-visible:ring-2 focus-visible:ring-ring/50",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <Link href={item.href}>
+                      {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -154,13 +158,14 @@ export default function AppSidebar() {
                     tooltip="Admin"
                     onClick={() => navigate('/admin')}
                     className={cn(
-                      "h-9 rounded-lg px-2.5 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "h-9 rounded-lg px-2.5 text-[13px] font-medium gap-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
                       pathname.startsWith('/admin')
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <Link href="/admin">
+                      <Shield className="h-4 w-4 shrink-0" />
                       <span>Admin</span>
                     </Link>
                   </SidebarMenuButton>

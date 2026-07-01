@@ -56,14 +56,6 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.67",
-    subtitle: "Sidebar cleanup",
-    date: "Early-July 2026",
-    changes: [
-      "Removed page icons from the sidebar navigation for a cleaner text-only layout.",
-    ],
-  },
-  {
     version: "v1.3.66",
     subtitle: "Icon polish",
     date: "Early-July 2026",
