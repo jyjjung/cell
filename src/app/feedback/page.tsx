@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.66",
+    subtitle: "Icon polish",
+    date: "Early-July 2026",
+    changes: [
+      "The sidebar toggle now uses a clearer open/close icon and stays visible in the header so you can collapse the sidebar on desktop.",
+      "Header and sidebar navigation icons now share consistent sizing and styling with the rest of the app chrome.",
+    ],
+  },
+  {
     version: "v1.3.65",
     subtitle: "Bible popup selection",
     date: "Late-June 2026",

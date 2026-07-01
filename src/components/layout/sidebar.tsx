@@ -134,7 +134,7 @@ export default function AppSidebar() {
                     )}
                   >
                     <Link href={item.href}>
-                      {item.icon && <item.icon className="h-[15px] w-[15px] shrink-0" />}
+                      {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -165,7 +165,7 @@ export default function AppSidebar() {
                     )}
                   >
                     <Link href="/admin">
-                      <Shield className="h-[15px] w-[15px] shrink-0" />
+                      <Shield className="h-4 w-4 shrink-0" />
                       <span>Admin</span>
                     </Link>
                   </SidebarMenuButton>
