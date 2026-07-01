@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.64",
+    subtitle: "Bible popup progress",
+    date: "Late-June 2026",
+    changes: [
+      "Marking a chapter complete in the Bible popup now checks off only the earliest matching plan passage instead of every repeated occurrence.",
+    ],
+  },
+  {
     version: "v1.3.63",
     date: "Late-June 2026",
     changes: [

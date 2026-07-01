@@ -189,6 +189,30 @@ export function findPlanPassageKeysForChapter(
   return keys;
 }
 
+/** Earliest incomplete plan passage key for a given chapter assignment. */
+export function findEarliestIncompletePlanPassageKeyForChapter(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): string | null {
+  if (!dailyReadings?.length) return null;
+
+  for (const day of dailyReadings) {
+    for (const passage of day.passages ?? []) {
+      const resolved = resolvePlanPassage(passage);
+      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) continue;
+
+      const key = makePassageKey(day.date, resolved.displayText);
+      if (!completedPassages.includes(key)) {
+        return key;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function isChapterMarkedCompleteInPlan(
   dailyReadings: DailyReading[] | undefined | null,
   book: string,
