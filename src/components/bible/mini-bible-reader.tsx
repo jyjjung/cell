@@ -39,7 +39,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const { currentUser } = useAuth();
   const { version, setVersion } = useBibleTextVersion();
   const { plan } = useBiblePlan();
-  const { completedPassages, markMultiplePassages } = useUserBibleChecklist();
+  const { completedPassages, markMultiplePassages, markPassageCompleteWithLegacyCleanup } = useUserBibleChecklist();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const [book, setBook] = useState(targetPassage?.book || 'Genesis');
@@ -143,7 +143,11 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
         chapter,
         completedPassages,
       );
-      await markMultiplePassages(earliestPlanKey ? [earliestPlanKey] : [chapterRef], true);
+      if (earliestPlanKey) {
+        await markPassageCompleteWithLegacyCleanup(earliestPlanKey, chapterRef);
+      } else {
+        await markMultiplePassages([chapterRef], true);
+      }
     } catch (e) {
       console.error('Failed to mark chapter as read:', e);
     } finally {

@@ -244,6 +244,34 @@ export function useUserBibleChecklist() {
     updateChecklistDocument(updatePayload);
   }, [currentUser, checklistDocExists]);
 
+  /**
+   * Mark one scoped passage complete while removing an old bare key that would
+   * otherwise match every repeated occurrence in the plan.
+   */
+  const markPassageCompleteWithLegacyCleanup = useCallback(async (
+    passageKey: string,
+    legacyKeyToRemove?: string,
+  ) => {
+    if (!currentUser?.uid || !passageKey) {
+      throw new Error("User not logged in or no passage to update.");
+    }
+
+    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
+
+    if (legacyKeyToRemove && completedPassages.includes(legacyKeyToRemove)) {
+      await setDoc(checklistDocRef, {
+        completedPassages: arrayRemove(legacyKeyToRemove),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    await setDoc(checklistDocRef, {
+      ...(checklistDocExists ? {} : { userId: currentUser.uid }),
+      completedPassages: arrayUnion(passageKey),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  }, [currentUser?.uid, completedPassages, checklistDocExists]);
+
 
   const markReadRange = useCallback(async (
     fromBook: string, fromChapter: number, fromVerse?: number,
@@ -312,5 +340,12 @@ export function useUserBibleChecklist() {
   }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, completedPassages]);
 
 
-  return { completedPassages, togglePassageCompletion, markReadRange, markMultiplePassages, loadingChecklist };
+  return {
+    completedPassages,
+    togglePassageCompletion,
+    markReadRange,
+    markMultiplePassages,
+    markPassageCompleteWithLegacyCleanup,
+    loadingChecklist
+  };
 }
