@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Loader2,
@@ -11,6 +12,7 @@ import {
   X,
   Languages,
   CheckSquare,
+  AlertTriangle,
   Maximize2,
   Minimize2,
 } from 'lucide-react';
@@ -24,7 +26,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import {
-  findEarliestIncompletePlanPassageKeyForChapter,
+  findIncompletePlanPassagesForChapter,
   isChapterMarkedCompleteInPlan,
 } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
@@ -50,6 +52,8 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [browsingBook, setBrowsingBook] = useState<string | null>(null);
+  const [chapterMatchOptions, setChapterMatchOptions] = useState<Array<{ key: string; date: string; displayText: string }>>([]);
+  const [selectedChapterMatchKey, setSelectedChapterMatchKey] = useState<string>('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const prefetchControllerRef = useRef<AbortController | null>(null);
@@ -77,6 +81,8 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       setChapter(targetPassage.chapter);
       setIsBrowsing(false);
       setBrowsingBook(null);
+      setChapterMatchOptions([]);
+      setSelectedChapterMatchKey('');
     }
   }, [targetPassage]);
 
@@ -111,6 +117,11 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     };
   }, [book, chapter, version, fetchPassage]);
 
+  useEffect(() => {
+    setChapterMatchOptions([]);
+    setSelectedChapterMatchKey('');
+  }, [book, chapter]);
+
   const handlePrev = () => {
     const prev = getPreviousChapterRef(book, chapter);
     if (prev) {
@@ -135,21 +146,50 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
   const handleMarkChapter = async () => {
     if (!currentUser || isChapterComplete) return;
+
+    const incompleteMatches = findIncompletePlanPassagesForChapter(
+      plan?.dailyReadings,
+      book,
+      chapter,
+      completedPassages,
+    );
+
+    if (incompleteMatches.length > 1) {
+      setChapterMatchOptions(incompleteMatches);
+      setSelectedChapterMatchKey((currentSelection) =>
+        incompleteMatches.some((match) => match.key === currentSelection)
+          ? currentSelection
+          : incompleteMatches[0].key
+      );
+      return;
+    }
+
     setIsMarkingChapter(true);
     try {
-      const earliestPlanKey = findEarliestIncompletePlanPassageKeyForChapter(
-        plan?.dailyReadings,
-        book,
-        chapter,
-        completedPassages,
-      );
-      if (earliestPlanKey) {
-        await markPassageCompleteWithLegacyCleanup(earliestPlanKey, chapterRef);
+      const selectedMatch = incompleteMatches[0];
+      if (selectedMatch) {
+        await markPassageCompleteWithLegacyCleanup(selectedMatch.key, chapterRef);
       } else {
         await markMultiplePassages([chapterRef], true);
       }
+      setChapterMatchOptions([]);
+      setSelectedChapterMatchKey('');
     } catch (e) {
       console.error('Failed to mark chapter as read:', e);
+    } finally {
+      setIsMarkingChapter(false);
+    }
+  };
+
+  const handleMarkSelectedChapterMatch = async () => {
+    if (!selectedChapterMatchKey) return;
+    setIsMarkingChapter(true);
+    try {
+      await markPassageCompleteWithLegacyCleanup(selectedChapterMatchKey, chapterRef);
+      setChapterMatchOptions([]);
+      setSelectedChapterMatchKey('');
+    } catch (e) {
+      console.error('Failed to mark selected chapter as read:', e);
     } finally {
       setIsMarkingChapter(false);
     }
@@ -292,21 +332,86 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       {!isBrowsing && (
         <div className="p-3 border-t flex flex-col gap-2 bg-background/95 backdrop-blur z-20 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
           {currentUser ? (
-            <Button
-              type="button"
-              variant={isChapterComplete ? 'secondary' : 'default'}
-              size="sm"
-              className="w-full h-9 rounded-full text-xs font-semibold"
-              onClick={() => void handleMarkChapter()}
-              disabled={isChapterComplete || isMarkingChapter}
-            >
-              {isMarkingChapter ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckSquare className="mr-2 h-3.5 w-3.5" />
-              )}
-              {isChapterComplete ? t.chapterMarkedComplete : t.markChapterAsRead}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant={isChapterComplete ? 'secondary' : 'default'}
+                size="sm"
+                className="w-full h-9 rounded-full text-xs font-semibold"
+                onClick={() => void handleMarkChapter()}
+                disabled={isChapterComplete || isMarkingChapter}
+              >
+                {isMarkingChapter ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckSquare className="mr-2 h-3.5 w-3.5" />
+                )}
+                {isChapterComplete ? t.chapterMarkedComplete : t.markChapterAsRead}
+              </Button>
+              {chapterMatchOptions.length > 1 ? (
+                <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="space-y-2">
+                      <p className="font-semibold">{t.chapterMultipleMatchesWarningTitle}</p>
+                      <p className="text-[11px] leading-relaxed text-amber-900/90 dark:text-amber-100/90">
+                        {t.chapterMultipleMatchesWarningDescription}
+                      </p>
+                    </div>
+                  </div>
+                  <RadioGroup
+                    className="mt-3 gap-2"
+                    value={selectedChapterMatchKey}
+                    onValueChange={setSelectedChapterMatchKey}
+                  >
+                    {chapterMatchOptions.map((match) => (
+                      <label
+                        key={match.key}
+                        htmlFor={match.key}
+                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-300/60 bg-background/80 p-3 dark:border-amber-700/50"
+                      >
+                        <RadioGroupItem id={match.key} value={match.key} className="mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="font-semibold">{match.displayText}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {t.chapterPlanAssignmentLabel} {match.date}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 rounded-full px-4 text-xs font-semibold"
+                      disabled={!selectedChapterMatchKey || isMarkingChapter}
+                      onClick={() => void handleMarkSelectedChapterMatch()}
+                    >
+                      {isMarkingChapter ? (
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckSquare className="mr-2 h-3.5 w-3.5" />
+                      )}
+                      {t.chapterConfirmSelectedPassage}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-full px-4 text-xs font-semibold"
+                      disabled={isMarkingChapter}
+                      onClick={() => {
+                        setChapterMatchOptions([]);
+                        setSelectedChapterMatchKey('');
+                      }}
+                    >
+                      {t.chapterSelectionCancel}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </>
           ) : null}
           <div className="flex justify-between items-center gap-2">
             <Button
