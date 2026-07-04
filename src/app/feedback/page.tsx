@@ -62,6 +62,7 @@ const changelogs = [
     changes: [
       "Worship roster assignments now send push notifications when you're added to a role, including Keys",
       "Daily duty reminders now include same-day alerts for QT, cleaning, and worship team duties",
+      "Birthday push reminders now read Firestore event dates correctly and match birthdays in the community timezone",
     ],
   },
   {
