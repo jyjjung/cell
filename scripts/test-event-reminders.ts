@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { collectEventDayReminders } from '../src/lib/event-reminders';
+import { normalizeEventFromFirestore } from '../src/lib/event-doc';
 import { EventCategory, type AppEvent, type UserProfileData } from '../src/types';
 
 const users = [
@@ -34,6 +35,7 @@ const birthdayReminders = collectEventDayReminders({
   todayIso,
   events: [birthday],
   users,
+  timeZone: 'Australia/Brisbane',
 });
 assert.equal(birthdayReminders.length, 3, 'birthday reminders go to every approved user');
 assert.ok(
@@ -77,7 +79,21 @@ const leapDay = collectEventDayReminders({
   todayIso: '2028-02-29',
   events: [leapYearBirthday],
   users,
+  timeZone: 'Australia/Brisbane',
 });
 assert.equal(leapDay.length, 3, 'Feb 29 birthday fires on leap day');
+
+const fromTimestamp = normalizeEventFromFirestore('ts-1', {
+  title: 'Taylor Swift',
+  date: { toDate: () => new Date('1995-06-26T00:00:00.000Z') },
+  category: EventCategory.Birthday,
+});
+const tsReminders = collectEventDayReminders({
+  todayIso: '2026-06-26',
+  events: [fromTimestamp],
+  users,
+  timeZone: 'Australia/Brisbane',
+});
+assert.equal(tsReminders.length, 3, 'Firestore Timestamp birthdays normalize correctly');
 
 console.log('event reminder tests passed');
