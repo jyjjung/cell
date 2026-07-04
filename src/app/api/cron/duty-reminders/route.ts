@@ -6,6 +6,7 @@ import {
   type DutyReminderPayload,
 } from '@/lib/duty-reminders';
 import { collectEventDayReminders } from '@/lib/event-reminders';
+import { normalizeEventFromFirestore } from '@/lib/event-doc';
 import { sendUserNotification } from '@/lib/server-notifications';
 import type {
   AppEvent,
@@ -90,7 +91,9 @@ export async function GET(request: NextRequest) {
     const worshipRosters = worshipSnap.docs.map(
       (d) => ({ id: d.id, ...d.data() }) as WorshipRoster,
     );
-    const events = eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as AppEvent);
+    const events = eventsSnap.docs.map((d) =>
+      normalizeEventFromFirestore(d.id, d.data() as Record<string, unknown>),
+    );
     const users = usersSnap.docs
       .map((d) => ({ uid: d.id, ...d.data() }) as UserProfileData)
       .filter((u) => u.isApproved !== false);
@@ -102,7 +105,7 @@ export async function GET(request: NextRequest) {
       qtRoster,
       worshipRosters,
     });
-    const eventReminders = collectEventDayReminders({ todayIso, events, users });
+    const eventReminders = collectEventDayReminders({ todayIso, events, users, timeZone });
 
     let dutySent = 0;
     let dutySkipped = 0;
