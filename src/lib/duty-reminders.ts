@@ -4,7 +4,11 @@ import type { CleaningDay, CleaningRosterEntry, QTRosterEntry, WorshipRoster } f
 
 export const DUTY_REMINDER_WEEK_WINDOW = 7;
 export const DUTY_REMINDER_DAY_BEFORE = 1;
-export type DutyReminderOffset = typeof DUTY_REMINDER_WEEK_WINDOW | typeof DUTY_REMINDER_DAY_BEFORE;
+export const DUTY_REMINDER_TODAY = 0;
+export type DutyReminderOffset =
+  | typeof DUTY_REMINDER_WEEK_WINDOW
+  | typeof DUTY_REMINDER_DAY_BEFORE
+  | typeof DUTY_REMINDER_TODAY;
 export type DutyKind = 'cleaning' | 'qt' | 'worship';
 
 export interface DutyReminderPayload {
@@ -96,6 +100,31 @@ function pushDayBeforeReminder(
   });
 }
 
+function pushTodayReminder(
+  results: DutyReminderPayload[],
+  params: {
+    userId: string;
+    kind: DutyKind;
+    dutyDate: string;
+    titlePrefix: string;
+    detail: string;
+    relatedUrl: string;
+  },
+) {
+  const { userId, kind, dutyDate, titlePrefix, detail, relatedUrl } = params;
+  const displayDate = formatDisplayDate(dutyDate);
+  results.push({
+    userId,
+    kind,
+    dutyDate,
+    daysBefore: DUTY_REMINDER_TODAY,
+    title: `${titlePrefix} today`,
+    message: `${detail} today — ${displayDate}.`,
+    relatedUrl,
+    dedupeId: buildDutyReminderDedupeId(userId, kind, dutyDate, DUTY_REMINDER_TODAY),
+  });
+}
+
 export function collectDutyReminders(params: {
   todayIso: string;
   cleaningRoster: CleaningRosterEntry[];
@@ -109,7 +138,7 @@ export function collectDutyReminders(params: {
 
   for (const entry of cleaningRoster) {
     const daysUntil = daysUntilDuty(todayIso, entry.date);
-    if (daysUntil < DUTY_REMINDER_DAY_BEFORE || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
+    if (daysUntil < DUTY_REMINDER_TODAY || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
     if (!entry.assignedUserIds?.length) continue;
 
     const dayName = cleaningDaysMap.get(entry.dayId);
@@ -138,13 +167,23 @@ export function collectDutyReminders(params: {
           relatedUrl: '/cleaning-roster',
         });
       }
+      if (daysUntil === DUTY_REMINDER_TODAY) {
+        pushTodayReminder(results, {
+          userId,
+          kind: 'cleaning',
+          dutyDate: entry.date,
+          titlePrefix: 'Cleaning duty',
+          detail,
+          relatedUrl: '/cleaning-roster',
+        });
+      }
     }
   }
 
   for (const entry of qtRoster) {
     if (!entry.userId) continue;
     const daysUntil = daysUntilDuty(todayIso, entry.date);
-    if (daysUntil < DUTY_REMINDER_DAY_BEFORE || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
+    if (daysUntil < DUTY_REMINDER_TODAY || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
 
     const topic = entry.title || entry.passage || entry.personName;
     const detail = `You're sharing QT${topic ? `: ${topic}` : ''}`;
@@ -170,6 +209,16 @@ export function collectDutyReminders(params: {
         relatedUrl: '/qt',
       });
     }
+    if (daysUntil === DUTY_REMINDER_TODAY) {
+      pushTodayReminder(results, {
+        userId: entry.userId,
+        kind: 'qt',
+        dutyDate: entry.date,
+        titlePrefix: 'QT sharing',
+        detail,
+        relatedUrl: '/qt',
+      });
+    }
   }
 
   const worshipByDate = new Map<string, WorshipRoster[]>();
@@ -181,7 +230,7 @@ export function collectDutyReminders(params: {
 
   for (const [dutyDate, rostersOnDate] of worshipByDate) {
     const daysUntil = daysUntilDuty(todayIso, dutyDate);
-    if (daysUntil < DUTY_REMINDER_DAY_BEFORE || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
+    if (daysUntil < DUTY_REMINDER_TODAY || daysUntil > DUTY_REMINDER_WEEK_WINDOW) continue;
 
     const worshipByUser = new Map<string, { roles: string[]; rosterName: string }>();
     for (const roster of rostersOnDate) {
@@ -223,6 +272,16 @@ export function collectDutyReminders(params: {
           relatedUrl: '/worship',
         });
       }
+      if (daysUntil === DUTY_REMINDER_TODAY) {
+        pushTodayReminder(results, {
+          userId,
+          kind: 'worship',
+          dutyDate,
+          titlePrefix: 'Worship team',
+          detail,
+          relatedUrl: '/worship',
+        });
+      }
     }
   }
 
@@ -232,7 +291,7 @@ export function collectDutyReminders(params: {
 /** @internal test helper */
 export function getDutyDatesInReminderWindow(todayIso: string): { from: string; to: string } {
   return {
-    from: format(addDays(parseDay(todayIso), DUTY_REMINDER_DAY_BEFORE), 'yyyy-MM-dd'),
+    from: format(addDays(parseDay(todayIso), DUTY_REMINDER_TODAY), 'yyyy-MM-dd'),
     to: format(addDays(parseDay(todayIso), DUTY_REMINDER_WEEK_WINDOW), 'yyyy-MM-dd'),
   };
 }

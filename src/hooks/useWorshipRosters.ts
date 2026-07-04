@@ -10,12 +10,27 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useScheduleData } from '@/contexts/schedule-data-context';
+import { useNotifications } from '@/hooks/use-notifications';
 
 const ROSTERS_COLLECTION = 'worshipRosters';
+
+function getUserRoleAssignments(slots: WorshipRosterSlot[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const slot of slots) {
+    for (const member of slot.members ?? []) {
+      if (!member.userId) continue;
+      const roles = map.get(member.userId) ?? [];
+      roles.push(slot.role);
+      map.set(member.userId, roles);
+    }
+  }
+  return map;
+}
 
 export function useWorshipRosters(enabled = true) {
   const { currentUser } = useAuth();
   const schedule = useScheduleData();
+  const { createNotification } = useNotifications();
   const [localRosters, setLocalRosters] = useState<WorshipRoster[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
 
@@ -65,11 +80,33 @@ export function useWorshipRosters(enabled = true) {
     rosterId: string,
     slots: WorshipRosterSlot[],
   ) => {
+    const existingRoster = rosters.find((r) => r.id === rosterId);
+    const previousAssignments = getUserRoleAssignments(existingRoster?.slots ?? []);
+    const nextAssignments = getUserRoleAssignments(slots);
+
     await updateDoc(doc(db, ROSTERS_COLLECTION, rosterId), {
       slots,
       updatedAt: serverTimestamp(),
     });
-  }, []);
+
+    const rosterName = existingRoster?.name ?? 'Worship roster';
+    const rosterDate = existingRoster?.date ?? '';
+
+    for (const [userId, roles] of nextAssignments) {
+      const previousRoles = previousAssignments.get(userId) ?? [];
+      const addedRoles = roles.filter((role) => !previousRoles.includes(role));
+      if (addedRoles.length === 0) continue;
+
+      createNotification({
+        title: 'New Worship Assignment',
+        message: `You've been added to ${rosterName}${rosterDate ? ` on ${rosterDate}` : ''}: ${addedRoles.join(', ')}.`,
+        type: 'reminder',
+        isGlobal: false,
+        userId,
+        relatedUrl: '/worship',
+      });
+    }
+  }, [rosters, createNotification]);
 
   const updateRosterMeta = useCallback(async (
     rosterId: string,
