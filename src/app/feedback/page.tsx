@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.67",
+    subtitle: "Worship & duty reminders",
+    date: "Early-July 2026",
+    changes: [
+      "Worship roster assignments now send push notifications when you're added to a role, including Keys",
+      "Daily duty reminders now include same-day alerts for QT, cleaning, and worship team duties",
+    ],
+  },
+  {
     version: "v1.3.66",
     subtitle: "Icon polish",
     date: "Early-July 2026",
