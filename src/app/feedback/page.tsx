@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.68",
+    subtitle: "Login fix",
+    date: "Early-July 2026",
+    changes: [
+      "Sign-in now waits for your profile to load before redirecting, so you won't land back on the guest home page after logging in",
+      "Login shows a clear error if your account exists but your profile is missing, instead of silently failing",
+      "The login page shows a loading spinner instead of a blank screen while your session is being checked",
+    ],
+  },
+  {
     version: "v1.3.67",
     subtitle: "Worship & duty reminders",
     date: "Early-July 2026",

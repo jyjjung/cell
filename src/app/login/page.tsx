@@ -6,6 +6,7 @@ import LoginForm from '@/components/auth/login-form';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
 
@@ -21,12 +22,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isMounted && !loadingAuth && currentUser) {
-      router.push('/'); 
+      const destination = currentUser.isApproved || currentUser.isAdmin ? '/' : '/pending-approval';
+      router.replace(destination);
     }
   }, [currentUser, loadingAuth, router, isMounted]);
 
    if (!isMounted || loadingAuth || (isMounted && !loadingAuth && currentUser)) {
-    return null;
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+      </div>
+    );
   }
 
   return (

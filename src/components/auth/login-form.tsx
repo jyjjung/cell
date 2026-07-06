@@ -37,18 +37,25 @@ export default function LoginForm() {
     form.clearErrors();
 
     try {
-      await signInUser(data.email, data.password);
-      router.push('/');
+      const appUser = await signInUser(data.email, data.password);
+      if (!appUser) {
+        throw new Error('Sign-in failed. Please try again.');
+      }
+
+      const destination = appUser.isApproved || appUser.isAdmin ? '/' : '/pending-approval';
+      router.replace(destination);
     } catch (error: any) {
-      setIsLoading(false);
       let message = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        form.setError("root", { type: "manual", message: "Invalid credentials. Please check your email and password." });
+        message = "Invalid credentials. Please check your email and password.";
       } else if (error.code === 'auth/too-many-requests') {
-        form.setError("root", { type: "manual", message: "Access temporarily disabled due to too many login attempts. Please reset your password or try again later." });
-      } else {
-         form.setError("root", { type: "manual", message });
+        message = "Access temporarily disabled due to too many login attempts. Please reset your password or try again later.";
+      } else if (error.code === 'auth/profile-not-found') {
+        message = error.message;
       }
+      form.setError("root", { type: "manual", message });
+    } finally {
+      setIsLoading(false);
     }
   }
 

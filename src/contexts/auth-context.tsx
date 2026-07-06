@@ -13,7 +13,7 @@ import {
   type User as FirebaseUser,
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
 import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRole } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
@@ -72,6 +72,45 @@ const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   nextReading: true,
 };
 
+function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData): AppUser {
+  const hasName = !!(profileData.firstName && profileData.lastName);
+
+  return {
+    ...firebaseUser,
+    firstName: profileData.firstName,
+    lastName: profileData.lastName,
+    displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
+    roleIds: profileData.roleIds || [],
+    showInCommunityProgress: profileData.showInCommunityProgress ?? true,
+    preferredLanguage: profileData.preferredLanguage || 'en',
+    colorPalette: profileData.colorPalette,
+    surfaceBackground: profileData.surfaceBackground,
+    appTheme: profileData.appTheme,
+    glassEnabled: profileData.glassEnabled,
+    typography: profileData.typography,
+    bibleTextVersion: profileData.bibleTextVersion,
+    dashboard: {
+      layouts: profileData.dashboard?.layouts || {},
+      widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) },
+    },
+    isAdmin: profileData.isAdmin || false,
+    isApproved: profileData.isApproved || false,
+    isYouth: profileData.isYouth || false,
+    avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+    avatarChangesEnabled: profileData.avatarChangesEnabled,
+    fcmTokens: profileData.fcmTokens || [],
+  } as AppUser;
+}
+
+async function fetchUserProfile(uid: string) {
+  const userDocRef = doc(db, USERS_COLLECTION, uid);
+  try {
+    return await getDocFromServer(userDocRef);
+  } catch {
+    return getDoc(userDocRef);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -91,42 +130,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (firebaseUser) {
+        setLoadingAuth(true);
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
         
         unsubscribeFromProfile = onSnapshot(userDocRef, (userDocSnap) => {
           if (userDocSnap.exists()) {
             const profileData = userDocSnap.data() as UserProfileData;
-            
-            const hasName = !!(profileData.firstName && profileData.lastName);
-
-            setCurrentUser({
-              ...firebaseUser,
-              firstName: profileData.firstName,
-              lastName: profileData.lastName,
-              displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
-              roleIds: profileData.roleIds || [],
-              showInCommunityProgress: profileData.showInCommunityProgress ?? true,
-              preferredLanguage: profileData.preferredLanguage || 'en',
-              colorPalette: profileData.colorPalette,
-              surfaceBackground: profileData.surfaceBackground,
-              appTheme: profileData.appTheme,
-              glassEnabled: profileData.glassEnabled,
-              typography: profileData.typography,
-              bibleTextVersion: profileData.bibleTextVersion,
-              dashboard: { 
-                layouts: profileData.dashboard?.layouts || {},
-                widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
-              },
-              isAdmin: profileData.isAdmin || false,
-              isApproved: profileData.isApproved || false,
-              isYouth: profileData.isYouth || false,
-              avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
-              avatarChangesEnabled: profileData.avatarChangesEnabled,
-              fcmTokens: profileData.fcmTokens || [],
-            } as AppUser);
+            setCurrentUser(buildAppUser(firebaseUser, profileData));
             setIsAdmin(profileData.isAdmin || false);
+            setLoadingAuth(false);
+          } else if (!userDocSnap.metadata.fromCache) {
+            console.error("User profile not found for authenticated account:", firebaseUser.uid);
+            setCurrentUser(null);
+            setIsAdmin(false);
+            setLoadingAuth(false);
           }
-          setLoadingAuth(false);
         }, (error) => {
             console.error("Error listening to user profile:", error);
             setCurrentUser(null);
@@ -269,7 +287,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInUser = async (email: string, password: string): Promise<AppUser | null> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      return userCredential.user as AppUser;
+      const firebaseUser = userCredential.user;
+      const userDocSnap = await fetchUserProfile(firebaseUser.uid);
+
+      if (!userDocSnap.exists()) {
+        await signOut(auth);
+        const profileError = new Error(
+          'Your account exists but your profile could not be loaded. Please contact an administrator.',
+        );
+        (profileError as Error & { code?: string }).code = 'auth/profile-not-found';
+        throw profileError;
+      }
+
+      const profileData = userDocSnap.data() as UserProfileData;
+      return buildAppUser(firebaseUser, profileData);
     } catch (error) {
       console.error("Error signing in user:", error);
       throw error;
