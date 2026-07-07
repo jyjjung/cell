@@ -248,9 +248,17 @@ export function ContinuousSetlistViewer({
     jumpToSection(index);
   };
 
+  useEffect(() => {
+    sectionControlsRef.current = sectionControlsMap.current.get(activeSection) ?? null;
+    setSectionScale(1);
+  }, [activeSection]);
+
   const registerSectionControls = useCallback((sectionIdx: number, controls: SectionZoomControls | null) => {
-    if (sectionIdx !== activeSection) return;
-    sectionControlsRef.current = controls;
+    if (controls) sectionControlsMap.current.set(sectionIdx, controls);
+    else sectionControlsMap.current.delete(sectionIdx);
+    if (sectionIdx === activeSection) {
+      sectionControlsRef.current = controls;
+    }
   }, [activeSection]);
 
   const controlBtn = 'p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30';
@@ -369,12 +377,13 @@ export function ContinuousSetlistViewer({
 
                 {(section.imageUrls ?? []).length > 0 ? (
                   <ZoomableChordSection
+                    sectionIdx={sectionIdx}
                     imageUrls={section.imageUrls ?? []}
                     songTitle={section.songTitle}
                     onScaleChange={(scale) => {
                       if (isActive) setSectionScale(scale);
                     }}
-                    onRegisterControls={(controls) => registerSectionControls(sectionIdx, controls)}
+                    onRegisterControls={registerSectionControls}
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-6 py-10 text-center">
