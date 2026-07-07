@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import {
   TransformWrapper,
   TransformComponent,
+  type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch';
 import {
   X, Download, ZoomIn, ZoomOut, Maximize, FileText, Headphones,
@@ -15,12 +16,6 @@ import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
-
-type SectionZoomControls = {
-  zoomIn: (step?: number) => void;
-  zoomOut: (step?: number) => void;
-  resetTransform: () => void;
-};
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -73,88 +68,62 @@ function ChordPage({ url, pageIndex, songTitle }: { url: string; pageIndex: numb
   );
 }
 
-function ZoomableChordSectionInner({
-  imageUrls,
-  songTitle,
+/** Counter-scale title bars so they stay readable while chord sheets zoom. */
+function SectionTitleBar({
+  scale,
   sectionIdx,
-  zoomIn,
-  zoomOut,
-  resetTransform,
-  onScaleChange,
-  onRegisterControls,
+  title,
+  keyName,
+  hasTracks,
+  listenOpen,
+  isActive,
+  onListen,
 }: {
-  imageUrls: string[];
-  songTitle: string;
+  scale: number;
   sectionIdx: number;
-  zoomIn: (step?: number) => void;
-  zoomOut: (step?: number) => void;
-  resetTransform: () => void;
-  onScaleChange: (scale: number) => void;
-  onRegisterControls: (sectionIdx: number, controls: SectionZoomControls | null) => void;
+  title: string;
+  keyName: ChordKey;
+  hasTracks: boolean;
+  listenOpen: boolean;
+  isActive: boolean;
+  onListen: () => void;
 }) {
-  useEffect(() => {
-    const controls = { zoomIn, zoomOut, resetTransform };
-    onRegisterControls(sectionIdx, controls);
-    return () => onRegisterControls(sectionIdx, null);
-  }, [sectionIdx, zoomIn, zoomOut, resetTransform, onRegisterControls]);
+  const counterScaled = scale > 1.01;
 
   return (
-    <TransformComponent wrapperClass="!w-full" contentClass="!w-full">
-      <div className="flex flex-col gap-3">
-        {imageUrls.map((url, pageIdx) => (
-          <ChordPage
-            key={`${url}-${pageIdx}`}
-            url={url}
-            pageIndex={pageIdx}
-            songTitle={songTitle}
-          />
-        ))}
-      </div>
-    </TransformComponent>
-  );
-}
-
-function ZoomableChordSection({
-  sectionIdx,
-  imageUrls,
-  songTitle,
-  onScaleChange,
-  onRegisterControls,
-}: {
-  sectionIdx: number;
-  imageUrls: string[];
-  songTitle: string;
-  onScaleChange: (scale: number) => void;
-  onRegisterControls: (sectionIdx: number, controls: SectionZoomControls | null) => void;
-}) {
-  if (imageUrls.length === 0) return null;
-
-  return (
-    <TransformWrapper
-      initialScale={1}
-      minScale={1}
-      maxScale={5}
-      centerOnInit={false}
-      limitToBounds
-      centerZoomedOut={false}
-      wheel={{ step: 0.12, smoothStep: 0.004 }}
-      pinch={{ step: 6 }}
-      panning={{ velocityDisabled: false }}
-      onTransformed={(_, state) => onScaleChange(state.scale)}
+    <div
+      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/90 px-4 py-2.5 backdrop-blur-md"
+      style={counterScaled ? {
+        transform: `scale(${1 / scale})`,
+        transformOrigin: 'top center',
+        width: `${scale * 100}%`,
+        marginLeft: `${((1 - scale) / 2) * 100}%`,
+      } : undefined}
     >
-      {({ zoomIn, zoomOut, resetTransform }) => (
-        <ZoomableChordSectionInner
-          sectionIdx={sectionIdx}
-          imageUrls={imageUrls}
-          songTitle={songTitle}
-          zoomIn={zoomIn}
-          zoomOut={zoomOut}
-          resetTransform={resetTransform}
-          onScaleChange={onScaleChange}
-          onRegisterControls={onRegisterControls}
-        />
-      )}
-    </TransformWrapper>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-white">
+          {sectionIdx + 1}. {title}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <KeyBadge keyName={keyName} />
+        {hasTracks && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onListen(); }}
+            className={cn(
+              'setlist-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
+              listenOpen && isActive
+                ? 'border-rose-400/40 bg-rose-500/20 text-rose-200'
+                : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/20',
+            )}
+          >
+            <Headphones className="h-3.5 w-3.5" />
+            Listen
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -169,56 +138,66 @@ export function ContinuousSetlistViewer({
   startIndex?: number;
   onClose: () => void;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const sectionControlsMap = useRef<Map<number, SectionZoomControls>>(new Map());
-  const sectionControlsRef = useRef<SectionZoomControls | null>(null);
-  const didInitialScroll = useRef(false);
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const controlsRef = useRef<{
+    zoomIn: (step?: number) => void;
+    zoomOut: (step?: number) => void;
+    resetTransform: () => void;
+    zoomToElement: (node: HTMLElement, scale?: number, animationTime?: number) => void;
+  } | null>(null);
 
+  const [scale, setScale] = useState(1);
   const [activeSection, setActiveSection] = useState(startIndex);
-  const [sectionScale, setSectionScale] = useState(1);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
+  const didInitialScroll = useRef(false);
 
   const activeSlide = slides[activeSection] ?? slides[0];
-  const isZoomed = sectionScale > 1.05;
-  const zoomPct = Math.round(sectionScale * 100);
+  const isZoomed = scale > 1.05;
+  const zoomPct = Math.round(scale * 100);
 
-  const jumpToSection = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
+  const centerContentHorizontally = useCallback((ref: ReactZoomPanPinchRef) => {
+    const wrapper = ref.instance.wrapperComponent;
+    const content = ref.instance.contentComponent;
+    if (!wrapper || !content) return;
+    const x = Math.max(0, (wrapper.offsetWidth - content.offsetWidth) / 2);
+    ref.setTransform(x, ref.instance.transformState.positionY, ref.instance.transformState.scale);
+  }, []);
+
+  const updateActiveSectionFromView = useCallback(() => {
+    const wrapper = transformRef.current?.instance.wrapperComponent;
+    if (!wrapper) return;
+    const anchor = wrapper.getBoundingClientRect().top + 88;
+    let current = 0;
+    for (let i = 0; i < slides.length; i++) {
+      const el = document.getElementById(`setlist-section-${i}`);
+      if (el && el.getBoundingClientRect().top <= anchor) current = i;
+    }
+    setActiveSection((prev) => (prev === current ? prev : current));
+  }, [slides.length]);
+
+  const jumpToSection = useCallback((index: number, animationTime = 280) => {
     const clamped = Math.max(0, Math.min(index, slides.length - 1));
     setActiveSection(clamped);
     setActiveTrackIdx(0);
-    setSectionScale(1);
-    sectionControlsRef.current?.resetTransform();
-    document.getElementById(`setlist-section-${clamped}`)?.scrollIntoView({ behavior, block: 'start' });
-  }, [slides.length]);
+    const el = document.getElementById(`setlist-section-${clamped}`);
+    if (el && controlsRef.current) {
+      controlsRef.current.zoomToElement(el, scale, animationTime);
+    }
+  }, [slides.length, scale]);
 
   useEffect(() => {
     if (didInitialScroll.current) return;
     const timer = window.setTimeout(() => {
-      if (startIndex > 0) jumpToSection(startIndex, 'instant');
+      if (startIndex > 0) {
+        jumpToSection(startIndex, 0);
+      } else if (transformRef.current) {
+        centerContentHorizontally(transformRef.current);
+      }
       didInitialScroll.current = true;
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [startIndex, jumpToSection]);
-
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-
-    const onScroll = () => {
-      const anchor = container.getBoundingClientRect().top + 96;
-      let current = 0;
-      for (let i = 0; i < slides.length; i++) {
-        const el = document.getElementById(`setlist-section-${i}`);
-        if (el && el.getBoundingClientRect().top <= anchor) current = i;
-      }
-      setActiveSection((prev) => (prev === current ? prev : current));
-    };
-
-    container.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => container.removeEventListener('scroll', onScroll);
-  }, [slides.length]);
+  }, [startIndex, jumpToSection, centerContentHorizontally]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -243,23 +222,11 @@ export function ContinuousSetlistViewer({
   };
 
   const openListenForSection = (index: number) => {
+    setActiveSection(index);
     setActiveTrackIdx(0);
     setListenOpen(true);
     jumpToSection(index);
   };
-
-  useEffect(() => {
-    sectionControlsRef.current = sectionControlsMap.current.get(activeSection) ?? null;
-    setSectionScale(1);
-  }, [activeSection]);
-
-  const registerSectionControls = useCallback((sectionIdx: number, controls: SectionZoomControls | null) => {
-    if (controls) sectionControlsMap.current.set(sectionIdx, controls);
-    else sectionControlsMap.current.delete(sectionIdx);
-    if (sectionIdx === activeSection) {
-      sectionControlsRef.current = controls;
-    }
-  }, [activeSection]);
 
   const controlBtn = 'p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30';
 
@@ -293,7 +260,7 @@ export function ContinuousSetlistViewer({
               {isZoomed && (
                 <button
                   type="button"
-                  onClick={() => sectionControlsRef.current?.resetTransform()}
+                  onClick={() => controlsRef.current?.resetTransform()}
                   className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
                 >
                   {zoomPct}% · Reset
@@ -305,8 +272,8 @@ export function ContinuousSetlistViewer({
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            onClick={() => sectionControlsRef.current?.zoomOut(0.35)}
-            disabled={sectionScale <= 1.01}
+            onClick={() => controlsRef.current?.zoomOut(0.35)}
+            disabled={scale <= 1.01}
             className={controlBtn}
             aria-label="Zoom out"
           >
@@ -314,7 +281,7 @@ export function ContinuousSetlistViewer({
           </button>
           <button
             type="button"
-            onClick={() => sectionControlsRef.current?.zoomIn(0.35)}
+            onClick={() => controlsRef.current?.zoomIn(0.35)}
             className={controlBtn}
             aria-label="Zoom in"
           >
@@ -322,7 +289,7 @@ export function ContinuousSetlistViewer({
           </button>
           <button
             type="button"
-            onClick={() => sectionControlsRef.current?.resetTransform()}
+            onClick={() => controlsRef.current?.resetTransform()}
             className={cn(controlBtn, 'hidden sm:inline-flex')}
             aria-label="Reset zoom"
           >
@@ -334,77 +301,87 @@ export function ContinuousSetlistViewer({
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-      >
-        <div className="mx-auto flex w-[min(100vw-1.5rem,48rem)] flex-col gap-8 px-3 pb-4 pt-1">
-          {slides.map((section, sectionIdx) => {
-            const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
-            const isActive = sectionIdx === activeSection;
-
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <TransformWrapper
+          ref={transformRef}
+          initialScale={1}
+          minScale={1}
+          maxScale={5}
+          centerOnInit={false}
+          limitToBounds
+          centerZoomedOut={false}
+          alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
+          wheel={{ step: 0.12, smoothStep: 0.004 }}
+          pinch={{ step: 6 }}
+          panning={{ velocityDisabled: false, excluded: ['setlist-control'] }}
+          onInit={(ref) => {
+            transformRef.current = ref;
+            window.requestAnimationFrame(() => centerContentHorizontally(ref));
+          }}
+          onTransformed={(_, state) => {
+            setScale(state.scale);
+            updateActiveSectionFromView();
+          }}
+        >
+          {({ zoomIn, zoomOut, resetTransform, zoomToElement }) => {
+            controlsRef.current = { zoomIn, zoomOut, resetTransform, zoomToElement };
             return (
-              <section
-                key={`${section.songTitle}-${section.key}-${sectionIdx}`}
-                id={`setlist-section-${sectionIdx}`}
-                className="flex w-full flex-col gap-3"
+              <TransformComponent
+                wrapperClass="!w-full !h-full"
+                contentClass="!w-fit !max-w-full"
               >
-                <div className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/90 px-4 py-2.5 backdrop-blur-md">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {sectionIdx + 1}. {section.songTitle}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <KeyBadge keyName={section.key} />
-                    {hasTracks && (
-                      <button
-                        type="button"
-                        onClick={() => openListenForSection(sectionIdx)}
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
-                          listenOpen && isActive
-                            ? 'border-rose-400/40 bg-rose-500/20 text-rose-200'
-                            : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/20',
+                <div className="flex w-[min(100vw-1.5rem,48rem)] flex-col gap-8 px-3 pb-4 pt-1">
+                  {slides.map((section, sectionIdx) => {
+                    const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
+                    return (
+                      <section
+                        key={`${section.songTitle}-${section.key}-${sectionIdx}`}
+                        id={`setlist-section-${sectionIdx}`}
+                        className="flex w-full flex-col gap-3"
+                      >
+                        <SectionTitleBar
+                          scale={scale}
+                          sectionIdx={sectionIdx}
+                          title={section.songTitle}
+                          keyName={section.key}
+                          hasTracks={hasTracks}
+                          listenOpen={listenOpen}
+                          isActive={activeSection === sectionIdx}
+                          onListen={() => openListenForSection(sectionIdx)}
+                        />
+                        {(section.imageUrls ?? []).length > 0 ? (
+                          (section.imageUrls ?? []).map((url, pageIdx) => (
+                            <ChordPage
+                              key={`${url}-${pageIdx}`}
+                              url={url}
+                              pageIndex={pageIdx}
+                              songTitle={section.songTitle}
+                            />
+                          ))
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-6 py-10 text-center">
+                            <FileText className="h-8 w-8 text-white/25" />
+                            <p className="text-sm text-white/50">No chord sheets for this song</p>
+                            {hasTracks && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); openListenForSection(sectionIdx); }}
+                                className="setlist-control mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white"
+                              >
+                                <Headphones className="h-4 w-4" />
+                                Play reference track
+                              </button>
+                            )}
+                          </div>
                         )}
-                      >
-                        <Headphones className="h-3.5 w-3.5" />
-                        Listen
-                      </button>
-                    )}
-                  </div>
+                      </section>
+                    );
+                  })}
                 </div>
-
-                {(section.imageUrls ?? []).length > 0 ? (
-                  <ZoomableChordSection
-                    sectionIdx={sectionIdx}
-                    imageUrls={section.imageUrls ?? []}
-                    songTitle={section.songTitle}
-                    onScaleChange={(scale) => {
-                      if (isActive) setSectionScale(scale);
-                    }}
-                    onRegisterControls={registerSectionControls}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-6 py-10 text-center">
-                    <FileText className="h-8 w-8 text-white/25" />
-                    <p className="text-sm text-white/50">No chord sheets for this song</p>
-                    {hasTracks && (
-                      <button
-                        type="button"
-                        onClick={() => openListenForSection(sectionIdx)}
-                        className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white"
-                      >
-                        <Headphones className="h-4 w-4" />
-                        Play reference track
-                      </button>
-                    )}
-                  </div>
-                )}
-              </section>
+              </TransformComponent>
             );
-          })}
-        </div>
+          }}
+        </TransformWrapper>
       </div>
 
       <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 bg-black/90 px-4 pb-6 pt-3 backdrop-blur-md">

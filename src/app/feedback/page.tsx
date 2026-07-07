@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.77",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Restored natural pinch-zoom and panning across the full setlist in chat",
+      "Song titles stay readable at a fixed size while chord sheets zoom",
+    ],
+  },
+  {
     version: "v1.3.76",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
