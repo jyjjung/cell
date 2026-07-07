@@ -53,12 +53,18 @@ export default function SignupForm() {
       router.push('/');
     } catch (error: any) {
       setIsLoading(false);
-      let message = "An unexpected error occurred. Please try again.";
       if (error.code === 'auth/email-already-in-use') {
         form.setError("email", { type: "manual", message: "This email address is already in use." });
-      } else {
-        form.setError("root", { type: "manual", message });
+        return;
       }
+      if (error.code === 'auth/invite-invalid') {
+        form.setError("root", {
+          type: "manual",
+          message: `${error.message} Your account was created and is waiting for admin approval.`,
+        });
+        return;
+      }
+      form.setError("root", { type: "manual", message: "An unexpected error occurred. Please try again." });
     }
   }
 

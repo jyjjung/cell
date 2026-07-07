@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { getStatusLabel } from '@/lib/formatting';
 import { resolveUserIdByEmail, sendUserNotification } from '@/lib/server-notifications';
+import { userHasAdminAccess } from '@/lib/server-admin-access';
 
 const FEEDBACK_ADMIN_EMAIL =
   process.env.FEEDBACK_NOTIFY_EMAIL || 'yejoon7154@gmail.com';
@@ -44,8 +45,7 @@ export async function POST(request: NextRequest) {
       try {
         const decoded = await adminAuth.verifyIdToken(token);
         actorUid = decoded.uid;
-        const actorDoc = await adminDb.collection('users').doc(actorUid).get();
-        actorIsAdmin = !!actorDoc.data()?.isAdmin;
+        actorIsAdmin = await userHasAdminAccess(adminDb, actorUid);
       } catch {
         return NextResponse.json({ error: 'Unauthorized: Invalid token.' }, { status: 401 });
       }

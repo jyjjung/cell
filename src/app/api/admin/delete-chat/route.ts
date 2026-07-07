@@ -4,6 +4,7 @@ import type { App as FirebaseAdminApp } from 'firebase-admin/app';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { userHasAdminAccess } from '@/lib/server-admin-access';
 
 function initializeAdminApp(): FirebaseAdminApp {
   const existingApp = getApps().find(app => app.name === 'firebase-admin-delete-chat');
@@ -43,8 +44,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized: Invalid token.' }, { status: 401 });
     }
     
-    const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    if (!callerDoc.exists || !callerDoc.data()?.isAdmin) {
+    const callerIsAdmin = await userHasAdminAccess(adminDb, decodedToken.uid);
+    if (!callerIsAdmin) {
       return NextResponse.json({ error: 'Forbidden: Caller is not an admin.' }, { status: 403 });
     }
 

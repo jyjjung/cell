@@ -56,6 +56,22 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.70",
+    subtitle: "Safer invites",
+    date: "Early-July 2026",
+    changes: [
+      "Invite links are now single-use, expire after 7 days, and can be locked to one email",
+      "Invites are redeemed on the server instead of auto-approving anyone with the link",
+    ],
+  },
+  {
+    version: "v1.3.69",
+    date: "Early-July 2026",
+    changes: [
+      "The Admin role now grants admin access, matching the existing Leader role behavior",
+    ],
+  },
+  {
     version: "v1.3.68",
     subtitle: "Invites & signup alerts",
     date: "Early-July 2026",

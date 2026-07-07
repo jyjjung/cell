@@ -25,6 +25,12 @@ export interface AppInvite {
   label?: string;
   createdAt?: Timestamp;
   createdBy?: string;
+  allowedEmail?: string | null;
+  expiresAt?: Timestamp | null;
+  maxUses?: number;
+  useCount?: number;
+  usedBy?: string[];
+  lastUsedAt?: Timestamp;
 }
 
 export enum EventCategory {
