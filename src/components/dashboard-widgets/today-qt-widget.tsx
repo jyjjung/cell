@@ -2,17 +2,15 @@
 
 import { useMemo, useCallback } from 'react';
 import { format, startOfToday } from 'date-fns';
-import { Loader2, ArrowRight, BookOpenText } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Loader2, BookOpenText } from 'lucide-react';
+import Link from 'next/link';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
-import { usePageLoading } from '@/contexts/page-loading-context';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parseQtPassageForNavigation } from '@/lib/bible-navigation';
 import { translations } from '@/lib/translations';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export default function TodayQtWidget() {
@@ -20,8 +18,6 @@ export default function TodayQtWidget() {
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const { roster, loading: rosterLoading } = useQTRoster();
   const { allUsers, loading: usersLoading } = useAllUsers();
-  const router = useRouter();
-  const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
 
   const todayStr = format(startOfToday(), 'yyyy-MM-dd');
@@ -49,71 +45,54 @@ export default function TodayQtWidget() {
     if (parsed) openBibleReader(parsed.book, parsed.chapter);
   }, [todayEntry?.passage, openBibleReader]);
 
-  const handleGoToQt = () => {
-    setIsPageLoading(true);
-    router.push('/qt');
-  };
-
   const loading = rosterLoading || usersLoading || loadingAuth;
 
   return (
-    <div className="widget-surface relative flex h-full flex-col">
-      <div className="panel-header">
-        <div className="min-w-0">
-          <h3 className="panel-title">{t.todaysQt}</h3>
-          <p className="panel-subtitle">{t.qtSharing}</p>
-        </div>
-      </div>
-
-      <div className="flex-grow">
-        {loading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground opacity-40" />
-          </div>
-        ) : !todayEntry ? (
-          <div className="flex flex-col items-start gap-1 py-2">
-            <p className="text-sm font-medium text-foreground">{t.noQtToday}</p>
-            <p className="text-sm text-muted-foreground">{t.nothingPlannedToday}</p>
-          </div>
-        ) : (
-          <div className="stack-gap-sm">
-            {sharerName && (
-              <p className="text-micro-label text-muted-foreground">{sharerName}</p>
-            )}
-            {todayEntry.title && (
-              <p className="text-sm font-semibold leading-snug text-foreground">{todayEntry.title}</p>
-            )}
-            {todayEntry.passage ? (
-              passageIsClickable ? (
-                <button
-                  type="button"
-                  onClick={handlePassageClick}
-                  className={cn(
-                    'group inline-flex items-center gap-2 rounded-md border border-primary/10 bg-primary/5 px-2.5 py-1',
-                    'text-left transition-colors hover:border-primary/25 hover:bg-primary/10',
-                  )}
-                >
-                  <span className="font-mono text-sm font-medium text-primary">{todayEntry.passage}</span>
-                  <BookOpenText className="h-3.5 w-3.5 shrink-0 text-primary/40 transition-opacity group-hover:text-primary/70" />
-                </button>
-              ) : (
-                <div className="inline-flex rounded-md border border-primary/10 bg-primary/5 px-2.5 py-1">
-                  <span className="font-mono text-sm font-medium text-primary">{todayEntry.passage}</span>
-                </div>
-              )
-            ) : (
-              <p className="text-sm text-muted-foreground">{t.noPassageAssigned}</p>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <Button variant="outline" size="sm" className="w-full" onClick={handleGoToQt}>
+    <div className="space-y-2 border-b border-border/50 pb-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-eyebrow">{t.todaysQt}</p>
+        <Link href="/qt" className="text-xs font-medium text-muted-foreground hover:text-foreground">
           {t.qtRoster}
-          <ArrowRight className="ml-2 h-3.5 w-3.5" />
-        </Button>
+        </Link>
       </div>
+
+      {loading ? (
+        <div className="flex items-center py-1">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground opacity-40" />
+        </div>
+      ) : !todayEntry ? (
+        <p className="text-sm text-muted-foreground">{t.noQtToday}</p>
+      ) : (
+        <div className="space-y-1.5">
+          {todayEntry.title && (
+            <p className="text-sm font-semibold leading-snug text-foreground">{todayEntry.title}</p>
+          )}
+          {sharerName && (
+            <p className="text-stat-label">{sharerName}</p>
+          )}
+          {todayEntry.passage ? (
+            passageIsClickable ? (
+              <button
+                type="button"
+                onClick={handlePassageClick}
+                className={cn(
+                  'group inline-flex max-w-full items-center gap-1.5 rounded-md border border-primary/10 bg-primary/5 px-2 py-0.5',
+                  'text-left transition-colors hover:border-primary/25 hover:bg-primary/10',
+                )}
+              >
+                <span className="truncate font-mono text-xs font-medium text-primary">{todayEntry.passage}</span>
+                <BookOpenText className="h-3 w-3 shrink-0 text-primary/40 transition-opacity group-hover:text-primary/70" />
+              </button>
+            ) : (
+              <span className="inline-flex max-w-full rounded-md border border-primary/10 bg-primary/5 px-2 py-0.5 font-mono text-xs font-medium text-primary">
+                {todayEntry.passage}
+              </span>
+            )
+          ) : (
+            <p className="text-sm text-muted-foreground">{t.noPassageAssigned}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
