@@ -359,7 +359,10 @@ export function ContinuousSetlistViewer({
                       <section
                         key={`${section.songTitle}-${section.key}-${sectionIdx}`}
                         id={`setlist-section-${sectionIdx}`}
-                        className="flex w-full flex-col gap-3"
+                        className={cn(
+                          "flex w-full flex-col gap-3",
+                          sectionIdx === 0 && "pt-16",
+                        )}
                       >
                         <div id={`setlist-anchor-${sectionIdx}`} className="h-0 w-full shrink-0" aria-hidden />
                         {(section.imageUrls ?? []).length > 0 ? (
