@@ -16,10 +16,10 @@ const DashboardPage = dynamic(() => import('@/components/home/dashboard-page'), 
 });
 
 export default function HomePage() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, hasSession, loadingAuth } = useAuth();
   const router = useRouter();
 
-  if (loadingAuth) {
+  if (loadingAuth || (hasSession && !currentUser)) {
     return (
       <div className="page-container flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
@@ -27,7 +27,7 @@ export default function HomePage() {
     );
   }
 
-  if (!currentUser) {
+  if (!hasSession) {
     return (
       <LandingPage
         onSignIn={() => router.push('/login')}
