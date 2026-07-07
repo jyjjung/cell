@@ -8,7 +8,7 @@ import {
   Timestamp,
   type Firestore,
 } from 'firebase/firestore';
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getMessaging, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 
@@ -48,6 +48,13 @@ function createDb(): Firestore {
 const db = createDb();
 
 const auth = getAuth(app);
+
+if (typeof window !== 'undefined') {
+  void setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.warn('Firebase auth persistence could not be enabled:', error);
+  });
+}
+
 const storage = getStorage(app);
 
 let messaging: Messaging | null = null;
