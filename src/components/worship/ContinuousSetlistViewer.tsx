@@ -17,6 +17,8 @@ import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
 
+const TITLE_SLOT_HEIGHT = 44;
+
 async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
@@ -68,9 +70,7 @@ function ChordPage({ url, pageIndex, songTitle }: { url: string; pageIndex: numb
   );
 }
 
-/** Counter-scale title bars so they stay readable while chord sheets zoom. */
 function SectionTitleBar({
-  scale,
   sectionIdx,
   title,
   keyName,
@@ -79,7 +79,6 @@ function SectionTitleBar({
   isActive,
   onListen,
 }: {
-  scale: number;
   sectionIdx: number;
   title: string;
   keyName: ChordKey;
@@ -88,18 +87,8 @@ function SectionTitleBar({
   isActive: boolean;
   onListen: () => void;
 }) {
-  const counterScaled = scale > 1.01;
-
   return (
-    <div
-      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/90 px-4 py-2.5 backdrop-blur-md"
-      style={counterScaled ? {
-        transform: `scale(${1 / scale})`,
-        transformOrigin: 'top center',
-        width: `${scale * 100}%`,
-        marginLeft: `${((1 - scale) / 2) * 100}%`,
-      } : undefined}
-    >
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/95 px-4 py-2.5 shadow-lg backdrop-blur-md">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-white">
           {sectionIdx + 1}. {title}
@@ -139,6 +128,8 @@ export function ContinuousSetlistViewer({
   onClose: () => void;
 }) {
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const titleRefs = useRef<(HTMLDivElement | null)[]>([]);
   const controlsRef = useRef<{
     zoomIn: (step?: number) => void;
     zoomOut: (step?: number) => void;
@@ -150,11 +141,14 @@ export function ContinuousSetlistViewer({
   const [activeSection, setActiveSection] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
+  const [titlesVisible, setTitlesVisible] = useState(false);
   const didInitialScroll = useRef(false);
 
   const activeSlide = slides[activeSection] ?? slides[0];
   const isZoomed = scale > 1.05;
   const zoomPct = Math.round(scale * 100);
+
+  const contentWidth = 'min(100vw - 1.5rem, 48rem)';
 
   const centerContentHorizontally = useCallback((ref: ReactZoomPanPinchRef) => {
     const wrapper = ref.instance.wrapperComponent;
@@ -164,17 +158,41 @@ export function ContinuousSetlistViewer({
     ref.setTransform(x, ref.instance.transformState.positionY, ref.instance.transformState.scale);
   }, []);
 
-  const updateActiveSectionFromView = useCallback(() => {
-    const wrapper = transformRef.current?.instance.wrapperComponent;
-    if (!wrapper) return;
-    const anchor = wrapper.getBoundingClientRect().top + 88;
-    let current = 0;
-    for (let i = 0; i < slides.length; i++) {
-      const el = document.getElementById(`setlist-section-${i}`);
-      if (el && el.getBoundingClientRect().top <= anchor) current = i;
-    }
-    setActiveSection((prev) => (prev === current ? prev : current));
-  }, [slides.length]);
+  const updateTitlePositions = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const contentEl = transformRef.current?.instance.contentComponent;
+    const contentRect = contentEl?.getBoundingClientRect();
+    const barWidth = contentRect?.width ?? Math.min(viewportRect.width - 24, 768);
+    const barLeft = contentRect
+      ? contentRect.left - viewportRect.left
+      : (viewportRect.width - barWidth) / 2;
+
+    let currentSection = 0;
+
+    slides.forEach((_, i) => {
+      const anchor = document.getElementById(`setlist-anchor-${i}`);
+      const titleEl = titleRefs.current[i];
+      if (!anchor || !titleEl) return;
+
+      const anchorRect = anchor.getBoundingClientRect();
+      const y = anchorRect.top - viewportRect.top;
+
+      titleEl.style.width = `${barWidth}px`;
+      titleEl.style.transform = `translate3d(${barLeft}px, ${y}px, 0)`;
+
+      const visible = y > -TITLE_SLOT_HEIGHT && y < viewportRect.height;
+      titleEl.style.opacity = visible ? '1' : '0';
+      titleEl.style.pointerEvents = visible ? 'auto' : 'none';
+
+      if (anchorRect.top <= viewportRect.top + 96) currentSection = i;
+    });
+
+    setActiveSection((prev) => (prev === currentSection ? prev : currentSection));
+    setTitlesVisible(true);
+  }, [slides]);
 
   const jumpToSection = useCallback((index: number, animationTime = 280) => {
     const clamped = Math.max(0, Math.min(index, slides.length - 1));
@@ -194,10 +212,11 @@ export function ContinuousSetlistViewer({
       } else if (transformRef.current) {
         centerContentHorizontally(transformRef.current);
       }
+      updateTitlePositions();
       didInitialScroll.current = true;
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [startIndex, jumpToSection, centerContentHorizontally]);
+  }, [startIndex, jumpToSection, centerContentHorizontally, updateTitlePositions]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -227,6 +246,10 @@ export function ContinuousSetlistViewer({
     setListenOpen(true);
     jumpToSection(index);
   };
+
+  const handleTransformChange = useCallback(() => {
+    window.requestAnimationFrame(updateTitlePositions);
+  }, [updateTitlePositions]);
 
   const controlBtn = 'p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30';
 
@@ -301,7 +324,7 @@ export function ContinuousSetlistViewer({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div ref={viewportRef} className="relative min-h-0 flex-1 overflow-hidden">
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
@@ -316,11 +339,16 @@ export function ContinuousSetlistViewer({
           panning={{ velocityDisabled: false, excluded: ['setlist-control'] }}
           onInit={(ref) => {
             transformRef.current = ref;
-            window.requestAnimationFrame(() => centerContentHorizontally(ref));
+            window.requestAnimationFrame(() => {
+              centerContentHorizontally(ref);
+              updateTitlePositions();
+            });
           }}
+          onPanning={handleTransformChange}
+          onZoom={handleTransformChange}
           onTransformed={(_, state) => {
             setScale(state.scale);
-            updateActiveSectionFromView();
+            handleTransformChange();
           }}
         >
           {({ zoomIn, zoomOut, resetTransform, zoomToElement }) => {
@@ -330,7 +358,10 @@ export function ContinuousSetlistViewer({
                 wrapperClass="!w-full !h-full"
                 contentClass="!w-fit !max-w-full"
               >
-                <div className="flex w-[min(100vw-1.5rem,48rem)] flex-col gap-8 px-3 pb-4 pt-1">
+                <div
+                  className="flex flex-col gap-8 px-3 pb-4 pt-1"
+                  style={{ width: contentWidth }}
+                >
                   {slides.map((section, sectionIdx) => {
                     const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
                     return (
@@ -339,15 +370,11 @@ export function ContinuousSetlistViewer({
                         id={`setlist-section-${sectionIdx}`}
                         className="flex w-full flex-col gap-3"
                       >
-                        <SectionTitleBar
-                          scale={scale}
-                          sectionIdx={sectionIdx}
-                          title={section.songTitle}
-                          keyName={section.key}
-                          hasTracks={hasTracks}
-                          listenOpen={listenOpen}
-                          isActive={activeSection === sectionIdx}
-                          onListen={() => openListenForSection(sectionIdx)}
+                        <div
+                          id={`setlist-anchor-${sectionIdx}`}
+                          className="w-full shrink-0"
+                          style={{ height: TITLE_SLOT_HEIGHT }}
+                          aria-hidden
                         />
                         {(section.imageUrls ?? []).length > 0 ? (
                           (section.imageUrls ?? []).map((url, pageIdx) => (
@@ -382,6 +409,36 @@ export function ContinuousSetlistViewer({
             );
           }}
         </TransformWrapper>
+
+        {/* Title bars live outside the zoom transform and track section anchors */}
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 z-20 overflow-hidden transition-opacity duration-150',
+            titlesVisible ? 'opacity-100' : 'opacity-0',
+          )}
+        >
+          {slides.map((section, sectionIdx) => {
+            const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
+            return (
+              <div
+                key={`title-${section.songTitle}-${sectionIdx}`}
+                ref={(el) => { titleRefs.current[sectionIdx] = el; }}
+                className="absolute left-0 top-0 will-change-transform"
+                style={{ transform: 'translate3d(0, -9999px, 0)' }}
+              >
+                <SectionTitleBar
+                  sectionIdx={sectionIdx}
+                  title={section.songTitle}
+                  keyName={section.key}
+                  hasTracks={hasTracks}
+                  listenOpen={listenOpen}
+                  isActive={activeSection === sectionIdx}
+                  onListen={() => openListenForSection(sectionIdx)}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 bg-black/90 px-4 pb-6 pt-3 backdrop-blur-md">
