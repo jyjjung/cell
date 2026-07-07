@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.73",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Setlists opened from chat now show all chord sheets on one scrollable page",
+      "Pinch, zoom buttons, and scroll let you move around the full setlist while practicing",
+    ],
+  },
+  {
     version: "v1.3.72",
     subtitle: "Chat & security",
     date: "Early-July 2026",
