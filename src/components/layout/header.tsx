@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight } from "lucide-react";
@@ -19,7 +19,6 @@ interface HeaderProps {
 }
 
 export default function Header({ onOpenCommandMenu }: HeaderProps) {
-  const { isMobile, state } = useSidebar();
   const { currentUser } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
   const [mounted, setMounted] = useState(false);
@@ -97,9 +96,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
       <div className="app-header-bar">
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">
-          {(isMobile || state === "collapsed") && (
-            <SidebarTrigger className="h-9 w-9 rounded-xl shrink-0 hover:bg-muted/70 transition-colors" />
-          )}
+          <SidebarTrigger />
           <div className="min-w-0 pr-1 overflow-visible">
             <Breadcrumbs />
           </div>
