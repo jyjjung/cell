@@ -189,6 +189,52 @@ export function findPlanPassageKeysForChapter(
   return keys;
 }
 
+export type ChapterPlanMatch = {
+  key: string;
+  date: string;
+  displayText: string;
+};
+
+/** Incomplete plan passage matches for a given chapter, in plan order. */
+export function findIncompletePlanPassagesForChapter(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): ChapterPlanMatch[] {
+  if (!dailyReadings?.length) return [];
+
+  const matches: ChapterPlanMatch[] = [];
+
+  for (const day of dailyReadings) {
+    for (const passage of day.passages ?? []) {
+      const resolved = resolvePlanPassage(passage);
+      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) continue;
+
+      const key = makePassageKey(day.date, resolved.displayText);
+      if (!completedPassages.includes(key)) {
+        matches.push({
+          key,
+          date: day.date,
+          displayText: resolved.displayText,
+        });
+      }
+    }
+  }
+
+  return matches;
+}
+
+/** Earliest incomplete plan passage key for a given chapter assignment. */
+export function findEarliestIncompletePlanPassageKeyForChapter(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): string | null {
+  return findIncompletePlanPassagesForChapter(dailyReadings, book, chapter, completedPassages)[0]?.key ?? null;
+}
+
 export function isChapterMarkedCompleteInPlan(
   dailyReadings: DailyReading[] | undefined | null,
   book: string,

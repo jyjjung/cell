@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { eventOccursOnDate, parseDay } from '@/lib/event-occurrences';
+import { birthdayOccursOnCommunityDate, eventOccursOnDate, parseDay } from '@/lib/event-occurrences';
 import { userCanSeeEvent } from '@/lib/event-visibility';
 import { EventCategory, type AppEvent, type UserProfileData } from '@/types';
 
@@ -27,13 +27,27 @@ export function collectEventDayReminders(params: {
   todayIso: string;
   events: AppEvent[];
   users: UserProfileData[];
+  timeZone?: string;
 }): EventDayReminderPayload[] {
-  const { todayIso, events, users } = params;
+  const { todayIso, events, users, timeZone } = params;
   const today = parseDay(todayIso);
   const results: EventDayReminderPayload[] = [];
 
   for (const event of events) {
-    if (!eventOccursOnDate(event, today)) continue;
+    if (!event.date) continue;
+
+    let occurs = false;
+    try {
+      occurs =
+        event.category === EventCategory.Birthday && timeZone
+          ? birthdayOccursOnCommunityDate(event, todayIso, timeZone)
+          : eventOccursOnDate(event, today);
+    } catch (error) {
+      console.warn('[collectEventDayReminders] skipped event', event.id, error);
+      continue;
+    }
+
+    if (!occurs) continue;
 
     const isBirthday = event.category === EventCategory.Birthday;
     const timeLabel = formatEventTime(event);

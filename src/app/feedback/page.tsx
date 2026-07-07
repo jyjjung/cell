@@ -56,12 +56,48 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.64",
+    version: "v1.3.68",
+    subtitle: "Invites & signup alerts",
     date: "Early-July 2026",
     changes: [
       "Admins receive a notification when someone signs up and is waiting for approval",
       "Invite button on Admin → Users and Members to create signup links with optional roles",
       "Invite links can be shown as a QR code to scan or download",
+    ],
+  },
+  {
+    version: "v1.3.67",
+    subtitle: "Worship & duty reminders",
+    date: "Early-July 2026",
+    changes: [
+      "Worship roster assignments now send push notifications when you're added to a role, including Keys",
+      "Daily duty reminders now include same-day alerts for QT, cleaning, and worship team duties",
+      "Birthday push reminders now read Firestore event dates correctly and match birthdays in the community timezone",
+    ],
+  },
+  {
+    version: "v1.3.66",
+    subtitle: "Icon polish",
+    date: "Early-July 2026",
+    changes: [
+      "The sidebar toggle now uses a clearer open/close icon and stays visible in the header so you can collapse the sidebar on desktop.",
+      "Header and sidebar navigation icons now share consistent sizing and styling with the rest of the app chrome.",
+    ],
+  },
+  {
+    version: "v1.3.65",
+    subtitle: "Bible popup selection",
+    date: "Late-June 2026",
+    changes: [
+      "When a chapter appears multiple times in your reading plan, the Bible popup now asks which assignment to mark complete instead of checking off all matches.",
+    ],
+  },
+  {
+    version: "v1.3.64",
+    subtitle: "Bible popup progress",
+    date: "Late-June 2026",
+    changes: [
+      "Marking a chapter complete in the Bible popup now checks off only the earliest matching plan passage instead of every repeated occurrence.",
     ],
   },
   {
