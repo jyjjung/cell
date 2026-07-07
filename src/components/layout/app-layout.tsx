@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import Footer from './footer';
 import { Bell } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
+import { PrayerRequestPrompt } from './prayer-request-prompt';
 import { CommandMenu } from './command-menu';
 import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
@@ -138,6 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {showScheduleTabs && <ScheduleHubTabs />}
         {showAdminTabs && <AdminHubTabs />}
         <PWAInstallPrompt />
+        <PrayerRequestPrompt />
         <SetlistPlaylistBar />
 
         {showPermissionBanner && (
