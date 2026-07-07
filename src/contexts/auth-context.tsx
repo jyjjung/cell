@@ -13,7 +13,7 @@ import {
   type User as FirebaseUser,
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
 import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRole } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
@@ -181,17 +181,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsAdmin(profileData.isAdmin || false);
               });
           } else {
-            void signOut(auth).catch((error) => {
-              console.error('Signed out due to missing profile:', error);
-            });
-            setCurrentUser(null);
-            setIsAdmin(false);
+            void getDocFromServer(userDocRef)
+              .then((serverSnap) => {
+                if (generation !== profileGeneration) return;
+
+                if (serverSnap.exists()) {
+                  setLoadingAuth(false);
+                  return;
+                }
+
+                void signOut(auth).catch((error) => {
+                  console.error('Signed out due to missing profile:', error);
+                });
+                setCurrentUser(null);
+                setIsAdmin(false);
+                setLoadingAuth(false);
+              })
+              .catch((error) => {
+                if (generation !== profileGeneration) return;
+                console.error('Error verifying user profile on server:', error);
+                setLoadingAuth(false);
+              });
+            return;
           }
           setLoadingAuth(false);
         }, (error) => {
             console.error("Error listening to user profile:", error);
-            setCurrentUser(null);
-            setIsAdmin(false);
             setLoadingAuth(false);
         });
 

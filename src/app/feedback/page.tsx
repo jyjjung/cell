@@ -358,6 +358,14 @@ const changelogs = [
     ],
   },
   {
+    version: "v1.3.41",
+    date: "Early-July 2026",
+    changes: [
+      "Today's QT on the home dashboard is now a compact section instead of a tall card",
+      "Fixed sessions dropping when leaving a page due to a brief profile sync hiccup",
+    ],
+  },
+  {
     version: "v1.3.40",
     date: "Mid-June 2026",
     changes: [
