@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
-import { DEFAULT_INVITE_MAX_USES, normalizeInviteCode, normalizeInviteEmail } from '@/lib/invite-utils';
+import { DEFAULT_INVITE_MAX_USES, normalizeInviteCode, normalizeInviteEmail, resolveInviteExpiresAtMs } from '@/lib/invite-utils';
 
 const USERS_COLLECTION = 'users';
 const INVITES_COLLECTION = 'invites';
@@ -78,8 +78,11 @@ export async function POST(request: NextRequest) {
         throw new Error('INVITE_USED');
       }
 
-      const expiresAt = invite.expiresAt as Timestamp | undefined;
-      if (expiresAt && expiresAt.toMillis() <= Date.now()) {
+      const expiresAtMs = resolveInviteExpiresAtMs({
+        expiresAt: invite.expiresAt as { toMillis?: () => number } | undefined,
+        createdAt: invite.createdAt as { toMillis?: () => number } | undefined,
+      });
+      if (expiresAtMs && expiresAtMs <= Date.now()) {
         throw new Error('INVITE_EXPIRED');
       }
 

@@ -38,6 +38,7 @@ import {
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
+import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 const CACHE_KEY_PREFIX = 'notifications_v2';
@@ -254,7 +255,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     try {
       await setDoc(docRef, dataToSave);
-      triggerPushNotification(notificationId);
+      const deferPush = shouldDeferScheduledAnnouncement(notificationData.scheduledFor);
+      if (!deferPush) {
+        triggerPushNotification(notificationId);
+      }
     } catch (e) {
       console.error('Error creating notification:', e);
     }

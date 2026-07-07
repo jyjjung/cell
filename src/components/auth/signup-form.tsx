@@ -58,10 +58,7 @@ export default function SignupForm() {
         return;
       }
       if (error.code === 'auth/invite-invalid') {
-        form.setError("root", {
-          type: "manual",
-          message: `${error.message} Your account was created and is waiting for admin approval.`,
-        });
+        router.push('/pending-approval');
         return;
       }
       form.setError("root", { type: "manual", message: "An unexpected error occurred. Please try again." });

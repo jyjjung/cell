@@ -116,8 +116,18 @@ service cloud.firestore {
 
     match /notifications/{notifId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow create: if request.auth != null && (
+        isAppAdmin(request.auth.uid)
+        || (
+          request.resource.data.get('isGlobal', false) == false
+          && request.resource.data.userId == request.auth.uid
+        )
+      );
+      allow update: if isAppAdmin(request.auth.uid)
+        || (
+          request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        );
       allow delete: if isAppAdmin(request.auth.uid);
     }
 

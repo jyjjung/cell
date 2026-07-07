@@ -311,6 +311,7 @@ export interface AppNotification {
   readBy: string[];
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
+  pushSentAt?: Timestamp | null;
 }
 
 export interface PrayerRequest {
