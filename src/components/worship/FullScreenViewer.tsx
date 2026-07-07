@@ -10,15 +10,12 @@ import {
 
 import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
-import type { ChordKey, ReferenceTrack } from '@/types';
+import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
+import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
+import type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 
-export interface ViewerSlide {
-  songTitle: string;
-  key: ChordKey;
-  imageUrls: string[];
-  referenceTracks?: ReferenceTrack[];
-}
+export type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -61,7 +58,80 @@ function useImagePreloader(slides: ViewerSlide[]) {
   }, [slides]);
 }
 
+function renderChordPage(
+  url: string,
+  pageIndex: number,
+  imgPxWidth: number | null,
+  onFirstImageLoad?: (e: React.SyntheticEvent<HTMLImageElement>) => void,
+) {
+  if (isPdfUrl(url)) {
+    return (
+      <div key={url} className="w-full flex flex-col shrink-0" style={{ height: '85vh' }}>
+        <iframe src={`${url}#toolbar=0&navpanes=0`}
+          className="w-full flex-1 border-none bg-white/5" title={`PDF pg ${pageIndex + 1}`} />
+        <div className="flex flex-col items-center py-8 px-6 bg-black/20 sm:hidden">
+          <FileText className="h-10 w-10 text-rose-500/50 mb-3" />
+          <button onClick={() => window.open(url, '_blank')}
+            className="w-full py-4 rounded-2xl bg-rose-500 text-white font-semibold flex items-center justify-center gap-3">
+            <Maximize className="h-5 w-5" /> Open PDF
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <RemoteImage
+      key={url}
+      src={url}
+      alt={`chord sheet pg ${pageIndex + 1}`}
+      width={1200}
+      height={1600}
+      draggable={false}
+      onLoad={onFirstImageLoad}
+      style={{
+        ...(imgPxWidth != null
+          ? { width: `${imgPxWidth}px`, height: 'auto', maxWidth: 'none' }
+          : { maxWidth: '100%', maxHeight: 'calc(100vh - 140px)', width: 'auto', height: 'auto', objectFit: 'contain' }
+        ),
+        display: 'block',
+        borderRadius: 12,
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
 export function FullScreenViewer({
+  slides, startIndex = 0, onClose, mode = 'slides', title,
+}: {
+  slides: ViewerSlide[];
+  startIndex?: number;
+  onClose: () => void;
+  mode?: ViewerMode;
+  title?: string;
+}) {
+  if (mode === 'continuous') {
+    return (
+      <ContinuousSetlistViewer
+        slides={slides}
+        title={title}
+        startIndex={startIndex}
+        onClose={onClose}
+      />
+    );
+  }
+
+  return (
+    <SlidesFullScreenViewer
+      slides={slides}
+      startIndex={startIndex}
+      onClose={onClose}
+    />
+  );
+}
+
+function SlidesFullScreenViewer({
   slides, startIndex = 0, onClose,
 }: {
   slides: ViewerSlide[];
@@ -89,13 +159,11 @@ export function FullScreenViewer({
   const [holdDir, setHoldDir] = useState<'next' | 'prev' | null>(null);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
 
-
-
   useImagePreloader(slides);
 
   // Reset when slide changes
   useEffect(() => {
-    setImgPxWidth(null); // trigger re-fit on image load
+    setImgPxWidth(null);
     fitWidthRef.current = 0;
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     setListenOpen(false);
@@ -146,7 +214,7 @@ export function FullScreenViewer({
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (e.touches.length === 2 && lastPinchDist.current) {
-      if (e.cancelable) e.preventDefault(); // Block native zoom
+      if (e.cancelable) e.preventDefault();
       isPinching.current = true;
       const dist  = getTouchDist(e.touches);
       const ratio = dist / lastPinchDist.current;
@@ -268,6 +336,8 @@ export function FullScreenViewer({
 
   const resetZoom = () => setImgPxWidth(fitWidthRef.current || null);
 
+  if (slides.length === 0) return null;
+
   const slide = slides[idx];
   if (!slide) return null;
 
@@ -275,6 +345,12 @@ export function FullScreenViewer({
   const fitW      = fitWidthRef.current;
   const zoomPct   = fitW > 0 ? Math.round((currentW / fitW) * 100) : 100;
   const isZoomed  = fitW > 0 && Math.abs(currentW - fitW) > 3;
+
+  const downloadCurrent = () => {
+    (slide.imageUrls ?? []).forEach((url, i) =>
+      setTimeout(() => downloadFile(url, `${slide.songTitle} - ${slide.key}${(slide.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`), i * 300),
+    );
+  };
 
   const viewerContent = (
     <AnimatePresence>
@@ -291,7 +367,7 @@ export function FullScreenViewer({
             </button>
             <div className="min-w-0">
               <p className="text-white font-bold text-sm truncate">{slide.songTitle}</p>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <KeyBadge keyName={slide.key} accent />
                 {(slide.imageUrls?.length ?? 0) > 1 && (
                   <span className="text-white/40 text-[11px] font-bold">{slide.imageUrls.length} pages</span>
@@ -315,15 +391,14 @@ export function FullScreenViewer({
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom In">
               <ZoomIn className="h-4 w-4" />
             </button>
-            <button onClick={() => (slide.imageUrls ?? []).forEach((url, i) =>
-              setTimeout(() => downloadFile(url, `${slide.songTitle} - ${slide.key}${(slide.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`), i * 300)
-            )} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Download to device">
+            <button onClick={downloadCurrent}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Download to device">
               <Download className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Scroll container — always the right size, no blank overflow */}
+        {/* Scroll container */}
         <div
           ref={containerRef}
           className="flex-1 min-h-0"
@@ -333,50 +408,18 @@ export function FullScreenViewer({
             className="w-full h-full overflow-auto"
             style={{ touchAction: 'pan-x pan-y' }}
           >
-            {/* Center column — images stack vertically, centered horizontally */}
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
-              {(slide.imageUrls ?? []).map((url, i) => {
-                if (isPdfUrl(url)) {
-                  return (
-                    <div key={url} className="w-full flex flex-col shrink-0" style={{ height: '85vh' }}>
-                      <iframe src={`${url}#toolbar=0&navpanes=0`}
-                        className="w-full flex-1 border-none bg-white/5" title={`PDF pg ${i + 1}`} />
-                      <div className="flex flex-col items-center py-8 px-6 bg-black/20 sm:hidden">
-                        <FileText className="h-10 w-10 text-rose-500/50 mb-3" />
-                        <button onClick={() => window.open(url, '_blank')}
-                          className="w-full py-4 rounded-2xl bg-rose-500 text-white font-semibold flex items-center justify-center gap-3">
-                          <Maximize className="h-5 w-5" /> Open PDF
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <RemoteImage
-                    key={url}
-                    src={url}
-                    alt={`chord sheet pg ${i + 1}`}
-                    width={1200}
-                    height={1600}
-                    draggable={false}
-                    onLoad={i === 0 ? handleFirstImageLoad : undefined}
-                    style={{
-                      ...(imgPxWidth != null
-                        ? { width: `${imgPxWidth}px`, height: 'auto', maxWidth: 'none' }
-                        : { maxWidth: '100%', maxHeight: 'calc(100vh - 140px)', width: 'auto', height: 'auto', objectFit: 'contain' }
-                      ),
-                      display: 'block',
-                      borderRadius: 12,
-                      pointerEvents: 'none',
-                    }}
-                  />
-                );
-              })}
+              {(slide.imageUrls ?? []).map((url, i) => renderChordPage(
+                url,
+                i,
+                imgPxWidth,
+                i === 0 ? handleFirstImageLoad : undefined,
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Footer nav + listen */}
+        {/* Footer */}
         <div className="shrink-0 flex flex-col gap-2 pb-6 pt-2 px-4">
           {listenOpen && slide.referenceTracks && slide.referenceTracks.length > 0 && (() => {
             const activeTrack = slide.referenceTracks[activeTrackIdx] ?? slide.referenceTracks[0];
