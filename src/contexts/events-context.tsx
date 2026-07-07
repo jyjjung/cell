@@ -119,7 +119,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [realtime]);
+  }, [realtime, events.length]);
 
   const refreshEvents = useCallback(async () => {
     const loaded = await loadEventsDirectory({ forceRefresh: true });

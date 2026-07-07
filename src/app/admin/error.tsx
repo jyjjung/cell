@@ -19,6 +19,11 @@ export default function AdminError({
       <h2 className="text-xl font-semibold">Admin page error</h2>
       <p className="max-w-md text-sm text-muted-foreground">
         This admin screen failed to load. Try again or return to the main app.
+        {error.digest ? (
+          <span className="mt-2 block font-mono text-xs text-muted-foreground/80">
+            Reference: {error.digest}
+          </span>
+        ) : null}
       </p>
       <div className="flex gap-3">
         <Button type="button" onClick={() => reset()}>

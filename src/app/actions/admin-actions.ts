@@ -7,11 +7,13 @@ import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 
+import { commitUpdatesInChunks } from '@/lib/commit-batches';
+
 const USERS_COLLECTION = 'users';
 const ROLES_COLLECTION = 'roles';
 const CHATS_COLLECTION = 'chats';
 
-export async function escalateToAdminAction(password: string, userId: string) {
+export async function escalateToAdminAction(password: string, idToken: string) {
   const correctPassword = process.env.ADMIN_PASSWORD;
   
   if (!correctPassword) {
@@ -25,18 +27,27 @@ export async function escalateToAdminAction(password: string, userId: string) {
 
   try {
     const app = getAdminApp();
+    const auth = getAdminAuth(app);
     const db = getAdminDb(app);
+
+    let uid: string;
+    try {
+      uid = (await auth.verifyIdToken(idToken)).uid;
+    } catch {
+      return { success: false, error: 'Unauthorized.' };
+    }
     
-    await db.collection(USERS_COLLECTION).doc(userId).update({
+    await db.collection(USERS_COLLECTION).doc(uid).update({
       isAdmin: true,
       isApproved: true,
       updatedAt: FieldValue.serverTimestamp()
     });
     
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update user profile.';
     console.error("Failed to escalate to admin:", error);
-    return { success: false, error: error.message || 'Failed to update user profile.' };
+    return { success: false, error: message };
   }
 }
 
@@ -116,10 +127,11 @@ export async function adminUpdateUserProfileAction(
     }
 
     // Clean up undefined properties for Firestore update, replacing with FieldValue.delete() if null
-    const cleanUpdateData: any = { ...finalDataToUpdate, updatedAt: FieldValue.serverTimestamp() };
+    const cleanUpdateData: Record<string, unknown> = { ...finalDataToUpdate, updatedAt: FieldValue.serverTimestamp() };
 
-    const batch = db.batch();
-    batch.update(userDocRef, cleanUpdateData);
+    const batchUpdates: Array<{ ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> }> = [
+      { ref: userDocRef, data: cleanUpdateData },
+    ];
 
     const shouldSyncMemberInfo =
       profileData.avatar !== undefined
@@ -140,7 +152,10 @@ export async function adminUpdateUserProfileAction(
         .get();
 
       for (const chatDoc of chatsSnap.docs) {
-        batch.update(chatDoc.ref, { [`memberInfo.${userId}`]: memberInfo });
+        batchUpdates.push({
+          ref: chatDoc.ref,
+          data: { [`memberInfo.${userId}`]: memberInfo },
+        });
       }
     }
     
@@ -148,13 +163,16 @@ export async function adminUpdateUserProfileAction(
       const roleData = allRolesMap.get(roleId);
       if (roleData && roleData.chatId) {
         const chatDocRef = db.collection(CHATS_COLLECTION).doc(roleData.chatId);
-        batch.update(chatDocRef, { 
-          members: FieldValue.arrayUnion(userId),
-          [`memberInfo.${userId}`]: {
-            firstName: profileData.firstName || oldProfileData.firstName,
-            lastName: profileData.lastName || oldProfileData.lastName,
-            avatar: oldProfileData.avatar || DEFAULT_AVATAR_DATA,
-          }
+        batchUpdates.push({
+          ref: chatDocRef,
+          data: {
+            members: FieldValue.arrayUnion(userId),
+            [`memberInfo.${userId}`]: {
+              firstName: profileData.firstName || oldProfileData.firstName,
+              lastName: profileData.lastName || oldProfileData.lastName,
+              avatar: oldProfileData.avatar || DEFAULT_AVATAR_DATA,
+            },
+          },
         });
       }
     }
@@ -163,15 +181,18 @@ export async function adminUpdateUserProfileAction(
       const roleData = allRolesMap.get(roleId);
       if (roleData && roleData.chatId) {
         const chatDocRef = db.collection(CHATS_COLLECTION).doc(roleData.chatId);
-        batch.update(chatDocRef, { 
-          members: FieldValue.arrayRemove(userId),
-          admins: FieldValue.arrayRemove(userId),
-          [`memberInfo.${userId}`]: FieldValue.delete()
+        batchUpdates.push({
+          ref: chatDocRef,
+          data: {
+            members: FieldValue.arrayRemove(userId),
+            admins: FieldValue.arrayRemove(userId),
+            [`memberInfo.${userId}`]: FieldValue.delete(),
+          },
         });
       }
     }
     
-    await batch.commit();
+    await commitUpdatesInChunks(db, batchUpdates);
 
     // 3. Update Firebase Auth displayName if names changed
     if (profileData.firstName || profileData.lastName) {

@@ -14,6 +14,7 @@ import { extractChatPhotos, type ChatPhoto } from '@/lib/chat-media-extract';
 import { NavPageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { ChatImageGallery } from '@/components/chat/ImageLightbox';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { downloadChatImage } from '@/lib/chat-image-download';
 
 type GlobalPhoto = ChatPhoto & {
@@ -96,11 +97,12 @@ export default function AllChatPhotosPage() {
               onClick={() => setOpenImageUrl(photo.imageUrl)}
               className="group relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-muted/30"
             >
-              <img
+              <RemoteImage
                 src={photo.imageUrl}
                 alt={`Photo from ${photo.chatName}`}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="200px"
               />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                 <p className="truncate text-[9px] font-bold text-white">{photo.chatName}</p>

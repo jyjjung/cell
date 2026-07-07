@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { RemoteImage } from '@/components/ui/remote-image';
 import type { AvatarData } from '@/types';
 import { HAIR_STYLES, ACCESSORIES, OUTFITS, MOUTHS, FACIAL_HAIR_STYLES, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { avatarWithoutBrokenImage, resolveInitialsDisplaySeed, type AvatarNameHint } from '@/lib/avatar-utils';
@@ -75,11 +76,13 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   if (mode === 'image') {
     return withHalo(
       resolved.imageUrl ? (
-        <img
+        <RemoteImage
           key={resolved.imageUrl}
           src={resolved.imageUrl}
           alt=""
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="96px"
           onError={() => setImageFailed(true)}
         />
       ) : (
@@ -112,11 +115,13 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
       : `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seedToUse)}&backgroundColor=transparent`;
     
     return withHalo(
-      <img
+      <RemoteImage
         key={url}
         src={url}
         alt="Avatar"
-        className="w-full h-full object-contain"
+        fill
+        className="object-contain"
+        sizes="96px"
       />,
       undefined,
       bgStyle

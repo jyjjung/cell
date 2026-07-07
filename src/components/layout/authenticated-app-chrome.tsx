@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { useFCMToken } from '@/hooks/use-fcm-token';
+import { getFCMRegistration } from '@/lib/fcm-registration';
 import { isChatUnread } from '@/lib/notification-utils';
 import type { AppUser } from '@/types';
 
@@ -64,7 +65,7 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
       if (pathname === link && link.startsWith('/chat/')) return;
 
       if (Notification.permission === 'granted') {
-        navigator.serviceWorker.ready
+        getFCMRegistration()
           .then((registration) => {
             registration.showNotification(title, {
               body,

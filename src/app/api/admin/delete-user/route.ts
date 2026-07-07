@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
+import { commitDeletesInChunks, commitUpdatesInChunks } from '@/lib/commit-batches';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,30 +25,43 @@ export async function POST(request: NextRequest) {
 
     try {
       await adminAuth.deleteUser(uidToDelete);
-    } catch (e) {}
+    } catch {
+      // User may already be removed from Auth.
+    }
 
-    const batch = adminDb.batch();
-    batch.delete(adminDb.collection('users').doc(uidToDelete));
-    batch.delete(adminDb.collection('userBibleChecklists').doc(uidToDelete));
-    batch.delete(adminDb.collection('communityProgress').doc(uidToDelete));
-    
+    const deletes = [
+      adminDb.collection('users').doc(uidToDelete),
+      adminDb.collection('userBibleChecklists').doc(uidToDelete),
+      adminDb.collection('communityProgress').doc(uidToDelete),
+    ];
+
     const chatsSnap = await adminDb.collection('chats').where('members', 'array-contains', uidToDelete).get();
-    chatsSnap.forEach(doc => {
-        const data = doc.data();
+    const chatUpdates: Array<{ ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> }> = [];
+    const chatDeletes: FirebaseFirestore.DocumentReference[] = [];
+
+    chatsSnap.forEach((docSnap) => {
+        const data = docSnap.data();
         if (data.type === 'private' || (data.members?.length === 1)) {
-            batch.delete(doc.ref);
+            chatDeletes.push(docSnap.ref);
         } else {
-            batch.update(doc.ref, {
+            chatUpdates.push({
+              ref: docSnap.ref,
+              data: {
                 members: FieldValue.arrayRemove(uidToDelete),
                 [`memberInfo.${uidToDelete}`]: FieldValue.delete(),
-                admins: FieldValue.arrayRemove(uidToDelete)
+                admins: FieldValue.arrayRemove(uidToDelete),
+              },
             });
         }
     });
-    
-    await batch.commit();
+
+    await commitDeletesInChunks(adminDb, deletes);
+    await commitUpdatesInChunks(adminDb, chatUpdates);
+    await commitDeletesInChunks(adminDb, chatDeletes);
+
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

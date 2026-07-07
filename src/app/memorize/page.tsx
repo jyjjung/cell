@@ -52,7 +52,7 @@ export default function MemorizePage() {
               </div>
               {verse.isLordsPrayerChunk && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-full bg-muted text-primary border border-border/50">
-                  <BookMarked className="h-3 w-3" /> Lord's Prayer
+                  <BookMarked className="h-3 w-3" /> Lord&apos;s Prayer
                 </span>
               )}
             </motion.button>

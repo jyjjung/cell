@@ -18,6 +18,7 @@ import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import type { WorshipSong, WorshipSetlist, ChordKey, SongChordSheet } from '@/types';
 import { cn } from '@/lib/utils';
+import { RemoteImage } from '@/components/ui/remote-image';
 import {
   chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft,
 } from '@/lib/worship-utils';
@@ -342,8 +343,7 @@ export function SetlistSongConfigPanel({
                     selected ? 'border-primary ring-2 ring-primary/30' : 'border-border/40 opacity-50',
                   )}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sheet.imageUrl} alt={`Page ${i + 1}`} className="w-full h-full object-cover" />
+                  <RemoteImage src={sheet.imageUrl} alt={`Page ${i + 1}`} fill className="object-cover" sizes="64px" />
                   <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white font-bold text-center py-0.5">
                     Pg {i + 1}
                   </span>

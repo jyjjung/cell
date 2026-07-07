@@ -114,9 +114,8 @@ export default function QTRosterPage() {
                                                 const currentIndex = globalIdx++;
 
                                                 return (
-                                                    <div id={`date-${entry.date}`} className="scroll-mt-20 transition-all duration-500">
+                                                    <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20 transition-all duration-500">
                                                         <RosterFeedCard
-                                                            key={entry.id}
                                                             index={currentIndex}
                                                             date={entryDate}
                                                             label={t.qtTitle}

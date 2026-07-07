@@ -12,6 +12,7 @@ import { translations } from '@/lib/translations';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatLinks } from '@/lib/chat-media-extract';
 import { chatLinkFaviconUrl, chatLinkHostname } from '@/lib/chat-url-utils';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { NavPageHeader } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import {
@@ -127,13 +128,13 @@ export default function AllChatLinksPage() {
                       >
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
                           {favicon ? (
-                            <img
+                            <RemoteImage
                               src={favicon}
                               alt=""
+                              width={16}
+                              height={16}
                               className="h-4 w-4 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
+                              sizes="16px"
                             />
                           ) : (
                             <Link2 className="h-3.5 w-3.5 text-primary" />

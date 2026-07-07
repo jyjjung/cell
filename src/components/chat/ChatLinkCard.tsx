@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, Link2 } from 'lucide-react';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { chatLinkFaviconUrl, chatLinkHostname } from '@/lib/chat-url-utils';
 
 export default function ChatLinkCard({
@@ -27,13 +28,14 @@ export default function ChatLinkCard({
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
         {favicon ? (
-          <img
+          <RemoteImage
             src={favicon}
             alt=""
+            width={24}
+            height={24}
             className="h-6 w-6 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
+            sizes="24px"
+            onError={() => {}}
           />
         ) : (
           <Link2 className="h-4 w-4 text-primary" />

@@ -15,6 +15,7 @@ import {
   collection, addDoc, deleteDoc, doc, onSnapshot,
   serverTimestamp, query, orderBy, updateDoc,
 } from 'firebase/firestore';
+import { RemoteImage } from '@/components/ui/remote-image';
 import type { CommunityLink } from '@/types';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -150,7 +151,7 @@ export default function LinksPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setLinks([]);
       setLoading(false);
       return;
@@ -253,13 +254,13 @@ export default function LinksPage() {
                       >
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
                           {favicon ? (
-                            <img
+                            <RemoteImage
                               src={favicon}
                               alt=""
+                              width={16}
+                              height={16}
                               className="h-4 w-4 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
+                              sizes="16px"
                             />
                           ) : (
                             <Link2 className="h-3.5 w-3.5 text-primary" />

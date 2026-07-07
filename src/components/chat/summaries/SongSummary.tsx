@@ -6,6 +6,9 @@ import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import type { WorshipSong } from '@/types';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface SongSummaryProps {
   songId: string;
@@ -14,6 +17,8 @@ interface SongSummaryProps {
 }
 
 export default function SongSummary({ songId, isSender, onOpenViewer }: SongSummaryProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: song, loading } = useFirestoreDoc<WorshipSong>('worshipSongs', songId);
 
   if (loading) {
@@ -27,18 +32,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
   }
 
   if (!song) {
-    return (
-      <div className={cn(
-        "flex w-full min-w-0 items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 p-4"
-      )}>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/50 bg-muted grayscale opacity-70">
-          <Music2 className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Song not found</p>
-        </div>
-      </div>
-    );
+    return <DeletedContentNotice label={t.deletedContentSong} />;
   }
 
   return (

@@ -15,6 +15,9 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface QTSummaryProps {
   date: string;
@@ -22,16 +25,22 @@ interface QTSummaryProps {
 }
 
 export default function QTSummary({ date, isSender }: QTSummaryProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: entry, loading } = useFirestoreDoc<QTRosterEntry>('qtRosters', date);
   const usersById = useUsersById();
   const router = useRouter();
 
-  if (loading || !entry) {
+  if (loading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading QT Entry...
       </div>
     );
+  }
+
+  if (!entry) {
+    return <DeletedContentNotice label={t.deletedContentQt} />;
   }
 
   const user = entry.userId ? usersById.get(entry.userId) : undefined;

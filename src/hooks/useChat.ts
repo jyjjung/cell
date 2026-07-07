@@ -24,8 +24,9 @@ import {
   GROUP_PHOTO_REMOVED_PREVIEW,
 } from '@/lib/chat-utils';
 import { primeMediaUrl } from '@/lib/media-cache';
-import type { UserProfileData } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_SUBCOLLECTION = 'messages';
@@ -36,9 +37,10 @@ function actorLabel(user: { firstName?: string | null; lastName?: string | null;
 
 async function dispatchChatPush(chatId: string, messageId: string, text: string, senderId: string) {
   try {
+    const headers = await getClientAuthHeaders();
     await fetch('/api/send-chat-push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ chatId, messageId, text, senderId }),
     });
   } catch (error) {
@@ -67,7 +69,8 @@ export function useChat(chatId: string) {
         const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
         updateDoc(chatDocRef, {
             members: arrayRemove(currentUser.uid),
-            admins: arrayRemove(currentUser.uid), 
+            admins: arrayRemove(currentUser.uid),
+            [`memberInfo.${currentUser.uid}`]: deleteField(),
         }).catch((error: any) => {
             console.error("Error leaving group:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not leave group." });

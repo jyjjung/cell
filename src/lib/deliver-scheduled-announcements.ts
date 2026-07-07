@@ -1,8 +1,7 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import type { Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
-import type { AppNotification } from '@/types';
 import { getCommunityTodayIso } from '@/lib/duty-reminders';
-import { deliverNotificationPush } from '@/lib/server-push';
+import { deliverPushWithLock } from '@/lib/push-delivery-lock';
 import { getScheduledDateIso } from '@/lib/scheduled-notifications';
 
 const DEFAULT_TIMEZONE = 'Australia/Brisbane';
@@ -30,12 +29,11 @@ export async function deliverDueScheduledAnnouncements(
     if (!scheduledDateIso || scheduledDateIso > todayIso) continue;
 
     candidates++;
-    const notification = { id: doc.id, ...data } as AppNotification;
 
     try {
-      await deliverNotificationPush(notification, adminDb, adminMessaging);
-      await doc.ref.update({ pushSentAt: FieldValue.serverTimestamp() });
-      sent++;
+      const result = await deliverPushWithLock(doc.id, adminDb, adminMessaging);
+      if (result.delivered > 0) sent++;
+      else skipped++;
     } catch (error) {
       console.error('[deliverDueScheduledAnnouncements]', doc.id, error);
       skipped++;

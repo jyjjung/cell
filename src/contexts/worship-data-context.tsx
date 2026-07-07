@@ -45,7 +45,7 @@ export function WorshipDataProvider({
   const [setlistsLoading, setSetlistsLoading] = useState(enabled);
 
   useEffect(() => {
-    if (!enabled || !currentUser) {
+    if (!enabled || !currentUser?.uid) {
       setSongs([]);
       setSetlists([]);
       setSongsLoading(false);

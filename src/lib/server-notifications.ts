@@ -73,8 +73,15 @@ export async function sendUserNotification(
 
   if (dedupeId) {
     const logRef = adminDb.collection(dedupeCollection).doc(dedupeId);
-    const existing = await logRef.get();
-    if (existing.exists) return 'skipped';
+    try {
+      await logRef.create({
+        userId,
+        title,
+        sentAt: FieldValue.serverTimestamp(),
+      });
+    } catch {
+      return 'skipped';
+    }
   }
 
   const notifRef = adminDb.collection('notifications').doc();
@@ -94,12 +101,9 @@ export async function sendUserNotification(
   await deliverNotificationPush(notification, adminDb, adminMessaging);
 
   if (dedupeId) {
-    await adminDb.collection(dedupeCollection).doc(dedupeId).set({
-      userId,
-      title,
+    await adminDb.collection(dedupeCollection).doc(dedupeId).update({
       notificationId: notifRef.id,
-      sentAt: FieldValue.serverTimestamp(),
-    });
+    }).catch(() => {});
   }
 
   return 'sent';

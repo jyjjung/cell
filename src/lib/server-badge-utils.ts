@@ -9,29 +9,47 @@ import { isChatUnread } from '@/lib/notification-utils';
  */
 export async function calculateTotalUnread(userId: string, db: Firestore): Promise<number> {
     try {
-        // 1. Unread System Notifications (Checking readBy array, limited to last 30 days for performance)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const notificationsSnapshot = await db.collection('notifications')
-            .where('createdAt', '>=', thirtyDaysAgo)
-            .get();
-            
-        let unreadNotifications = 0;
-        notificationsSnapshot.forEach((doc: any) => {
-            const data = doc.data();
-            const readBy = Array.isArray(data.readBy) ? data.readBy : [];
-            const isTargetUser = data.isGlobal || data.userId === userId || data.type === 'announcement';
-            if (isTargetUser && !readBy.includes(userId)) {
-                unreadNotifications++;
-            }
-        });
 
-        // 2. Unread Chats (using memberSeen)
-        const chatsSnapshot = await db.collection('chats').where('members', 'array-contains', userId).get();
+        const [personalSnap, globalSnap, announcementSnap, chatsSnapshot] = await Promise.all([
+            db.collection('notifications')
+                .where('userId', '==', userId)
+                .where('createdAt', '>=', thirtyDaysAgo)
+                .get(),
+            db.collection('notifications')
+                .where('isGlobal', '==', true)
+                .where('createdAt', '>=', thirtyDaysAgo)
+                .get(),
+            db.collection('notifications')
+                .where('type', '==', 'announcement')
+                .where('createdAt', '>=', thirtyDaysAgo)
+                .get(),
+            db.collection('chats').where('members', 'array-contains', userId).get(),
+        ]);
+
+        const seenIds = new Set<string>();
+        let unreadNotifications = 0;
+
+        const countUnread = (docs: FirebaseFirestore.QueryDocumentSnapshot[]) => {
+            docs.forEach((docSnap) => {
+                if (seenIds.has(docSnap.id)) return;
+                seenIds.add(docSnap.id);
+                const data = docSnap.data();
+                const readBy = Array.isArray(data.readBy) ? data.readBy : [];
+                if (!readBy.includes(userId)) {
+                    unreadNotifications++;
+                }
+            });
+        };
+
+        countUnread(personalSnap.docs);
+        countUnread(globalSnap.docs);
+        countUnread(announcementSnap.docs);
+
         let unreadChats = 0;
-        chatsSnapshot.forEach((doc: any) => {
-            const chat = { id: doc.id, ...doc.data() } as Chat;
+        chatsSnapshot.forEach((docSnap) => {
+            const chat = { id: docSnap.id, ...docSnap.data() } as Chat;
             if (isChatUnread(chat, userId)) {
                 unreadChats++;
             }
@@ -40,7 +58,7 @@ export async function calculateTotalUnread(userId: string, db: Firestore): Promi
         return unreadNotifications + unreadChats;
     } catch (error) {
         console.error(`[calculateTotalUnread] Error for ${userId}:`, error);
-        return 0; // Default to 0 on error
+        return 0;
     }
 }
 

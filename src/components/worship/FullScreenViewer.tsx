@@ -8,6 +8,7 @@ import {
   ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones,
 } from 'lucide-react';
 
+import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey, ReferenceTrack } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
@@ -351,16 +352,15 @@ export function FullScreenViewer({
                   );
                 }
                 return (
-                  <img
+                  <RemoteImage
                     key={url}
                     src={url}
                     alt={`chord sheet pg ${i + 1}`}
+                    width={1200}
+                    height={1600}
                     draggable={false}
                     onLoad={i === 0 ? handleFirstImageLoad : undefined}
                     style={{
-                      // If we have a calculated pixel width, use it directly.
-                      // This means the scroll container exactly wraps the content — no blank space.
-                      // If not yet calculated, fall back to CSS contain so it fits on screen.
                       ...(imgPxWidth != null
                         ? { width: `${imgPxWidth}px`, height: 'auto', maxWidth: 'none' }
                         : { maxWidth: '100%', maxHeight: 'calc(100vh - 140px)', width: 'auto', height: 'auto', objectFit: 'contain' }

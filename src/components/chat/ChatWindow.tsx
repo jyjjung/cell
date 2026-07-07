@@ -171,7 +171,7 @@ function ChatWindowBody({
       currentUserId: currentUser.uid,
       getDisplayName: (uid) => formatUserDisplayName(usersById.get(uid)),
     });
-  }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser]);
+  }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser, allUsers.length]);
 
   const chatDetails = useMemo(() => {
     if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null, photoURL: null as string | null };
@@ -228,7 +228,7 @@ function ChatWindowBody({
     imageUrl?: string,
   ) => {
     setWorshipViewer({ setlistId, songId, imageUrl });
-  }, []);
+  }, [setWorshipViewer]);
 
   const sendersByUserId = useMemo(() => {
     if (!chat) return new Map<string, ChatMemberInfo | null>();

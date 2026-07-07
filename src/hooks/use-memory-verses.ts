@@ -34,7 +34,7 @@ export function useMemoryVerses() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setMemoryVerses([]);
       setLoading(false);
       return;

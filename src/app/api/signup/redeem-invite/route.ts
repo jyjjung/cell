@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       }
 
       const expiresAtMs = resolveInviteExpiresAtMs({
-        expiresAt: invite.expiresAt as { toMillis?: () => number } | undefined,
-        createdAt: invite.createdAt as { toMillis?: () => number } | undefined,
+        expiresAt: invite.expiresAt,
+        createdAt: invite.createdAt,
       });
       if (expiresAtMs && expiresAtMs <= Date.now()) {
         throw new Error('INVITE_EXPIRED');

@@ -34,7 +34,7 @@ export function PrayerRequestsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!currentUser || !isShepherd) {
+    if (!currentUser?.uid || !isShepherd) {
       setRequests([]);
       setLoading(false);
       return;

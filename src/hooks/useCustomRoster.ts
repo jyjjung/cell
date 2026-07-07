@@ -43,7 +43,7 @@ export function useCustomRoster(
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser || !rosterDefId) {
+    if (!currentUser?.uid || !rosterDefId) {
       setRoster([]);
       setLoading(false);
       return;

@@ -15,12 +15,15 @@ import {
   arrayUnion,
   deleteField,
   increment,
+  getDoc,
   getDocs,
+  writeBatch,
   type DocumentData,
   type UpdateData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
+import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
@@ -33,6 +36,7 @@ import {
 import type { ChatMessage } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
@@ -212,7 +216,8 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     });
 
     try {
-      await addDoc(threadColRef, messageData);
+      const threadMessageRef = doc(threadColRef);
+      const mainMessageRef = doc(mainColRef);
 
       const parentUpdate: UpdateData<DocumentData> = {
         replyCount: increment(1),
@@ -224,27 +229,40 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       if (setlistId) parentUpdate.latestReplyText = '🎵 Setlist';
       if (rosterId) parentUpdate.latestReplyText = '📋 Roster';
 
-      await updateDoc(parentDocRef, parentUpdate);
-
-      await addDoc(mainColRef, {
+      const batch = writeBatch(db);
+      batch.set(threadMessageRef, messageData);
+      batch.update(parentDocRef, parentUpdate);
+      batch.set(mainMessageRef, {
         ...messageData,
         threadParentId: parentMessageId,
       });
-
-      await updateDoc(chatDocRef, {
+      batch.update(chatDocRef, {
         lastMessageText: lastText,
         lastMessageSentAt: serverTimestamp(),
         lastMessageSenderId: currentUser.uid,
       });
+      await batch.commit();
+
+      const headers = await getClientAuthHeaders();
       fetch('/api/send-chat-push', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId, senderId: currentUser.uid, text: lastText }),
+        headers,
+        body: JSON.stringify({
+          chatId,
+          messageId: mainMessageRef.id,
+          senderId: currentUser.uid,
+          text: lastText,
+        }),
       }).catch((error) => console.error('Thread push notification dispatch failed:', error));
     } catch (error) {
       console.error('Failed to store thread message:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Reply not sent',
+        description: error instanceof Error ? error.message : 'Could not save this reply. Try again.',
+      });
     }
-  }, [currentUser, chatId, parentMessageId]);
+  }, [currentUser, chatId, parentMessageId, toast]);
 
   const sendImageMessage = useCallback((imageUrl: string, replyToId?: string) => {
     sendMessage(undefined, imageUrl, replyToId);
@@ -253,6 +271,8 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!currentUser || !chatId || !parentMessageId) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
+    const previous = messagesRef.current.find((m) => m.id === messageId);
+    const previousReactions = previous?.reactions ? { ...previous.reactions } : {};
 
     let nextReactions: ChatMessage['reactions'] = {};
     setMessages((prev) =>
@@ -270,7 +290,13 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       }),
     );
 
-    updateDoc(messageRef, { reactions: nextReactions }).catch(() => {});
+    try {
+      await updateDoc(messageRef, { reactions: nextReactions });
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, reactions: previousReactions } : m)),
+      );
+    }
   }, [currentUser, chatId, parentMessageId]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
@@ -281,15 +307,35 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     const threadColRef = collection(parentDocRef, THREAD_SUBCOLLECTION);
     const mainColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
     try {
+      let messageData = messagesRef.current.find((m) => m.id === messageId);
+      if (!messageData) {
+        const snap = await getDoc(messageRef);
+        if (snap.exists()) {
+          messageData = { id: snap.id, ...snap.data() } as ChatMessage;
+        }
+      }
+      const deletedContentType = messageData
+        ? getDeletedMessageContentType(messageData)
+        : 'message';
+
       await updateDoc(messageRef, {
         isDeleted: true,
         deletedBy: currentUser.uid,
+        deletedContentType,
         text: deleteField(),
         imageUrl: deleteField(),
         eventId: deleteField(),
         setlistId: deleteField(),
         rosterId: deleteField(),
+        qtDate: deleteField(),
+        cleaningDate: deleteField(),
+        songId: deleteField(),
+        songTitle: deleteField(),
+        sheetKey: deleteField(),
         reactions: deleteField(),
+        poll: deleteField(),
+        pollVotes: deleteField(),
+        pollUpdatedAt: deleteField(),
       });
 
       const latestThreadSnap = await getDocs(

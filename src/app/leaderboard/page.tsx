@@ -66,7 +66,7 @@ export default function LeaderboardPage() {
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);
-  }, [allProgress, allUsers, totalPassagesToDate, progressLoading, usersLoading, currentUser?.uid]);
+  }, [allProgress, allUsers, totalPassagesToDate, progressLoading, usersLoading, currentUser?.uid, currentUser?.avatar]);
 
   if (!isMounted || planLoading || progressLoading || usersLoading) return null;
 

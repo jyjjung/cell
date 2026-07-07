@@ -21,7 +21,7 @@ export function useWorshipSetlists(enabled = true) {
   const [loading, setLoading] = useState(!useShared);
 
   useEffect(() => {
-    if (useShared || !enabled || !currentUser) {
+    if (useShared || !enabled || !currentUser?.uid) {
       if (!useShared) {
         setSetlists([]);
         setLoading(false);

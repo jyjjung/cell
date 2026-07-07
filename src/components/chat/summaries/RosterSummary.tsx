@@ -15,6 +15,7 @@ import { translations } from '@/lib/translations';
 import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import type { WorshipRoster } from '@/types';
 import Link from 'next/link';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 
 interface RosterSummaryProps {
   rosterId: string;
@@ -28,12 +29,16 @@ export default function RosterSummary({ rosterId, isSender }: RosterSummaryProps
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const locale = getAppLocale(currentUser?.preferredLanguage);
 
-  if (loading || !roster) {
+  if (loading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...
       </div>
     );
+  }
+
+  if (!roster) {
+    return <DeletedContentNotice label={t.deletedContentRoster} />;
   }
 
   const slots = roster.slots || [];

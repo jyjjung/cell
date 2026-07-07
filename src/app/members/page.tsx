@@ -38,7 +38,7 @@ export default function MembersPage() {
   useEffect(() => { setIsMounted(true); }, []);
 
   useEffect(() => {
-    if (currentUser) void refreshUsers();
+    if (currentUser?.uid) void refreshUsers();
   }, [currentUser?.uid, refreshUsers]);
 
   const rolesMap = useMemo(() => new Map(roles.map(r => [r.id, r.name])), [roles]);

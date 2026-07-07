@@ -39,7 +39,7 @@ export function useRoles() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setRoles([]);
       setLoading(false);
       return;
