@@ -358,6 +358,14 @@ const changelogs = [
     ],
   },
   {
+    version: "v1.3.42",
+    date: "Early-July 2026",
+    changes: [
+      "New users who have not sent a prayer request see a prompt on site open with a link to the prayer page",
+      "Don't ask again hides the prayer request prompt for your account",
+    ],
+  },
+  {
     version: "v1.3.41",
     date: "Early-July 2026",
     changes: [
