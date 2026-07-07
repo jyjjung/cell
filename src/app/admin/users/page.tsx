@@ -26,7 +26,7 @@ import {
   Shield,
   Fingerprint,
   CheckSquare,
-  Square
+  UserPlus,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,6 +47,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-layout';
 import { translations } from '@/lib/translations';
+import { AdminInviteDialog } from '@/components/admin/admin-invite-dialog';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -74,6 +75,7 @@ export default function AdminUsersPage() {
   // Bulk Selection
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isBulkApproving, setIsBulkApproving] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
@@ -332,6 +334,17 @@ export default function AdminUsersPage() {
             />
           </div>
 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full md:w-auto shrink-0 h-9 rounded-lg"
+            onClick={() => setIsInviteOpen(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            {t.adminCreateInvite}
+          </Button>
+
           {selectedUserIds.size > 0 && (
               <Button onClick={handleBulkApprove} disabled={isBulkApproving} size="sm" className="whitespace-nowrap shrink-0">
                   {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
@@ -536,6 +549,7 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
+      <AdminInviteDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />
 
     </div>
   );

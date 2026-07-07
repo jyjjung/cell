@@ -7,8 +7,9 @@ import { useRoles } from '@/hooks/use-roles';
 import { useEvents } from '@/hooks/use-events';
 import { useAuth } from '@/contexts/auth-context';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Users, Cake } from 'lucide-react';
+import { Search, Users, Cake, UserPlus } from 'lucide-react';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { translations } from '@/lib/translations';
 import { format, parseISO, isValid } from 'date-fns';
@@ -22,13 +23,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { AdminInviteDialog } from '@/components/admin/admin-invite-dialog';
 
 export default function MembersPage() {
   const { allUsers, loading: usersLoading, refreshUsers } = useAllUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -73,14 +76,28 @@ export default function MembersPage() {
     <div className="page-container">
       <NavPageHeader />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t.searchMembers}
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="pl-9 h-10 rounded-lg"
-        />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t.searchMembers}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9 h-10 rounded-lg"
+          />
+        </div>
+        {isAdmin && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-10 shrink-0 rounded-lg"
+            onClick={() => setIsInviteOpen(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            {t.adminCreateInvite}
+          </Button>
+        )}
       </div>
 
       {filteredUsers.length === 0 ? (
@@ -137,6 +154,8 @@ export default function MembersPage() {
           </Table>
         </div>
       )}
+
+      {isAdmin && <AdminInviteDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} />}
     </div>
   );
 }

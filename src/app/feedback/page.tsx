@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.64",
+    date: "Early-July 2026",
+    changes: [
+      "Admins receive a notification when someone signs up and is waiting for approval",
+      "Invite button on Admin → Users and Members to create signup links with optional roles",
+      "Invite links can be shown as a QR code to scan or download",
+    ],
+  },
+  {
     version: "v1.3.63",
     date: "Late-June 2026",
     changes: [
