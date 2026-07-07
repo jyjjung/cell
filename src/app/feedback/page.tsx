@@ -56,6 +56,61 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.85",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Each song title bar now sits directly above its own chart and below the previous one",
+      "Setlist titles are rendered in the content flow for simpler spacing between songs",
+    ],
+  },
+  {
+    version: "v1.3.77",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Restored natural pinch-zoom and panning across the full setlist in chat",
+      "Song titles stay readable at a fixed size while chord sheets zoom",
+    ],
+  },
+  {
+    version: "v1.3.76",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Song titles stay fixed at normal size while you zoom chord sheets",
+      "Scrolling uses native vertical scroll; zoom only applies to the chart images",
+    ],
+  },
+  {
+    version: "v1.3.75",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Setlist viewer no longer lets you pan into empty black space around chord sheets",
+      "The scroll area now matches the actual sheet width and stays clamped to the content edges",
+    ],
+  },
+  {
+    version: "v1.3.74",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Chat setlist viewer now uses natural pinch-zoom and free panning in all directions",
+      "Reference track Listen buttons are back on each song in the setlist viewer",
+      "Song chips at the bottom jump you to any song while keeping the full scrollable setlist",
+    ],
+  },
+  {
+    version: "v1.3.73",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Setlists opened from chat now show all chord sheets on one scrollable page",
+      "Pinch, zoom buttons, and scroll let you move around the full setlist while practicing",
+    ],
+  },
+  {
     version: "v1.3.72",
     subtitle: "Chat & security",
     date: "Early-July 2026",

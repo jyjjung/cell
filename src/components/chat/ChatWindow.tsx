@@ -395,7 +395,30 @@ function ChatWindowBody({
               });
             }
           }
-        } else if (worshipViewer.songId) {
+
+          if (slides.length === 0) return null;
+
+          let startIndex = 0;
+          if (worshipViewer.songId) {
+            const ps = setlist.songs.find((s) => s.songId === worshipViewer.songId);
+            if (ps) {
+              const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
+              if (foundIdx !== -1) startIndex = foundIdx;
+            }
+          }
+
+          return (
+            <FullScreenViewer
+              slides={slides}
+              startIndex={startIndex}
+              onClose={() => setWorshipViewer(null)}
+              mode="continuous"
+              title={setlist.name}
+            />
+          );
+        }
+        
+        if (worshipViewer.songId) {
           const libSong = songs.find(s => s.id === worshipViewer.songId);
           if (!libSong) return null;
           
@@ -416,14 +439,7 @@ function ChatWindowBody({
         if (slides.length === 0) return null;
 
         let startIndex = 0;
-        if (worshipViewer.setlistId && worshipViewer.songId) {
-          const setlist = setlists.find(s => s.id === worshipViewer.setlistId);
-          const ps = setlist?.songs.find((s: any) => s.songId === worshipViewer.songId);
-          if (ps) {
-            const foundIdx = slides.findIndex(sl => sl.songTitle === ps.title && sl.key === ps.key);
-            if (foundIdx !== -1) startIndex = foundIdx;
-          }
-        } else if (worshipViewer.imageUrl) {
+        if (worshipViewer.imageUrl) {
           const foundIdx = slides.findIndex(sl => sl.imageUrls?.includes(worshipViewer.imageUrl!));
           if (foundIdx !== -1) startIndex = foundIdx;
         }
