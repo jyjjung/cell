@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.75",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Setlist viewer no longer lets you pan into empty black space around chord sheets",
+      "The scroll area now matches the actual sheet width and stays clamped to the content edges",
+    ],
+  },
+  {
     version: "v1.3.74",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",

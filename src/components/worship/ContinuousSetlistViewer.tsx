@@ -93,6 +93,14 @@ export function ContinuousSetlistViewer({
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
   const didInitialScroll = useRef(false);
 
+  const centerContentHorizontally = useCallback((ref: ReactZoomPanPinchRef) => {
+    const wrapper = ref.instance.wrapperComponent;
+    const content = ref.instance.contentComponent;
+    if (!wrapper || !content) return;
+    const x = Math.max(0, (wrapper.offsetWidth - content.offsetWidth) / 2);
+    ref.setTransform(x, ref.instance.transformState.positionY, ref.instance.transformState.scale);
+  }, []);
+
   const activeSlide = slides[activeSection] ?? slides[0];
   const isZoomed = scale > 1.05;
   const zoomPct = Math.round(scale * 100);
@@ -108,13 +116,18 @@ export function ContinuousSetlistViewer({
   }, [slides.length, scale]);
 
   useEffect(() => {
-    if (didInitialScroll.current || startIndex <= 0) return;
+    if (didInitialScroll.current) return;
     const timer = window.setTimeout(() => {
-      jumpToSection(startIndex, 0);
+      if (!controlsRef.current) return;
+      if (startIndex > 0) {
+        jumpToSection(startIndex, 0);
+      } else if (transformRef.current) {
+        centerContentHorizontally(transformRef.current);
+      }
       didInitialScroll.current = true;
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [startIndex, jumpToSection]);
+  }, [startIndex, jumpToSection, centerContentHorizontally]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -218,14 +231,15 @@ export function ContinuousSetlistViewer({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
           minScale={1}
           maxScale={5}
-          centerOnInit
-          limitToBounds={false}
+          centerOnInit={false}
+          limitToBounds
+          centerZoomedOut={false}
           alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
           wheel={{ step: 0.12, smoothStep: 0.004 }}
           pinch={{ step: 6 }}
@@ -237,9 +251,9 @@ export function ContinuousSetlistViewer({
             return (
               <TransformComponent
                 wrapperClass="!w-full !h-full"
-                contentClass="!w-full !flex !justify-center !py-6"
+                contentClass="!w-fit !max-w-full"
               >
-                <div className="flex w-full max-w-3xl flex-col gap-10 px-3 pb-24">
+                <div className="flex w-[min(100vw-1.5rem,48rem)] flex-col gap-8 px-3 pb-4 pt-1">
                   {slides.map((section, sectionIdx) => {
                     const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
                     return (
@@ -259,9 +273,9 @@ export function ContinuousSetlistViewer({
                             {hasTracks && (
                               <button
                                 type="button"
-                                onClick={() => openListenForSection(sectionIdx)}
+                                onClick={(e) => { e.stopPropagation(); openListenForSection(sectionIdx); }}
                                 className={cn(
-                                  'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
+                                  'setlist-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
                                   listenOpen && activeSection === sectionIdx
                                     ? 'border-rose-400/40 bg-rose-500/20 text-rose-200'
                                     : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/20',
@@ -289,8 +303,8 @@ export function ContinuousSetlistViewer({
                             {hasTracks && (
                               <button
                                 type="button"
-                                onClick={() => openListenForSection(sectionIdx)}
-                                className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white"
+                                onClick={(e) => { e.stopPropagation(); openListenForSection(sectionIdx); }}
+                                className="setlist-control mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white"
                               >
                                 <Headphones className="h-4 w-4" />
                                 Play reference track
