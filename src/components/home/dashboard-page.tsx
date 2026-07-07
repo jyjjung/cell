@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import CalendarWidget from '@/components/dashboard-widgets/calendar-widget';
 import AgendaView, { type AgendaItem } from '@/components/dashboard-widgets/agenda-view';
+import TodayQtWidget from '@/components/dashboard-widgets/today-qt-widget';
 import { EventCategory } from '@/types';
 
 interface DashboardPageProps {
@@ -455,21 +456,24 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         </section>
 
         {/* Today snapshot */}
-        <aside className="ui-card space-y-4 lg:col-span-2">
-          <p className="text-eyebrow">{t.todayLabel}</p>
-          <AgendaView
-            selectedDate={today}
-            hideHeader
-            hideQt
-            events={upcomingOnlyEvents}
-            cleaningRoster={cleaningRoster}
-            qtRoster={qtRoster}
-            worshipRosters={worshipRosters}
-            customRosterEntries={customRosterEntries}
-            allUsers={allUsers}
-            cleaningDays={cleaningDays}
-            onItemClick={handleAgendaItemClick}
-          />
+        <aside className="space-y-5 lg:col-span-2">
+          <TodayQtWidget />
+
+          <div className="ui-card space-y-4">
+            <p className="text-eyebrow">{t.todayLabel}</p>
+            <AgendaView
+              selectedDate={today}
+              hideHeader
+              hideQt
+              events={upcomingOnlyEvents}
+              cleaningRoster={cleaningRoster}
+              qtRoster={qtRoster}
+              worshipRosters={worshipRosters}
+              customRosterEntries={customRosterEntries}
+              allUsers={allUsers}
+              cleaningDays={cleaningDays}
+              onItemClick={handleAgendaItemClick}
+            />
 
           {upcomingDuties.length > 0 && (
             <div className="space-y-2 border-t border-border/50 pt-4">
@@ -516,6 +520,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
               </div>
             </div>
           )}
+          </div>
         </aside>
       </div>
 
