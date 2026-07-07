@@ -25,6 +25,11 @@ export async function resolveUserIdByEmail(
   return null;
 }
 
+export async function getAdminUserIds(adminDb: Firestore): Promise<string[]> {
+  const snap = await adminDb.collection('users').where('isAdmin', '==', true).get();
+  return snap.docs.map((doc) => doc.id);
+}
+
 export async function sendUserNotification(
   adminDb: Firestore,
   adminMessaging: Messaging,

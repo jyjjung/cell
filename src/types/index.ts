@@ -19,6 +19,14 @@ export interface AppRole {
   createdAt: Timestamp;
 }
 
+export interface AppInvite {
+  id: string;
+  roles: string[];
+  label?: string;
+  createdAt?: Timestamp;
+  createdBy?: string;
+}
+
 export enum EventCategory {
   Event = "Event",
   Birthday = "Birthday",

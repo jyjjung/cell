@@ -18,6 +18,7 @@ import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRol
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
 import { syncProfileToChats } from '@/lib/sync-profile-chats';
+import { notifySignupPending } from '@/lib/signup-notify';
 
 interface AuthContextType {
   isAdmin: boolean;
@@ -258,7 +259,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       await setDoc(userDocRef, newProfileData);
       await updateFirebaseProfile(firebaseUser, { displayName: `${firstName} ${lastName}` });
-      
+
+      if (!autoCompleteApproval) {
+        void notifySignupPending(firebaseUser.uid);
+      }
+
       return firebaseUser as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
