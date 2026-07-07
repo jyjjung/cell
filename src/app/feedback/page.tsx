@@ -56,12 +56,12 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.82",
+    version: "v1.3.83",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
     changes: [
-      "Setlist viewer now shows one sticky current-song title bar instead of overlapping floating bars",
-      "The title stays fixed while you zoom, without covering the previous or next song",
+      "Setlist viewer titles now sit in the gap between songs, below the previous song and above the next one",
+      "Titles stay fixed while you zoom and no longer overlap adjacent charts",
     ],
   },
   {
