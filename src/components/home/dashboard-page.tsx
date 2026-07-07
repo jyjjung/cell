@@ -456,10 +456,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         </section>
 
         {/* Today snapshot */}
-        <aside className="space-y-5 lg:col-span-2">
+        <aside className="ui-card space-y-4 lg:col-span-2">
           <TodayQtWidget />
 
-          <div className="ui-card space-y-4">
+          <div>
             <p className="text-eyebrow">{t.todayLabel}</p>
             <AgendaView
               selectedDate={today}
