@@ -56,11 +56,11 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.78",
+    version: "v1.3.79",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
     changes: [
-      "Song title bars in the setlist viewer no longer resize when zooming chord sheets",
+      "Song title bars keep a fixed width and no longer stretch horizontally while zooming",
       "Titles are rendered in a fixed overlay that tracks each song as you pan",
     ],
   },

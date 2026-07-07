@@ -163,12 +163,8 @@ export function ContinuousSetlistViewer({
     if (!viewport) return;
 
     const viewportRect = viewport.getBoundingClientRect();
-    const contentEl = transformRef.current?.instance.contentComponent;
-    const contentRect = contentEl?.getBoundingClientRect();
-    const barWidth = contentRect?.width ?? Math.min(viewportRect.width - 24, 768);
-    const barLeft = contentRect
-      ? contentRect.left - viewportRect.left
-      : (viewportRect.width - barWidth) / 2;
+    const barWidth = Math.min(viewportRect.width - 24, 768);
+    const barLeft = (viewportRect.width - barWidth) / 2;
 
     let currentSection = 0;
 
