@@ -56,6 +56,18 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.71",
+    subtitle: "Security & reliability",
+    date: "Early-July 2026",
+    changes: [
+      "Scheduled announcements now go out on their chosen day via the morning reminder job",
+      "Admin role access syncs correctly with Firestore permissions",
+      "Tighter notification and chat file upload security rules",
+      "Cleaning days in use on the roster can no longer be deleted",
+      "Invalid invite signups redirect to the pending-approval screen",
+    ],
+  },
+  {
     version: "v1.3.70",
     subtitle: "Safer invites",
     date: "Early-July 2026",

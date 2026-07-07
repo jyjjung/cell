@@ -6,6 +6,7 @@ import {
   type DutyReminderPayload,
 } from '@/lib/duty-reminders';
 import { collectEventDayReminders } from '@/lib/event-reminders';
+import { deliverDueScheduledAnnouncements } from '@/lib/deliver-scheduled-announcements';
 import { normalizeEventFromFirestore } from '@/lib/event-doc';
 import { sendUserNotification } from '@/lib/server-notifications';
 import type {
@@ -129,6 +130,8 @@ export async function GET(request: NextRequest) {
       else eventSkipped++;
     }
 
+    const scheduled = await deliverDueScheduledAnnouncements(adminDb, adminMessaging, timeZone);
+
     return NextResponse.json({
       success: true,
       todayIso,
@@ -143,6 +146,7 @@ export async function GET(request: NextRequest) {
         sent: eventSent,
         skipped: eventSkipped,
       },
+      scheduledAnnouncements: scheduled,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

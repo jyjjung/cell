@@ -13,6 +13,8 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDocs,
+  where,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useScheduleData } from '@/contexts/schedule-data-context';
@@ -69,7 +71,14 @@ export function useCleaningDays(enabled = true) {
 
   const deleteCleaningDay = useCallback(async (id: string) => {
     if (!isAdmin) throw new Error("Not authorized");
-    // TODO: Add logic to check if day is in use before deleting
+    const rosterQuery = query(
+      collection(db, 'cleaningRosters'),
+      where('dayId', '==', id),
+    );
+    const rosterSnap = await getDocs(rosterQuery);
+    if (!rosterSnap.empty) {
+      throw new Error("This cleaning day is assigned on the roster. Reassign those entries before deleting.");
+    }
     const docRef = doc(db, CLEANING_DAYS_COLLECTION, id);
     await deleteDoc(docRef);
   }, [isAdmin]);

@@ -135,10 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsAdmin(effectiveIsAdmin);
 
                 if (userHasAdminRole(profileData.roleIds, adminRoleIds) && !profileData.isAdmin) {
-                  void updateDoc(userDocRef, {
-                    isAdmin: true,
-                    updatedAt: serverTimestamp(),
-                  });
+                  void auth.currentUser?.getIdToken().then((token) =>
+                    fetch('/api/auth/sync-admin-access', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    }).catch((error) => {
+                      console.error('Error syncing admin access:', error);
+                    }),
+                  );
                 }
               })
               .catch((error) => {
@@ -248,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await updateUserProfile(currentUser.uid, { isAdmin: false });
         }
         
-        router.push('/admin');
+        router.push('/');
     } catch(err) {
         console.error("Failed to revoke admin status:", err);
     }

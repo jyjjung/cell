@@ -32,15 +32,34 @@ export function inviteUsesRemaining(invite: AppInvite): number {
   return Math.max(0, inviteMaxUses(invite) - inviteUseCount(invite));
 }
 
+function timestampToMillis(value: Timestamp | { toMillis?: () => number } | undefined): number {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  return 0;
+}
+
+export function resolveInviteExpiresAtMs(
+  invite: Pick<AppInvite, 'expiresAt' | 'createdAt'>,
+  nowMs = Date.now(),
+): number | null {
+  const explicitMs = timestampToMillis(invite.expiresAt ?? undefined);
+  if (explicitMs > 0) return explicitMs;
+
+  const createdMs = timestampToMillis(invite.createdAt);
+  if (createdMs > 0) {
+    return createdMs + DEFAULT_INVITE_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+  }
+
+  return null;
+}
+
 export function isInviteExpired(
-  invite: Pick<AppInvite, 'expiresAt'>,
+  invite: Pick<AppInvite, 'expiresAt' | 'createdAt'>,
   nowMs = Date.now(),
 ): boolean {
-  if (!invite.expiresAt) return false;
-  const millis = typeof invite.expiresAt.toMillis === 'function'
-    ? invite.expiresAt.toMillis()
-    : (invite.expiresAt as Timestamp).toMillis?.() ?? 0;
-  return millis > 0 && millis <= nowMs;
+  const expiresAtMs = resolveInviteExpiresAtMs(invite, nowMs);
+  if (!expiresAtMs) return false;
+  return expiresAtMs <= nowMs;
 }
 
 export type InviteStatus = 'active' | 'used' | 'expired';
