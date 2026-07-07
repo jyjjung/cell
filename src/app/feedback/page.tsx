@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.76",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Song titles stay fixed at normal size while you zoom chord sheets",
+      "Scrolling uses native vertical scroll; zoom only applies to the chart images",
+    ],
+  },
+  {
     version: "v1.3.75",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
