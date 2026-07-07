@@ -1,7 +1,7 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -30,6 +30,7 @@ interface AuthContextType {
   adminUpdateUserProfile: (userId: string, profileData: Partial<UserProfileData>) => Promise<void>;
 
   currentUser: AppUser | null;
+  hasSession: boolean;
   loadingAuth: boolean;
   signUpUser: (email: string, password: string, firstName: string, lastName: string, inviteCode?: string) => Promise<AppUser | null>;
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
@@ -76,18 +77,108 @@ const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   nextReading: true,
 };
 
+function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, isAdmin: boolean): AppUser {
+  const hasName = !!(profileData.firstName && profileData.lastName);
+
+  return {
+    ...firebaseUser,
+    firstName: profileData.firstName,
+    lastName: profileData.lastName,
+    displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
+    roleIds: profileData.roleIds || [],
+    showInCommunityProgress: profileData.showInCommunityProgress ?? true,
+    preferredLanguage: profileData.preferredLanguage || 'en',
+    colorPalette: profileData.colorPalette,
+    surfaceBackground: profileData.surfaceBackground,
+    appTheme: profileData.appTheme,
+    glassEnabled: profileData.glassEnabled,
+    typography: profileData.typography,
+    bibleTextVersion: profileData.bibleTextVersion,
+    dashboard: {
+      layouts: profileData.dashboard?.layouts || {},
+      widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) },
+    },
+    isAdmin,
+    isApproved: profileData.isApproved || false,
+    isYouth: profileData.isYouth || false,
+    avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+    avatarChangesEnabled: profileData.avatarChangesEnabled,
+    fcmTokens: profileData.fcmTokens || [],
+  } as AppUser;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [hasSession, setHasSession] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isWorshipTeam, setIsWorshipTeam] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const profileGenerationRef = useRef(0);
 
+  const applyProfile = useCallback(async (
+    firebaseUser: FirebaseUser,
+    profileData: UserProfileData,
+    generation: number,
+  ) => {
+    try {
+      const adminRoleIds = await getAdminRoleIds();
+      if (generation !== profileGenerationRef.current) return;
+
+      const effectiveIsAdmin = resolveIsAdmin(profileData, adminRoleIds);
+      setCurrentUser(buildAppUser(firebaseUser, profileData, effectiveIsAdmin));
+      setIsAdmin(effectiveIsAdmin);
+
+      if (userHasAdminRole(profileData.roleIds, adminRoleIds) && !profileData.isAdmin) {
+        void auth.currentUser?.getIdToken().then((token) =>
+          fetch('/api/auth/sync-admin-access', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch((error) => {
+            console.error('Error syncing admin access:', error);
+          }),
+        );
+      }
+    } catch (error) {
+      if (generation !== profileGenerationRef.current) return;
+      console.error('Error resolving admin access:', error);
+      setCurrentUser(buildAppUser(firebaseUser, profileData, profileData.isAdmin || false));
+      setIsAdmin(profileData.isAdmin || false);
+    }
+  }, []);
+
+  const hydrateProfileFromServer = useCallback(async (
+    firebaseUser: FirebaseUser,
+    userDocRef: ReturnType<typeof doc>,
+    generation: number,
+  ) => {
+    try {
+      const serverSnap = await getDocFromServer(userDocRef);
+      if (generation !== profileGenerationRef.current) return;
+
+      if (serverSnap.exists()) {
+        await applyProfile(firebaseUser, serverSnap.data() as UserProfileData, generation);
+        return;
+      }
+
+      const cacheSnap = await getDoc(userDocRef);
+      if (generation !== profileGenerationRef.current) return;
+
+      if (cacheSnap.exists()) {
+        await applyProfile(firebaseUser, cacheSnap.data() as UserProfileData, generation);
+        return;
+      }
+
+      console.warn('[AuthProvider] Firebase session exists but no Firestore profile was found:', firebaseUser.uid);
+    } catch (error) {
+      if (generation !== profileGenerationRef.current) return;
+      console.error('[AuthProvider] Error hydrating profile from server:', error);
+    }
+  }, [applyProfile]);
 
   useEffect(() => {
     let unsubscribeFromProfile: (() => void) | null = null;
-    let profileGeneration = 0;
 
     const unsubscribeFromAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (unsubscribeFromProfile) {
@@ -95,122 +186,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribeFromProfile = null;
       }
 
+      setHasSession(!!firebaseUser);
+
       if (firebaseUser) {
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
-        
+
         unsubscribeFromProfile = onSnapshot(userDocRef, (userDocSnap) => {
-          const generation = ++profileGeneration;
+          const generation = ++profileGenerationRef.current;
 
           if (userDocSnap.exists()) {
-            const profileData = userDocSnap.data() as UserProfileData;
-            
-            const hasName = !!(profileData.firstName && profileData.lastName);
-
-            void getAdminRoleIds()
-              .then((adminRoleIds) => {
-                if (generation !== profileGeneration) return;
-
-                const effectiveIsAdmin = resolveIsAdmin(profileData, adminRoleIds);
-
-                setCurrentUser({
-                  ...firebaseUser,
-                  firstName: profileData.firstName,
-                  lastName: profileData.lastName,
-                  displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
-                  roleIds: profileData.roleIds || [],
-                  showInCommunityProgress: profileData.showInCommunityProgress ?? true,
-                  preferredLanguage: profileData.preferredLanguage || 'en',
-                  colorPalette: profileData.colorPalette,
-                  surfaceBackground: profileData.surfaceBackground,
-                  appTheme: profileData.appTheme,
-                  glassEnabled: profileData.glassEnabled,
-                  typography: profileData.typography,
-                  bibleTextVersion: profileData.bibleTextVersion,
-                  dashboard: { 
-                    layouts: profileData.dashboard?.layouts || {},
-                    widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
-                  },
-                  isAdmin: effectiveIsAdmin,
-                  isApproved: profileData.isApproved || false,
-                  isYouth: profileData.isYouth || false,
-                  avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
-                  avatarChangesEnabled: profileData.avatarChangesEnabled,
-                  fcmTokens: profileData.fcmTokens || [],
-                } as AppUser);
-                setIsAdmin(effectiveIsAdmin);
-
-                if (userHasAdminRole(profileData.roleIds, adminRoleIds) && !profileData.isAdmin) {
-                  void auth.currentUser?.getIdToken().then((token) =>
-                    fetch('/api/auth/sync-admin-access', {
-                      method: 'POST',
-                      headers: { Authorization: `Bearer ${token}` },
-                    }).catch((error) => {
-                      console.error('Error syncing admin access:', error);
-                    }),
-                  );
-                }
-              })
-              .catch((error) => {
-                if (generation !== profileGeneration) return;
-                console.error('Error resolving admin access:', error);
-                setCurrentUser({
-                  ...firebaseUser,
-                  firstName: profileData.firstName,
-                  lastName: profileData.lastName,
-                  displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
-                  roleIds: profileData.roleIds || [],
-                  showInCommunityProgress: profileData.showInCommunityProgress ?? true,
-                  preferredLanguage: profileData.preferredLanguage || 'en',
-                  colorPalette: profileData.colorPalette,
-                  surfaceBackground: profileData.surfaceBackground,
-                  appTheme: profileData.appTheme,
-                  glassEnabled: profileData.glassEnabled,
-                  typography: profileData.typography,
-                  bibleTextVersion: profileData.bibleTextVersion,
-                  dashboard: { 
-                    layouts: profileData.dashboard?.layouts || {},
-                    widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
-                  },
-                  isAdmin: profileData.isAdmin || false,
-                  isApproved: profileData.isApproved || false,
-                  isYouth: profileData.isYouth || false,
-                  avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
-                  avatarChangesEnabled: profileData.avatarChangesEnabled,
-                  fcmTokens: profileData.fcmTokens || [],
-                } as AppUser);
-                setIsAdmin(profileData.isAdmin || false);
-              });
-          } else {
-            void getDocFromServer(userDocRef)
-              .then((serverSnap) => {
-                if (generation !== profileGeneration) return;
-
-                if (serverSnap.exists()) {
+            void applyProfile(firebaseUser, userDocSnap.data() as UserProfileData, generation)
+              .finally(() => {
+                if (generation === profileGenerationRef.current) {
                   setLoadingAuth(false);
-                  return;
                 }
-
-                void signOut(auth).catch((error) => {
-                  console.error('Signed out due to missing profile:', error);
-                });
-                setCurrentUser(null);
-                setIsAdmin(false);
-                setLoadingAuth(false);
-              })
-              .catch((error) => {
-                if (generation !== profileGeneration) return;
-                console.error('Error verifying user profile on server:', error);
-                setLoadingAuth(false);
               });
             return;
           }
-          setLoadingAuth(false);
+
+          void hydrateProfileFromServer(firebaseUser, userDocRef, generation)
+            .finally(() => {
+              if (generation === profileGenerationRef.current) {
+                setLoadingAuth(false);
+              }
+            });
         }, (error) => {
-            console.error("Error listening to user profile:", error);
-            setLoadingAuth(false);
+          console.error('Error listening to user profile:', error);
+          setLoadingAuth(false);
         });
 
       } else {
+        profileGenerationRef.current += 1;
         setCurrentUser(null);
         setIsAdmin(false);
         setLoadingAuth(false);
@@ -223,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribeFromProfile();
       }
     };
-  }, []);
+  }, [applyProfile, hydrateProfileFromServer]);
 
   const uid = currentUser?.uid;
   const roleIds = currentUser?.roleIds;
@@ -440,6 +446,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminLogout,
       adminUpdateUserProfile,
       currentUser,
+      hasSession,
       loadingAuth,
       signUpUser,
       signInUser,
