@@ -17,8 +17,6 @@ import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
 
-const TITLE_SLOT_HEIGHT = 44;
-
 async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
@@ -179,7 +177,7 @@ export function ContinuousSetlistViewer({
       titleEl.style.width = `${barWidth}px`;
       titleEl.style.transform = `translate3d(${barLeft}px, ${y}px, 0)`;
 
-      const visible = y > -TITLE_SLOT_HEIGHT && y < viewportRect.height;
+      const visible = y > -48 && y < viewportRect.height;
       titleEl.style.opacity = visible ? '1' : '0';
       titleEl.style.pointerEvents = visible ? 'auto' : 'none';
 
@@ -368,8 +366,7 @@ export function ContinuousSetlistViewer({
                       >
                         <div
                           id={`setlist-anchor-${sectionIdx}`}
-                          className="w-full shrink-0"
-                          style={{ height: TITLE_SLOT_HEIGHT }}
+                          className="h-0 w-full shrink-0"
                           aria-hidden
                         />
                         {(section.imageUrls ?? []).length > 0 ? (
