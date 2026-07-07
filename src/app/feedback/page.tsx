@@ -56,12 +56,12 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.84",
+    version: "v1.3.85",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
     changes: [
-      "Added extra top padding above the first song in the chat setlist viewer",
-      "The first title bar now has more space without changing the rest of the setlist layout",
+      "Each song title bar now sits directly above its own chart and below the previous one",
+      "Setlist titles are rendered in the content flow for simpler spacing between songs",
     ],
   },
   {

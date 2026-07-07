@@ -303,19 +303,6 @@ export function ContinuousSetlistViewer({
       </div>
 
       <div ref={viewportRef} className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-2 z-20 px-3 sm:px-4">
-          <div className="mx-auto w-full max-w-3xl pointer-events-auto">
-            <SectionTitleBar
-              sectionIdx={activeSection}
-              title={activeSlide?.songTitle ?? ''}
-              keyName={activeSlide?.key ?? 'C'}
-              hasTracks={(activeSlide?.referenceTracks?.length ?? 0) > 0}
-              listenOpen={listenOpen}
-              isActive
-              onListen={() => openListenForSection(activeSection)}
-            />
-          </div>
-        </div>
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
@@ -365,6 +352,15 @@ export function ContinuousSetlistViewer({
                         )}
                       >
                         <div id={`setlist-anchor-${sectionIdx}`} className="h-0 w-full shrink-0" aria-hidden />
+                        <SectionTitleBar
+                          sectionIdx={sectionIdx}
+                          title={section.songTitle}
+                          keyName={section.key}
+                          hasTracks={hasTracks}
+                          listenOpen={listenOpen}
+                          isActive={activeSection === sectionIdx}
+                          onListen={() => openListenForSection(sectionIdx)}
+                        />
                         {(section.imageUrls ?? []).length > 0 ? (
                           (section.imageUrls ?? []).map((url, pageIdx) => (
                             <ChordPage
@@ -398,7 +394,6 @@ export function ContinuousSetlistViewer({
             );
           }}
         </TransformWrapper>
-
       </div>
 
       <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 bg-black/90 px-4 pb-6 pt-3 backdrop-blur-md">
