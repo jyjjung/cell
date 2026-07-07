@@ -318,6 +318,14 @@ const changelogs = [
     ],
   },
   {
+    version: "v1.3.45",
+    date: "Early-July 2026",
+    changes: [
+      "Fixed sessions appearing to log out when leaving a page while your profile was still syncing",
+      "Auth now keeps your Firebase session during brief Firestore cache misses instead of signing you out",
+    ],
+  },
+  {
     version: "v1.3.44",
     subtitle: "Stability Fix",
     date: "Mid-June 2026",

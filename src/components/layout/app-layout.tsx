@@ -11,7 +11,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import Footer from './footer';
-import { Bell } from 'lucide-react';
+import { Bell, Loader2 } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { PrayerRequestPrompt } from './prayer-request-prompt';
 import { CommandMenu } from './command-menu';
@@ -39,7 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, hasSession, loadingAuth } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
@@ -94,8 +94,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, loadingAuth, pathname, router]);
 
-  if (!currentUser) {
+  if (!hasSession) {
+    if (loadingAuth) {
+      return (
+        <div className="flex min-h-svh items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+        </div>
+      );
+    }
     return <GuestShell>{children}</GuestShell>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+      </div>
+    );
   }
 
   return (
