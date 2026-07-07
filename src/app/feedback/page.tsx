@@ -56,12 +56,12 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.81",
+    version: "v1.3.82",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
     changes: [
-      "Song title bars now sit above the sheet music instead of covering the first lines",
-      "Titles keep a fixed width in a non-zooming overlay while chord sheets scale underneath",
+      "Setlist viewer now shows one sticky current-song title bar instead of overlapping floating bars",
+      "The title stays fixed while you zoom, without covering the previous or next song",
     ],
   },
   {

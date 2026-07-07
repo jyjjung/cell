@@ -17,9 +17,6 @@ import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
 
-const TITLE_BAR_HEIGHT = 44;
-const TITLE_BAR_GAP = 8;
-
 async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
@@ -130,7 +127,6 @@ export function ContinuousSetlistViewer({
 }) {
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const titleRefs = useRef<(HTMLDivElement | null)[]>([]);
   const controlsRef = useRef<{
     zoomIn: (step?: number) => void;
     zoomOut: (step?: number) => void;
@@ -142,7 +138,6 @@ export function ContinuousSetlistViewer({
   const [activeSection, setActiveSection] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
-  const [titlesVisible, setTitlesVisible] = useState(false);
   const didInitialScroll = useRef(false);
 
   const activeSlide = slides[activeSection] ?? slides[0];
@@ -159,36 +154,22 @@ export function ContinuousSetlistViewer({
     ref.setTransform(x, ref.instance.transformState.positionY, ref.instance.transformState.scale);
   }, []);
 
-  const updateTitlePositions = useCallback(() => {
+  const updateActiveSectionFromView = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
     const viewportRect = viewport.getBoundingClientRect();
-    const barWidth = Math.min(viewportRect.width - 24, 768);
-    const barLeft = (viewportRect.width - barWidth) / 2;
-
     let currentSection = 0;
 
     slides.forEach((_, i) => {
       const anchor = document.getElementById(`setlist-anchor-${i}`);
-      const titleEl = titleRefs.current[i];
-      if (!anchor || !titleEl) return;
+      if (!anchor) return;
 
       const anchorRect = anchor.getBoundingClientRect();
-      const y = anchorRect.top - viewportRect.top - TITLE_BAR_HEIGHT - TITLE_BAR_GAP;
-
-      titleEl.style.width = `${barWidth}px`;
-      titleEl.style.transform = `translate3d(${barLeft}px, ${y}px, 0)`;
-
-      const visible = y > -(TITLE_BAR_HEIGHT + TITLE_BAR_GAP) && y < viewportRect.height;
-      titleEl.style.opacity = visible ? '1' : '0';
-      titleEl.style.pointerEvents = visible ? 'auto' : 'none';
-
       if (anchorRect.top <= viewportRect.top + 96) currentSection = i;
     });
 
     setActiveSection((prev) => (prev === currentSection ? prev : currentSection));
-    setTitlesVisible(true);
   }, [slides]);
 
   const jumpToSection = useCallback((index: number, animationTime = 280) => {
@@ -209,11 +190,11 @@ export function ContinuousSetlistViewer({
       } else if (transformRef.current) {
         centerContentHorizontally(transformRef.current);
       }
-      updateTitlePositions();
+      updateActiveSectionFromView();
       didInitialScroll.current = true;
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [startIndex, jumpToSection, centerContentHorizontally, updateTitlePositions]);
+  }, [startIndex, jumpToSection, centerContentHorizontally, updateActiveSectionFromView]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -245,8 +226,8 @@ export function ContinuousSetlistViewer({
   };
 
   const handleTransformChange = useCallback(() => {
-    window.requestAnimationFrame(updateTitlePositions);
-  }, [updateTitlePositions]);
+    window.requestAnimationFrame(updateActiveSectionFromView);
+  }, [updateActiveSectionFromView]);
 
   const controlBtn = 'p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30';
 
@@ -322,6 +303,19 @@ export function ContinuousSetlistViewer({
       </div>
 
       <div ref={viewportRef} className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-2 z-20 px-3 sm:px-4">
+          <div className="mx-auto w-full max-w-3xl pointer-events-auto">
+            <SectionTitleBar
+              sectionIdx={activeSection}
+              title={activeSlide?.songTitle ?? ''}
+              keyName={activeSlide?.key ?? 'C'}
+              hasTracks={(activeSlide?.referenceTracks?.length ?? 0) > 0}
+              listenOpen={listenOpen}
+              isActive
+              onListen={() => openListenForSection(activeSection)}
+            />
+          </div>
+        </div>
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
@@ -367,11 +361,7 @@ export function ContinuousSetlistViewer({
                         id={`setlist-section-${sectionIdx}`}
                         className="flex w-full flex-col gap-3"
                       >
-                        <div
-                          id={`setlist-anchor-${sectionIdx}`}
-                          className="h-0 w-full shrink-0"
-                          aria-hidden
-                        />
+                        <div id={`setlist-anchor-${sectionIdx}`} className="h-0 w-full shrink-0" aria-hidden />
                         {(section.imageUrls ?? []).length > 0 ? (
                           (section.imageUrls ?? []).map((url, pageIdx) => (
                             <ChordPage
@@ -406,35 +396,6 @@ export function ContinuousSetlistViewer({
           }}
         </TransformWrapper>
 
-        {/* Title bars live outside the zoom transform and track section anchors */}
-        <div
-          className={cn(
-            'pointer-events-none absolute inset-0 z-20 overflow-hidden transition-opacity duration-150',
-            titlesVisible ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {slides.map((section, sectionIdx) => {
-            const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
-            return (
-              <div
-                key={`title-${section.songTitle}-${sectionIdx}`}
-                ref={(el) => { titleRefs.current[sectionIdx] = el; }}
-                className="absolute left-0 top-0 will-change-transform"
-                style={{ transform: 'translate3d(0, -9999px, 0)' }}
-              >
-                <SectionTitleBar
-                  sectionIdx={sectionIdx}
-                  title={section.songTitle}
-                  keyName={section.key}
-                  hasTracks={hasTracks}
-                  listenOpen={listenOpen}
-                  isActive={activeSection === sectionIdx}
-                  onListen={() => openListenForSection(sectionIdx)}
-                />
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 bg-black/90 px-4 pb-6 pt-3 backdrop-blur-md">
