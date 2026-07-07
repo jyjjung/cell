@@ -33,7 +33,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setCleaningRoster([]);
       setQtRoster([]);
       setCleaningDays([]);

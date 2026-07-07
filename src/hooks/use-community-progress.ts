@@ -20,7 +20,7 @@ export function useCommunityProgress() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setAllProgress([]);
       setLoading(false);
       return;
@@ -52,7 +52,7 @@ export function useCommunityProgress() {
     }
 
     const onVisible = () => {
-      if (document.visibilityState !== 'visible' || !currentUser) return;
+      if (document.visibilityState !== 'visible' || !currentUser?.uid) return;
       const fresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
       if (fresh?.length) return;
       void loadCommunityProgress({ forceRefresh: true }).then((rows) => {

@@ -12,6 +12,9 @@ import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import type { AppEvent } from '@/types';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface EventSummaryProps {
   eventId: string;
@@ -19,14 +22,20 @@ interface EventSummaryProps {
 }
 
 export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: event, loading } = useFirestoreDoc<AppEvent>('events', eventId);
 
-  if (loading || !event) {
+  if (loading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
         Loading…
       </div>
     );
+  }
+
+  if (!event) {
+    return <DeletedContentNotice label={t.deletedContentEvent} />;
   }
 
   const getDayInfo = () => {

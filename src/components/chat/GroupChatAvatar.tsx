@@ -5,6 +5,7 @@ import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { primeMediaUrl } from '@/lib/media-cache';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import { RemoteImage } from '@/components/ui/remote-image';
 import type { AvatarData } from '@/types';
 
 type GroupChatAvatarProps = {
@@ -33,11 +34,15 @@ export function GroupChatAvatar({
 
   if (photoURL) {
     return (
-      <img
-        src={photoURL}
-        alt=""
-        className={cn('h-full w-full rounded-full object-cover', className)}
-      />
+      <div className={cn('relative h-full w-full', className)}>
+        <RemoteImage
+          src={photoURL}
+          alt=""
+          fill
+          className="rounded-full object-cover"
+          sizes="48px"
+        />
+      </div>
     );
   }
 

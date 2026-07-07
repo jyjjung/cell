@@ -13,18 +13,17 @@ export function usePrayerRequestBadge() {
   const { currentUser } = useAuth();
   const ctx = usePrayerRequestsContext();
   const isShepherd = ctx?.isShepherd ?? false;
-  const requests = ctx?.requests ?? [];
-
   const unreadCount = useMemo(() => {
     if (!isShepherd || !currentUser) return 0;
+    const requestList = ctx?.requests ?? [];
     const lastSeen = toDateSafe(currentUser.prayerRequestsLastSeenAt);
     const lastSeenMs = lastSeen?.getTime() ?? 0;
 
-    return requests.filter((item: PrayerRequest) => {
+    return requestList.filter((item: PrayerRequest) => {
       const createdAt = toDateSafe(item.createdAt);
       return createdAt ? createdAt.getTime() > lastSeenMs : false;
     }).length;
-  }, [isShepherd, currentUser, requests]);
+  }, [isShepherd, currentUser, ctx?.requests]);
 
   return { unreadCount, isShepherd };
 }

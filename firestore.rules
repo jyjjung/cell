@@ -33,13 +33,27 @@ service cloud.firestore {
       return isAppAdmin(userId) || isWorshipTeamMember(userId);
     }
 
+    function userSelfUpdateAllowed() {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      let allowed = [
+        'firstName', 'lastName', 'avatar', 'showInCommunityProgress', 'preferredLanguage',
+        'colorPalette', 'surfaceBackground', 'appTheme', 'glassEnabled', 'typography',
+        'bibleTextVersion', 'dashboard', 'fcmTokens', 'updatedAt', 'prayerRequestsLastSeenAt',
+        'isAdmin',
+      ];
+      return diff.hasOnly(allowed)
+        && (!diff.hasAny(['avatar'])
+            || resource.data.get('avatarChangesEnabled', true) != false)
+        && (!diff.hasAny(['isAdmin']) || request.resource.data.isAdmin == false);
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId
+                    && request.resource.data.isAdmin == false
+                    && request.resource.data.isApproved == false;
       allow update: if isAppAdmin(request.auth.uid)
-                    || (request.auth.uid == userId
-                        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['avatar'])
-                            || resource.data.get('avatarChangesEnabled', true) != false));
+                    || (request.auth.uid == userId && userSelfUpdateAllowed());
       allow delete: if isAppAdmin(request.auth.uid);
     }
 
@@ -114,13 +128,27 @@ service cloud.firestore {
       }
     }
 
+    function canReadNotification() {
+      return request.auth != null && (
+        resource.data.get('isGlobal', false) == true
+        || resource.data.type == 'announcement'
+        || resource.data.userId == request.auth.uid
+        || isAppAdmin(request.auth.uid)
+      );
+    }
+
     match /notifications/{notifId} {
-      allow read: if request.auth != null;
+      allow get, list: if canReadNotification();
       allow create: if request.auth != null && (
         isAppAdmin(request.auth.uid)
         || (
           request.resource.data.get('isGlobal', false) == false
           && request.resource.data.userId == request.auth.uid
+        )
+        || (
+          canManageWorship(request.auth.uid)
+          && request.resource.data.get('isGlobal', false) == false
+          && request.resource.data.type == 'reminder'
         )
       );
       allow update: if isAppAdmin(request.auth.uid)
@@ -132,7 +160,7 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow write: if isAppAdmin(request.auth.uid);
     }
 
@@ -253,7 +281,8 @@ service cloud.firestore {
                      || request.auth.uid in chatDoc().data.members);
       allow list: if request.auth != null
                   && request.auth.uid in resource.data.members;
-      allow delete: if isMember() || isAppAdmin(request.auth.uid);
+      allow delete: if isAppAdmin(request.auth.uid)
+                    || (isMember() && chatDoc().data.type == 'private');
 
       allow create: if isCreatingMember()
                     && request.resource.data.keys().hasAll(['type', 'members', 'memberInfo', 'createdAt', 'lastMessageText', 'lastMessageSentAt', 'memberSeen'])
@@ -283,7 +312,7 @@ service cloud.firestore {
       allow update: if (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen']))
                     || (isMember() && resource.data.type == 'group' && request.resource.data.type == 'group'
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL', 'lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId']))
-                    || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).hasAny(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
+                    || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
                     || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
 
       match /messages/{messageId} {
@@ -309,7 +338,7 @@ service cloud.firestore {
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
                            // Soft delete
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
                         );
 
         match /thread/{threadMessageId} {
@@ -326,7 +355,7 @@ service cloud.firestore {
                           && (
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
-                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'reactions']))
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
                           );
         }
       }

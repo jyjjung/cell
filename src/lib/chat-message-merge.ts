@@ -138,6 +138,7 @@ export function chatMessagesShallowEqual(
     ma.sheetKey === mb.sheetKey &&
     ma.isDeleted === mb.isDeleted &&
     ma.deletedBy === mb.deletedBy &&
+    ma.deletedContentType === mb.deletedContentType &&
     ma.systemEvent === mb.systemEvent &&
     ma.replyCount === mb.replyCount &&
     ma.latestReplySenderId === mb.latestReplySenderId &&

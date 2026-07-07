@@ -41,7 +41,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   useEffect(() => {
     if (!enabled || loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setAllUsers([]);
       setLoading(false);
       return;
@@ -93,7 +93,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
     }
 
     const onVisible = () => {
-      if (document.visibilityState !== 'visible' || !currentUser) return;
+      if (document.visibilityState !== 'visible' || !currentUser?.uid) return;
       const fresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v2', COLLECTION_CACHE_TTL_MS);
       if (fresh?.length) return;
       void loadUsersDirectory({ forceRefresh: true }).then((users) => {
@@ -115,11 +115,11 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   }, []);
 
   const refreshUsers = useCallback(async () => {
-    if (!currentUser) return usersRef.current;
+    if (!currentUser?.uid) return usersRef.current;
     const users = await loadUsersDirectory({ forceRefresh: true });
     setAllUsers(users);
     return users;
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   const patchUsers = useCallback((patches: UserDirectoryPatch[]) => {
     setAllUsers(patchUsersDirectoryCache(patches));

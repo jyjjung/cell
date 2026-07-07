@@ -97,7 +97,7 @@ export function useWorshipRosters(enabled = true) {
       const addedRoles = roles.filter((role) => !previousRoles.includes(role));
       if (addedRoles.length === 0) continue;
 
-      createNotification({
+      await createNotification({
         title: 'New Worship Assignment',
         message: `You've been added to ${rosterName}${rosterDate ? ` on ${rosterDate}` : ''}: ${addedRoles.join(', ')}.`,
         type: 'reminder',

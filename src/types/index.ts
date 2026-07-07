@@ -346,6 +346,17 @@ export interface Chat {
   createdAt: Timestamp;
 }
 
+export type DeletedMessageContentType =
+  | 'message'
+  | 'image'
+  | 'event'
+  | 'setlist'
+  | 'roster'
+  | 'song'
+  | 'poll'
+  | 'qt'
+  | 'cleaning';
+
 export interface ChatMessage {
   id: string;
   senderId: string;
@@ -369,6 +380,7 @@ export interface ChatMessage {
   sheetKey?: string;
   isDeleted?: boolean;
   deletedBy?: string;
+  deletedContentType?: DeletedMessageContentType;
   /** Centered system line in chat (e.g. group photo changed). */
   systemEvent?: 'groupPhotoChanged' | 'groupPhotoRemoved';
   /** Main-chat message mirroring a thread reply; opens thread on parent. */

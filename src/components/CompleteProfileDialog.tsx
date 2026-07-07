@@ -63,7 +63,7 @@ export default function CompleteProfileDialog({ isOpen }: { isOpen: boolean }) {
         <DialogHeader>
           <DialogTitle>Complete Your Profile</DialogTitle>
           <DialogDescription>
-            Welcome! Please enter your first and last name to continue. You won't be able to change this later.
+            Welcome! Please enter your first and last name to continue. You won&apos;t be able to change this later.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

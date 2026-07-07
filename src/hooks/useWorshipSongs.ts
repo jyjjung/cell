@@ -23,7 +23,7 @@ export function useWorshipSongs(enabled = true) {
   const [loading, setLoading] = useState(!useShared);
 
   useEffect(() => {
-    if (useShared || !enabled || !currentUser) {
+    if (useShared || !enabled || !currentUser?.uid) {
       if (!useShared) {
         setSongs([]);
         setLoading(false);

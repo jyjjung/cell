@@ -56,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.72",
+    subtitle: "Chat & security",
+    date: "Early-July 2026",
+    changes: [
+      "Deleted chat messages now show clear placeholders like “This message has been deleted” or “This image has been deleted”",
+      "Shared rosters, songs, events, and other attachments show a deleted notice when the original item is removed",
+      "Push notifications and admin actions require proper sign-in",
+      "Profile and notification permissions are tighter in Firestore security rules",
+    ],
+  },
+  {
     version: "v1.3.71",
     subtitle: "Security & reliability",
     date: "Early-July 2026",

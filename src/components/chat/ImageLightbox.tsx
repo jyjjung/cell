@@ -6,6 +6,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Download, X, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { RemoteImage } from '@/components/ui/remote-image';
 
 interface ChatImageGalleryProps {
   images: string[];
@@ -205,11 +206,14 @@ export function ChatImageGallery({
                   wrapperClass="!w-full !h-full"
                   contentClass="!w-full !h-full flex items-center justify-center"
                 >
-                  <img
+                  <RemoteImage
                     src={imageUrl}
                     alt={altText}
-                    className="max-w-[95vw] max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] object-contain select-none"
+                    width={1920}
+                    height={1080}
                     draggable={false}
+                    className="max-w-[95vw] max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] object-contain select-none"
+                    sizes="95vw"
                   />
                 </TransformComponent>
               );

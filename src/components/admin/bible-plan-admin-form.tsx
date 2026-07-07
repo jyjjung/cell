@@ -182,7 +182,7 @@ export default function BiblePlanAdminForm() {
                     </SelectItem>
                     <SelectItem value="mcheyne">
                         <div className="flex items-center">
-                            <BookOpen className="mr-2 h-4 w-4" /> M'Cheyne Reading Plan (365 days)
+                            <BookOpen className="mr-2 h-4 w-4" /> M&apos;Cheyne Reading Plan (365 days)
                         </div>
                     </SelectItem>
                     </SelectContent>

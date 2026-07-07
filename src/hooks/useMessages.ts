@@ -14,11 +14,13 @@ import {
   updateDoc,
   arrayUnion,
   deleteField,
+  getDoc,
   getDocs,
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
+import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { primeMediaUrls } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
@@ -32,6 +34,7 @@ import { sortChatMessagesDesc } from '@/lib/chat-message-merge';
 import type { ChatMessage, Chat, ChatPoll } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
@@ -262,9 +265,10 @@ export function useMessages(chatId: string | null) {
             lastMessageSentAt: serverTimestamp(),
             lastMessageSenderId: currentUser.uid,
         });
+        const headers = await getClientAuthHeaders();
         fetch('/api/send-chat-push', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ 
                 chatId, 
                 messageId: docRef.id,
@@ -308,6 +312,8 @@ export function useMessages(chatId: string | null) {
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!currentUser || !chatId) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
+    const previous = messagesRef.current.find((m) => m.id === messageId);
+    const previousReactions = previous?.reactions ? { ...previous.reactions } : {};
 
     let nextReactions: ChatMessage['reactions'] = {};
     setMessages((prev) =>
@@ -325,7 +331,13 @@ export function useMessages(chatId: string | null) {
       }),
     );
 
-    updateDoc(messageRef, { reactions: nextReactions }).catch(() => {});
+    try {
+      await updateDoc(messageRef, { reactions: nextReactions });
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, reactions: previousReactions } : m)),
+      );
+    }
   }, [currentUser, chatId]);
 
   const votePoll = useCallback(async (messageId: string, optionIndex: number) => {
@@ -388,9 +400,21 @@ export function useMessages(chatId: string | null) {
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
     const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
     try {
+      let messageData = messagesRef.current.find((m) => m.id === messageId);
+      if (!messageData) {
+        const snap = await getDoc(messageRef);
+        if (snap.exists()) {
+          messageData = { id: snap.id, ...snap.data() } as ChatMessage;
+        }
+      }
+      const deletedContentType = messageData
+        ? getDeletedMessageContentType(messageData)
+        : 'message';
+
       await updateDoc(messageRef, {
         isDeleted: true,
         deletedBy: currentUser.uid,
+        deletedContentType,
         text: deleteField(),
         imageUrl: deleteField(),
         eventId: deleteField(),

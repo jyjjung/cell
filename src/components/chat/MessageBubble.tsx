@@ -4,9 +4,11 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import type { ChatMessage, Chat, ChatMemberInfo, UserProfileData } from '@/types';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
 import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare } from 'lucide-react';
 import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
+import { resolveDeletedMessageLabel } from '@/lib/deleted-content';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { translations } from '@/lib/translations';
@@ -106,12 +108,10 @@ const MessageBubble = React.memo(function MessageBubble({
   }, [message.text]);
 
   if (message.isDeleted) {
-    const deletedByUid = message.deletedBy || message.senderId;
-    const deletedByName = resolveChatUserName(deletedByUid, chat, usersById);
     return (
       <div className="chat-message-row py-2 flex justify-center w-full">
         <p className="text-[11px] italic text-muted-foreground/60">
-          {deletedByName} {t.deletedMessage}
+          {resolveDeletedMessageLabel(message, t)}
         </p>
       </div>
     );
@@ -284,12 +284,13 @@ const MessageBubble = React.memo(function MessageBubble({
                                     !message.text && "mb-0"
                                   )}
                               >
-                                <img 
+                                <RemoteImage 
                                   src={message.imageUrl} 
                                   alt={t.image || "Image"} 
+                                  width={280}
+                                  height={280}
                                   className="block max-h-[280px] max-w-[min(280px,100%)] w-auto h-auto object-contain align-bottom"
-                                  loading="lazy"
-                                  decoding="async"
+                                  sizes="280px"
                                 />
                               </div>
                         )}
@@ -329,10 +330,13 @@ const MessageBubble = React.memo(function MessageBubble({
                                         </div>
                                     </div>
                                 ) : (
-                                    <img 
+                                    <RemoteImage 
                                         src={message.imageUrl} 
                                         alt="Chord Sheet" 
+                                        width={350}
+                                        height={350}
                                         className="w-full h-auto object-cover max-h-[350px]"
+                                        sizes="350px"
                                     />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover/sheet:opacity-40 transition-opacity" />
@@ -406,12 +410,12 @@ const MessageBubble = React.memo(function MessageBubble({
                           className="relative block h-full w-full"
                           aria-label="Play YouTube video"
                         >
-                          <img
+                          <RemoteImage
                             src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
                             alt=""
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
+                            fill
+                            className="object-cover"
+                            sizes="320px"
                           />
                           <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white text-lg shadow-lg">

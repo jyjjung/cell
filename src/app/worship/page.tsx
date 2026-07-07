@@ -27,6 +27,7 @@ import type {
   WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole,
 } from '@/types';
 import { mergeWorshipRosterSlots } from '@/types';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -249,8 +250,10 @@ function SongDetailView({
                         <span className="text-[10px] font-semibold text-primary mt-2">PDF DOCUMENT</span>
                       </div>
                     ) : (
-                      <img src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                      <RemoteImage src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                        sizes="200px" />
                     )}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
                       <button onClick={() => setViewSheet(sheet)}
@@ -434,7 +437,7 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
           <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
             <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
               <DialogHeader>
-                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete "{deleteConfirm?.title}"?</DialogTitle>
+                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete &ldquo;{deleteConfirm?.title}&rdquo;?</DialogTitle>
                 <DialogDescription>This will permanently remove the song and all its chord sheet images.</DialogDescription>
               </DialogHeader>
               <div className="flex gap-2 mt-4">
@@ -518,12 +521,13 @@ function AddSongToSetlistDialog({
   const liveSong = selectedSong ? (songs.find((s) => s.id === selectedSong.id) ?? selectedSong) : null;
   const { selectedSheetIds, setSelectedSheetIds } = useSetlistSongSheetSelection(liveSong, selectedKey);
 
-  const alreadyAdded = new Set(playlist.songs.map(s => s.songId));
-  const filtered = useMemo(() =>
-    songs.filter(s =>
+  const filtered = useMemo(() => {
+    const alreadyAdded = new Set(playlist.songs.map(s => s.songId));
+    return songs.filter(s =>
       !alreadyAdded.has(s.id) &&
       (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist?.toLowerCase().includes(search.toLowerCase()))
-    ), [songs, search, alreadyAdded]);
+    );
+  }, [songs, search, playlist.songs]);
 
   const tracksInvalid = referenceTrackDraftsInvalid(referenceTracks);
 
@@ -1230,7 +1234,7 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
           <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
             <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
               <DialogHeader>
-                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete "{deleteConfirm?.name}"?</DialogTitle>
+                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete &ldquo;{deleteConfirm?.name}&rdquo;?</DialogTitle>
                 <DialogDescription>This will permanently remove the setlist.</DialogDescription>
               </DialogHeader>
               <div className="flex gap-2 mt-4">
@@ -1698,7 +1702,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
           <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
             <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
               <DialogHeader>
-                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete "{deleteConfirm?.name}"?</DialogTitle>
+                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete &ldquo;{deleteConfirm?.name}&rdquo;?</DialogTitle>
                 <DialogDescription>This will permanently remove the roster.</DialogDescription>
               </DialogHeader>
               <div className="flex gap-2 mt-4">

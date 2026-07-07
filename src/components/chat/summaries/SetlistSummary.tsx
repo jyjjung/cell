@@ -24,6 +24,9 @@ import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context'
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface SetlistSummaryProps {
   setlistId: string;
@@ -65,6 +68,8 @@ function isOfflineReadyLocally(setlistId: string, urls: string[]): boolean {
 }
 
 export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: SetlistSummaryProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: setlist, loading: setlistLoading } = useFirestoreDoc<WorshipSetlist>('worshipSetlists', setlistId);
   const worshipData = useWorshipData();
   const songHook = useWorshipSongs(!!setlist && !worshipData);
@@ -218,12 +223,16 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
     }
   };
 
-  if (setlistLoading || !setlist) {
+  if (setlistLoading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Setlist...
       </div>
     );
+  }
+
+  if (!setlist) {
+    return <DeletedContentNotice label={t.deletedContentSetlist} />;
   }
 
   const formatDateText = (dateStr: string) => {

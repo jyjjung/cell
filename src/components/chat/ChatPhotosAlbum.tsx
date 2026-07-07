@@ -6,6 +6,7 @@ import { ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
+import { RemoteImage } from '@/components/ui/remote-image';
 
 export { extractChatPhotos } from '@/lib/chat-media-extract';
 
@@ -55,11 +56,12 @@ export default function ChatPhotosAlbum({
             onClick={() => onOpenImage(photo.imageUrl)}
             className="relative aspect-square overflow-hidden rounded-xl bg-muted/30 border border-border/30 group"
           >
-            <img
+            <RemoteImage
               src={photo.imageUrl}
               alt={`Photo by ${photo.senderLabel}`}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="200px"
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <p className="text-[9px] font-bold text-white truncate">{photo.senderLabel}</p>

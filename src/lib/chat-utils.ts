@@ -3,7 +3,10 @@ import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData, AvatarData } f
 import { formatUserDisplayName } from '@/lib/formatting';
 import { mergeAvatarData } from '@/lib/avatar-utils';
 
-export const DELETED_MESSAGE_PREVIEW = 'deleted a message.';
+import { getDeletedContentPreview } from '@/lib/deleted-content';
+import type { DeletedMessageContentType } from '@/types';
+
+export const DELETED_MESSAGE_PREVIEW = 'This message has been deleted';
 export const GROUP_PHOTO_CHANGED_PREVIEW = 'changed the group chat picture.';
 export const GROUP_PHOTO_REMOVED_PREVIEW = 'removed the group chat picture.';
 
@@ -21,11 +24,15 @@ type MessagePreviewFields = Pick<
   | 'sheetKey'
   | 'poll'
   | 'isDeleted'
+  | 'deletedContentType'
   | 'systemEvent'
 >;
 
 export function formatChatMessagePreview(message: MessagePreviewFields): string {
-  if (message.isDeleted) return DELETED_MESSAGE_PREVIEW;
+  if (message.isDeleted) {
+    const type = (message.deletedContentType ?? 'message') as DeletedMessageContentType;
+    return getDeletedContentPreview(type);
+  }
   if (message.systemEvent === 'groupPhotoChanged') return GROUP_PHOTO_CHANGED_PREVIEW;
   if (message.systemEvent === 'groupPhotoRemoved') return GROUP_PHOTO_REMOVED_PREVIEW;
 

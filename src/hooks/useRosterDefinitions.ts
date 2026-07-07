@@ -34,7 +34,7 @@ export function useRosterDefinitions() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setDefinitions([]);
       setLoading(false);
       return;

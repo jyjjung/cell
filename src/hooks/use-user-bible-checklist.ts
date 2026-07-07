@@ -193,7 +193,7 @@ export function useUserBibleChecklist() {
   // NOTE: completedPassages intentionally excluded — we only want to run once
   // after initial load, not on every Firestore update.
 
-  const updateChecklistDocument = (updatePayload: any) => {
+  const updateChecklistDocument = useCallback((updatePayload: Record<string, unknown>) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
     
@@ -210,7 +210,7 @@ export function useUserBibleChecklist() {
     } else {
       setDoc(checklistDocRef, dataToSet, { merge: true }).catch(e => console.error("Error updating checklist:", e));
     }
-  };
+  }, [currentUser?.uid, checklistDocExists]);
 
   const togglePassageCompletion = useCallback(async (passageDisplayText: string, date?: string) => {
     if (!currentUser?.uid || !passageDisplayText) {
@@ -226,7 +226,7 @@ export function useUserBibleChecklist() {
     };
     updateChecklistDocument(updatePayload);
 
-  }, [currentUser, completedPassages, checklistDocExists]);
+  }, [currentUser?.uid, completedPassages, updateChecklistDocument]);
 
 
   /**
@@ -242,7 +242,7 @@ export function useUserBibleChecklist() {
       completedPassages: markAsComplete ? arrayUnion(...passageKeys) : arrayRemove(...passageKeys)
     };
     updateChecklistDocument(updatePayload);
-  }, [currentUser, checklistDocExists]);
+  }, [currentUser?.uid, updateChecklistDocument]);
 
   /**
    * Mark one scoped passage complete while removing an old bare key that would
@@ -337,7 +337,7 @@ export function useUserBibleChecklist() {
     updateChecklistDocument({ completedPassages: arrayUnion(...passagesToComplete) });
     return { markedCount: passagesToComplete.length };
 
-  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, completedPassages]);
+  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, completedPassages, updateChecklistDocument]);
 
 
   return {

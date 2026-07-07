@@ -120,7 +120,7 @@ export function useAllCustomRosterEntries() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setEntries([]);
       setLoading(false);
       return;
@@ -134,7 +134,7 @@ export function useAllCustomRosterEntries() {
     });
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && currentUser) {
+      if (document.visibilityState === 'visible' && currentUser?.uid) {
         void load().catch((err) => {
           console.error('[useAllCustomRosterEntries] refresh error:', err);
         });

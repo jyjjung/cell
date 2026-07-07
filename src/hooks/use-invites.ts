@@ -33,7 +33,7 @@ export function useInvites() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser || !isAdmin) {
+    if (!currentUser?.uid || !isAdmin) {
       setInvites([]);
       setLoading(false);
       return;

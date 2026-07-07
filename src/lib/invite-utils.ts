@@ -4,6 +4,8 @@ import type { Timestamp } from 'firebase/firestore';
 export const DEFAULT_INVITE_MAX_USES = 1;
 export const DEFAULT_INVITE_EXPIRES_DAYS = 7;
 
+type TimestampLike = Timestamp | { toMillis?: () => number; seconds?: number } | null | undefined;
+
 export function normalizeInviteCode(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, '-');
 }
@@ -32,14 +34,18 @@ export function inviteUsesRemaining(invite: AppInvite): number {
   return Math.max(0, inviteMaxUses(invite) - inviteUseCount(invite));
 }
 
-function timestampToMillis(value: Timestamp | { toMillis?: () => number } | undefined): number {
+function timestampToMillis(value: TimestampLike): number {
   if (!value) return 0;
   if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
   return 0;
 }
 
 export function resolveInviteExpiresAtMs(
-  invite: Pick<AppInvite, 'expiresAt' | 'createdAt'>,
+  invite: {
+    expiresAt?: TimestampLike;
+    createdAt?: TimestampLike;
+  },
   nowMs = Date.now(),
 ): number | null {
   const explicitMs = timestampToMillis(invite.expiresAt ?? undefined);

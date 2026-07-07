@@ -447,7 +447,7 @@ export function AvatarEditor({
         </div>
         <div className="text-center space-y-1">
             <p className="text-xs text-muted-foreground">Preview</p>
-            <p className="text-xs text-muted-foreground font-medium italic">"{value.initials || value.seed || 'Unique Sequence'}"</p>
+            <p className="text-xs text-muted-foreground font-medium italic">&ldquo;{value.initials || value.seed || 'Unique Sequence'}&rdquo;</p>
         </div>
       </div>
 

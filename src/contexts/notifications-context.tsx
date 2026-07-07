@@ -39,6 +39,7 @@ import {
 } from '@/lib/collection-cache';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 const CACHE_KEY_PREFIX = 'notifications_v2';
@@ -78,9 +79,10 @@ function mapSnapshot(docs: { id: string; data: () => Record<string, unknown> }[]
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {
   try {
+    const headers = await getClientAuthHeaders();
     const res = await fetch('/api/send-push', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ notificationId }),
     });
     if (!res.ok) {
@@ -253,14 +255,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       readBy: [],
     };
 
-    try {
-      await setDoc(docRef, dataToSave);
-      const deferPush = shouldDeferScheduledAnnouncement(notificationData.scheduledFor);
-      if (!deferPush) {
-        triggerPushNotification(notificationId);
-      }
-    } catch (e) {
-      console.error('Error creating notification:', e);
+    await setDoc(docRef, dataToSave);
+    const deferPush = shouldDeferScheduledAnnouncement(notificationData.scheduledFor);
+    if (!deferPush) {
+      void triggerPushNotification(notificationId);
     }
 
     return { notificationId };

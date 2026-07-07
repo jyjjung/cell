@@ -21,7 +21,7 @@ export function useQTRoster(enabled = true) {
   useEffect(() => {
     if (schedule || !enabled || loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setLocalRoster([]);
       setLocalLoading(false);
       return;

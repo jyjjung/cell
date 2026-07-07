@@ -39,7 +39,7 @@ export function usePrayerRequests() {
       return;
     }
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setLocalRequests([]);
       setLocalLoading(false);
       return;

@@ -11,6 +11,9 @@ import type { CleaningDay, CleaningRosterEntry } from '@/types';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 interface CleaningSummaryProps {
   date: string;
@@ -18,6 +21,8 @@ interface CleaningSummaryProps {
 }
 
 export default function CleaningSummary({ date, isSender }: CleaningSummaryProps) {
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: entry, loading: entryLoading } = useFirestoreDoc<CleaningRosterEntry>('cleaningRosters', date);
   const { data: day, loading: dayLoading } = useFirestoreDoc<CleaningDay>(
     'cleaningDays',
@@ -26,7 +31,19 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
   const usersById = useUsersById();
   const router = useRouter();
 
-  if (entryLoading || dayLoading || !entry) {
+  if (entryLoading) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
+        Loading Roster...
+      </div>
+    );
+  }
+
+  if (!entry) {
+    return <DeletedContentNotice label={t.deletedContentCleaning} />;
+  }
+
+  if (dayLoading) {
     return (
       <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
         Loading Roster...

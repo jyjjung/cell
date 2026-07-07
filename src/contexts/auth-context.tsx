@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsubscribeFromProfile: (() => void) | null = null;
+    let profileGeneration = 0;
 
     const unsubscribeFromAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (unsubscribeFromProfile) {
@@ -98,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
         
         unsubscribeFromProfile = onSnapshot(userDocRef, (userDocSnap) => {
+          const generation = ++profileGeneration;
+
           if (userDocSnap.exists()) {
             const profileData = userDocSnap.data() as UserProfileData;
             
@@ -105,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             void getAdminRoleIds()
               .then((adminRoleIds) => {
+                if (generation !== profileGeneration) return;
+
                 const effectiveIsAdmin = resolveIsAdmin(profileData, adminRoleIds);
 
                 setCurrentUser({
@@ -146,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               })
               .catch((error) => {
+                if (generation !== profileGeneration) return;
                 console.error('Error resolving admin access:', error);
                 setCurrentUser({
                   ...firebaseUser,
@@ -174,6 +180,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 } as AppUser);
                 setIsAdmin(profileData.isAdmin || false);
               });
+          } else {
+            void signOut(auth).catch((error) => {
+              console.error('Signed out due to missing profile:', error);
+            });
+            setCurrentUser(null);
+            setIsAdmin(false);
           }
           setLoadingAuth(false);
         }, (error) => {
@@ -198,9 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const uid = currentUser?.uid;
+  const roleIds = currentUser?.roleIds;
+
   // Update isWorshipTeam whenever roleIds change (worship role IDs cached after first fetch)
   useEffect(() => {
-    if (!currentUser) {
+    if (!uid) {
       setIsWorshipTeam(false);
       return;
     }
@@ -209,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void getWorshipRoleIds()
       .then((worshipRoleIds) => {
         if (cancelled) return;
-        const hasRole = currentUser.roleIds?.some((id) => worshipRoleIds.includes(id));
+        const hasRole = roleIds?.some((id) => worshipRoleIds.includes(id));
         setIsWorshipTeam(!!hasRole);
       })
       .catch((e) => {
@@ -220,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [currentUser?.uid, currentUser?.roleIds]);
+  }, [uid, roleIds]);
 
   const adminPasswordLogin = async (password: string): Promise<boolean> => {
     if (!currentUser) {
@@ -229,7 +244,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Dynamic import to avoid client-side bundling of server actions immediately
     const { escalateToAdminAction } = await import('@/app/actions/admin-actions');
-    const result = await escalateToAdminAction(password, currentUser.uid);
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) {
+      throw new Error('Not authenticated.');
+    }
+    const result = await escalateToAdminAction(password, idToken);
     
     if (result.success) {
       return true;

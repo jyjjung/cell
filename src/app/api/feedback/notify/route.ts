@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { getStatusLabel } from '@/lib/formatting';
 import { resolveUserIdByEmail, sendUserNotification } from '@/lib/server-notifications';
@@ -69,13 +68,8 @@ export async function POST(request: NextRequest) {
     const suggestionText = (body.previewText as string) || suggestion.text || '';
     const status = (body.status as string) || suggestion.status || 'pending';
 
-    if (action === 'submitted' && !token) {
-      const createdAt = suggestion.createdAt as Timestamp | undefined;
-      if (!createdAt) {
-        return NextResponse.json({ error: 'Suggestion not ready.' }, { status: 400 });
-      }
-      const ageMs = Date.now() - createdAt.toMillis();
-      if (ageMs > 2 * 60 * 1000) {
+    if (action === 'submitted') {
+      if (!actorUid || actorUid !== suggestion.userId) {
         return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
       }
     }

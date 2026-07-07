@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { RemoteImage } from '@/components/ui/remote-image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Shield, User,
@@ -102,7 +103,7 @@ export default function AppSidebar() {
         <Link href="/" onClick={() => navigate('/')}
           className="flex h-full items-center justify-start transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
-            <img src="/icon-v4.svg" alt="em." className="h-full w-full" />
+            <RemoteImage src="/icon-v4.svg" alt="em." width={32} height={32} className="h-full w-full" />
           </div>
         </Link>
       </SidebarHeader>

@@ -30,7 +30,7 @@ export function useCleaningDays(enabled = true) {
   useEffect(() => {
     if (schedule || !enabled || loadingAuth) return;
 
-    if (!currentUser) {
+    if (!currentUser?.uid) {
       setLocalCleaningDays([]);
       setLocalLoading(false);
       return;

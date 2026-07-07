@@ -21,11 +21,11 @@ import type {
 const DEFAULT_TIMEZONE = 'Australia/Brisbane';
 
 function isAuthorized(request: NextRequest): boolean {
-  if (request.headers.get('x-vercel-cron') === '1') return true;
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  const auth = request.headers.get('authorization');
-  return auth === `Bearer ${secret}`;
+  if (request.headers.get('authorization') === `Bearer ${secret}`) return true;
+  if (process.env.VERCEL === '1' && request.headers.get('x-vercel-cron') === '1') return true;
+  return false;
 }
 
 async function sendReminder(

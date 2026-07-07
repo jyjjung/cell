@@ -37,6 +37,7 @@ import { translations } from '@/lib/translations';
 import { Copy, Download, Loader2, Link2, QrCode, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { RemoteImage } from '@/components/ui/remote-image';
 import {
   DEFAULT_INVITE_MAX_USES,
   getInviteStatus,
@@ -146,11 +147,13 @@ function InviteLinkShare({
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : qrDataUrl ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <RemoteImage
                 src={qrDataUrl}
                 alt={t.adminInviteQrHint}
+                width={192}
+                height={192}
                 className="h-48 w-48 rounded-lg border border-border/40 bg-white p-2"
+                sizes="192px"
               />
               <p className="text-xs text-muted-foreground text-center">{t.adminInviteQrHint}</p>
               <Button type="button" size="sm" variant="outline" className="rounded-lg" onClick={downloadQr}>
