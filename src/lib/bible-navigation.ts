@@ -7,6 +7,42 @@ export interface ParsedPassage {
   // Verses are not strictly needed for chapter navigation but can be parsed if present
 }
 
+/** Collapse spaced-out QT passage strings (e.g. "J o e l 1 : 1 - 2 0" → "Joel 1:1-20"). */
+export function normalizeQtPassageReference(passageRef: string): string {
+  if (!passageRef) return '';
+
+  let s = passageRef.normalize('NFKC').replace(/[\u2013\u2014]/g, '-').trim();
+
+  const parts = s.split(/\s+/);
+  const result: string[] = [];
+  let letterBuffer = '';
+
+  for (const part of parts) {
+    if (part.length === 1 && /[a-zA-Z]/.test(part)) {
+      letterBuffer += part;
+    } else {
+      if (letterBuffer) {
+        result.push(letterBuffer);
+        letterBuffer = '';
+      }
+      result.push(part);
+    }
+  }
+  if (letterBuffer) result.push(letterBuffer);
+
+  s = result.join(' ');
+  s = s.replace(/\s*([:\-,.\u2013\u2014])\s*/g, '$1');
+  s = s.replace(/(\d)(?:\s+(\d))+/g, (match) => match.replace(/\s+/g, ''));
+  s = s.replace(/^(\d)([A-Za-z]+)/, '$1 $2');
+  s = s.replace(/([a-zA-Z])(\d)/g, '$1 $2');
+
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+export function parseQtPassageForNavigation(passageRef: string): ParsedPassage | null {
+  return parsePassageReferenceForNavigation(normalizeQtPassageReference(passageRef));
+}
+
 export function parsePassageReferenceForNavigation(passageRef: string): ParsedPassage | null {
   if (!passageRef) return null;
 
