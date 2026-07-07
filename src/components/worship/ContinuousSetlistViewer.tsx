@@ -17,6 +17,9 @@ import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
 
+const TITLE_BAR_HEIGHT = 44;
+const TITLE_BAR_GAP = 8;
+
 async function downloadFile(url: string, filename: string) {
   try {
     const res = await fetch(url);
@@ -172,12 +175,12 @@ export function ContinuousSetlistViewer({
       if (!anchor || !titleEl) return;
 
       const anchorRect = anchor.getBoundingClientRect();
-      const y = anchorRect.top - viewportRect.top;
+      const y = anchorRect.top - viewportRect.top - TITLE_BAR_HEIGHT - TITLE_BAR_GAP;
 
       titleEl.style.width = `${barWidth}px`;
       titleEl.style.transform = `translate3d(${barLeft}px, ${y}px, 0)`;
 
-      const visible = y > -48 && y < viewportRect.height;
+      const visible = y > -(TITLE_BAR_HEIGHT + TITLE_BAR_GAP) && y < viewportRect.height;
       titleEl.style.opacity = visible ? '1' : '0';
       titleEl.style.pointerEvents = visible ? 'auto' : 'none';
 
