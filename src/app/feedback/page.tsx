@@ -384,6 +384,14 @@ const changelogs = [
     ],
   },
   {
+    version: "v1.3.38",
+    date: "Early-July 2026",
+    changes: [
+      "Home dashboard now shows a Today's QT widget with the topic, passage, and sharer",
+      "QT passages open the Bible reader when tapped, including spaced-out references like \"J o e l 1 : 1 - 2 0\"",
+    ],
+  },
+  {
     version: "v1.3.37",
     date: "Mid-June 2026",
     changes: [
