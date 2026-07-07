@@ -401,7 +401,7 @@ function ChatWindowBody({
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 relative overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {chatTab === 'messages' ? (
           <ChatMessageList
             messages={messages}
@@ -523,7 +523,7 @@ function ChatWindowBody({
       )}
 
       {chatTab === 'messages' && (
-      <div className="mt-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
+      <div className="sticky bottom-0 z-10 mt-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
         <MessageInput
           chatId={chatId}
           disabled={!online}

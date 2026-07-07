@@ -122,10 +122,10 @@ export default function ThreadWindow({
         <div className="w-10" />
       </header>
 
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <div 
             ref={scrollRef} 
-            className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar"
+            className="h-full min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar"
         >
             <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
                 {loadingOlder && (
@@ -169,7 +169,7 @@ export default function ThreadWindow({
         </div>
       </div>
 
-      <div className="px-3 pb-3 pt-1 shrink-0">
+      <div className="sticky bottom-0 z-10 shrink-0 bg-background px-3 pb-3 pt-1">
           {/* We need to pass parentMessageId down to MessageInput so it uses useThreadMessages instead */}
           <MessageInput 
               chatId={chatId}

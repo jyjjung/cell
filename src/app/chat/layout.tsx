@@ -24,7 +24,7 @@ export default function ChatLayout({
   }
 
   return (
-    <div className="w-full flex-1 flex flex-col min-h-0">
+    <div className="w-full flex-1 flex flex-col min-h-0 h-full">
       {children}
     </div>
   );

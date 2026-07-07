@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.143",
+    subtitle: "Chat input layout",
+    date: "July 29, 2026",
+    changes: [
+      "Chat message input stays at the bottom of the pane on web (flex height chain fix)",
+    ],
+  },
+
+  {
     version: "v1.3.142",
     subtitle: "Chat photo uploads",
     date: "July 29, 2026",
