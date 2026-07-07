@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
 
 const ROLES_COLLECTION = 'roles';
 const CHATS_COLLECTION = 'chats';
@@ -150,7 +151,9 @@ export function useRoles() {
         const usersSnapshot = await getDocs(usersQuery);
         usersSnapshot.forEach(userDoc => {
           const updateData: any = { roleIds: arrayRemove(roleId) };
-          if (roleData.name === 'Leader') updateData.isAdmin = false;
+          if (roleData.name && ADMIN_ROLE_NAMES.includes(roleData.name as typeof ADMIN_ROLE_NAMES[number])) {
+            updateData.isAdmin = false;
+          }
           if (roleData.name === 'Youth') updateData.isYouth = false;
           batch.update(userDoc.ref, updateData);
         });

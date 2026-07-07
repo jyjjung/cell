@@ -2,6 +2,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
+import { userHasAdminAccess } from '@/lib/server-admin-access';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,9 +18,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(token);
-    const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+    const callerIsAdmin = await userHasAdminAccess(adminDb, decodedToken.uid);
     
-    if (!callerDoc.exists || !callerDoc.data()?.isAdmin) {
+    if (!callerIsAdmin) {
       return NextResponse.json({ error: 'Forbidden: Admin privileges required.' }, { status: 403 });
     }
 

@@ -4,6 +4,8 @@ import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { UserProfileData, AppRole } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
+import { userHasAdminAccess } from '@/lib/server-admin-access';
 
 const USERS_COLLECTION = 'users';
 const ROLES_COLLECTION = 'roles';
@@ -48,8 +50,8 @@ export async function adminUpdateUserProfileAction(
     const db = getAdminDb(app);
     
     // 1. Verify the requester is an admin
-    const requesterDoc = await db.collection(USERS_COLLECTION).doc(requesterId).get();
-    if (!requesterDoc.exists || !requesterDoc.data()?.isAdmin) {
+    const requesterIsAdmin = await userHasAdminAccess(db, requesterId);
+    if (!requesterIsAdmin) {
       return { success: false, error: 'Only admins can perform this action.' };
     }
     
@@ -86,22 +88,23 @@ export async function adminUpdateUserProfileAction(
     const rolesQuery = await db.collection(ROLES_COLLECTION).get();
     const allRolesMap = new Map<string, AppRole>(rolesQuery.docs.map((d: any) => [d.id, d.data() as AppRole]));
     
-    let leaderRoleId: string | null = null;
     let youthRoleId: string | null = null;
+    const privilegedAdminRoleIds: string[] = [];
     for (const [id, role] of allRolesMap.entries()) {
-        if (role?.name === 'Leader') leaderRoleId = id;
+        if (role?.name && ADMIN_ROLE_NAMES.includes(role.name as typeof ADMIN_ROLE_NAMES[number])) {
+            privilegedAdminRoleIds.push(id);
+        }
         if (role?.name === 'Youth') youthRoleId = id;
     }
 
     const finalDataToUpdate: Partial<UserProfileData> = { ...profileData };
 
-    if (leaderRoleId) {
-        if (currentRoles.has(leaderRoleId)) {
-            finalDataToUpdate.isAdmin = true;
-            finalDataToUpdate.isApproved = true; 
-        } else if (hasRoleUpdate) {
-            finalDataToUpdate.isAdmin = false;
-        }
+    const hasPrivilegedAdminRole = privilegedAdminRoleIds.some((id) => currentRoles.has(id));
+    if (hasPrivilegedAdminRole) {
+        finalDataToUpdate.isAdmin = true;
+        finalDataToUpdate.isApproved = true;
+    } else if (hasRoleUpdate && privilegedAdminRoleIds.length > 0) {
+        finalDataToUpdate.isAdmin = false;
     }
     
     if (youthRoleId) {

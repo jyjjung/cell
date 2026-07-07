@@ -19,6 +19,9 @@ import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
 import { syncProfileToChats } from '@/lib/sync-profile-chats';
 import { notifySignupPending } from '@/lib/signup-notify';
+import { getAdminRoleIds, resolveIsAdmin, userHasAdminRole } from '@/lib/admin-access';
+import { normalizeInviteCode } from '@/lib/invite-utils';
+import { redeemSignupInvite } from '@/lib/signup-invite-redeem';
 
 interface AuthContextType {
   isAdmin: boolean;
@@ -100,32 +103,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             
             const hasName = !!(profileData.firstName && profileData.lastName);
 
-            setCurrentUser({
-              ...firebaseUser,
-              firstName: profileData.firstName,
-              lastName: profileData.lastName,
-              displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
-              roleIds: profileData.roleIds || [],
-              showInCommunityProgress: profileData.showInCommunityProgress ?? true,
-              preferredLanguage: profileData.preferredLanguage || 'en',
-              colorPalette: profileData.colorPalette,
-              surfaceBackground: profileData.surfaceBackground,
-              appTheme: profileData.appTheme,
-              glassEnabled: profileData.glassEnabled,
-              typography: profileData.typography,
-              bibleTextVersion: profileData.bibleTextVersion,
-              dashboard: { 
-                layouts: profileData.dashboard?.layouts || {},
-                widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
-              },
-              isAdmin: profileData.isAdmin || false,
-              isApproved: profileData.isApproved || false,
-              isYouth: profileData.isYouth || false,
-              avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
-              avatarChangesEnabled: profileData.avatarChangesEnabled,
-              fcmTokens: profileData.fcmTokens || [],
-            } as AppUser);
-            setIsAdmin(profileData.isAdmin || false);
+            void getAdminRoleIds()
+              .then((adminRoleIds) => {
+                const effectiveIsAdmin = resolveIsAdmin(profileData, adminRoleIds);
+
+                setCurrentUser({
+                  ...firebaseUser,
+                  firstName: profileData.firstName,
+                  lastName: profileData.lastName,
+                  displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
+                  roleIds: profileData.roleIds || [],
+                  showInCommunityProgress: profileData.showInCommunityProgress ?? true,
+                  preferredLanguage: profileData.preferredLanguage || 'en',
+                  colorPalette: profileData.colorPalette,
+                  surfaceBackground: profileData.surfaceBackground,
+                  appTheme: profileData.appTheme,
+                  glassEnabled: profileData.glassEnabled,
+                  typography: profileData.typography,
+                  bibleTextVersion: profileData.bibleTextVersion,
+                  dashboard: { 
+                    layouts: profileData.dashboard?.layouts || {},
+                    widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
+                  },
+                  isAdmin: effectiveIsAdmin,
+                  isApproved: profileData.isApproved || false,
+                  isYouth: profileData.isYouth || false,
+                  avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+                  avatarChangesEnabled: profileData.avatarChangesEnabled,
+                  fcmTokens: profileData.fcmTokens || [],
+                } as AppUser);
+                setIsAdmin(effectiveIsAdmin);
+
+                if (userHasAdminRole(profileData.roleIds, adminRoleIds) && !profileData.isAdmin) {
+                  void updateDoc(userDocRef, {
+                    isAdmin: true,
+                    updatedAt: serverTimestamp(),
+                  });
+                }
+              })
+              .catch((error) => {
+                console.error('Error resolving admin access:', error);
+                setCurrentUser({
+                  ...firebaseUser,
+                  firstName: profileData.firstName,
+                  lastName: profileData.lastName,
+                  displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
+                  roleIds: profileData.roleIds || [],
+                  showInCommunityProgress: profileData.showInCommunityProgress ?? true,
+                  preferredLanguage: profileData.preferredLanguage || 'en',
+                  colorPalette: profileData.colorPalette,
+                  surfaceBackground: profileData.surfaceBackground,
+                  appTheme: profileData.appTheme,
+                  glassEnabled: profileData.glassEnabled,
+                  typography: profileData.typography,
+                  bibleTextVersion: profileData.bibleTextVersion,
+                  dashboard: { 
+                    layouts: profileData.dashboard?.layouts || {},
+                    widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) }
+                  },
+                  isAdmin: profileData.isAdmin || false,
+                  isApproved: profileData.isApproved || false,
+                  isYouth: profileData.isYouth || false,
+                  avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+                  avatarChangesEnabled: profileData.avatarChangesEnabled,
+                  fcmTokens: profileData.fcmTokens || [],
+                } as AppUser);
+                setIsAdmin(profileData.isAdmin || false);
+              });
           }
           setLoadingAuth(false);
         }, (error) => {
@@ -197,17 +241,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
     }
     try {
-        const rolesQuery = query(collection(db, ROLES_COLLECTION), where('name', '==', 'Leader'));
-        const leaderRoleSnapshot = await getDocs(rolesQuery);
-        let hasLeaderRole = false;
-        if (!leaderRoleSnapshot.empty) {
-            const leaderRoleId = leaderRoleSnapshot.docs[0].id;
-            if (currentUser.roleIds?.includes(leaderRoleId)) {
-                hasLeaderRole = true;
-            }
-        }
+        const adminRoleIds = await getAdminRoleIds();
+        const hasAdminRole = userHasAdminRole(currentUser.roleIds, adminRoleIds);
 
-        if (!hasLeaderRole) {
+        if (!hasAdminRole) {
             await updateUserProfile(currentUser.uid, { isAdmin: false });
         }
         
@@ -221,20 +258,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
-      
-      let preConfiguredRoles: string[] = [];
-      let autoCompleteApproval = false;
-      if (inviteCode) {
-          try {
-              const inviteDocSnap = await getDoc(doc(db, 'invites', inviteCode));
-              if (inviteDocSnap.exists()) {
-                  preConfiguredRoles = inviteDocSnap.data().roles || [];
-                  autoCompleteApproval = true;
-              }
-          } catch(err) {
-              console.error("Failed to parse invite code", err);
-          }
-      }
 
       const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
       const newProfileData: UserProfileData = {
@@ -251,16 +274,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           layouts: {},
         },
         isAdmin: false,
-        isApproved: autoCompleteApproval,
+        isApproved: false,
         isYouth: false,
         avatar: DEFAULT_AVATAR_DATA,
         fcmTokens: [],
-        roleIds: preConfiguredRoles,
+        roleIds: [],
       };
       await setDoc(userDocRef, newProfileData);
       await updateFirebaseProfile(firebaseUser, { displayName: `${firstName} ${lastName}` });
 
-      if (!autoCompleteApproval) {
+      let inviteRedeemed = false;
+      if (inviteCode?.trim()) {
+        const redeem = await redeemSignupInvite(normalizeInviteCode(inviteCode));
+        if (redeem.ok) {
+          inviteRedeemed = true;
+        } else if (redeem.error !== 'not_authenticated') {
+          const err = new Error(redeem.message) as Error & { code?: string };
+          err.code = 'auth/invite-invalid';
+          void notifySignupPending(firebaseUser.uid);
+          throw err;
+        }
+      }
+
+      if (!inviteRedeemed) {
         void notifySignupPending(firebaseUser.uid);
       }
 

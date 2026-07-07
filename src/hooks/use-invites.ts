@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { addDays } from 'date-fns';
 import type { AppInvite } from '@/types';
 import { db } from '@/lib/firebase';
 import {
@@ -11,21 +12,18 @@ import {
   deleteDoc,
   serverTimestamp,
   getDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import {
+  DEFAULT_INVITE_EXPIRES_DAYS,
+  DEFAULT_INVITE_MAX_USES,
+  generateInviteCode,
+  normalizeInviteCode,
+  normalizeInviteEmail,
+} from '@/lib/invite-utils';
 
 const INVITES_COLLECTION = 'invites';
-
-function generateInviteCode(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID().replace(/-/g, '').slice(0, 10);
-  }
-  return Math.random().toString(36).slice(2, 12);
-}
-
-function normalizeInviteCode(raw: string): string {
-  return raw.trim().toLowerCase().replace(/\s+/g, '-');
-}
 
 export function useInvites() {
   const { currentUser, isAdmin, loadingAuth } = useAuth();
@@ -68,7 +66,14 @@ export function useInvites() {
   }, [loadingAuth, currentUser?.uid, isAdmin]);
 
   const createInvite = useCallback(
-    async (params: { code?: string; roles?: string[]; label?: string }) => {
+    async (params: {
+      code?: string;
+      roles?: string[];
+      label?: string;
+      allowedEmail?: string;
+      maxUses?: number;
+      expiresInDays?: number;
+    }) => {
       if (!isAdmin || !currentUser) throw new Error('Admin access required.');
 
       const code = normalizeInviteCode(params.code || generateInviteCode());
@@ -77,6 +82,23 @@ export function useInvites() {
       }
       if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]{1,2}$/.test(code)) {
         throw new Error('Use letters, numbers, and hyphens only.');
+      }
+
+      const allowedEmail = params.allowedEmail?.trim()
+        ? normalizeInviteEmail(params.allowedEmail)
+        : null;
+      if (allowedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(allowedEmail)) {
+        throw new Error('Enter a valid email address for the invite lock.');
+      }
+
+      const maxUses = params.maxUses ?? DEFAULT_INVITE_MAX_USES;
+      if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 10) {
+        throw new Error('Uses must be between 1 and 10.');
+      }
+
+      const expiresInDays = params.expiresInDays ?? DEFAULT_INVITE_EXPIRES_DAYS;
+      if (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 90) {
+        throw new Error('Expiry must be between 1 and 90 days.');
       }
 
       const inviteRef = doc(db, INVITES_COLLECTION, code);
@@ -88,6 +110,11 @@ export function useInvites() {
       await setDoc(inviteRef, {
         roles: params.roles ?? [],
         label: params.label?.trim() || null,
+        allowedEmail,
+        maxUses,
+        useCount: 0,
+        usedBy: [],
+        expiresAt: Timestamp.fromDate(addDays(new Date(), expiresInDays)),
         createdAt: serverTimestamp(),
         createdBy: currentUser.uid,
       });

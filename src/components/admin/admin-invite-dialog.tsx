@@ -37,11 +37,18 @@ import { translations } from '@/lib/translations';
 import { Copy, Download, Loader2, Link2, QrCode, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  DEFAULT_INVITE_MAX_USES,
+  getInviteStatus,
+  inviteUsesRemaining,
+} from '@/lib/invite-utils';
 
 const inviteFormSchema = z.object({
   code: z.string().optional(),
   label: z.string().optional(),
   roleIds: z.array(z.string()).optional(),
+  allowedEmail: z.string().optional(),
+  expiresInDays: z.coerce.number().int().min(1).max(90).default(7),
 });
 
 type InviteFormValues = z.infer<typeof inviteFormSchema>;
@@ -178,7 +185,7 @@ export function AdminInviteDialog({
 
   const form = useForm<InviteFormValues>({
     resolver: zodResolver(inviteFormSchema),
-    defaultValues: { code: '', label: '', roleIds: [] },
+    defaultValues: { code: '', label: '', roleIds: [], allowedEmail: '', expiresInDays: 7 },
   });
 
   const roleOptions: MultiSelectItem[] = useMemo(
@@ -191,7 +198,7 @@ export function AdminInviteDialog({
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setCreatedLink(null);
-      form.reset({ code: '', label: '', roleIds: [] });
+      form.reset({ code: '', label: '', roleIds: [], allowedEmail: '', expiresInDays: 7 });
     }
     onOpenChange(next);
   };
@@ -212,10 +219,13 @@ export function AdminInviteDialog({
         code: data.code,
         label: data.label,
         roles: data.roleIds ?? [],
+        allowedEmail: data.allowedEmail,
+        maxUses: DEFAULT_INVITE_MAX_USES,
+        expiresInDays: data.expiresInDays,
       });
       const url = buildSignupUrl(code);
       setCreatedLink(url);
-      form.reset({ code: '', label: '', roleIds: [] });
+      form.reset({ code: '', label: '', roleIds: [], allowedEmail: '', expiresInDays: 7 });
       await copyLink(url);
       toast({
         title: t.adminInviteCreated,
@@ -281,6 +291,27 @@ export function AdminInviteDialog({
 
             <FormField
               control={form.control}
+              name="allowedEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-micro-label">{t.adminInviteAllowedEmail}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="email"
+                      placeholder={t.adminInviteAllowedEmailPlaceholder}
+                      className="h-10 rounded-lg"
+                      disabled={isSaving}
+                    />
+                  </FormControl>
+                  <FormDescription>{t.adminInviteAllowedEmailHint}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="code"
               render={({ field }) => (
                 <FormItem>
@@ -314,6 +345,28 @@ export function AdminInviteDialog({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="expiresInDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-micro-label">{t.adminInviteExpiresInDays}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      min={1}
+                      max={90}
+                      className="h-10 rounded-lg"
+                      disabled={isSaving}
+                    />
+                  </FormControl>
+                  <FormDescription>{t.adminInviteExpiresHint}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter className="pt-1">
               <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
@@ -336,16 +389,39 @@ export function AdminInviteDialog({
             <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {invites.map((invite) => {
                 const url = buildSignupUrl(invite.id);
+                const status = getInviteStatus(invite);
+                const statusLabel =
+                  status === 'used'
+                    ? t.adminInviteStatusUsed
+                    : status === 'expired'
+                      ? t.adminInviteStatusExpired
+                      : t.adminInviteStatusActive;
                 return (
                   <li
                     key={invite.id}
-                    className="rounded-xl border border-border/50 bg-muted/20 px-3 py-2 space-y-2"
+                    className={cn(
+                      'rounded-xl border border-border/50 bg-muted/20 px-3 py-2 space-y-2',
+                      status !== 'active' && 'opacity-70',
+                    )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="font-mono text-xs font-semibold truncate">{invite.id}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-mono text-xs font-semibold truncate">{invite.id}</p>
+                          <Badge
+                            variant={status === 'active' ? 'outline' : 'secondary'}
+                            className="h-5 px-1.5 text-[10px]"
+                          >
+                            {statusLabel}
+                          </Badge>
+                        </div>
                         {invite.label ? (
                           <p className="text-xs text-muted-foreground truncate">{invite.label}</p>
+                        ) : null}
+                        {invite.allowedEmail ? (
+                          <p className="text-[10px] text-muted-foreground mt-1 truncate">
+                            {t.adminInviteLockedTo.replace('{email}', invite.allowedEmail)}
+                          </p>
                         ) : null}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(invite.roles?.length ?? 0) > 0 ? (
@@ -361,6 +437,12 @@ export function AdminInviteDialog({
                         {invite.createdAt ? (
                           <p className="text-[10px] text-muted-foreground mt-1">
                             {format(invite.createdAt.toDate(), 'MMM d, yyyy')}
+                            {invite.expiresAt
+                              ? ` · ${t.adminInviteExpiresOn.replace('{date}', format(invite.expiresAt.toDate(), 'MMM d, yyyy'))}`
+                              : ''}
+                            {status === 'active'
+                              ? ` · ${t.adminInviteUsesLeft.replace('{count}', String(inviteUsesRemaining(invite)))}`
+                              : ''}
                           </p>
                         ) : null}
                       </div>
@@ -400,7 +482,9 @@ export function AdminInviteDialog({
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                    <InviteLinkShare url={url} t={t} onCopy={copyLink} compact />
+                    {status === 'active' ? (
+                      <InviteLinkShare url={url} t={t} onCopy={copyLink} compact />
+                    ) : null}
                   </li>
                 );
               })}

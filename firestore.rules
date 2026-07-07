@@ -167,7 +167,7 @@ service cloud.firestore {
     }
 
     match /invites/{inviteId} {
-      allow read: if request.auth != null;
+      allow read: if isAppAdmin(request.auth.uid);
       allow write: if isAppAdmin(request.auth.uid);
     }
 
