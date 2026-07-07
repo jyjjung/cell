@@ -10,17 +10,12 @@ import {
 
 import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
-import type { ChordKey, ReferenceTrack } from '@/types';
+import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
+import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
+import type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 
-export interface ViewerSlide {
-  songTitle: string;
-  key: ChordKey;
-  imageUrls: string[];
-  referenceTracks?: ReferenceTrack[];
-}
-
-export type ViewerMode = 'slides' | 'continuous';
+export type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -116,7 +111,33 @@ export function FullScreenViewer({
   mode?: ViewerMode;
   title?: string;
 }) {
-  const isContinuous = mode === 'continuous';
+  if (mode === 'continuous') {
+    return (
+      <ContinuousSetlistViewer
+        slides={slides}
+        title={title}
+        startIndex={startIndex}
+        onClose={onClose}
+      />
+    );
+  }
+
+  return (
+    <SlidesFullScreenViewer
+      slides={slides}
+      startIndex={startIndex}
+      onClose={onClose}
+    />
+  );
+}
+
+function SlidesFullScreenViewer({
+  slides, startIndex = 0, onClose,
+}: {
+  slides: ViewerSlide[];
+  startIndex?: number;
+  onClose: () => void;
+}) {
   const [idx, setIdx] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
@@ -137,35 +158,17 @@ export function FullScreenViewer({
   const swipeStartY   = useRef<number | null>(null);
   const [holdDir, setHoldDir] = useState<'next' | 'prev' | null>(null);
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
-  const scrolledToStartRef = useRef(false);
 
   useImagePreloader(slides);
 
-  const scrollToSection = useCallback((sectionIndex: number, behavior: ScrollBehavior = 'smooth') => {
-    const el = document.getElementById(`viewer-section-${sectionIndex}`);
-    el?.scrollIntoView({ behavior, block: 'start' });
-  }, []);
-
-  // Reset when slide changes (slides mode only)
+  // Reset when slide changes
   useEffect(() => {
-    if (isContinuous) return;
     setImgPxWidth(null);
     fitWidthRef.current = 0;
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     setListenOpen(false);
     setActiveTrackIdx(0);
-  }, [idx, isContinuous]);
-
-  // Reset zoom when opening continuous view
-  useEffect(() => {
-    if (!isContinuous) return;
-    scrolledToStartRef.current = false;
-    setImgPxWidth(null);
-    fitWidthRef.current = 0;
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    setListenOpen(false);
-    setActiveTrackIdx(0);
-  }, [isContinuous, slides]);
+  }, [idx]);
 
   // Calculate the "fit the whole page" pixel width from the first image's natural dims
   const handleFirstImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -186,13 +189,6 @@ export function FullScreenViewer({
     setImgPxWidth(fitW);
   }, []);
 
-  useEffect(() => {
-    if (!isContinuous || scrolledToStartRef.current || startIndex <= 0) return;
-    if (fitWidthRef.current <= 0) return;
-    scrollToSection(startIndex, 'instant');
-    scrolledToStartRef.current = true;
-  }, [isContinuous, startIndex, imgPxWidth, scrollToSection]);
-
   const clampWidth = useCallback((w: number) => {
     const cW = containerRef.current?.clientWidth ?? 400;
     return Math.max(cW * 0.25, Math.min(cW * 6, w));
@@ -201,14 +197,8 @@ export function FullScreenViewer({
   // ── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (isContinuous) {
-        const scrollEl = scrollRef.current;
-        if (e.key === 'ArrowDown') scrollEl?.scrollBy({ top: 120, behavior: 'smooth' });
-        if (e.key === 'ArrowUp') scrollEl?.scrollBy({ top: -120, behavior: 'smooth' });
-      } else {
-        if (e.key === 'ArrowRight') setIdx(i => Math.min(i + 1, slides.length - 1));
-        if (e.key === 'ArrowLeft')  setIdx(i => Math.max(i - 1, 0));
-      }
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(i + 1, slides.length - 1));
+      if (e.key === 'ArrowLeft')  setIdx(i => Math.max(i - 1, 0));
       if (e.key === '=' || e.key === '+') setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) * 1.25));
       if (e.key === '-') setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) / 1.25));
       if (e.key === '0') setImgPxWidth(fitWidthRef.current || null);
@@ -216,7 +206,7 @@ export function FullScreenViewer({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [slides.length, onClose, clampWidth, isContinuous]);
+  }, [slides.length, onClose, clampWidth]);
 
   // ── Touch ─────────────────────────────────────────────────────────────────
   const getTouchDist = (t: React.TouchList | TouchList) =>
@@ -229,7 +219,7 @@ export function FullScreenViewer({
       const dist  = getTouchDist(e.touches);
       const ratio = dist / lastPinchDist.current;
       setImgPxWidth(clampWidth(pinchStartW.current * ratio));
-    } else if (!isContinuous && e.touches.length === 1 && swipeStartX.current !== null) {
+    } else if (e.touches.length === 1 && swipeStartX.current !== null) {
       const dx = e.touches[0].clientX - swipeStartX.current;
       const dy = e.touches[0].clientY - (swipeStartY.current ?? 0);
       const scrollEl = scrollRef.current;
@@ -260,7 +250,7 @@ export function FullScreenViewer({
         }
       }
     }
-  }, [clampWidth, holdDir, idx, slides.length, isContinuous]);
+  }, [clampWidth, holdDir, idx, slides.length]);
 
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
@@ -272,7 +262,7 @@ export function FullScreenViewer({
       const currentW = imgPxWidth ?? fitWidthRef.current;
       const isAtFit  = Math.abs(currentW - fitWidthRef.current) < 5;
 
-      if (!isContinuous && !wasPinching && swipeStartX.current !== null) {
+      if (!wasPinching && swipeStartX.current !== null) {
         const dx = e.changedTouches[0].clientX - swipeStartX.current;
         const dy = e.changedTouches[0].clientY - (swipeStartY.current ?? 0);
         
@@ -302,7 +292,7 @@ export function FullScreenViewer({
         holdTimer.current = null;
       }
     }
-  }, [imgPxWidth, slides.length, isContinuous]);
+  }, [imgPxWidth, slides.length]);
 
 
 
@@ -312,11 +302,11 @@ export function FullScreenViewer({
       swipeStartX.current = null;
       lastPinchDist.current = getTouchDist(e.touches);
       pinchStartW.current   = imgPxWidth ?? fitWidthRef.current;
-    } else if (!isContinuous && e.touches.length === 1 && !isPinching.current) {
+    } else if (e.touches.length === 1 && !isPinching.current) {
       swipeStartX.current = e.touches[0].clientX;
       swipeStartY.current = e.touches[0].clientY;
     }
-  }, [imgPxWidth, isContinuous]);
+  }, [imgPxWidth]);
 
   // Use useEffect to attach non-passive listeners to block native zoom
   useEffect(() => {
@@ -348,28 +338,13 @@ export function FullScreenViewer({
 
   if (slides.length === 0) return null;
 
-  const slide = slides[isContinuous ? Math.min(startIndex, slides.length - 1) : idx];
+  const slide = slides[idx];
   if (!slide) return null;
 
   const currentW  = imgPxWidth ?? fitWidthRef.current;
   const fitW      = fitWidthRef.current;
   const zoomPct   = fitW > 0 ? Math.round((currentW / fitW) * 100) : 100;
   const isZoomed  = fitW > 0 && Math.abs(currentW - fitW) > 3;
-
-  const headerTitle = isContinuous
-    ? (title || slide.songTitle)
-    : slide.songTitle;
-
-  const downloadAll = () => {
-    slides.forEach((s) => {
-      (s.imageUrls ?? []).forEach((url, i) => {
-        setTimeout(
-          () => downloadFile(url, `${s.songTitle} - ${s.key}${(s.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`),
-          i * 300,
-        );
-      });
-    });
-  };
 
   const downloadCurrent = () => {
     (slide.imageUrls ?? []).forEach((url, i) =>
@@ -391,15 +366,10 @@ export function FullScreenViewer({
               <X className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm truncate">{headerTitle}</p>
+              <p className="text-white font-bold text-sm truncate">{slide.songTitle}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                {!isContinuous && <KeyBadge keyName={slide.key} accent />}
-                {isContinuous && (
-                  <span className="text-white/40 text-[11px] font-bold">
-                    {slides.length} songs · scroll to browse
-                  </span>
-                )}
-                {!isContinuous && (slide.imageUrls?.length ?? 0) > 1 && (
+                <KeyBadge keyName={slide.key} accent />
+                {(slide.imageUrls?.length ?? 0) > 1 && (
                   <span className="text-white/40 text-[11px] font-bold">{slide.imageUrls.length} pages</span>
                 )}
                 {isZoomed && (
@@ -412,9 +382,7 @@ export function FullScreenViewer({
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {!isContinuous && (
-              <span className="text-white/40 text-xs font-bold mr-1">{idx + 1} / {slides.length}</span>
-            )}
+            <span className="text-white/40 text-xs font-bold mr-1">{idx + 1} / {slides.length}</span>
             <button onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) / 1.35))}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom Out">
               <ZoomOut className="h-4 w-4" />
@@ -423,7 +391,7 @@ export function FullScreenViewer({
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom In">
               <ZoomIn className="h-4 w-4" />
             </button>
-            <button onClick={() => (isContinuous ? downloadAll() : downloadCurrent())}
+            <button onClick={downloadCurrent}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Download to device">
               <Download className="h-5 w-5" />
             </button>
@@ -440,34 +408,6 @@ export function FullScreenViewer({
             className="w-full h-full overflow-auto"
             style={{ touchAction: 'pan-x pan-y' }}
           >
-            {isContinuous ? (
-              <div className="flex flex-col items-center gap-6 py-4 px-2">
-                {slides.map((section, sectionIdx) => (
-                  <section
-                    key={`${section.songTitle}-${section.key}-${sectionIdx}`}
-                    id={`viewer-section-${sectionIdx}`}
-                    className="w-full flex flex-col items-center gap-3"
-                  >
-                    <div className="sticky top-0 z-10 flex w-full max-w-3xl items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/70 px-4 py-2 backdrop-blur-md">
-                      <div className="min-w-0">
-                        <p className="text-white text-sm font-semibold truncate">
-                          {sectionIdx + 1}. {section.songTitle}
-                        </p>
-                      </div>
-                      <KeyBadge keyName={section.key} accent onDark />
-                    </div>
-                    {(section.imageUrls ?? []).map((url, pageIdx) =>
-                      renderChordPage(
-                        url,
-                        pageIdx,
-                        imgPxWidth,
-                        sectionIdx === 0 && pageIdx === 0 ? handleFirstImageLoad : undefined,
-                      ),
-                    )}
-                  </section>
-                ))}
-              </div>
-            ) : (
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
               {(slide.imageUrls ?? []).map((url, i) => renderChordPage(
                 url,
@@ -476,13 +416,12 @@ export function FullScreenViewer({
                 i === 0 ? handleFirstImageLoad : undefined,
               ))}
             </div>
-            )}
           </div>
         </div>
 
         {/* Footer */}
         <div className="shrink-0 flex flex-col gap-2 pb-6 pt-2 px-4">
-          {!isContinuous && listenOpen && slide.referenceTracks && slide.referenceTracks.length > 0 && (() => {
+          {listenOpen && slide.referenceTracks && slide.referenceTracks.length > 0 && (() => {
             const activeTrack = slide.referenceTracks[activeTrackIdx] ?? slide.referenceTracks[0];
             return (
               <div className="space-y-2 max-w-lg mx-auto w-full">
@@ -502,22 +441,6 @@ export function FullScreenViewer({
               </div>
             );
           })()}
-          {isContinuous && slides.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 max-w-lg mx-auto w-full scrollbar-hide">
-              {slides.map((s, i) => (
-                <button
-                  key={`${s.songTitle}-${s.key}-${i}`}
-                  type="button"
-                  onClick={() => scrollToSection(i)}
-                  title={`${s.songTitle} (${s.key})`}
-                  className="shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white/80 hover:bg-white/20 hover:text-white transition-colors"
-                >
-                  {i + 1}. {s.songTitle}
-                </button>
-              ))}
-            </div>
-          )}
-          {!isContinuous && (
           <div className="flex items-center justify-center gap-3">
             <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
               className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
@@ -550,11 +473,10 @@ export function FullScreenViewer({
               <ChevronRight className="h-6 w-6" />
             </button>
           </div>
-          )}
         </div>
         {/* Swipe-and-Hold Indicator */}
         <AnimatePresence>
-          {!isContinuous && holdDir && (
+          {holdDir && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9, x: holdDir === 'next' ? 20 : -20 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}

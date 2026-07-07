@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.74",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Chat setlist viewer now uses natural pinch-zoom and free panning in all directions",
+      "Reference track Listen buttons are back on each song in the setlist viewer",
+      "Song chips at the bottom jump you to any song while keeping the full scrollable setlist",
+    ],
+  },
+  {
     version: "v1.3.73",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
