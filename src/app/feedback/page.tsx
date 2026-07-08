@@ -56,6 +56,22 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.89",
+    subtitle: "Home page stability",
+    date: "Early-July 2026",
+    changes: [
+      "Fixed a dashboard load type-safety issue so the home page waits for your signed-in profile before rendering",
+    ],
+  },
+  {
+    version: "v1.3.88",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "The Worship page now uses the same full setlist viewer as chat, with trackpad scrolling to pan and pinch to zoom",
+    ],
+  },
+  {
     version: "v1.3.87",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",

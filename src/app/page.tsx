@@ -36,5 +36,13 @@ export default function HomePage() {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <div className="page-container flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+      </div>
+    );
+  }
+
   return <DashboardPage currentUser={currentUser} />;
 }
