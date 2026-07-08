@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.87",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Cleaned up a viewer initialization call to improve reliability when opening from chat",
+    ],
+  },
+  {
     version: "v1.3.86",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
