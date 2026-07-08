@@ -312,14 +312,20 @@ export function ContinuousSetlistViewer({
           limitToBounds
           centerZoomedOut={false}
           alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
-          wheel={{ step: 0.12, smoothStep: 0.004 }}
+          // Trackpad scroll on macOS often comes through as wheel events; without `wheelDisabled`,
+          // the library interprets that as zoom. We keep pinch/ctrl+wheel zoom behavior,
+          // and use wheel-based panning for normal two-finger scrolling.
+          wheel={{ step: 0.12, smoothStep: 0.004, wheelDisabled: true }}
           pinch={{ step: 6 }}
-          panning={{ velocityDisabled: false, excluded: ['setlist-control'] }}
+          panning={{
+            velocityDisabled: false,
+            excluded: ['setlist-control'],
+            wheelPanning: true,
+          }}
           onInit={(ref) => {
             transformRef.current = ref;
             window.requestAnimationFrame(() => {
               centerContentHorizontally(ref);
-              updateTitlePositions();
             });
           }}
           onPanning={handleTransformChange}
