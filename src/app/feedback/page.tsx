@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.88",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "The Worship page now uses the same full setlist viewer as chat, with trackpad scrolling to pan and pinch to zoom",
+    ],
+  },
+  {
     version: "v1.3.87",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
