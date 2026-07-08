@@ -1123,6 +1123,8 @@ function SetlistDetailView({
         <FullScreenViewer
           slides={allSlides}
           startIndex={viewerStart}
+          mode="continuous"
+          title={playlist.name}
           onClose={() => setViewerStart(null)}
         />
       )}
