@@ -326,7 +326,6 @@ export function ContinuousSetlistViewer({
             transformRef.current = ref;
             window.requestAnimationFrame(() => {
               centerContentHorizontally(ref);
-              updateTitlePositions();
             });
           }}
           onPanning={handleTransformChange}
