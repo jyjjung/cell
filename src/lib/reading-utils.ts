@@ -195,6 +195,67 @@ export type ChapterPlanMatch = {
   displayText: string;
 };
 
+export type ChapterPlanAssignment = ChapterPlanMatch & {
+  completed: boolean;
+};
+
+export type ChapterPlanAssignmentStatus = {
+  assignments: ChapterPlanAssignment[];
+  total: number;
+  completedCount: number;
+  allComplete: boolean;
+  partialComplete: boolean;
+  hasMultipleAssignments: boolean;
+};
+
+/** Every plan assignment for a given chapter, in plan order, with completion state. */
+export function getChapterPlanAssignmentStatus(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): ChapterPlanAssignmentStatus {
+  if (!dailyReadings?.length) {
+    return {
+      assignments: [],
+      total: 0,
+      completedCount: 0,
+      allComplete: false,
+      partialComplete: false,
+      hasMultipleAssignments: false,
+    };
+  }
+
+  const assignments: ChapterPlanAssignment[] = [];
+
+  for (const day of dailyReadings) {
+    for (const passage of day.passages ?? []) {
+      const resolved = resolvePlanPassage(passage);
+      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) continue;
+
+      const key = makePassageKey(day.date, resolved.displayText);
+      assignments.push({
+        key,
+        date: day.date,
+        displayText: resolved.displayText,
+        completed: completedPassages.includes(key),
+      });
+    }
+  }
+
+  const total = assignments.length;
+  const completedCount = assignments.filter((assignment) => assignment.completed).length;
+
+  return {
+    assignments,
+    total,
+    completedCount,
+    allComplete: total > 0 && completedCount === total,
+    partialComplete: completedCount > 0 && completedCount < total,
+    hasMultipleAssignments: total > 1,
+  };
+}
+
 /** Incomplete plan passage matches for a given chapter, in plan order. */
 export function findIncompletePlanPassagesForChapter(
   dailyReadings: DailyReading[] | undefined | null,

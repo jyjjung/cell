@@ -56,11 +56,20 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
-    version: "v1.3.90",
+    version: "v1.3.91",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
     changes: [
       "Setlist viewer now matches light mode with readable controls, song chips, and reference player styling",
+    ],
+  },
+  {
+    version: "v1.3.90",
+    subtitle: "Bible popup plan status",
+    date: "Early-July 2026",
+    changes: [
+      "When a chapter appears more than once in your reading plan, the Bible popup now shows whether each plan assignment is already marked complete",
+      "You can mark or unmark plan assignments directly from the Bible popup — tap an assignment row, or use Unmark as read for single-assignment chapters",
     ],
   },
   {
