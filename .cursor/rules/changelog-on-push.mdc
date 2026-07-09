@@ -19,7 +19,7 @@ Add a **new object at the top** of the `changelogs` array (before the existing f
 {
   version: "v1.3.6",           // increment patch from the current latest entry
   subtitle: "Short Title",   // optional but preferred for feature releases
-  date: "Late-May 2026",       // match existing date style
+  date: "July 9, 2026",        // use the exact calendar date for the release
   changes: [
     "User-facing change written in plain language",
     "Another bullet if needed",
@@ -35,3 +35,5 @@ Add a **new object at the top** of the `changelogs` array (before the existing f
 4. Push to GitHub.
 
 Never push code changes without a matching changelog entry in the same push.
+
+Always use an exact date like `July 9, 2026` for new changelog entries, never `Early/Mid/Late-Month Year`.
