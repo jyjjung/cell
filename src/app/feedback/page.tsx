@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.94",
+    subtitle: "Bible popup button colors",
+    date: "Early-July 2026",
+    changes: [
+      "Bible popup mark button uses base styling when unread and primary styling once any plan assignment is marked",
+    ],
+  },
+  {
     version: "v1.3.93",
     subtitle: "Bible popup layout",
     date: "Early-July 2026",
