@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.92",
+    subtitle: "Bible popup progress",
+    date: "Early-July 2026",
+    changes: [
+      "The Bible popup mark button turns green when a chapter is already complete",
+      "For chapters that appear more than once in your plan, the button fill reflects how much of that chapter you have read",
+    ],
+  },
+  {
     version: "v1.3.91",
     subtitle: "Setlist viewer",
     date: "Early-July 2026",
