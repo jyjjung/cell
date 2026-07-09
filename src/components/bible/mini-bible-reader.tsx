@@ -95,19 +95,18 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       : t.markChapterAsRead;
 
   const markButtonVariant = chapterPlanStatus.hasMultipleAssignments
-    ? chapterProgressPercent === 100
-      ? 'primary'
-      : 'default'
+    ? 'default'
     : hasAnyPlanCompletion
       ? 'primary'
       : 'default';
   const markButtonClassName = cn(
     'relative w-full h-9 overflow-hidden rounded-full text-xs font-semibold',
+    chapterPlanStatus.hasMultipleAssignments &&
+      chapterProgressPercent === 100 &&
+      'text-primary-foreground',
   );
   const showMarkButtonProgress =
-    chapterPlanStatus.hasMultipleAssignments &&
-    chapterProgressPercent > 0 &&
-    chapterProgressPercent < 100;
+    chapterPlanStatus.hasMultipleAssignments && chapterProgressPercent > 0;
 
   const formatPlanAssignmentDate = (date: string) => {
     const parsed = parseISO(date);
