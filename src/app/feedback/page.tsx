@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.90",
+    subtitle: "Bible popup plan status",
+    date: "Early-July 2026",
+    changes: [
+      "When a chapter appears more than once in your reading plan, the Bible popup now shows whether each plan assignment is already marked complete",
+    ],
+  },
+  {
     version: "v1.3.89",
     subtitle: "Home page stability",
     date: "Early-July 2026",
