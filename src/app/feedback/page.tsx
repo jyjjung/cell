@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.93",
+    subtitle: "Bible popup layout",
+    date: "Early-July 2026",
+    changes: [
+      "Mark chapter as read stays pinned to the bottom of the Bible popup, with no cancel button on the assignment picker",
+    ],
+  },
+  {
     version: "v1.3.92",
     subtitle: "Bible popup progress",
     date: "Early-July 2026",
