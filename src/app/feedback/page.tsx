@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.99",
+    subtitle: "Bible verse text fix",
+    date: "Early-July 2026",
+    changes: [
+      "Fixed a missing space in Proverbs 7:1 in the Bible reader text",
+    ],
+  },
+  {
     version: "v1.3.98",
     subtitle: "Bible popup picker",
     date: "Early-July 2026",
