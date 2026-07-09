@@ -124,14 +124,13 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   }, [html, book, chapter]);
 
   useEffect(() => {
-    if (targetPassage) {
-      setBook(targetPassage.book);
-      setChapter(targetPassage.chapter);
-      setIsBrowsing(false);
-      setBrowsingBook(null);
-      setShowAssignmentPanel(false);
-    }
-  }, [targetPassage]);
+    if (!targetPassage) return;
+    setBook(targetPassage.book);
+    setChapter(targetPassage.chapter);
+    setIsBrowsing(false);
+    setBrowsingBook(null);
+    setShowAssignmentPanel(false);
+  }, [targetPassage?.book, targetPassage?.chapter, targetPassage?.timestamp]);
 
   useEffect(() => {
     prefetchControllerRef.current?.abort();
@@ -240,6 +239,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       console.error('Failed to toggle plan assignment:', e);
     } finally {
       setIsMarkingChapter(false);
+      setShowAssignmentPanel(false);
     }
   };
 
