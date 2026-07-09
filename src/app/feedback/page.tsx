@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.100",
+    subtitle: "Bible text refresh",
+    date: "Early-July 2026",
+    changes: [
+      "Updated Bible passage caching so corrected verse text refreshes after app updates",
+    ],
+  },
+  {
     version: "v1.3.99",
     subtitle: "Bible verse text fix",
     date: "Early-July 2026",

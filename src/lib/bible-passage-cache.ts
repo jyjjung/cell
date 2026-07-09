@@ -1,15 +1,16 @@
 import type { BibleTextVersion } from '@/lib/bible-versions';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 
-const BIBLE_PASSAGE_CACHE = 'bible-passage-responses';
+const BIBLE_PASSAGE_CACHE_VERSION = '2026-07-09-proverbs-7-1-fix';
+const BIBLE_PASSAGE_CACHE = `bible-passage-responses-${BIBLE_PASSAGE_CACHE_VERSION}`;
 const memoryCache = new Map<string, string>();
 
 function cacheKey(passage: string, version: BibleTextVersion): string {
-  return `${version}::${passage.trim().toLowerCase()}`;
+  return `${BIBLE_PASSAGE_CACHE_VERSION}::${version}::${passage.trim().toLowerCase()}`;
 }
 
 function apiUrl(passage: string, version: BibleTextVersion): string {
-  return `/api/bible?passage=${encodeURIComponent(passage)}&version=${version}`;
+  return `/api/bible?passage=${encodeURIComponent(passage)}&version=${version}&cacheVersion=${BIBLE_PASSAGE_CACHE_VERSION}`;
 }
 
 export function readCachedPassageHtml(passage: string, version: BibleTextVersion): string | null {
