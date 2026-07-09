@@ -16,6 +16,21 @@ import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
+import {
+  useViewerTheme,
+  viewerControlBtn,
+  viewerEmptyState,
+  viewerFooter,
+  viewerKeyBadge,
+  viewerListenBtn,
+  viewerPdfFrame,
+  viewerSectionBar,
+  viewerShell,
+  viewerSongChip,
+  viewerTitleMuted,
+  viewerTitlePrimary,
+  viewerZoomBadge,
+} from '@/components/worship/viewer-theme';
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -34,21 +49,23 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
-function KeyBadge({ keyName }: { keyName: ChordKey }) {
+function KeyBadge({ keyName, isDark }: { keyName: ChordKey; isDark: boolean }) {
   return (
-    <span className="inline-flex min-w-[2rem] h-6 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-1.5 text-[11px] font-semibold tracking-tight text-white/80">
+    <span className={viewerKeyBadge(isDark)}>
       {keyName === 'numbers' ? '#' : keyName}
     </span>
   );
 }
 
-function ChordPage({ url, pageIndex, songTitle }: { url: string; pageIndex: number; songTitle: string }) {
+function ChordPage({
+  url, pageIndex, songTitle, isDark,
+}: { url: string; pageIndex: number; songTitle: string; isDark: boolean }) {
   if (isPdfUrl(url)) {
     return (
-      <div className="flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5" style={{ minHeight: '70vh' }}>
+      <div className={viewerPdfFrame(isDark)} style={{ minHeight: '70vh' }}>
         <iframe
           src={`${url}#toolbar=0&navpanes=0`}
-          className="min-h-[60vh] w-full flex-1 border-none bg-white/5"
+          className={cn('min-h-[60vh] w-full flex-1 border-none', isDark ? 'bg-white/5' : 'bg-background')}
           title={`${songTitle} PDF page ${pageIndex + 1}`}
         />
       </div>
@@ -75,6 +92,7 @@ function SectionTitleBar({
   hasTracks,
   listenOpen,
   isActive,
+  isDark,
   onListen,
 }: {
   sectionIdx: number;
@@ -83,26 +101,25 @@ function SectionTitleBar({
   hasTracks: boolean;
   listenOpen: boolean;
   isActive: boolean;
+  isDark: boolean;
   onListen: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/95 px-4 py-2.5 shadow-lg backdrop-blur-md">
+    <div className={viewerSectionBar(isDark)}>
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-white">
+        <p className={cn('truncate text-sm font-semibold', viewerTitlePrimary(isDark))}>
           {sectionIdx + 1}. {title}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <KeyBadge keyName={keyName} />
+        <KeyBadge keyName={keyName} isDark={isDark} />
         {hasTracks && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onListen(); }}
             className={cn(
               'setlist-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
-              listenOpen && isActive
-                ? 'border-rose-400/40 bg-rose-500/20 text-rose-200'
-                : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/20',
+              viewerListenBtn(isDark, listenOpen && isActive),
             )}
           >
             <Headphones className="h-3.5 w-3.5" />
@@ -139,6 +156,8 @@ export function ContinuousSetlistViewer({
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
   const didInitialScroll = useRef(false);
+  const viewerTheme = useViewerTheme();
+  const isDark = viewerTheme === 'dark';
 
   const activeSlide = slides[activeSection] ?? slides[0];
   const isZoomed = scale > 1.05;
@@ -229,14 +248,14 @@ export function ContinuousSetlistViewer({
     window.requestAnimationFrame(updateActiveSectionFromView);
   }, [updateActiveSectionFromView]);
 
-  const controlBtn = 'p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-30';
+  const controlBtn = viewerControlBtn(isDark);
 
   const viewer = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] flex flex-col bg-black select-none"
+      className={cn('fixed inset-0 z-[300] flex flex-col select-none', viewerShell(isDark))}
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
@@ -248,13 +267,13 @@ export function ContinuousSetlistViewer({
             <X className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">{title || activeSlide?.songTitle}</p>
+            <p className={cn('truncate text-sm font-bold', viewerTitlePrimary(isDark))}>{title || activeSlide?.songTitle}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold text-white/45">
+              <span className={cn('text-[11px] font-semibold', viewerTitleMuted(isDark, 'low'))}>
                 {slides.length} songs
               </span>
               {activeSlide && (
-                <span className="truncate text-[11px] font-medium text-white/65">
+                <span className={cn('truncate text-[11px] font-medium', viewerTitleMuted(isDark))}>
                   · {activeSlide.songTitle}
                 </span>
               )}
@@ -262,7 +281,7 @@ export function ContinuousSetlistViewer({
                 <button
                   type="button"
                   onClick={() => controlsRef.current?.resetTransform()}
-                  className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300"
+                  className={viewerZoomBadge(isDark)}
                 >
                   {zoomPct}% · Reset
                 </button>
@@ -365,6 +384,7 @@ export function ContinuousSetlistViewer({
                           hasTracks={hasTracks}
                           listenOpen={listenOpen}
                           isActive={activeSection === sectionIdx}
+                          isDark={isDark}
                           onListen={() => openListenForSection(sectionIdx)}
                         />
                         {(section.imageUrls ?? []).length > 0 ? (
@@ -374,17 +394,21 @@ export function ContinuousSetlistViewer({
                               url={url}
                               pageIndex={pageIdx}
                               songTitle={section.songTitle}
+                              isDark={isDark}
                             />
                           ))
                         ) : (
-                          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 px-6 py-10 text-center">
-                            <FileText className="h-8 w-8 text-white/25" />
-                            <p className="text-sm text-white/50">No chord sheets for this song</p>
+                          <div className={viewerEmptyState(isDark)}>
+                            <FileText className={cn('h-8 w-8', isDark ? 'text-white/25' : 'text-muted-foreground/50')} />
+                            <p className={cn('text-sm', isDark ? 'text-white/50' : 'text-muted-foreground')}>No chord sheets for this song</p>
                             {hasTracks && (
                               <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); openListenForSection(sectionIdx); }}
-                                className="setlist-control mt-1 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white"
+                                className={cn(
+                                  'setlist-control mt-1 inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors',
+                                  viewerListenBtn(isDark, false),
+                                )}
                               >
                                 <Headphones className="h-4 w-4" />
                                 Play reference track
@@ -402,7 +426,7 @@ export function ContinuousSetlistViewer({
         </TransformWrapper>
       </div>
 
-      <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 bg-black/90 px-4 pb-6 pt-3 backdrop-blur-md">
+      <div className={viewerFooter(isDark)}>
         {listenOpen && activeSlide?.referenceTracks && activeSlide.referenceTracks.length > 0 && (() => {
           const activeTrack = activeSlide.referenceTracks![activeTrackIdx] ?? activeSlide.referenceTracks![0];
           return (
@@ -411,13 +435,14 @@ export function ContinuousSetlistViewer({
                 tracks={activeSlide.referenceTracks!}
                 activeIndex={activeTrackIdx}
                 onSelect={setActiveTrackIdx}
-                theme="dark"
+                theme={viewerTheme}
               />
               <YoutubePlayerPanel
                 key={activeTrack.url}
                 url={activeTrack.url}
                 note={activeTrack.note}
                 enabled={listenOpen}
+                theme={viewerTheme}
                 onClose={() => setListenOpen(false)}
               />
             </div>
@@ -434,9 +459,7 @@ export function ContinuousSetlistViewer({
                 title={`${section.songTitle} (${section.key})`}
                 className={cn(
                   'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors',
-                  i === activeSection
-                    ? 'border-rose-400/40 bg-rose-500/20 text-rose-100'
-                    : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white',
+                  viewerSongChip(isDark, i === activeSection),
                 )}
               >
                 {i + 1}. {section.songTitle}
