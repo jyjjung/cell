@@ -14,6 +14,14 @@ import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
 import type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
+import {
+  useViewerTheme,
+  viewerControlBtn,
+  viewerShell,
+  viewerTitleMuted,
+  viewerTitlePrimary,
+  viewerZoomBadge,
+} from '@/components/worship/viewer-theme';
 
 export type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 
@@ -141,6 +149,8 @@ function SlidesFullScreenViewer({
   const [idx, setIdx] = useState(startIndex);
   const [listenOpen, setListenOpen] = useState(false);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
+  const viewerTheme = useViewerTheme();
+  const isDark = viewerTheme === 'dark';
 
   // Pixel width of images — drives zoom. null = CSS-contained (loading state).
   // We use pixel width (not CSS transform) so the scroll container always
@@ -356,25 +366,25 @@ function SlidesFullScreenViewer({
     <AnimatePresence>
         <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[300] bg-black flex flex-col select-none"
+        className={cn('fixed inset-0 z-[300] flex flex-col select-none', viewerShell(isDark))}
         style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white shrink-0">
+            <button onClick={onClose} className={cn(viewerControlBtn(isDark), 'shrink-0')}>
               <X className="h-5 w-5" />
             </button>
             <div className="min-w-0">
-              <p className="text-white font-bold text-sm truncate">{slide.songTitle}</p>
+              <p className={cn('font-bold text-sm truncate', viewerTitlePrimary(isDark))}>{slide.songTitle}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <KeyBadge keyName={slide.key} accent />
                 {(slide.imageUrls?.length ?? 0) > 1 && (
-                  <span className="text-white/40 text-[11px] font-bold">{slide.imageUrls.length} pages</span>
+                  <span className={cn('text-[11px] font-bold', viewerTitleMuted(isDark, 'low'))}>{slide.imageUrls.length} pages</span>
                 )}
                 {isZoomed && (
                   <button onClick={resetZoom}
-                    className="text-micro-label text-amber-400/90 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                    className={viewerZoomBadge(isDark)}>
                     {zoomPct}% · Reset
                   </button>
                 )}
@@ -382,17 +392,17 @@ function SlidesFullScreenViewer({
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-white/40 text-xs font-bold mr-1">{idx + 1} / {slides.length}</span>
+            <span className={cn('text-xs font-bold mr-1', viewerTitleMuted(isDark, 'low'))}>{idx + 1} / {slides.length}</span>
             <button onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) / 1.35))}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom Out">
+              className={viewerControlBtn(isDark)} title="Zoom Out">
               <ZoomOut className="h-4 w-4" />
             </button>
             <button onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) * 1.35))}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Zoom In">
+              className={viewerControlBtn(isDark)} title="Zoom In">
               <ZoomIn className="h-4 w-4" />
             </button>
             <button onClick={downloadCurrent}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white" title="Download to device">
+              className={viewerControlBtn(isDark)} title="Download to device">
               <Download className="h-5 w-5" />
             </button>
           </div>
@@ -429,13 +439,14 @@ function SlidesFullScreenViewer({
                   tracks={slide.referenceTracks}
                   activeIndex={activeTrackIdx}
                   onSelect={setActiveTrackIdx}
-                  theme="dark"
+                  theme={viewerTheme}
                 />
                 <YoutubePlayerPanel
                   key={activeTrack.url}
                   url={activeTrack.url}
                   note={activeTrack.note}
                   enabled={listenOpen}
+                  theme={viewerTheme}
                   onClose={() => setListenOpen(false)}
                 />
               </div>
@@ -443,7 +454,7 @@ function SlidesFullScreenViewer({
           })()}
           <div className="flex items-center justify-center gap-3">
             <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
-              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
+              className={cn(viewerControlBtn(isDark), 'p-3 rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}>
               <ChevronLeft className="h-6 w-6" />
             </button>
             {slide.referenceTracks && slide.referenceTracks.length > 0 && (
@@ -451,8 +462,12 @@ function SlidesFullScreenViewer({
                 type="button"
                 onClick={() => setListenOpen((open) => !open)}
                 className={cn(
-                  'flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold text-white backdrop-blur-sm transition-colors',
-                  listenOpen ? 'bg-rose-500/90 hover:bg-rose-500' : 'bg-white/10 hover:bg-white/20',
+                  'flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold backdrop-blur-sm transition-colors',
+                  listenOpen
+                    ? 'bg-rose-500/90 hover:bg-rose-500 text-white'
+                    : isDark
+                      ? 'bg-white/10 hover:bg-white/20 text-white'
+                      : 'border border-border/50 bg-muted/50 text-foreground hover:bg-muted',
                 )}
               >
                 <Headphones className="h-5 w-5" />
@@ -464,12 +479,16 @@ function SlidesFullScreenViewer({
                 {slides.map((s, i) => (
                   <button key={i} onClick={() => setIdx(i)} title={`${s.songTitle} (${s.key})`}
                     className={cn('rounded-full transition-all',
-                      i === idx ? 'w-4 h-2 bg-rose-500' : 'w-2 h-2 bg-white/25 hover:bg-white/50')} />
+                      i === idx
+                        ? 'w-4 h-2 bg-rose-500'
+                        : isDark
+                          ? 'w-2 h-2 bg-white/25 hover:bg-white/50'
+                          : 'w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50')} />
                 ))}
               </div>
             )}
             <button onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))} disabled={idx === slides.length - 1}
-              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-20 disabled:pointer-events-none text-white backdrop-blur-sm">
+              className={cn(viewerControlBtn(isDark), 'p-3 rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}>
               <ChevronRight className="h-6 w-6" />
             </button>
           </div>
@@ -495,14 +514,14 @@ function SlidesFullScreenViewer({
                 {holdDir === 'next' ? <ArrowRight className="h-8 w-8" /> : <ArrowLeftIcon className="h-8 w-8" />}
               </div>
               <div className="text-center">
-                <p className="text-micro-label opacity-60 text-white mb-1">
+                <p className={cn('text-micro-label opacity-60 mb-1', viewerTitlePrimary(isDark))}>
                   {holdDir === 'next' ? 'Next song' : 'Previous song'}
                 </p>
-                <p className="text-white font-semibold text-lg max-w-[160px] leading-tight">
+                <p className={cn('font-semibold text-lg max-w-[160px] leading-tight', viewerTitlePrimary(isDark))}>
                   {holdDir === 'next' ? slides[idx + 1]?.songTitle : slides[idx - 1]?.songTitle}
                 </p>
               </div>
-              <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2">
+              <div className={cn('w-full h-1 rounded-full overflow-hidden mt-2', isDark ? 'bg-white/10' : 'bg-muted')}>
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: '100%' }}

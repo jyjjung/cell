@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.90",
+    subtitle: "Setlist viewer",
+    date: "Early-July 2026",
+    changes: [
+      "Setlist viewer now matches light mode with readable controls, song chips, and reference player styling",
+    ],
+  },
+  {
     version: "v1.3.89",
     subtitle: "Home page stability",
     date: "Early-July 2026",
