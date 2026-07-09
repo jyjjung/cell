@@ -58,6 +58,8 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const prefetchControllerRef = useRef<AbortController | null>(null);
+  const assignmentPanelRef = useRef<HTMLDivElement>(null);
+  const markButtonRef = useRef<HTMLButtonElement>(null);
 
   const chapterRef = `${book} ${chapter}`;
   const chapterPlanStatus = getChapterPlanAssignmentStatus(
@@ -165,6 +167,20 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   useEffect(() => {
     setShowAssignmentPanel(false);
   }, [book, chapter]);
+
+  useEffect(() => {
+    if (!showAssignmentPanel) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (assignmentPanelRef.current?.contains(target)) return;
+      if (markButtonRef.current?.contains(target)) return;
+      setShowAssignmentPanel(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [showAssignmentPanel]);
 
   const handlePrev = () => {
     const prev = getPreviousChapterRef(book, chapter);
@@ -393,7 +409,10 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
           {currentUser ? (
             <>
               {showAssignmentPanel && chapterPlanStatus.hasMultipleAssignments ? (
-                <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
+                <div
+                  ref={assignmentPanelRef}
+                  className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100"
+                >
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     <div className="min-w-0 space-y-2">
@@ -494,6 +513,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
           </div>
           {currentUser ? (
             <Button
+              ref={markButtonRef}
               type="button"
               variant={markButtonVariant}
               size="sm"

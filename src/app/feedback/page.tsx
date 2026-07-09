@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.98",
+    subtitle: "Bible popup picker",
+    date: "Early-July 2026",
+    changes: [
+      "Tapping outside the Bible popup plan assignment picker now closes it",
+    ],
+  },
+  {
     version: "v1.3.97",
     subtitle: "Bible popup progress bar",
     date: "Early-July 2026",
