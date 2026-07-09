@@ -986,6 +986,154 @@ const changelogs = [
   },
 ];
 
+type ChangelogEntry = {
+  version: string;
+  date: string;
+  changes: string[];
+};
+
+const exactDateOverridesByFirstChange: Record<string, string> = {
+  "Fixed sessions appearing to log out when leaving a page while your profile was still syncing":
+    "July 7, 2026",
+  "New users who have not sent a prayer request see a prompt on site open with a link to the prayer page":
+    "July 7, 2026",
+  "Today's QT on the home dashboard is now a compact section instead of a tall card":
+    "July 7, 2026",
+  "Home dashboard now shows a Today's QT widget with the topic, passage, and sharer":
+    "July 7, 2026",
+};
+
+function getExactChangelogDate(log: ChangelogEntry): string {
+  if (!/^(Early|Mid|Late)-/.test(log.date)) return log.date;
+
+  const firstChange = log.changes[0];
+  if (firstChange && exactDateOverridesByFirstChange[firstChange]) {
+    return exactDateOverridesByFirstChange[firstChange];
+  }
+
+  switch (log.version) {
+    case 'v1.3.100':
+    case 'v1.3.99':
+    case 'v1.3.98':
+    case 'v1.3.97':
+    case 'v1.3.96':
+    case 'v1.3.95':
+    case 'v1.3.94':
+    case 'v1.3.93':
+    case 'v1.3.92':
+    case 'v1.3.91':
+    case 'v1.3.90':
+      return 'July 9, 2026';
+    case 'v1.3.89':
+    case 'v1.3.88':
+    case 'v1.3.87':
+    case 'v1.3.86':
+      return 'July 8, 2026';
+    case 'v1.3.85':
+    case 'v1.3.77':
+    case 'v1.3.76':
+    case 'v1.3.75':
+    case 'v1.3.74':
+    case 'v1.3.73':
+    case 'v1.3.72':
+    case 'v1.3.71':
+    case 'v1.3.70':
+    case 'v1.3.69':
+    case 'v1.3.68':
+      return 'July 7, 2026';
+    case 'v1.3.67':
+      return 'July 4, 2026';
+    case 'v1.3.66':
+    case 'v1.3.65':
+    case 'v1.3.64':
+      return 'July 1, 2026';
+    case 'v1.3.63':
+    case 'v1.3.62':
+    case 'v1.3.61':
+      return 'June 28, 2026';
+    case 'v1.3.60':
+      return 'June 27, 2026';
+    case 'v1.3.59':
+    case 'v1.3.58':
+      return 'June 26, 2026';
+    case 'v1.3.57':
+    case 'v1.3.56':
+    case 'v1.3.55':
+    case 'v1.3.54':
+    case 'v1.3.53':
+    case 'v1.3.52':
+    case 'v1.3.51':
+      return 'June 21, 2026';
+    case 'v1.3.50':
+    case 'v1.3.49':
+    case 'v1.3.48':
+    case 'v1.3.47':
+    case 'v1.3.46':
+      return 'June 19, 2026';
+    case 'v1.3.44':
+    case 'v1.3.43':
+      return 'June 18, 2026';
+    case 'v1.3.42':
+      return 'June 16, 2026';
+    case 'v1.3.41':
+    case 'v1.3.40':
+    case 'v1.3.39':
+      return 'June 15, 2026';
+    case 'v1.3.38':
+    case 'v1.3.37':
+      return 'June 14, 2026';
+    case 'v1.3.36':
+      return 'June 13, 2026';
+    case 'v1.3.35':
+    case 'v1.3.34':
+    case 'v1.3.33':
+    case 'v1.3.32':
+    case 'v1.3.31':
+    case 'v1.3.30':
+    case 'v1.3.29':
+    case 'v1.3.28':
+    case 'v1.3.27':
+    case 'v1.3.26':
+    case 'v1.3.25':
+    case 'v1.3.24':
+      return 'June 9, 2026';
+    case 'v1.3.23':
+    case 'v1.3.22':
+    case 'v1.3.21':
+    case 'v1.3.20':
+      return 'June 7, 2026';
+    case 'v1.3.19':
+    case 'v1.3.18':
+    case 'v1.3.17':
+      return 'June 3, 2026';
+    case 'v1.3.16':
+    case 'v1.3.15':
+    case 'v1.3.11':
+    case 'v1.3.10':
+    case 'v1.3.9':
+    case 'v1.3.8':
+    case 'v1.3.7':
+    case 'v1.3.6':
+      return 'May 31, 2026';
+    case 'v1.3.5':
+    case 'v1.3.4':
+      return 'May 29, 2026';
+    case 'v1.3.3':
+    case 'v1.3.2':
+    case 'v1.3.1':
+    case 'v1.3.0':
+      return 'May 28, 2026';
+    case 'v1.2.1':
+    case 'v1.2.0':
+    case 'v1.1.1':
+    case 'v1.1.0':
+    case 'v1.0.1':
+      return 'May 26, 2026';
+    default:
+      return log.date;
+  }
+}
+
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function FeedbackPage() {
@@ -1240,7 +1388,7 @@ export default function FeedbackPage() {
                           <span className="text-xs font-semibold text-primary">{log.subtitle}</span>
                         )}
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          {log.date}
+                          {getExactChangelogDate(log)}
                         </span>
                       </div>
 
