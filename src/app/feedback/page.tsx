@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.101",
+    subtitle: "Bible reader caching",
+    date: "July 9, 2026",
+    changes: [
+      "Bible chapters now cache only after you open them instead of preloading the whole Bible in the background",
+      "Bible reader caching is lighter on server runtime while keeping reopened chapters fast",
+    ],
+  },
+  {
     version: "v1.3.100",
     subtitle: "Bible text refresh",
     date: "Early-July 2026",

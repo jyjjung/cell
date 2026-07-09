@@ -1,5 +1,4 @@
 import type { BibleTextVersion } from '@/lib/bible-versions';
-import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 
 const BIBLE_PASSAGE_CACHE_VERSION = '2026-07-09-proverbs-7-1-fix';
 const BIBLE_PASSAGE_CACHE = `bible-passage-responses-${BIBLE_PASSAGE_CACHE_VERSION}`;
@@ -79,40 +78,4 @@ export async function fetchPassageHtml(
   );
 
   return { html: data.html, fromCache: false };
-}
-
-function allChapterPassages(): string[] {
-  const passages: string[] = [];
-  for (const book of CANONICAL_BIBLE_ORDER) {
-    const meta = BIBLE_BOOKS_DATA[book];
-    if (!meta) continue;
-    for (let chapter = 1; chapter <= meta.chapters; chapter += 1) {
-      passages.push(`${book} ${chapter}`);
-    }
-  }
-  return passages;
-}
-
-/** Prefetch every chapter for a Bible version into memory + Cache Storage. */
-export async function prefetchBibleVersion(
-  version: BibleTextVersion,
-  options?: { signal?: AbortSignal },
-): Promise<void> {
-  const passages = allChapterPassages();
-  const batchSize = 6;
-
-  for (let i = 0; i < passages.length; i += batchSize) {
-    if (options?.signal?.aborted) return;
-    const batch = passages.slice(i, i + batchSize);
-    await Promise.all(
-      batch.map(async (passage) => {
-        if (readCachedPassageHtml(passage, version)) return;
-        try {
-          await fetchPassageHtml(passage, version, options?.signal);
-        } catch {
-          /* best-effort background prefetch */
-        }
-      }),
-    );
-  }
 }
