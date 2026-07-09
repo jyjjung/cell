@@ -12,6 +12,7 @@ import {
   X,
   Languages,
   CheckSquare,
+  Check,
   AlertTriangle,
   Maximize2,
   Minimize2,
@@ -27,10 +28,13 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import {
   findIncompletePlanPassagesForChapter,
+  getChapterPlanAssignmentStatus,
   isChapterMarkedCompleteInPlan,
+  type ChapterPlanAssignment,
 } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
+import { format, isValid, parseISO } from 'date-fns';
 
 interface MiniBibleReaderProps {
   onClose: () => void;
@@ -59,12 +63,24 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const prefetchControllerRef = useRef<AbortController | null>(null);
 
   const chapterRef = `${book} ${chapter}`;
+  const chapterPlanStatus = getChapterPlanAssignmentStatus(
+    plan?.dailyReadings,
+    book,
+    chapter,
+    completedPassages,
+  );
   const isChapterComplete = isChapterMarkedCompleteInPlan(
     plan?.dailyReadings,
     book,
     chapter,
     completedPassages,
   );
+  const hasSingleOrNoPlanAssignment = !chapterPlanStatus.hasMultipleAssignments;
+
+  const formatPlanAssignmentDate = (date: string) => {
+    const parsed = parseISO(date);
+    return isValid(parsed) ? format(parsed, 'MMM d, yyyy') : date;
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -179,6 +195,49 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     } finally {
       setIsMarkingChapter(false);
     }
+  };
+
+  const handleUnmarkChapter = async () => {
+    if (!currentUser || !isChapterComplete || isMarkingChapter) return;
+
+    setIsMarkingChapter(true);
+    try {
+      const assignment = chapterPlanStatus.assignments[0];
+      if (assignment) {
+        await markMultiplePassages([assignment.key], false);
+      } else {
+        await markMultiplePassages([chapterRef], false);
+      }
+    } catch (e) {
+      console.error('Failed to unmark chapter as read:', e);
+    } finally {
+      setIsMarkingChapter(false);
+    }
+  };
+
+  const handleToggleAssignment = async (assignment: ChapterPlanAssignment) => {
+    if (!currentUser || isMarkingChapter) return;
+
+    setIsMarkingChapter(true);
+    try {
+      if (assignment.completed) {
+        await markMultiplePassages([assignment.key], false);
+      } else {
+        await markPassageCompleteWithLegacyCleanup(assignment.key, chapterRef);
+      }
+    } catch (e) {
+      console.error('Failed to toggle plan assignment:', e);
+    } finally {
+      setIsMarkingChapter(false);
+    }
+  };
+
+  const handlePrimaryChapterAction = () => {
+    if (isChapterComplete && hasSingleOrNoPlanAssignment) {
+      void handleUnmarkChapter();
+      return;
+    }
+    void handleMarkChapter();
   };
 
   const handleMarkSelectedChapterMatch = async () => {
@@ -333,20 +392,88 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
         <div className="p-3 border-t flex flex-col gap-2 bg-background/95 backdrop-blur z-20 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
           {currentUser ? (
             <>
+              {chapterPlanStatus.hasMultipleAssignments && chapterMatchOptions.length === 0 ? (
+                <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 space-y-2">
+                      <p className="font-semibold">{t.chapterMultipleMatchesWarningTitle}</p>
+                      <p className="text-[11px] leading-relaxed text-amber-900/90 dark:text-amber-100/90">
+                        {t.chapterPlanAssignmentsStatus
+                          .replace('{completed}', String(chapterPlanStatus.completedCount))
+                          .replace('{total}', String(chapterPlanStatus.total))}
+                      </p>
+                      <div className="space-y-2">
+                        {chapterPlanStatus.assignments.map((assignment) => (
+                          <button
+                            key={assignment.key}
+                            type="button"
+                            disabled={isMarkingChapter}
+                            onClick={() => void handleToggleAssignment(assignment)}
+                            className={cn(
+                              'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                              assignment.completed
+                                ? 'border-emerald-300/60 bg-emerald-50/80 hover:bg-emerald-100/80 dark:border-emerald-700/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/35'
+                                : 'border-amber-300/60 bg-background/80 hover:bg-amber-50/60 dark:border-amber-700/50 dark:hover:bg-amber-950/20',
+                              isMarkingChapter && 'opacity-70',
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
+                                assignment.completed
+                                  ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500'
+                                  : 'border-amber-400 bg-background dark:border-amber-600',
+                              )}
+                            >
+                              {assignment.completed ? <Check className="h-3 w-3" /> : null}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold">{assignment.displayText}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {t.chapterPlanAssignmentLabel} {formatPlanAssignmentDate(assignment.date)}
+                              </div>
+                              <div
+                                className={cn(
+                                  'mt-1 text-[11px] font-semibold',
+                                  assignment.completed
+                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                    : 'text-amber-800 dark:text-amber-200',
+                                )}
+                              >
+                                {assignment.completed
+                                  ? t.chapterPlanAssignmentTapToUnmark
+                                  : t.chapterPlanAssignmentTapToMark}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <Button
                 type="button"
                 variant={isChapterComplete ? 'secondary' : 'default'}
                 size="sm"
                 className="w-full h-9 rounded-full text-xs font-semibold"
-                onClick={() => void handleMarkChapter()}
-                disabled={isChapterComplete || isMarkingChapter}
+                onClick={() => handlePrimaryChapterAction()}
+                disabled={
+                  isMarkingChapter ||
+                  (isChapterComplete && !hasSingleOrNoPlanAssignment)
+                }
               >
                 {isMarkingChapter ? (
                   <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <CheckSquare className="mr-2 h-3.5 w-3.5" />
                 )}
-                {isChapterComplete ? t.chapterMarkedComplete : t.markChapterAsRead}
+                {isChapterComplete
+                  ? hasSingleOrNoPlanAssignment
+                    ? t.unmarkChapterAsRead
+                    : t.chapterMarkedComplete
+                  : t.markChapterAsRead}
               </Button>
               {chapterMatchOptions.length > 1 ? (
                 <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
@@ -364,20 +491,47 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                     value={selectedChapterMatchKey}
                     onValueChange={setSelectedChapterMatchKey}
                   >
-                    {chapterMatchOptions.map((match) => (
-                      <label
-                        key={match.key}
-                        htmlFor={match.key}
-                        className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-300/60 bg-background/80 p-3 dark:border-amber-700/50"
-                      >
-                        <RadioGroupItem id={match.key} value={match.key} className="mt-0.5" />
-                        <div className="min-w-0">
-                          <div className="font-semibold">{match.displayText}</div>
-                          <div className="text-[11px] text-muted-foreground">
-                            {t.chapterPlanAssignmentLabel} {match.date}
+                    {chapterPlanStatus.assignments.map((assignment) => (
+                      assignment.completed ? (
+                        <button
+                          key={assignment.key}
+                          type="button"
+                          disabled={isMarkingChapter}
+                          onClick={() => void handleToggleAssignment(assignment)}
+                          className={cn(
+                            'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                            'border-emerald-300/60 bg-emerald-50/80 hover:bg-emerald-100/80 dark:border-emerald-700/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/35',
+                            isMarkingChapter && 'opacity-70',
+                          )}
+                        >
+                          <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500">
+                            <Check className="h-3 w-3" />
                           </div>
-                        </div>
-                      </label>
+                          <div className="min-w-0">
+                            <div className="font-semibold">{assignment.displayText}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {t.chapterPlanAssignmentLabel} {formatPlanAssignmentDate(assignment.date)}
+                            </div>
+                            <div className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                              {t.chapterPlanAssignmentTapToUnmark}
+                            </div>
+                          </div>
+                        </button>
+                      ) : (
+                        <label
+                          key={assignment.key}
+                          htmlFor={assignment.key}
+                          className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-300/60 bg-background/80 p-3 dark:border-amber-700/50"
+                        >
+                          <RadioGroupItem id={assignment.key} value={assignment.key} className="mt-0.5" />
+                          <div className="min-w-0">
+                            <div className="font-semibold">{assignment.displayText}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {t.chapterPlanAssignmentLabel} {formatPlanAssignmentDate(assignment.date)}
+                            </div>
+                          </div>
+                        </label>
+                      )
                     ))}
                   </RadioGroup>
                   <div className="mt-3 flex gap-2">
