@@ -19,7 +19,7 @@ import {
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
 import { getPreviousChapterRef, getNextChapterRef } from '@/lib/bible-navigation';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
-import { fetchPassageHtml, prefetchBibleVersion } from '@/lib/bible-passage-cache';
+import { fetchPassageHtml } from '@/lib/bible-passage-cache';
 import { bibleVersionLabel, type BibleTextVersion } from '@/lib/bible-versions';
 import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 import { useAuth } from '@/contexts/auth-context';
@@ -57,10 +57,8 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const [showAssignmentPanel, setShowAssignmentPanel] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prefetchControllerRef = useRef<AbortController | null>(null);
   const assignmentPanelRef = useRef<HTMLDivElement>(null);
   const markButtonRef = useRef<HTMLButtonElement>(null);
-
   const chapterRef = `${book} ${chapter}`;
   const chapterPlanStatus = getChapterPlanAssignmentStatus(
     plan?.dailyReadings,
@@ -132,14 +130,6 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     setBrowsingBook(null);
     setShowAssignmentPanel(false);
   }, [targetPassage?.book, targetPassage?.chapter, targetPassage?.timestamp]);
-
-  useEffect(() => {
-    prefetchControllerRef.current?.abort();
-    const controller = new AbortController();
-    prefetchControllerRef.current = controller;
-    void prefetchBibleVersion(version, { signal: controller.signal });
-    return () => controller.abort();
-  }, [version]);
 
   const fetchPassage = useCallback(async (b: string, c: number, v: BibleTextVersion, signal?: AbortSignal) => {
     setIsLoading(true);
