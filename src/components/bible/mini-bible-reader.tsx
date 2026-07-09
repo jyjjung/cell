@@ -72,7 +72,47 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     chapter,
     completedPassages,
   );
-  const hasSingleOrNoPlanAssignment = !chapterPlanStatus.hasMultipleAssignments;
+  const chapterProgressPercent =
+    chapterPlanStatus.total > 0
+      ? Math.round((chapterPlanStatus.completedCount / chapterPlanStatus.total) * 100)
+      : isChapterComplete
+        ? 100
+        : 0;
+
+  const markButtonLabel = chapterPlanStatus.hasMultipleAssignments
+    ? chapterProgressPercent === 100
+      ? t.chapterMarkedComplete
+      : chapterProgressPercent > 0
+        ? t.chapterPlanAssignmentsStatus
+            .replace('{completed}', String(chapterPlanStatus.completedCount))
+            .replace('{total}', String(chapterPlanStatus.total))
+        : t.markChapterAsRead
+    : isChapterComplete
+      ? t.unmarkChapterAsRead
+      : t.markChapterAsRead;
+
+  const markButtonClassName = cn(
+    'relative w-full h-9 overflow-hidden rounded-full text-xs font-semibold transition-colors',
+    chapterPlanStatus.hasMultipleAssignments
+      ? chapterProgressPercent === 100
+        ? 'border-transparent bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+        : chapterProgressPercent > 0
+          ? 'border border-emerald-500/40 bg-muted/50 text-emerald-950 hover:bg-muted/70 dark:border-emerald-500/50 dark:text-emerald-50'
+          : ''
+      : isChapterComplete
+        ? 'border-transparent bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500'
+        : '',
+  );
+
+  const markButtonVariant = chapterPlanStatus.hasMultipleAssignments
+    ? chapterProgressPercent === 100
+      ? 'default'
+      : chapterProgressPercent > 0
+        ? 'outline'
+        : 'primary'
+    : isChapterComplete
+      ? 'default'
+      : 'primary';
 
   const formatPlanAssignmentDate = (date: string) => {
     const parsed = parseISO(date);
@@ -364,22 +404,29 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
             <>
               <Button
                 type="button"
-                variant={isChapterComplete ? 'secondary' : 'default'}
+                variant={markButtonVariant}
                 size="sm"
-                className="w-full h-9 rounded-full text-xs font-semibold"
+                className={markButtonClassName}
                 onClick={() => handlePrimaryChapterAction()}
                 disabled={isMarkingChapter}
               >
-                {isMarkingChapter ? (
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <CheckSquare className="mr-2 h-3.5 w-3.5" />
-                )}
-                {isChapterComplete
-                  ? hasSingleOrNoPlanAssignment
-                    ? t.unmarkChapterAsRead
-                    : t.chapterMarkedComplete
-                  : t.markChapterAsRead}
+                {chapterPlanStatus.hasMultipleAssignments &&
+                chapterProgressPercent > 0 &&
+                chapterProgressPercent < 100 ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 rounded-full bg-emerald-500/35 transition-all duration-300 dark:bg-emerald-500/45"
+                    style={{ width: `${chapterProgressPercent}%` }}
+                  />
+                ) : null}
+                <span className="relative z-10 inline-flex items-center">
+                  {isMarkingChapter ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckSquare className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  {markButtonLabel}
+                </span>
               </Button>
               {showAssignmentPanel && chapterPlanStatus.hasMultipleAssignments ? (
                 <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
