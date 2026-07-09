@@ -94,8 +94,20 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       ? t.unmarkChapterAsRead
       : t.markChapterAsRead;
 
-  const markButtonVariant = hasAnyPlanCompletion ? 'primary' : 'default';
-  const markButtonClassName = 'w-full h-9 rounded-full text-xs font-semibold';
+  const markButtonVariant = chapterPlanStatus.hasMultipleAssignments
+    ? chapterProgressPercent === 100
+      ? 'primary'
+      : 'default'
+    : hasAnyPlanCompletion
+      ? 'primary'
+      : 'default';
+  const markButtonClassName = cn(
+    'relative w-full h-9 overflow-hidden rounded-full text-xs font-semibold',
+  );
+  const showMarkButtonProgress =
+    chapterPlanStatus.hasMultipleAssignments &&
+    chapterProgressPercent > 0 &&
+    chapterProgressPercent < 100;
 
   const formatPlanAssignmentDate = (date: string) => {
     const parsed = parseISO(date);
@@ -490,12 +502,21 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
               onClick={() => handlePrimaryChapterAction()}
               disabled={isMarkingChapter}
             >
-              {isMarkingChapter ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <CheckSquare className="mr-2 h-3.5 w-3.5" />
-              )}
-              {markButtonLabel}
+              {showMarkButtonProgress ? (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${chapterProgressPercent}%` }}
+                />
+              ) : null}
+              <span className="relative z-10 inline-flex items-center">
+                {isMarkingChapter ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckSquare className="mr-2 h-3.5 w-3.5" />
+                )}
+                {markButtonLabel}
+              </span>
             </Button>
           ) : null}
         </div>

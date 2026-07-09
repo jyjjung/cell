@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.95",
+    subtitle: "Bible popup progress bar",
+    date: "Early-July 2026",
+    changes: [
+      "Bible popup mark button shows a primary progress fill for duplicate chapters (e.g. 1 of 2 read), with base styling when unread and full primary when complete",
+    ],
+  },
+  {
     version: "v1.3.94",
     subtitle: "Bible popup button colors",
     date: "Early-July 2026",
