@@ -250,7 +250,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
   const handlePrimaryChapterAction = () => {
     if (chapterPlanStatus.hasMultipleAssignments) {
-      setShowAssignmentPanel(true);
+      setShowAssignmentPanel((open) => !open);
       return;
     }
     if (isChapterComplete) {
@@ -258,10 +258,6 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       return;
     }
     void handleMarkChapter();
-  };
-
-  const handleCloseAssignmentPanel = () => {
-    setShowAssignmentPanel(false);
   };
 
   return (
@@ -402,32 +398,6 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
         <div className="p-3 border-t flex flex-col gap-2 bg-background/95 backdrop-blur z-20 shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)]">
           {currentUser ? (
             <>
-              <Button
-                type="button"
-                variant={markButtonVariant}
-                size="sm"
-                className={markButtonClassName}
-                onClick={() => handlePrimaryChapterAction()}
-                disabled={isMarkingChapter}
-              >
-                {chapterPlanStatus.hasMultipleAssignments &&
-                chapterProgressPercent > 0 &&
-                chapterProgressPercent < 100 ? (
-                  <span
-                    aria-hidden
-                    className="absolute inset-y-0 left-0 rounded-full bg-emerald-500/35 transition-all duration-300 dark:bg-emerald-500/45"
-                    style={{ width: `${chapterProgressPercent}%` }}
-                  />
-                ) : null}
-                <span className="relative z-10 inline-flex items-center">
-                  {isMarkingChapter ? (
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <CheckSquare className="mr-2 h-3.5 w-3.5" />
-                  )}
-                  {markButtonLabel}
-                </span>
-              </Button>
               {showAssignmentPanel && chapterPlanStatus.hasMultipleAssignments ? (
                 <div className="rounded-2xl border border-amber-300/60 bg-amber-50/80 p-3 text-xs text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-100">
                   <div className="flex items-start gap-2">
@@ -489,18 +459,6 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-full px-4 text-xs font-semibold"
-                      disabled={isMarkingChapter}
-                      onClick={handleCloseAssignmentPanel}
-                    >
-                      {t.chapterSelectionCancel}
-                    </Button>
-                  </div>
                 </div>
               ) : null}
             </>
@@ -540,6 +498,34 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
               Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
+          {currentUser ? (
+            <Button
+              type="button"
+              variant={markButtonVariant}
+              size="sm"
+              className={markButtonClassName}
+              onClick={() => handlePrimaryChapterAction()}
+              disabled={isMarkingChapter}
+            >
+              {chapterPlanStatus.hasMultipleAssignments &&
+              chapterProgressPercent > 0 &&
+              chapterProgressPercent < 100 ? (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 rounded-full bg-emerald-500/35 transition-all duration-300 dark:bg-emerald-500/45"
+                  style={{ width: `${chapterProgressPercent}%` }}
+                />
+              ) : null}
+              <span className="relative z-10 inline-flex items-center">
+                {isMarkingChapter ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CheckSquare className="mr-2 h-3.5 w-3.5" />
+                )}
+                {markButtonLabel}
+              </span>
+            </Button>
+          ) : null}
         </div>
       )}
     </div>
