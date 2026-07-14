@@ -9,6 +9,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   serverTimestamp,
   updateDoc,
   writeBatch,
@@ -30,6 +31,30 @@ import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_SUBCOLLECTION = 'messages';
+
+function normalizeChatMemberIds(members: unknown): string[] {
+  if (!Array.isArray(members)) return [];
+  return members
+    .map((member) => (typeof member === 'string' ? member : (member as { uid?: string })?.uid))
+    .filter((uid): uid is string => typeof uid === 'string' && uid.length > 0);
+}
+
+async function assertGroupMember(chatId: string, uid: string): Promise<void> {
+  const chatSnap = await getDoc(doc(db, CHATS_COLLECTION, chatId));
+  if (!chatSnap.exists()) {
+    throw new Error('Chat not found.');
+  }
+
+  const chatData = chatSnap.data();
+  if (chatData.type !== 'group') {
+    throw new Error('Group photos can only be updated in group chats.');
+  }
+
+  const memberIds = normalizeChatMemberIds(chatData.members);
+  if (!memberIds.includes(uid)) {
+    throw new Error('Only chat members can update the group photo.');
+  }
+}
 
 function actorLabel(user: { firstName?: string | null; lastName?: string | null; displayName?: string | null }): string {
   return formatUserDisplayName(user, 'Someone');
@@ -141,6 +166,7 @@ export function useChat(chatId: string) {
       const announcement = GROUP_PHOTO_CHANGED_PREVIEW;
 
       try {
+        await assertGroupMember(chatId, currentUser.uid);
         const batch = writeBatch(db);
         const messageRef = doc(messagesColRef);
         batch.set(messageRef, {
@@ -163,7 +189,8 @@ export function useChat(chatId: string) {
         toast({ title: "Group photo updated" });
       } catch (error) {
         console.error("Error updating group photo:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not update group photo." });
+        const description = error instanceof Error ? error.message : "Could not update group photo.";
+        toast({ variant: "destructive", title: "Error", description });
         throw error;
       }
     }, [chatId, currentUser, toast]);
@@ -178,6 +205,7 @@ export function useChat(chatId: string) {
       const announcement = GROUP_PHOTO_REMOVED_PREVIEW;
 
       try {
+        await assertGroupMember(chatId, currentUser.uid);
         const batch = writeBatch(db);
         const messageRef = doc(messagesColRef);
         batch.set(messageRef, {
@@ -199,7 +227,8 @@ export function useChat(chatId: string) {
         toast({ title: "Group photo removed" });
       } catch (error) {
         console.error("Error removing group photo:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not remove group photo." });
+        const description = error instanceof Error ? error.message : "Could not remove group photo.";
+        toast({ variant: "destructive", title: "Error", description });
         throw error;
       }
     }, [chatId, currentUser, toast]);
