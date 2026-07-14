@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.102",
+    subtitle: "Group chat photo fix",
+    date: "July 14, 2026",
+    changes: [
+      "Fixed changing the group chat photo from chat settings, especially on mobile",
+      "Shows a clear error if a group photo upload fails or the file is invalid",
+    ],
+  },
+  {
     version: "v1.3.101",
     subtitle: "Bible reader caching",
     date: "July 9, 2026",
