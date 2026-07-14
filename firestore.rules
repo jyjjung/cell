@@ -251,6 +251,18 @@ service cloud.firestore {
           && request.auth.uid in chatDoc().data.admins;
       }
 
+      // Any group member (not just chat admins) may change the group photo.
+      function isGroupMember() {
+        return isMember() && chatDoc().data.type == 'group';
+      }
+
+      function memberCanUpdateGroupPhoto() {
+        return isGroupMember()
+          && request.resource.data.type == 'group'
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['photoURL', 'lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId']);
+      }
+
       function hasMessagePayload() {
         return request.resource.data.keys().hasAny([
           'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId',
@@ -310,8 +322,7 @@ service cloud.firestore {
                     );
 
       allow update: if (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen']))
-                    || (isMember() && resource.data.type == 'group' && request.resource.data.type == 'group'
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL', 'lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId']))
+                    || memberCanUpdateGroupPhoto()
                     || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
                     || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
 

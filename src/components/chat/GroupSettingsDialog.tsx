@@ -62,6 +62,10 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
   const [usersToAdd, setUsersToAdd] = useState<string[]>([]);
 
   const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser!.uid);
+  const canChangeGroupPhoto =
+    chat.type === 'group' &&
+    !!currentUser?.uid &&
+    chat.members.includes(currentUser.uid);
 
   const form = useForm({
     resolver: zodResolver(renameSchema),
@@ -138,7 +142,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
   };
 
   const openPhotoPicker = () => {
-    if (isUploadingPhoto) return;
+    if (isUploadingPhoto || !canChangeGroupPhoto) return;
     setIsPickingPhoto(true);
     fileInputRef.current?.click();
   };
@@ -269,7 +273,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                     variant="outline"
                     size="sm"
                     className="rounded-xl"
-                    disabled={isUploadingPhoto}
+                    disabled={isUploadingPhoto || !canChangeGroupPhoto}
                     onClick={openPhotoPicker}
                   >
                     <Camera className="mr-1.5 h-4 w-4" />
@@ -281,7 +285,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                       variant="ghost"
                       size="sm"
                       className="rounded-xl text-muted-foreground"
-                      disabled={isUploadingPhoto}
+                      disabled={isUploadingPhoto || !canChangeGroupPhoto}
                       onClick={handleRemovePhoto}
                     >
                       <X className="mr-1.5 h-4 w-4" />
@@ -289,6 +293,9 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                     </Button>
                   )}
                 </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  Any member can change the group photo.
+                </p>
               </div>
               <Separator />
 

@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.103",
+    subtitle: "Group chat photos",
+    date: "July 14, 2026",
+    changes: [
+      "Any member of a group chat can change or remove the group photo from chat settings",
+    ],
+  },
+  {
     version: "v1.3.102",
     subtitle: "Group chat photo fix",
     date: "July 14, 2026",
