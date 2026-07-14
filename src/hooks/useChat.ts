@@ -132,7 +132,10 @@ export function useChat(chatId: string) {
     }, [chatId, currentUser, toast]);
 
     const updateGroupPhoto = useCallback(async (photoURL: string) => {
-      if (!currentUser) return;
+      if (!currentUser) {
+        toast({ variant: "destructive", title: "Error", description: "You must be signed in to update the group photo." });
+        throw new Error("Not signed in");
+      }
       const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
       const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
       const announcement = GROUP_PHOTO_CHANGED_PREVIEW;
@@ -166,7 +169,10 @@ export function useChat(chatId: string) {
     }, [chatId, currentUser, toast]);
 
     const removeGroupPhoto = useCallback(async () => {
-      if (!currentUser) return;
+      if (!currentUser) {
+        toast({ variant: "destructive", title: "Error", description: "You must be signed in to remove the group photo." });
+        throw new Error("Not signed in");
+      }
       const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
       const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
       const announcement = GROUP_PHOTO_REMOVED_PREVIEW;
