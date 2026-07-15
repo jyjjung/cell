@@ -27,6 +27,7 @@ interface ChatMessageListProps {
   lastSeenNamesPerMessage: Record<string, string[]>;
   toggleReaction: (messageId: string, emoji: string) => void;
   votePoll?: (messageId: string, optionIndex: number) => void;
+  setPollResultsLocked?: (messageId: string, locked: boolean) => void;
   deleteMessage: (messageId: string) => void;
   onOpenThread: (messageId: string) => void;
   onOpenImage: (imageUrl: string) => void;
@@ -52,6 +53,7 @@ export default function ChatMessageList({
   lastSeenNamesPerMessage,
   toggleReaction,
   votePoll,
+  setPollResultsLocked,
   deleteMessage,
   onOpenThread,
   onOpenImage,
@@ -97,6 +99,7 @@ export default function ChatMessageList({
           usersById={usersById}
           toggleReaction={toggleReaction}
           votePoll={votePoll}
+          setPollResultsLocked={setPollResultsLocked}
           lastSeenNames={lastSeenNamesPerMessage[msg.id] ?? EMPTY_SEEN_NAMES}
           onOpenThread={onOpenThread}
           onOpenImage={onOpenImage}
@@ -137,6 +140,7 @@ export default function ChatMessageList({
     usersById,
     toggleReaction,
     votePoll,
+    setPollResultsLocked,
     deleteMessage,
     lastSeenNamesPerMessage,
     onOpenThread,

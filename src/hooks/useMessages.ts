@@ -235,6 +235,7 @@ export function useMessages(chatId: string | null) {
         question: poll.question.trim(),
         options: poll.options.map((option) => option.trim()).filter(Boolean),
         ...(poll.allowMultiple ? { allowMultiple: true } : {}),
+        ...(poll.resultsLocked ? { resultsLocked: true } : {}),
       };
       messageData.pollVotes = Object.fromEntries(
         messageData.poll.options.map((_: string, index: number) => [String(index), [] as string[]]),
@@ -394,6 +395,38 @@ export function useMessages(chatId: string | null) {
     });
   }, [currentUser, chatId]);
 
+  const setPollResultsLocked = useCallback(async (messageId: string, locked: boolean) => {
+    if (!currentUser || !chatId) return;
+    const message = messagesRef.current.find((m) => m.id === messageId);
+    if (!message?.poll) return;
+    if (message.senderId !== currentUser.uid) return;
+    if (!!message.poll.resultsLocked === locked) return;
+
+    const nextPoll: ChatPoll = {
+      question: message.poll.question,
+      options: [...message.poll.options],
+      ...(message.poll.allowMultiple ? { allowMultiple: true } : {}),
+      ...(locked ? { resultsLocked: true } : {}),
+    };
+
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, poll: nextPoll } : m)),
+    );
+
+    const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
+    updateDoc(messageRef, { poll: nextPoll }).catch((error) => {
+      console.error('[useMessages] Poll results lock failed:', error);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, poll: message.poll } : m)),
+      );
+      toastRef.current({
+        variant: 'destructive',
+        title: locked ? 'Could not lock results' : 'Could not unlock results',
+        description: error instanceof Error ? error.message : 'Try again.',
+      });
+    });
+  }, [currentUser, chatId]);
+
   const deleteMessage = useCallback(async (messageId: string) => {
     if (!chatId || !currentUser) return;
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
@@ -462,6 +495,7 @@ export function useMessages(chatId: string | null) {
     updateSeenTimestamp,
     toggleReaction,
     votePoll,
+    setPollResultsLocked,
     deleteMessage,
   };
 }

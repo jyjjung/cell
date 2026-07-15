@@ -63,14 +63,15 @@ function pollVotesEqual(
 }
 
 function pollsEqual(
-  a?: { question: string; options: string[]; allowMultiple?: boolean },
-  b?: { question: string; options: string[]; allowMultiple?: boolean },
+  a?: { question: string; options: string[]; allowMultiple?: boolean; resultsLocked?: boolean },
+  b?: { question: string; options: string[]; allowMultiple?: boolean; resultsLocked?: boolean },
 ): boolean {
   if (a === b) return true;
   if (!a || !b) return !a && !b;
   return (
     a.question === b.question &&
     !!a.allowMultiple === !!b.allowMultiple &&
+    !!a.resultsLocked === !!b.resultsLocked &&
     a.options.length === b.options.length &&
     a.options.every((option, index) => option === b.options[index])
   );
@@ -149,8 +150,8 @@ export function chatMessagesShallowEqual(
       mb.reactions as { [key: string]: string[] } | undefined,
     ) &&
     pollsEqual(
-      ma.poll as { question: string; options: string[]; allowMultiple?: boolean } | undefined,
-      mb.poll as { question: string; options: string[]; allowMultiple?: boolean } | undefined,
+      ma.poll as { question: string; options: string[]; allowMultiple?: boolean; resultsLocked?: boolean } | undefined,
+      mb.poll as { question: string; options: string[]; allowMultiple?: boolean; resultsLocked?: boolean } | undefined,
     ) &&
     pollVotesEqual(
       ma.pollVotes as Record<string, string[]> | undefined,

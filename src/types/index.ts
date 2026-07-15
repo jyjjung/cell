@@ -404,6 +404,8 @@ export interface ChatPoll {
   question: string;
   options: string[];
   allowMultiple?: boolean;
+  /** When true, only the poll creator sees tallies and voter names. */
+  resultsLocked?: boolean;
 }
 
 // ── Worship Portal ──────────────────────────────────────────────────────────

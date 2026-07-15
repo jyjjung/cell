@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { resolveChatUserName } from "@/lib/chat-utils";
-import { BarChart3, Check } from "lucide-react";
+import { BarChart3, Check, Lock } from "lucide-react";
 import type { Chat, ChatMessage, UserProfileData } from "@/types";
 
 type PollSummaryProps = {
@@ -11,6 +11,7 @@ type PollSummaryProps = {
   usersById: Map<string, UserProfileData>;
   isSender: boolean;
   currentUserId?: string;
+  isCreator?: boolean;
   onVote: (optionIndex: number) => void;
 };
 
@@ -20,6 +21,7 @@ export default function PollSummary({
   usersById,
   isSender,
   currentUserId,
+  isCreator = false,
   onVote,
 }: PollSummaryProps) {
   const poll = message.poll;
@@ -27,11 +29,27 @@ export default function PollSummary({
 
   const votes = message.pollVotes ?? {};
   const allowMultiple = poll.allowMultiple ?? false;
+  const resultsLocked = poll.resultsLocked ?? false;
+  const showResults = !resultsLocked || isCreator;
   const totalVotes = poll.options.reduce(
     (sum, _, index) => sum + (votes[String(index)]?.length ?? 0),
     0,
   );
   const uniqueVoters = new Set(Object.values(votes).flat()).size;
+
+  let footerText: string;
+  if (resultsLocked && !isCreator) {
+    footerText = uniqueVoters === 0 ? "Results locked · Tap an option to vote" : "Results locked";
+  } else if (resultsLocked && isCreator) {
+    footerText =
+      uniqueVoters === 0
+        ? "Results locked from others"
+        : `Results locked · ${uniqueVoters} ${uniqueVoters === 1 ? "person" : "people"} voted`;
+  } else if (uniqueVoters === 0) {
+    footerText = "Tap an option to vote";
+  } else {
+    footerText = `${uniqueVoters} ${uniqueVoters === 1 ? "person" : "people"} voted`;
+  }
 
   return (
     <div className="w-full min-w-[200px]">
@@ -44,11 +62,24 @@ export default function PollSummary({
         <BarChart3 className={cn("mt-0.5 h-4 w-4 shrink-0", isSender ? "text-primary-foreground/80" : "text-primary")} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-snug">{poll.question}</p>
-          {allowMultiple && (
-            <p className={cn("mt-0.5 text-[11px]", isSender ? "text-primary-foreground/60" : "text-muted-foreground")}>
-              Choose any that apply
-            </p>
-          )}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {allowMultiple && (
+              <p className={cn("text-[11px]", isSender ? "text-primary-foreground/60" : "text-muted-foreground")}>
+                Choose any that apply
+              </p>
+            )}
+            {resultsLocked && (
+              <p
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px]",
+                  isSender ? "text-primary-foreground/60" : "text-muted-foreground",
+                )}
+              >
+                <Lock className="h-3 w-3" />
+                {isCreator ? "Only you see results" : "Results hidden"}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -58,7 +89,9 @@ export default function PollSummary({
           const optionVotes = voterIds.length;
           const pct = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
           const isSelected = voterIds.includes(currentUserId ?? "");
-          const voterNames = voterIds.map((uid) => resolveChatUserName(uid, chat, usersById));
+          const voterNames = showResults
+            ? voterIds.map((uid) => resolveChatUserName(uid, chat, usersById))
+            : [];
 
           return (
             <button
@@ -76,7 +109,7 @@ export default function PollSummary({
                     : "border-border/60 bg-muted/30 hover:bg-muted/50",
               )}
             >
-              {totalVotes > 0 && (
+              {showResults && totalVotes > 0 && (
                 <span
                   className={cn(
                     "absolute inset-y-0 left-0 transition-all",
@@ -99,14 +132,16 @@ export default function PollSummary({
                     )}
                     <span className="truncate text-sm font-medium">{option}</span>
                   </span>
-                  <span
-                    className={cn(
-                      "shrink-0 text-xs tabular-nums",
-                      isSender ? "text-primary-foreground/70" : "text-muted-foreground",
-                    )}
-                  >
-                    {totalVotes > 0 ? `${pct}%` : "0"}
-                  </span>
+                  {showResults && (
+                    <span
+                      className={cn(
+                        "shrink-0 text-xs tabular-nums",
+                        isSender ? "text-primary-foreground/70" : "text-muted-foreground",
+                      )}
+                    >
+                      {totalVotes > 0 ? `${pct}%` : "0"}
+                    </span>
+                  )}
                 </span>
                 {voterNames.length > 0 && (
                   <span
@@ -132,9 +167,7 @@ export default function PollSummary({
             : "border-border/50 text-muted-foreground",
         )}
       >
-        {uniqueVoters === 0
-          ? "Tap an option to vote"
-          : `${uniqueVoters} ${uniqueVoters === 1 ? "person" : "people"} voted`}
+        {footerText}
       </p>
     </div>
   );

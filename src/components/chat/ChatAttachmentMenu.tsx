@@ -56,6 +56,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
+  const [pollResultsLocked, setPollResultsLocked] = useState(false);
 
   const needsSetlists = view === "setlist";
   const needsRosters = view === "roster";
@@ -129,7 +130,15 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
   const postPoll = () => {
     const options = pollOptions.map((o) => o.trim()).filter(Boolean);
     if (!pollQuestion.trim() || options.length < 2) return;
-    onPick({ type: "poll", poll: { question: pollQuestion.trim(), options, allowMultiple: pollAllowMultiple } });
+    onPick({
+      type: "poll",
+      poll: {
+        question: pollQuestion.trim(),
+        options,
+        allowMultiple: pollAllowMultiple,
+        ...(pollResultsLocked ? { resultsLocked: true } : {}),
+      },
+    });
     onClose();
   };
 
@@ -250,6 +259,14 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
               className="h-5 w-5"
             />
             <span className="text-base text-foreground">Allow multiple selections</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 px-0.5 py-1">
+            <Checkbox
+              checked={pollResultsLocked}
+              onCheckedChange={(checked) => setPollResultsLocked(checked === true)}
+              className="h-5 w-5"
+            />
+            <span className="text-base text-foreground">Lock results</span>
           </label>
           <Button
             type="button"

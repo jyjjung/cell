@@ -112,6 +112,7 @@ function ChatWindowBody({
     updateSeenTimestamp,
     toggleReaction,
     votePoll,
+    setPollResultsLocked,
     sendMessage,
     sendImageMessage,
     deleteMessage,
@@ -353,6 +354,7 @@ function ChatWindowBody({
             lastSeenNamesPerMessage={lastSeenNamesPerMessage}
             toggleReaction={toggleReaction}
             votePoll={votePoll}
+            setPollResultsLocked={setPollResultsLocked}
             deleteMessage={deleteMessage}
             onOpenThread={handleOpenThread}
             onOpenImage={handleOpenImage}
