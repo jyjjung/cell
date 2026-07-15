@@ -6,10 +6,17 @@ import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils'
 /** Keep in sync with client MAX_FCM_TOKENS — validate/send all stored tokens, not a silent first-3 subset. */
 const MAX_FCM_TOKENS = 5;
 
-async function deliverToUser(
+export type DataPushPayload = {
+  title: string;
+  body: string;
+  tag: string;
+  link: string;
+};
+
+export async function deliverDataPush(
   userId: string,
   tokens: string[],
-  notification: AppNotification,
+  payload: DataPushPayload,
   adminDb: Firestore,
   adminMessaging: Messaging,
 ): Promise<number> {
@@ -17,15 +24,18 @@ async function deliverToUser(
   if (uniqueTokens.length === 0) return 0;
 
   const badgeCount = await calculateTotalUnread(userId, adminDb);
+  const title = payload.title || 'New Notification';
+  const body = payload.body || '';
+  const link = payload.link || '/';
 
   const message = {
     tokens: uniqueTokens,
     data: toSafeStringMap({
-      title: notification.title || 'New Notification',
-      body: notification.message || '',
+      title,
+      body,
       icon: '/icon-192x192-v4.png',
-      tag: notification.id,
-      link: notification.relatedUrl || '/',
+      tag: payload.tag,
+      link,
       badge: String(badgeCount),
     }),
     apns: {
@@ -33,8 +43,8 @@ async function deliverToUser(
       payload: {
         aps: {
           alert: {
-            title: notification.title || 'New Notification',
-            body: notification.message || '',
+            title,
+            body,
           },
           badge: badgeCount,
           sound: 'default',
@@ -44,11 +54,11 @@ async function deliverToUser(
       },
     },
     webpush: {
-      fcm_options: { link: notification.relatedUrl || '/' },
+      fcm_options: { link },
     },
   };
 
-  const response = await adminMessaging.sendEachForMulticast(message as any);
+  const response = await adminMessaging.sendEachForMulticast(message as Parameters<Messaging['sendEachForMulticast']>[0]);
 
   if (response.failureCount > 0) {
     const staleTokens: string[] = [];
@@ -72,6 +82,43 @@ async function deliverToUser(
   }
 
   return response.successCount;
+}
+
+async function deliverToUser(
+  userId: string,
+  tokens: string[],
+  notification: AppNotification,
+  adminDb: Firestore,
+  adminMessaging: Messaging,
+): Promise<number> {
+  return deliverDataPush(
+    userId,
+    tokens,
+    {
+      title: notification.title || 'New Notification',
+      body: notification.message || '',
+      tag: notification.id,
+      link: notification.relatedUrl || '/',
+    },
+    adminDb,
+    adminMessaging,
+  );
+}
+
+/** Load a user's FCM tokens and deliver a data push (no notifications collection write). */
+export async function deliverDataPushToUser(
+  userId: string,
+  payload: DataPushPayload,
+  adminDb: Firestore,
+  adminMessaging: Messaging,
+): Promise<number> {
+  const userDoc = await adminDb.collection('users').doc(userId).get();
+  if (!userDoc.exists) return 0;
+
+  const user = userDoc.data() as UserProfileData;
+  if (!user.fcmTokens?.length) return 0;
+
+  return deliverDataPush(userId, user.fcmTokens, payload, adminDb, adminMessaging);
 }
 
 export async function deliverNotificationPush(
