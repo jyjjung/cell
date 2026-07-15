@@ -404,7 +404,7 @@ export interface ChatPoll {
   question: string;
   options: string[];
   allowMultiple?: boolean;
-  /** When true, only the poll creator sees tallies and voter names. */
+  /** When true, voting is closed; everyone can still view results. */
   resultsLocked?: boolean;
 }
 

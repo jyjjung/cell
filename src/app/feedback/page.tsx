@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.107",
+    subtitle: "Poll lock closes voting",
+    date: "July 15, 2026",
+    changes: [
+      "Locking a poll closes voting only — everyone can still see percentages and who voted",
+      "Creators can lock or unlock voting when creating a poll or anytime afterward",
+    ],
+  },
+  {
     version: "v1.3.106",
     subtitle: "Poll vote notifications",
     date: "July 15, 2026",
