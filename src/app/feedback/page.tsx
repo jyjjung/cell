@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.108",
+    subtitle: "Chat message box",
+    date: "July 15, 2026",
+    changes: [
+      "Multi-line chat messages no longer get cut off by the overly round message input",
+    ],
+  },
+  {
     version: "v1.3.107",
     subtitle: "Poll lock closes voting",
     date: "July 15, 2026",

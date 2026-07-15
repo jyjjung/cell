@@ -246,14 +246,14 @@ export default function MessageInput({
           </button>
         </div>
       )}
-      <div className="relative flex items-center gap-1.5">
+      <div className="relative flex items-end gap-1.5">
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden" />
         <button 
             type="button" 
             onClick={() => setShowAttachmentMenu((v) => !v)} 
             disabled={disabled || isUploading}
             className={cn(
-                "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95", 
+                "relative mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95", 
                 showAttachmentMenu ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                 isUploading && "animate-pulse"
             )}
@@ -261,9 +261,9 @@ export default function MessageInput({
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
         </button>
 
-        <div className="flex flex-1 items-center overflow-hidden rounded-full border border-border/50 bg-muted/30 px-3 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40">
+        <div className="flex flex-1 items-end overflow-hidden rounded-2xl border border-border/50 bg-muted/30 px-3 py-1.5 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40">
           {stagedAttachment && (
-            <div className="mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border/50 bg-background/60 px-2.5 py-1">
+            <div className="mb-0.5 mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border/50 bg-background/60 px-2.5 py-1">
                <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
                <button onClick={() => setStagedAttachment(null)} className="text-muted-foreground transition-colors hover:text-foreground">
                  <X className="w-3.5 h-3.5" />
@@ -278,14 +278,14 @@ export default function MessageInput({
               disabled={disabled || isUploading}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 resize-none border-none bg-transparent py-2 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
+              className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
           <button 
               type="button" 
               onClick={handleSend} 
               disabled={disabled || (!text.trim() && !stagedAttachment) || isUploading}
               className={cn(
-                "ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all",
+                "mb-0.5 ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all",
                 (!disabled && (text.trim() || stagedAttachment))
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground opacity-40",
