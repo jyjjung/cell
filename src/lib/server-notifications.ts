@@ -98,11 +98,24 @@ export async function sendUserNotification(
   };
 
   await notifRef.set(notification);
-  await deliverNotificationPush(notification, adminDb, adminMessaging);
+  const delivered = await deliverNotificationPush(notification, adminDb, adminMessaging);
+
+  if (delivered > 0) {
+    await notifRef.update({
+      pushSentAt: FieldValue.serverTimestamp(),
+      pushDeliveredCount: delivered,
+    }).catch(() => {});
+  } else {
+    await notifRef.update({
+      pushDeliveredCount: 0,
+      pushNeedsRetry: true,
+    }).catch(() => {});
+  }
 
   if (dedupeId) {
     await adminDb.collection(dedupeCollection).doc(dedupeId).update({
       notificationId: notifRef.id,
+      pushDeliveredCount: delivered,
     }).catch(() => {});
   }
 
