@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import type { ChatMessage, Chat, ChatMemberInfo, UserProfileData } from '@/types';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
-import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare } from 'lucide-react';
+import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare, Lock, LockOpen } from 'lucide-react';
 import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
 import { resolveDeletedMessageLabel } from '@/lib/deleted-content';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,6 +36,7 @@ interface MessageBubbleProps {
   usersById: Map<string, UserProfileData>;
   toggleReaction: (messageId: string, emoji: string) => void;
   votePoll?: (messageId: string, optionIndex: number) => void;
+  setPollResultsLocked?: (messageId: string, locked: boolean) => void;
   lastSeenNames?: string[];
   onOpenThread?: (messageId: string) => void;
   onOpenImage?: (imageUrl: string) => void;
@@ -56,6 +57,7 @@ function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubblePr
     prev.usersById === next.usersById &&
     prev.toggleReaction === next.toggleReaction &&
     prev.votePoll === next.votePoll &&
+    prev.setPollResultsLocked === next.setPollResultsLocked &&
     prev.lastSeenNames === next.lastSeenNames &&
     prev.onOpenThread === next.onOpenThread &&
     prev.onOpenImage === next.onOpenImage &&
@@ -70,7 +72,7 @@ function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubblePr
 }
 
 const MessageBubble = React.memo(function MessageBubble({
-  message, chat, sender, usersById, toggleReaction, votePoll, lastSeenNames = [], 
+  message, chat, sender, usersById, toggleReaction, votePoll, setPollResultsLocked, lastSeenNames = [], 
   onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
   threadParentMessage, onDelete,
   showAvatar = true, showName = true
@@ -164,6 +166,7 @@ const MessageBubble = React.memo(function MessageBubble({
             chat={chat}
             usersById={usersById}
             isSender={false}
+            isCreator={isSender}
             currentUserId={currentUser?.uid}
             onVote={(optionIndex) => votePoll(message.id, optionIndex)}
           />
@@ -174,26 +177,45 @@ const MessageBubble = React.memo(function MessageBubble({
           )}
         </div>
 
-        {(isSender || isAdmin) && onDelete && (
-          <div className="mt-1.5 flex justify-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="group/del rounded-full bg-foreground/5 p-1 transition-colors hover:bg-rose-500/20">
-                  <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 rounded-2xl border border-border/20 bg-popover p-3 shadow-2xl">
-                <p className="mb-3 text-sm font-semibold text-foreground">{t.deleteMessageConfirm}</p>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-8 w-full rounded-xl text-micro-label font-semibold"
-                  onClick={() => onDelete(message.id)}
-                >
-                  {t.deleteAction}
-                </Button>
-              </PopoverContent>
-            </Popover>
+        {(isSender || isAdmin) && (onDelete || (isSender && setPollResultsLocked)) && (
+          <div className="mt-1.5 flex justify-center gap-1.5">
+            {isSender && setPollResultsLocked && (
+              <button
+                type="button"
+                onClick={() =>
+                  setPollResultsLocked(message.id, !(message.poll?.resultsLocked ?? false))
+                }
+                className="group/lock rounded-full bg-foreground/5 p-1 transition-colors hover:bg-foreground/10"
+                aria-label={message.poll?.resultsLocked ? "Unlock results" : "Lock results"}
+                title={message.poll?.resultsLocked ? "Unlock results" : "Lock results"}
+              >
+                {message.poll?.resultsLocked ? (
+                  <LockOpen className="h-3 w-3 text-foreground/40 group-hover/lock:text-foreground/70" />
+                ) : (
+                  <Lock className="h-3 w-3 text-foreground/40 group-hover/lock:text-foreground/70" />
+                )}
+              </button>
+            )}
+            {(isSender || isAdmin) && onDelete && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="group/del rounded-full bg-foreground/5 p-1 transition-colors hover:bg-rose-500/20">
+                    <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 rounded-2xl border border-border/20 bg-popover p-3 shadow-2xl">
+                  <p className="mb-3 text-sm font-semibold text-foreground">{t.deleteMessageConfirm}</p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-8 w-full rounded-xl text-micro-label font-semibold"
+                    onClick={() => onDelete(message.id)}
+                  >
+                    {t.deleteAction}
+                  </Button>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         )}
 

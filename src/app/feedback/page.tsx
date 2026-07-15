@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.105",
+    subtitle: "Lock poll results",
+    date: "July 15, 2026",
+    changes: [
+      "Poll creators can lock results so others can’t see percentages or who voted",
+      "Choose “Lock results” when creating a poll, or lock and unlock later from the poll",
+      "The creator still sees full results while they stay locked for everyone else",
+    ],
+  },
+  {
     version: "v1.3.104",
     subtitle: "Push notification repair",
     date: "July 15, 2026",

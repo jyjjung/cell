@@ -284,7 +284,20 @@ service cloud.firestore {
       function hasValidPollPayload() {
         return request.resource.data.keys().hasAll(['poll', 'pollVotes'])
           && isValidPollMap(request.resource.data.poll)
-          && request.resource.data.pollVotes is map;
+          && request.resource.data.pollVotes is map
+          && (!request.resource.data.poll.keys().hasAny(['resultsLocked'])
+              || request.resource.data.poll.resultsLocked is bool);
+      }
+
+      // Poll creator may only toggle resultsLocked (question/options/allowMultiple stay fixed).
+      function isPollResultsLockUpdate() {
+        return resource.data.keys().hasAny(['poll'])
+          && resource.data.senderId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll'])
+          && isValidPollMap(request.resource.data.poll)
+          && request.resource.data.poll.diff(resource.data.poll).affectedKeys().hasOnly(['resultsLocked'])
+          && (!request.resource.data.poll.keys().hasAny(['resultsLocked'])
+              || request.resource.data.poll.resultsLocked is bool);
       }
 
       // Admins cannot see all chats; strictly member-only.
@@ -347,6 +360,8 @@ service cloud.firestore {
                            // Poll votes
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes']) && resource.data.keys().hasAny(['poll'])) ||
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes', 'pollUpdatedAt']) && resource.data.keys().hasAny(['poll'])) ||
+                           // Poll creator lock/unlock results
+                           isPollResultsLockUpdate() ||
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
                            // Soft delete
