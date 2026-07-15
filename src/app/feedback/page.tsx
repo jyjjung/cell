@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.105",
+    subtitle: "Poll vote notifications",
+    date: "July 15, 2026",
+    changes: [
+      "You’ll get a push notification when someone votes on a poll you created in chat",
+    ],
+  },
+  {
     version: "v1.3.104",
     subtitle: "Push notification repair",
     date: "July 15, 2026",
@@ -66,6 +74,7 @@ const changelogs = [
       "Duty and other server reminders record whether the push was delivered",
     ],
   },
+
   {
     version: "v1.3.103",
     subtitle: "Group chat photos",
