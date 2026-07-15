@@ -166,7 +166,6 @@ const MessageBubble = React.memo(function MessageBubble({
             chat={chat}
             usersById={usersById}
             isSender={false}
-            isCreator={isSender}
             currentUserId={currentUser?.uid}
             onVote={(optionIndex) => votePoll(message.id, optionIndex)}
           />
@@ -186,8 +185,8 @@ const MessageBubble = React.memo(function MessageBubble({
                   setPollResultsLocked(message.id, !(message.poll?.resultsLocked ?? false))
                 }
                 className="group/lock rounded-full bg-foreground/5 p-1 transition-colors hover:bg-foreground/10"
-                aria-label={message.poll?.resultsLocked ? "Unlock results" : "Lock results"}
-                title={message.poll?.resultsLocked ? "Unlock results" : "Lock results"}
+                aria-label={message.poll?.resultsLocked ? "Unlock voting" : "Lock voting"}
+                title={message.poll?.resultsLocked ? "Unlock voting" : "Lock voting"}
               >
                 {message.poll?.resultsLocked ? (
                   <LockOpen className="h-3 w-3 text-foreground/40 group-hover/lock:text-foreground/70" />
