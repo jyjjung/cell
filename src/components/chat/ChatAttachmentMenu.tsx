@@ -266,7 +266,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
               onCheckedChange={(checked) => setPollResultsLocked(checked === true)}
               className="h-5 w-5"
             />
-            <span className="text-base text-foreground">Lock results</span>
+            <span className="text-base text-foreground">Lock voting</span>
           </label>
           <Button
             type="button"

@@ -300,6 +300,11 @@ service cloud.firestore {
               || request.resource.data.poll.resultsLocked is bool);
       }
 
+      function pollVotingOpen() {
+        return resource.data.keys().hasAny(['poll'])
+          && resource.data.poll.get('resultsLocked', false) != true;
+      }
+
       // Admins cannot see all chats; strictly member-only.
       // Allow get on non-existent docs so private-chat creation can check existence.
       allow get: if request.auth != null
@@ -357,10 +362,10 @@ service cloud.firestore {
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                            // Allow updating 'reactions'
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
-                           // Poll votes
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes']) && resource.data.keys().hasAny(['poll'])) ||
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes', 'pollUpdatedAt']) && resource.data.keys().hasAny(['poll'])) ||
-                           // Poll creator lock/unlock results
+                           // Poll votes (blocked while voting is locked)
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes']) && pollVotingOpen()) ||
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pollVotes', 'pollUpdatedAt']) && pollVotingOpen()) ||
+                           // Poll creator lock/unlock voting
                            isPollResultsLockUpdate() ||
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||

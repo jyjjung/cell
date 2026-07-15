@@ -345,6 +345,7 @@ export function useMessages(chatId: string | null) {
     if (!currentUser || !chatId) return;
     const message = messagesRef.current.find((m) => m.id === messageId);
     if (!message?.poll) return;
+    if (message.poll.resultsLocked) return;
 
     const uid = currentUser.uid;
     const key = String(optionIndex);
@@ -446,7 +447,7 @@ export function useMessages(chatId: string | null) {
       );
       toastRef.current({
         variant: 'destructive',
-        title: locked ? 'Could not lock results' : 'Could not unlock results',
+        title: locked ? 'Could not lock voting' : 'Could not unlock voting',
         description: error instanceof Error ? error.message : 'Try again.',
       });
     });
