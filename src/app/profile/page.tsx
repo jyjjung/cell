@@ -28,6 +28,8 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { calculatePlanProgressPercent } from '@/lib/reading-utils';
 import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
+import { healFcmSubscription, MAX_FCM_TOKENS } from '@/lib/fcm-heal';
+import { getFCMRegistration } from '@/lib/fcm-registration';
 import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
 import { AppearanceSettings } from '@/components/profile/appearance-settings';
 import { ProfileHubTabs, isProfileTabId, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
@@ -143,29 +145,33 @@ export default function ProfilePage() {
     if (!currentUser) return;
     setIsSubscriptionLoading(true);
     try {
-        // 1. Forcefully unregister all service workers to clear the "Handshake"
+        // Unregister every SW so a stale PWA worker cannot keep owning push.
         if ('serviceWorker' in navigator) {
             const regs = await navigator.serviceWorker.getRegistrations();
             for (const reg of regs) {
                 await reg.unregister();
             }
         }
-        
-        // 2. Clear local storage for FCM
-        localStorage.removeItem('fcm_token_synced');
-        
-        toast({
-            title: "Repairing Handshake...",
-            description: "Refreshing the app to finish the repair.",
-        });
 
-        // 3. Reload to trigger fresh registration
-        setTimeout(() => window.location.reload(), 1500);
+        // Force a fresh messaging SW + token rebind (covers chat + reminders).
+        await healFcmSubscription(currentUser.uid, { force: true });
+
+        toast({
+            title: "Push notifications repaired",
+            description: "This device is reconnected. Try Send Test next.",
+        });
+        setPushSupport(getPushSupportState());
     } catch (err: any) {
         console.error('Repair failed:', err);
+        toast({
+            variant: "destructive",
+            title: "Repair failed",
+            description: err?.message || "Could not refresh push on this device.",
+        });
+    } finally {
         setIsSubscriptionLoading(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, getPushSupportState]);
 
 
   const handleEnableNotifications = useCallback(async () => {
@@ -178,22 +184,25 @@ export default function ProfilePage() {
         const permission = await Notification.requestPermission();
 
         if (permission === 'granted') {
-            // CRITICAL: Explicitly register firebase-messaging-sw.js.
-            // Cannot use navigator.serviceWorker.ready — that may return sw.js (next-pwa),
-            // which doesn't have Firebase Messaging code, breaking onBackgroundMessage.
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' });
+            const registration = await getFCMRegistration();
             const currentToken = await getToken(messaging, { 
                 vapidKey,
                 serviceWorkerRegistration: registration 
             });
             
             if (currentToken) {
-                // Preserve tokens from other devices (up to 3 total).
-                // Put this device's token first, keep existing tokens deduped.
+                // Preserve tokens from other devices (up to MAX_FCM_TOKENS).
                 const existing = currentUser.fcmTokens || [];
                 const filtered = existing.filter(t => t !== currentToken);
-                const newList = [currentToken, ...filtered].slice(0, 3);
-                await updateDoc(doc(db, 'users', currentUser.uid), { fcmTokens: newList });
+                const newList = [currentToken, ...filtered].slice(0, MAX_FCM_TOKENS);
+                await updateDoc(doc(db, 'users', currentUser.uid), {
+                  fcmTokens: newList,
+                });
+                try {
+                  await updateDoc(doc(db, 'users', currentUser.uid), { fcmNeedsResync: false });
+                } catch {
+                  // optional heal metadata
+                }
                 toast({
                     title: "Notifications Enabled",
                     description: "You will now receive push notifications on this device.",

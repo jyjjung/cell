@@ -3,6 +3,9 @@ import type { Messaging } from 'firebase-admin/messaging';
 import type { AppNotification, UserProfileData } from '@/types';
 import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils';
 
+/** Keep in sync with client MAX_FCM_TOKENS — validate/send all stored tokens, not a silent first-3 subset. */
+const MAX_FCM_TOKENS = 5;
+
 async function deliverToUser(
   userId: string,
   tokens: string[],
@@ -10,7 +13,7 @@ async function deliverToUser(
   adminDb: Firestore,
   adminMessaging: Messaging,
 ): Promise<number> {
-  const uniqueTokens = [...new Set(tokens)].filter(Boolean).slice(0, 3);
+  const uniqueTokens = [...new Set(tokens)].filter(Boolean).slice(0, MAX_FCM_TOKENS);
   if (uniqueTokens.length === 0) return 0;
 
   const badgeCount = await calculateTotalUnread(userId, adminDb);

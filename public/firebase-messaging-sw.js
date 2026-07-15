@@ -2,11 +2,21 @@
 /**
  * @fileOverview Firebase Messaging Service Worker.
  * Handles background push notifications when the app is closed or in the background.
+ *
+ * Heal version: 2026-07-15-v2 — bump this when clients need to rebind push subscriptions.
  */
 
 // Import and configure the Firebase SDK
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
 
 firebase.initializeApp({
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",

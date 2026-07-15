@@ -38,7 +38,8 @@ service cloud.firestore {
       let allowed = [
         'firstName', 'lastName', 'avatar', 'showInCommunityProgress', 'preferredLanguage',
         'colorPalette', 'surfaceBackground', 'appTheme', 'glassEnabled', 'typography',
-        'bibleTextVersion', 'dashboard', 'fcmTokens', 'updatedAt', 'prayerRequestsLastSeenAt',
+        'bibleTextVersion', 'dashboard', 'fcmTokens', 'fcmNeedsResync', 'fcmLastHealedAt',
+        'fcmHealVersion', 'updatedAt', 'prayerRequestsLastSeenAt',
         'isAdmin',
       ];
       return diff.hasOnly(allowed)

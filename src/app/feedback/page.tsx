@@ -56,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.104",
+    subtitle: "Push notification repair",
+    date: "July 15, 2026",
+    changes: [
+      "Automatically repairs push for opted-in users whose app still had an old notification handler (including chat)",
+      "Opening the app rebinds this device’s push subscription to the current messaging service worker",
+      "Profile “Fix push notifications” now reconnects immediately instead of only reloading",
+      "Duty and other server reminders record whether the push was delivered",
+    ],
+  },
+  {
     version: "v1.3.103",
     subtitle: "Group chat photos",
     date: "July 14, 2026",

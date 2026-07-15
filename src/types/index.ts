@@ -219,6 +219,10 @@ export interface AppUser extends FirebaseUser {
   avatar?: AvatarData;
   avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
+  /** Client should hard-rebind FCM SW + token on next open. */
+  fcmNeedsResync?: boolean;
+  fcmLastHealedAt?: Timestamp;
+  fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;
   surfaceBackground?: SurfaceBackgroundId;
@@ -252,6 +256,10 @@ export interface UserProfileData {
   avatar?: AvatarData;
   avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
+  /** Client should hard-rebind FCM SW + token on next open. */
+  fcmNeedsResync?: boolean;
+  fcmLastHealedAt?: Timestamp;
+  fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
   colorPalette?: ColorPaletteId;
   surfaceBackground?: SurfaceBackgroundId;

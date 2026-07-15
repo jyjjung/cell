@@ -82,7 +82,8 @@ async function sendNotifications(chat: Chat, message: ChatMessage, adminDb: Fire
 
             const rawTokens = Array.isArray(user.fcmTokens) ? user.fcmTokens : [];
             const tokensSet = [...new Set(rawTokens)].filter(Boolean);
-            const prunedTokens = tokensSet.slice(0, 3);
+            // Send to all stored tokens (capped) — skipping extras left stale devices "opted in" but silent.
+            const prunedTokens = tokensSet.slice(0, 5);
 
             const payload = {
               tokens: prunedTokens,
