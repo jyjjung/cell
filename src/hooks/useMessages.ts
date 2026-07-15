@@ -351,12 +351,17 @@ export function useMessages(chatId: string | null) {
     if (optionIndex < 0 || optionIndex >= optionCount) return;
 
     const allowMultiple = message.poll.allowMultiple ?? false;
+    const previousVotes: Record<string, string[]> = {};
+    for (let i = 0; i < optionCount; i++) {
+      previousVotes[String(i)] = [...(message.pollVotes?.[String(i)] || [])];
+    }
     const nextVotes: Record<string, string[]> = {};
     for (let i = 0; i < optionCount; i++) {
-      nextVotes[String(i)] = [...(message.pollVotes?.[String(i)] || [])];
+      nextVotes[String(i)] = [...previousVotes[String(i)]];
     }
 
     const alreadyVoted = nextVotes[key].includes(uid);
+    const isAddingVote = !alreadyVoted;
 
     if (allowMultiple) {
       if (alreadyVoted) {
@@ -374,6 +379,7 @@ export function useMessages(chatId: string | null) {
     }
 
     const now = Timestamp.now();
+    const previousUpdatedAt = message.pollUpdatedAt;
 
     setMessages((prev) =>
       sortChatMessagesDesc(
@@ -384,14 +390,33 @@ export function useMessages(chatId: string | null) {
     );
 
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
-    updateDoc(messageRef, { pollVotes: nextVotes, pollUpdatedAt: serverTimestamp() }).catch((error) => {
+    try {
+      await updateDoc(messageRef, { pollVotes: nextVotes, pollUpdatedAt: serverTimestamp() });
+      if (isAddingVote && message.senderId !== uid) {
+        const headers = await getClientAuthHeaders();
+        fetch('/api/send-poll-vote-push', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId, messageId, optionIndex }),
+        }).catch((error) => console.error('[useMessages] Poll vote push failed:', error));
+      }
+    } catch (error) {
       console.error('[useMessages] Poll vote failed:', error);
+      setMessages((prev) =>
+        sortChatMessagesDesc(
+          prev.map((m) =>
+            m.id === messageId
+              ? { ...m, pollVotes: previousVotes, pollUpdatedAt: previousUpdatedAt }
+              : m,
+          ),
+        ),
+      );
       toastRef.current({
         variant: 'destructive',
         title: 'Vote not saved',
         description: error instanceof Error ? error.message : 'Could not save your vote.',
       });
-    });
+    }
   }, [currentUser, chatId]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
