@@ -278,6 +278,12 @@ export default function MessageInput({
               disabled={disabled || isUploading}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onTouchStart={() => {
+                const el = textareaRef.current;
+                if (!el || document.activeElement === el) return;
+                // Focus during touchstart so iOS does not scroll the page to the field.
+                el.focus({ preventScroll: true });
+              }}
               className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
           <button 

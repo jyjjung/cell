@@ -13,7 +13,6 @@ import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } f
 import { formatUserDisplayName } from '@/lib/formatting';
 
 import ChatMessageList from './ChatMessageList';
-import ChatMessagesPanel from './ChatMessagesPanel';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
@@ -346,39 +345,24 @@ function ChatWindowBody({
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
         {chatTab === 'messages' ? (
-          <ChatMessagesPanel
+          <ChatMessageList
+            messages={messages}
+            chat={chat}
+            usersById={usersById}
+            sendersByUserId={sendersByUserId}
+            messagesById={messagesById}
+            lastSeenNamesPerMessage={lastSeenNamesPerMessage}
+            toggleReaction={toggleReaction}
+            votePoll={votePoll}
+            setPollResultsLocked={setPollResultsLocked}
+            deleteMessage={deleteMessage}
+            onOpenThread={handleOpenThread}
+            onOpenImage={handleOpenImage}
+            onOpenWorshipViewer={handleOpenWorshipViewer}
             onLoadOlder={loadOlderMessages}
             loadingOlder={loadingOlder}
             hasMoreOlder={hasMoreOlder}
-            footer={
-              <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
-                <MessageInput
-                  chatId={chatId}
-                  disabled={!online}
-                  replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
-                  onCancelReply={() => setReplyToId(null)}
-                  messageActions={{ sendMessage, sendImageMessage }}
-                />
-              </div>
-            }
-          >
-            <ChatMessageList
-              embedded
-              messages={messages}
-              chat={chat}
-              usersById={usersById}
-              sendersByUserId={sendersByUserId}
-              messagesById={messagesById}
-              lastSeenNamesPerMessage={lastSeenNamesPerMessage}
-              toggleReaction={toggleReaction}
-              votePoll={votePoll}
-              setPollResultsLocked={setPollResultsLocked}
-              deleteMessage={deleteMessage}
-              onOpenThread={handleOpenThread}
-              onOpenImage={handleOpenImage}
-              onOpenWorshipViewer={handleOpenWorshipViewer}
-            />
-          </ChatMessagesPanel>
+          />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
             messages={messages}
@@ -478,6 +462,18 @@ function ChatWindowBody({
           onClose={() => setOpenImageUrl(null)}
           onDownload={downloadChatImage}
         />
+      )}
+
+      {chatTab === 'messages' && (
+      <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
+        <MessageInput
+          chatId={chatId}
+          disabled={!online}
+          replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
+          onCancelReply={() => setReplyToId(null)}
+          messageActions={{ sendMessage, sendImageMessage }}
+        />
+      </div>
       )}
 
       <NewSongDialog 

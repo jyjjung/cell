@@ -811,22 +811,33 @@
   overscroll-behavior: contain;
 }
 
-/* Chat detail: lock the document so focus scroll stays in the message panel */
+/* Chat detail: lock document + pin shell to the visible viewport */
 html[data-chat-detail='true'],
 html[data-chat-detail='true'] body {
-  overflow: hidden;
+  overflow: hidden !important;
   overscroll-behavior: none;
+  height: 100%;
+  width: 100%;
 }
 
 html[data-chat-detail='true'] body {
   position: fixed;
   inset: 0;
-  width: 100%;
 }
 
 html[data-chat-detail='true'] [data-chat-shell] {
-  min-height: 0;
-  overflow: hidden;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  height: var(--chat-vv-height, 100dvh) !important;
+  transform: translate3d(0, var(--chat-vv-offset, 0px), 0);
+  overflow: hidden !important;
+  z-index: 30;
+  background: hsl(var(--background));
 }
 
 .custom-scrollbar::-webkit-scrollbar {

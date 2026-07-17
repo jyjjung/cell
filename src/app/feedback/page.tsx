@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Tapping the chat message box only scrolls the conversation — the top bars stay fixed and the rest of the page does not move",
+      "Opening the chat keyboard keeps the top bars on screen — the page itself no longer scrolls up",
     ],
   },
   {

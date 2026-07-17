@@ -20,6 +20,7 @@ import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
+import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -56,6 +57,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       delete root.dataset.chatDetail;
     };
   }, [isIndividualChat]);
+
+  useChatVisualViewportVars(isIndividualChat);
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -133,7 +136,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         data-chat-shell={isIndividualChat ? '' : undefined}
         className={cn(
           'min-w-0 bg-background overflow-hidden flex flex-col',
-          isIndividualChat ? 'h-dvh max-h-dvh' : 'h-svh',
+          isIndividualChat ? '!min-h-0 h-full' : 'h-svh min-h-svh',
         )}
       >
         <div className="flex-1 flex flex-col min-h-0">
