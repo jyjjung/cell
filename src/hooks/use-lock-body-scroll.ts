@@ -9,34 +9,22 @@ export function useLockBodyScroll(enabled: boolean) {
 
     const html = document.documentElement;
     const body = document.body;
-    const scrollY = window.scrollY;
 
     const prevHtmlOverflow = html.style.overflow;
     const prevBodyOverflow = body.style.overflow;
-    const prevBodyPosition = body.style.position;
-    const prevBodyTop = body.style.top;
-    const prevBodyWidth = body.style.width;
+    const prevHtmlOverscroll = html.style.overscrollBehavior;
+    const prevBodyOverscroll = body.style.overscrollBehavior;
 
     html.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = `-${scrollY}px`;
-    body.style.width = '100%';
-
-    const vv = window.visualViewport;
-    const preventViewportScroll = () => {
-      window.scrollTo(0, 0);
-    };
-    vv?.addEventListener('scroll', preventViewportScroll);
+    html.style.overscrollBehavior = 'none';
+    body.style.overscrollBehavior = 'none';
 
     return () => {
-      vv?.removeEventListener('scroll', preventViewportScroll);
       html.style.overflow = prevHtmlOverflow;
       body.style.overflow = prevBodyOverflow;
-      body.style.position = prevBodyPosition;
-      body.style.top = prevBodyTop;
-      body.style.width = prevBodyWidth;
-      window.scrollTo(0, scrollY);
+      html.style.overscrollBehavior = prevHtmlOverscroll;
+      body.style.overscrollBehavior = prevBodyOverscroll;
     };
   }, [enabled]);
 }
