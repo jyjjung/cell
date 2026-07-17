@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.111",
+    subtitle: "Chat keyboard stay open",
+    date: "July 17, 2026",
+    changes: [
+      "Tapping the chat message box no longer glitches and closes the keyboard",
+    ],
+  },
+  {
     version: "v1.3.110",
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",

@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 
 /**
- * Keep the chat shell inside the visible area when the keyboard opens.
- * Uses CSS variables + transform (not top/scrollTo) to avoid the iOS feedback shake.
+ * Shrink the chat shell to the visible viewport height when the keyboard opens.
+ * Height only — never transform/translate while focused (that dismisses the iOS keyboard).
+ * Debounced so mid-animation height thrashing does not blur the input.
  */
 export function useChatVisualViewportVars(enabled: boolean) {
   useEffect(() => {
@@ -15,25 +16,27 @@ export function useChatVisualViewportVars(enabled: boolean) {
     if (!vv) return;
 
     let lastHeight = Number.NaN;
-    let lastOffset = Number.NaN;
+    let timer = 0;
 
-    const sync = () => {
+    const apply = () => {
       const height = Math.round(vv.height);
-      const offset = Math.round(vv.offsetTop);
-      if (height === lastHeight && offset === lastOffset) return;
+      if (height === lastHeight) return;
       lastHeight = height;
-      lastOffset = offset;
       root.style.setProperty('--chat-vv-height', `${height}px`);
-      root.style.setProperty('--chat-vv-offset', `${offset}px`);
     };
 
-    sync();
+    const sync = () => {
+      window.clearTimeout(timer);
+      // Apply after the keyboard animation settles to avoid blur/glitch mid-transition.
+      timer = window.setTimeout(apply, 120);
+    };
+
+    apply();
     vv.addEventListener('resize', sync);
-    vv.addEventListener('scroll', sync);
 
     return () => {
+      window.clearTimeout(timer);
       vv.removeEventListener('resize', sync);
-      vv.removeEventListener('scroll', sync);
       root.style.removeProperty('--chat-vv-height');
       root.style.removeProperty('--chat-vv-offset');
     };
