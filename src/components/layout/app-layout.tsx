@@ -45,19 +45,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
   const isIndividualChat = !!chatSubpath && !isChatListSubpage;
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useLockBodyScroll(isIndividualChat);
-
-  useEffect(() => {
-    const media = window.matchMedia('(pointer: coarse)');
-    const update = () => setIsTouchDevice(media.matches);
-    update();
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
-
-  const hideAppHeader = isIndividualChat && isTouchDevice;
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -138,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex-1 flex flex-col min-h-0">
-          {!hideAppHeader && <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />}
+          <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
           <div
