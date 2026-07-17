@@ -834,7 +834,6 @@ html[data-chat-detail='true'] [data-chat-shell] {
   min-height: 0 !important;
   max-height: none !important;
   height: var(--chat-vv-height, 100dvh) !important;
-  transform: translate3d(0, var(--chat-vv-offset, 0px), 0);
   overflow: hidden !important;
   z-index: 30;
   background: hsl(var(--background));
