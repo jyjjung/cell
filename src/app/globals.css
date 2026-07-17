@@ -839,6 +839,12 @@ html[data-chat-detail='true'] [data-chat-shell] {
   background: hsl(var(--background));
 }
 
+/* While the keyboard is open, keep non-scrolling chrome from rubber-banding the layout */
+html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] header,
+html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] [data-chat-tabs] {
+  touch-action: none;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

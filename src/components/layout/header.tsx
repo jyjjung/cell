@@ -94,7 +94,10 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
   }, [notifications, currentUser, mounted]);
 
   return (
-    <header className={cn('z-40 w-full shrink-0', !pinStatic && 'sticky top-0')}>
+    <header
+      className={cn('z-40 w-full shrink-0', !pinStatic && 'sticky top-0')}
+      style={pinStatic ? { touchAction: 'none' } : undefined}
+    >
       <div className="app-header-bar">
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">

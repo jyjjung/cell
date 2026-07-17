@@ -52,7 +52,10 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
   viewportFit: 'cover',
+  // Android Chrome: resize layout with keyboard. iOS WebKit ignores this.
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({

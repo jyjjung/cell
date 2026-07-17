@@ -14,6 +14,7 @@ import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { ChatMessage, ChatPoll } from '@/types';
 import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
+import { isIOSLike, preLiftChatComposer } from '@/hooks/use-chat-visual-viewport-vars';
 
 type MessageActions = {
   sendMessage: (
@@ -149,6 +150,18 @@ export default function MessageInput({
     }
   };
 
+  /** iOS: pre-shrink shell before focus so Safari does not scroll the page. */
+  const handleComposerMouseDown = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    if (!isIOSLike()) return;
+    if (disabled || isUploading) return;
+    const el = e.currentTarget;
+    if (document.activeElement === el) return;
+
+    preLiftChatComposer();
+    e.preventDefault();
+    el.focus({ preventScroll: true });
+  };
+
   const handleImageClick = () => {
     if (disabled || isUploading) return;
     fileInputRef.current?.click();
@@ -278,6 +291,7 @@ export default function MessageInput({
               disabled={disabled || isUploading}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onMouseDown={handleComposerMouseDown}
               className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
           <button 

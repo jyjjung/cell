@@ -106,7 +106,10 @@ export default function ThreadWindow({
 
   return (
     <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden animate-in slide-in-from-right-8 duration-300">
-      <header className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
+      <header
+        className="flex-shrink-0 flex items-center justify-between py-4 px-6 border-b border-border/50 bg-background z-20"
+        style={{ touchAction: 'none' }}
+      >
         <Button 
           variant="ghost" 
           size="icon" 
