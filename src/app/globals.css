@@ -811,12 +811,17 @@
   overscroll-behavior: contain;
 }
 
-/* Chat detail: no page scroll; browser resizes layout for keyboard (see viewport interactiveWidget) */
+/* Chat detail: lock the document so focus scroll stays in the message panel */
 html[data-chat-detail='true'],
 html[data-chat-detail='true'] body {
   overflow: hidden;
-  height: 100%;
   overscroll-behavior: none;
+}
+
+html[data-chat-detail='true'] body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 html[data-chat-detail='true'] [data-chat-shell] {

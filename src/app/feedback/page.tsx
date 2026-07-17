@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Chat keyboard handling is smoother on mobile — no page shake, headers stay at the top, and messages stay above the input",
+      "Tapping the chat message box only scrolls the conversation — the top bars stay fixed and the rest of the page does not move",
     ],
   },
   {
