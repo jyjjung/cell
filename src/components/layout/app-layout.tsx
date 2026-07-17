@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -20,8 +20,6 @@ import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
-import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
-import { useChatViewportShell } from '@/hooks/use-chat-viewport-shell';
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,10 +44,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
   const isIndividualChat = !!chatSubpath && !isChatListSubpage;
-  const chatShellRef = useRef<HTMLDivElement>(null);
 
-  useLockBodyScroll(isIndividualChat);
-  useChatViewportShell(chatShellRef, isIndividualChat);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isIndividualChat) {
+      root.dataset.chatDetail = 'true';
+    } else {
+      delete root.dataset.chatDetail;
+    }
+    return () => {
+      delete root.dataset.chatDetail;
+    };
+  }, [isIndividualChat]);
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -123,11 +129,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
-      <SidebarInset className="min-w-0 bg-background h-svh overflow-hidden flex flex-col">
-        <div
-          ref={chatShellRef}
-          className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background"
-        >
+      <SidebarInset
+        data-chat-shell={isIndividualChat ? '' : undefined}
+        className={cn(
+          'min-w-0 bg-background overflow-hidden flex flex-col',
+          isIndividualChat ? 'h-dvh max-h-dvh' : 'h-svh',
+        )}
+      >
+        <div className="flex-1 flex flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={isIndividualChat} />
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 

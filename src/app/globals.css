@@ -811,6 +811,19 @@
   overscroll-behavior: contain;
 }
 
+/* Chat detail: no page scroll; browser resizes layout for keyboard (see viewport interactiveWidget) */
+html[data-chat-detail='true'],
+html[data-chat-detail='true'] body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+html[data-chat-detail='true'] [data-chat-shell] {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
