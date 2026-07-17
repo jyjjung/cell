@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useCallback, useContext } from 'react';
-import type { AppUser, UserProfileData, ChatMemberInfo } from '@/types';
+import { useCallback } from 'react';
+import type { UserProfileData, ChatMemberInfo } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
   doc,
-  getDoc,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -26,6 +26,8 @@ export function useChats() {
   const ctx = useChatsContext();
   const { chats, loading } = useChatsSubscription({ enabled: !ctx });
 
+  const localChats = ctx?.chats;
+
   const createPrivateChat = useCallback(async (peerUser: UserProfileData): Promise<string> => {
     if (!currentUser || !currentUser.firstName || !currentUser.lastName) {
       throw new Error('Current user not found or profile incomplete.');
@@ -33,12 +35,11 @@ export function useChats() {
     if (!peerUser?.uid) throw new Error('Peer user is invalid.');
 
     const chatId = getPrivateChatId(currentUser.uid, peerUser.uid);
-    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-
-    const chatDoc = await getDoc(chatDocRef);
-    if (chatDoc.exists()) {
+    if (localChats?.some((chat) => chat.id === chatId)) {
       return chatId;
     }
+
+    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
 
     const currentUserInfo: ChatMemberInfo = {
       firstName: currentUser.firstName!,
@@ -68,9 +69,13 @@ export function useChats() {
       },
     };
 
-    await setDoc(chatDocRef, newChat);
+    await runTransaction(db, async (transaction) => {
+      const chatDoc = await transaction.get(chatDocRef);
+      if (chatDoc.exists()) return;
+      transaction.set(chatDocRef, newChat);
+    });
     return chatId;
-  }, [currentUser]);
+  }, [currentUser, localChats]);
 
   const createGroupChat = useCallback(async (name: string, members: UserProfileData[]): Promise<string> => {
     if (!currentUser || !currentUser.firstName || !currentUser.lastName) {

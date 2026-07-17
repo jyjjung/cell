@@ -6,10 +6,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
-import { PixelAvatar } from '../avatar/PixelAvatar';
 import type { UserProfileData } from '@/types';
 import { Loader2, Search, UserX } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from '@/lib/utils';
+
+function UserListAvatar({ user }: { user: UserProfileData }) {
+  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() || '?';
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground',
+      )}
+      aria-hidden
+    >
+      {initials}
+    </div>
+  );
+}
 
 interface UserSelectorProps {
   users: UserProfileData[];
@@ -71,9 +85,7 @@ export default function UserSelector({
         <RadioGroupItem value={user.uid} id={`user-selector-${user.uid}`} className="h-5 w-5" />
       )}
       <Label htmlFor={`user-selector-${user.uid}`} className="flex flex-1 items-center gap-3 cursor-pointer">
-        <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0">
-          <PixelAvatar avatar={user.avatar} />
-        </div>
+        <UserListAvatar user={user} />
         <div className="min-w-0">
           <p className="font-semibold truncate">{user.firstName} {user.lastName}</p>
         </div>
