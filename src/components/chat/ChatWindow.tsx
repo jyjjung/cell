@@ -15,7 +15,6 @@ import { formatUserDisplayName } from '@/lib/formatting';
 import ChatMessageList from './ChatMessageList';
 import ChatConversationPanel from './ChatConversationPanel';
 import MessageInput from './MessageInput';
-import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import { GroupChatAvatar } from './GroupChatAvatar';
@@ -147,8 +146,6 @@ function ChatWindowBody({
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
-
-  useLockBodyScroll(true);
 
   useEffect(() => {
     if (!chatId) return;
