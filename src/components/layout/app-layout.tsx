@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -21,7 +21,6 @@ import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
-import { useVisualViewportFrame } from '@/hooks/use-visual-viewport-frame';
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,10 +45,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
   const isIndividualChat = !!chatSubpath && !isChatListSubpage;
-  const chatFrameRef = useRef<HTMLDivElement>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useLockBodyScroll(isIndividualChat);
-  useVisualViewportFrame(chatFrameRef, isIndividualChat);
+
+  useEffect(() => {
+    const media = window.matchMedia('(pointer: coarse)');
+    const update = () => setIsTouchDevice(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  const hideAppHeader = isIndividualChat && isTouchDevice;
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -123,9 +131,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
-      <SidebarInset className="min-w-0 bg-background h-svh overflow-hidden flex flex-col">
-        <div ref={chatFrameRef} className="flex-1 flex flex-col min-h-0 bg-background">
-          <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />
+      <SidebarInset
+        className={cn(
+          'min-w-0 bg-background overflow-hidden flex flex-col',
+          isIndividualChat ? 'h-dvh' : 'h-svh',
+        )}
+      >
+        <div className="flex-1 flex flex-col min-h-0">
+          {!hideAppHeader && <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} />}
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
           <div

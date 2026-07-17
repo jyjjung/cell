@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Tapping the chat message box no longer scrolls the whole page — only the messages and input area adjust",
+      "Tapping the chat message box no longer scrolls or jumps the whole page — headers stay put and the input stays above the keyboard on mobile",
     ],
   },
   {
