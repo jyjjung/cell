@@ -16,6 +16,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
 import { useChats } from '@/hooks/useChats';
+import { getPrivateChatId } from '@/lib/chat-utils';
 import UserSelector from './UserSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +33,7 @@ const groupSchema = z.object({
 export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void; }) {
   const { allUsers, loading: loadingUsers } = useAllUsers();
   const { currentUser } = useAuth();
-  const { createPrivateChat, createGroupChat } = useChats();
+  const { chats, createPrivateChat, createGroupChat } = useChats();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
@@ -43,30 +44,39 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   const privateForm = useForm({ resolver: zodResolver(privateSchema), defaultValues: { selectedUser: "" } });
   const groupForm = useForm({ resolver: zodResolver(groupSchema), defaultValues: { groupName: "", selectedUsers: [] } });
 
-  const otherUsers = allUsers.filter(u => u.uid !== currentUser?.uid && u.firstName);
-  
+  const otherUsers = useMemo(
+    () => allUsers.filter((u) => u.uid !== currentUser?.uid && u.firstName),
+    [allUsers, currentUser?.uid],
+  );
+
   // Restriction: Youth cannot private chat with other Youth
   const usersForPrivateChat = useMemo(() => {
     if (isYouth) {
-        return otherUsers.filter(u => !u.isYouth);
+      return otherUsers.filter((u) => !u.isYouth);
     }
     return otherUsers;
   }, [isYouth, otherUsers]);
 
   const goToChat = (chatId: string) => {
-    // setIsPageLoading(true);
-    router.push(`/chat/${chatId}`);
+    setIsPageLoading(true);
     onOpenChange(false);
+    router.push(`/chat/${chatId}`);
   };
   
   const handleCreatePrivate = async (values: z.infer<typeof privateSchema>) => {
+    const peerUser = otherUsers.find((u) => u.uid === values.selectedUser);
+    if (!peerUser || !currentUser?.uid) return;
+
+    const chatId = getPrivateChatId(currentUser.uid, peerUser.uid);
+    if (chats.some((chat) => chat.id === chatId)) {
+      goToChat(chatId);
+      return;
+    }
+
     setIsLoading(true);
     try {
-        const peerUser = otherUsers.find(u => u.uid === values.selectedUser);
-        if(peerUser) {
-          const chatId = await createPrivateChat(peerUser);
-          goToChat(chatId);
-        }
+      await createPrivateChat(peerUser);
+      goToChat(chatId);
     } catch (error: any) {
         const code = error?.code as string | undefined;
         const description =
@@ -86,9 +96,9 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   const handleCreateGroup = async (values: z.infer<typeof groupSchema>) => {
     setIsLoading(true);
     try {
-        const members = otherUsers.filter(u => values.selectedUsers.includes(u.uid));
-        const chatId = await createGroupChat(values.groupName, members);
-        goToChat(chatId);
+      const members = otherUsers.filter((u) => values.selectedUsers.includes(u.uid));
+      const chatId = await createGroupChat(values.groupName, members);
+      goToChat(chatId);
     } catch (error: any) {
         console.error("[CreateChatDialog] Error:", error);
         const code = error?.code as string | undefined;

@@ -33,6 +33,7 @@ import {
 import { sortChatMessagesDesc } from '@/lib/chat-message-merge';
 import type { ChatMessage, Chat, ChatPoll } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
+import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
@@ -41,8 +42,12 @@ const CHATS_COLLECTION = 'chats';
 
 export function useMessages(chatId: string | null) {
   const { currentUser } = useAuth();
+  const chatsContext = useChatsContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [chat, setChat] = useState<Chat | null>(null);
+  const [chat, setChat] = useState<Chat | null>(() => {
+    if (!chatId) return null;
+    return chatsContext?.chats.find((item) => item.id === chatId) ?? null;
+  });
   const [loading, setLoading] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
@@ -73,6 +78,12 @@ export function useMessages(chatId: string | null) {
       setChat(null);
       return;
     }
+
+    const seededChat = chatsContext?.chats.find((item) => item.id === chatId);
+    if (seededChat) {
+      setChat(seededChat);
+    }
+
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
     const unsubscribe = onSnapshot(
       chatDocRef,
@@ -86,7 +97,7 @@ export function useMessages(chatId: string | null) {
       }
     );
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, chatsContext?.chats]);
 
   useEffect(() => {
     if (!chatId || !currentUser?.uid) {
@@ -113,7 +124,11 @@ export function useMessages(chatId: string | null) {
     });
 
     void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
-      if (aborted.value || latest.length === 0) return;
+      if (aborted.value) return;
+      if (latest.length === 0) {
+        setLoading(false);
+        return;
+      }
       setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
       setHasMoreOlder(hasMore);
       setLoading(false);

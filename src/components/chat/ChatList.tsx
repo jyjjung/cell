@@ -223,7 +223,9 @@ export default function ChatList() {
           </div>
         )}
       </div>
-      <CreateChatDialog isOpen={isCreateDialogOpen} onOpenChange={setCreateDialogOpen} />
+      {isCreateDialogOpen && (
+        <CreateChatDialog isOpen={isCreateDialogOpen} onOpenChange={setCreateDialogOpen} />
+      )}
     </div>
   );
 }

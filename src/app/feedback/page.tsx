@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.109",
+    subtitle: "Faster new chats",
+    date: "July 17, 2026",
+    changes: [
+      "Starting a new chat opens faster — the user picker loads more quickly and existing conversations open instantly",
+      "New empty chats no longer sit on a loading spinner while messages load",
+    ],
+  },
+  {
     version: "v1.3.108",
     subtitle: "Chat message box",
     date: "July 15, 2026",
