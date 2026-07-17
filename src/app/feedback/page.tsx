@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Chat top bars stay stuck to the top of the screen when you open the keyboard — only the messages and input area shrink",
+      "Opening the chat keyboard no longer shakes the page — headers stay put while the message area adjusts",
     ],
   },
   {
