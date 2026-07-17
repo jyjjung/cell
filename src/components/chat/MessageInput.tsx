@@ -133,6 +133,26 @@ export default function MessageInput({
     if (onCancelReply) onCancelReply();
   };
   
+  const focusTextareaWithoutScroll = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || document.activeElement === el) return;
+    el.focus({ preventScroll: true });
+  }, []);
+
+  const handleTextareaPointerDown = (e: React.PointerEvent<HTMLTextAreaElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (document.activeElement === textareaRef.current) return;
+    e.preventDefault();
+    focusTextareaWithoutScroll();
+  };
+
+  const handleInputAreaPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') return;
+    if (e.target === textareaRef.current || document.activeElement === textareaRef.current) return;
+    e.preventDefault();
+    focusTextareaWithoutScroll();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       e.key === 'Enter' &&
@@ -261,7 +281,10 @@ export default function MessageInput({
             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
         </button>
 
-        <div className="flex flex-1 items-end overflow-hidden rounded-2xl border border-border/50 bg-muted/30 px-3 py-1.5 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40">
+        <div
+          className="flex flex-1 items-end overflow-hidden rounded-2xl border border-border/50 bg-muted/30 px-3 py-1.5 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40"
+          onPointerDown={handleInputAreaPointerDown}
+        >
           {stagedAttachment && (
             <div className="mb-0.5 mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border/50 bg-background/60 px-2.5 py-1">
                <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
@@ -278,6 +301,7 @@ export default function MessageInput({
               disabled={disabled || isUploading}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPointerDown={handleTextareaPointerDown}
               className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
           <button 

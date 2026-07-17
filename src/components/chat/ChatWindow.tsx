@@ -13,7 +13,9 @@ import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } f
 import { formatUserDisplayName } from '@/lib/formatting';
 
 import ChatMessageList from './ChatMessageList';
+import ChatConversationPanel from './ChatConversationPanel';
 import MessageInput from './MessageInput';
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 import { GroupChatAvatar } from './GroupChatAvatar';
@@ -145,6 +147,8 @@ function ChatWindowBody({
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
+
+  useLockBodyScroll(true);
 
   useEffect(() => {
     if (!chatId) return;
@@ -343,8 +347,20 @@ function ChatWindowBody({
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 relative">
-        {chatTab === 'messages' ? (
+      {chatTab === 'messages' ? (
+        <ChatConversationPanel
+          footer={
+            <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
+              <MessageInput
+                chatId={chatId}
+                disabled={!online}
+                replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
+                onCancelReply={() => setReplyToId(null)}
+                messageActions={{ sendMessage, sendImageMessage }}
+              />
+            </div>
+          }
+        >
           <ChatMessageList
             messages={messages}
             chat={chat}
@@ -363,16 +379,20 @@ function ChatWindowBody({
             loadingOlder={loadingOlder}
             hasMoreOlder={hasMoreOlder}
           />
-        ) : chatTab === 'photos' ? (
-          <ChatPhotosAlbum
-            messages={messages}
-            allUsers={allUsers}
-            onOpenImage={setOpenImageUrl}
-          />
-        ) : (
-          <ChatLinksList messages={messages} allUsers={allUsers} />
-        )}
-      </div>
+        </ChatConversationPanel>
+      ) : (
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          {chatTab === 'photos' ? (
+            <ChatPhotosAlbum
+              messages={messages}
+              allUsers={allUsers}
+              onOpenImage={setOpenImageUrl}
+            />
+          ) : (
+            <ChatLinksList messages={messages} allUsers={allUsers} />
+          )}
+        </div>
+      )}
 
       {/* Worship Viewer Modal logic constructed from state */}
       {(() => {
@@ -462,18 +482,6 @@ function ChatWindowBody({
           onClose={() => setOpenImageUrl(null)}
           onDownload={downloadChatImage}
         />
-      )}
-
-      {chatTab === 'messages' && (
-      <div className="px-3 pb-3 pt-1 shrink-0">
-        <MessageInput
-          chatId={chatId}
-          disabled={!online}
-          replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
-          onCancelReply={() => setReplyToId(null)}
-          messageActions={{ sendMessage, sendImageMessage }}
-        />
-      </div>
       )}
 
       <NewSongDialog 
