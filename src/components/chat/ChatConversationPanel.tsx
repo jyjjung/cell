@@ -15,9 +15,8 @@ type ChatConversationPanelProps = {
 };
 
 /**
- * Single scroll region for messages + input. Headers stay outside this panel.
- * The input sits at the bottom of the scroller so focus/keyboard adjustments
- * happen here instead of scrolling the whole page.
+ * Messages scroll in the middle; input stays pinned under them.
+ * Parent shell owns viewport pinning so headers above this panel stay put.
  */
 export default function ChatConversationPanel({
   children,
@@ -30,27 +29,25 @@ export default function ChatConversationPanel({
   const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
 
   return (
-    <div
-      ref={scrollRef}
-      className={cn(
-        'flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col-reverse',
-        'custom-scrollbar touch-pan-y overscroll-y-contain',
-        className,
-      )}
-    >
-      {footer ? (
-        <div className="sticky bottom-0 z-10 shrink-0 bg-background border-t border-border/40">
-          {footer}
-        </div>
-      ) : null}
-      <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0 px-4 py-2">
-        {loadingOlder && (
-          <div className="flex justify-center py-3">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+    <div className={cn('flex-1 min-h-0 flex flex-col overflow-hidden', className)}>
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div
+          ref={scrollRef}
+          className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y overscroll-y-contain"
+        >
+          <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
+            {loadingOlder && (
+              <div className="flex justify-center py-3">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+              </div>
+            )}
+            {children}
           </div>
-        )}
-        {children}
+        </div>
       </div>
+      {footer ? (
+        <div className="shrink-0 bg-background border-t border-border/40">{footer}</div>
+      ) : null}
     </div>
   );
 }
