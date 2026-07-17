@@ -13,7 +13,6 @@ import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } f
 import { formatUserDisplayName } from '@/lib/formatting';
 
 import ChatMessageList from './ChatMessageList';
-import ChatConversationPanel from './ChatConversationPanel';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
 import { PixelAvatar } from '../avatar/PixelAvatar';
@@ -277,7 +276,7 @@ function ChatWindowBody({
         </div>
       )}
 
-      <header className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background/50 backdrop-blur-xl z-20">
+      <header className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background z-20">
         <Button
           variant="ghost"
           size="icon"
@@ -305,7 +304,7 @@ function ChatWindowBody({
         </Button>
       </header>
 
-      <div className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background/30">
+      <div className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background">
         <button
           type="button"
           onClick={() => setChatTab('messages')}
@@ -344,23 +343,8 @@ function ChatWindowBody({
         </button>
       </div>
 
-      {chatTab === 'messages' ? (
-        <ChatConversationPanel
-          footer={
-            <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1">
-              <MessageInput
-                chatId={chatId}
-                disabled={!online}
-                replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
-                onCancelReply={() => setReplyToId(null)}
-                messageActions={{ sendMessage, sendImageMessage }}
-              />
-            </div>
-          }
-          onLoadOlder={loadOlderMessages}
-          loadingOlder={loadingOlder}
-          hasMoreOlder={hasMoreOlder}
-        >
+      <div className="flex-1 min-h-0 relative">
+        {chatTab === 'messages' ? (
           <ChatMessageList
             messages={messages}
             chat={chat}
@@ -375,21 +359,20 @@ function ChatWindowBody({
             onOpenThread={handleOpenThread}
             onOpenImage={handleOpenImage}
             onOpenWorshipViewer={handleOpenWorshipViewer}
+            onLoadOlder={loadOlderMessages}
+            loadingOlder={loadingOlder}
+            hasMoreOlder={hasMoreOlder}
           />
-        </ChatConversationPanel>
-      ) : (
-        <div className="flex-1 min-h-0 relative overflow-hidden">
-          {chatTab === 'photos' ? (
-            <ChatPhotosAlbum
-              messages={messages}
-              allUsers={allUsers}
-              onOpenImage={setOpenImageUrl}
-            />
-          ) : (
-            <ChatLinksList messages={messages} allUsers={allUsers} />
-          )}
-        </div>
-      )}
+        ) : chatTab === 'photos' ? (
+          <ChatPhotosAlbum
+            messages={messages}
+            allUsers={allUsers}
+            onOpenImage={setOpenImageUrl}
+          />
+        ) : (
+          <ChatLinksList messages={messages} allUsers={allUsers} />
+        )}
+      </div>
 
       {/* Worship Viewer Modal logic constructed from state */}
       {(() => {
@@ -479,6 +462,18 @@ function ChatWindowBody({
           onClose={() => setOpenImageUrl(null)}
           onDownload={downloadChatImage}
         />
+      )}
+
+      {chatTab === 'messages' && (
+      <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
+        <MessageInput
+          chatId={chatId}
+          disabled={!online}
+          replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
+          onCancelReply={() => setReplyToId(null)}
+          messageActions={{ sendMessage, sendImageMessage }}
+        />
+      </div>
       )}
 
       <NewSongDialog 
