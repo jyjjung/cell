@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Opening the chat keyboard no longer shakes the page — headers stay put while the message area adjusts",
+      "Chat headers stay at the top when the keyboard opens — only the messages and input area move",
     ],
   },
   {
