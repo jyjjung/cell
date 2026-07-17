@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.112",
+    subtitle: "Chat keyboard final fix",
+    date: "July 17, 2026",
+    changes: [
+      "Tapping the chat message box no longer scrolls the whole page — the top bars stay put and the keyboard stays open",
+    ],
+  },
+  {
     version: "v1.3.111",
     subtitle: "Chat keyboard stay open",
     date: "July 17, 2026",

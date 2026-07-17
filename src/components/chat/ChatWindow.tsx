@@ -276,7 +276,10 @@ function ChatWindowBody({
         </div>
       )}
 
-      <header className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background z-20">
+      <header
+        className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background z-20"
+        style={{ touchAction: 'none' }}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -304,7 +307,11 @@ function ChatWindowBody({
         </Button>
       </header>
 
-      <div className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background">
+      <div
+        data-chat-tabs=""
+        className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background"
+        style={{ touchAction: 'none' }}
+      >
         <button
           type="button"
           onClick={() => setChatTab('messages')}
