@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.110",
+    subtitle: "Chat input scrolling",
+    date: "July 17, 2026",
+    changes: [
+      "Tapping the chat message box no longer scrolls the whole page — only the messages and input area adjust",
+    ],
+  },
+  {
     version: "v1.3.109",
     subtitle: "Faster new chats",
     date: "July 17, 2026",
