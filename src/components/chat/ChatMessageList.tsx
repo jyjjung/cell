@@ -2,11 +2,9 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
-import { Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { resolveChatUserName, isMutedChatEvent } from '@/lib/chat-utils';
-import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
 import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
 
 const EMPTY_SEEN_NAMES: string[] = [];
@@ -32,9 +30,6 @@ interface ChatMessageListProps {
   onOpenThread: (messageId: string) => void;
   onOpenImage: (imageUrl: string) => void;
   onOpenWorshipViewer: (setlistId?: string, songId?: string, imageUrl?: string) => void;
-  onLoadOlder?: () => void;
-  loadingOlder?: boolean;
-  hasMoreOlder?: boolean;
 }
 
 function findVisibleNeighbor(messages: ChatMessage[], startIndex: number, direction: 1 | -1): ChatMessage | undefined {
@@ -58,12 +53,7 @@ export default function ChatMessageList({
   onOpenThread,
   onOpenImage,
   onOpenWorshipViewer,
-  onLoadOlder,
-  loadingOlder = false,
-  hasMoreOlder = false,
 }: ChatMessageListProps) {
-  const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
-
   const messageList = useMemo(() => {
     const content: ReactNode[] = [];
 
@@ -150,20 +140,6 @@ export default function ChatMessageList({
   ]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 pb-4 flex flex-col-reverse custom-scrollbar touch-pan-y"
-    >
-      <TooltipProvider delayDuration={300}>
-        <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
-          {loadingOlder && (
-            <div className="flex justify-center py-3">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
-            </div>
-          )}
-          {messageList}
-        </div>
-      </TooltipProvider>
-    </div>
+    <TooltipProvider delayDuration={300}>{messageList}</TooltipProvider>
   );
 }

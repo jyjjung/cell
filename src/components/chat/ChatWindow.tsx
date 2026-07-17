@@ -357,6 +357,9 @@ function ChatWindowBody({
               />
             </div>
           }
+          onLoadOlder={loadOlderMessages}
+          loadingOlder={loadingOlder}
+          hasMoreOlder={hasMoreOlder}
         >
           <ChatMessageList
             messages={messages}
@@ -372,9 +375,6 @@ function ChatWindowBody({
             onOpenThread={handleOpenThread}
             onOpenImage={handleOpenImage}
             onOpenWorshipViewer={handleOpenWorshipViewer}
-            onLoadOlder={loadOlderMessages}
-            loadingOlder={loadingOlder}
-            hasMoreOlder={hasMoreOlder}
           />
         </ChatConversationPanel>
       ) : (

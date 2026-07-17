@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useCallback, useState } from 'react';
-import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, X } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { translations } from '@/lib/translations';
 import MessageBubble from './MessageBubble';
 import ChatConversationPanel from './ChatConversationPanel';
@@ -39,7 +38,6 @@ export default function ThreadWindow({
   const { messages, parentMessage, loading, loadingOlder, hasMoreOlder, loadOlderMessages, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
   const usersById = useUsersById();
-  const scrollRef = useChatScrollLoadOlder({ onLoadOlder: loadOlderMessages, hasMoreOlder, loadingOlder });
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -131,50 +129,41 @@ export default function ThreadWindow({
             />
           </div>
         }
+        onLoadOlder={loadOlderMessages}
+        loadingOlder={loadingOlder}
+        hasMoreOlder={hasMoreOlder}
       >
-        <div
-          ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar touch-pan-y"
-        >
-          <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
-            {loadingOlder && (
-              <div className="flex justify-center py-3">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
-              </div>
-            )}
-            {renderContent()}
+        {renderContent()}
 
-            {parentMessage && (
-              <div className="w-full flex-col pt-4 pb-2 relative flex">
-                <div className="mt-4 w-full">
-                  <MessageBubble
-                    message={parentMessage}
-                    chat={chat}
-                    sender={parentSenderForBubble!}
-                    usersById={usersById}
-                    toggleReaction={toggleReaction}
-                    onOpenImage={setOpenImageUrl}
-                    onDelete={(id) => {
-                      onDeleteParentMessage?.(id);
-                      onClose();
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-4 mt-6 mb-4">
-                  <div className="h-px bg-border flex-1" />
-                  <span className="text-micro-label text-muted-foreground">{t.replyCount(messages.length)}</span>
-                  <div className="h-px bg-border flex-1" />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {loading && messages.length === 0 && (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/40" />
+        {parentMessage && (
+          <div className="w-full flex-col pt-4 pb-2 relative flex">
+            <div className="mt-4 w-full">
+              <MessageBubble
+                message={parentMessage}
+                chat={chat}
+                sender={parentSenderForBubble!}
+                usersById={usersById}
+                toggleReaction={toggleReaction}
+                onOpenImage={setOpenImageUrl}
+                onDelete={(id) => {
+                  onDeleteParentMessage?.(id);
+                  onClose();
+                }}
+              />
             </div>
-          )}
-        </div>
+            <div className="flex items-center gap-4 mt-6 mb-4">
+              <div className="h-px bg-border flex-1" />
+              <span className="text-micro-label text-muted-foreground">{t.replyCount(messages.length)}</span>
+              <div className="h-px bg-border flex-1" />
+            </div>
+          </div>
+        )}
+
+        {loading && messages.length === 0 && (
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/40" />
+          </div>
+        )}
       </ChatConversationPanel>
 
       {openImageUrl && threadImages.length > 0 && (

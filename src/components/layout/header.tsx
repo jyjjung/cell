@@ -16,9 +16,11 @@ import { translations } from "@/lib/translations";
 
 interface HeaderProps {
   onOpenCommandMenu?: () => void;
+  /** When true, header stays in the flex column instead of sticky document scroll. */
+  pinStatic?: boolean;
 }
 
-export default function Header({ onOpenCommandMenu }: HeaderProps) {
+export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderProps) {
   const { currentUser } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
   const [mounted, setMounted] = useState(false);
@@ -92,7 +94,7 @@ export default function Header({ onOpenCommandMenu }: HeaderProps) {
   }, [notifications, currentUser, mounted]);
 
   return (
-    <header className="sticky top-0 z-40 w-full">
+    <header className={cn('z-40 w-full shrink-0', !pinStatic && 'sticky top-0')}>
       <div className="app-header-bar">
         {/* Left: trigger + breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0">
