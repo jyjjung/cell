@@ -269,7 +269,7 @@ function ChatWindowBody({
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
+    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
       {showOfflineRibbon && (
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
           <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
