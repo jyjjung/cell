@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Chat input scrolling",
     date: "July 17, 2026",
     changes: [
-      "Tapping the chat message box no longer clears or hides messages — headers stay fixed while only the message list scrolls",
+      "Chat top bars stay stuck to the top of the screen when you open the keyboard — only the messages and input area shrink",
     ],
   },
   {
