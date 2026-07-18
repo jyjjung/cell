@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.117",
+    subtitle: "Docs permissions fix",
+    date: "July 18, 2026",
+    changes: [
+      "Creating and editing documents no longer depends on undeployed Firestore client rules — docs use a secure server API",
+    ],
+  },
+  {
     version: "v1.3.116",
     subtitle: "Docs in chat",
     date: "July 18, 2026",
