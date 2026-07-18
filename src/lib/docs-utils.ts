@@ -63,3 +63,9 @@ export function stripHtmlPreview(html: string, maxLen = 120): string {
   if (text.length <= maxLen) return text;
   return `${text.slice(0, maxLen - 1)}…`;
 }
+
+/** True when HTML has no visible text (empty TipTap docs, placeholders, etc.). */
+export function isBlankDocHtml(html: string | undefined | null): boolean {
+  if (!html) return true;
+  return stripHtmlPreview(html, Number.MAX_SAFE_INTEGER).length === 0;
+}

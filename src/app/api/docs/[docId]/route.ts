@@ -4,6 +4,7 @@ import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import {
   buildMemberIds,
   DOC_TITLE_MAX,
+  isBlankDocHtml,
   mergeAuthorIds,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
@@ -75,7 +76,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         updates.title = body.title.trim().slice(0, DOC_TITLE_MAX);
       }
       if (typeof body.content === 'string') {
-        updates.content = body.content;
+        const existingContent = typeof data.content === 'string' ? data.content : '';
+        // Guard against race that autosaves empty TipTap HTML over real content.
+        // Intentional clears still work when the client sends allowEmpty: true.
+        if (
+          isBlankDocHtml(body.content) &&
+          !isBlankDocHtml(existingContent) &&
+          body.allowEmpty !== true
+        ) {
+          // Keep existing content; still allow title / metadata updates.
+        } else {
+          updates.content = body.content;
+        }
       }
       const existingAuthors = Array.isArray(data.authorIds) ? (data.authorIds as string[]) : [data.ownerId as string];
       updates.authorIds = mergeAuthorIds(existingAuthors, uid);
