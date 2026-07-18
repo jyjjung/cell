@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.114",
+    subtitle: "Chat input stays at the bottom",
+    date: "July 18, 2026",
+    changes: [
+      "The chat message box stays at the bottom of the screen again instead of jumping up under the tabs",
+    ],
+  },
+  {
     version: "v1.3.113",
     subtitle: "Chat sidebar on desktop",
     date: "July 18, 2026",
