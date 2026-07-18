@@ -22,6 +22,7 @@ export const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
   '/admin': 'admin',
   '/worship': 'worshipPortal',
   '/media': 'links',
+  '/docs': 'docs',
   '/prayer-requests': 'prayerRequests',
   '/feedback': 'feedback',
   '/features': 'features',
@@ -38,6 +39,7 @@ export function getNavLabelForPath(
   if (key) return t[key] as string;
 
   if (pathname.startsWith('/chat/')) return t.chat as string;
+  if (pathname.startsWith('/docs/')) return t.docs as string;
   if (pathname.startsWith('/admin/')) return t.admin as string;
   if (pathname.startsWith('/members/')) return t.members as string;
 

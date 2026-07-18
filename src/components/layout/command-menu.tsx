@@ -33,6 +33,7 @@ import {
   ArrowRight,
   Sparkles,
   Check,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
@@ -208,6 +209,14 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
         keywords: ["progress", "ranking", "stats"],
       },
       { id: "chat", href: "/chat", label: t.chat, icon: MessageCircle, keywords: ["messages", "messenger"], requiresAuth: true },
+      {
+        id: "docs",
+        href: "/docs",
+        label: t.docs,
+        icon: FileText,
+        keywords: ["documents", "docs", "notes", "shared"],
+        requiresAuth: true,
+      },
       {
         id: "events",
         href: "/events",

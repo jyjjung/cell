@@ -16,6 +16,7 @@ const NAV: DocNavItem[] = [
   { id: "dashboard", label: "Dashboard" },
   { id: "bible", label: "Bible reading plan" },
   { id: "chat", label: "Chat" },
+  { id: "docs", label: "Docs" },
   { id: "rosters", label: "Rosters and events" },
   { id: "notifications", label: "Notifications" },
   { id: "halos", label: "Halos" },
@@ -95,6 +96,20 @@ export default function FeaturesPage() {
               <>Share events, setlists, rosters, and QT posts from the attachment menu.</>,
               <>Photos and links also have gallery pages per circle.</>,
               <>Deleted messages show as deleted instead of disappearing.</>,
+            ]}
+          />
+        </DocSection>
+
+        <DocSection id="docs" title="Docs">
+          <p>
+            Keep personal notes or share documents with specific members. Shared docs support rich text
+            editing and comments. Only people you share with can open them.
+          </p>
+          <DocList
+            items={[
+              <>Create a personal document only you can see.</>,
+              <>Share with chosen members so they can edit together.</>,
+              <>Leave comments on shared documents.</>,
             ]}
           />
         </DocSection>

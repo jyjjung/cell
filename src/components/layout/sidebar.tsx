@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Users, BookOpen, Shield, User,
   LogIn, UserPlus, LogOut, MessageCircle, ChevronDown,
-  CalendarCheck, Music, Library, Lightbulb, HeartHandshake
+  CalendarCheck, Music, Library, Lightbulb, HeartHandshake, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatUserDisplayName } from '@/lib/formatting';
@@ -88,6 +88,7 @@ export default function AppSidebar() {
     { href: '/events', label: t.schedule, icon: CalendarCheck },
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal, icon: Music }] : []),
     { href: '/media', label: t.links, icon: Library },
+    { href: '/docs', label: t.docs, icon: FileText, requiresAuth: true },
     { href: '/members', label: t.members, icon: Users },
     { href: '/prayer-requests', label: t.prayerRequests, icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
     { href: '/feedback', label: t.feedback, icon: Lightbulb },
