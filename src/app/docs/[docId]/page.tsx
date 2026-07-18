@@ -32,6 +32,7 @@ import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
+import { isBlankDocHtml } from '@/lib/docs-utils';
 import { translations } from '@/lib/translations';
 import type { DocVisibility } from '@/types';
 
@@ -62,8 +63,15 @@ export default function DocDetailPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
+  /** Editor stays unmounted until local draft matches the loaded note. */
+  const [hydrated, setHydrated] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedId = useRef<string | null>(null);
+  const userEditedRef = useRef(false);
+  const titleRef = useRef(title);
+  const contentRef = useRef(content);
+  titleRef.current = title;
+  contentRef.current = content;
 
   useEffect(() => {
     if (!loadingAuth && !currentUser) {
@@ -72,26 +80,44 @@ export default function DocDetailPage() {
   }, [loadingAuth, currentUser, router]);
 
   useEffect(() => {
+    hydratedId.current = null;
+    setHydrated(false);
+    setDirty(false);
+    userEditedRef.current = false;
+    setTitle('');
+    setContent('<p></p>');
+  }, [docId]);
+
+  useEffect(() => {
     if (!note) return;
     if (hydratedId.current !== note.id) {
       setTitle(note.title);
       setContent(note.content || '<p></p>');
       setDirty(false);
+      userEditedRef.current = false;
       hydratedId.current = note.id;
+      setHydrated(true);
       return;
     }
-    if (!dirty) {
+    // Soft-sync from poll only when the user has not edited locally.
+    if (!dirty && !userEditedRef.current) {
       setTitle(note.title);
       setContent(note.content || '<p></p>');
     }
   }, [note, dirty]);
 
   useEffect(() => {
-    if (!dirty || !note || !currentUser) return;
+    if (!dirty || !hydrated || !note || !currentUser || !userEditedRef.current) return;
+    // Never autosave empty local content over non-empty server content.
+    if (isBlankDocHtml(content) && !isBlankDocHtml(note.content)) return;
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const nextTitle = titleRef.current;
+      const nextContent = contentRef.current;
+      if (isBlankDocHtml(nextContent) && !isBlankDocHtml(note.content)) return;
       try {
-        await saveContent(title, content);
+        await saveContent(nextTitle, nextContent);
         setDirty(false);
       } catch (e: unknown) {
         toast({
@@ -104,7 +130,7 @@ export default function DocDetailPage() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [title, content, dirty, note, currentUser, saveContent, toast, t.error]);
+  }, [title, content, dirty, hydrated, note, currentUser, saveContent, toast, t.error]);
 
   const metaLine = useMemo(() => {
     if (!note) return '';
@@ -123,14 +149,14 @@ export default function DocDetailPage() {
   }, [note, currentUser?.uid, usersById, t.you, t.communityMember, t.updated, locale]);
 
   const handleManualSave = async () => {
-    if (!note || !currentUser) return;
+    if (!note || !currentUser || !hydrated) return;
     if (saveTimer.current) {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
     setManualSaving(true);
     try {
-      await saveContent(title, content);
+      await saveContent(title, content, { allowEmpty: isBlankDocHtml(content) });
       setDirty(false);
       toast({ title: t.saved });
     } catch (e: unknown) {
@@ -168,11 +194,16 @@ export default function DocDetailPage() {
   }
 
   const markDirtyTitle = (value: string) => {
+    if (!hydrated) return;
+    userEditedRef.current = true;
     setTitle(value);
     setDirty(true);
   };
 
   const markDirtyContent = (html: string) => {
+    if (!hydrated) return;
+    if (html === contentRef.current) return;
+    userEditedRef.current = true;
     setContent(html);
     setDirty(true);
   };
@@ -279,15 +310,24 @@ export default function DocDetailPage() {
         className="text-xl font-semibold border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 h-auto"
         placeholder={t.documentTitlePlaceholder}
         maxLength={200}
+        disabled={!hydrated}
       />
       <p className="text-xs text-muted-foreground mb-3 mt-1">{metaLine}</p>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <DocEditor
-          content={content}
-          onChange={markDirtyContent}
-          placeholder={t.documentEditorPlaceholder}
-        />
+        {hydrated ? (
+          <DocEditor
+            key={note.id}
+            content={content}
+            onChange={markDirtyContent}
+            placeholder={t.documentEditorPlaceholder}
+            acceptUpdates={hydrated}
+          />
+        ) : (
+          <div className="rounded-xl border border-border/50 bg-card min-h-[320px] flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary/30" />
+          </div>
+        )}
         {note.visibility === 'shared' ? (
           <DocComments docId={note.id} ownerId={note.ownerId} />
         ) : (

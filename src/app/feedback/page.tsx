@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.118",
+    subtitle: "Docs open correctly",
+    date: "July 18, 2026",
+    changes: [
+      "Opening a document no longer briefly shows blank content that could overwrite your writing via autosave",
+    ],
+  },
+  {
     version: "v1.3.117",
     subtitle: "Docs permissions fix",
     date: "July 18, 2026",

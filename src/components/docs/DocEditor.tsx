@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -25,6 +25,8 @@ type DocEditorProps = {
   onChange: (html: string) => void;
   placeholder?: string;
   editable?: boolean;
+  /** When false, TipTap updates are ignored (prevents wiping docs before hydrate). */
+  acceptUpdates?: boolean;
   className?: string;
 };
 
@@ -65,8 +67,14 @@ export function DocEditor({
   onChange,
   placeholder = 'Start writing…',
   editable = true,
+  acceptUpdates = true,
   className,
 }: DocEditorProps) {
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const acceptUpdatesRef = useRef(acceptUpdates);
+  acceptUpdatesRef.current = acceptUpdates;
+
   const editor = useEditor({
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
@@ -83,7 +91,8 @@ export function DocEditor({
     ],
     content,
     onUpdate: ({ editor: ed }) => {
-      onChange(ed.getHTML());
+      if (!acceptUpdatesRef.current) return;
+      onChangeRef.current(ed.getHTML());
     },
     editorProps: {
       attributes: {

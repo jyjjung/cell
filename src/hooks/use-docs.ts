@@ -198,7 +198,11 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
   }, [docId, userId, refresh]);
 
   const saveContent = useCallback(
-    async (title: string, content: string) => {
+    async (
+      title: string,
+      content: string,
+      options?: { allowEmpty?: boolean },
+    ) => {
       if (!docId || !userId || !note) return;
       const trimmed = title.trim().slice(0, DOC_TITLE_MAX);
       if (trimmed === note.title && content === note.content) return;
@@ -206,7 +210,11 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
       try {
         await apiJson(`/api/docs/${docId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ title: trimmed, content }),
+          body: JSON.stringify({
+            title: trimmed,
+            content,
+            ...(options?.allowEmpty ? { allowEmpty: true } : {}),
+          }),
         });
         await refresh();
       } finally {
