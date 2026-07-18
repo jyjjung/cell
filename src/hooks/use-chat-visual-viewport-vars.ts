@@ -40,6 +40,8 @@ function setKeyboardOpen(open: boolean) {
 export function preLiftChatComposer() {
   if (typeof window === 'undefined') return;
   if (!document.documentElement.dataset.chatDetail) return;
+  // Desktop never uses the mobile chat shell lock.
+  if (window.matchMedia('(min-width: 768px)').matches) return;
 
   const layoutH = window.innerHeight;
   const kb =

@@ -21,6 +21,7 @@ import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,10 +46,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
   const isIndividualChat = !!chatSubpath && !isChatListSubpage;
+  const isMobile = useIsMobile();
+  // iOS keyboard shell lock is mobile-only — desktop must keep the normal sidebar layout.
+  const lockChatShell = isIndividualChat && isMobile;
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isIndividualChat) {
+    if (lockChatShell) {
       root.dataset.chatDetail = 'true';
     } else {
       delete root.dataset.chatDetail;
@@ -56,9 +60,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => {
       delete root.dataset.chatDetail;
     };
-  }, [isIndividualChat]);
+  }, [lockChatShell]);
 
-  useChatVisualViewportVars(isIndividualChat);
+  useChatVisualViewportVars(lockChatShell);
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
@@ -133,14 +137,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
       <SidebarInset
-        data-chat-shell={isIndividualChat ? '' : undefined}
+        data-chat-shell={lockChatShell ? '' : undefined}
         className={cn(
           'min-w-0 bg-background overflow-hidden flex flex-col',
           isIndividualChat ? '!min-h-0 h-full' : 'h-svh min-h-svh',
         )}
       >
         <div className="flex-1 flex flex-col min-h-0">
-          <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={isIndividualChat} />
+          <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
           <div
