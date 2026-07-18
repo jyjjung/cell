@@ -137,6 +137,7 @@ export function chatMessagesShallowEqual(
     ma.songId === mb.songId &&
     ma.songTitle === mb.songTitle &&
     ma.sheetKey === mb.sheetKey &&
+    ma.docId === mb.docId &&
     ma.isDeleted === mb.isDeleted &&
     ma.deletedBy === mb.deletedBy &&
     ma.deletedContentType === mb.deletedContentType &&

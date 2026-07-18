@@ -56,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.116",
+    subtitle: "Docs in chat",
+    date: "July 18, 2026",
+    changes: [
+      "Share documents from the chat + button — new or existing docs go to everyone in the chat",
+      "Long messages prompt you to send as a shared document instead",
+      "Documents show authors and dates; optional titles; autosave plus a Save button",
+      "Open a document from chat to edit, review, and comment together",
+    ],
+  },
+  {
     version: "v1.3.115",
     subtitle: "Shared documents",
     date: "July 18, 2026",

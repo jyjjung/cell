@@ -102,14 +102,15 @@ export default function FeaturesPage() {
 
         <DocSection id="docs" title="Docs">
           <p>
-            Keep personal notes or share documents with specific members. Shared docs support rich text
-            editing and comments. Only people you share with can open them.
+            Keep personal notes or share documents with specific members — or with everyone in a
+            chat. Shared docs support rich text editing, comments, autosave, and a manual Save
+            button. Long chat messages can be turned into a document automatically.
           </p>
           <DocList
             items={[
-              <>Create a personal document only you can see.</>,
-              <>Share with chosen members so they can edit together.</>,
-              <>Leave comments on shared documents.</>,
+              <>Create or attach a document from the chat + button.</>,
+              <>Docs you create or that are shared with you appear on the Docs page.</>,
+              <>Titles are optional; each document shows authors and dates.</>,
             ]}
           />
         </DocSection>

@@ -223,9 +223,10 @@ export function useMessages(chatId: string | null) {
     songTitle?: string,
     sheetKey?: string,
     poll?: ChatPoll,
+    docId?: string,
   ) => {
     if (!currentUser || !chatId) return;
-    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId && !poll) return;
+    if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId && !poll && !docId) return;
 
     const trimmedText = text?.trim();
     const messageData: any = {
@@ -245,6 +246,7 @@ export function useMessages(chatId: string | null) {
     if (songId) messageData.songId = songId;
     if (songTitle) messageData.songTitle = songTitle;
     if (sheetKey) messageData.sheetKey = sheetKey;
+    if (docId) messageData.docId = docId;
     if (poll) {
       messageData.poll = {
         question: poll.question.trim(),
@@ -272,6 +274,7 @@ export function useMessages(chatId: string | null) {
       songTitle,
       sheetKey,
       poll,
+      docId,
     });
 
     try {
@@ -499,6 +502,7 @@ export function useMessages(chatId: string | null) {
         songId: deleteField(),
         songTitle: deleteField(),
         sheetKey: deleteField(),
+        docId: deleteField(),
         threadParentId: deleteField(),
         reactions: deleteField(),
         poll: deleteField(),

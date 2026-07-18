@@ -52,7 +52,6 @@ export function CreateDocDialog({ open, onClose, onCreate }: CreateDocDialogProp
   );
 
   const canSubmit =
-    title.trim().length > 0 &&
     (visibility === 'private' || sharedWith.length > 0) &&
     !saving;
 
@@ -83,7 +82,7 @@ export function CreateDocDialog({ open, onClose, onCreate }: CreateDocDialogProp
 
         <div className="stack-gap-sm mt-3">
           <div className="stack-gap-sm">
-            <Label htmlFor="doc-title">{t.titleLabel}</Label>
+            <Label htmlFor="doc-title">{t.titleLabel} <span className="text-muted-foreground font-normal">({t.optional})</span></Label>
             <Input
               id="doc-title"
               value={title}

@@ -24,6 +24,7 @@ import RosterSummary from './summaries/RosterSummary';
 import QTSummary from './summaries/QTSummary';
 import CleaningSummary from './summaries/CleaningSummary';
 import SongSummary from './summaries/SongSummary';
+import DocSummary from './summaries/DocSummary';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 
 
@@ -83,7 +84,7 @@ const MessageBubble = React.memo(function MessageBubble({
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const isSpecialContent = !!(message.imageUrl || message.eventId || message.setlistId || message.rosterId || message.songId);
+  const isSpecialContent = !!(message.imageUrl || message.eventId || message.setlistId || message.rosterId || message.songId || message.docId);
   const isStandaloneImage = !!(
     message.imageUrl &&
     !message.songId &&
@@ -94,6 +95,7 @@ const MessageBubble = React.memo(function MessageBubble({
     !message.qtDate &&
     !message.cleaningDate &&
     !message.poll &&
+    !message.docId &&
     !parentMessage &&
     !message.threadParentId
   );
@@ -142,6 +144,7 @@ const MessageBubble = React.memo(function MessageBubble({
     !message.setlistId &&
     !message.rosterId &&
     !message.songId &&
+    !message.docId &&
     !message.qtDate &&
     !message.cleaningDate;
 
@@ -409,6 +412,10 @@ const MessageBubble = React.memo(function MessageBubble({
                             isSender={isSender} 
                             onOpenViewer={(songId) => onOpenWorshipViewer?.(undefined, songId)}
                           />
+                        )}
+
+                        {message.docId && (
+                          <DocSummary docId={message.docId} isSender={isSender} />
                         )}
                   </div>
 

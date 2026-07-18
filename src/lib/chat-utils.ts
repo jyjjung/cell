@@ -23,6 +23,7 @@ type MessagePreviewFields = Pick<
   | 'songTitle'
   | 'sheetKey'
   | 'poll'
+  | 'docId'
   | 'isDeleted'
   | 'deletedContentType'
   | 'systemEvent'
@@ -44,6 +45,7 @@ export function formatChatMessagePreview(message: MessagePreviewFields): string 
   if (message.cleaningDate) preview = '🧹 Cleaning Roster';
   if (message.songId) preview = `🎵 Chord Sheet: ${message.songTitle || 'Song'} (${message.sheetKey || ''})`;
   if (message.poll) preview = `📊 Poll: ${message.poll.question}`;
+  if (message.docId) preview = '📄 Document';
   return preview;
 }
 

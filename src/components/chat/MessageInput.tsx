@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useMessages } from '@/hooks/useMessages';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { ArrowUp, Loader2, X, Plus } from 'lucide-react';
@@ -12,9 +13,32 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { storage } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { ChatMessage, ChatPoll } from '@/types';
+import type { ChatMessage, ChatPoll, DocNote } from '@/types';
 import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
 import { isIOSLike, preLiftChatComposer } from '@/hooks/use-chat-visual-viewport-vars';
+import {
+  LONG_MESSAGE_DOC_THRESHOLD,
+  plainTextToDocHtml,
+  displayDocTitle,
+} from '@/lib/docs-utils';
+import {
+  createSharedDocForChat,
+  shareDocWithChatMembers,
+  useDocs,
+} from '@/hooks/use-docs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { DOCS_COLLECTION } from '@/lib/docs-utils';
 
 type MessageActions = {
   sendMessage: (
@@ -30,38 +54,41 @@ type MessageActions = {
     songTitle?: string,
     sheetKey?: string,
     poll?: ChatPoll,
+    docId?: string,
   ) => void | Promise<void>;
   sendImageMessage: (imageUrl: string, replyToId?: string) => void;
 };
 
 type StagedAttachment = {
-  type: 'setlist' | 'roster' | 'song';
+  type: 'setlist' | 'roster' | 'song' | 'doc';
   id: string;
   label: string;
   metadata?: Record<string, unknown>;
 };
 
-export default function MessageInput({ 
-  chatId, 
-  disabled = false, 
-  replyToMessage, 
+export default function MessageInput({
+  chatId,
+  disabled = false,
+  replyToMessage,
   onCancelReply,
   parentMessageId,
   messageActions,
   attachmentsOnlyPhoto = false,
-}: { 
-  chatId: string; 
-  disabled?: boolean; 
-  replyToMessage?: ChatMessage; 
+  chatMembers = [],
+}: {
+  chatId: string;
+  disabled?: boolean;
+  replyToMessage?: ChatMessage;
   onCancelReply?: () => void;
   parentMessageId?: string;
   messageActions?: MessageActions;
   attachmentsOnlyPhoto?: boolean;
+  chatMembers?: string[];
 }) {
   const useOwnHooks = !messageActions;
   const mainChat = useMessages(!parentMessageId && useOwnHooks ? chatId : null);
   const threadChat = useThreadMessages(chatId, parentMessageId && useOwnHooks ? parentMessageId : null);
-  
+
   const sendMessage = messageActions?.sendMessage
     ?? (parentMessageId ? threadChat.sendMessage : mainChat.sendMessage);
   const sendImageMessage = messageActions?.sendImageMessage
@@ -69,15 +96,19 @@ export default function MessageInput({
 
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+  const { docs } = useDocs(currentUser?.uid);
   const [text, setText] = useState('');
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [stagedAttachment, setStagedAttachment] = useState<StagedAttachment | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSendingDoc, setIsSendingDoc] = useState(false);
   const [isTouchKeyboardMode, setIsTouchKeyboardMode] = useState(false);
+  const [longMessageOpen, setLongMessageOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const MAX_TEXTAREA_HEIGHT = 100;
-  
+
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const adjustTextareaHeight = useCallback(() => {
@@ -102,14 +133,19 @@ export default function MessageInput({
     return () => media.removeEventListener('change', updateTouchMode);
   }, []);
 
-  const handleSend = () => {
-    const trimmedText = text.trim();
-    if (!trimmedText && !stagedAttachment && !isUploading) return;
-    if (showAttachmentMenu) return;
+  const clearComposer = () => {
+    setText('');
+    setStagedAttachment(null);
+    setShowAttachmentMenu(false);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    if (onCancelReply) onCancelReply();
+  };
 
+  const sendPlainOrStaged = () => {
+    const trimmedText = text.trim();
     if (stagedAttachment) {
       const args: [
-        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?,
+        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?, string?,
       ] = [trimmedText || undefined, undefined, replyToMessage?.id];
 
       if (stagedAttachment.type === 'setlist') args[4] = stagedAttachment.id;
@@ -120,20 +156,74 @@ export default function MessageInput({
         if (meta?.songTitle) args[9] = meta.songTitle as string;
         if (meta?.sheetKey) args[10] = meta.sheetKey as string;
         if (meta?.imageUrl) args[1] = meta.imageUrl as string;
+      } else if (stagedAttachment.type === 'doc') {
+        args[12] = stagedAttachment.id;
       }
 
-      sendMessage(...args);
-      setStagedAttachment(null);
+      void sendMessage(...args);
     } else {
-      sendMessage(trimmedText, undefined, replyToMessage?.id);
+      void sendMessage(trimmedText, undefined, replyToMessage?.id);
+    }
+    clearComposer();
+  };
+
+  const sendTextAsDocument = async (rawText: string) => {
+    if (!currentUser) return;
+    setIsSendingDoc(true);
+    try {
+      const docId = await createSharedDocForChat({
+        ownerId: currentUser.uid,
+        chatMemberIds: chatMembers,
+        title: '',
+        content: plainTextToDocHtml(rawText),
+      });
+      await sendMessage(
+        undefined,
+        undefined,
+        replyToMessage?.id,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        docId,
+      );
+      clearComposer();
+      toast({ title: t.documentSharedInChat });
+      router.push(`/docs/${docId}`);
+    } catch (e: unknown) {
+      toast({
+        title: t.error,
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingDoc(false);
+      setLongMessageOpen(false);
+    }
+  };
+
+  const handleSend = () => {
+    const trimmedText = text.trim();
+    if (!trimmedText && !stagedAttachment && !isUploading) return;
+    if (showAttachmentMenu) return;
+    if (isSendingDoc) return;
+
+    if (
+      !stagedAttachment &&
+      trimmedText.length >= LONG_MESSAGE_DOC_THRESHOLD
+    ) {
+      setLongMessageOpen(true);
+      return;
     }
 
-    setText('');
-    setShowAttachmentMenu(false);
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    if (onCancelReply) onCancelReply();
+    sendPlainOrStaged();
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       e.key === 'Enter' &&
@@ -150,7 +240,6 @@ export default function MessageInput({
     }
   };
 
-  /** iOS: pre-shrink shell before focus so Safari does not scroll the page. */
   const handleComposerMouseDown = (e: React.MouseEvent<HTMLTextAreaElement>) => {
     if (!isIOSLike()) return;
     if (disabled || isUploading) return;
@@ -221,15 +310,112 @@ export default function MessageInput({
     }
   };
 
+  const attachExistingDoc = async (docId: string, label: string) => {
+    if (!currentUser) return;
+    setIsSendingDoc(true);
+    try {
+      const note =
+        docs.find((d) => d.id === docId) ||
+        (await (async () => {
+          const snap = await getDoc(doc(db, DOCS_COLLECTION, docId));
+          if (!snap.exists()) return null;
+          return { id: snap.id, ...snap.data() } as DocNote;
+        })());
+
+      if (note) {
+        await shareDocWithChatMembers({
+          docId,
+          note,
+          actorId: currentUser.uid,
+          chatMemberIds: chatMembers,
+        });
+      }
+
+      setStagedAttachment({
+        type: 'doc',
+        id: docId,
+        label: displayDocTitle(label || note?.title, t.untitledDocument),
+      });
+    } catch (e: unknown) {
+      toast({
+        title: t.error,
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingDoc(false);
+    }
+  };
+
+  const createAndAttachNewDoc = async () => {
+    if (!currentUser) return;
+    setIsSendingDoc(true);
+    try {
+      const docId = await createSharedDocForChat({
+        ownerId: currentUser.uid,
+        chatMemberIds: chatMembers,
+        title: '',
+        content: '<p></p>',
+      });
+      await sendMessage(
+        undefined,
+        undefined,
+        replyToMessage?.id,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        docId,
+      );
+      clearComposer();
+      toast({ title: t.documentSharedInChat });
+      router.push(`/docs/${docId}`);
+    } catch (e: unknown) {
+      toast({
+        title: t.error,
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingDoc(false);
+    }
+  };
+
   const handleAttachmentPick = (pick: AttachmentPick) => {
     if (pick.type === 'photo') {
       handleImageClick();
       return;
     }
     if (pick.type === 'poll') {
-      sendMessage(undefined, undefined, replyToMessage?.id, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, pick.poll);
+      void sendMessage(
+        undefined,
+        undefined,
+        replyToMessage?.id,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        pick.poll,
+      );
       setShowAttachmentMenu(false);
       if (onCancelReply) onCancelReply();
+      return;
+    }
+    if (pick.type === 'new-doc') {
+      void createAndAttachNewDoc();
+      return;
+    }
+    if (pick.type === 'doc') {
+      void attachExistingDoc(pick.id, pick.label);
       return;
     }
     if (pick.type === 'setlist' || pick.type === 'roster') {
@@ -261,64 +447,104 @@ export default function MessageInput({
       )}
       <div className="relative flex items-end gap-1.5">
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden" />
-        <button 
-            type="button" 
-            onClick={() => setShowAttachmentMenu((v) => !v)} 
-            disabled={disabled || isUploading}
-            className={cn(
-                "relative mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95", 
-                showAttachmentMenu ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-                isUploading && "animate-pulse"
-            )}
+        <button
+          type="button"
+          onClick={() => setShowAttachmentMenu((v) => !v)}
+          disabled={disabled || isUploading || isSendingDoc}
+          className={cn(
+            'relative mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors active:scale-95',
+            showAttachmentMenu ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+            (isUploading || isSendingDoc) && 'animate-pulse',
+          )}
         >
-            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={2.5} />}
+          {isUploading || isSendingDoc ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          )}
         </button>
 
         <div className="flex flex-1 items-end overflow-hidden rounded-2xl border border-border/50 bg-muted/30 px-3 py-1.5 min-h-[40px] transition-colors focus-within:border-ring/60 focus-within:bg-muted/40">
           {stagedAttachment && (
             <div className="mb-0.5 mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border/50 bg-background/60 px-2.5 py-1">
-               <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
-               <button onClick={() => setStagedAttachment(null)} className="text-muted-foreground transition-colors hover:text-foreground">
-                 <X className="w-3.5 h-3.5" />
-               </button>
+              <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
+              <button onClick={() => setStagedAttachment(null)} className="text-muted-foreground transition-colors hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
           <textarea
-              ref={textareaRef}
-              rows={1}
-              placeholder={stagedAttachment ? "" : (isUploading ? "Uploading..." : "Message")}
-              value={text}
-              disabled={disabled || isUploading}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onMouseDown={handleComposerMouseDown}
-              className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
+            ref={textareaRef}
+            rows={1}
+            placeholder={stagedAttachment ? '' : isUploading ? 'Uploading...' : 'Message'}
+            value={text}
+            disabled={disabled || isUploading || isSendingDoc}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onMouseDown={handleComposerMouseDown}
+            className="flex-1 resize-none border-none bg-transparent py-1.5 text-base text-foreground outline-none placeholder:text-muted-foreground leading-snug max-h-[100px]"
           />
-          <button 
-              type="button" 
-              onClick={handleSend} 
-              disabled={disabled || (!text.trim() && !stagedAttachment) || isUploading}
-              className={cn(
-                "mb-0.5 ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all",
-                (!disabled && (text.trim() || stagedAttachment))
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground opacity-40",
-              )}
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={disabled || (!text.trim() && !stagedAttachment) || isUploading || isSendingDoc}
+            className={cn(
+              'mb-0.5 ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all',
+              !disabled && (text.trim() || stagedAttachment)
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground opacity-40',
+            )}
           >
-              <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} />
           </button>
         </div>
 
         <AnimatePresence>
           {showAttachmentMenu && (
-              <ChatAttachmentMenu
-                onPick={handleAttachmentPick}
-                onClose={() => setShowAttachmentMenu(false)}
-                photoOnly={attachmentsOnlyPhoto}
-              />
+            <ChatAttachmentMenu
+              onPick={handleAttachmentPick}
+              onClose={() => setShowAttachmentMenu(false)}
+              photoOnly={attachmentsOnlyPhoto}
+            />
           )}
         </AnimatePresence>
       </div>
+
+      <AlertDialog open={longMessageOpen} onOpenChange={setLongMessageOpen}>
+        <AlertDialogContent className="rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.longMessageAsDocTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.longMessageAsDocDesc}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="rounded-lg" disabled={isSendingDoc}>
+              {t.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-lg"
+              disabled={isSendingDoc}
+              onClick={(e) => {
+                e.preventDefault();
+                setLongMessageOpen(false);
+                sendPlainOrStaged();
+              }}
+            >
+              {t.sendAsMessage}
+            </AlertDialogAction>
+            <AlertDialogAction
+              className="rounded-lg"
+              disabled={isSendingDoc}
+              onClick={(e) => {
+                e.preventDefault();
+                void sendTextAsDocument(text);
+              }}
+            >
+              {isSendingDoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {t.sendAsDocument}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -233,16 +233,18 @@ service cloud.firestore {
 
       function validDocShape() {
         return request.resource.data.keys().hasAll([
-                 'title', 'content', 'visibility', 'ownerId',
+                 'title', 'content', 'visibility', 'ownerId', 'authorIds',
                  'sharedWith', 'memberIds', 'createdAt', 'updatedAt', 'updatedBy'
                ])
                && request.resource.data.title is string
-               && request.resource.data.title.size() > 0
                && request.resource.data.title.size() <= 200
                && request.resource.data.content is string
                && request.resource.data.visibility in ['private', 'shared']
                && request.resource.data.sharedWith is list
                && request.resource.data.memberIds is list
+               && request.resource.data.authorIds is list
+               && request.resource.data.authorIds.size() >= 1
+               && request.auth.uid in request.resource.data.authorIds
                && request.resource.data.ownerId is string
                && request.resource.data.updatedBy is string
                && request.auth.uid in request.resource.data.memberIds;
@@ -270,13 +272,14 @@ service cloud.firestore {
                     && request.resource.data.createdAt == resource.data.createdAt
                     && request.resource.data.updatedBy == request.auth.uid
                     && request.resource.data.title is string
-                    && request.resource.data.title.size() > 0
                     && request.resource.data.title.size() <= 200
                     && request.resource.data.content is string
+                    && request.resource.data.authorIds is list
+                    && request.auth.uid in request.resource.data.authorIds
                     && (
                       (isDocOwner()
                         && request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['title', 'content', 'visibility', 'sharedWith', 'memberIds', 'updatedAt', 'updatedBy'])
+                            .hasOnly(['title', 'content', 'visibility', 'sharedWith', 'memberIds', 'authorIds', 'updatedAt', 'updatedBy'])
                         && request.resource.data.visibility in ['private', 'shared']
                         && request.resource.data.sharedWith is list
                         && request.resource.data.memberIds is list
@@ -295,7 +298,7 @@ service cloud.firestore {
                         && request.resource.data.sharedWith == resource.data.sharedWith
                         && request.resource.data.memberIds == resource.data.memberIds
                         && request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['title', 'content', 'updatedAt', 'updatedBy']))
+                            .hasOnly(['title', 'content', 'authorIds', 'updatedAt', 'updatedBy']))
                     );
 
       allow delete: if isDocOwner();
@@ -378,7 +381,7 @@ service cloud.firestore {
       function hasMessagePayload() {
         return request.resource.data.keys().hasAny([
           'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId',
-          'qtDate', 'cleaningDate', 'songId', 'threadParentId', 'systemEvent', 'poll',
+          'qtDate', 'cleaningDate', 'songId', 'threadParentId', 'systemEvent', 'poll', 'docId',
         ]);
       }
 
@@ -481,7 +484,7 @@ service cloud.firestore {
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
                            // Soft delete
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
                         );
 
         match /thread/{threadMessageId} {
@@ -498,7 +501,7 @@ service cloud.firestore {
                           && (
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
-                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt']))
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
                           );
         }
       }
