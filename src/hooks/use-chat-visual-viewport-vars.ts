@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 const KEYBOARD_OPEN_PX = 80;
 const STABILITY_MS = 80;
 const FIRST_OPEN_KB_RATIO = 0.42;
+const PRELIFT_RESTORE_MS = 900;
 
 type ChatKeyboardState = {
   savedKb: number;
@@ -15,6 +16,8 @@ const state: ChatKeyboardState = {
   savedKb: 0,
   isOpen: false,
 };
+
+let preliftRestoreTimer = 0;
 
 function isIOSLike() {
   if (typeof navigator === 'undefined') return false;
@@ -33,6 +36,12 @@ function setKeyboardOpen(open: boolean) {
   document.documentElement.dataset.chatKeyboard = open ? 'open' : 'closed';
 }
 
+function restoreFullShellHeight() {
+  const vv = window.visualViewport;
+  const height = Math.round(vv?.height ?? window.innerHeight);
+  setShellHeight(height);
+}
+
 /**
  * Pre-shrink the chat shell before Safari's focus visibility check.
  * Call from textarea onMouseDown (fires before focus on iOS).
@@ -40,7 +49,6 @@ function setKeyboardOpen(open: boolean) {
 export function preLiftChatComposer() {
   if (typeof window === 'undefined') return;
   if (!document.documentElement.dataset.chatDetail) return;
-  // Desktop never uses the mobile chat shell lock.
   if (window.matchMedia('(min-width: 768px)').matches) return;
 
   const layoutH = window.innerHeight;
@@ -51,6 +59,20 @@ export function preLiftChatComposer() {
 
   setShellHeight(layoutH - kb);
   setKeyboardOpen(true);
+
+  // If the keyboard never actually opens, restore full height so the input
+  // does not stay stuck under the tabs with empty space below.
+  window.clearTimeout(preliftRestoreTimer);
+  preliftRestoreTimer = window.setTimeout(() => {
+    const vv = window.visualViewport;
+    const kbNow = vv
+      ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+      : 0;
+    if (kbNow < KEYBOARD_OPEN_PX) {
+      restoreFullShellHeight();
+      setKeyboardOpen(false);
+    }
+  }, PRELIFT_RESTORE_MS);
 }
 
 /**
@@ -63,8 +85,10 @@ export function useChatVisualViewportVars(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) {
+      window.clearTimeout(preliftRestoreTimer);
       document.documentElement.style.removeProperty('--chat-vv-height');
       delete document.documentElement.dataset.chatKeyboard;
+      state.isOpen = false;
       return;
     }
 
@@ -92,7 +116,6 @@ export function useChatVisualViewportVars(enabled: boolean) {
           return;
         }
 
-        // Refresh layout baseline when keyboard is clearly closed.
         if (vv.offsetTop < 1 && Math.abs(vv.height - window.innerHeight) < 2) {
           layoutH = window.innerHeight;
         }
@@ -104,11 +127,13 @@ export function useChatVisualViewportVars(enabled: boolean) {
 
         if (kb < KEYBOARD_OPEN_PX) {
           window.clearTimeout(stableTimer);
+          window.clearTimeout(preliftRestoreTimer);
           pendingKb = 0;
           setKeyboardOpen(false);
           return;
         }
 
+        window.clearTimeout(preliftRestoreTimer);
         setKeyboardOpen(true);
         pendingKb = kb;
         window.clearTimeout(stableTimer);
@@ -122,6 +147,7 @@ export function useChatVisualViewportVars(enabled: boolean) {
 
     const onOrientation = () => {
       window.clearTimeout(stableTimer);
+      window.clearTimeout(preliftRestoreTimer);
       state.savedKb = 0;
       setKeyboardOpen(false);
       window.setTimeout(() => {
@@ -131,7 +157,6 @@ export function useChatVisualViewportVars(enabled: boolean) {
       }, 250);
     };
 
-    // Safety net: only while keyboard open, snap accidental document scroll.
     const onWindowScroll = () => {
       if (state.isOpen && window.scrollY !== 0) {
         window.scrollTo(0, 0);
@@ -150,6 +175,7 @@ export function useChatVisualViewportVars(enabled: boolean) {
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(stableTimer);
+      window.clearTimeout(preliftRestoreTimer);
       vv?.removeEventListener('resize', sync);
       vv?.removeEventListener('scroll', sync);
       window.removeEventListener('resize', sync);

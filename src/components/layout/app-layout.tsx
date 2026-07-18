@@ -140,22 +140,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         data-chat-shell={lockChatShell ? '' : undefined}
         className={cn(
           'min-w-0 bg-background overflow-hidden flex flex-col',
-          isIndividualChat ? '!min-h-0 h-full' : 'h-svh min-h-svh',
+          // Always give chat routes a real viewport height. Mobile CSS may override
+          // with --chat-vv-height; desktop keeps the sidebar layout.
+          isIndividualChat ? 'h-svh min-h-0' : 'h-svh min-h-svh',
         )}
       >
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-1 flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
           <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
           <div
             className={cn(
-              'flex-1 relative min-h-0',
-              !isIndividualChat ? 'overflow-y-auto overflow-x-hidden p-0' : 'overflow-hidden'
+              'flex flex-1 flex-col min-h-0',
+              !isIndividualChat ? 'overflow-y-auto overflow-x-hidden p-0 relative' : 'overflow-hidden'
             )}
           >
-            <main role="main" className={cn('flex flex-col', isIndividualChat ? 'h-full' : 'min-h-full')}>
+            <main
+              role="main"
+              className={cn(
+                'flex flex-col min-h-0',
+                isIndividualChat ? 'flex-1' : 'min-h-full',
+              )}
+            >
               <div
-                className={cn('flex-1 flex flex-col min-h-0', isIndividualChat ? 'w-full h-full p-0' : '')}
+                className={cn(
+                  'flex flex-col min-h-0',
+                  isIndividualChat ? 'flex-1 w-full' : 'flex-1',
+                )}
               >
                 {isIndividualChat ? (
                   children

@@ -268,7 +268,7 @@ function ChatWindowBody({
   }
 
   return (
-    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
+    <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden">
       {showOfflineRibbon && (
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
           <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
@@ -472,7 +472,7 @@ function ChatWindowBody({
       )}
 
       {chatTab === 'messages' && (
-      <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
+      <div className="mt-auto px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 shrink-0 bg-background border-t border-border/40">
         <MessageInput
           chatId={chatId}
           disabled={!online}
