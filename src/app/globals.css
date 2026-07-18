@@ -811,38 +811,40 @@
   overscroll-behavior: contain;
 }
 
-/* Chat detail: lock document + pin shell to the visible viewport */
-html[data-chat-detail='true'],
-html[data-chat-detail='true'] body {
-  overflow: hidden !important;
-  overscroll-behavior: none;
-  height: 100%;
-  width: 100%;
-}
+/* Chat detail (mobile only): lock document + pin shell for iOS keyboard.
+   Desktop must keep normal SidebarInset flow so the sidebar stays visible. */
+@media (max-width: 767px) {
+  html[data-chat-detail='true'],
+  html[data-chat-detail='true'] body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    height: 100%;
+    width: 100%;
+  }
 
-html[data-chat-detail='true'] body {
-  position: fixed;
-  inset: 0;
-}
+  html[data-chat-detail='true'] body {
+    position: fixed;
+    inset: 0;
+  }
 
-html[data-chat-detail='true'] [data-chat-shell] {
-  position: fixed !important;
-  left: 0 !important;
-  right: 0 !important;
-  top: 0 !important;
-  width: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  height: var(--chat-vv-height, 100dvh) !important;
-  overflow: hidden !important;
-  z-index: 30;
-  background: hsl(var(--background));
-}
+  html[data-chat-detail='true'] [data-chat-shell] {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: var(--chat-vv-height, 100dvh) !important;
+    overflow: hidden !important;
+    z-index: 30;
+    background: hsl(var(--background));
+  }
 
-/* While the keyboard is open, keep non-scrolling chrome from rubber-banding the layout */
-html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] header,
-html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] [data-chat-tabs] {
-  touch-action: none;
+  html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] header,
+  html[data-chat-detail='true'][data-chat-keyboard='open'] [data-chat-shell] [data-chat-tabs] {
+    touch-action: none;
+  }
 }
 
 .custom-scrollbar::-webkit-scrollbar {

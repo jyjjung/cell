@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.113",
+    subtitle: "Chat sidebar on desktop",
+    date: "July 18, 2026",
+    changes: [
+      "The sidebar stays visible on large screens in chats — the mobile keyboard layout no longer covers it",
+    ],
+  },
+  {
     version: "v1.3.112",
     subtitle: "Chat keyboard final fix",
     date: "July 17, 2026",
