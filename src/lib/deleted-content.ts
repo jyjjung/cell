@@ -13,6 +13,7 @@ const PREVIEW_LABELS: Record<DeletedMessageContentType, string> = {
   poll: 'This poll has been deleted',
   qt: 'This QT entry has been deleted',
   cleaning: 'This cleaning roster has been deleted',
+  doc: 'This document has been deleted',
 };
 
 export function getDeletedMessageContentType(
@@ -27,9 +28,11 @@ export function getDeletedMessageContentType(
     | 'qtDate'
     | 'cleaningDate'
     | 'imageUrl'
+    | 'docId'
   >,
 ): DeletedMessageContentType {
   if (message.poll) return 'poll';
+  if (message.docId) return 'doc';
   if (message.songId || message.sheetKey) return 'song';
   if (message.setlistId) return 'setlist';
   if (message.rosterId) return 'roster';
@@ -65,6 +68,8 @@ export function getDeletedContentLabel(
       return t.deletedContentQt;
     case 'cleaning':
       return t.deletedContentCleaning;
+    case 'doc':
+      return t.deletedContentDoc;
     default:
       return t.deletedContentMessage;
   }

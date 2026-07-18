@@ -12,15 +12,20 @@ import {
   Search,
   Plus,
   Trash2,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useWorshipSetlists } from "@/hooks/useWorshipSetlists";
 import { useWorshipRosters } from "@/hooks/useWorshipRosters";
 import { useWorshipSongs } from "@/hooks/useWorshipSongs";
+import { useDocs } from "@/hooks/use-docs";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { displayDocTitle, stripHtmlPreview } from "@/lib/docs-utils";
+import { translations } from "@/lib/translations";
 import type { ChatPoll } from "@/types";
 
 export type AttachmentPick =
@@ -28,12 +33,15 @@ export type AttachmentPick =
   | { type: "setlist"; id: string; label: string }
   | { type: "roster"; id: string; label: string }
   | { type: "song"; id: string; label: string; metadata: Record<string, unknown> }
-  | { type: "poll"; poll: ChatPoll };
+  | { type: "poll"; poll: ChatPoll }
+  | { type: "doc"; id: string; label: string }
+  | { type: "new-doc" };
 
-type MenuView = "grid" | "setlist" | "roster" | "song" | "song-keys" | "poll";
+type MenuView = "grid" | "setlist" | "roster" | "song" | "song-keys" | "poll" | "doc";
 
 const GRID_ITEMS = [
   { id: "photo" as const, label: "Photo", icon: ImageIcon },
+  { id: "document" as const, label: "Document", icon: FileText },
   { id: "setlist" as const, label: "Setlist", icon: ListMusic },
   { id: "roster" as const, label: "Roster", icon: ClipboardList },
   { id: "song" as const, label: "Song", icon: Music2 },
@@ -58,13 +66,18 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
   const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
   const [pollResultsLocked, setPollResultsLocked] = useState(false);
 
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || "en"];
+
   const needsSetlists = view === "setlist";
   const needsRosters = view === "roster";
   const needsSongs = view === "song" || view === "song-keys";
+  const needsDocs = view === "doc";
 
   const { setlists } = useWorshipSetlists(needsSetlists);
   const { rosters } = useWorshipRosters(needsRosters);
   const { songs, loading: songsLoading } = useWorshipSongs(needsSongs);
+  const { docs, loading: docsLoading } = useDocs(needsDocs ? currentUser?.uid : undefined);
 
   const selectedSong = useMemo(
     () => (selectedSongId ? songs.find((s) => s.id === selectedSongId) ?? null : null),
@@ -107,8 +120,21 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
           date: null as string | null,
         }));
     }
+    if (view === "doc") {
+      return docs
+        .filter((d) => {
+          const title = displayDocTitle(d.title, t.untitledDocument).toLowerCase();
+          return !q || title.includes(q) || stripHtmlPreview(d.content, 80).toLowerCase().includes(q);
+        })
+        .map((d) => ({
+          id: d.id,
+          title: displayDocTitle(d.title, t.untitledDocument),
+          meta: stripHtmlPreview(d.content, 60) || (d.visibility === "shared" ? t.sharedDocument : t.personalDocument),
+          date: null as string | null,
+        }));
+    }
     return [];
-  }, [view, search, setlists, rosters, songs]);
+  }, [view, search, setlists, rosters, songs, docs, t.untitledDocument, t.sharedDocument, t.personalDocument]);
 
   const handleGridPick = (id: (typeof GRID_ITEMS)[number]["id"]) => {
     if (id === "photo") {
@@ -118,6 +144,10 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
     }
     if (id === "poll") {
       setView("poll");
+      return;
+    }
+    if (id === "document") {
+      setView("doc");
       return;
     }
     setView(id);
@@ -149,7 +179,9 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
         ? "New poll"
         : view === "song-keys"
           ? "Pick key"
-          : GRID_ITEMS.find((g) => g.id === view)?.label ?? "Choose";
+          : view === "doc"
+            ? t.docs
+            : GRID_ITEMS.find((g) => g.id === view)?.label ?? "Choose";
 
   const visibleItems = GRID_ITEMS.filter((item) => !photoOnly || item.id === "photo");
 
@@ -321,8 +353,26 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
         </div>
       )}
 
-      {(view === "setlist" || view === "roster" || view === "song") && (
+      {(view === "setlist" || view === "roster" || view === "song" || view === "doc") && (
         <div className="flex flex-col">
+          {view === "doc" && (
+            <button
+              type="button"
+              onClick={() => {
+                onPick({ type: "new-doc" });
+                onClose();
+              }}
+              className="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Plus className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-medium">{t.newDocument}</p>
+                <p className="truncate text-sm text-muted-foreground">{t.newDocumentInChatHint}</p>
+              </div>
+            </button>
+          )}
           <div className="border-b border-border px-3 py-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -335,7 +385,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
             </div>
           </div>
           <div className="max-h-[240px] overflow-y-auto">
-            {view === "song" && songsLoading ? (
+            {(view === "song" && songsLoading) || (view === "doc" && docsLoading) ? (
               <p className="py-8 text-center text-base text-muted-foreground">Loading…</p>
             ) : listItems.length === 0 ? (
               <p className="py-8 text-center text-base text-muted-foreground">No results</p>
@@ -348,6 +398,11 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                     if (view === "song") {
                       setSelectedSongId(item.id);
                       setView("song-keys");
+                      return;
+                    }
+                    if (view === "doc") {
+                      onPick({ type: "doc", id: item.id, label: item.title });
+                      onClose();
                       return;
                     }
                     onPick({
@@ -368,7 +423,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                     </div>
                   ) : (
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                      <Music2 className="h-4 w-4" />
+                      {view === "doc" ? <FileText className="h-4 w-4" /> : <Music2 className="h-4 w-4" />}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">

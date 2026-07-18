@@ -363,7 +363,8 @@ export type DeletedMessageContentType =
   | 'song'
   | 'poll'
   | 'qt'
-  | 'cleaning';
+  | 'cleaning'
+  | 'doc';
 
 export interface ChatMessage {
   id: string;
@@ -386,6 +387,8 @@ export interface ChatMessage {
   songId?: string;
   songTitle?: string;
   sheetKey?: string;
+  /** Shared document attached to this chat message. */
+  docId?: string;
   isDeleted?: boolean;
   deletedBy?: string;
   deletedContentType?: DeletedMessageContentType;
@@ -540,10 +543,13 @@ export type DocVisibility = 'private' | 'shared';
 
 export interface DocNote {
   id: string;
+  /** Optional display title; empty string means untitled. */
   title: string;
   content: string;
   visibility: DocVisibility;
   ownerId: string;
+  /** Everyone who has authored or edited the document (includes owner). */
+  authorIds: string[];
   sharedWith: string[];
   memberIds: string[];
   createdAt: Timestamp;

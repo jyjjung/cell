@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   Share2,
   Trash2,
   Check,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,10 @@ import { DocComments } from '@/components/docs/DocComments';
 import { ShareDocDialog } from '@/components/docs/ShareDocDialog';
 import { useAuth } from '@/contexts/auth-context';
 import { useDoc } from '@/hooks/use-docs';
+import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
+import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
+import { toDateSafe } from '@/lib/firestore-timestamp';
 import { translations } from '@/lib/translations';
 import type { DocVisibility } from '@/types';
 
@@ -39,6 +43,8 @@ export default function DocDetailPage() {
   const router = useRouter();
   const { currentUser, loadingAuth } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
+  const locale = getAppLocale(currentUser?.preferredLanguage);
+  const usersById = useUsersById();
   const { toast } = useToast();
   const {
     note,
@@ -55,6 +61,7 @@ export default function DocDetailPage() {
   const [content, setContent] = useState('<p></p>');
   const [shareOpen, setShareOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedId = useRef<string | null>(null);
 
@@ -98,6 +105,44 @@ export default function DocDetailPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [title, content, dirty, note, currentUser, saveContent, toast, t.error]);
+
+  const metaLine = useMemo(() => {
+    if (!note) return '';
+    const authorIds = note.authorIds?.length ? note.authorIds : [note.ownerId];
+    const authors = authorIds
+      .slice(0, 4)
+      .map((uid) =>
+        uid === currentUser?.uid
+          ? t.you
+          : formatUserDisplayName(usersById.get(uid), t.communityMember),
+      )
+      .join(', ');
+    const created = formatAppDateTime(toDateSafe(note.createdAt), locale);
+    const updated = formatAppDateTime(toDateSafe(note.updatedAt), locale);
+    return `${authors} · ${created} · ${t.updated} ${updated}`;
+  }, [note, currentUser?.uid, usersById, t.you, t.communityMember, t.updated, locale]);
+
+  const handleManualSave = async () => {
+    if (!note || !currentUser) return;
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setManualSaving(true);
+    try {
+      await saveContent(title, content);
+      setDirty(false);
+      toast({ title: t.saved });
+    } catch (e: unknown) {
+      toast({
+        title: t.error,
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setManualSaving(false);
+    }
+  };
 
   if (loadingAuth || !currentUser || loading) {
     return (
@@ -145,7 +190,7 @@ export default function DocDetailPage() {
         </Button>
         <div className="flex-1" />
         <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5 mr-1">
-          {saving ? (
+          {saving || manualSaving ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {t.saving}
@@ -159,6 +204,20 @@ export default function DocDetailPage() {
             </>
           )}
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-lg"
+          onClick={() => void handleManualSave()}
+          disabled={manualSaving || saving || !dirty}
+        >
+          {manualSaving ? (
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-1.5" />
+          )}
+          {t.save}
+        </Button>
         {isOwner ? (
           <>
             <Button
@@ -217,10 +276,11 @@ export default function DocDetailPage() {
       <Input
         value={title}
         onChange={(e) => markDirtyTitle(e.target.value.slice(0, 200))}
-        className="text-xl font-semibold border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 mb-3 h-auto"
+        className="text-xl font-semibold border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 h-auto"
         placeholder={t.documentTitlePlaceholder}
         maxLength={200}
       />
+      <p className="text-xs text-muted-foreground mb-3 mt-1">{metaLine}</p>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <DocEditor

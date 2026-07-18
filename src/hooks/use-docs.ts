@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -20,17 +21,25 @@ import {
   DOCS_COLLECTION,
   DOC_COMMENT_MAX,
   DOC_TITLE_MAX,
+  mergeAuthorIds,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
 import type { DocComment, DocNote, DocVisibility } from '@/types';
 
 function docFromSnap(id: string, data: Record<string, unknown>): DocNote {
+  const ownerId = data.ownerId as string;
+  const authorIds = Array.isArray(data.authorIds)
+    ? (data.authorIds as string[])
+    : ownerId
+      ? [ownerId]
+      : [];
   return {
     id,
-    title: (data.title as string) || '',
+    title: typeof data.title === 'string' ? data.title : '',
     content: (data.content as string) || '',
     visibility: (data.visibility as DocVisibility) || 'private',
-    ownerId: data.ownerId as string,
+    ownerId,
+    authorIds,
     sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
     memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
     createdAt: data.createdAt as DocNote['createdAt'],
@@ -86,14 +95,13 @@ export function useDocs(userId: string | undefined) {
 
   const createDoc = useCallback(
     async (input: {
-      title: string;
+      title?: string;
       visibility: DocVisibility;
       sharedWith: string[];
       content?: string;
     }) => {
       if (!userId) throw new Error('Not signed in');
-      const title = input.title.trim().slice(0, DOC_TITLE_MAX);
-      if (!title) throw new Error('Title required');
+      const title = (input.title || '').trim().slice(0, DOC_TITLE_MAX);
 
       const sharedWith = normalizeSharedWith(input.visibility, input.sharedWith, userId);
       if (input.visibility === 'shared' && sharedWith.length === 0) {
@@ -106,6 +114,7 @@ export function useDocs(userId: string | undefined) {
         content: input.content ?? '<p></p>',
         visibility: input.visibility,
         ownerId: userId,
+        authorIds: [userId],
         sharedWith,
         memberIds,
         createdAt: serverTimestamp(),
@@ -121,7 +130,30 @@ export function useDocs(userId: string | undefined) {
     await deleteDoc(doc(db, DOCS_COLLECTION, docId));
   }, []);
 
-  return { docs, loading, error, createDoc, deleteDocById };
+  /** Expand sharing to more people. Only the owner can change ACL (Firestore rules). */
+  const shareWithUsers = useCallback(
+    async (docId: string, note: DocNote, additionalUids: string[]) => {
+      if (!userId) throw new Error('Not signed in');
+      if (note.ownerId !== userId) return;
+      const merged = Array.from(new Set([...note.sharedWith, ...additionalUids]));
+      const sharedWith = normalizeSharedWith('shared', merged, userId);
+      if (sharedWith.length === 0) {
+        throw new Error('Pick at least one person to share with');
+      }
+      const memberIds = buildMemberIds(userId, sharedWith);
+      await updateDoc(doc(db, DOCS_COLLECTION, docId), {
+        visibility: 'shared',
+        sharedWith,
+        memberIds,
+        authorIds: mergeAuthorIds(note.authorIds, userId),
+        updatedAt: serverTimestamp(),
+        updatedBy: userId,
+      });
+    },
+    [userId],
+  );
+
+  return { docs, loading, error, createDoc, deleteDocById, shareWithUsers };
 }
 
 export function useDoc(docId: string | undefined, userId: string | undefined) {
@@ -170,7 +202,6 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
     async (title: string, content: string) => {
       if (!docId || !userId || !note) return;
       const trimmed = title.trim().slice(0, DOC_TITLE_MAX);
-      if (!trimmed) throw new Error('Title required');
       if (trimmed === note.title && content === note.content) return;
 
       setSaving(true);
@@ -178,6 +209,7 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
         await updateDoc(doc(db, DOCS_COLLECTION, docId), {
           title: trimmed,
           content,
+          authorIds: mergeAuthorIds(note.authorIds, userId),
           updatedAt: serverTimestamp(),
           updatedBy: userId,
         });
@@ -205,6 +237,7 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
           visibility,
           sharedWith,
           memberIds,
+          authorIds: mergeAuthorIds(note.authorIds, userId),
           updatedAt: serverTimestamp(),
           updatedBy: userId,
         });
@@ -292,4 +325,69 @@ export function useDocComments(docId: string | undefined, enabled: boolean) {
   );
 
   return { comments, loading, addComment, deleteComment };
+}
+
+/** Standalone helpers for chat flows (avoid hook coupling). */
+export async function createSharedDocForChat(input: {
+  ownerId: string;
+  chatMemberIds: string[];
+  title?: string;
+  content?: string;
+}): Promise<string> {
+  const sharedWith = normalizeSharedWith(
+    'shared',
+    input.chatMemberIds,
+    input.ownerId,
+  );
+  if (sharedWith.length === 0) {
+    // Solo chat with self only — keep private
+    const ref = await addDoc(collection(db, DOCS_COLLECTION), {
+      title: (input.title || '').trim().slice(0, DOC_TITLE_MAX),
+      content: input.content ?? '<p></p>',
+      visibility: 'private',
+      ownerId: input.ownerId,
+      authorIds: [input.ownerId],
+      sharedWith: [],
+      memberIds: [input.ownerId],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      updatedBy: input.ownerId,
+    });
+    return ref.id;
+  }
+  const memberIds = buildMemberIds(input.ownerId, sharedWith);
+  const ref = await addDoc(collection(db, DOCS_COLLECTION), {
+    title: (input.title || '').trim().slice(0, DOC_TITLE_MAX),
+    content: input.content ?? '<p></p>',
+    visibility: 'shared',
+    ownerId: input.ownerId,
+    authorIds: [input.ownerId],
+    sharedWith,
+    memberIds,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy: input.ownerId,
+  });
+  return ref.id;
+}
+
+export async function shareDocWithChatMembers(input: {
+  docId: string;
+  note: DocNote;
+  actorId: string;
+  chatMemberIds: string[];
+}): Promise<void> {
+  if (input.note.ownerId !== input.actorId) return;
+  const merged = Array.from(new Set([...input.note.sharedWith, ...input.chatMemberIds]));
+  const sharedWith = normalizeSharedWith('shared', merged, input.actorId);
+  if (sharedWith.length === 0) return;
+  const memberIds = buildMemberIds(input.actorId, sharedWith);
+  await updateDoc(doc(db, DOCS_COLLECTION, input.docId), {
+    visibility: 'shared',
+    sharedWith,
+    memberIds,
+    authorIds: arrayUnion(input.actorId),
+    updatedAt: serverTimestamp(),
+    updatedBy: input.actorId,
+  });
 }

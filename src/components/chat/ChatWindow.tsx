@@ -479,6 +479,7 @@ function ChatWindowBody({
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
           messageActions={{ sendMessage, sendImageMessage }}
+          chatMembers={chat?.members ?? []}
         />
       </div>
       )}

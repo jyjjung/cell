@@ -32,7 +32,7 @@ import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
-import { stripHtmlPreview } from '@/lib/docs-utils';
+import { stripHtmlPreview, displayDocTitle } from '@/lib/docs-utils';
 import { translations } from '@/lib/translations';
 import type { DocNote } from '@/types';
 
@@ -53,6 +53,7 @@ function DocListItem({
   currentUserId,
   onOpen,
   onDelete,
+  title,
   ownerLabel,
   updatedLabel,
   personalLabel,
@@ -66,6 +67,7 @@ function DocListItem({
   currentUserId: string;
   onOpen: () => void;
   onDelete: () => Promise<void>;
+  title: string;
   ownerLabel: string;
   updatedLabel: string;
   personalLabel: string;
@@ -101,7 +103,7 @@ function DocListItem({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-semibold text-foreground truncate">{note.title}</h3>
+                <h3 className="text-sm font-semibold text-foreground truncate">{title}</h3>
                 <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                   {isShared ? sharedLabel : personalLabel}
                 </span>
@@ -225,17 +227,24 @@ export default function DocsPage() {
       ) : (
         <div className="stack-gap-sm">
           {filtered.map((note, index) => {
-            const owner = usersById.get(note.ownerId);
-            const ownerLabel =
-              note.ownerId === currentUser.uid
-                ? t.you
-                : formatUserDisplayName(owner, t.communityMember);
+            const authorIds = note.authorIds?.length ? note.authorIds : [note.ownerId];
+            const authorLabel = authorIds
+              .slice(0, 3)
+              .map((uid) =>
+                uid === currentUser.uid
+                  ? t.you
+                  : formatUserDisplayName(usersById.get(uid), t.communityMember),
+              )
+              .join(', ');
+            const createdLabel = formatAppDateTime(toDateSafe(note.createdAt), locale);
+            const updatedLabel = formatAppDateTime(toDateSafe(note.updatedAt), locale);
             return (
               <DocListItem
                 key={note.id}
                 note={note}
                 index={index}
                 currentUserId={currentUser.uid}
+                title={displayDocTitle(note.title, t.untitledDocument)}
                 onOpen={() => router.push(`/docs/${note.id}`)}
                 onDelete={async () => {
                   try {
@@ -249,8 +258,8 @@ export default function DocsPage() {
                     });
                   }
                 }}
-                ownerLabel={ownerLabel}
-                updatedLabel={formatAppDateTime(toDateSafe(note.updatedAt), locale)}
+                ownerLabel={authorLabel}
+                updatedLabel={`${createdLabel} · ${t.updated} ${updatedLabel}`}
                 personalLabel={t.personalDocument}
                 sharedLabel={t.sharedDocument}
                 deleteLabel={t.deleteDocument}
