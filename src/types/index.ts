@@ -534,3 +534,28 @@ export interface CommunityLink {
   createdAt: Timestamp;
 }
 
+// ── Shared documents ──────────────────────────────────────────────────────────
+
+export type DocVisibility = 'private' | 'shared';
+
+export interface DocNote {
+  id: string;
+  title: string;
+  content: string;
+  visibility: DocVisibility;
+  ownerId: string;
+  sharedWith: string[];
+  memberIds: string[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
+export interface DocComment {
+  id: string;
+  text: string;
+  authorId: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+}
+

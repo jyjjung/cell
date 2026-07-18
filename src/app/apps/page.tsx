@@ -8,7 +8,7 @@ import {
   ArrowLeft, Home, BookCheck, ListChecks, Brain,
   Trophy, MessageCircle, CalendarDays, ClipboardList,
   SprayCan, Music, Library, Users, Lightbulb, User,
-  Shield, Cpu
+  Shield, Cpu, FileText
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { NavPageHeader, FeedCard } from '@/components/ui/page-layout';
@@ -48,6 +48,7 @@ function getAppSections(t: T): { titleKey: string; apps: AppItem[] }[] {
       titleKey: 'appsSectionCommunication',
       apps: [
         { nameKey: 'chat', descKey: 'appChatDesc', href: '/chat', icon: MessageCircle, requiresAuth: true },
+        { nameKey: 'docs', descKey: 'appDocsDesc', href: '/docs', icon: FileText, requiresAuth: true },
         { nameKey: 'members', descKey: 'appMembersDesc', href: '/members', icon: Users },
       ],
     },

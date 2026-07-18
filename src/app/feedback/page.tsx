@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.115",
+    subtitle: "Shared documents",
+    date: "July 18, 2026",
+    changes: [
+      "New Docs page for personal notes and shared documents with rich text editing",
+      "Share a document with specific members — they can edit and leave comments",
+      "Find Docs in the sidebar, All apps, and quick search",
+    ],
+  },
+  {
     version: "v1.3.114",
     subtitle: "Chat input stays at the bottom",
     date: "July 18, 2026",
