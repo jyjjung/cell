@@ -433,6 +433,8 @@ export const translations = {
     saving: "Saving…",
     unsavedChanges: "Unsaved",
     error: "Something went wrong",
+    docsPermissionDenied:
+      "Firestore blocked this document action. An admin needs to deploy the latest Firestore rules (firebase deploy --only firestore:rules,firestore:indexes).",
     progress: "Progress",
     daysLeftLabel: "days left",
     messagesLabel: "Messages",
@@ -1171,6 +1173,8 @@ export const translations = {
     saving: "저장 중…",
     unsavedChanges: "미저장",
     error: "문제가 발생했습니다",
+    docsPermissionDenied:
+      "Firestore가 문서 작업을 차단했습니다. 관리자가 최신 Firestore 규칙을 배포해야 합니다 (firebase deploy --only firestore:rules,firestore:indexes).",
     progress: "진도",
     daysLeftLabel: "일 남음",
     messagesLabel: "메시지",

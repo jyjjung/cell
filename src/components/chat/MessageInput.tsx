@@ -21,6 +21,7 @@ import {
   plainTextToDocHtml,
   displayDocTitle,
 } from '@/lib/docs-utils';
+import { getDocActionErrorMessage } from '@/lib/docs-errors';
 import {
   createSharedDocForChat,
   shareDocWithChatMembers,

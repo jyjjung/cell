@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { stripHtmlPreview, displayDocTitle } from '@/lib/docs-utils';
+import { getDocActionErrorMessage } from '@/lib/docs-errors';
 import { translations } from '@/lib/translations';
 import type { DocNote } from '@/types';
 
@@ -253,7 +254,7 @@ export default function DocsPage() {
                   } catch (e: unknown) {
                     toast({
                       title: t.error,
-                      description: e instanceof Error ? e.message : undefined,
+                      description: getDocActionErrorMessage(e, t),
                       variant: 'destructive',
                     });
                   }
@@ -282,7 +283,7 @@ export default function DocsPage() {
           } catch (e: unknown) {
             toast({
               title: t.error,
-              description: e instanceof Error ? e.message : undefined,
+              description: getDocActionErrorMessage(e, t),
               variant: 'destructive',
             });
             throw e;

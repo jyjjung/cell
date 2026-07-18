@@ -217,21 +217,19 @@ service cloud.firestore {
 
     // Shared documents (personal notes + collaboratively shared docs)
     match /docs/{docId} {
-      function docData() {
-        return resource.data;
-      }
-
       function isDocMember() {
         return request.auth != null
-          && request.auth.uid in docData().memberIds;
+          && resource.data.keys().hasAny(['memberIds'])
+          && resource.data.memberIds is list
+          && resource.data.memberIds.hasAny([request.auth.uid]);
       }
 
       function isDocOwner() {
         return request.auth != null
-          && request.auth.uid == docData().ownerId;
+          && resource.data.ownerId == request.auth.uid;
       }
 
-      function validDocShape() {
+      function validDocPayload() {
         return request.resource.data.keys().hasAll([
                  'title', 'content', 'visibility', 'ownerId', 'authorIds',
                  'sharedWith', 'memberIds', 'createdAt', 'updatedAt', 'updatedBy'
@@ -244,27 +242,26 @@ service cloud.firestore {
                && request.resource.data.memberIds is list
                && request.resource.data.authorIds is list
                && request.resource.data.authorIds.size() >= 1
-               && request.auth.uid in request.resource.data.authorIds
-               && request.resource.data.ownerId is string
-               && request.resource.data.updatedBy is string
-               && request.auth.uid in request.resource.data.memberIds;
+               && request.resource.data.authorIds.hasAny([request.auth.uid])
+               && request.resource.data.memberIds.hasAny([request.auth.uid])
+               && request.resource.data.ownerId == request.auth.uid
+               && request.resource.data.updatedBy == request.auth.uid;
       }
 
       allow get, list: if isDocMember();
 
+      // Authenticated owners may create private or shared docs they belong to.
+      // Note: do not require createdAt == request.time; serverTimestamp() is enough.
       allow create: if request.auth != null
-                    && validDocShape()
-                    && request.resource.data.ownerId == request.auth.uid
-                    && request.resource.data.updatedBy == request.auth.uid
-                    && request.resource.data.createdAt == request.time
-                    && request.resource.data.updatedAt == request.time
+                    && validDocPayload()
                     && (
                       (request.resource.data.visibility == 'private'
                         && request.resource.data.sharedWith.size() == 0
                         && request.resource.data.memberIds.size() == 1)
                       ||
                       (request.resource.data.visibility == 'shared'
-                        && request.resource.data.sharedWith.size() > 0)
+                        && request.resource.data.sharedWith.size() > 0
+                        && request.resource.data.memberIds.size() > 1)
                     );
 
       allow update: if isDocMember()
@@ -275,7 +272,7 @@ service cloud.firestore {
                     && request.resource.data.title.size() <= 200
                     && request.resource.data.content is string
                     && request.resource.data.authorIds is list
-                    && request.auth.uid in request.resource.data.authorIds
+                    && request.resource.data.authorIds.hasAny([request.auth.uid])
                     && (
                       (isDocOwner()
                         && request.resource.data.diff(resource.data).affectedKeys()
@@ -283,14 +280,15 @@ service cloud.firestore {
                         && request.resource.data.visibility in ['private', 'shared']
                         && request.resource.data.sharedWith is list
                         && request.resource.data.memberIds is list
-                        && request.auth.uid in request.resource.data.memberIds
+                        && request.resource.data.memberIds.hasAny([request.auth.uid])
                         && (
                           (request.resource.data.visibility == 'private'
                             && request.resource.data.sharedWith.size() == 0
                             && request.resource.data.memberIds.size() == 1)
                           ||
                           (request.resource.data.visibility == 'shared'
-                            && request.resource.data.sharedWith.size() > 0)
+                            && request.resource.data.sharedWith.size() > 0
+                            && request.resource.data.memberIds.size() > 1)
                         ))
                       ||
                       (!isDocOwner()
@@ -311,8 +309,7 @@ service cloud.firestore {
                       && request.resource.data.keys().hasAll(['text', 'authorId', 'createdAt'])
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
-                      && request.resource.data.text.size() <= 2000
-                      && request.resource.data.createdAt == request.time;
+                      && request.resource.data.text.size() <= 2000;
 
         allow update: if isDocMember()
                       && resource.data.authorId == request.auth.uid

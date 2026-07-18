@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FileText, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
@@ -12,6 +11,7 @@ import { translations } from '@/lib/translations';
 import { displayDocTitle, stripHtmlPreview } from '@/lib/docs-utils';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { DocNote } from '@/types';
 
 interface DocSummaryProps {
@@ -24,7 +24,54 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const locale = getAppLocale(currentUser?.preferredLanguage);
   const usersById = useUsersById();
-  const { data: note, loading } = useFirestoreDoc<DocNote>('docs', docId);
+  const [note, setNote] = useState<DocNote | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [missing, setMissing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setMissing(false);
+    void (async () => {
+      try {
+        const headers = await getClientAuthHeaders();
+        const res = await fetch(`/api/docs/${docId}`, { headers });
+        if (!res.ok) {
+          if (!cancelled) {
+            setNote(null);
+            setMissing(true);
+          }
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setNote({
+            id: data.id,
+            title: data.title || '',
+            content: data.content || '',
+            visibility: data.visibility || 'private',
+            ownerId: data.ownerId,
+            authorIds: Array.isArray(data.authorIds) ? data.authorIds : [data.ownerId],
+            sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
+            memberIds: Array.isArray(data.memberIds) ? data.memberIds : [],
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy || '',
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setNote(null);
+          setMissing(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [docId]);
 
   const authorLabel = useMemo(() => {
     if (!note) return '';
@@ -43,7 +90,7 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
     );
   }
 
-  if (!note) {
+  if (missing || !note) {
     return <DeletedContentNotice label={t.deletedContentDoc} />;
   }
 
