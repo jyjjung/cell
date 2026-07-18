@@ -199,7 +199,7 @@ export default function MessageInput({
     } catch (e: unknown) {
       toast({
         title: t.error,
-        description: e instanceof Error ? e.message : undefined,
+        description: getDocActionErrorMessage(e, t),
         variant: 'destructive',
       });
     } finally {
@@ -340,7 +340,7 @@ export default function MessageInput({
     } catch (e: unknown) {
       toast({
         title: t.error,
-        description: e instanceof Error ? e.message : undefined,
+        description: getDocActionErrorMessage(e, t),
         variant: 'destructive',
       });
     } finally {
@@ -379,7 +379,7 @@ export default function MessageInput({
     } catch (e: unknown) {
       toast({
         title: t.error,
-        description: e instanceof Error ? e.message : undefined,
+        description: getDocActionErrorMessage(e, t),
         variant: 'destructive',
       });
     } finally {
