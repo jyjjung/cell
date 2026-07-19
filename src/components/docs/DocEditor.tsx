@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Extension } from '@tiptap/core';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import {
   Bold,
   Italic,
@@ -19,6 +22,38 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  findInsertedTextRanges,
+  htmlToEditorPlainText,
+  mapTextRangesToDocPositions,
+} from '@/lib/docs-utils';
+
+const REMOTE_HIGHLIGHT_MS = 3800;
+const remoteHighlightKey = new PluginKey<DecorationSet>('docRemoteHighlight');
+
+const RemoteHighlight = Extension.create({
+  name: 'docRemoteHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin<DecorationSet>({
+        key: remoteHighlightKey,
+        state: {
+          init: () => DecorationSet.empty,
+          apply(tr, old) {
+            const meta = tr.getMeta(remoteHighlightKey) as DecorationSet | undefined;
+            if (meta !== undefined) return meta;
+            return tr.docChanged ? old.map(tr.mapping, tr.doc) : old;
+          },
+        },
+        props: {
+          decorations(state) {
+            return remoteHighlightKey.getState(state);
+          },
+        },
+      }),
+    ];
+  },
+});
 
 type DocEditorProps = {
   content: string;
@@ -27,6 +62,8 @@ type DocEditorProps = {
   editable?: boolean;
   /** When false, TipTap updates are ignored (prevents wiping docs before hydrate). */
   acceptUpdates?: boolean;
+  /** When true, next external content update highlights inserted text like Apple Notes. */
+  highlightRemoteChanges?: boolean;
   className?: string;
 };
 
@@ -68,12 +105,17 @@ export function DocEditor({
   placeholder = 'Start writing…',
   editable = true,
   acceptUpdates = true,
+  highlightRemoteChanges = false,
   className,
 }: DocEditorProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const acceptUpdatesRef = useRef(acceptUpdates);
   acceptUpdatesRef.current = acceptUpdates;
+  const highlightRemoteRef = useRef(highlightRemoteChanges);
+  highlightRemoteRef.current = highlightRemoteChanges;
+  const prevContentRef = useRef(content);
+  const clearHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -88,6 +130,7 @@ export function DocEditor({
         },
       }),
       Placeholder.configure({ placeholder }),
+      RemoteHighlight,
     ],
     content,
     onUpdate: ({ editor: ed }) => {
@@ -109,10 +152,57 @@ export function DocEditor({
 
   useEffect(() => {
     if (!editor) return;
+    const previousHtml = prevContentRef.current;
     const current = editor.getHTML();
+    if (content === current && content === previousHtml) return;
+
+    const prevPlain = htmlToEditorPlainText(previousHtml);
+    const nextPlain = htmlToEditorPlainText(content);
+    const shouldHighlight =
+      highlightRemoteRef.current && previousHtml !== content && prevPlain !== nextPlain;
+
     if (content !== current) {
       editor.commands.setContent(content, { emitUpdate: false });
     }
+    prevContentRef.current = content;
+
+    if (clearHighlightTimer.current) {
+      clearTimeout(clearHighlightTimer.current);
+      clearHighlightTimer.current = null;
+    }
+
+    if (!shouldHighlight) {
+      editor.view.dispatch(editor.state.tr.setMeta(remoteHighlightKey, DecorationSet.empty));
+      return;
+    }
+
+    const textRanges = findInsertedTextRanges(prevPlain, nextPlain);
+    const docRanges = mapTextRangesToDocPositions(editor.state.doc, textRanges);
+    const decorations =
+      docRanges.length > 0
+        ? DecorationSet.create(
+            editor.state.doc,
+            docRanges.map((range) =>
+              Decoration.inline(range.from, range.to, {
+                class: 'doc-remote-change',
+              }),
+            ),
+          )
+        : DecorationSet.empty;
+
+    editor.view.dispatch(editor.state.tr.setMeta(remoteHighlightKey, decorations));
+    clearHighlightTimer.current = setTimeout(() => {
+      if (editor.isDestroyed) return;
+      editor.view.dispatch(editor.state.tr.setMeta(remoteHighlightKey, DecorationSet.empty));
+      clearHighlightTimer.current = null;
+    }, REMOTE_HIGHLIGHT_MS);
+
+    return () => {
+      if (clearHighlightTimer.current) {
+        clearTimeout(clearHighlightTimer.current);
+        clearHighlightTimer.current = null;
+      }
+    };
   }, [content, editor]);
 
   if (!editor) {
