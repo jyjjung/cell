@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.130",
+    subtitle: "Docs delete permissions",
+    date: "July 19, 2026",
+    changes: [
+      "Deployed Firestore rules so document owners can delete their docs",
+      "If the server delete fails, the app retries with a direct owner delete",
+    ],
+  },
+  {
     version: "v1.3.129",
     subtitle: "Deleted documents stay gone",
     date: "July 19, 2026",
