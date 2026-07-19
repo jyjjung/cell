@@ -235,7 +235,7 @@ export default function PrayerRequestsPage() {
   } = usePrayerRequests();
   const { toast } = useToast();
   const [text, setText] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const locale = getAppLocale(currentUser?.preferredLanguage);
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -259,7 +259,7 @@ export default function PrayerRequestsPage() {
     try {
       await submitRequest(text, isAnonymous);
       setText('');
-      setIsAnonymous(true);
+      setIsAnonymous(false);
       toast({
         title: 'Prayer request sent',
         description: 'Shepherd Claire will receive your request privately.',

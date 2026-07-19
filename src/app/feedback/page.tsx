@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.133",
+    subtitle: "Chat history restored",
+    date: "July 19, 2026",
+    changes: [
+      "Scrolling up now restores older chat history and the setlist widgets contained in it",
+      "New setlists and rosters shared from chat now appear as the correct widget type",
+      "Prayer requests are named by default, and the automatic prayer request pop-up has been removed",
+    ],
+  },
+  {
     version: "v1.3.132",
     subtitle: "Reading progress protection",
     date: "July 19, 2026",

@@ -405,8 +405,7 @@ export const translations = {
     privacyPolicy: "Privacy",
     prayerRequests: "Prayer requests",
     prayerRequestsDesc: "Only Shepherd Claire will be able to see your prayer requests",
-    prayerRequestPromptMessage: "You have not sent any prayer requests yet. Send one to Shepherd Claire!",
-    prayerRequestPromptDontAskAgain: "Don't ask again",
+
     submitPrayerRequest: "Submit a prayer request",
     docs: "Docs",
     docsDesc: "Personal notes and shared documents with your cell group.",
@@ -1196,8 +1195,7 @@ export const translations = {
     privacyPolicy: "개인정보",
     prayerRequests: "기도 제목",
     prayerRequestsDesc: "Shepherd Claire만이 기도 제목을 볼 수 있습니다",
-    prayerRequestPromptMessage: "아직 기도 제목을 보내지 않았습니다. Shepherd Claire에게 보내 보세요!",
-    prayerRequestPromptDontAskAgain: "다시 묻지 않기",
+
     submitPrayerRequest: "기도 제목 제출",
     docs: "문서",
     docsDesc: "개인 메모와 셀 그룹과 공유하는 문서입니다.",
