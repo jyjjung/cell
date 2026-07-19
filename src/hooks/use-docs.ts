@@ -1,17 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+  Timestamp,
+  type FirestoreError,
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import {
   DOC_COMMENT_MAX,
   DOC_TITLE_MAX,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
+import { toMillisSafe } from '@/lib/firestore-timestamp';
 import type { DocComment, DocNote, DocVisibility } from '@/types';
-
-const LIST_POLL_MS = 4000;
-const DOC_POLL_MS = 2500;
-const COMMENTS_POLL_MS = 3000;
 
 function docFromData(id: string, data: Record<string, unknown>): DocNote {
   const ownerId = data.ownerId as string;
@@ -60,46 +68,49 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+function firestoreError(err: FirestoreError): Error {
+  const e = new Error(err.message);
+  (e as Error & { code?: string }).code = err.code;
+  return e;
+}
+
 export function useDocs(userId: string | undefined) {
   const [docs, setDocs] = useState<DocNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const mounted = useRef(true);
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
     if (!userId) {
       setDocs([]);
       setLoading(false);
+      setError(null);
       return;
     }
-    try {
-      const data = await apiJson<{ docs: Array<Record<string, unknown> & { id: string }> }>(
-        '/api/docs',
-      );
-      if (!mounted.current) return;
-      setDocs(data.docs.map((d) => docFromData(d.id, d)));
-      setError(null);
-    } catch (err) {
-      if (!mounted.current) return;
-      setError(err instanceof Error ? err : new Error('Failed to load documents'));
-    } finally {
-      if (mounted.current) setLoading(false);
-    }
-  }, [userId]);
 
-  useEffect(() => {
-    mounted.current = true;
     setLoading(true);
-    void refresh();
-    if (!userId) return () => {
-      mounted.current = false;
-    };
-    const id = window.setInterval(() => void refresh(), LIST_POLL_MS);
-    return () => {
-      mounted.current = false;
-      window.clearInterval(id);
-    };
-  }, [userId, refresh]);
+    const docsQuery = query(
+      collection(db, 'docs'),
+      where('memberIds', 'array-contains', userId),
+    );
+
+    const unsubscribe = onSnapshot(
+      docsQuery,
+      (snapshot) => {
+        const next = snapshot.docs
+          .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
+          .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt));
+        setDocs(next);
+        setError(null);
+        setLoading(false);
+      },
+      (err) => {
+        setError(firestoreError(err));
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [userId]);
 
   const createDoc = useCallback(
     async (input: {
@@ -123,19 +134,14 @@ export function useDocs(userId: string | undefined) {
           content: input.content ?? '<p></p>',
         }),
       });
-      await refresh();
       return data.id;
     },
-    [userId, refresh],
+    [userId],
   );
 
-  const deleteDocById = useCallback(
-    async (docId: string) => {
-      await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
-      await refresh();
-    },
-    [refresh],
-  );
+  const deleteDocById = useCallback(async (docId: string) => {
+    await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+  }, []);
 
   const shareWithUsers = useCallback(
     async (docId: string, note: DocNote, additionalUids: string[]) => {
@@ -146,12 +152,11 @@ export function useDocs(userId: string | undefined) {
         method: 'PATCH',
         body: JSON.stringify({ visibility: 'shared', sharedWith: merged }),
       });
-      await refresh();
     },
-    [userId, refresh],
+    [userId],
   );
 
-  return { docs, loading, error, createDoc, deleteDocById, shareWithUsers, refresh };
+  return { docs, loading, error, createDoc, deleteDocById, shareWithUsers };
 }
 
 export function useDoc(docId: string | undefined, userId: string | undefined) {
@@ -159,43 +164,38 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [saving, setSaving] = useState(false);
-  const mounted = useRef(true);
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
     if (!docId || !userId) {
       setNote(null);
       setLoading(false);
+      setError(null);
       return;
     }
-    try {
-      const data = await apiJson<Record<string, unknown> & { id: string }>(`/api/docs/${docId}`);
-      if (!mounted.current) return;
-      setNote(docFromData(data.id, data));
-      setError(null);
-    } catch (err) {
-      if (!mounted.current) return;
-      setNote(null);
-      setError(err instanceof Error ? err : new Error('Failed to load document'));
-    } finally {
-      if (mounted.current) setLoading(false);
-    }
-  }, [docId, userId]);
 
-  useEffect(() => {
-    mounted.current = true;
     setLoading(true);
-    void refresh();
-    if (!docId || !userId) {
-      return () => {
-        mounted.current = false;
-      };
-    }
-    const id = window.setInterval(() => void refresh(), DOC_POLL_MS);
-    return () => {
-      mounted.current = false;
-      window.clearInterval(id);
-    };
-  }, [docId, userId, refresh]);
+    const unsubscribe = onSnapshot(
+      doc(db, 'docs', docId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setNote(null);
+          setError(new Error('Document not found'));
+          setLoading(false);
+          return;
+        }
+        setNote(docFromData(snapshot.id, snapshot.data() as Record<string, unknown>));
+        setError(null);
+        setLoading(false);
+      },
+      (err) => {
+        setNote(null);
+        setError(firestoreError(err));
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [docId, userId]);
 
   const saveContent = useCallback(
     async (
@@ -216,12 +216,23 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
             ...(options?.allowEmpty ? { allowEmpty: true } : {}),
           }),
         });
-        await refresh();
+        // Optimistic local update so soft-sync does not briefly revert after save.
+        setNote((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: trimmed,
+                content,
+                updatedBy: userId,
+                updatedAt: Timestamp.now(),
+              }
+            : prev,
+        );
       } finally {
         setSaving(false);
       }
     },
-    [docId, userId, note, refresh],
+    [docId, userId, note],
   );
 
   const updateSharing = useCallback(
@@ -234,12 +245,11 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
           method: 'PATCH',
           body: JSON.stringify({ visibility, sharedWith: sharedWithInput }),
         });
-        await refresh();
       } finally {
         setSaving(false);
       }
     },
-    [docId, userId, note, refresh],
+    [docId, userId, note],
   );
 
   const removeDoc = useCallback(async () => {
@@ -268,42 +278,38 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
 export function useDocComments(docId: string | undefined, enabled: boolean) {
   const [comments, setComments] = useState<DocComment[]>([]);
   const [loading, setLoading] = useState(true);
-  const mounted = useRef(true);
 
-  const refresh = useCallback(async () => {
+  useEffect(() => {
     if (!docId || !enabled) {
       setComments([]);
       setLoading(false);
       return;
     }
-    try {
-      const data = await apiJson<{ comments: Array<Record<string, unknown> & { id: string }> }>(
-        `/api/docs/${docId}/comments`,
-      );
-      if (!mounted.current) return;
-      setComments(data.comments.map((c) => commentFromData(c.id, c)));
-    } catch {
-      // keep previous comments on transient errors
-    } finally {
-      if (mounted.current) setLoading(false);
-    }
-  }, [docId, enabled]);
 
-  useEffect(() => {
-    mounted.current = true;
     setLoading(true);
-    void refresh();
-    if (!docId || !enabled) {
-      return () => {
-        mounted.current = false;
-      };
-    }
-    const id = window.setInterval(() => void refresh(), COMMENTS_POLL_MS);
-    return () => {
-      mounted.current = false;
-      window.clearInterval(id);
-    };
-  }, [docId, enabled, refresh]);
+    const commentsQuery = query(
+      collection(db, 'docs', docId, 'comments'),
+      orderBy('createdAt', 'asc'),
+    );
+
+    const unsubscribe = onSnapshot(
+      commentsQuery,
+      (snapshot) => {
+        setComments(
+          snapshot.docs.map((d) =>
+            commentFromData(d.id, d.data() as Record<string, unknown>),
+          ),
+        );
+        setLoading(false);
+      },
+      () => {
+        // Keep previous comments on transient listener errors.
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [docId, enabled]);
 
   const addComment = useCallback(
     async (_authorId: string, text: string) => {
@@ -314,18 +320,16 @@ export function useDocComments(docId: string | undefined, enabled: boolean) {
         method: 'POST',
         body: JSON.stringify({ text: trimmed }),
       });
-      await refresh();
     },
-    [docId, refresh],
+    [docId],
   );
 
   const deleteComment = useCallback(
     async (commentId: string) => {
       if (!docId) return;
       await apiJson(`/api/docs/${docId}/comments/${commentId}`, { method: 'DELETE' });
-      await refresh();
     },
-    [docId, refresh],
+    [docId],
   );
 
   return { comments, loading, addComment, deleteComment };

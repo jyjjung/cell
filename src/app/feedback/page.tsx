@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.125",
+    subtitle: "Live document sync",
+    date: "July 19, 2026",
+    changes: [
+      "Documents and comments update instantly when someone else saves changes",
+      "While you have unsaved edits, a prompt lets you load the latest version from others",
+    ],
+  },
+  {
     version: "v1.3.124",
     subtitle: "Info under Bible reading",
     date: "July 19, 2026",
