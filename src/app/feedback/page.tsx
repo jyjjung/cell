@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.132",
+    subtitle: "Reading progress protection",
+    date: "July 19, 2026",
+    changes: [
+      "Legacy reading progress migrations now preserve unmatched chapters instead of removing them",
+      "Reading progress is backed up before migration and migrations cannot reduce the saved chapter count",
+    ],
+  },
+  {
     version: "v1.3.131",
     subtitle: "Docs delete cleanup",
     date: "July 19, 2026",
