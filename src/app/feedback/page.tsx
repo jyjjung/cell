@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.128",
+    subtitle: "Chat member names in admin",
+    date: "July 19, 2026",
+    changes: [
+      "The admin chats list shows each chat’s members by name, not only a count",
+    ],
+  },
+  {
     version: "v1.3.127",
     subtitle: "Admin chats manager",
     date: "July 19, 2026",

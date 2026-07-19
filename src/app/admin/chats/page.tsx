@@ -110,22 +110,24 @@ export default function AdminChatsPage() {
 
   const loading = loadingChats || loadingUsers || loadingRoles || loadingPermissions;
 
+  const getMemberDisplayName = (chat: AdminChatSummary, uid: string) => {
+    const user = usersMap.get(uid);
+    if (user) {
+      const full = `${user.firstName} ${user.lastName}`.trim();
+      if (full) return full;
+    }
+    return getMemberFullName(chat.memberInfo[uid]) || 'Unknown';
+  };
+
+  const getChatMemberNames = (chat: AdminChatSummary) =>
+    chat.members.map((uid) => getMemberDisplayName(chat, uid));
+
   const getChatDisplayName = (chat: AdminChatSummary) => {
     if (chat.type === 'group') {
       return chat.name || t.unnamedCircle;
     }
     if (chat.type === 'private' && chat.members.length >= 2) {
-      const member1 = usersMap.get(chat.members[0]);
-      const member2 = usersMap.get(chat.members[1]);
-      const name1 =
-        member1
-          ? `${member1.firstName} ${member1.lastName}`.trim()
-          : getMemberFullName(chat.memberInfo[chat.members[0]]) || 'Unknown';
-      const name2 =
-        member2
-          ? `${member2.firstName} ${member2.lastName}`.trim()
-          : getMemberFullName(chat.memberInfo[chat.members[1]]) || 'Unknown';
-      return `${name1} <> ${name2}`;
+      return `${getMemberDisplayName(chat, chat.members[0])} <> ${getMemberDisplayName(chat, chat.members[1])}`;
     }
     if (chat.type === 'private' && chat.members.length < 2) {
       const remainingMember = chat.members.length === 1 ? usersMap.get(chat.members[0]) : null;
@@ -141,16 +143,9 @@ export default function AdminChatsPage() {
       if (typeFilter !== 'all' && chat.type !== typeFilter) return false;
       if (!needle) return true;
       const name = getChatDisplayName(chat).toLowerCase();
-      const memberNames = chat.members
-        .map((uid) => {
-          const user = usersMap.get(uid);
-          if (user) return `${user.firstName} ${user.lastName}`.trim().toLowerCase();
-          return getMemberFullName(chat.memberInfo[uid])?.toLowerCase() || '';
-        })
-        .join(' ');
+      const memberNames = getChatMemberNames(chat).join(' ').toLowerCase();
       return name.includes(needle) || memberNames.includes(needle) || chat.id.toLowerCase().includes(needle);
     });
-    // getChatDisplayName depends on usersMap/t; listed via chats/search/typeFilter/usersMap
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chats, search, typeFilter, usersMap, t.unnamedCircle, t.privateChat]);
 
@@ -347,7 +342,21 @@ export default function AdminChatsPage() {
                         {chat.type}
                       </Badge>
                     </TableCell>
-                    <TableCell>{chat.members.length}</TableCell>
+                    <TableCell className="max-w-xs">
+                      {chat.members.length === 0 ? (
+                        <span className="text-muted-foreground text-xs">{t.adminChatNoMembers}</span>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            {chat.members.length}{' '}
+                            {chat.members.length === 1 ? t.adminChatMemberSingular : t.adminChatMemberPlural}
+                          </p>
+                          <p className="text-sm leading-snug whitespace-normal break-words">
+                            {getChatMemberNames(chat).join(', ')}
+                          </p>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       {chat.lastMessageSentAtMs
                         ? `${formatDistanceToNow(new Date(chat.lastMessageSentAtMs))} ago`
