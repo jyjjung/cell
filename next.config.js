@@ -27,15 +27,6 @@ const FIREBASE_MEDIA_CACHING = [
     },
   },
   {
-    urlPattern: /\/wallpapers\/.+\.svg$/i,
-    handler: "CacheFirst",
-    options: {
-      cacheName: "wallpaper-assets",
-      expiration: { maxEntries: 64, maxAgeSeconds: ONE_YEAR_SECONDS },
-      cacheableResponse: { statuses: [0, 200] },
-    },
-  },
-  {
     urlPattern: /^https:\/\/api\.dicebear\.com\/.*/i,
     handler: "CacheFirst",
     options: {
@@ -93,12 +84,6 @@ const withPWA = pwa.default({
 });
 
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {

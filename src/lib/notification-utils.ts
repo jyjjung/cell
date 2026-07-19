@@ -3,7 +3,7 @@
  * Shared utility for robustly converting any timestamp-like value to milliseconds.
  * This ensures consistency between client-side and server-side badge calculations.
  */
-export function getMillis(timestamp: any): number {
+function getMillis(timestamp: any): number {
     if (!timestamp) return 0;
     
     // Firestore Timestamp (Client or Admin SDK)

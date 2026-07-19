@@ -34,7 +34,6 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const { 
     mode,
     seed,
-    initials,
     skinTone, 
     hairStyle, 
     hairColor, 

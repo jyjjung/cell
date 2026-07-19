@@ -35,7 +35,7 @@ export function UsersProvider({ children }: { children: ReactNode }) {
   return <UsersContext.Provider value={value}>{children}</UsersContext.Provider>;
 }
 
-export function useUsers() {
+function useUsers() {
   return useContext(UsersContext);
 }
 

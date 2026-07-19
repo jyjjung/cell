@@ -1,6 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore';
-
-const WORSHIP_ROLE_NAMES = new Set(['Worship', 'Worship Team']);
+import { hasCapability } from '@/lib/role-capabilities';
 
 export async function userCanManageWorship(
   adminDb: Firestore,
@@ -10,18 +9,6 @@ export async function userCanManageWorship(
   if (!userDoc.exists) return false;
 
   const data = userDoc.data()!;
-  if (data.isAdmin) return true;
-
-  const roleIds: string[] = data.roleIds || [];
-  if (!roleIds.length) return false;
-
-  const rolesSnap = await adminDb.collection('roles').get();
-  for (const roleDoc of rolesSnap.docs) {
-    const name = roleDoc.data()?.name;
-    if (typeof name === 'string' && WORSHIP_ROLE_NAMES.has(name) && roleIds.includes(roleDoc.id)) {
-      return true;
-    }
-  }
-
-  return false;
+  return hasCapability(data.capabilityKeys, 'app.admin')
+    || hasCapability(data.capabilityKeys, 'worship.manage');
 }

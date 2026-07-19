@@ -75,8 +75,7 @@ export function getCustomRosterEntryTitle(
     const display = displayFieldValue(entry.fieldValues?.[field.id], field, usersMap);
     if (display) return display;
   }
-  const first = (entry.assignments ?? []).find((a) => a.person?.trim());
-  return first ? formatNameString(first.person) : '';
+  return '';
 }
 
 export function entryHasContent(
@@ -84,13 +83,10 @@ export function entryHasContent(
   def: Pick<RosterDefinition, 'fields'>,
 ): boolean {
   const fields = sortedRosterFields(def.fields);
-  if (fields.length > 0) {
-    return fields.some((field) => {
-      const v = entry.fieldValues?.[field.id];
-      return (v?.text?.trim() ?? '') || v?.userId;
-    });
-  }
-  return (entry.assignments ?? []).some((a) => a.person?.trim() || a.duty?.trim());
+  return fields.some((field) => {
+    const value = entry.fieldValues?.[field.id];
+    return (value?.text?.trim() ?? '') || value?.userId;
+  });
 }
 
 export function getUserCustomRosterLabels(
@@ -99,14 +95,9 @@ export function getUserCustomRosterLabels(
   userId: string,
 ): string[] {
   const fields = sortedRosterFields(def.fields);
-  if (fields.length > 0) {
-    return fields
-      .filter((field) => field.type === 'user' && entry.fieldValues?.[field.id]?.userId === userId)
-      .map((field) => field.label);
-  }
-  return (entry.assignments ?? [])
-    .filter((a) => a.userId === userId)
-    .map((a) => a.duty);
+  return fields
+    .filter((field) => field.type === 'user' && entry.fieldValues?.[field.id]?.userId === userId)
+    .map((field) => field.label);
 }
 
 export function formatCustomRosterEntrySummary(
@@ -115,18 +106,12 @@ export function formatCustomRosterEntrySummary(
   usersMap?: Map<string, UserProfileData>,
 ): string {
   const fields = sortedRosterFields(def.fields);
-  if (fields.length > 0) {
-    return fields
-      .map((field) => {
-        const display = displayFieldValue(entry.fieldValues?.[field.id], field, usersMap);
-        if (!display) return null;
-        return `${field.label}: ${display}`;
-      })
-      .filter(Boolean)
-      .join(', ');
-  }
-
-  return (entry.assignments ?? [])
-    .map((a) => `${a.duty}: ${formatNameString(a.person)}`)
+  return fields
+    .map((field) => {
+      const display = displayFieldValue(entry.fieldValues?.[field.id], field, usersMap);
+      if (!display) return null;
+      return `${field.label}: ${display}`;
+    })
+    .filter(Boolean)
     .join(', ');
 }

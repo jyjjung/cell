@@ -17,7 +17,7 @@ import {
 import { mergeAvatarData } from '@/lib/avatar-utils';
 
 const USERS_COLLECTION = 'users';
-const CACHE_KEY = 'users_directory_v2';
+const CACHE_KEY = 'users_directory_v3';
 
 function docToUser(docSnap: { id: string; data: () => Record<string, unknown> }): UserProfileData {
   return { uid: docSnap.id, ...docSnap.data() } as UserProfileData;

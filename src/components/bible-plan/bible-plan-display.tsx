@@ -7,7 +7,10 @@ import { format, parseISO, isToday, isValid, isBefore, startOfDay } from 'date-f
 import { CalendarX, Info, Loader2 } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import {
+  makeManualPassageKey,
+  makePassageKey,
+} from '@/lib/passage-keys';
 import type { AppUser } from '@/types';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
@@ -71,9 +74,9 @@ export default function BiblePlanDisplay({
     const date = readingToDisplay?.date;
     return validTextsFromProp.every(text => {
       if (date) {
-        return completedPassages.includes(makePassageKey(date, text)) || completedPassages.includes(text);
+        return completedPassages.includes(makePassageKey(date, text));
       }
-      return completedPassages.includes(text);
+      return completedPassages.includes(makeManualPassageKey(text));
     });
   }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date]);
 
@@ -207,8 +210,8 @@ export default function BiblePlanDisplay({
             const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
             const date = readingToDisplay.date;
             const isChecked = date
-              ? completedPassages.includes(makePassageKey(date, passage.displayText)) || completedPassages.includes(passage.displayText)
-              : completedPassages.includes(passage.displayText);
+              ? completedPassages.includes(makePassageKey(date, passage.displayText))
+              : completedPassages.includes(makeManualPassageKey(passage.displayText));
             const isPassageValid = !passage.displayText.startsWith('Error:');
 
             return (

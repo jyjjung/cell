@@ -1,7 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminDb, getAdminAuth, getAdminStorage } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { commitDeletesInChunks, commitUpdatesInChunks } from '@/lib/commit-batches';
 
@@ -23,14 +23,23 @@ export async function POST(request: NextRequest) {
     const { uid: uidToDelete } = await request.json();
     if (!uidToDelete) return NextResponse.json({ error: 'UID missing' }, { status: 400 });
 
-    try {
-      await adminAuth.deleteUser(uidToDelete);
-    } catch {
-      // User may already be removed from Auth.
-    }
+    const userRef = adminDb.collection('users').doc(uidToDelete);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    await adminDb
+      .collection('migrationArchive')
+      .doc('deletedUsers')
+      .collection('records')
+      .doc(uidToDelete)
+      .set({
+        sourcePath: userRef.path,
+        payload: userSnap.data(),
+        deletedBy: decodedToken.uid,
+        archivedAt: FieldValue.serverTimestamp(),
+      });
 
     const deletes = [
-      adminDb.collection('users').doc(uidToDelete),
+      userRef,
       adminDb.collection('userBibleChecklists').doc(uidToDelete),
       adminDb.collection('communityProgress').doc(uidToDelete),
     ];
@@ -57,7 +66,28 @@ export async function POST(request: NextRequest) {
 
     await commitDeletesInChunks(adminDb, deletes);
     await commitUpdatesInChunks(adminDb, chatUpdates);
-    await commitDeletesInChunks(adminDb, chatDeletes);
+    for (const chatRef of chatDeletes) {
+      await adminDb.recursiveDelete(chatRef);
+      const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'cell-abca4.firebasestorage.app';
+      if (bucketName) {
+        await getAdminStorage(adminApp).bucket(bucketName).deleteFiles({
+          prefix: `chats/${chatRef.id}/`,
+          force: true,
+        }).catch(() => undefined);
+      }
+    }
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'cell-abca4.firebasestorage.app';
+    if (bucketName) {
+      await getAdminStorage(adminApp).bucket(bucketName).deleteFiles({
+        prefix: `avatars/${uidToDelete}_`,
+        force: true,
+      }).catch(() => undefined);
+    }
+    try {
+      await adminAuth.deleteUser(uidToDelete);
+    } catch {
+      // Auth record may already be absent; Firestore archive remains recoverable.
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

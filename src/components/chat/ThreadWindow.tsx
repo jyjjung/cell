@@ -1,19 +1,19 @@
 "use client";
 
-import { useMemo, useCallback, useState } from 'react';
-import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
-import { useThreadMessages } from '@/hooks/useThreadMessages';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
-import { Loader2, ArrowLeft, X } from 'lucide-react';
+import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
+import { useThreadMessages } from '@/hooks/useThreadMessages';
+import { downloadChatImage } from '@/lib/chat-image-download';
 import { translations } from '@/lib/translations';
+import { Chat, ChatMemberInfo } from '@/types';
+import { differenceInDays, format, isToday, isYesterday } from 'date-fns';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { ChatImageGallery } from './ImageLightbox';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
-import { ChatImageGallery } from './ImageLightbox';
-import { downloadChatImage } from '@/lib/chat-image-download';
-import { Button } from '@/components/ui/button';
-import { Chat, ChatMemberInfo } from '@/types';
-import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 
 function formatMessageDate(date: Date) {
   if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;

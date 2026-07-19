@@ -3,6 +3,7 @@ import { type App, getApps, initializeApp, cert, type ServiceAccount } from 'fir
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getStorage } from 'firebase-admin/storage';
 
 function loadServiceAccountFromEnv(): ServiceAccount | null {
   const raw =
@@ -60,3 +61,4 @@ export function getAdminApp(): App {
 export const getAdminDb = (app: App) => getFirestore(app);
 export const getAdminAuth = (app: App) => getAuth(app);
 export const getAdminMessaging = (app: App) => getMessaging(app);
+export const getAdminStorage = (app: App) => getStorage(app);

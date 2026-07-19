@@ -31,7 +31,7 @@ export function displayDocTitle(title: string | undefined | null, untitledLabel 
   return trimmed || untitledLabel;
 }
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

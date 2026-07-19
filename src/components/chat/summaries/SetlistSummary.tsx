@@ -1,32 +1,24 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Music,
-  ChevronRight,
-  Play,
-  CloudDownload,
-  Check,
-  Loader2,
-  Youtube,
-  ListMusic,
-  Pause,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { useWorshipData } from '@/contexts/worship-data-context';
-import type { WorshipSetlist, WorshipSong } from '@/types';
-import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
-import { resolveChordSheetsForSetlistSong, hasReferenceTracks, getReferenceTracks } from '@/lib/worship-utils';
-import { buildSetlistPlaylistQueue } from '@/lib/setlist-playlist-queue';
-import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { useRouter } from 'next/navigation';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 import { useAuth } from '@/contexts/auth-context';
+import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
+import { useWorshipData } from '@/contexts/worship-data-context';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
+import { useToast } from '@/hooks/use-toast';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
+import { buildSetlistPlaylistQueue } from '@/lib/setlist-playlist-queue';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import { getReferenceTracks, hasReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
+import type { WorshipSetlist } from '@/types';
+import { format } from 'date-fns';
+import {
+    Check, ChevronRight, CloudDownload, ListMusic, Loader2, Music, Pause, Play, Youtube
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface SetlistSummaryProps {
   setlistId: string;

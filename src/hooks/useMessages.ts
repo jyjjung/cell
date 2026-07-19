@@ -33,6 +33,7 @@ import {
 import { sortChatMessagesDesc } from '@/lib/chat-message-merge';
 import type { ChatMessage, Chat, ChatPoll } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
+import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
 import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
@@ -319,13 +320,13 @@ export function useMessages(chatId: string | null) {
   const markAsSeen = useCallback((messageId: string) => {
     if (!currentUser || !chatId) return;
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
-    updateDoc(messageRef, { seenBy: arrayUnion(currentUser.uid) }).catch(e => {});
+    updateDoc(messageRef, { seenBy: arrayUnion(currentUser.uid) }).catch(() => {});
   }, [currentUser, chatId]);
 
   const updateSeenTimestamp = useCallback(() => {
     if (!currentUser || !chatId) return;
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-    updateDoc(chatDocRef, { [`memberSeen.${currentUser.uid}`]: serverTimestamp() }).catch(e => {});
+    updateDoc(chatDocRef, { [`memberSeen.${currentUser.uid}`]: serverTimestamp() }).catch(() => {});
   }, [currentUser, chatId]);
 
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -487,6 +488,9 @@ export function useMessages(chatId: string | null) {
       const deletedContentType = messageData
         ? getDeletedMessageContentType(messageData)
         : 'message';
+      if (messageData?.imageUrl) {
+        await deleteStorageObjectAtUrl(messageData.imageUrl);
+      }
 
       await updateDoc(messageRef, {
         isDeleted: true,

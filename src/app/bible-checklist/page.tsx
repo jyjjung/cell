@@ -1,32 +1,32 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
+import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
+import ReadingHeatmap from '@/components/dashboard-widgets/reading-heatmap';
+import BackToTopButton from '@/components/ui/back-to-top-button';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { PageLoading } from '@/components/ui/loading-spinner';
+import { NavPageHeader, PageHeader, PageSection } from '@/components/ui/page-layout';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import type { DailyReading, WeeklyProgress } from '@/types';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Loader2, Info, ArrowLeft, BookUp, CheckCircle, MoreVertical } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, isWithinInterval, isValid, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
+import { makePassageKey } from '@/lib/passage-keys';
 import { calculatePlanPaceStats, countPlanPassageProgress } from '@/lib/reading-utils';
-import BiblePlanDisplay from '@/components/bible-plan/bible-plan-display';
-import BackToTopButton from '@/components/ui/back-to-top-button';
-import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
-import ReadingHeatmap from '@/components/dashboard-widgets/reading-heatmap';
-import { cn } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { translations } from '@/lib/translations';
-import { PageHeader, NavPageHeader, PageSection } from '@/components/ui/page-layout';
-import { PageLoading } from '@/components/ui/loading-spinner';
-import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { cn } from '@/lib/utils';
+import type { DailyReading, WeeklyProgress } from '@/types';
+import { endOfWeek, format, isBefore, isValid, isWithinInterval, startOfDay, startOfWeek } from 'date-fns';
+import { ArrowLeft, BookUp, CheckCircle, Info, MoreVertical } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 type ViewState = 
   | { view: 'all-weeks' }
@@ -147,9 +147,8 @@ export default function BibleChecklistPage() {
                   completedCount += numValidPassages;
               }
             } else {
-              completedCount += validPassages.filter(p => 
-                completedPassages.includes(makePassageKey(reading.date, p.displayText)) ||
-                completedPassages.includes(p.displayText) // legacy fallback
+              completedCount += validPassages.filter((p) =>
+                completedPassages.includes(makePassageKey(reading.date, p.displayText))
               ).length;
             }
         });

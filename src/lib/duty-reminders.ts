@@ -1,15 +1,15 @@
-import { addDays, differenceInCalendarDays, format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
 import type { CleaningDay, CleaningRosterEntry, QTRosterEntry, WorshipRoster } from '@/types';
 
-export const DUTY_REMINDER_WEEK_WINDOW = 7;
-export const DUTY_REMINDER_DAY_BEFORE = 1;
-export const DUTY_REMINDER_TODAY = 0;
-export type DutyReminderOffset =
+const DUTY_REMINDER_WEEK_WINDOW = 7;
+const DUTY_REMINDER_DAY_BEFORE = 1;
+const DUTY_REMINDER_TODAY = 0;
+type DutyReminderOffset =
   | typeof DUTY_REMINDER_WEEK_WINDOW
   | typeof DUTY_REMINDER_DAY_BEFORE
   | typeof DUTY_REMINDER_TODAY;
-export type DutyKind = 'cleaning' | 'qt' | 'worship';
+type DutyKind = 'cleaning' | 'qt' | 'worship';
 
 export interface DutyReminderPayload {
   userId: string;
@@ -34,7 +34,7 @@ function daysUntilDuty(todayIso: string, dutyDate: string): number {
   return differenceInCalendarDays(parseDay(dutyDate), parseDay(todayIso));
 }
 
-export function buildDutyReminderDedupeId(
+function buildDutyReminderDedupeId(
   userId: string,
   kind: DutyKind,
   dutyDate: string,
@@ -289,9 +289,3 @@ export function collectDutyReminders(params: {
 }
 
 /** @internal test helper */
-export function getDutyDatesInReminderWindow(todayIso: string): { from: string; to: string } {
-  return {
-    from: format(addDays(parseDay(todayIso), DUTY_REMINDER_TODAY), 'yyyy-MM-dd'),
-    to: format(addDays(parseDay(todayIso), DUTY_REMINDER_WEEK_WINDOW), 'yyyy-MM-dd'),
-  };
-}

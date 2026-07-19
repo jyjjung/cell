@@ -1,24 +1,15 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import type { MemoryVerse, AppNotification } from '@/types';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  addDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  where,
-  getDocs
-} from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
+import type { AppNotification, MemoryVerse } from '@/types';
+import {
+    addDoc, collection, deleteDoc,
+    doc, getDocs, onSnapshot, orderBy, query, serverTimestamp,
+    Timestamp, where
+} from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
 import { useNotifications } from './use-notifications';
 
 const MEMORY_VERSES_COLLECTION = 'memoryVerses';

@@ -1,29 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription 
+import { Button } from '@/components/ui/button';
+import {
+    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { 
-  Plus, Loader2, Music, ListMusic, Calendar, Search, 
-  ChevronRight, Trash2, Key as KeyIcon, Check, Upload, Youtube
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { format, parseISO } from 'date-fns';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
-import { useWorshipRosters } from '@/hooks/useWorshipRosters';
-import type { WorshipSong, WorshipSetlist, ChordKey, SongChordSheet } from '@/types';
-import { cn } from '@/lib/utils';
 import { RemoteImage } from '@/components/ui/remote-image';
+import { useToast } from '@/hooks/use-toast';
+import { useWorshipRosters } from '@/hooks/useWorshipRosters';
+import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { cn } from '@/lib/utils';
 import {
-  chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft,
+    chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
+import type { ChordKey, WorshipSong } from '@/types';
+import { format, parseISO } from 'date-fns';
+import { Check, Loader2, Plus, Trash2, Upload, Youtube } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
-export const WORSHIP_ALL_KEYS: ChordKey[] = [
+const WORSHIP_ALL_KEYS: ChordKey[] = [
   'numbers',
   'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
   'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',

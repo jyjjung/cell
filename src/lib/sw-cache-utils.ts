@@ -5,7 +5,7 @@ export const MEDIA_CACHE_NAMES = new Set([
   'wallpaper-assets',
 ]);
 
-export function isMediaCacheName(name: string): boolean {
+function isMediaCacheName(name: string): boolean {
   return MEDIA_CACHE_NAMES.has(name);
 }
 

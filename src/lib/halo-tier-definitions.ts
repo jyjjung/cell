@@ -1,6 +1,6 @@
 export type HaloPowerLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
-export const HALO_TIER_IDS = [
+const HALO_TIER_IDS = [
   'bronze', 'copper', 'pewter', 'onyx', 'silver', 'jade', 'mint', 'teal', 'gold', 'peach',
   'rose', 'ruby', 'coral', 'lavender', 'sapphire', 'frost', 'diamond', 'amethyst', 'topaz', 'nebula',
   'celestial', 'prism', 'radiant', 'sovereign', 'magenta', 'master',

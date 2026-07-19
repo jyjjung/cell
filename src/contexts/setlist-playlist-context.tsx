@@ -1,20 +1,20 @@
 "use client";
 
-import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
-} from 'react';
 import {
-  loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer,
-} from '@/lib/youtube-player-api';
-import { fetchYoutubeVideoTitle } from '@/lib/worship-utils';
+    bindMediaSessionHandlers,
+    setMediaSessionPlaybackState,
+    syncMediaSessionMetadata,
+    syncMediaSessionPosition
+} from '@/lib/media-session-controls';
 import type { PlaylistQueueItem } from '@/lib/setlist-playlist-queue';
 import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
+import { fetchYoutubeVideoTitle } from '@/lib/worship-utils';
 import {
-  bindMediaSessionHandlers,
-  setMediaSessionPlaybackState,
-  syncMediaSessionMetadata,
-  syncMediaSessionPosition,
-} from '@/lib/media-session-controls';
+    loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer
+} from '@/lib/youtube-player-api';
+import React, {
+    createContext, useCallback, useContext, useEffect, useMemo, useRef, useState
+} from 'react';
 
 const YT_MOUNT_ID = 'setlist-playlist-yt-mount';
 
@@ -41,12 +41,6 @@ type SetlistPlaylistContextValue = {
 };
 
 const SetlistPlaylistContext = createContext<SetlistPlaylistContextValue | null>(null);
-
-export function useSetlistPlaylist() {
-  const ctx = useContext(SetlistPlaylistContext);
-  if (!ctx) throw new Error('useSetlistPlaylist must be used within SetlistPlaylistProvider');
-  return ctx;
-}
 
 export function useSetlistPlaylistOptional() {
   return useContext(SetlistPlaylistContext);

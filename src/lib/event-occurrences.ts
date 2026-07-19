@@ -15,7 +15,7 @@ function isBirthdayEvent(event: AppEvent): boolean {
 }
 
 /** Calendar date (yyyy-MM-dd) for an instant in a community timezone. */
-export function communityCalendarDay(iso: string, timeZone: string): string {
+function communityCalendarDay(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone }).format(parseDay(iso));
 }
 
@@ -74,7 +74,7 @@ export function eventOccursOnDate(event: AppEvent, targetDay: Date): boolean {
 }
 
 /** Sorted YYYY-MM-DD occurrence strings from start through end of relevant range (for listing / grouping). */
-export function getOccurrenceDateStrings(
+function getOccurrenceDateStrings(
   event: AppEvent,
   options?: { listUntil?: Date; listFrom?: Date }
 ): string[] {
@@ -132,7 +132,7 @@ export function getOccurrenceDateStrings(
   return pushRange(start, effectiveEnd, weekdays);
 }
 
-export function getLatestOccurrenceDay(event: AppEvent): Date {
+function getLatestOccurrenceDay(event: AppEvent): Date {
   if (isBirthdayEvent(event)) {
     const { month, day: dom } = birthdayMonthDay(event);
     const today = day(new Date());
@@ -149,7 +149,7 @@ export function getLatestOccurrenceDay(event: AppEvent): Date {
 }
 
 /** Whether any occurrence falls on `fromDay` or later (walks day-by-day; bounded). */
-export function eventHasFutureOccurrence(event: AppEvent, fromDay: Date): boolean {
+function eventHasFutureOccurrence(event: AppEvent, fromDay: Date): boolean {
   const from = day(fromDay);
   const last = getLatestOccurrenceDay(event);
   if (isBefore(last, from)) return false;
@@ -165,20 +165,6 @@ export function eventHasFutureOccurrence(event: AppEvent, fromDay: Date): boolea
 /** True if there is no occurrence on or after `fromDay`. */
 export function eventIsFullyBefore(event: AppEvent, fromDay: Date): boolean {
   return !eventHasFutureOccurrence(event, fromDay);
-}
-
-/** First occurrence date on or after `fromDay`, or null. */
-export function nextOccurrenceOnOrAfter(event: AppEvent, fromDay: Date): Date | null {
-  const from = day(fromDay);
-  const last = getLatestOccurrenceDay(event);
-  if (isBefore(last, from)) return null;
-  let d = from;
-  for (let i = 0; i < 800; i++) {
-    if (isAfter(d, last)) break;
-    if (eventOccursOnDate(event, d)) return d;
-    d = addDays(d, 1);
-  }
-  return null;
 }
 
 export type EventOccurrenceRow = {

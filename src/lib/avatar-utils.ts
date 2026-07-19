@@ -30,7 +30,7 @@ export function mergeAvatarData(existing?: AvatarData, incoming?: AvatarData): A
   return merged;
 }
 
-export function deriveInitialsFromName(
+function deriveInitialsFromName(
   firstName?: string | null,
   lastName?: string | null,
 ): string {
@@ -39,7 +39,7 @@ export function deriveInitialsFromName(
   return `${first}${last}`.toUpperCase();
 }
 
-export function normalizeAvatarInitials(initials?: string | null): string {
+function normalizeAvatarInitials(initials?: string | null): string {
   return initials?.trim().toUpperCase().slice(0, 2) ?? '';
 }
 

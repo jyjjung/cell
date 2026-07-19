@@ -4,6 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { type AppUser } from '@/types';
 import { translations } from '@/lib/translations';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
+import {
+  makeManualPassageKey,
+  makePassageKey,
+} from '@/lib/passage-keys';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
 import { useChats } from '@/hooks/useChats';
@@ -16,7 +20,6 @@ import { useAllCustomRosterEntries } from '@/hooks/useAllCustomRosterEntries';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
-import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState } from 'react';
 import {
@@ -146,8 +149,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const todayDoneCount = useMemo(() => todayPassages.filter(p => {
     const date = todaysReading?.date;
     return date
-      ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
-      : completedPassages.includes(p.displayText);
+      ? completedPassages.includes(makePassageKey(date, p.displayText))
+      : completedPassages.includes(makeManualPassageKey(p.displayText));
   }).length, [todayPassages, completedPassages, todaysReading?.date]);
 
   const overallPct = useMemo(
@@ -330,10 +333,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     const passages = nextUnread.passages?.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [];
     return passages.find(passage => {
       const date = nextUnread.date;
-      return !(
-        completedPassages.includes(makePassageKey(date, passage.displayText)) ||
-        completedPassages.includes(passage.displayText)
-      );
+      return !completedPassages.includes(makePassageKey(date, passage.displayText));
     }) ?? null;
   }, [nextUnread, completedPassages]);
 
@@ -403,8 +403,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                   {todayPassages.map(p => {
                     const date = todaysReading?.date;
                     const done = date
-                      ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
-                      : completedPassages.includes(p.displayText);
+                      ? completedPassages.includes(makePassageKey(date, p.displayText))
+                      : completedPassages.includes(makeManualPassageKey(p.displayText));
                     return (
                       <motion.div
                         key={p.displayText}

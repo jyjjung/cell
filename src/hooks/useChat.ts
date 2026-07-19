@@ -5,14 +5,9 @@ import { useCallback } from 'react';
 import {
   arrayRemove,
   arrayUnion,
-  collection,
-  deleteDoc,
   deleteField,
   doc,
-  getDoc,
-  serverTimestamp,
   updateDoc,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
@@ -30,31 +25,6 @@ import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
-const MESSAGES_SUBCOLLECTION = 'messages';
-
-function normalizeChatMemberIds(members: unknown): string[] {
-  if (!Array.isArray(members)) return [];
-  return members
-    .map((member) => (typeof member === 'string' ? member : (member as { uid?: string })?.uid))
-    .filter((uid): uid is string => typeof uid === 'string' && uid.length > 0);
-}
-
-async function assertGroupMember(chatId: string, uid: string): Promise<void> {
-  const chatSnap = await getDoc(doc(db, CHATS_COLLECTION, chatId));
-  if (!chatSnap.exists()) {
-    throw new Error('Chat not found.');
-  }
-
-  const chatData = chatSnap.data();
-  if (chatData.type !== 'group') {
-    throw new Error('Group photos can only be updated in group chats.');
-  }
-
-  const memberIds = normalizeChatMemberIds(chatData.members);
-  if (!memberIds.includes(uid)) {
-    throw new Error('Only chat members can update the group photo.');
-  }
-}
 
 function actorLabel(user: { firstName?: string | null; lastName?: string | null; displayName?: string | null }): string {
   return formatUserDisplayName(user, 'Someone');
@@ -106,16 +76,23 @@ export function useChat(chatId: string) {
         router.push('/chat');
     }, [chatId, currentUser, router, toast, setIsPageLoading]);
 
-    const deleteChat = useCallback(() => {
-        const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-        deleteDoc(chatDocRef).catch((error: any) => {
-            console.error("Error deleting chat:", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not delete chat." });
+    const deleteChat = useCallback(async () => {
+      try {
+        const headers = await getClientAuthHeaders();
+        const response = await fetch('/api/admin/delete-chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId }),
         });
-        
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Could not delete chat.');
         toast({ title: "Chat deleted." });
         setIsPageLoading(true);
         router.push('/chat');
+      } catch (error) {
+        console.error("Error deleting chat:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not delete chat." });
+      }
     }, [chatId, router, toast, setIsPageLoading]);
 
     const addMembers = useCallback((membersToAdd: UserProfileData[]) => {
@@ -157,77 +134,59 @@ export function useChat(chatId: string) {
     }, [chatId, currentUser, toast]);
 
     const updateGroupPhoto = useCallback(async (photoURL: string) => {
-      if (!currentUser) {
-        toast({ variant: "destructive", title: "Error", description: "You must be signed in to update the group photo." });
-        throw new Error("Not signed in");
-      }
-      const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-      const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
-      const announcement = GROUP_PHOTO_CHANGED_PREVIEW;
+      if (!currentUser) return;
 
       try {
-        await assertGroupMember(chatId, currentUser.uid);
-        const batch = writeBatch(db);
-        const messageRef = doc(messagesColRef);
-        batch.set(messageRef, {
-          senderId: currentUser.uid,
-          systemEvent: 'groupPhotoChanged',
-          createdAt: serverTimestamp(),
-          seenBy: [currentUser.uid],
+        const headers = await getClientAuthHeaders();
+        const response = await fetch('/api/chat/group-photo', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId, photoURL }),
         });
-        batch.update(chatDocRef, {
-          photoURL,
-          lastMessageText: announcement,
-          lastMessageSentAt: serverTimestamp(),
-          lastMessageSenderId: currentUser.uid,
-        });
-        await batch.commit();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof data.error === 'string' ? data.error : 'Could not update group photo.');
+        }
 
         primeMediaUrl(photoURL);
-        const pushBody = `${actorLabel(currentUser)} ${announcement}`;
-        void dispatchChatPush(chatId, messageRef.id, pushBody, currentUser.uid);
+        const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_CHANGED_PREVIEW}`;
+        void dispatchChatPush(chatId, data.messageId, pushBody, currentUser.uid);
         toast({ title: "Group photo updated" });
       } catch (error) {
         console.error("Error updating group photo:", error);
-        const description = error instanceof Error ? error.message : "Could not update group photo.";
+        const description =
+          error instanceof Error && error.message
+            ? error.message
+            : "Could not update group photo.";
         toast({ variant: "destructive", title: "Error", description });
         throw error;
       }
     }, [chatId, currentUser, toast]);
 
     const removeGroupPhoto = useCallback(async () => {
-      if (!currentUser) {
-        toast({ variant: "destructive", title: "Error", description: "You must be signed in to remove the group photo." });
-        throw new Error("Not signed in");
-      }
-      const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-      const messagesColRef = collection(chatDocRef, MESSAGES_SUBCOLLECTION);
-      const announcement = GROUP_PHOTO_REMOVED_PREVIEW;
+      if (!currentUser) return;
 
       try {
-        await assertGroupMember(chatId, currentUser.uid);
-        const batch = writeBatch(db);
-        const messageRef = doc(messagesColRef);
-        batch.set(messageRef, {
-          senderId: currentUser.uid,
-          systemEvent: 'groupPhotoRemoved',
-          createdAt: serverTimestamp(),
-          seenBy: [currentUser.uid],
+        const headers = await getClientAuthHeaders();
+        const response = await fetch('/api/chat/group-photo', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId, remove: true }),
         });
-        batch.update(chatDocRef, {
-          photoURL: deleteField(),
-          lastMessageText: announcement,
-          lastMessageSentAt: serverTimestamp(),
-          lastMessageSenderId: currentUser.uid,
-        });
-        await batch.commit();
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(typeof data.error === 'string' ? data.error : 'Could not remove group photo.');
+        }
 
-        const pushBody = `${actorLabel(currentUser)} ${announcement}`;
-        void dispatchChatPush(chatId, messageRef.id, pushBody, currentUser.uid);
+        const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_REMOVED_PREVIEW}`;
+        void dispatchChatPush(chatId, data.messageId, pushBody, currentUser.uid);
         toast({ title: "Group photo removed" });
       } catch (error) {
         console.error("Error removing group photo:", error);
-        const description = error instanceof Error ? error.message : "Could not remove group photo.";
+        const description =
+          error instanceof Error && error.message
+            ? error.message
+            : "Could not remove group photo.";
         toast({ variant: "destructive", title: "Error", description });
         throw error;
       }

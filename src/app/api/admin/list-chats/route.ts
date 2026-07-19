@@ -3,6 +3,8 @@ import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import type { AdminChatSummary, ChatMemberInfo } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 function timestampToMs(value: unknown): number | null {
   if (!value || typeof value !== 'object') return null;
   const maybe = value as { toMillis?: () => number; _seconds?: number; seconds?: number };

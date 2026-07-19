@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookOpenText, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { MemoryVerse } from '@/types';
+import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 import { fetchPassageHtml } from '@/lib/bible-passage-cache';
 import { bibleVersionLabel } from '@/lib/bible-versions';
-import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
+import type { MemoryVerse } from '@/types';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface VerseDisplayDialogProps {
   isOpen: boolean;

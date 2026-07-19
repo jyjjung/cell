@@ -1,4 +1,43 @@
-import type { ColorPaletteTokens } from './color-palettes';
+export type ColorPaletteTokens = {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  primary: string;
+  primaryForeground: string;
+  secondary: string;
+  secondaryForeground: string;
+  muted: string;
+  mutedForeground: string;
+  accent: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
+  success: string;
+  successForeground: string;
+  border: string;
+  input: string;
+  ring: string;
+  glassBg: string;
+  glassBgAlpha: string;
+  glassBorderAlpha: string;
+  glassRingAlpha: string;
+  glassShadowAlpha: string;
+  routeAccent: string;
+  chart1: string;
+  chart2: string;
+  chart3: string;
+  chart4: string;
+  chart5: string;
+  sidebarBackground: string;
+  sidebarForeground: string;
+  sidebarAccent: string;
+  sidebarAccentForeground: string;
+  sidebarBorder: string;
+  sidebarRing: string;
+};
 
 export type AppThemeId =
   | 'classic'
@@ -18,29 +57,26 @@ export type AppThemeId =
   | 'plum'
   | 'midnight';
 
-export type AppThemeAccent = {
+type AppThemeAccent = {
   h: number;
   s: number;
   lightL: number;
   darkL: number;
 };
 
-export type AppThemeSurface = {
+type AppThemeSurface = {
   h: number;
   s: number;
   bg: number;
   card: number;
 };
 
-export type AppThemeDefinition = {
+type AppThemeDefinition = {
   id: AppThemeId;
   label: string;
   accent: AppThemeAccent;
   light: AppThemeSurface;
   dark: AppThemeSurface;
-  /** Legacy fields kept in sync for older clients */
-  legacyPalette: string;
-  legacySurface: string;
 };
 
 export const APP_THEME_STORAGE_KEY = 'appTheme';
@@ -53,8 +89,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 221, s: 83, lightL: 53, darkL: 62 },
     light: { h: 240, s: 14, bg: 97, card: 100 },
     dark: { h: 240, s: 10, bg: 4, card: 6 },
-    legacyPalette: 'azure',
-    legacySurface: 'light',
   },
   {
     id: 'ocean',
@@ -62,8 +96,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 199, s: 89, lightL: 48, darkL: 58 },
     light: { h: 200, s: 25, bg: 96, card: 100 },
     dark: { h: 210, s: 30, bg: 7, card: 9 },
-    legacyPalette: 'ocean',
-    legacySurface: 'gray',
   },
   {
     id: 'forest',
@@ -71,8 +103,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 142, s: 72, lightL: 36, darkL: 52 },
     light: { h: 140, s: 20, bg: 96, card: 100 },
     dark: { h: 145, s: 18, bg: 6, card: 8 },
-    legacyPalette: 'forest',
-    legacySurface: 'cream',
   },
   {
     id: 'sunset',
@@ -80,8 +110,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 25, s: 95, lightL: 53, darkL: 62 },
     light: { h: 35, s: 40, bg: 96, card: 100 },
     dark: { h: 25, s: 20, bg: 7, card: 9 },
-    legacyPalette: 'amber',
-    legacySurface: 'cream',
   },
   {
     id: 'rose',
@@ -89,8 +117,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 346, s: 77, lightL: 50, darkL: 62 },
     light: { h: 350, s: 30, bg: 97, card: 100 },
     dark: { h: 345, s: 18, bg: 6, card: 8 },
-    legacyPalette: 'rose',
-    legacySurface: 'light',
   },
   {
     id: 'lavender',
@@ -98,8 +124,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 262, s: 83, lightL: 58, darkL: 68 },
     light: { h: 265, s: 25, bg: 97, card: 100 },
     dark: { h: 265, s: 22, bg: 6, card: 8 },
-    legacyPalette: 'lavender',
-    legacySurface: 'light',
   },
   {
     id: 'slate',
@@ -107,8 +131,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 215, s: 25, lightL: 42, darkL: 72 },
     light: { h: 220, s: 12, bg: 92, card: 98 },
     dark: { h: 220, s: 10, bg: 10, card: 12 },
-    legacyPalette: 'cool-slate',
-    legacySurface: 'gray',
   },
   {
     id: 'amber',
@@ -116,8 +138,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 38, s: 92, lightL: 50, darkL: 60 },
     light: { h: 40, s: 35, bg: 96, card: 100 },
     dark: { h: 35, s: 15, bg: 7, card: 9 },
-    legacyPalette: 'ember',
-    legacySurface: 'cream',
   },
   {
     id: 'mint',
@@ -125,8 +145,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 173, s: 80, lightL: 40, darkL: 55 },
     light: { h: 165, s: 25, bg: 97, card: 100 },
     dark: { h: 170, s: 18, bg: 6, card: 8 },
-    legacyPalette: 'mint',
-    legacySurface: 'light',
   },
   {
     id: 'coral',
@@ -134,8 +152,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 12, s: 85, lightL: 55, darkL: 65 },
     light: { h: 20, s: 35, bg: 96, card: 100 },
     dark: { h: 15, s: 18, bg: 7, card: 9 },
-    legacyPalette: 'coral',
-    legacySurface: 'cream',
   },
   {
     id: 'indigo',
@@ -143,8 +159,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 239, s: 84, lightL: 67, darkL: 72 },
     light: { h: 235, s: 20, bg: 97, card: 100 },
     dark: { h: 235, s: 25, bg: 5, card: 7 },
-    legacyPalette: 'midnight',
-    legacySurface: 'light',
   },
   {
     id: 'monochrome',
@@ -152,8 +166,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 240, s: 6, lightL: 10, darkL: 98 },
     light: { h: 240, s: 5, bg: 98, card: 100 },
     dark: { h: 240, s: 8, bg: 4, card: 6 },
-    legacyPalette: 'monochrome',
-    legacySurface: 'light',
   },
   {
     id: 'parchment',
@@ -161,8 +173,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 30, s: 45, lightL: 38, darkL: 58 },
     light: { h: 40, s: 55, bg: 96, card: 99 },
     dark: { h: 35, s: 14, bg: 8, card: 10 },
-    legacyPalette: 'warm-paper',
-    legacySurface: 'cream',
   },
   {
     id: 'charcoal',
@@ -170,8 +180,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 210, s: 70, lightL: 52, darkL: 65 },
     light: { h: 220, s: 8, bg: 90, card: 96 },
     dark: { h: 240, s: 6, bg: 8, card: 10 },
-    legacyPalette: 'lunar',
-    legacySurface: 'dark',
   },
   {
     id: 'plum',
@@ -179,8 +187,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 300, s: 65, lightL: 48, darkL: 62 },
     light: { h: 300, s: 20, bg: 96, card: 100 },
     dark: { h: 295, s: 22, bg: 6, card: 8 },
-    legacyPalette: 'blossom',
-    legacySurface: 'dark',
   },
   {
     id: 'midnight',
@@ -188,12 +194,10 @@ const THEME_LIST: AppThemeDefinition[] = [
     accent: { h: 235, s: 80, lightL: 48, darkL: 68 },
     light: { h: 230, s: 30, bg: 95, card: 100 },
     dark: { h: 230, s: 35, bg: 3, card: 5 },
-    legacyPalette: 'midnight',
-    legacySurface: 'black',
   },
 ];
 
-export const APP_THEMES: Record<AppThemeId, AppThemeDefinition> = Object.fromEntries(
+const APP_THEMES: Record<AppThemeId, AppThemeDefinition> = Object.fromEntries(
   THEME_LIST.map((t) => [t.id, t]),
 ) as Record<AppThemeId, AppThemeDefinition>;
 
@@ -278,73 +282,12 @@ export function appThemePreviewCss(id: AppThemeId, isDark: boolean): string {
   return `linear-gradient(135deg, ${bg} 55%, ${accent} 55%)`;
 }
 
-const LEGACY_PALETTE_TO_THEME: Record<string, AppThemeId> = {
-  azure: 'classic',
-  'spectrum-210': 'classic',
-  ocean: 'ocean',
-  'spectrum-195': 'ocean',
-  forest: 'forest',
-  'spectrum-145': 'forest',
-  verdant: 'forest',
-  'spectrum-120': 'forest',
-  amber: 'sunset',
-  ember: 'amber',
-  'spectrum-45': 'sunset',
-  'spectrum-30': 'amber',
-  rose: 'rose',
-  'spectrum-345': 'rose',
-  lavender: 'lavender',
-  'spectrum-270': 'lavender',
-  'cool-slate': 'slate',
-  'spectrum-215': 'slate',
-  lunar: 'charcoal',
-  'spectrum-220': 'charcoal',
-  mint: 'mint',
-  'spectrum-165': 'mint',
-  blossom: 'plum',
-  'spectrum-330': 'plum',
-  midnight: 'midnight',
-  'spectrum-235': 'midnight',
-  monochrome: 'monochrome',
-  'warm-paper': 'parchment',
-  'high-contrast': 'monochrome',
-};
-
-const SURFACE_HINT_THEME: Partial<Record<string, AppThemeId>> = {
-  cream: 'parchment',
-  gray: 'slate',
-  dark: 'charcoal',
-  black: 'midnight',
-};
-
-export function isAppThemeId(value: string | undefined | null): value is AppThemeId {
+function isAppThemeId(value: string | undefined | null): value is AppThemeId {
   return !!value && value in APP_THEMES;
-}
-
-export function deriveAppThemeFromLegacy(
-  paletteId?: string | null,
-  surfaceId?: string | null,
-): AppThemeId {
-  if (paletteId && LEGACY_PALETTE_TO_THEME[paletteId]) {
-    const base = LEGACY_PALETTE_TO_THEME[paletteId];
-    if (surfaceId === 'black' && base === 'classic') return 'midnight';
-    if (surfaceId === 'dark' && (base === 'classic' || base === 'slate')) return 'charcoal';
-    if (surfaceId === 'cream' && base === 'classic') return 'parchment';
-    return base;
-  }
-  if (surfaceId && SURFACE_HINT_THEME[surfaceId]) return SURFACE_HINT_THEME[surfaceId]!;
-  return DEFAULT_APP_THEME_ID;
 }
 
 export function normalizeAppThemeId(
   value: string | undefined | null,
-  legacyPalette?: string | null,
-  legacySurface?: string | null,
 ): AppThemeId {
-  if (isAppThemeId(value)) return value;
-  if (legacyPalette || legacySurface) {
-    return deriveAppThemeFromLegacy(legacyPalette, legacySurface);
-  }
-  if (value && LEGACY_PALETTE_TO_THEME[value]) return LEGACY_PALETTE_TO_THEME[value];
-  return DEFAULT_APP_THEME_ID;
+  return isAppThemeId(value) ? value : DEFAULT_APP_THEME_ID;
 }

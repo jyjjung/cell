@@ -31,7 +31,7 @@ export function normalizeChatCreationPermissions(
   };
 }
 
-export function canUserCreateChatType(
+function canUserCreateChatType(
   user: { roleIds?: string[]; isAdmin?: boolean } | null | undefined,
   permission: ChatTypeCreationPermission,
 ): boolean {

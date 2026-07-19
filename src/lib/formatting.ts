@@ -131,13 +131,3 @@ export function formatNameString(rawName: string | null | undefined, fallback = 
   const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
   return lastInitial ? `${first} ${lastInitial}.` : first;
 }
-
-export function formatUserListDisplayNames(
-  people: Array<NameLike>,
-  separator = ', ',
-): string {
-  return people
-    .map((person) => formatUserDisplayName(person, ''))
-    .filter(Boolean)
-    .join(separator);
-}

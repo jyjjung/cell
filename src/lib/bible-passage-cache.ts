@@ -12,11 +12,6 @@ function apiUrl(passage: string, version: BibleTextVersion): string {
   return `/api/bible?passage=${encodeURIComponent(passage)}&version=${version}&cacheVersion=${BIBLE_PASSAGE_CACHE_VERSION}`;
 }
 
-export function readCachedPassageHtml(passage: string, version: BibleTextVersion): string | null {
-  const key = cacheKey(passage, version);
-  return memoryCache.get(key) ?? null;
-}
-
 async function readFromCacheStorage(passage: string, version: BibleTextVersion): Promise<string | null> {
   if (typeof caches === 'undefined') return null;
   try {

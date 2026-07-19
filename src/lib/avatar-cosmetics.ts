@@ -59,7 +59,7 @@ export function getHaloTierUnlockProgress(planProgressPercent: number, tier: Tie
   return Math.min(1, Math.max(0, (planProgressPercent - prevThreshold) / span));
 }
 
-export function getAvatarTierByPlanProgress(planProgressPercent: number): TierConfig {
+function getAvatarTierByPlanProgress(planProgressPercent: number): TierConfig {
   let current = AVATAR_COSMETIC_TIERS[0];
   for (const tier of AVATAR_COSMETIC_TIERS) {
     if (planProgressPercent >= tier.minPlanProgressPercent) current = tier;
@@ -67,7 +67,7 @@ export function getAvatarTierByPlanProgress(planProgressPercent: number): TierCo
   return current;
 }
 
-export function getNextAvatarTierByPlanProgress(planProgressPercent: number): TierConfig | null {
+function getNextAvatarTierByPlanProgress(planProgressPercent: number): TierConfig | null {
   return AVATAR_COSMETIC_TIERS.find((tier) => planProgressPercent < tier.minPlanProgressPercent) || null;
 }
 

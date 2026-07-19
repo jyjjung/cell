@@ -1,6 +1,4 @@
-import type { DocVisibility } from '@/types';
-
-export function isFirestorePermissionError(error: unknown): boolean {
+function isFirestorePermissionError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: string }).code || '') : '';
   return code === 'permission-denied' || code === 'permissions-denied';
@@ -20,10 +18,3 @@ export function getDocActionErrorMessage(
   }
   return t.error;
 }
-
-export type CreateDocInput = {
-  title?: string;
-  visibility: DocVisibility;
-  sharedWith: string[];
-  content?: string;
-};

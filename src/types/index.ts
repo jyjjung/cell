@@ -2,21 +2,23 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
-import type { ColorPaletteId } from '@/lib/color-palettes';
 import type { AppThemeId } from '@/lib/app-themes';
-import type { SurfaceBackgroundId } from '@/lib/surface-backgrounds';
 import type { TypographyPreferences } from '@/lib/typography-preferences';
 import type { BibleTextVersion } from '@/lib/bible-versions';
+import type { RoleCapability, RoleStatus } from '@/lib/role-capabilities';
 
-export type ColorSchemePreference = 'light' | 'dark' | 'system';
 // Layout types removed: react-grid-layout is no longer used
 type Layouts = Record<string, any>;
 
 export interface AppRole {
   id: string;
   name: string;
-  chatId?: string;
+  capabilities?: RoleCapability[];
+  status?: RoleStatus;
+  chatId?: string | null;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  archivedAt?: Timestamp;
 }
 
 export interface AppInvite {
@@ -121,12 +123,6 @@ export interface RosterDefinition {
   editPermissions?: RosterEditPermissions;
 }
 
-export interface RosterAssignment {
-  person: string;
-  duty: string;
-  userId?: string | null;
-}
-
 export interface RosterFieldValue {
   text?: string;
   userId?: string | null;
@@ -136,8 +132,6 @@ export interface CustomRosterEntry {
   id: string;
   date: string;
   time?: string;
-  /** Legacy duty/person rows — used when no field definitions exist */
-  assignments?: RosterAssignment[];
   fieldValues?: Record<string, RosterFieldValue>;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -157,7 +151,7 @@ export interface DailyReading {
   originalDateKey?: string;
 }
 
-export type PlanType = 'canonical' | 'custom' | 'mcheyne';
+type PlanType = 'canonical' | 'custom' | 'mcheyne';
 
 export interface BibleReadingPlan {
   id?: string;
@@ -182,7 +176,7 @@ export interface DashboardPreferences {
   layouts: Layouts;
 }
 
-export interface EditableAvatarData {
+interface EditableAvatarData {
   skinTone: string;
   hairStyle: string;
   hairColor: string;
@@ -211,6 +205,7 @@ export interface AppUser extends FirebaseUser {
   lastName: string | null;
   displayName: string | null;
   roleIds?: string[];
+  capabilityKeys?: RoleCapability[];
   showInCommunityProgress?: boolean;
   dashboard?: DashboardPreferences;
   isAdmin?: boolean;
@@ -224,18 +219,10 @@ export interface AppUser extends FirebaseUser {
   fcmLastHealedAt?: Timestamp;
   fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
-  colorPalette?: ColorPaletteId;
-  surfaceBackground?: SurfaceBackgroundId;
   appTheme?: AppThemeId;
-  glassEnabled?: boolean;
   typography?: TypographyPreferences;
-  colorScheme?: ColorSchemePreference;
   bibleTextVersion?: BibleTextVersion;
-  clickMeCount?: number;
-  clickMeLastClaimAt?: Timestamp;
-  feedbackCount?: number;
   prayerRequestsLastSeenAt?: Timestamp;
-  unlockedSecrets?: string[];
 }
 
 
@@ -245,14 +232,13 @@ export interface UserProfileData {
   firstName: string;
   lastName: string;
   roleIds?: string[];
+  capabilityKeys?: RoleCapability[];
   photoURL?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   showInCommunityProgress?: boolean;
   dashboard?: DashboardPreferences;
-  isAdmin?: boolean;
   isApproved?: boolean;
-  isYouth?: boolean;
   avatar?: AvatarData;
   avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
@@ -261,18 +247,10 @@ export interface UserProfileData {
   fcmLastHealedAt?: Timestamp;
   fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
-  colorPalette?: ColorPaletteId;
-  surfaceBackground?: SurfaceBackgroundId;
   appTheme?: AppThemeId;
-  glassEnabled?: boolean;
   typography?: TypographyPreferences;
-  colorScheme?: ColorSchemePreference;
   bibleTextVersion?: BibleTextVersion;
-  clickMeCount?: number;
-  clickMeLastClaimAt?: Timestamp;
-  feedbackCount?: number;
   prayerRequestsLastSeenAt?: Timestamp;
-  unlockedSecrets?: string[];
 }
 
 
@@ -474,8 +452,6 @@ export interface SetlistSong {
   title: string;
   key: ChordKey;
   order: number;
-  /** @deprecated Use referenceTracks — kept for older setlist entries */
-  youtubeUrl?: string;
   /** Per-setlist reference tracks (YouTube watch or youtu.be URLs) */
   referenceTracks?: ReferenceTrack[];
   /** Explicit chord sheet IDs from the song library for this key; omit = all sheets for key */

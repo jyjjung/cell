@@ -13,8 +13,6 @@ export const HAIR_COLORS = [
   '#6D4C41', '#795548', '#8E5A3D', '#A56B46', '#D19A66', 
   '#FFD692', '#F5D3A9', '#BDBDBD', '#C75A7E', '#F0A1C1'
 ];
-export const FACIAL_HAIR_COLORS = HAIR_COLORS;
-
 // Outfit Colors - Spectral order
 export const OUTFIT_COLORS = [
   '#FFFFFF', '#F3F4F6', '#D1D5DB', '#4B5563', '#1F2937', 
@@ -22,8 +20,6 @@ export const OUTFIT_COLORS = [
   '#8BC34A', '#7ED321', '#4CAF50', '#3A8D5B', '#009688', 
   '#00BCD4', '#2196F3', '#4A90E2', '#3F51B5', '#673AB7', '#9C27B0'
 ];
-
-export const ACCESSORY_COLORS = ['#222222', '#5A6978', '#FFFFFF', '#D95763', '#F5A623', '#FFEB3B', '#4A90E2'];
 
 export { BACKGROUNDS } from '@/lib/avatar-backgrounds';
 

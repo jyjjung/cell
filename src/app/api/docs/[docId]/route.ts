@@ -138,12 +138,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (snap.data()?.ownerId !== uid) {
       return NextResponse.json({ error: 'Only the owner can delete' }, { status: 403 });
     }
-    // Delete comments subcollection in batches
-    const comments = await ref.collection('comments').limit(400).get();
-    const batch = adminDb.batch();
-    comments.docs.forEach((d) => batch.delete(d.ref));
-    batch.delete(ref);
-    await batch.commit();
+    await adminDb.recursiveDelete(ref);
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const status = typeof error === 'object' && error && 'status' in error

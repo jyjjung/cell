@@ -1,39 +1,39 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import UserSelector from '@/components/chat/UserSelector';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Trash2, Save, ChevronsLeft, ChevronsRight, PlusCircle, Edit, ListTodo, UserPlus, X } from 'lucide-react';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, addMonths, subMonths, getDay } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { CleaningRosterEntry, UserProfileData } from '@/types';
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { PageHeader } from '@/components/ui/page-layout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import UserSelector from '@/components/chat/UserSelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { useToast } from '@/hooks/use-toast';
 import { useCleaningDays } from '@/hooks/useCleaningDays';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { PageHeader } from '@/components/ui/page-layout';
 import { formatUserDisplayName } from '@/lib/formatting';
-import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { CleaningRosterEntry, UserProfileData } from '@/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { addMonths, eachDayOfInterval, endOfMonth, format, getDay, startOfMonth, subMonths } from 'date-fns';
+import { ChevronsLeft, ChevronsRight, Edit, Loader2, PlusCircle, Save, Trash2, UserPlus, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const daySchema = z.object({ name: z.string().min(1, "Name required.") });
 type DayFormValues = z.infer<typeof daySchema>;
 
 function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
-    const { cleaningDays, loading, addCleaningDay, updateCleaningDay, deleteCleaningDay } = useCleaningDays();
+    const { cleaningDays, addCleaningDay, updateCleaningDay, deleteCleaningDay } = useCleaningDays();
     const [editingDay, setEditingDay] = useState<{ id: string; name: string } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();

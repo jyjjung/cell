@@ -13,8 +13,8 @@
  * 5. Prints a report of who was broken vs healthy
  *
  * Usage:
- *   node scripts/repair-push-tokens.mjs           # apply fixes
- *   node scripts/repair-push-tokens.mjs --dry-run # report only
+ *   node scripts/repair-push-tokens.mjs # report only
+ *   node scripts/repair-push-tokens.mjs --apply --confirm-project=cell-abca4
  */
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
@@ -22,7 +22,13 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env' });
 dotenv.config({ path: '.env.local' });
 
-const APPLY = !process.argv.includes('--dry-run');
+const APPLY = process.argv.includes('--apply');
+const confirmedProject = process.argv
+  .find((arg) => arg.startsWith('--confirm-project='))
+  ?.split('=')[1];
+if (APPLY && confirmedProject !== 'cell-abca4') {
+  throw new Error('Apply requires --confirm-project=cell-abca4.');
+}
 const MAX_TOKENS = 5;
 
 function parseServiceAccount(raw) {
@@ -191,8 +197,9 @@ async function main() {
         if (APPLY) {
           await db.collection('users').doc(user.uid).update({
             fcmTokens: [],
-            fcmTokensRepairedAt: admin.firestore.FieldValue.serverTimestamp(),
-            fcmNeedsReenable: true,
+            fcmNeedsResync: true,
+            fcmResyncReason: 'no-valid-token-after-server-validation',
+            fcmResyncRequestedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
         }
         console.log(`BROKEN  ${user.name} <${user.email}> — ${user.tokens.length} token(s), 0 valid (cleared)`);
@@ -205,8 +212,8 @@ async function main() {
         if (APPLY) {
           await db.collection('users').doc(user.uid).update({
             fcmTokens: kept,
-            fcmTokensRepairedAt: admin.firestore.FieldValue.serverTimestamp(),
-            fcmNeedsReenable: false,
+            fcmNeedsResync: false,
+            fcmLastHealedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
         }
         console.log(

@@ -1,7 +1,7 @@
 import type { AppEvent } from '@/types';
 
 /** Normalize Firestore date fields (string, Timestamp, or {seconds}) to ISO strings. */
-export function toEventIsoString(value: unknown): string | undefined {
+function toEventIsoString(value: unknown): string | undefined {
   if (value == null) return undefined;
   if (typeof value === 'string') return value;
   if (value instanceof Date) return value.toISOString();

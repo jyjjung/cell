@@ -1,23 +1,21 @@
 "use client";
 
-import React from 'react';
-import { 
-  Calendar, 
-  ChevronRight,
-  BookOpen,
-} from 'lucide-react';
-import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
-import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
-import { useUsersById } from '@/contexts/users-context';
-import type { QTRosterEntry } from '@/types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { format } from 'date-fns';
-import { useRouter } from 'next/navigation';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
+import { useUsersById } from '@/contexts/users-context';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
+import { formatNameString, formatUserDisplayName } from '@/lib/formatting';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { QTRosterEntry } from '@/types';
+import { format } from 'date-fns';
+import {
+    BookOpen, Calendar,
+    ChevronRight
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface QTSummaryProps {
   date: string;

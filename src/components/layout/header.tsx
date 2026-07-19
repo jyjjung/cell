@@ -1,18 +1,18 @@
 "use client";
 
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/auth-context";
+import { useNotifications } from "@/hooks/use-notifications";
+import { translations } from "@/lib/translations";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Bell, CheckCheck, Megaphone, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
-import { Bell, Search, Megaphone, Check, CheckCheck, X, ArrowRight } from "lucide-react";
-import { useNotifications } from "@/hooks/use-notifications";
-import { useAuth } from "@/contexts/auth-context";
-import { useMemo, useState, useEffect, useRef } from "react";
-import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { formatDistanceToNow } from "date-fns";
-import { LinkifiedText } from "@/components/ui/linkified-text";
-import { translations } from "@/lib/translations";
 
 interface HeaderProps {
   onOpenCommandMenu?: () => void;

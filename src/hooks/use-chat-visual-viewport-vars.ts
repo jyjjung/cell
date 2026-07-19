@@ -188,8 +188,4 @@ export function useChatVisualViewportVars(enabled: boolean) {
   }, [enabled]);
 }
 
-export function useIsIOSLike() {
-  return typeof window !== 'undefined' && isIOSLike();
-}
-
 export { isIOSLike };

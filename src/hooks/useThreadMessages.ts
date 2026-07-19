@@ -1,42 +1,28 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  addDoc,
-  serverTimestamp,
-  doc,
-  updateDoc,
-  arrayUnion,
-  deleteField,
-  increment,
-  getDoc,
-  getDocs,
-  writeBatch,
-  type DocumentData,
-  type UpdateData,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { formatChatMessagePreview } from '@/lib/chat-utils';
-import { getDeletedMessageContentType } from '@/lib/deleted-content';
-import { primeMediaUrls } from '@/lib/media-cache';
-import {
-  CHAT_MESSAGES_LIVE_LIMIT,
-  mergeMessageListsStable,
-  readAllMessagesFromDeviceCache,
-  fetchLatestMessagesWindow,
-  fetchOlderMessagesPage,
-  threadMessagesCollection,
-} from '@/lib/chat-messages-device-cache';
-import type { ChatMessage } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
+import {
+    CHAT_MESSAGES_LIVE_LIMIT, fetchLatestMessagesWindow,
+    fetchOlderMessagesPage, mergeMessageListsStable,
+    readAllMessagesFromDeviceCache, threadMessagesCollection
+} from '@/lib/chat-messages-device-cache';
+import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import { getDeletedMessageContentType } from '@/lib/deleted-content';
+import { db } from '@/lib/firebase';
+import { primeMediaUrls } from '@/lib/media-cache';
+import type { ChatMessage } from '@/types';
+import {
+    collection, deleteField, doc, getDoc,
+    getDocs, increment, limit,
+    onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch,
+    type DocumentData,
+    type UpdateData
+} from 'firebase/firestore';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
@@ -181,7 +167,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const sendMessage = useCallback(async (
     text?: string, 
     imageUrl?: string, 
-    replyToId?: string,
+    _replyToId?: string,
     eventId?: string,
     setlistId?: string,
     rosterId?: string
@@ -317,6 +303,9 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       const deletedContentType = messageData
         ? getDeletedMessageContentType(messageData)
         : 'message';
+      if (messageData?.imageUrl) {
+        await deleteStorageObjectAtUrl(messageData.imageUrl);
+      }
 
       await updateDoc(messageRef, {
         isDeleted: true,

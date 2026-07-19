@@ -5,7 +5,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { BIBLE_BOOKS_DATA } from '../bible-data';
 import type { BibleXmlVersion } from '@/lib/bible-versions';
 
-export interface BibleVerse {
+interface BibleVerse {
   number: number;
   text: string;
 }

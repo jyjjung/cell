@@ -1,9 +1,9 @@
 import { translations } from '@/lib/translations';
 
-export type TranslationKey = keyof typeof translations.en;
+type TranslationKey = keyof typeof translations.en;
 
 /** Route → translation key. Keep in sync with sidebar navigation labels. */
-export const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
+const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
   '/': 'home',
   '/chat': 'chat',
   '/chat/photos': 'allPhotos',

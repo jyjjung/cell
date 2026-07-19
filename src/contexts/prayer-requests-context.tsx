@@ -1,23 +1,22 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase';
 import { isPrayerShepherd, PRAYER_REQUESTS_COLLECTION } from '@/lib/prayer-requests';
 import type { PrayerRequest } from '@/types';
+import {
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    serverTimestamp,
+    updateDoc
+} from 'firebase/firestore';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 type PrayerRequestsContextValue = {
   requests: PrayerRequest[];

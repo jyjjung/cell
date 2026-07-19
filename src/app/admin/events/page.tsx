@@ -1,23 +1,23 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import { useEvents } from '@/hooks/use-events';
-import type { AppEvent } from '@/types';
-import { EventForm } from '@/components/admin/event-form';
 import BatchEventImportForm from '@/components/admin/batch-event-import-form';
+import { EventForm } from '@/components/admin/event-form';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, ListOrdered, Loader2 } from 'lucide-react';
-import { startOfDay, format } from 'date-fns';
-import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { EmptyState, PageHeader } from '@/components/ui/page-layout';
 import { Separator } from '@/components/ui/separator';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAuth } from '@/contexts/auth-context';
+import { useEvents } from '@/hooks/use-events';
+import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
 import { translations } from '@/lib/translations';
+import type { AppEvent } from '@/types';
+import { format, startOfDay } from 'date-fns';
+import { Edit, ListOrdered, Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 export default function AdminEventsPage() {
   const { events, addEvent, updateEvent, deleteEvent, loading: eventsLoading } = useEvents();

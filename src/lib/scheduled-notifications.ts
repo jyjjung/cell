@@ -22,22 +22,10 @@ export function getScheduledDateIso(
 export function shouldDeferScheduledAnnouncement(
   scheduledFor: Timestamp | null | undefined,
   timeZone = process.env.DUTY_REMINDER_TIMEZONE || DEFAULT_TIMEZONE,
-  now = new Date(),
 ): boolean {
   if (!scheduledFor) return false;
   const scheduledDateIso = getScheduledDateIso(scheduledFor, timeZone);
   if (!scheduledDateIso) return false;
   const todayIso = getCommunityTodayIso(timeZone);
   return scheduledDateIso > todayIso;
-}
-
-export function isScheduledAnnouncementDueToday(
-  scheduledFor: Timestamp | { toMillis?: () => number; seconds?: number },
-  timeZone = process.env.DUTY_REMINDER_TIMEZONE || DEFAULT_TIMEZONE,
-  now = new Date(),
-): boolean {
-  const scheduledDateIso = getScheduledDateIso(scheduledFor, timeZone);
-  if (!scheduledDateIso) return false;
-  const todayIso = getCommunityTodayIso(timeZone);
-  return scheduledDateIso <= todayIso;
 }

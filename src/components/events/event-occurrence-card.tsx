@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
-import { EventCategory } from "@/types";
-import { parseDay, type EventOccurrenceRow } from "@/lib/event-occurrences";
-import { cn } from "@/lib/utils";
-import { ChevronRight, Clock, MapPin } from "lucide-react";
 import { LinkifiedText } from "@/components/ui/linkified-text";
+import { type EventOccurrenceRow } from "@/lib/event-occurrences";
+import { cn } from "@/lib/utils";
+import { EventCategory } from "@/types";
+import { format } from "date-fns";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight, Clock, MapPin } from "lucide-react";
+import { useState } from "react";
 
 const categoryConfig: Record<EventCategory, { color: string }> = {
   [EventCategory.Event]: { color: "text-foreground" },
@@ -29,8 +29,6 @@ export default function EventOccurrenceCard({
   const [open, setOpen] = useState(false);
   const { event, occurrenceDate } = row;
   const eventDate = occurrenceDate;
-  const rangeStart = parseDay(event.date);
-  const rangeEnd = event.endDate ? parseDay(event.endDate) : null;
   const config = categoryConfig[event.category as EventCategory] || categoryConfig[EventCategory.Event];
   const isRecurring = event.recurrence && event.recurrence !== "none";
 

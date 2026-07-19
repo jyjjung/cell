@@ -10,7 +10,7 @@ import { readStoredBibleVersion } from '@/lib/bible-versions';
 export function AppearanceFirebaseBootstrap() {
   const { currentUser, updateUserProfile } = useAuth();
   const { typography, isReady: typographyReady } = useTypography();
-  const { themeId, paletteId, surfaceBackgroundId, isReady: paletteReady } = useColorPalette();
+  const { themeId, isReady: paletteReady } = useColorPalette();
   const bootstrappedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -21,8 +21,6 @@ export function AppearanceFirebaseBootstrap() {
     const patch: Record<string, unknown> = {};
     if (!currentUser.typography) patch.typography = typography;
     if (!currentUser.appTheme) patch.appTheme = themeId;
-    if (!currentUser.colorPalette) patch.colorPalette = paletteId;
-    if (!currentUser.surfaceBackground) patch.surfaceBackground = surfaceBackgroundId;
     if (!currentUser.bibleTextVersion) patch.bibleTextVersion = readStoredBibleVersion();
 
     if (Object.keys(patch).length > 0) {
@@ -34,8 +32,6 @@ export function AppearanceFirebaseBootstrap() {
     paletteReady,
     typography,
     themeId,
-    paletteId,
-    surfaceBackgroundId,
     updateUserProfile,
   ]);
 

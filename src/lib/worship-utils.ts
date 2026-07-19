@@ -11,7 +11,7 @@ export function parseYoutubeVideoId(url: string): string | null {
 }
 
 /** Normalize a YouTube URL to a canonical watch URL, or return null if invalid. */
-export function normalizeYoutubeUrl(url: string): string | null {
+function normalizeYoutubeUrl(url: string): string | null {
   const id = parseYoutubeVideoId(url);
   return id ? `https://www.youtube.com/watch?v=${id}` : null;
 }
@@ -41,21 +41,14 @@ export async function fetchYoutubeVideoTitle(videoId: string): Promise<string | 
   return null;
 }
 
-/** Resolve reference tracks from a setlist song (supports legacy youtubeUrl). */
 export function getReferenceTracks(
-  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+  song: Pick<SetlistSong, 'referenceTracks'>,
 ): ReferenceTrack[] {
-  if (song.referenceTracks?.length) {
-    return song.referenceTracks.filter((t) => parseYoutubeVideoId(t.url));
-  }
-  if (song.youtubeUrl && parseYoutubeVideoId(song.youtubeUrl)) {
-    return [{ url: song.youtubeUrl }];
-  }
-  return [];
+  return song.referenceTracks?.filter((track) => parseYoutubeVideoId(track.url)) ?? [];
 }
 
 export function hasReferenceTracks(
-  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+  song: Pick<SetlistSong, 'referenceTracks'>,
 ): boolean {
   return getReferenceTracks(song).length > 0;
 }
@@ -64,7 +57,7 @@ export type ReferenceTrackDraft = { url: string; note: string };
 
 /** Editor rows from saved setlist song data (always at least one row). */
 export function referenceTracksToDrafts(
-  song: Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>,
+  song: Pick<SetlistSong, 'referenceTracks'>,
 ): ReferenceTrackDraft[] {
   const tracks = getReferenceTracks(song);
   if (tracks.length === 0) return [{ url: '', note: '' }];

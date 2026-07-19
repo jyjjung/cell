@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
 import { DEFAULT_INVITE_MAX_USES, normalizeInviteCode, normalizeInviteEmail, resolveInviteExpiresAtMs } from '@/lib/invite-utils';
+import { deriveRoleState } from '@/lib/role-capabilities';
+import { reconcileUserRoleState } from '@/lib/server-role-state';
 
 const USERS_COLLECTION = 'users';
 const INVITES_COLLECTION = 'invites';
@@ -48,9 +49,11 @@ export async function POST(request: NextRequest) {
     const inviteRef = adminDb.collection(INVITES_COLLECTION).doc(inviteCode);
 
     const rolesSnap = await adminDb.collection(ROLES_COLLECTION).get();
-    const adminRoleIds = rolesSnap.docs
-      .filter((doc) => ADMIN_ROLE_NAMES.includes(doc.data()?.name as typeof ADMIN_ROLE_NAMES[number]))
-      .map((doc) => doc.id);
+    const roles = rolesSnap.docs.map((roleDoc) => ({
+      id: roleDoc.id,
+      capabilities: roleDoc.data().capabilities,
+      status: roleDoc.data().status,
+    }));
 
     const result = await adminDb.runTransaction(async (tx) => {
       const [userSnap, inviteSnap] = await Promise.all([tx.get(userRef), tx.get(inviteRef)]);
@@ -94,12 +97,13 @@ export async function POST(request: NextRequest) {
       }
 
       const roleIds: string[] = Array.isArray(invite.roles) ? invite.roles : [];
-      const hasAdminRole = roleIds.some((id) => adminRoleIds.includes(id));
+      const roleState = deriveRoleState(roleIds, roles);
 
       tx.update(userRef, {
         isApproved: true,
-        roleIds,
-        isAdmin: hasAdminRole,
+        roleIds: roleState.roleIds,
+        capabilityKeys: roleState.capabilityKeys,
+        roleSyncVersion: 1,
         updatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -116,6 +120,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, alreadyApproved: true });
     }
 
+    await reconcileUserRoleState(adminDb, uid);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const code = error instanceof Error ? error.message : 'UNKNOWN';

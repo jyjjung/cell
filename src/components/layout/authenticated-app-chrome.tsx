@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
-import { onMessage } from 'firebase/messaging';
-import { messaging } from '@/lib/firebase';
-import { useAuth } from '@/contexts/auth-context';
+import { useFCMToken } from '@/hooks/use-fcm-token';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
-import { useFCMToken } from '@/hooks/use-fcm-token';
 import { getFCMRegistration } from '@/lib/fcm-registration';
+import { messaging } from '@/lib/firebase';
 import { isChatUnread } from '@/lib/notification-utils';
 import type { AppUser } from '@/types';
+import { onMessage } from 'firebase/messaging';
+import { usePathname } from 'next/navigation';
+import { useCallback, useEffect, useMemo } from 'react';
 
 /** Subscribes to chats, notifications, FCM, and badge updates — only for signed-in users. */
 export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }) {

@@ -1,27 +1,26 @@
 
 "use client";
 
-import type { AvatarData, AvatarMode } from '@/types';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { PixelAvatar } from './PixelAvatar';
+import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
-import { deriveInitialsFromName, normalizeAvatarInitials } from '@/lib/avatar-utils';
-import { SKIN_TONES, HAIR_STYLES, HAIR_COLORS, OUTFITS, ACCESSORIES, OUTFIT_COLORS, ACCESSORY_COLORS, MOUTHS, FACIAL_HAIR_STYLES, FACIAL_HAIR_COLORS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
-import { AVATAR_BACKGROUND_GROUPS, AVATAR_BACKGROUNDS } from '@/lib/avatar-backgrounds';
+import { useToast } from '@/hooks/use-toast';
+import { AVATAR_BACKGROUNDS, AVATAR_BACKGROUND_GROUPS } from '@/lib/avatar-backgrounds';
+import { ACCESSORIES, FACIAL_HAIR_STYLES, HAIR_COLORS, HAIR_STYLES, MOUTHS, OUTFITS, OUTFIT_COLORS, SKIN_TONES } from '@/lib/avatar-options';
+import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
+import getCroppedImg from '@/lib/cropImage';
+import { storage } from '@/lib/firebase';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { cn } from '@/lib/utils';
+import type { AvatarData, AvatarMode } from '@/types';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import Cropper from 'react-easy-crop';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, User, Dog, Type, Eraser, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
-import { useState, useRef, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
-import { deleteAvatarPhotoAtUrl } from '@/lib/avatar-storage';
-import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '@/lib/cropImage';
-import { Slider } from '@/components/ui/slider';
+import { PixelAvatar } from './PixelAvatar';
 function BackgroundSelector({
   currentData,
   onDataChange,
@@ -248,7 +247,7 @@ function ImageUploadControls({
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
-    const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
+    const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
 
@@ -315,7 +314,7 @@ function ImageUploadControls({
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     onDataChange({ ...currentData, mode: 'image', imageUrl: downloadURL });
                     if (previousImageUrl && previousImageUrl !== downloadURL) {
-                      await deleteAvatarPhotoAtUrl(previousImageUrl);
+                      await deleteStorageObjectAtUrl(previousImageUrl);
                     }
                     setIsUploading(false);
                     setImageSrc(null); // Close the cropper UI

@@ -1,53 +1,37 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useAuth } from '@/contexts/auth-context';
-import type { UserProfileData, AppRole } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { 
-  Loader2, 
-  Edit, 
-  Trash2, 
-  Users, 
-  Search, 
-  ShieldAlert, 
-  BadgeCheck, 
-  AlertTriangle, 
-  ArrowLeft, 
-  UserCheck, 
-  AlertCircle, 
-  ShieldCheck, 
-  Clock,
-  Shield,
-  Fingerprint,
-  CheckSquare,
-  UserPlus,
-} from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { auth, db } from '@/lib/firebase';
-import { useRoles } from '@/hooks/use-roles';
 import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select';
-import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useAuth } from '@/contexts/auth-context';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useRoles } from '@/hooks/use-roles';
+import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase';
+import type { UserProfileData } from '@/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+    AlertCircle, AlertTriangle, BadgeCheck, CheckSquare, Clock, Edit, Loader2, Search,
+    ShieldAlert, ShieldCheck, Trash2, UserPlus, Users
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { PageHeader } from '@/components/ui/page-layout';
-import { translations } from '@/lib/translations';
 import { AdminInviteDialog } from '@/components/admin/admin-invite-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PageHeader } from '@/components/ui/page-layout';
+import { hasCapability } from '@/lib/role-capabilities';
+import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
 
 const editUserSchema = z.object({
   firstName: z.string().min(1, "First name is required."),
@@ -56,6 +40,10 @@ const editUserSchema = z.object({
   isApproved: z.boolean().optional(),
 });
 type EditUserFormValues = z.infer<typeof editUserSchema>;
+
+function userIsAdmin(user: Pick<UserProfileData, 'capabilityKeys'>): boolean {
+  return hasCapability(user.capabilityKeys, 'app.admin');
+}
 
 export default function AdminUsersPage() {
   const { allUsers, loading: usersLoading } = useAllUsers();
@@ -154,7 +142,10 @@ export default function AdminUsersPage() {
     }
   };
 
-  const pendingUsers = useMemo(() => filteredUsers.filter(u => !u.isApproved && !u.isAdmin), [filteredUsers]);
+  const pendingUsers = useMemo(
+    () => filteredUsers.filter((user) => !user.isApproved && !userIsAdmin(user)),
+    [filteredUsers],
+  );
   
   const handleBulkApprove = async () => {
     if (selectedUserIds.size === 0) return;
@@ -218,7 +209,7 @@ export default function AdminUsersPage() {
 
   const UserActions = ({ user, size = "icon" }: { user: UserProfileData, size?: "icon" | "sm" }) => (
     <div className="flex items-center justify-end gap-1.5">
-      {!(user.isApproved || user.isAdmin) && (
+      {!(user.isApproved || userIsAdmin(user)) && (
         <Button 
             variant="default" 
             size="sm" 
@@ -258,7 +249,7 @@ export default function AdminUsersPage() {
 
   const UserMobileCard = ({ user }: { user: UserProfileData }) => {
     const isDuplicate = duplicateNameSet.has(`${user.firstName?.toLowerCase() || ''} ${user.lastName?.toLowerCase() || ''}`);
-    const isApproved = user.isApproved || user.isAdmin;
+    const isApproved = user.isApproved || userIsAdmin(user);
 
     return (
       <div className={cn(
@@ -290,7 +281,7 @@ export default function AdminUsersPage() {
                 <Clock className="h-3 w-3 mr-1" /> Pending
               </Badge>
             )}
-            {user.isAdmin ? (
+            {userIsAdmin(user) ? (
                <div className="flex items-center gap-1 tex-xs text-primary font-semibold">
                  <ShieldAlert className="h-3 w-3" />
                  <span className="text-[10px]">Admin</span>
@@ -406,7 +397,7 @@ export default function AdminUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => {
-                    const isPending = !user.isApproved && !user.isAdmin;
+                    const isPending = !user.isApproved && !userIsAdmin(user);
                     return (
                     <TableRow key={user.uid} className={cn(
                       "border-white/5 transition-colors group hover:bg-white/5",
@@ -444,7 +435,7 @@ export default function AdminUsersPage() {
                           </div>
                       </TableCell>
                       <TableCell className="py-2">
-                          {(user.isApproved || user.isAdmin) ? (
+                          {(user.isApproved || userIsAdmin(user)) ? (
                             <Badge variant="outline" className="h-5 px-2 rounded-lg border-border/50 bg-muted text-primary text-[10px]">
                                 <ShieldCheck className="h-3 w-3 mr-1" /> {t.adminApproved}
                             </Badge>
@@ -468,7 +459,7 @@ export default function AdminUsersPage() {
                           </div>
                       </TableCell>
                       <TableCell className="py-2">
-                        {user.isAdmin ? (
+                        {userIsAdmin(user) ? (
                             <div className="flex items-center gap-1.5 text-primary">
                                 <ShieldAlert className="h-3 w-3" />
                                 <span className="text-xs font-semibold">{t.admin}</span>
