@@ -5,10 +5,11 @@ import { ArrowDown, ArrowUp, Info, Loader2, Pencil, Plus, Trash2 } from 'lucide-
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { useInfoWidgets, type InfoWidgetInput } from '@/hooks/use-info-widgets';
-import type { InfoWidget, InfoWidgetItem } from '@/types';
+import type { InfoWidget } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { EmptyState } from '@/components/ui/page-layout';
 import {
@@ -30,34 +31,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-type DraftItem = {
-  key: string;
-  label: string;
-  labelKo: string;
-  value: string;
-  detail: string;
-};
-
-function toDraftItems(items: InfoWidgetItem[]): DraftItem[] {
-  return items.map((item, index) => ({
-    key: item.id || `draft-${index}`,
-    label: item.label,
-    labelKo: item.labelKo || '',
-    value: item.value,
-    detail: item.detail || '',
-  }));
-}
-
-function emptyDraftItem(): DraftItem {
-  return {
-    key: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    label: '',
-    labelKo: '',
-    value: '',
-    detail: '',
-  };
-}
-
 function WidgetEditorDialog({
   open,
   existing,
@@ -73,65 +46,30 @@ function WidgetEditorDialog({
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const [title, setTitle] = useState('');
   const [titleKo, setTitleKo] = useState('');
-  const [items, setItems] = useState<DraftItem[]>([emptyDraftItem()]);
+  const [body, setBody] = useState('');
+  const [bodyKo, setBodyKo] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTitle(existing?.title || '');
     setTitleKo(existing?.titleKo || '');
-    setItems(
-      existing?.items?.length
-        ? toDraftItems(existing.items)
-        : [emptyDraftItem()],
-    );
+    setBody(existing?.body || '');
+    setBodyKo(existing?.bodyKo || '');
   }, [existing, open]);
-
-  const updateItem = (key: string, patch: Partial<DraftItem>) => {
-    setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)));
-  };
-
-  const removeItem = (key: string) => {
-    setItems((prev) => {
-      const next = prev.filter((item) => item.key !== key);
-      return next.length > 0 ? next : [emptyDraftItem()];
-    });
-  };
-
-  const moveItem = (key: string, direction: 'up' | 'down') => {
-    setItems((prev) => {
-      const index = prev.findIndex((item) => item.key === key);
-      if (index < 0) return prev;
-      const swapIndex = direction === 'up' ? index - 1 : index + 1;
-      if (swapIndex < 0 || swapIndex >= prev.length) return prev;
-      const next = [...prev];
-      const [item] = next.splice(index, 1);
-      next.splice(swapIndex, 0, item);
-      return next;
-    });
-  };
 
   const handleSave = async () => {
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    const cleanedItems = items
-      .map((item) => ({
-        label: item.label.trim(),
-        labelKo: item.labelKo.trim() || undefined,
-        value: item.value.trim(),
-        detail: item.detail.trim() || undefined,
-      }))
-      .filter((item) => item.label && item.value);
-
-    if (cleanedItems.length === 0) return;
+    const trimmedBody = body.trim();
+    if (!trimmedTitle || !trimmedBody) return;
 
     setSaving(true);
     try {
       await onSave({
         title: trimmedTitle,
         titleKo: titleKo.trim() || undefined,
-        items: cleanedItems,
+        body: trimmedBody,
+        bodyKo: bodyKo.trim() || undefined,
       });
       onClose();
     } catch {
@@ -141,9 +79,7 @@ function WidgetEditorDialog({
     }
   };
 
-  const canSave =
-    title.trim().length > 0 &&
-    items.some((item) => item.label.trim() && item.value.trim());
+  const canSave = title.trim().length > 0 && body.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -183,95 +119,28 @@ function WidgetEditorDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label>{t.adminInfoWidgetItems}</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-lg"
-                onClick={() => setItems((prev) => [...prev, emptyDraftItem()])}
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                {t.adminAddInfoWidgetItem}
-              </Button>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="info-widget-body">
+              {t.adminInfoWidgetBody} <span className="text-primary">*</span>
+            </Label>
+            <Textarea
+              id="info-widget-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={t.adminInfoWidgetBodyPlaceholder}
+              className="min-h-[140px] rounded-lg"
+            />
+          </div>
 
-            <div className="space-y-3">
-              {items.map((item, index) => (
-                <div
-                  key={item.key}
-                  className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-micro-label">
-                      {t.adminInfoWidgetItem} {index + 1}
-                    </p>
-                    <div className="flex items-center gap-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground"
-                        onClick={() => moveItem(item.key, 'up')}
-                        disabled={index === 0}
-                        aria-label={t.adminMoveUp}
-                      >
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground"
-                        onClick={() => moveItem(item.key, 'down')}
-                        disabled={index === items.length - 1}
-                        aria-label={t.adminMoveDown}
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeItem(item.key)}
-                        aria-label={t.adminYesDelete}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Input
-                      value={item.label}
-                      onChange={(e) => updateItem(item.key, { label: e.target.value })}
-                      placeholder={t.adminInfoWidgetLabelPlaceholder}
-                      className="rounded-lg"
-                    />
-                    <Input
-                      value={item.labelKo}
-                      onChange={(e) => updateItem(item.key, { labelKo: e.target.value })}
-                      placeholder={t.adminInfoWidgetLabelKoPlaceholder}
-                      className="rounded-lg"
-                    />
-                    <Input
-                      value={item.value}
-                      onChange={(e) => updateItem(item.key, { value: e.target.value })}
-                      placeholder={t.adminInfoWidgetValuePlaceholder}
-                      className="rounded-lg font-mono"
-                    />
-                    <Input
-                      value={item.detail}
-                      onChange={(e) => updateItem(item.key, { detail: e.target.value })}
-                      placeholder={t.adminInfoWidgetDetailPlaceholder}
-                      className="rounded-lg"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="info-widget-body-ko">{t.adminInfoWidgetBodyKo}</Label>
+            <Textarea
+              id="info-widget-body-ko"
+              value={bodyKo}
+              onChange={(e) => setBodyKo(e.target.value)}
+              placeholder={t.adminInfoWidgetBodyKoPlaceholder}
+              className="min-h-[100px] rounded-lg"
+            />
           </div>
 
           <div className="flex gap-2 pt-1">
@@ -388,6 +257,8 @@ export default function InfoWidgetsAdmin() {
           {widgets.map((widget, index) => {
             const title =
               lang === 'ko' && widget.titleKo ? widget.titleKo : widget.title;
+            const body =
+              lang === 'ko' && widget.bodyKo ? widget.bodyKo : widget.body;
             const isReordering = reorderingId === widget.id;
             return (
               <section key={widget.id} className="widget-surface space-y-3">
@@ -395,11 +266,6 @@ export default function InfoWidgetsAdmin() {
                   <div className="min-w-0">
                     <p className="text-eyebrow">{t.adminInfoWidgetPreview}</p>
                     <h3 className="text-section-title truncate">{title}</h3>
-                    {lang === 'ko' && widget.titleKo ? (
-                      <p className="text-stat-label mt-0.5">{widget.title}</p>
-                    ) : widget.titleKo ? (
-                      <p className="text-stat-label mt-0.5">{widget.titleKo}</p>
-                    ) : null}
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <Button
@@ -470,29 +336,9 @@ export default function InfoWidgetsAdmin() {
                   </div>
                 </div>
 
-                <ul className="space-y-1.5">
-                  {widget.items.map((item) => {
-                    const label =
-                      lang === 'ko' && item.labelKo ? item.labelKo : item.label;
-                    return (
-                      <li
-                        key={item.id}
-                        className="flex items-baseline justify-between gap-3 text-sm"
-                      >
-                        <span className="text-muted-foreground">{label}</span>
-                        <span className="text-right font-medium tabular-nums text-foreground">
-                          {item.value}
-                          {item.detail ? (
-                            <span className="font-normal text-muted-foreground">
-                              {' — '}
-                              {item.detail}
-                            </span>
-                          ) : null}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                  {body}
+                </p>
               </section>
             );
           })}

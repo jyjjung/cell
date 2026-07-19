@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { InfoWidget, InfoWidgetItem } from '@/types';
+import type { InfoWidget } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -23,42 +23,65 @@ const INFO_WIDGETS_COLLECTION = 'infoWidgets';
 export type InfoWidgetInput = {
   title: string;
   titleKo?: string;
-  items: Omit<InfoWidgetItem, 'id' | 'order'>[];
+  body: string;
+  bodyKo?: string;
 };
 
-function normalizeItems(
-  items: Array<Partial<InfoWidgetItem> & { label?: string; value?: string }>,
-): InfoWidgetItem[] {
-  return items
-    .map((item, index) => ({
-      id: item.id || `item-${index}-${Date.now()}`,
-      label: (item.label || '').trim(),
-      labelKo: item.labelKo?.trim() || undefined,
-      value: (item.value || '').trim(),
-      detail: item.detail?.trim() || undefined,
-      order: typeof item.order === 'number' ? item.order : index,
-    }))
-    .filter((item) => item.label && item.value)
-    .sort((a, b) => a.order - b.order)
-    .map((item, index) => ({ ...item, order: index }));
+type LegacyItem = {
+  label?: string;
+  labelKo?: string;
+  value?: string;
+  detail?: string;
+  order?: number;
+};
+
+/** Convert older row-based widgets into plain text for display/editing. */
+function bodyFromLegacyItems(items: LegacyItem[], lang: 'en' | 'ko' = 'en'): string {
+  return [...items]
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item) => {
+      const label =
+        lang === 'ko' && item.labelKo?.trim()
+          ? item.labelKo.trim()
+          : (item.label || '').trim();
+      const value = (item.value || '').trim();
+      const detail = item.detail?.trim();
+      if (!label && !value) return '';
+      if (!value) return label;
+      if (!label) return detail ? `${value} — ${detail}` : value;
+      return detail ? `${label}: ${value} — ${detail}` : `${label}: ${value}`;
+    })
+    .filter(Boolean)
+    .join('\n');
 }
 
-/** Firestore rejects `undefined` — only include optional fields when set. */
-function serializeItems(
-  items: Omit<InfoWidgetItem, 'id' | 'order'>[],
-): Array<Record<string, string | number>> {
-  return items.map((item, index) => {
-    const labelKo = item.labelKo?.trim();
-    const detail = item.detail?.trim();
-    return {
-      id: `item-${Date.now()}-${index}`,
-      label: item.label.trim(),
-      value: item.value.trim(),
-      order: index,
-      ...(labelKo ? { labelKo } : {}),
-      ...(detail ? { detail } : {}),
-    };
-  });
+function normalizeWidget(
+  id: string,
+  raw: Record<string, unknown>,
+): InfoWidget {
+  const legacyItems = Array.isArray(raw.items) ? (raw.items as LegacyItem[]) : [];
+  const body =
+    typeof raw.body === 'string' && raw.body.trim()
+      ? raw.body
+      : bodyFromLegacyItems(legacyItems, 'en');
+  const bodyKo =
+    typeof raw.bodyKo === 'string' && raw.bodyKo.trim()
+      ? raw.bodyKo
+      : legacyItems.length > 0
+        ? bodyFromLegacyItems(legacyItems, 'ko') || undefined
+        : undefined;
+
+  return {
+    id,
+    title: typeof raw.title === 'string' ? raw.title : '',
+    titleKo: typeof raw.titleKo === 'string' && raw.titleKo ? raw.titleKo : undefined,
+    body,
+    bodyKo: bodyKo && bodyKo !== body ? bodyKo : bodyKo || undefined,
+    order: typeof raw.order === 'number' ? raw.order : 0,
+    createdAt: raw.createdAt as Timestamp,
+    updatedAt: raw.updatedAt as Timestamp | undefined,
+    createdBy: typeof raw.createdBy === 'string' ? raw.createdBy : undefined,
+  };
 }
 
 export function useInfoWidgets() {
@@ -80,20 +103,11 @@ export function useInfoWidgets() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data: InfoWidget[] = snapshot.docs.map((d) => {
-          const raw = d.data();
-          return {
-            id: d.id,
-            title: raw.title || '',
-            titleKo: raw.titleKo || undefined,
-            order: typeof raw.order === 'number' ? raw.order : 0,
-            items: normalizeItems(Array.isArray(raw.items) ? raw.items : []),
-            createdAt: raw.createdAt as Timestamp,
-            updatedAt: raw.updatedAt as Timestamp | undefined,
-            createdBy: raw.createdBy,
-          };
-        });
-        setWidgets(data);
+        setWidgets(
+          snapshot.docs.map((d) =>
+            normalizeWidget(d.id, d.data() as Record<string, unknown>),
+          ),
+        );
         setLoading(false);
       },
       (error) => {
@@ -115,14 +129,18 @@ export function useInfoWidgets() {
     async (input: InfoWidgetInput) => {
       if (!isAdmin) throw new Error('Not authorized to add info widgets.');
       const title = input.title.trim();
+      const body = input.body.trim();
       if (!title) throw new Error('Title is required.');
+      if (!body) throw new Error('Body is required.');
       const titleKo = input.titleKo?.trim();
+      const bodyKo = input.bodyKo?.trim();
 
       await addDoc(collection(db, INFO_WIDGETS_COLLECTION), {
         title,
+        body,
         ...(titleKo ? { titleKo } : {}),
+        ...(bodyKo ? { bodyKo } : {}),
         order: nextOrder(),
-        items: serializeItems(input.items),
         ...(currentUser?.uid ? { createdBy: currentUser.uid } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -135,13 +153,18 @@ export function useInfoWidgets() {
     async (id: string, input: InfoWidgetInput) => {
       if (!isAdmin) throw new Error('Not authorized to update info widgets.');
       const title = input.title.trim();
+      const body = input.body.trim();
       if (!title) throw new Error('Title is required.');
+      if (!body) throw new Error('Body is required.');
       const titleKo = input.titleKo?.trim();
+      const bodyKo = input.bodyKo?.trim();
 
       await updateDoc(doc(db, INFO_WIDGETS_COLLECTION, id), {
         title,
+        body,
         titleKo: titleKo || null,
-        items: serializeItems(input.items),
+        bodyKo: bodyKo || null,
+        items: null,
         updatedAt: serverTimestamp(),
       });
     },

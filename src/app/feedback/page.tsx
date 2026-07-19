@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.123",
+    subtitle: "Simpler info widgets",
+    date: "July 19, 2026",
+    changes: [
+      "Info widgets are now a title plus freeform text instead of structured rows",
+    ],
+  },
+  {
     version: "v1.3.122",
     subtitle: "Info widget save fix",
     date: "July 19, 2026",

@@ -14,31 +14,14 @@ export default function HomeInfoWidgets() {
     <>
       {widgets.map((widget) => {
         const title = lang === 'ko' && widget.titleKo ? widget.titleKo : widget.title;
+        const body = lang === 'ko' && widget.bodyKo ? widget.bodyKo : widget.body;
+        if (!body.trim()) return null;
         return (
           <div key={widget.id} className="space-y-2 border-b border-border/50 pb-4">
             <p className="text-eyebrow">{title}</p>
-            <ul className="space-y-1.5">
-              {widget.items.map((item) => {
-                const label = lang === 'ko' && item.labelKo ? item.labelKo : item.label;
-                return (
-                  <li
-                    key={item.id}
-                    className="flex items-baseline justify-between gap-3 text-sm"
-                  >
-                    <span className="text-muted-foreground">{label}</span>
-                    <span className="text-right font-medium tabular-nums text-foreground">
-                      {item.value}
-                      {item.detail ? (
-                        <span className="font-normal text-muted-foreground">
-                          {' — '}
-                          {item.detail}
-                        </span>
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              {body}
+            </p>
           </div>
         );
       })}

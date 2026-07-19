@@ -537,22 +537,14 @@ export interface CommunityLink {
   createdAt: Timestamp;
 }
 
-/** Homepage information widget (e.g. online offerings account numbers). */
-export interface InfoWidgetItem {
-  id: string;
-  label: string;
-  labelKo?: string;
-  value: string;
-  detail?: string;
-  order: number;
-}
-
+/** Homepage information widget (freeform text panel). */
 export interface InfoWidget {
   id: string;
   title: string;
   titleKo?: string;
+  body: string;
+  bodyKo?: string;
   order: number;
-  items: InfoWidgetItem[];
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   createdBy?: string;
