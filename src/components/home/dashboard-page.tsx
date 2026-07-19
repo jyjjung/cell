@@ -373,93 +373,96 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       {/* Main grid: reading + today */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
 
-        {/* Bible reading */}
-        <section className="ui-card space-y-5 lg:col-span-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-eyebrow">{t.bibleReadingHub}</p>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-4xl font-semibold tabular-nums tracking-tight">{overallPct}</span>
-                <span className="text-lg text-muted-foreground">%</span>
+        <div className="space-y-5 lg:col-span-3">
+          {/* Bible reading */}
+          <section className="ui-card space-y-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-eyebrow">{t.bibleReadingHub}</p>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-4xl font-semibold tabular-nums tracking-tight">{overallPct}</span>
+                  <span className="text-lg text-muted-foreground">%</span>
+                </div>
+                {daysLeft != null && (
+                  <p className="text-stat-label mt-1">{daysLeft} {t.daysLeftLabel}</p>
+                )}
               </div>
-              {daysLeft != null && (
-                <p className="text-stat-label mt-1">{daysLeft} {t.daysLeftLabel}</p>
+              {todayPassages.length > 0 && (
+                <p className="text-sm font-medium text-muted-foreground tabular-nums">
+                  {todayDoneCount}/{todayPassages.length}
+                </p>
               )}
             </div>
-            {todayPassages.length > 0 && (
-              <p className="text-sm font-medium text-muted-foreground tabular-nums">
-                {todayDoneCount}/{todayPassages.length}
-              </p>
-            )}
-          </div>
 
-          <Progress value={overallPct} className="h-1.5 bg-muted" />
+            <Progress value={overallPct} className="h-1.5 bg-muted" />
 
-          {todayPassages.length > 0 ? (
-            <div className="space-y-0.5">
-              <p className="text-eyebrow pb-2">{t.todaysAssigned}</p>
-              <AnimatePresence mode="popLayout">
-                {todayPassages.map(p => {
-                  const date = todaysReading?.date;
-                  const done = date
-                    ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
-                    : completedPassages.includes(p.displayText);
-                  return (
-                    <motion.div
-                      key={p.displayText}
-                      layout
-                      transition={spring}
-                      className={cn('flex items-center gap-3 rounded-lg py-2', done && 'opacity-45')}
-                    >
-                      <Checkbox
-                        checked={done}
-                        onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
-                        className="h-4 w-4 shrink-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => readPassage(p.displayText)}
-                        className={cn(
-                          'flex-1 text-left text-sm font-medium',
-                          done && 'line-through text-muted-foreground',
-                        )}
+            {todayPassages.length > 0 ? (
+              <div className="space-y-0.5">
+                <p className="text-eyebrow pb-2">{t.todaysAssigned}</p>
+                <AnimatePresence mode="popLayout">
+                  {todayPassages.map(p => {
+                    const date = todaysReading?.date;
+                    const done = date
+                      ? completedPassages.includes(makePassageKey(date, p.displayText)) || completedPassages.includes(p.displayText)
+                      : completedPassages.includes(p.displayText);
+                    return (
+                      <motion.div
+                        key={p.displayText}
+                        layout
+                        transition={spring}
+                        className={cn('flex items-center gap-3 rounded-lg py-2', done && 'opacity-45')}
                       >
-                        {p.displayText}
-                      </button>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t.restDayMessage}</p>
-          )}
-
-          {nextMissedPassage && (
-            <div className="border-t border-border/50 pt-4">
-              <p className="text-eyebrow mb-2">{t.missedReading}</p>
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={false}
-                  onCheckedChange={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
-                  className="h-4 w-4 shrink-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => readPassage(nextMissedPassage.displayText)}
-                  className="flex-1 text-left text-sm font-medium"
-                >
-                  {nextMissedPassage.displayText}
-                </button>
+                        <Checkbox
+                          checked={done}
+                          onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
+                          className="h-4 w-4 shrink-0"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => readPassage(p.displayText)}
+                          className={cn(
+                            'flex-1 text-left text-sm font-medium',
+                            done && 'line-through text-muted-foreground',
+                          )}
+                        >
+                          {p.displayText}
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
-            </div>
-          )}
-        </section>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t.restDayMessage}</p>
+            )}
+
+            {nextMissedPassage && (
+              <div className="border-t border-border/50 pt-4">
+                <p className="text-eyebrow mb-2">{t.missedReading}</p>
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={false}
+                    onCheckedChange={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => readPassage(nextMissedPassage.displayText)}
+                    className="flex-1 text-left text-sm font-medium"
+                  >
+                    {nextMissedPassage.displayText}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <HomeInfoWidgets />
+        </div>
 
         {/* Today snapshot */}
         <aside className="ui-card space-y-4 lg:col-span-2">
           <TodayQtWidget />
-          <HomeInfoWidgets />
 
           <div>
             <p className="text-eyebrow">{t.todayLabel}</p>

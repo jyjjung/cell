@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.124",
+    subtitle: "Info under Bible reading",
+    date: "July 19, 2026",
+    changes: [
+      "Homepage info widgets appear in their own card under Bible reading when any are created",
+    ],
+  },
+  {
     version: "v1.3.123",
     subtitle: "Simpler info widgets",
     date: "July 19, 2026",
