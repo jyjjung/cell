@@ -537,6 +537,27 @@ export interface CommunityLink {
   createdAt: Timestamp;
 }
 
+/** Homepage information widget (e.g. online offerings account numbers). */
+export interface InfoWidgetItem {
+  id: string;
+  label: string;
+  labelKo?: string;
+  value: string;
+  detail?: string;
+  order: number;
+}
+
+export interface InfoWidget {
+  id: string;
+  title: string;
+  titleKo?: string;
+  order: number;
+  items: InfoWidgetItem[];
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  createdBy?: string;
+}
+
 // ── Shared documents ──────────────────────────────────────────────────────────
 
 export type DocVisibility = 'private' | 'shared';

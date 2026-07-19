@@ -14,6 +14,7 @@ import {
   BookOpen,
   Brain,
   MessageCircle,
+  Info,
   Grid2x2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export default function AdminHubTabs() {
       { value: "custom", label: "Custom", href: "/admin/custom-rosters", icon: ClipboardList },
       { value: "bible", label: "Bible", href: "/admin/bible-plan", icon: BookOpen },
       { value: "memory", label: "Memory", href: "/admin/memory-verses", icon: Brain },
+      { value: "info", label: "Info", href: "/admin/info-widgets", icon: Info },
       { value: "chats", label: "Chats", href: "/admin/chats", icon: MessageCircle },
     ],
     []
