@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.119",
+    subtitle: "Online offerings",
+    date: "July 19, 2026",
+    changes: [
+      "Homepage shows online offering account numbers for weekly, tithes, thanksgiving, construction, and missions",
+    ],
+  },
+  {
     version: "v1.3.118",
     subtitle: "Docs open correctly",
     date: "July 18, 2026",
