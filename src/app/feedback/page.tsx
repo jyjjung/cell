@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.126",
+    subtitle: "Shared note edit cues",
+    date: "July 19, 2026",
+    changes: [
+      "Documents show who last edited and how long ago, instead of a fixed date or “Not yet”",
+      "New edits from other people flash in yellow like a shared Apple Note",
+    ],
+  },
+  {
     version: "v1.3.125",
     subtitle: "Live document sync",
     date: "July 19, 2026",

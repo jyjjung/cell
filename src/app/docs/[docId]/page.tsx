@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useDoc } from '@/hooks/use-docs';
 import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
-import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
+import { formatRelativeAppTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe, toMillisSafe } from '@/lib/firestore-timestamp';
 import { isBlankDocHtml } from '@/lib/docs-utils';
 import { getDocActionErrorMessage } from '@/lib/docs-errors';
@@ -39,6 +39,7 @@ import { translations } from '@/lib/translations';
 import type { DocVisibility } from '@/types';
 
 const AUTOSAVE_MS = 800;
+const RELATIVE_TIME_TICK_MS = 30000;
 
 export default function DocDetailPage() {
   const params = useParams();
@@ -69,6 +70,10 @@ export default function DocDetailPage() {
   const [hydrated, setHydrated] = useState(false);
   /** Remote changes from someone else while local draft is dirty. */
   const [remoteNewer, setRemoteNewer] = useState(false);
+  /** Highlight inserted text when applying someone else's live edit. */
+  const [highlightRemote, setHighlightRemote] = useState(false);
+  const [titleRemoteFlash, setTitleRemoteFlash] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedId = useRef<string | null>(null);
   const userEditedRef = useRef(false);
@@ -85,11 +90,18 @@ export default function DocDetailPage() {
   }, [loadingAuth, currentUser, router]);
 
   useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), RELATIVE_TIME_TICK_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
     hydratedId.current = null;
     appliedUpdatedAtRef.current = 0;
     setHydrated(false);
     setDirty(false);
     setRemoteNewer(false);
+    setHighlightRemote(false);
+    setTitleRemoteFlash(false);
     userEditedRef.current = false;
     setTitle('');
     setContent('<p></p>');
@@ -106,6 +118,8 @@ export default function DocDetailPage() {
       setContent(remoteContent);
       setDirty(false);
       setRemoteNewer(false);
+      setHighlightRemote(false);
+      setTitleRemoteFlash(false);
       userEditedRef.current = false;
       hydratedId.current = note.id;
       appliedUpdatedAtRef.current = remoteMs;
@@ -121,8 +135,14 @@ export default function DocDetailPage() {
     // Live-sync remote changes immediately when the local draft is clean.
     if (!dirty && !userEditedRef.current) {
       if (contentDiffers) {
+        const titleChanged = remoteTitle !== titleRef.current;
+        const bodyChanged = remoteContent !== contentRef.current;
+        setHighlightRemote(isRemoteFromOther && bodyChanged);
+        setTitleRemoteFlash(isRemoteFromOther && titleChanged);
         setTitle(remoteTitle);
         setContent(remoteContent);
+      } else {
+        setHighlightRemote(false);
       }
       appliedUpdatedAtRef.current = Math.max(appliedUpdatedAtRef.current, remoteMs);
       setRemoteNewer(false);
@@ -138,6 +158,18 @@ export default function DocDetailPage() {
       setRemoteNewer(true);
     }
   }, [note, dirty, currentUser?.uid]);
+
+  useEffect(() => {
+    if (!titleRemoteFlash) return;
+    const id = window.setTimeout(() => setTitleRemoteFlash(false), 3800);
+    return () => window.clearTimeout(id);
+  }, [titleRemoteFlash]);
+
+  useEffect(() => {
+    if (!highlightRemote) return;
+    const id = window.setTimeout(() => setHighlightRemote(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [highlightRemote]);
 
   useEffect(() => {
     if (!dirty || !hydrated || !note || !currentUser || !userEditedRef.current) return;
@@ -174,6 +206,10 @@ export default function DocDetailPage() {
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
+    const titleChanged = note.title !== titleRef.current;
+    const bodyChanged = (note.content || '<p></p>') !== contentRef.current;
+    setHighlightRemote(bodyChanged);
+    setTitleRemoteFlash(titleChanged);
     setTitle(note.title);
     setContent(note.content || '<p></p>');
     setDirty(false);
@@ -182,21 +218,47 @@ export default function DocDetailPage() {
     appliedUpdatedAtRef.current = toMillisSafe(note.updatedAt);
   };
 
+  const lastEditorName = useMemo(() => {
+    if (!note) return '';
+    const editorId = note.updatedBy || note.ownerId;
+    if (editorId === currentUser?.uid) return t.you;
+    return formatUserDisplayName(usersById.get(editorId), t.communityMember);
+  }, [note, currentUser?.uid, usersById, t.you, t.communityMember]);
+
   const metaLine = useMemo(() => {
     if (!note) return '';
-    const authorIds = note.authorIds?.length ? note.authorIds : [note.ownerId];
-    const authors = authorIds
-      .slice(0, 4)
-      .map((uid) =>
-        uid === currentUser?.uid
-          ? t.you
-          : formatUserDisplayName(usersById.get(uid), t.communityMember),
-      )
-      .join(', ');
-    const created = formatAppDateTime(toDateSafe(note.createdAt), locale);
-    const updated = formatAppDateTime(toDateSafe(note.updatedAt), locale);
-    return `${authors} · ${created} · ${t.updated} ${updated}`;
-  }, [note, currentUser?.uid, usersById, t.you, t.communityMember, t.updated, locale]);
+    const editedBy =
+      (note.updatedBy || note.ownerId) === currentUser?.uid
+        ? t.editedByYou
+        : t.editedByOther.replace('{name}', lastEditorName);
+    const when = formatRelativeAppTime(toDateSafe(note.updatedAt), locale, new Date(nowTick));
+    return `${editedBy} · ${when}`;
+  }, [
+    note,
+    currentUser?.uid,
+    lastEditorName,
+    t.editedByYou,
+    t.editedByOther,
+    locale,
+    nowTick,
+  ]);
+
+  const remoteBannerText = useMemo(() => {
+    if (!note) return t.documentUpdatedByOther;
+    const name =
+      note.updatedBy === currentUser?.uid
+        ? t.you
+        : formatUserDisplayName(usersById.get(note.updatedBy), t.communityMember);
+    return t.documentUpdatedByName.replace('{name}', name);
+  }, [
+    note,
+    currentUser?.uid,
+    usersById,
+    t.documentUpdatedByOther,
+    t.documentUpdatedByName,
+    t.you,
+    t.communityMember,
+  ]);
 
   const handleManualSave = async () => {
     if (!note || !currentUser || !hydrated) return;
@@ -362,7 +424,9 @@ export default function DocDetailPage() {
       <Input
         value={title}
         onChange={(e) => markDirtyTitle(e.target.value.slice(0, 200))}
-        className="text-xl font-semibold border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 h-auto"
+        className={`text-xl font-semibold border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 h-auto rounded-md transition-[background-color] duration-500 ${
+          titleRemoteFlash ? 'doc-remote-title-flash px-1.5 -mx-1.5' : ''
+        }`}
         placeholder={t.documentTitlePlaceholder}
         maxLength={200}
         disabled={!hydrated}
@@ -371,7 +435,7 @@ export default function DocDetailPage() {
 
       {remoteNewer ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm">
-          <span className="flex-1 text-muted-foreground">{t.documentUpdatedByOther}</span>
+          <span className="flex-1 text-muted-foreground">{remoteBannerText}</span>
           <Button
             variant="outline"
             size="sm"
@@ -392,6 +456,7 @@ export default function DocDetailPage() {
             onChange={markDirtyContent}
             placeholder={t.documentEditorPlaceholder}
             acceptUpdates={hydrated}
+            highlightRemoteChanges={highlightRemote}
           />
         ) : (
           <div className="rounded-xl border border-border/50 bg-card min-h-[320px] flex items-center justify-center">
