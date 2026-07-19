@@ -30,7 +30,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useDocs } from '@/hooks/use-docs';
 import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
-import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
+import { formatRelativeAppTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { stripHtmlPreview, displayDocTitle } from '@/lib/docs-utils';
 import { getDocActionErrorMessage } from '@/lib/docs-errors';
@@ -228,17 +228,16 @@ export default function DocsPage() {
       ) : (
         <div className="stack-gap-sm">
           {filtered.map((note, index) => {
-            const authorIds = note.authorIds?.length ? note.authorIds : [note.ownerId];
-            const authorLabel = authorIds
-              .slice(0, 3)
-              .map((uid) =>
-                uid === currentUser.uid
-                  ? t.you
-                  : formatUserDisplayName(usersById.get(uid), t.communityMember),
-              )
-              .join(', ');
-            const createdLabel = formatAppDateTime(toDateSafe(note.createdAt), locale);
-            const updatedLabel = formatAppDateTime(toDateSafe(note.updatedAt), locale);
+            const editorId = note.updatedBy || note.ownerId;
+            const editorLabel =
+              editorId === currentUser.uid
+                ? t.you
+                : formatUserDisplayName(usersById.get(editorId), t.communityMember);
+            const editedBy =
+              editorId === currentUser.uid
+                ? t.editedByYou
+                : t.editedByOther.replace('{name}', editorLabel);
+            const whenLabel = formatRelativeAppTime(toDateSafe(note.updatedAt), locale);
             return (
               <DocListItem
                 key={note.id}
@@ -259,8 +258,8 @@ export default function DocsPage() {
                     });
                   }
                 }}
-                ownerLabel={authorLabel}
-                updatedLabel={`${createdLabel} · ${t.updated} ${updatedLabel}`}
+                ownerLabel={editedBy}
+                updatedLabel={whenLabel}
                 personalLabel={t.personalDocument}
                 sharedLabel={t.sharedDocument}
                 deleteLabel={t.deleteDocument}
