@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Info, Loader2, Pencil, Plus, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Info, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { useInfoWidgets, type InfoWidgetInput } from '@/hooks/use-info-widgets';
@@ -304,12 +304,10 @@ export default function InfoWidgetsAdmin() {
     updateWidget,
     deleteWidget,
     moveWidget,
-    seedOnlineOfferings,
   } = useInfoWidgets();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<InfoWidget | null>(null);
-  const [seeding, setSeeding] = useState(false);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
 
   const openCreate = () => {
@@ -360,19 +358,6 @@ export default function InfoWidgetsAdmin() {
     }
   };
 
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      await seedOnlineOfferings();
-      toast({ title: t.adminInfoWidgetSeeded });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : t.error;
-      toast({ title: t.error, description: message, variant: 'destructive' });
-    } finally {
-      setSeeding(false);
-    }
-  };
-
   const lang = currentUser?.preferredLanguage || 'en';
 
   return (
@@ -382,29 +367,10 @@ export default function InfoWidgetsAdmin() {
           <h2 className="text-section-title">{t.adminInfoWidgets}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t.adminInfoWidgetsHint}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {widgets.length === 0 && !loading && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-              onClick={() => void handleSeed()}
-              disabled={seeding}
-            >
-              {seeding ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <PlusCircle className="mr-2 h-4 w-4" />
-              )}
-              {t.adminSeedOnlineOfferings}
-            </Button>
-          )}
-          <Button type="button" size="sm" className="rounded-lg" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t.adminAddInfoWidget}
-          </Button>
-        </div>
+        <Button type="button" size="sm" className="rounded-lg" onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t.adminAddInfoWidget}
+        </Button>
       </section>
 
       {loading ? (
