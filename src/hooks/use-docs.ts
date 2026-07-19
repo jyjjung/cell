@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -67,12 +68,20 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error((body as { error?: string }).error || `Request failed (${res.status})`);
-    (err as Error & { code?: string }).code =
-      res.status === 403 || res.status === 401 ? 'permission-denied' : undefined;
+    const message = (body as { error?: string }).error || `Request failed (${res.status})`;
+    const err = new Error(message);
+    // Only treat auth failures as permission-denied — business-rule 403s
+    // (e.g. "Only the owner can delete") should surface their real message.
+    if (res.status === 401) {
+      (err as Error & { code?: string }).code = 'permission-denied';
+    }
     throw err;
   }
   return body as T;
+}
+
+async function deleteDocViaClient(docId: string): Promise<void> {
+  await deleteDoc(doc(db, 'docs', docId));
 }
 
 function firestoreError(err: FirestoreError): Error {
@@ -159,7 +168,16 @@ export function useDocs(userId: string | undefined) {
     markDocDeletedLocally(docId);
     setDocs((prev) => prev.filter((d) => d.id !== docId));
     try {
-      await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+      try {
+        await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+      } catch (apiErr) {
+        // Rules allow owners to delete directly; use that if the admin API fails.
+        try {
+          await deleteDocViaClient(docId);
+        } catch {
+          throw apiErr;
+        }
+      }
     } catch (err) {
       unmarkDocDeletedLocally(docId);
       throw err;
@@ -288,7 +306,15 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
     markDocDeletedLocally(docId);
     setNote(null);
     try {
-      await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+      try {
+        await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+      } catch (apiErr) {
+        try {
+          await deleteDocViaClient(docId);
+        } catch {
+          throw apiErr;
+        }
+      }
     } catch (err) {
       unmarkDocDeletedLocally(docId);
       setNote(note);
