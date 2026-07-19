@@ -5,6 +5,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -61,6 +62,28 @@ function commentFromData(id: string, data: Record<string, unknown>): DocComment 
   };
 }
 
+function errorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  if ('status' in error && typeof (error as { status?: unknown }).status === 'number') {
+    return (error as { status: number }).status;
+  }
+  return undefined;
+}
+
+function errorCode(error: unknown): string {
+  if (!error || typeof error !== 'object') return '';
+  return 'code' in error ? String((error as { code?: string }).code || '') : '';
+}
+
+function isAlreadyGoneError(error: unknown): boolean {
+  const status = errorStatus(error);
+  if (status === 404) return true;
+  const code = errorCode(error);
+  if (code === 'not-found') return true;
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  return message === 'not found' || message.includes('document not found');
+}
+
 async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = await getClientAuthHeaders(
     init?.headers as Record<string, string> | undefined,
@@ -69,11 +92,11 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message = (body as { error?: string }).error || `Request failed (${res.status})`;
-    const err = new Error(message);
-    // Only treat auth failures as permission-denied — business-rule 403s
-    // (e.g. "Only the owner can delete") should surface their real message.
+    const err = new Error(message) as Error & { code?: string; status?: number };
+    err.status = res.status;
+    // Only bare auth failures map to permission-denied (avoids "deploy rules" for 404/owner checks).
     if (res.status === 401) {
-      (err as Error & { code?: string }).code = 'permission-denied';
+      err.code = 'permission-denied';
     }
     throw err;
   }
@@ -84,9 +107,39 @@ async function deleteDocViaClient(docId: string): Promise<void> {
   await deleteDoc(doc(db, 'docs', docId));
 }
 
+/** True when the doc is already gone on the server (or we cannot see it anymore). */
+async function isDocGoneOnServer(docId: string): Promise<boolean> {
+  try {
+    const snap = await getDocFromServer(doc(db, 'docs', docId));
+    return !snap.exists();
+  } catch (err) {
+    // Missing docs often surface as permission-denied under security rules.
+    const code = errorCode(err);
+    return code === 'permission-denied' || code === 'not-found' || isAlreadyGoneError(err);
+  }
+}
+
+async function deleteDocBestEffort(docId: string): Promise<void> {
+  try {
+    await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+    return;
+  } catch (apiErr) {
+    if (isAlreadyGoneError(apiErr)) return;
+    try {
+      await deleteDocViaClient(docId);
+      return;
+    } catch (clientErr) {
+      if (isAlreadyGoneError(clientErr)) return;
+      // Client delete of an already-removed doc fails rules (no resource) with permission-denied.
+      if (await isDocGoneOnServer(docId)) return;
+      throw apiErr;
+    }
+  }
+}
+
 function firestoreError(err: FirestoreError): Error {
-  const e = new Error(err.message);
-  (e as Error & { code?: string }).code = err.code;
+  const e = new Error(err.message) as Error & { code?: string };
+  e.code = err.code;
   return e;
 }
 
@@ -104,6 +157,16 @@ export function useDocs(userId: string | undefined) {
     }
 
     setLoading(true);
+    let hasServerSnapshot = false;
+    let cacheFallback: ReturnType<typeof setTimeout> | undefined;
+    let pendingCacheDocs: DocNote[] | null = null;
+
+    const applyDocs = (next: DocNote[]) => {
+      setDocs(filterOutLocallyDeletedDocs(next));
+      setError(null);
+      setLoading(false);
+    };
+
     const docsQuery = query(
       collection(db, 'docs'),
       where('memberIds', 'array-contains', userId),
@@ -111,17 +174,35 @@ export function useDocs(userId: string | undefined) {
 
     const unsubscribe = onSnapshot(
       docsQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
-        const next = filterOutLocallyDeletedDocs(
-          snapshot.docs
-            .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
-            .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt)),
-        );
-        setDocs(next);
-        setError(null);
-        setLoading(false);
+        const next = snapshot.docs
+          .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
+          .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt));
+
+        if (!snapshot.metadata.fromCache) {
+          hasServerSnapshot = true;
+          if (cacheFallback) {
+            clearTimeout(cacheFallback);
+            cacheFallback = undefined;
+          }
+          pendingCacheDocs = null;
+          applyDocs(next);
+          return;
+        }
+
+        // Cache can still contain deleted docs. Wait briefly for the server.
+        if (hasServerSnapshot) return;
+        pendingCacheDocs = next;
+        if (!cacheFallback) {
+          cacheFallback = setTimeout(() => {
+            if (hasServerSnapshot || !pendingCacheDocs) return;
+            applyDocs(pendingCacheDocs);
+          }, 1200);
+        }
       },
       (err) => {
+        if (cacheFallback) clearTimeout(cacheFallback);
         setError(firestoreError(err));
         setLoading(false);
       },
@@ -132,6 +213,7 @@ export function useDocs(userId: string | undefined) {
     });
 
     return () => {
+      if (cacheFallback) clearTimeout(cacheFallback);
       unsubscribe();
       unsubscribeLocalDeletes();
     };
@@ -168,16 +250,7 @@ export function useDocs(userId: string | undefined) {
     markDocDeletedLocally(docId);
     setDocs((prev) => prev.filter((d) => d.id !== docId));
     try {
-      try {
-        await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
-      } catch (apiErr) {
-        // Rules allow owners to delete directly; use that if the admin API fails.
-        try {
-          await deleteDocViaClient(docId);
-        } catch {
-          throw apiErr;
-        }
-      }
+      await deleteDocBestEffort(docId);
     } catch (err) {
       unmarkDocDeletedLocally(docId);
       throw err;
@@ -222,27 +295,81 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
     }
 
     setLoading(true);
+    let hasServerSnapshot = false;
+    let pendingCacheNote: DocNote | null = null;
+    let cacheFallback: ReturnType<typeof setTimeout> | undefined;
+
+    const showMissing = () => {
+      if (cacheFallback) {
+        clearTimeout(cacheFallback);
+        cacheFallback = undefined;
+      }
+      pendingCacheNote = null;
+      setNote(null);
+      setError(new Error('Document not found'));
+      setLoading(false);
+    };
+
+    const showNote = (next: DocNote) => {
+      if (cacheFallback) {
+        clearTimeout(cacheFallback);
+        cacheFallback = undefined;
+      }
+      pendingCacheNote = null;
+      setNote(next);
+      setError(null);
+      setLoading(false);
+    };
+
     const unsubscribe = onSnapshot(
       doc(db, 'docs', docId),
+      { includeMetadataChanges: true },
       (snapshot) => {
-        if (!snapshot.exists() || isDocDeletedLocally(docId)) {
-          setNote(null);
-          setError(new Error('Document not found'));
-          setLoading(false);
+        if (isDocDeletedLocally(docId)) {
+          showMissing();
           return;
         }
-        setNote(docFromData(snapshot.id, snapshot.data() as Record<string, unknown>));
-        setError(null);
-        setLoading(false);
+
+        if (!snapshot.exists()) {
+          hasServerSnapshot = !snapshot.metadata.fromCache || hasServerSnapshot;
+          showMissing();
+          return;
+        }
+
+        const next = docFromData(snapshot.id, snapshot.data() as Record<string, unknown>);
+
+        if (!snapshot.metadata.fromCache) {
+          hasServerSnapshot = true;
+          showNote(next);
+          return;
+        }
+
+        // Cache-only: wait briefly for server so deleted docs don't flash back.
+        pendingCacheNote = next;
+        if (!cacheFallback) {
+          cacheFallback = setTimeout(() => {
+            if (hasServerSnapshot || isDocDeletedLocally(docId) || !pendingCacheNote) return;
+            showNote(pendingCacheNote);
+          }, 1500);
+        }
       },
       (err) => {
+        // Deleted / inaccessible docs often arrive as permission-denied, not not-found.
+        if (err.code === 'permission-denied' || err.code === 'not-found') {
+          showMissing();
+          return;
+        }
+        if (cacheFallback) clearTimeout(cacheFallback);
         setNote(null);
         setError(firestoreError(err));
         setLoading(false);
       },
     );
 
-    return () => unsubscribe();
+    return () => {
+      if (cacheFallback) clearTimeout(cacheFallback);
+      unsubscribe();
+    };
   }, [docId, userId]);
 
   const saveContent = useCallback(
@@ -306,15 +433,7 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
     markDocDeletedLocally(docId);
     setNote(null);
     try {
-      try {
-        await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
-      } catch (apiErr) {
-        try {
-          await deleteDocViaClient(docId);
-        } catch {
-          throw apiErr;
-        }
-      }
+      await deleteDocBestEffort(docId);
     } catch (err) {
       unmarkDocDeletedLocally(docId);
       setNote(note);
