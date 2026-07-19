@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.131",
+    subtitle: "Docs delete cleanup",
+    date: "July 19, 2026",
+    changes: [
+      "Deleting a document that was already gone no longer shows a confusing error",
+      "The Docs list ignores stale cached copies of deleted documents",
+    ],
+  },
+  {
     version: "v1.3.130",
     subtitle: "Docs delete permissions",
     date: "July 19, 2026",
