@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, type DocumentSnapshot } from 'firebase/firestore';
 import { FileText, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
 import { translations } from '@/lib/translations';
 import { displayDocTitle, stripHtmlPreview } from '@/lib/docs-utils';
+import { isDocDeletedLocally } from '@/lib/docs-deleted';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { db } from '@/lib/firebase';
@@ -19,6 +20,28 @@ interface DocSummaryProps {
   docId: string;
   isSender: boolean;
 }
+
+function noteFromSnapshot(snapshot: DocumentSnapshot): DocNote {
+  const data = snapshot.data()!;
+  return {
+    id: snapshot.id,
+    title: typeof data.title === 'string' ? data.title : '',
+    content: (data.content as string) || '',
+    visibility: (data.visibility as DocVisibility) || 'private',
+    ownerId: data.ownerId as string,
+    authorIds: Array.isArray(data.authorIds)
+      ? (data.authorIds as string[])
+      : [data.ownerId as string],
+    sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
+    memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
+    createdAt: data.createdAt as DocNote['createdAt'],
+    updatedAt: data.updatedAt as DocNote['updatedAt'],
+    updatedBy: (data.updatedBy as string) || '',
+  };
+}
+
+/** Offline fallback: show cached doc only if server never confirms in time. */
+const CACHE_FALLBACK_MS = 1500;
 
 export default function DocSummary({ docId, isSender }: DocSummaryProps) {
   const { currentUser } = useAuth();
@@ -30,43 +53,84 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
+    if (isDocDeletedLocally(docId)) {
+      setNote(null);
+      setMissing(true);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let cacheFallback: ReturnType<typeof setTimeout> | undefined;
+    let pendingCacheNote: DocNote | null = null;
+
     setLoading(true);
     setMissing(false);
+    setNote(null);
+
+    const showDeleted = () => {
+      if (cancelled) return;
+      if (cacheFallback) {
+        clearTimeout(cacheFallback);
+        cacheFallback = undefined;
+      }
+      pendingCacheNote = null;
+      setNote(null);
+      setMissing(true);
+      setLoading(false);
+    };
+
+    const showNote = (next: DocNote) => {
+      if (cancelled) return;
+      if (cacheFallback) {
+        clearTimeout(cacheFallback);
+        cacheFallback = undefined;
+      }
+      pendingCacheNote = null;
+      setNote(next);
+      setMissing(false);
+      setLoading(false);
+    };
+
     const unsubscribe = onSnapshot(
       doc(db, 'docs', docId),
+      { includeMetadataChanges: true },
       (snapshot) => {
-        if (!snapshot.exists()) {
-          setNote(null);
-          setMissing(true);
-          setLoading(false);
+        if (cancelled) return;
+        if (!snapshot.exists() || isDocDeletedLocally(docId)) {
+          showDeleted();
           return;
         }
-        const data = snapshot.data();
-        setNote({
-          id: snapshot.id,
-          title: typeof data.title === 'string' ? data.title : '',
-          content: (data.content as string) || '',
-          visibility: (data.visibility as DocVisibility) || 'private',
-          ownerId: data.ownerId as string,
-          authorIds: Array.isArray(data.authorIds)
-            ? (data.authorIds as string[])
-            : [data.ownerId as string],
-          sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
-          memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
-          createdAt: data.createdAt as DocNote['createdAt'],
-          updatedAt: data.updatedAt as DocNote['updatedAt'],
-          updatedBy: (data.updatedBy as string) || '',
-        });
-        setMissing(false);
-        setLoading(false);
+
+        const next = noteFromSnapshot(snapshot);
+
+        // Server-confirmed existence — safe to show.
+        if (!snapshot.metadata.fromCache) {
+          showNote(next);
+          return;
+        }
+
+        // From persistent cache only: don't flash content that may already be
+        // deleted on the server. Wait briefly for a server snapshot; if we're
+        // offline, fall back to the cached doc.
+        pendingCacheNote = next;
+        if (!cacheFallback) {
+          cacheFallback = setTimeout(() => {
+            if (cancelled || !pendingCacheNote) return;
+            showNote(pendingCacheNote);
+          }, CACHE_FALLBACK_MS);
+        }
       },
       () => {
-        setNote(null);
-        setMissing(true);
-        setLoading(false);
+        showDeleted();
       },
     );
-    return () => unsubscribe();
+
+    return () => {
+      cancelled = true;
+      if (cacheFallback) clearTimeout(cacheFallback);
+      unsubscribe();
+    };
   }, [docId]);
 
   const authorLabel = useMemo(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   collection,
   doc,
@@ -19,6 +19,13 @@ import {
   normalizeSharedWith,
 } from '@/lib/docs-utils';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
+import {
+  filterOutLocallyDeletedDocs,
+  isDocDeletedLocally,
+  markDocDeletedLocally,
+  subscribeLocalDocDeletes,
+  unmarkDocDeletedLocally,
+} from '@/lib/docs-deleted';
 import type { DocComment, DocNote, DocVisibility } from '@/types';
 
 function docFromData(id: string, data: Record<string, unknown>): DocNote {
@@ -96,9 +103,11 @@ export function useDocs(userId: string | undefined) {
     const unsubscribe = onSnapshot(
       docsQuery,
       (snapshot) => {
-        const next = snapshot.docs
-          .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
-          .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt));
+        const next = filterOutLocallyDeletedDocs(
+          snapshot.docs
+            .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
+            .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt)),
+        );
         setDocs(next);
         setError(null);
         setLoading(false);
@@ -109,7 +118,14 @@ export function useDocs(userId: string | undefined) {
       },
     );
 
-    return () => unsubscribe();
+    const unsubscribeLocalDeletes = subscribeLocalDocDeletes(() => {
+      setDocs((prev) => filterOutLocallyDeletedDocs(prev));
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeLocalDeletes();
+    };
   }, [userId]);
 
   const createDoc = useCallback(
@@ -140,7 +156,14 @@ export function useDocs(userId: string | undefined) {
   );
 
   const deleteDocById = useCallback(async (docId: string) => {
-    await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+    markDocDeletedLocally(docId);
+    setDocs((prev) => prev.filter((d) => d.id !== docId));
+    try {
+      await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+    } catch (err) {
+      unmarkDocDeletedLocally(docId);
+      throw err;
+    }
   }, []);
 
   const shareWithUsers = useCallback(
@@ -173,11 +196,18 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
       return;
     }
 
+    if (isDocDeletedLocally(docId)) {
+      setNote(null);
+      setError(new Error('Document not found'));
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const unsubscribe = onSnapshot(
       doc(db, 'docs', docId),
       (snapshot) => {
-        if (!snapshot.exists()) {
+        if (!snapshot.exists() || isDocDeletedLocally(docId)) {
           setNote(null);
           setError(new Error('Document not found'));
           setLoading(false);
@@ -255,7 +285,15 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
   const removeDoc = useCallback(async () => {
     if (!docId || !userId || !note) return;
     if (note.ownerId !== userId) throw new Error('Only the owner can delete');
-    await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+    markDocDeletedLocally(docId);
+    setNote(null);
+    try {
+      await apiJson(`/api/docs/${docId}`, { method: 'DELETE' });
+    } catch (err) {
+      unmarkDocDeletedLocally(docId);
+      setNote(note);
+      throw err;
+    }
   }, [docId, userId, note]);
 
   const isOwner = useMemo(
