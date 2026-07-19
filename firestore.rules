@@ -33,6 +33,25 @@ service cloud.firestore {
       return isAppAdmin(userId) || isWorshipTeamMember(userId);
     }
 
+    // config/chatCreation — role-based who may create private vs group chats.
+    // Missing doc or mode != 'roles' means everyone (youth hard-rules still apply).
+    function chatCreationConfig() {
+      return exists(/databases/$(database)/documents/config/chatCreation)
+        ? get(/databases/$(database)/documents/config/chatCreation).data
+        : {};
+    }
+
+    function canCreateChatType(typeKey) {
+      let section = chatCreationConfig().get(typeKey, {});
+      let mode = section.get('mode', 'everyone');
+      return mode != 'roles'
+        || isAppAdmin(request.auth.uid)
+        || (
+          section.get('allowedRoleIds', []).size() > 0
+          && userData(request.auth.uid).get('roleIds', []).hasAny(section.get('allowedRoleIds', []))
+        );
+    }
+
     function userSelfUpdateAllowed() {
       let diff = request.resource.data.diff(resource.data).affectedKeys();
       let allowed = [
@@ -439,6 +458,7 @@ service cloud.firestore {
                     && (
                         request.resource.data.type == 'private' 
                         ? (
+                            canCreateChatType('privateChat') &&
                             request.resource.data.members.size() == 2 &&
                             // Deny if both users are youth.
                             !(isYouth(request.resource.data.members[0]) && isYouth(request.resource.data.members[1]))
@@ -448,6 +468,7 @@ service cloud.firestore {
                     && (
                         request.resource.data.type == 'group' 
                         ? (
+                            canCreateChatType('groupChat') &&
                             request.resource.data.keys().hasAll(['name', 'admins']) 
                             && request.auth.uid in request.resource.data.admins
                             // Deny if the creator is youth.

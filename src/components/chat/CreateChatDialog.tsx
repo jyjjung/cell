@@ -16,6 +16,11 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
 import { useChats } from '@/hooks/useChats';
+import { useChatCreationPermissions } from '@/hooks/use-chat-creation-permissions';
+import {
+  canUserCreateGroupChat,
+  canUserCreatePrivateChat,
+} from '@/lib/chat-creation-permissions';
 import { getPrivateChatId } from '@/lib/chat-utils';
 import UserSelector from './UserSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -32,14 +37,22 @@ const groupSchema = z.object({
 
 export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void; }) {
   const { allUsers, loading: loadingUsers } = useAllUsers();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const { chats, createPrivateChat, createGroupChat } = useChats();
+  const { permissions, loading: loadingPermissions } = useChatCreationPermissions();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const { toast } = useToast();
 
   const isYouth = currentUser?.isYouth;
+  const permissionUser = useMemo(
+    () => (currentUser ? { roleIds: currentUser.roleIds, isAdmin } : null),
+    [currentUser, isAdmin],
+  );
+  const canCreatePrivate = canUserCreatePrivateChat(permissionUser, permissions);
+  const canCreateGroup = !isYouth && canUserCreateGroupChat(permissionUser, permissions);
+  const showGroupTab = canCreateGroup;
 
   const privateForm = useForm({ resolver: zodResolver(privateSchema), defaultValues: { selectedUser: "" } });
   const groupForm = useForm({ resolver: zodResolver(groupSchema), defaultValues: { groupName: "", selectedUsers: [] } });
@@ -73,6 +86,15 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
       return;
     }
 
+    if (!canCreatePrivate) {
+      toast({
+        variant: 'destructive',
+        title: 'Connection Failed',
+        description: 'You do not have permission to start new private chats. Ask an admin if you need access.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await createPrivateChat(peerUser);
@@ -81,7 +103,7 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
         const code = error?.code as string | undefined;
         const description =
           code === 'permission-denied'
-            ? 'You do not have permission to start this chat. Youth accounts cannot message other youth or create group chats.'
+            ? 'You do not have permission to start this chat. Youth accounts cannot message other youth, and chat creation may be limited by role.'
             : error.message || 'Could not establish private circle.';
         toast({
             variant: "destructive",
@@ -94,6 +116,15 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   };
 
   const handleCreateGroup = async (values: z.infer<typeof groupSchema>) => {
+    if (!canCreateGroup) {
+      toast({
+        variant: 'destructive',
+        title: 'Establishment Failed',
+        description: 'You do not have permission to create group chats. Ask an admin if you need access.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const members = otherUsers.filter((u) => values.selectedUsers.includes(u.uid));
@@ -104,7 +135,7 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
         const code = error?.code as string | undefined;
         const description =
           code === 'permission-denied'
-            ? 'You do not have permission to create this group. Youth accounts cannot create group chats.'
+            ? 'You do not have permission to create this group. Youth accounts cannot create group chats, and creation may be limited by role.'
             : error.message || 'An unexpected error occurred during circle establishment.';
         toast({
             variant: "destructive",
@@ -121,86 +152,101 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New Chat</DialogTitle>
-          <DialogDescription>Start a new private or group conversation.</DialogDescription>
+          <DialogDescription>
+            {canCreatePrivate
+              ? 'Start a new private or group conversation.'
+              : 'Open an existing private chat, or ask an admin if you need permission to start new ones.'}
+          </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="private">
-          <TabsList className={cn("grid w-full", isYouth ? 'grid-cols-1' : 'grid-cols-2')}>
-            <TabsTrigger value="private">Private</TabsTrigger>
-            {!isYouth && <TabsTrigger value="group">Group</TabsTrigger>}
-          </TabsList>
-          <TabsContent value="private" className="pt-4">
-            <Form {...privateForm}>
-              <form onSubmit={privateForm.handleSubmit(handleCreatePrivate)} className="space-y-4">
-                <FormField
-                  control={privateForm.control}
-                  name="selectedUser"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>User</FormLabel>
-                      <UserSelector
-                        users={usersForPrivateChat}
-                        loading={loadingUsers}
-                        selectedUsers={field.value ? [field.value] : []}
-                        onSelectionChange={(uids) => field.onChange(uids[0] || "")}
-                        selectionMode="single"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Start Chat
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </TabsContent>
-          {!isYouth && (
-            <TabsContent value="group" className="pt-4">
-                <Form {...groupForm}>
-                <form onSubmit={groupForm.handleSubmit(handleCreateGroup)} className="space-y-4">
-                    <FormField
-                    control={groupForm.control}
-                    name="groupName"
+        {loadingPermissions ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <Tabs defaultValue="private">
+            <TabsList className={cn("grid w-full", showGroupTab ? 'grid-cols-2' : 'grid-cols-1')}>
+              <TabsTrigger value="private">Private</TabsTrigger>
+              {showGroupTab && <TabsTrigger value="group">Group</TabsTrigger>}
+            </TabsList>
+            <TabsContent value="private" className="pt-4">
+              <Form {...privateForm}>
+                <form onSubmit={privateForm.handleSubmit(handleCreatePrivate)} className="space-y-4">
+                  <FormField
+                    control={privateForm.control}
+                    name="selectedUser"
                     render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Group Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g., Study Group" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={groupForm.control}
-                    name="selectedUsers"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Members</FormLabel>
+                      <FormItem>
+                        <FormLabel>User</FormLabel>
                         <UserSelector
-                            users={otherUsers}
-                            loading={loadingUsers}
-                            selectedUsers={field.value}
-                            onSelectionChange={field.onChange}
-                            selectionMode="multiple"
+                          users={usersForPrivateChat}
+                          loading={loadingUsers}
+                          selectedUsers={field.value ? [field.value] : []}
+                          onSelectionChange={(uids) => field.onChange(uids[0] || "")}
+                          selectionMode="single"
                         />
                         <FormMessage />
-                        </FormItem>
+                      </FormItem>
                     )}
-                    />
-                    <DialogFooter>
+                  />
+                  {!canCreatePrivate && (
+                    <p className="text-xs text-muted-foreground">
+                      You can open an existing chat. Starting a new private chat requires a role that has permission.
+                    </p>
+                  )}
+                  <DialogFooter>
                     <Button type="submit" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create Group
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Start Chat
                     </Button>
-                    </DialogFooter>
+                  </DialogFooter>
                 </form>
-                </Form>
+              </Form>
             </TabsContent>
-          )}
-        </Tabs>
+            {showGroupTab && (
+              <TabsContent value="group" className="pt-4">
+                  <Form {...groupForm}>
+                  <form onSubmit={groupForm.handleSubmit(handleCreateGroup)} className="space-y-4">
+                      <FormField
+                      control={groupForm.control}
+                      name="groupName"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Group Name</FormLabel>
+                          <FormControl>
+                              <Input placeholder="e.g., Study Group" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                      <FormField
+                      control={groupForm.control}
+                      name="selectedUsers"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Members</FormLabel>
+                          <UserSelector
+                              users={otherUsers}
+                              loading={loadingUsers}
+                              selectedUsers={field.value}
+                              onSelectionChange={field.onChange}
+                              selectionMode="multiple"
+                          />
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                      <DialogFooter>
+                      <Button type="submit" disabled={isLoading}>
+                          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create Group
+                      </Button>
+                      </DialogFooter>
+                  </form>
+                  </Form>
+              </TabsContent>
+            )}
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );
