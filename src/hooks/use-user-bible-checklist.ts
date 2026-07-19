@@ -13,7 +13,8 @@ import {
   serverTimestamp,
   Timestamp,
   writeBatch,
-  getDoc
+  getDoc,
+  runTransaction
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { syncCommunityProgress } from '@/lib/community-progress';
@@ -117,11 +118,11 @@ export function useUserBibleChecklist() {
     return () => unsubscribe();
   }, [currentUser?.uid, scheduleCommunityProgressSync]);
 
-  // ── One-time migration: bare keys → date-scoped keys ──────────────────────
+  // ── Safe migration: bare keys → date-scoped keys ──────────────────────────
   // Legacy completedPassages stored bare displayText (e.g. "Matthew 1").
   // M'Cheyne repeats the same chapters twice a year, so a bare key causes the
-  // second occurrence to appear pre-checked. We migrate each bare key to its
-  // first-occurrence scoped key (e.g. "2025-01-01::Matthew 1") exactly once.
+  // second occurrence to appear pre-checked. Migrate matching keys atomically,
+  // preserve unmatched keys, and retain a backup of the pre-migration list.
   const migrationRunRef = useRef(false);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export function useUserBibleChecklist() {
     // Mark as run immediately to prevent re-entry on snapshot updates
     migrationRunRef.current = true;
 
-    // Build first-occurrence map: displayText → earliest date in the plan
+    // Build first-occurrence map: displayText → earliest date in the plan.
     const firstOccurrenceMap = new Map<string, string>();
     for (const day of currentGlobalPlan.dailyReadings) {
       for (const passage of day.passages) {
@@ -148,41 +149,61 @@ export function useUserBibleChecklist() {
       }
     }
 
-    const toRemove: string[] = [];
-    const toAdd: string[] = [];
-
-    for (const bareKey of bareKeys) {
-      toRemove.push(bareKey);
-      const date = firstOccurrenceMap.get(bareKey);
-      if (date) {
-        const scopedKey = makePassageKey(date, bareKey);
-        if (!completedPassages.includes(scopedKey)) {
-          toAdd.push(scopedKey);
-        }
-      }
-      // If bare key isn't in plan at all, just drop it (orphaned entry)
-    }
-
-    if (toRemove.length === 0) return;
-
-    console.log(`[BibleChecklist] Migrating ${toRemove.length} bare keys → date-scoped format…`);
-
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
 
-    // Firestore doesn't support arrayRemove + arrayUnion on the same field in
-    // one write, so we use two sequential setDoc-merge calls.
-    setDoc(checklistDocRef, {
-      completedPassages: arrayRemove(...toRemove),
-      updatedAt: serverTimestamp(),
-    }, { merge: true })
-      .then(() => toAdd.length > 0
-        ? setDoc(checklistDocRef, {
-            completedPassages: arrayUnion(...toAdd),
-            updatedAt: serverTimestamp(),
-          }, { merge: true })
-        : Promise.resolve()
-      )
-      .then(() => console.log(`[BibleChecklist] Migration complete — ${toRemove.length} keys converted.`))
+    runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(checklistDocRef);
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.data() as UserBibleChecklist & {
+        legacyCompletedPassagesBackupV2?: string[];
+      };
+      const currentPassages = data.completedPassages || [];
+      const existingKeys = new Set(currentPassages);
+      let convertedCount = 0;
+      let unmatchedCount = 0;
+
+      const migratedPassages = currentPassages.map((key) => {
+        if (key.includes('::')) return key;
+
+        const date = firstOccurrenceMap.get(key);
+        if (!date) {
+          unmatchedCount += 1;
+          return key;
+        }
+
+        const scopedKey = makePassageKey(date, key);
+        // Never collapse two stored completions into one. Keeping the legacy
+        // key is safer than silently reducing a user's reading count.
+        if (existingKeys.has(scopedKey)) {
+          unmatchedCount += 1;
+          return key;
+        }
+
+        existingKeys.add(scopedKey);
+        convertedCount += 1;
+        return scopedKey;
+      });
+
+      // Safety invariant: a migration must never reduce recorded progress.
+      if (migratedPassages.length < currentPassages.length) {
+        throw new Error('Migration aborted because it would reduce reading progress.');
+      }
+
+      transaction.set(checklistDocRef, {
+        completedPassages: migratedPassages,
+        ...(!data.legacyCompletedPassagesBackupV2
+          ? { legacyCompletedPassagesBackupV2: currentPassages }
+          : {}),
+        legacyMigrationVersion: 2,
+        legacyMigratedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      console.log(
+        `[BibleChecklist] Safe migration complete — ${convertedCount} converted, ${unmatchedCount} preserved.`,
+      );
+    })
       .catch(e => {
         console.error('[BibleChecklist] Migration failed:', e);
         migrationRunRef.current = false; // allow retry on next render
