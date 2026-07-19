@@ -14,6 +14,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -154,6 +155,31 @@ export function useInfoWidgets() {
     [isAdmin],
   );
 
+  const moveWidget = useCallback(
+    async (id: string, direction: 'up' | 'down') => {
+      if (!isAdmin) throw new Error('Not authorized to reorder info widgets.');
+      const index = widgets.findIndex((w) => w.id === id);
+      if (index < 0) return;
+
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= widgets.length) return;
+
+      const reordered = [...widgets];
+      const [moved] = reordered.splice(index, 1);
+      reordered.splice(swapIndex, 0, moved);
+
+      const batch = writeBatch(db);
+      reordered.forEach((widget, order) => {
+        batch.update(doc(db, INFO_WIDGETS_COLLECTION, widget.id), {
+          order,
+          updatedAt: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    },
+    [isAdmin, widgets],
+  );
+
   const seedOnlineOfferings = useCallback(async () => {
     if (!isAdmin) throw new Error('Not authorized to add info widgets.');
     await addDoc(collection(db, INFO_WIDGETS_COLLECTION), {
@@ -173,6 +199,7 @@ export function useInfoWidgets() {
     addWidget,
     updateWidget,
     deleteWidget,
+    moveWidget,
     seedOnlineOfferings,
   };
 }

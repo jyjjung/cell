@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.121",
+    subtitle: "Reorder info widgets",
+    date: "July 19, 2026",
+    changes: [
+      "Admins can reorder homepage info widgets and their rows with up/down controls",
+    ],
+  },
+  {
     version: "v1.3.120",
     subtitle: "Editable info widgets",
     date: "July 19, 2026",
