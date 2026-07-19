@@ -9,12 +9,13 @@ const inflight = new Map<string, Promise<Record<string, unknown> | null>>();
 async function fetchDocData(collectionName: string, docId: string) {
   const key = `${collectionName}/${docId}`;
   if (!inflight.has(key)) {
-    inflight.set(
-      key,
-      getDoc(doc(db, collectionName, docId)).then((snap) =>
-        snap.exists() ? { id: snap.id, ...snap.data() } : null,
-      ),
-    );
+    const promise = getDoc(doc(db, collectionName, docId))
+      .then((snap) => (snap.exists() ? { id: snap.id, ...snap.data() } : null))
+      .catch((err) => {
+        inflight.delete(key);
+        throw err;
+      });
+    inflight.set(key, promise);
   }
   return inflight.get(key)!;
 }
@@ -36,11 +37,18 @@ export function useFirestoreDoc<T extends { id: string }>(
     let cancelled = false;
     setLoading(true);
 
-    void fetchDocData(collectionName, docId).then((result) => {
-      if (cancelled) return;
-      setData(result as T | null);
-      setLoading(false);
-    });
+    void fetchDocData(collectionName, docId)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result as T | null);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(`[useFirestoreDoc] Failed to fetch doc ${collectionName}/${docId}:`, err);
+        if (cancelled) return;
+        setData(null);
+        setLoading(false);
+      });
 
     return () => {
       cancelled = true;

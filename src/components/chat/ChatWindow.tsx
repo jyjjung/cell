@@ -492,7 +492,7 @@ function ChatWindowBody({
         onClose={() => setShowNewSetlist(false)} 
         onCreated={(id) => {
           // Automatically share the new setlist in chat
-          sendMessage(undefined, undefined, undefined, undefined, undefined, id);
+          sendMessage(undefined, undefined, undefined, undefined, id);
         }} 
       />
       <NewRosterDialog 
@@ -500,7 +500,7 @@ function ChatWindowBody({
         onClose={() => setShowNewRoster(false)} 
         onCreated={(id) => {
           // Automatically share the new roster in chat
-          sendMessage(undefined, undefined, undefined, undefined, undefined, undefined, id);
+          sendMessage(undefined, undefined, undefined, undefined, undefined, id);
         }} 
       />
       <AddChordSheetDialog 
