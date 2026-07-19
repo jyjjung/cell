@@ -1015,3 +1015,27 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Shared-doc remote edits (Apple Notes–style yellow flash) */
+.tiptap .doc-remote-change {
+  background-color: rgba(255, 214, 10, 0.55);
+  border-radius: 0.15rem;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: doc-remote-change-fade 3.6s ease-out forwards;
+}
+
+.doc-remote-title-flash {
+  background-color: rgba(255, 214, 10, 0.45) !important;
+  animation: doc-remote-change-fade 3.6s ease-out forwards;
+}
+
+@keyframes doc-remote-change-fade {
+  0%,
+  45% {
+    background-color: rgba(255, 214, 10, 0.55);
+  }
+  100% {
+    background-color: rgba(255, 214, 10, 0);
+  }
+}

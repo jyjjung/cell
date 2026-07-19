@@ -454,6 +454,11 @@ export const translations = {
     create: "Create",
     saving: "Saving…",
     unsavedChanges: "Unsaved",
+    documentUpdatedByOther: "Someone else updated this document.",
+    documentUpdatedByName: "{name} updated this document.",
+    loadLatestDocument: "Load latest",
+    editedByYou: "Edited by you",
+    editedByOther: "Edited by {name}",
     error: "Something went wrong",
     docsPermissionDenied:
       "Firestore blocked this document action. An admin needs to deploy the latest Firestore rules (firebase deploy --only firestore:rules,firestore:indexes).",
@@ -1216,6 +1221,11 @@ export const translations = {
     create: "만들기",
     saving: "저장 중…",
     unsavedChanges: "미저장",
+    documentUpdatedByOther: "다른 사람이 이 문서를 업데이트했습니다.",
+    documentUpdatedByName: "{name}님이 이 문서를 업데이트했습니다.",
+    loadLatestDocument: "최신 버전 불러오기",
+    editedByYou: "내가 수정함",
+    editedByOther: "{name}님이 수정함",
     error: "문제가 발생했습니다",
     docsPermissionDenied:
       "Firestore가 문서 작업을 차단했습니다. 관리자가 최신 Firestore 규칙을 배포해야 합니다 (firebase deploy --only firestore:rules,firestore:indexes).",

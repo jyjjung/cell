@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { FileText, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -11,8 +12,8 @@ import { translations } from '@/lib/translations';
 import { displayDocTitle, stripHtmlPreview } from '@/lib/docs-utils';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
 import { toDateSafe } from '@/lib/firestore-timestamp';
-import { getClientAuthHeaders } from '@/lib/client-auth-headers';
-import type { DocNote } from '@/types';
+import { db } from '@/lib/firebase';
+import type { DocNote, DocVisibility } from '@/types';
 
 interface DocSummaryProps {
   docId: string;
@@ -29,48 +30,43 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
     setLoading(true);
     setMissing(false);
-    void (async () => {
-      try {
-        const headers = await getClientAuthHeaders();
-        const res = await fetch(`/api/docs/${docId}`, { headers });
-        if (!res.ok) {
-          if (!cancelled) {
-            setNote(null);
-            setMissing(true);
-          }
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled) {
-          setNote({
-            id: data.id,
-            title: data.title || '',
-            content: data.content || '',
-            visibility: data.visibility || 'private',
-            ownerId: data.ownerId,
-            authorIds: Array.isArray(data.authorIds) ? data.authorIds : [data.ownerId],
-            sharedWith: Array.isArray(data.sharedWith) ? data.sharedWith : [],
-            memberIds: Array.isArray(data.memberIds) ? data.memberIds : [],
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
-            updatedBy: data.updatedBy || '',
-          });
-        }
-      } catch {
-        if (!cancelled) {
+    const unsubscribe = onSnapshot(
+      doc(db, 'docs', docId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
           setNote(null);
           setMissing(true);
+          setLoading(false);
+          return;
         }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+        const data = snapshot.data();
+        setNote({
+          id: snapshot.id,
+          title: typeof data.title === 'string' ? data.title : '',
+          content: (data.content as string) || '',
+          visibility: (data.visibility as DocVisibility) || 'private',
+          ownerId: data.ownerId as string,
+          authorIds: Array.isArray(data.authorIds)
+            ? (data.authorIds as string[])
+            : [data.ownerId as string],
+          sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
+          memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
+          createdAt: data.createdAt as DocNote['createdAt'],
+          updatedAt: data.updatedAt as DocNote['updatedAt'],
+          updatedBy: (data.updatedBy as string) || '',
+        });
+        setMissing(false);
+        setLoading(false);
+      },
+      () => {
+        setNote(null);
+        setMissing(true);
+        setLoading(false);
+      },
+    );
+    return () => unsubscribe();
   }, [docId]);
 
   const authorLabel = useMemo(() => {
