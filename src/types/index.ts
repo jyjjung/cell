@@ -354,6 +354,32 @@ export interface Chat {
   createdAt: Timestamp;
 }
 
+/** Who may create a given chat type. `everyone` = all approved users (youth rules still apply). */
+export type ChatCreationAccessMode = 'everyone' | 'roles';
+
+export interface ChatTypeCreationPermission {
+  mode: ChatCreationAccessMode;
+  /** When mode is `roles`, only users with one of these role IDs may create. Empty = nobody (except app admins). */
+  allowedRoleIds: string[];
+}
+
+export interface ChatCreationPermissions {
+  privateChat: ChatTypeCreationPermission;
+  groupChat: ChatTypeCreationPermission;
+}
+
+/** Serializable chat row returned by the admin list-chats API. */
+export interface AdminChatSummary {
+  id: string;
+  type: 'private' | 'group';
+  name?: string;
+  members: string[];
+  memberInfo: { [uid: string]: ChatMemberInfo };
+  lastMessageText?: string;
+  lastMessageSentAtMs: number | null;
+  createdAtMs: number | null;
+}
+
 export type DeletedMessageContentType =
   | 'message'
   | 'image'

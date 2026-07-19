@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.127",
+    subtitle: "Admin chats manager",
+    date: "July 19, 2026",
+    changes: [
+      "Admins can see every chat (not only ones they belong to), search and filter them, and delete a chat with all of its messages",
+      "Admins can set role-based permissions for who may create private chats and group chats",
+    ],
+  },
+  {
     version: "v1.3.126",
     subtitle: "Shared note edit cues",
     date: "July 19, 2026",
