@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.122",
+    subtitle: "Info widget save fix",
+    date: "July 19, 2026",
+    changes: [
+      "Saving info widgets no longer fails when optional fields like Korean labels or details are blank",
+    ],
+  },
+  {
     version: "v1.3.121",
     subtitle: "Reorder info widgets",
     date: "July 19, 2026",

@@ -26,14 +26,6 @@ export type InfoWidgetInput = {
   items: Omit<InfoWidgetItem, 'id' | 'order'>[];
 };
 
-const DEFAULT_OFFERINGS_ITEMS: Omit<InfoWidgetItem, 'id' | 'order'>[] = [
-  { label: 'Weekly', labelKo: '주정헌금', value: '111', detail: 'Ye-Joon Jung' },
-  { label: 'Tithes', labelKo: '십일조', value: '101' },
-  { label: 'Thanksgiving', labelKo: '감사헌금', value: '365' },
-  { label: 'Construction', labelKo: '건축헌금', value: '123' },
-  { label: 'Missions', labelKo: '선교헌금', value: '999' },
-];
-
 function normalizeItems(
   items: Array<Partial<InfoWidgetItem> & { label?: string; value?: string }>,
 ): InfoWidgetItem[] {
@@ -51,15 +43,22 @@ function normalizeItems(
     .map((item, index) => ({ ...item, order: index }));
 }
 
-function withItemIds(items: Omit<InfoWidgetItem, 'id' | 'order'>[]): InfoWidgetItem[] {
-  return items.map((item, index) => ({
-    id: `item-${Date.now()}-${index}`,
-    label: item.label.trim(),
-    labelKo: item.labelKo?.trim() || undefined,
-    value: item.value.trim(),
-    detail: item.detail?.trim() || undefined,
-    order: index,
-  }));
+/** Firestore rejects `undefined` — only include optional fields when set. */
+function serializeItems(
+  items: Omit<InfoWidgetItem, 'id' | 'order'>[],
+): Array<Record<string, string | number>> {
+  return items.map((item, index) => {
+    const labelKo = item.labelKo?.trim();
+    const detail = item.detail?.trim();
+    return {
+      id: `item-${Date.now()}-${index}`,
+      label: item.label.trim(),
+      value: item.value.trim(),
+      order: index,
+      ...(labelKo ? { labelKo } : {}),
+      ...(detail ? { detail } : {}),
+    };
+  });
 }
 
 export function useInfoWidgets() {
@@ -117,13 +116,14 @@ export function useInfoWidgets() {
       if (!isAdmin) throw new Error('Not authorized to add info widgets.');
       const title = input.title.trim();
       if (!title) throw new Error('Title is required.');
+      const titleKo = input.titleKo?.trim();
 
       await addDoc(collection(db, INFO_WIDGETS_COLLECTION), {
         title,
-        titleKo: input.titleKo?.trim() || null,
+        ...(titleKo ? { titleKo } : {}),
         order: nextOrder(),
-        items: withItemIds(input.items),
-        createdBy: currentUser?.uid || null,
+        items: serializeItems(input.items),
+        ...(currentUser?.uid ? { createdBy: currentUser.uid } : {}),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -136,11 +136,12 @@ export function useInfoWidgets() {
       if (!isAdmin) throw new Error('Not authorized to update info widgets.');
       const title = input.title.trim();
       if (!title) throw new Error('Title is required.');
+      const titleKo = input.titleKo?.trim();
 
       await updateDoc(doc(db, INFO_WIDGETS_COLLECTION, id), {
         title,
-        titleKo: input.titleKo?.trim() || null,
-        items: withItemIds(input.items),
+        titleKo: titleKo || null,
+        items: serializeItems(input.items),
         updatedAt: serverTimestamp(),
       });
     },
@@ -180,19 +181,6 @@ export function useInfoWidgets() {
     [isAdmin, widgets],
   );
 
-  const seedOnlineOfferings = useCallback(async () => {
-    if (!isAdmin) throw new Error('Not authorized to add info widgets.');
-    await addDoc(collection(db, INFO_WIDGETS_COLLECTION), {
-      title: 'Online offerings',
-      titleKo: '온라인 헌금',
-      order: nextOrder(),
-      items: withItemIds(DEFAULT_OFFERINGS_ITEMS),
-      createdBy: currentUser?.uid || null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  }, [isAdmin, nextOrder, currentUser?.uid]);
-
   return {
     widgets,
     loading,
@@ -200,6 +188,5 @@ export function useInfoWidgets() {
     updateWidget,
     deleteWidget,
     moveWidget,
-    seedOnlineOfferings,
   };
 }
