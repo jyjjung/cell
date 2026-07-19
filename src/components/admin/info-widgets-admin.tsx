@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Info, Loader2, Pencil, Plus, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Info, Loader2, Pencil, Plus, PlusCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { useInfoWidgets, type InfoWidgetInput } from '@/hooks/use-info-widgets';
@@ -95,6 +95,19 @@ function WidgetEditorDialog({
     setItems((prev) => {
       const next = prev.filter((item) => item.key !== key);
       return next.length > 0 ? next : [emptyDraftItem()];
+    });
+  };
+
+  const moveItem = (key: string, direction: 'up' | 'down') => {
+    setItems((prev) => {
+      const index = prev.findIndex((item) => item.key === key);
+      if (index < 0) return prev;
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex < 0 || swapIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(swapIndex, 0, item);
+      return next;
     });
   };
 
@@ -195,16 +208,40 @@ function WidgetEditorDialog({
                     <p className="text-micro-label">
                       {t.adminInfoWidgetItem} {index + 1}
                     </p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(item.key)}
-                      aria-label={t.adminYesDelete}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => moveItem(item.key, 'up')}
+                        disabled={index === 0}
+                        aria-label={t.adminMoveUp}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => moveItem(item.key, 'down')}
+                        disabled={index === items.length - 1}
+                        aria-label={t.adminMoveDown}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(item.key)}
+                        aria-label={t.adminYesDelete}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Input
@@ -266,12 +303,14 @@ export default function InfoWidgetsAdmin() {
     addWidget,
     updateWidget,
     deleteWidget,
+    moveWidget,
     seedOnlineOfferings,
   } = useInfoWidgets();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<InfoWidget | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -306,6 +345,18 @@ export default function InfoWidgetsAdmin() {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t.error;
       toast({ title: t.error, description: message, variant: 'destructive' });
+    }
+  };
+
+  const handleMove = async (id: string, direction: 'up' | 'down') => {
+    setReorderingId(id);
+    try {
+      await moveWidget(id, direction);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t.error;
+      toast({ title: t.error, description: message, variant: 'destructive' });
+    } finally {
+      setReorderingId(null);
     }
   };
 
@@ -368,9 +419,10 @@ export default function InfoWidgetsAdmin() {
         />
       ) : (
         <div className="space-y-4">
-          {widgets.map((widget) => {
+          {widgets.map((widget, index) => {
             const title =
               lang === 'ko' && widget.titleKo ? widget.titleKo : widget.title;
+            const isReordering = reorderingId === widget.id;
             return (
               <section key={widget.id} className="widget-surface space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -384,6 +436,32 @@ export default function InfoWidgetsAdmin() {
                     ) : null}
                   </div>
                   <div className="flex shrink-0 gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => void handleMove(widget.id, 'up')}
+                      disabled={index === 0 || !!reorderingId}
+                      aria-label={t.adminMoveUp}
+                    >
+                      {isReordering ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => void handleMove(widget.id, 'down')}
+                      disabled={index === widgets.length - 1 || !!reorderingId}
+                      aria-label={t.adminMoveDown}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       type="button"
                       variant="outline"
