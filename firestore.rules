@@ -215,6 +215,11 @@ service cloud.firestore {
       allow write: if isAppAdmin(request.auth.uid);
     }
 
+    match /infoWidgets/{widgetId} {
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin(request.auth.uid);
+    }
+
     // Shared documents (personal notes + collaboratively shared docs)
     match /docs/{docId} {
       function isDocMember() {

@@ -20,6 +20,7 @@ import {
   Brain,
   MessageCircle,
   MessageSquarePlus,
+  Info,
 } from "lucide-react";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { PageHeader } from "@/components/ui/page-layout";
@@ -132,6 +133,7 @@ export default function AdminHubPage() {
     { title: t.adminRoles, href: "/admin/groups", icon: ShieldCheck },
     { title: t.adminBiblePlan, href: "/admin/bible-plan", icon: BookOpen },
     { title: t.adminMemorization, href: "/admin/memory-verses", icon: Brain },
+    { title: t.adminInfoWidgets, href: "/admin/info-widgets", icon: Info },
     { title: t.adminManageChats, href: "/admin/chats", icon: MessageCircle },
   ];
 

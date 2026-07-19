@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.120",
+    subtitle: "Editable info widgets",
+    date: "July 19, 2026",
+    changes: [
+      "Admins can add, edit, and delete homepage info widgets (like online offerings) from Admin → Info widgets",
+      "Homepage info panels now load from those admin-managed widgets, with English and Korean titles/labels",
+    ],
+  },
+  {
     version: "v1.3.119",
     subtitle: "Online offerings",
     date: "July 19, 2026",

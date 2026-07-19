@@ -41,7 +41,7 @@ import {
 import CalendarWidget from '@/components/dashboard-widgets/calendar-widget';
 import AgendaView, { type AgendaItem } from '@/components/dashboard-widgets/agenda-view';
 import TodayQtWidget from '@/components/dashboard-widgets/today-qt-widget';
-import OnlineOfferingsWidget from '@/components/dashboard-widgets/online-offerings-widget';
+import HomeInfoWidgets from '@/components/dashboard-widgets/home-info-widgets';
 import { EventCategory } from '@/types';
 
 interface DashboardPageProps {
@@ -459,7 +459,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         {/* Today snapshot */}
         <aside className="ui-card space-y-4 lg:col-span-2">
           <TodayQtWidget />
-          <OnlineOfferingsWidget />
+          <HomeInfoWidgets />
 
           <div>
             <p className="text-eyebrow">{t.todayLabel}</p>
