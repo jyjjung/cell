@@ -56,6 +56,15 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.129",
+    subtitle: "Deleted documents stay gone",
+    date: "July 19, 2026",
+    changes: [
+      "Deleted documents disappear from the Docs list right away instead of lingering",
+      "Chat document previews no longer briefly flash the old note before showing that it was deleted",
+    ],
+  },
+  {
     version: "v1.3.128",
     subtitle: "Chat member names in admin",
     date: "July 19, 2026",
