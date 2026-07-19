@@ -9,6 +9,7 @@ import {
   Trash2,
   Check,
   Save,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +32,9 @@ import { useDoc } from '@/hooks/use-docs';
 import { useUsersById } from '@/hooks/use-all-users';
 import { useToast } from '@/hooks/use-toast';
 import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/formatting';
-import { toDateSafe } from '@/lib/firestore-timestamp';
+import { toDateSafe, toMillisSafe } from '@/lib/firestore-timestamp';
 import { isBlankDocHtml } from '@/lib/docs-utils';
+import { getDocActionErrorMessage } from '@/lib/docs-errors';
 import { translations } from '@/lib/translations';
 import type { DocVisibility } from '@/types';
 
@@ -65,9 +67,12 @@ export default function DocDetailPage() {
   const [manualSaving, setManualSaving] = useState(false);
   /** Editor stays unmounted until local draft matches the loaded note. */
   const [hydrated, setHydrated] = useState(false);
+  /** Remote changes from someone else while local draft is dirty. */
+  const [remoteNewer, setRemoteNewer] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedId = useRef<string | null>(null);
   const userEditedRef = useRef(false);
+  const appliedUpdatedAtRef = useRef(0);
   const titleRef = useRef(title);
   const contentRef = useRef(content);
   titleRef.current = title;
@@ -81,8 +86,10 @@ export default function DocDetailPage() {
 
   useEffect(() => {
     hydratedId.current = null;
+    appliedUpdatedAtRef.current = 0;
     setHydrated(false);
     setDirty(false);
+    setRemoteNewer(false);
     userEditedRef.current = false;
     setTitle('');
     setContent('<p></p>');
@@ -90,21 +97,47 @@ export default function DocDetailPage() {
 
   useEffect(() => {
     if (!note) return;
+    const remoteTitle = note.title;
+    const remoteContent = note.content || '<p></p>';
+    const remoteMs = toMillisSafe(note.updatedAt);
+
     if (hydratedId.current !== note.id) {
-      setTitle(note.title);
-      setContent(note.content || '<p></p>');
+      setTitle(remoteTitle);
+      setContent(remoteContent);
       setDirty(false);
+      setRemoteNewer(false);
       userEditedRef.current = false;
       hydratedId.current = note.id;
+      appliedUpdatedAtRef.current = remoteMs;
       setHydrated(true);
       return;
     }
-    // Soft-sync from poll only when the user has not edited locally.
+
+    const contentDiffers =
+      remoteTitle !== titleRef.current || remoteContent !== contentRef.current;
+    const isRemoteFromOther =
+      !!note.updatedBy && note.updatedBy !== currentUser?.uid;
+
+    // Live-sync remote changes immediately when the local draft is clean.
     if (!dirty && !userEditedRef.current) {
-      setTitle(note.title);
-      setContent(note.content || '<p></p>');
+      if (contentDiffers) {
+        setTitle(remoteTitle);
+        setContent(remoteContent);
+      }
+      appliedUpdatedAtRef.current = Math.max(appliedUpdatedAtRef.current, remoteMs);
+      setRemoteNewer(false);
+      return;
     }
-  }, [note, dirty]);
+
+    // Local edits in progress — surface a reload prompt when someone else saved.
+    if (
+      isRemoteFromOther &&
+      contentDiffers &&
+      remoteMs > appliedUpdatedAtRef.current
+    ) {
+      setRemoteNewer(true);
+    }
+  }, [note, dirty, currentUser?.uid]);
 
   useEffect(() => {
     if (!dirty || !hydrated || !note || !currentUser || !userEditedRef.current) return;
@@ -119,6 +152,9 @@ export default function DocDetailPage() {
       try {
         await saveContent(nextTitle, nextContent);
         setDirty(false);
+        userEditedRef.current = false;
+        setRemoteNewer(false);
+        appliedUpdatedAtRef.current = Date.now();
       } catch (e: unknown) {
         toast({
           title: t.error,
@@ -131,6 +167,20 @@ export default function DocDetailPage() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [title, content, dirty, hydrated, note, currentUser, saveContent, toast, t.error]);
+
+  const applyRemoteVersion = () => {
+    if (!note) return;
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setTitle(note.title);
+    setContent(note.content || '<p></p>');
+    setDirty(false);
+    setRemoteNewer(false);
+    userEditedRef.current = false;
+    appliedUpdatedAtRef.current = toMillisSafe(note.updatedAt);
+  };
 
   const metaLine = useMemo(() => {
     if (!note) return '';
@@ -158,6 +208,9 @@ export default function DocDetailPage() {
     try {
       await saveContent(title, content, { allowEmpty: isBlankDocHtml(content) });
       setDirty(false);
+      userEditedRef.current = false;
+      setRemoteNewer(false);
+      appliedUpdatedAtRef.current = Date.now();
       toast({ title: t.saved });
     } catch (e: unknown) {
       toast({
@@ -188,7 +241,9 @@ export default function DocDetailPage() {
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> {t.back}
         </Button>
-        <p className="text-sm text-muted-foreground">{error?.message || t.documentNotFound}</p>
+        <p className="text-sm text-muted-foreground">
+          {error ? getDocActionErrorMessage(error, t) : t.documentNotFound}
+        </p>
       </div>
     );
   }
@@ -313,6 +368,21 @@ export default function DocDetailPage() {
         disabled={!hydrated}
       />
       <p className="text-xs text-muted-foreground mb-3 mt-1">{metaLine}</p>
+
+      {remoteNewer ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-sm">
+          <span className="flex-1 text-muted-foreground">{t.documentUpdatedByOther}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-lg"
+            onClick={applyRemoteVersion}
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            {t.loadLatestDocument}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {hydrated ? (
