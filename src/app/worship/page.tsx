@@ -1,67 +1,41 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useClientSearchParams } from '@/hooks/use-client-search-params';
-import { format, parseISO } from 'date-fns';
-import {
-  Music, Plus, ListMusic, BookOpen, ChevronRight, ChevronLeft,
-  Trash2, X, Upload, Image as ImageIcon, Calendar, Loader2,
-  Eye, ArrowLeft, GripVertical, Check, Search, Music2, Pencil, Save,
-  Users, UserPlus, Link2, UserCheck, UserX, Shield, Download,
-  ChevronUp, ChevronDown, RefreshCw, Youtube
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { NavPageHeader } from '@/components/ui/page-layout';
-import { cn } from '@/lib/utils';
-import { formatNameString } from '@/lib/formatting';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
-import { useWorshipRosters } from '@/hooks/useWorshipRosters';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useAuth } from '@/contexts/auth-context';
-import type {
-  WorshipSong, WorshipSetlist, SetlistSong, ChordKey, SongChordSheet,
-  WorshipRoster, WorshipRosterSlot, WorshipRosterMember, WorshipRole,
-} from '@/types';
-import { mergeWorshipRosterSlots } from '@/types';
-import { RemoteImage } from '@/components/ui/remote-image';
-import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { translations } from '@/lib/translations';
-import {
-  NewSongDialog, NewSetlistDialog, NewRosterDialog, AddChordSheetDialog,
-  SetlistSongConfigPanel,
-} from '@/components/worship/WorshipDialogs';
-import { WorshipDataProvider } from '@/contexts/worship-data-context';
+import { NavPageHeader } from '@/components/ui/page-layout';
+import { RemoteImage } from '@/components/ui/remote-image';
+import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
+import { AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog, SetlistSongConfigPanel } from '@/components/worship/WorshipDialogs';
 import { ReferenceTracksListen } from '@/components/worship/YoutubeReferenceEmbed';
+import { useAuth } from '@/contexts/auth-context';
+import { WorshipDataProvider } from '@/contexts/worship-data-context';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useClientSearchParams } from '@/hooks/use-client-search-params';
+import { useToast } from '@/hooks/use-toast';
+import { useWorshipRosters } from '@/hooks/useWorshipRosters';
+import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { formatNameString } from '@/lib/formatting';
+import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
 import {
-  resolveChordSheetsForSetlistSong, chordSheetsForKey,
-  hasReferenceTracks, getReferenceTracks,
-  referenceTracksToDrafts, normalizeReferenceTrackDrafts,
-  referenceTrackDraftsInvalid, type ReferenceTrackDraft,
+    chordSheetsForKey, getReferenceTracks, hasReferenceTracks, normalizeReferenceTrackDrafts,
+    referenceTrackDraftsInvalid, referenceTracksToDrafts, resolveChordSheetsForSetlistSong, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
+import type { ChordKey, SetlistSong, SongChordSheet, WorshipRole, WorshipRoster, WorshipRosterMember, WorshipRosterSlot, WorshipSetlist, WorshipSong } from '@/types';
+import { mergeWorshipRosterSlots } from '@/types';
+import { format, parseISO } from 'date-fns';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronRight, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Loader2, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, UserCheck, UserPlus, Users, UserX, X, Youtube } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const ALL_KEYS: ChordKey[] = [
-  'numbers',
-  'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
-  'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
-];
-
-const KEY_LABEL: Record<ChordKey, string> = {
-  numbers: '#', C: 'C', 'C#': 'C#', Db: 'Db', D: 'D', 'D#': 'D#',
-  Eb: 'Eb', E: 'E', F: 'F', 'F#': 'F#', Gb: 'Gb', G: 'G',
-  'G#': 'G#', Ab: 'Ab', A: 'A', 'A#': 'A#', Bb: 'Bb', B: 'B',
-};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -323,7 +297,7 @@ function SongDetailView({
 
 // ── SongsLibraryTab ───────────────────────────────────────────────────────────
 function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
-  const { songs, loading, deleteSong, addChordSheet, removeChordSheet } = useWorshipSongs();
+  const { songs, loading, deleteSong } = useWorshipSongs();
   const [newSongOpen, setNewSongOpen] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
   const [detailSong, setDetailSong] = useState<WorshipSong | null>(null);
@@ -1729,8 +1703,6 @@ export default function WorshipPortalPage() {
   const searchParams = useClientSearchParams();
   const initialTab = searchParams.get('tab') as 'playlists' | 'songs' | 'rosters' | null;
   const initialId = searchParams.get('id');
-  const { toast } = useToast();
-
   const [tab, setTab] = useState<'playlists' | 'songs' | 'rosters'>(initialTab || 'rosters');
   const [pendingSetlistId, setPendingSetlistId] = useState<string | null>(tab === 'playlists' ? (initialId || null) : null);
   const [pendingRosterId, setPendingRosterId] = useState<string | null>(tab === 'rosters' ? (initialId || null) : null);

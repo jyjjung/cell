@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminAuth, getAdminDb, getAdminStorage } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 
 export async function POST(request: NextRequest) {
@@ -21,18 +21,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Invalid token.' }, { status: 401 });
     }
 
-    const callerIsAdmin = await userHasAdminAccess(adminDb, decodedToken.uid);
-    if (!callerIsAdmin) {
-      return NextResponse.json({ error: 'Forbidden: Caller is not an admin.' }, { status: 403 });
-    }
-
     const { chatId } = await request.json();
     if (!chatId || typeof chatId !== 'string') {
       return NextResponse.json({ error: 'Bad Request: Chat ID is missing or invalid.' }, { status: 400 });
     }
 
     const chatRef = adminDb.collection('chats').doc(chatId);
+    const chatSnap = await chatRef.get();
+    if (!chatSnap.exists) {
+      return NextResponse.json({ success: true, message: 'Chat already deleted.' });
+    }
+    const chat = chatSnap.data()!;
+    const callerIsAdmin = await userHasAdminAccess(adminDb, decodedToken.uid);
+    const canDeletePrivateChat = chat.type === 'private'
+      && Array.isArray(chat.members)
+      && chat.members.includes(decodedToken.uid);
+    if (!callerIsAdmin && !canDeletePrivateChat) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+    }
+
     await adminDb.recursiveDelete(chatRef);
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'cell-abca4.firebasestorage.app';
+    if (bucketName) {
+      await getAdminStorage(adminApp).bucket(bucketName).deleteFiles({
+        prefix: `chats/${chatId}/`,
+        force: true,
+      }).catch((error) => console.warn('[delete-chat] Storage cleanup failed:', error));
+    }
 
     // Clear any role → chat link so role admin UI does not point at a deleted chat.
     const linkedRoles = await adminDb.collection('roles').where('chatId', '==', chatId).get();

@@ -81,7 +81,6 @@ export const CANONICAL_BIBLE_ORDER = Object.values(BIBLE_BOOKS_DATA)
   .sort((a, b) => a.order - b.order)
   .map(book => book.fullName);
 
-export const NEW_TESTAMENT_ORDER = CANONICAL_BIBLE_ORDER.slice(CANONICAL_BIBLE_ORDER.indexOf('Matthew'));
 
 export const PRESET_CUSTOM_ORDER_STRINGS: string[] = [
   "Genesis 1-50", "Exodus 1-40", "Leviticus 1-27", "Numbers 1-36", "Deuteronomy 1-34",

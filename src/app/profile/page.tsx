@@ -1,42 +1,42 @@
 
 "use client";
 
+import { AppearanceSettings } from '@/components/profile/appearance-settings';
+import { isProfileTabId, ProfileHubTabs, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
+import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
+import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { NavPageHeader, PageSection } from '@/components/ui/page-layout';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { useRouter } from 'next/navigation';
-import { useClientSearchParams } from '@/hooks/use-client-search-params';
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, LogOut, BellRing, BellOff, AlertTriangle, Download, Send, Languages, Cake } from 'lucide-react';
-import type { AvatarData } from '@/types';
-import { Switch } from '@/components/ui/switch';
-import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
-import { getToken } from 'firebase/messaging';
-import { messaging, db } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useNotifications } from '@/hooks/use-notifications';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { translations } from '@/lib/translations';
-import { useEvents } from '@/hooks/use-events';
-import { parseISO } from 'date-fns';
-import { motion } from 'framer-motion';
-import { NavPageHeader, PageSection } from '@/components/ui/page-layout';
-import { formatAppDate, getAppLocale } from '@/lib/formatting';
-import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
-import { calculatePlanProgressPercent } from '@/lib/reading-utils';
-import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
-import { healFcmSubscription, MAX_FCM_TOKENS } from '@/lib/fcm-heal';
-import { getFCMRegistration } from '@/lib/fcm-registration';
-import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
-import { AppearanceSettings } from '@/components/profile/appearance-settings';
-import { ProfileHubTabs, isProfileTabId, type ProfileTabId } from '@/components/profile/profile-hub-tabs';
+import { useClientSearchParams } from '@/hooks/use-client-search-params';
+import { useEvents } from '@/hooks/use-events';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useToast } from '@/hooks/use-toast';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { AVATAR_COSMETIC_TIERS, isHaloTierUnlocked } from '@/lib/avatar-cosmetics';
-import { sanitizeAvatarData } from '@/lib/avatar-utils';
 import { canMemberChangeOwnAvatar } from '@/lib/avatar-curator';
+import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { sanitizeAvatarData } from '@/lib/avatar-utils';
+import { healFcmSubscription, MAX_FCM_TOKENS } from '@/lib/fcm-heal';
+import { getFCMRegistration } from '@/lib/fcm-registration';
+import { db, messaging } from '@/lib/firebase';
+import { formatAppDate, getAppLocale } from '@/lib/formatting';
+import { calculatePlanProgressPercent } from '@/lib/reading-utils';
+import { translations } from '@/lib/translations';
+import type { AvatarData } from '@/types';
+import { parseISO } from 'date-fns';
+import { doc, updateDoc } from 'firebase/firestore';
+import { getToken } from 'firebase/messaging';
+import { motion } from 'framer-motion';
+import { AlertTriangle, BellOff, BellRing, Cake, Download, Languages, Loader2, LogOut, Send } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 
 
@@ -45,7 +45,7 @@ type PushSupportState = 'SUPPORTED' | 'NEEDS_PWA_INSTALL' | 'NEEDS_PERMISSION' |
 export default function ProfilePage() {
   const { currentUser, loadingAuth, signOutUser, updateUserProfile } = useAuth();
   const { patchUsers } = useAllUsers();
-  const { events, loading: loadingEvents } = useEvents();
+  const { events } = useEvents();
   const router = useRouter();
   const searchParams = useClientSearchParams();
   const [isMounted, setIsMounted] = useState(false);

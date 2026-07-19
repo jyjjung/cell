@@ -1,1 +1,1 @@
-export { useEvents, EventsProvider } from '@/contexts/events-context';
+export { useEvents,  } from '@/contexts/events-context';

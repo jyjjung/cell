@@ -1,8 +1,8 @@
 import type { FontFamilyChoice } from './font-catalog';
 import { getFontFamilyStack, normalizeFontFamilyChoice } from './font-catalog';
 
+export { FONT_FAMILY_GROUPS } from './font-catalog';
 export type { FontFamilyChoice } from './font-catalog';
-export { FONT_FAMILY_GROUPS, getFontLabel } from './font-catalog';
 
 export type FontSizeChoice = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -49,7 +49,7 @@ const DEFAULT_DENSITY_GAP = '1';
 const DEFAULT_BIBLE_LINE_HEIGHT = '1.85';
 const DEFAULT_BIBLE_LETTER_SPACING = '0.01em';
 
-export function isFontSizeChoice(value: string | undefined | null): value is FontSizeChoice {
+function isFontSizeChoice(value: string | undefined | null): value is FontSizeChoice {
   return value === 'sm' || value === 'md' || value === 'lg' || value === 'xl';
 }
 

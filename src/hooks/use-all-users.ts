@@ -1,1 +1,1 @@
-export { useAllUsers, useUsers, useUsersById, UsersProvider } from '@/contexts/users-context';
+export { useAllUsers,  useUsersById,  } from '@/contexts/users-context';

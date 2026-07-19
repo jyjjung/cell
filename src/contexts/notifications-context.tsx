@@ -1,45 +1,44 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import { usePathname } from 'next/navigation';
-import type { AppNotification } from '@/types';
-import { db } from '@/lib/firebase';
-import {
-  arrayUnion,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-  writeBatch,
-} from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import {
-  COLLECTION_CACHE_TTL_MS,
-  NOTIFICATIONS_CACHE_TTL_MS,
-  readLocalCollectionCache,
-  readLocalCollectionCacheStale,
-  writeLocalCollectionCache,
+    NOTIFICATIONS_CACHE_TTL_MS,
+    readLocalCollectionCache,
+    readLocalCollectionCacheStale,
+    writeLocalCollectionCache
 } from '@/lib/collection-cache';
+import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
-import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import type { AppNotification } from '@/types';
+import {
+    arrayUnion,
+    collection,
+    deleteDoc,
+    doc,
+    getDocs,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+    where,
+    writeBatch
+} from 'firebase/firestore';
+import { usePathname } from 'next/navigation';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode
+} from 'react';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 const CACHE_KEY_PREFIX = 'notifications_v2';

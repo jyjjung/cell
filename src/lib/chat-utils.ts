@@ -6,7 +6,6 @@ import { mergeAvatarData } from '@/lib/avatar-utils';
 import { getDeletedContentPreview } from '@/lib/deleted-content';
 import type { DeletedMessageContentType } from '@/types';
 
-export const DELETED_MESSAGE_PREVIEW = 'This message has been deleted';
 export const GROUP_PHOTO_CHANGED_PREVIEW = 'changed the group chat picture.';
 export const GROUP_PHOTO_REMOVED_PREVIEW = 'removed the group chat picture.';
 

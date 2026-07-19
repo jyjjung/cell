@@ -1,5 +1,4 @@
-import type { ColorPaletteId, ColorPaletteTokens } from './color-palettes';
-import { getPaletteTokens } from './color-palettes';
+import type { ColorPaletteTokens } from './app-themes';
 
 const TOKEN_CSS_MAP: Record<keyof ColorPaletteTokens, string> = {
   background: '--background',
@@ -53,19 +52,4 @@ export function applyColorPaletteTokens(tokens: ColorPaletteTokens, paletteId: s
       root.style.setProperty(cssVar, tokens[tokenKey]);
     }
   );
-}
-
-export function applyColorPalette(paletteId: ColorPaletteId, isDark: boolean) {
-  applyColorPaletteTokens(getPaletteTokens(paletteId, isDark), paletteId);
-}
-
-export function clearAppliedColorPalette() {
-  if (typeof document === 'undefined') return;
-
-  const root = document.documentElement;
-  delete root.dataset.palette;
-
-  (Object.values(TOKEN_CSS_MAP) as string[]).forEach((cssVar) => {
-    root.style.removeProperty(cssVar);
-  });
 }

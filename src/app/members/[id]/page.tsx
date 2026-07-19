@@ -1,34 +1,28 @@
 "use client";
 
-import { useMemo, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { useMemberCommunityProgress } from '@/hooks/use-community-progress';
-import { useRoles } from '@/hooks/use-roles';
-import { useEvents } from '@/hooks/use-events';
-import { useBiblePlan } from '@/hooks/use-bible-plan';
-import { useAuth } from '@/contexts/auth-context';
-import { isAvatarCurator } from '@/lib/avatar-curator';
-import { MemberAvatarCuratorPanel } from '@/components/members/member-avatar-curator-panel';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { translations } from '@/lib/translations';
-import { PageHeader } from '@/components/ui/page-layout';
+import { MemberAvatarCuratorPanel } from '@/components/members/member-avatar-curator-panel';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { motion } from 'framer-motion';
-import { 
-  User as UserIcon, 
-  Cake, 
-  BookOpen, 
-  Trophy, 
-  Shield, 
-  Calendar,
-  ChevronLeft
-} from 'lucide-react';
-import { format, parseISO, isValid, startOfDay, isBefore, isSameDay } from 'date-fns';
-import { toDateSafe } from '@/lib/firestore-timestamp';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
+import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/contexts/auth-context';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { useMemberCommunityProgress } from '@/hooks/use-community-progress';
+import { useEvents } from '@/hooks/use-events';
+import { useRoles } from '@/hooks/use-roles';
+import { isAvatarCurator } from '@/lib/avatar-curator';
+import { toDateSafe } from '@/lib/firestore-timestamp';
+import { hasCapability } from '@/lib/role-capabilities';
+import { translations } from '@/lib/translations';
+import { format, isBefore, isSameDay, isValid, parseISO, startOfDay } from 'date-fns';
+import { motion } from 'framer-motion';
+import {
+    BookOpen, Cake, ChevronLeft, Shield, Trophy
+} from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function MemberProfilePage() {
   const params = useParams();
@@ -135,7 +129,7 @@ export default function MemberProfilePage() {
 
         <div className="stack-gap-sm">
           <h1 className="text-page-title">{user.firstName} {user.lastName}</h1>
-          {user.isAdmin && (
+          {hasCapability(user.capabilityKeys, 'app.admin') && (
             <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs px-2 py-0.5">
               <Shield className="h-3 w-3 mr-1" /> {t.admin}
             </Badge>

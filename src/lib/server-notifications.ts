@@ -2,7 +2,6 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
 import type { AppNotification, AppNotificationType } from '@/types';
 import { deliverNotificationPush } from '@/lib/server-push';
-import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
 
 export async function resolveUserIdByEmail(
   adminDb: Firestore,
@@ -27,25 +26,11 @@ export async function resolveUserIdByEmail(
 }
 
 export async function getAdminUserIds(adminDb: Firestore): Promise<string[]> {
-  const ids = new Set<string>();
-
-  const adminSnap = await adminDb.collection('users').where('isAdmin', '==', true).get();
-  adminSnap.docs.forEach((doc) => ids.add(doc.id));
-
-  const rolesSnap = await adminDb.collection('roles').get();
-  const adminRoleIds = rolesSnap.docs
-    .filter((doc) => ADMIN_ROLE_NAMES.includes(doc.data()?.name as typeof ADMIN_ROLE_NAMES[number]))
-    .map((doc) => doc.id);
-
-  if (adminRoleIds.length > 0) {
-    const roleSnap = await adminDb
-      .collection('users')
-      .where('roleIds', 'array-contains-any', adminRoleIds)
-      .get();
-    roleSnap.docs.forEach((doc) => ids.add(doc.id));
-  }
-
-  return [...ids];
+  const capabilitySnap = await adminDb
+    .collection('users')
+    .where('capabilityKeys', 'array-contains', 'app.admin')
+    .get();
+  return capabilitySnap.docs.map((doc) => doc.id);
 }
 
 export async function sendUserNotification(

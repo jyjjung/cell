@@ -1,39 +1,35 @@
 
 "use client";
 
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
-import { Loader2, Info, WifiOff, MessageSquare, Images, Link2, ChevronLeft } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { useMessages } from '@/hooks/useMessages';
+import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
+import { formatUserDisplayName } from '@/lib/formatting';
+import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getMemberDisplayName, resolveChatAvatar, getLastSeenNamesPerMessage } from '@/lib/chat-utils';
-import { formatUserDisplayName } from '@/lib/formatting';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useWorshipData, WorshipDataProvider } from '@/contexts/worship-data-context';
+import { downloadChatImage } from '@/lib/chat-image-download';
+import { translations } from '@/lib/translations';
+import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
+import type { ChatMemberInfo, WorshipSong } from '@/types';
+import { Button } from '../ui/button';
+import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
+import {
+    AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog
+} from '../worship/WorshipDialogs';
+import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatMessageList from './ChatMessageList';
+import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
+import { GroupChatAvatar } from './GroupChatAvatar';
+import GroupSettingsDialog from './GroupSettingsDialog';
+import { ChatImageGallery } from './ImageLightbox';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
-import { PixelAvatar } from '../avatar/PixelAvatar';
-import { GroupChatAvatar } from './GroupChatAvatar';
-import { Button } from '../ui/button';
-import GroupSettingsDialog from './GroupSettingsDialog';
-import type { Chat, ChatMemberInfo, WorshipSong } from '@/types';
-import { translations } from '@/lib/translations';
-import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
-import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
-import ChatLinksList, { extractChatLinks } from './ChatLinksList';
-import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
-import { resolveChordSheetsForSetlistSong, getReferenceTracks } from '@/lib/worship-utils';
-import { ChatImageGallery } from './ImageLightbox';
-import { downloadChatImage } from '@/lib/chat-image-download';
-import { 
-  NewSongDialog, 
-  NewSetlistDialog, 
-  NewRosterDialog, 
-  AddChordSheetDialog 
-} from '../worship/WorshipDialogs';
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
   const messageState = useMessages(chatId);
@@ -487,7 +483,7 @@ function ChatWindowBody({
       <NewSongDialog 
         open={showNewSong} 
         onClose={() => setShowNewSong(false)} 
-        onCreated={(id) => {
+        onCreated={() => {
           // Could optionally send a message about the new song
         }} 
       />

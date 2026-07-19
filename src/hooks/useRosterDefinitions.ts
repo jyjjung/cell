@@ -13,16 +13,14 @@ import {
   collection,
   addDoc,
   updateDoc,
-  deleteDoc,
   doc,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp,
-  getDocs,
-  writeBatch
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 
@@ -95,17 +93,12 @@ export function useRosterDefinitions() {
 
   const deleteDefinition = useCallback(async (id: string) => {
     if (!isAdmin) throw new Error("User is not authorized.");
-    const batch = writeBatch(db);
-    const definitionDocRef = doc(db, ROSTER_DEFINITIONS_COLLECTION, id);
-    batch.delete(definitionDocRef);
-
-    const entriesCollectionRef = collection(db, ROSTER_DEFINITIONS_COLLECTION, id, 'entries');
-    const entriesSnapshot = await getDocs(entriesCollectionRef);
-    entriesSnapshot.forEach((entryDoc) => {
-        batch.delete(entryDoc.ref);
+    const response = await fetch(`/api/admin/roster-definitions/${id}`, {
+      method: 'DELETE',
+      headers: await getClientAuthHeaders(),
     });
-
-    await batch.commit();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Could not delete roster definition.');
   }, [isAdmin]);
 
   return {

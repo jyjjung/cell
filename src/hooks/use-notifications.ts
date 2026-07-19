@@ -1,1 +1,1 @@
-export { useNotifications, NotificationsProvider } from '@/contexts/notifications-context';
+export { useNotifications,  } from '@/contexts/notifications-context';

@@ -1,14 +1,12 @@
 
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { browserLocalPersistence, getAuth, setPersistence } from "firebase/auth";
 import {
-  getFirestore,
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  Timestamp,
-  type Firestore,
+    getFirestore,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager, type Firestore
 } from 'firebase/firestore';
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getMessaging, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 
@@ -66,4 +64,4 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     }
 }
 
-export { app, db, auth, storage, messaging, Timestamp, firebaseConfig };
+export { db, auth, storage, messaging, };

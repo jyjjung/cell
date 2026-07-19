@@ -1,36 +1,18 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { UserBibleChecklist, BibleReadingPlan, StructuredPassage } from '@/types';
-import { db } from '@/lib/firebase';
-import {
-  doc,
-  onSnapshot,
-  setDoc,
-  arrayUnion,
-  arrayRemove,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  getDoc,
-  runTransaction
-} from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
+import { BIBLE_BOOKS_DATA, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
 import { syncCommunityProgress } from '@/lib/community-progress';
-import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
-import { useBiblePlan } from './use-bible-plan'; 
-import { useNotifications } from './use-notifications';
-import { startOfDay, parseISO, isBefore, isSameDay, isValid } from 'date-fns';
-
-/**
- * Creates a date-scoped unique key for a passage to prevent cross-day collisions
- * in plans like M'Cheyne that repeat the same chapters on multiple days.
- * Format: "yyyy-MM-dd::Book Chapter"  e.g. "2025-01-01::Matthew 1"
- */
-export function makePassageKey(date: string, displayText: string): string {
-  return `${date}::${displayText}`;
-}
+import { db } from '@/lib/firebase';
+import { makePassageKey } from '@/lib/passage-keys';
+import type { UserBibleChecklist } from '@/types';
+import {
+    arrayRemove, arrayUnion, doc,
+    onSnapshot, serverTimestamp, setDoc, Timestamp
+} from 'firebase/firestore';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useBiblePlan } from './use-bible-plan';
 
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
@@ -118,102 +100,6 @@ export function useUserBibleChecklist() {
     return () => unsubscribe();
   }, [currentUser?.uid, scheduleCommunityProgressSync]);
 
-  // ── Safe migration: bare keys → date-scoped keys ──────────────────────────
-  // Legacy completedPassages stored bare displayText (e.g. "Matthew 1").
-  // M'Cheyne repeats the same chapters twice a year, so a bare key causes the
-  // second occurrence to appear pre-checked. Migrate matching keys atomically,
-  // preserve unmatched keys, and retain a backup of the pre-migration list.
-  const migrationRunRef = useRef(false);
-
-  useEffect(() => {
-    if (migrationRunRef.current) return;
-    if (!currentUser?.uid || !currentGlobalPlan?.dailyReadings || loadingChecklist) return;
-
-    // No bare keys → already migrated or fresh account
-    const bareKeys = completedPassages.filter(key => !key.includes('::'));
-    if (bareKeys.length === 0) {
-      migrationRunRef.current = true;
-      return;
-    }
-
-    // Mark as run immediately to prevent re-entry on snapshot updates
-    migrationRunRef.current = true;
-
-    // Build first-occurrence map: displayText → earliest date in the plan.
-    const firstOccurrenceMap = new Map<string, string>();
-    for (const day of currentGlobalPlan.dailyReadings) {
-      for (const passage of day.passages) {
-        if (passage.displayText && !firstOccurrenceMap.has(passage.displayText)) {
-          firstOccurrenceMap.set(passage.displayText, day.date);
-        }
-      }
-    }
-
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
-
-    runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(checklistDocRef);
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.data() as UserBibleChecklist & {
-        legacyCompletedPassagesBackupV2?: string[];
-      };
-      const currentPassages = data.completedPassages || [];
-      const existingKeys = new Set(currentPassages);
-      let convertedCount = 0;
-      let unmatchedCount = 0;
-
-      const migratedPassages = currentPassages.map((key) => {
-        if (key.includes('::')) return key;
-
-        const date = firstOccurrenceMap.get(key);
-        if (!date) {
-          unmatchedCount += 1;
-          return key;
-        }
-
-        const scopedKey = makePassageKey(date, key);
-        // Never collapse two stored completions into one. Keeping the legacy
-        // key is safer than silently reducing a user's reading count.
-        if (existingKeys.has(scopedKey)) {
-          unmatchedCount += 1;
-          return key;
-        }
-
-        existingKeys.add(scopedKey);
-        convertedCount += 1;
-        return scopedKey;
-      });
-
-      // Safety invariant: a migration must never reduce recorded progress.
-      if (migratedPassages.length < currentPassages.length) {
-        throw new Error('Migration aborted because it would reduce reading progress.');
-      }
-
-      transaction.set(checklistDocRef, {
-        completedPassages: migratedPassages,
-        ...(!data.legacyCompletedPassagesBackupV2
-          ? { legacyCompletedPassagesBackupV2: currentPassages }
-          : {}),
-        legacyMigrationVersion: 2,
-        legacyMigratedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      console.log(
-        `[BibleChecklist] Safe migration complete — ${convertedCount} converted, ${unmatchedCount} preserved.`,
-      );
-    })
-      .catch(e => {
-        console.error('[BibleChecklist] Migration failed:', e);
-        migrationRunRef.current = false; // allow retry on next render
-      });
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, loadingChecklist]);
-  // NOTE: completedPassages intentionally excluded — we only want to run once
-  // after initial load, not on every Firestore update.
-
   const updateChecklistDocument = useCallback((updatePayload: Record<string, unknown>) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");
     const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
@@ -238,10 +124,9 @@ export function useUserBibleChecklist() {
       throw new Error("User not logged in or invalid passage data.");
     }
 
-    // Use date-scoped key when date is provided; fall back to bare displayText for legacy callers.
-    const key = date ? makePassageKey(date, passageDisplayText) : passageDisplayText;
-    // Also check legacy bare key for backward compatibility with existing Firestore data.
-    const isCompleted = completedPassages.includes(key) || (!date && completedPassages.includes(passageDisplayText));
+    if (!date) throw new Error('A reading date is required.');
+    const key = makePassageKey(date, passageDisplayText);
+    const isCompleted = completedPassages.includes(key);
     const updatePayload = {
       completedPassages: isCompleted ? arrayRemove(key) : arrayUnion(key)
     };
@@ -252,7 +137,7 @@ export function useUserBibleChecklist() {
 
   /**
    * Mark multiple passages as complete/incomplete.
-   * Pass pre-scoped keys (from makePassageKey) or bare displayTexts.
+   * Pass date-scoped keys produced by makePassageKey.
    */
   const markMultiplePassages = useCallback(async (passageKeys: string[], markAsComplete: boolean) => {
     if (!currentUser?.uid || passageKeys.length === 0) {
@@ -264,35 +149,6 @@ export function useUserBibleChecklist() {
     };
     updateChecklistDocument(updatePayload);
   }, [currentUser?.uid, updateChecklistDocument]);
-
-  /**
-   * Mark one scoped passage complete while removing an old bare key that would
-   * otherwise match every repeated occurrence in the plan.
-   */
-  const markPassageCompleteWithLegacyCleanup = useCallback(async (
-    passageKey: string,
-    legacyKeyToRemove?: string,
-  ) => {
-    if (!currentUser?.uid || !passageKey) {
-      throw new Error("User not logged in or no passage to update.");
-    }
-
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
-
-    if (legacyKeyToRemove && completedPassages.includes(legacyKeyToRemove)) {
-      await setDoc(checklistDocRef, {
-        completedPassages: arrayRemove(legacyKeyToRemove),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    }
-
-    await setDoc(checklistDocRef, {
-      ...(checklistDocExists ? {} : { userId: currentUser.uid }),
-      completedPassages: arrayUnion(passageKey),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  }, [currentUser?.uid, completedPassages, checklistDocExists]);
-
 
   const markReadRange = useCallback(async (
     fromBook: string, fromChapter: number, fromVerse?: number,
@@ -343,8 +199,7 @@ export function useUserBibleChecklist() {
 
         if (startsAfterOrAtUserStart && endsBeforeOrAtUserEnd) {
           const key = makePassageKey(dailyReading.date, passage.displayText);
-          const legacyKey = passage.displayText;
-          if (!completedPassages.includes(key) && !completedPassages.includes(legacyKey)) {
+          if (!completedPassages.includes(key)) {
             passagesToComplete.push(key);
           }
         }
@@ -366,7 +221,6 @@ export function useUserBibleChecklist() {
     togglePassageCompletion,
     markReadRange,
     markMultiplePassages,
-    markPassageCompleteWithLegacyCleanup,
     loadingChecklist
   };
 }

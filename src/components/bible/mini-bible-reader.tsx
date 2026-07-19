@@ -24,6 +24,9 @@ import { bibleVersionLabel, type BibleTextVersion } from '@/lib/bible-versions';
 import { useBibleTextVersion } from '@/hooks/use-bible-text-version';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
+import {
+  makeManualPassageKey,
+} from '@/lib/passage-keys';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import {
   getChapterPlanAssignmentStatus,
@@ -43,7 +46,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const { currentUser } = useAuth();
   const { version, setVersion } = useBibleTextVersion();
   const { plan } = useBiblePlan();
-  const { completedPassages, markMultiplePassages, markPassageCompleteWithLegacyCleanup } = useUserBibleChecklist();
+  const { completedPassages, markMultiplePassages } = useUserBibleChecklist();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const [book, setBook] = useState(targetPassage?.book || 'Genesis');
@@ -129,7 +132,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     setIsBrowsing(false);
     setBrowsingBook(null);
     setShowAssignmentPanel(false);
-  }, [targetPassage?.book, targetPassage?.chapter, targetPassage?.timestamp]);
+  }, [targetPassage]);
 
   const fetchPassage = useCallback(async (b: string, c: number, v: BibleTextVersion, signal?: AbortSignal) => {
     setIsLoading(true);
@@ -201,9 +204,9 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     try {
       const assignment = chapterPlanStatus.assignments[0];
       if (assignment) {
-        await markPassageCompleteWithLegacyCleanup(assignment.key, chapterRef);
+        await markMultiplePassages([assignment.key], true);
       } else {
-        await markMultiplePassages([chapterRef], true);
+        await markMultiplePassages([makeManualPassageKey(chapterRef)], true);
       }
     } catch (e) {
       console.error('Failed to mark chapter as read:', e);
@@ -221,7 +224,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       if (assignment) {
         await markMultiplePassages([assignment.key], false);
       } else {
-        await markMultiplePassages([chapterRef], false);
+        await markMultiplePassages([makeManualPassageKey(chapterRef)], false);
       }
     } catch (e) {
       console.error('Failed to unmark chapter as read:', e);
@@ -238,7 +241,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       if (assignment.completed) {
         await markMultiplePassages([assignment.key], false);
       } else {
-        await markPassageCompleteWithLegacyCleanup(assignment.key, chapterRef);
+        await markMultiplePassages([assignment.key], true);
       }
     } catch (e) {
       console.error('Failed to toggle plan assignment:', e);

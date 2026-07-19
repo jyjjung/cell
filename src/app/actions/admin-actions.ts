@@ -2,10 +2,10 @@
 
 import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import type { UserProfileData, AppRole } from '@/types';
+import type { UserProfileData } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
-import { ADMIN_ROLE_NAMES } from '@/lib/admin-access';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
+import { reconcileUserRoleState } from '@/lib/server-role-state';
 
 import { commitUpdatesInChunks } from '@/lib/commit-batches';
 
@@ -37,11 +37,22 @@ export async function escalateToAdminAction(password: string, idToken: string) {
       return { success: false, error: 'Unauthorized.' };
     }
     
-    await db.collection(USERS_COLLECTION).doc(uid).update({
-      isAdmin: true,
+    const adminRoles = await db.collection(ROLES_COLLECTION)
+      .where('capabilities', 'array-contains', 'app.admin')
+      .get();
+    const adminRole = adminRoles.docs.find((roleDoc) => roleDoc.data().status !== 'archived');
+    if (!adminRole) {
+      return { success: false, error: 'No active admin-capable role is configured.' };
+    }
+    const userRef = db.collection(USERS_COLLECTION).doc(uid);
+    const userSnap = await userRef.get();
+    const roleIds = Array.isArray(userSnap.data()?.roleIds) ? userSnap.data()!.roleIds : [];
+    await userRef.update({
+      roleIds: Array.from(new Set([...roleIds, adminRole.id])),
       isApproved: true,
-      updatedAt: FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp(),
     });
+    await reconcileUserRoleState(db, uid);
     
     return { success: true };
   } catch (error: unknown) {
@@ -52,15 +63,14 @@ export async function escalateToAdminAction(password: string, idToken: string) {
 }
 
 export async function adminUpdateUserProfileAction(
-  requesterId: string, 
+  idToken: string,
   userId: string, 
   profileData: Partial<UserProfileData>
 ) {
   try {
     const app = getAdminApp();
     const db = getAdminDb(app);
-    
-    // 1. Verify the requester is an admin
+    const requesterId = (await getAdminAuth(app).verifyIdToken(idToken)).uid;
     const requesterIsAdmin = await userHasAdminAccess(db, requesterId);
     if (!requesterIsAdmin) {
       return { success: false, error: 'Only admins can perform this action.' };
@@ -75,59 +85,21 @@ export async function adminUpdateUserProfileAction(
     
     const oldProfileData = userDocSnap.data() as UserProfileData;
     
-    // Safety check: Only process role transitions if roleIds is explicitly in the update payload.
     const hasRoleUpdate = 'roleIds' in profileData;
-    const oldRoles = new Set((oldProfileData.roleIds || []) as string[]);
-    const currentRoles = hasRoleUpdate ? new Set((profileData.roleIds || []) as string[]) : oldRoles;
-
-    // Detect state changes for auto-sync
-    const isBecomingApproved = profileData.isApproved === true && !oldProfileData.isApproved;
-    
-    let rolesAdded: string[] = [];
-    let rolesRemoved: string[] = [];
-
-    if (hasRoleUpdate) {
-        rolesAdded = [...currentRoles].filter(r => !oldRoles.has(r));
-        rolesRemoved = [...oldRoles].filter(r => !currentRoles.has(r));
-    }
-
-    if (isBecomingApproved) {
-        const rolesToEnsure = Array.from(currentRoles);
-        rolesAdded = Array.from(new Set([...rolesAdded, ...rolesToEnsure]));
-    }
-    
-    const rolesQuery = await db.collection(ROLES_COLLECTION).get();
-    const allRolesMap = new Map<string, AppRole>(rolesQuery.docs.map((d: any) => [d.id, d.data() as AppRole]));
-    
-    let youthRoleId: string | null = null;
-    const privilegedAdminRoleIds: string[] = [];
-    for (const [id, role] of allRolesMap.entries()) {
-        if (role?.name && ADMIN_ROLE_NAMES.includes(role.name as typeof ADMIN_ROLE_NAMES[number])) {
-            privilegedAdminRoleIds.push(id);
-        }
-        if (role?.name === 'Youth') youthRoleId = id;
-    }
-
-    const finalDataToUpdate: Partial<UserProfileData> = { ...profileData };
-
-    const hasPrivilegedAdminRole = privilegedAdminRoleIds.some((id) => currentRoles.has(id));
-    if (hasPrivilegedAdminRole) {
-        finalDataToUpdate.isAdmin = true;
-        finalDataToUpdate.isApproved = true;
-    } else if (hasRoleUpdate && privilegedAdminRoleIds.length > 0) {
-        finalDataToUpdate.isAdmin = false;
-    }
-    
-    if (youthRoleId) {
-        if (currentRoles.has(youthRoleId)) {
-            finalDataToUpdate.isYouth = true;
-        } else if (hasRoleUpdate) {
-            finalDataToUpdate.isYouth = false;
-        }
-    }
-
-    // Clean up undefined properties for Firestore update, replacing with FieldValue.delete() if null
-    const cleanUpdateData: Record<string, unknown> = { ...finalDataToUpdate, updatedAt: FieldValue.serverTimestamp() };
+    const {
+      roleIds,
+      capabilityKeys: _ignoredCapabilities,
+      isAdmin: _ignoredAdmin,
+      isYouth: _ignoredYouth,
+      ...safeProfileData
+    } = profileData as Partial<UserProfileData> & {
+      isAdmin?: unknown;
+      isYouth?: unknown;
+    };
+    const cleanUpdateData: Record<string, unknown> = {
+      ...safeProfileData,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
     const batchUpdates: Array<{ ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData> }> = [
       { ref: userDocRef, data: cleanUpdateData },
@@ -139,7 +111,7 @@ export async function adminUpdateUserProfileAction(
       || profileData.lastName !== undefined;
 
     if (shouldSyncMemberInfo) {
-      const mergedProfile = { ...oldProfileData, ...finalDataToUpdate } as UserProfileData;
+      const mergedProfile = { ...oldProfileData, ...safeProfileData } as UserProfileData;
       const memberInfo = {
         firstName: mergedProfile.firstName,
         lastName: mergedProfile.lastName,
@@ -159,40 +131,10 @@ export async function adminUpdateUserProfileAction(
       }
     }
     
-    for (const roleId of rolesAdded) {
-      const roleData = allRolesMap.get(roleId);
-      if (roleData && roleData.chatId) {
-        const chatDocRef = db.collection(CHATS_COLLECTION).doc(roleData.chatId);
-        batchUpdates.push({
-          ref: chatDocRef,
-          data: {
-            members: FieldValue.arrayUnion(userId),
-            [`memberInfo.${userId}`]: {
-              firstName: profileData.firstName || oldProfileData.firstName,
-              lastName: profileData.lastName || oldProfileData.lastName,
-              avatar: oldProfileData.avatar || DEFAULT_AVATAR_DATA,
-            },
-          },
-        });
-      }
-    }
-    
-    for (const roleId of rolesRemoved) {
-      const roleData = allRolesMap.get(roleId);
-      if (roleData && roleData.chatId) {
-        const chatDocRef = db.collection(CHATS_COLLECTION).doc(roleData.chatId);
-        batchUpdates.push({
-          ref: chatDocRef,
-          data: {
-            members: FieldValue.arrayRemove(userId),
-            admins: FieldValue.arrayRemove(userId),
-            [`memberInfo.${userId}`]: FieldValue.delete(),
-          },
-        });
-      }
-    }
-    
     await commitUpdatesInChunks(db, batchUpdates);
+    if (hasRoleUpdate) {
+      await reconcileUserRoleState(db, userId, roleIds || []);
+    }
 
     // 3. Update Firebase Auth displayName if names changed
     if (profileData.firstName || profileData.lastName) {

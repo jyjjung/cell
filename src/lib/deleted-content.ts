@@ -47,7 +47,7 @@ export function getDeletedContentPreview(type: DeletedMessageContentType): strin
   return PREVIEW_LABELS[type];
 }
 
-export function getDeletedContentLabel(
+function getDeletedContentLabel(
   type: DeletedMessageContentType,
   t: TranslationBundle,
 ): string {

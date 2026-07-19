@@ -1,5 +1,5 @@
 /** Merge message lists (first list wins ordering for duplicates). */
-export function mergeMessageLists<T extends { id: string }>(...lists: T[][]): T[] {
+function mergeMessageLists<T extends { id: string }>(...lists: T[][]): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
   for (const list of lists) {
@@ -115,7 +115,7 @@ function reactionsEqual(
 }
 
 /** True when two messages would render the same bubble content. */
-export function chatMessagesShallowEqual(
+function chatMessagesShallowEqual(
   a: { id: string; createdAt?: { toMillis?: () => number } },
   b: { id: string; createdAt?: { toMillis?: () => number } },
 ): boolean {
@@ -166,7 +166,7 @@ export function chatMessagesShallowEqual(
 }
 
 /** Keep stable object references for unchanged messages to reduce React re-renders. */
-export function stabilizeMessages<T extends { id: string }>(
+function stabilizeMessages<T extends { id: string }>(
   incoming: T[],
   previous: T[],
   isEqual: (a: T, b: T) => boolean = chatMessagesShallowEqual as (a: T, b: T) => boolean,
@@ -195,12 +195,4 @@ export function mergeMessageListsStable<T extends {
     ? carryOlderMessages(stabilizedPrimary, secondary)
     : secondary;
   return sortChatMessagesDesc(mergeMessageLists(stabilizedPrimary, secondaryMessages));
-}
-
-/** @deprecated Use mergeMessageLists */
-export function mergeLatestMessageWindow<T extends { id: string }>(
-  latestWindow: T[],
-  previous: T[],
-): T[] {
-  return mergeMessageLists(latestWindow, previous);
 }

@@ -27,56 +27,21 @@ export type InfoWidgetInput = {
   bodyKo?: string;
 };
 
-type LegacyItem = {
-  label?: string;
-  labelKo?: string;
-  value?: string;
-  detail?: string;
-  order?: number;
-};
-
-/** Convert older row-based widgets into plain text for display/editing. */
-function bodyFromLegacyItems(items: LegacyItem[], lang: 'en' | 'ko' = 'en'): string {
-  return [...items]
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((item) => {
-      const label =
-        lang === 'ko' && item.labelKo?.trim()
-          ? item.labelKo.trim()
-          : (item.label || '').trim();
-      const value = (item.value || '').trim();
-      const detail = item.detail?.trim();
-      if (!label && !value) return '';
-      if (!value) return label;
-      if (!label) return detail ? `${value} — ${detail}` : value;
-      return detail ? `${label}: ${value} — ${detail}` : `${label}: ${value}`;
-    })
-    .filter(Boolean)
-    .join('\n');
-}
-
 function normalizeWidget(
   id: string,
   raw: Record<string, unknown>,
 ): InfoWidget {
-  const legacyItems = Array.isArray(raw.items) ? (raw.items as LegacyItem[]) : [];
-  const body =
-    typeof raw.body === 'string' && raw.body.trim()
-      ? raw.body
-      : bodyFromLegacyItems(legacyItems, 'en');
-  const bodyKo =
-    typeof raw.bodyKo === 'string' && raw.bodyKo.trim()
-      ? raw.bodyKo
-      : legacyItems.length > 0
-        ? bodyFromLegacyItems(legacyItems, 'ko') || undefined
-        : undefined;
+  const body = typeof raw.body === 'string' ? raw.body : '';
+  const bodyKo = typeof raw.bodyKo === 'string' && raw.bodyKo.trim()
+    ? raw.bodyKo
+    : undefined;
 
   return {
     id,
     title: typeof raw.title === 'string' ? raw.title : '',
     titleKo: typeof raw.titleKo === 'string' && raw.titleKo ? raw.titleKo : undefined,
     body,
-    bodyKo: bodyKo && bodyKo !== body ? bodyKo : bodyKo || undefined,
+    bodyKo,
     order: typeof raw.order === 'number' ? raw.order : 0,
     createdAt: raw.createdAt as Timestamp,
     updatedAt: raw.updatedAt as Timestamp | undefined,
@@ -164,7 +129,6 @@ export function useInfoWidgets() {
         body,
         titleKo: titleKo || null,
         bodyKo: bodyKo || null,
-        items: null,
         updatedAt: serverTimestamp(),
       });
     },

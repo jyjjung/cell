@@ -8,9 +8,3 @@ export function applyAppTheme(themeId: AppThemeId, isDark: boolean) {
   root.dataset.appTheme = themeId;
   applyColorPaletteTokens(getAppThemeTokens(themeId, isDark), themeId);
 }
-
-export function clearAppliedAppTheme() {
-  if (typeof document === 'undefined') return;
-  const root = document.documentElement;
-  delete root.dataset.appTheme;
-}

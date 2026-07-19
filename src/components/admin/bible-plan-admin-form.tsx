@@ -1,33 +1,30 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { CalendarIcon, BookOpen, ListOrdered } from 'lucide-react';
-import { useBiblePlan } from '@/hooks/use-bible-plan';
-import type { BibleReadingPlan, DailyReading } from '@/types';
-import { CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
-import { 
-  generateReadingUnitsForCanonical, 
-  generateReadingUnitsForCustomPreset, 
-  scheduleReadings,
-  scheduleFixedDayReadings,
-  type ReadingUnit
-} from '@/lib/plan-generator';
-import { MCHEYNE_PLAN_DATA } from '@/lib/mcheyne-data';
 import { useAuth } from '@/contexts/auth-context';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
+import { MCHEYNE_PLAN_DATA } from '@/lib/mcheyne-data';
+import {
+    generateReadingUnitsForCanonical,
+    generateReadingUnitsForCustomPreset, scheduleFixedDayReadings, scheduleReadings, type ReadingUnit
+} from '@/lib/plan-generator';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { BibleReadingPlan, DailyReading } from '@/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { BookOpen, CalendarIcon, ListOrdered } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 const adminPlanFormSchema = z.object({
   planType: z.enum(['canonical', 'custom', 'mcheyne'], { required_error: "Please select a plan type." }),

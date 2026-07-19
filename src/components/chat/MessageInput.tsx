@@ -1,45 +1,42 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { useMessages } from '@/hooks/useMessages';
-import { useThreadMessages } from '@/hooks/useThreadMessages';
-import { ArrowUp, Loader2, X, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/auth-context';
-import { translations } from '@/lib/translations';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
-import { storage } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import type { ChatMessage, ChatPoll, DocNote } from '@/types';
-import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
 import { isIOSLike, preLiftChatComposer } from '@/hooks/use-chat-visual-viewport-vars';
 import {
-  LONG_MESSAGE_DOC_THRESHOLD,
-  plainTextToDocHtml,
-  displayDocTitle,
-} from '@/lib/docs-utils';
+    createSharedDocForChat,
+    shareDocWithChatMembers,
+    useDocs
+} from '@/hooks/use-docs';
+import { useToast } from '@/hooks/use-toast';
+import { useMessages } from '@/hooks/useMessages';
+import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { getDocActionErrorMessage } from '@/lib/docs-errors';
 import {
-  createSharedDocForChat,
-  shareDocWithChatMembers,
-  useDocs,
-} from '@/hooks/use-docs';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+    displayDocTitle, DOCS_COLLECTION, LONG_MESSAGE_DOC_THRESHOLD,
+    plainTextToDocHtml
+} from '@/lib/docs-utils';
+import { db, storage } from '@/lib/firebase';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
+import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { ChatMessage, ChatPoll, DocNote } from '@/types';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { DOCS_COLLECTION } from '@/lib/docs-utils';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { AnimatePresence } from 'framer-motion';
+import { ArrowUp, Loader2, Plus, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
 
 type MessageActions = {
   sendMessage: (

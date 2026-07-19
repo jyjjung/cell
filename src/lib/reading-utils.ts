@@ -1,8 +1,11 @@
-import type { DailyReading, StructuredPassage } from '@/types';
-import { differenceInCalendarDays, isBefore, isValid, isSameDay, startOfDay } from 'date-fns';
-import { parseDay } from './event-occurrences';
-import { makePassageKey } from '@/hooks/use-user-bible-checklist';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import {
+    makeManualPassageKey,
+    makePassageKey
+} from '@/lib/passage-keys';
+import type { DailyReading, StructuredPassage } from '@/types';
+import { differenceInCalendarDays, isBefore, isSameDay, isValid, startOfDay } from 'date-fns';
+import { parseDay } from './event-occurrences';
 
 export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
@@ -58,8 +61,7 @@ export function findNextUnreadReading(
         continue;
     }
     const isFullyCompleted = validPassages.every(p => 
-      completedPassages.includes(makePassageKey(reading.date, p.displayText)) ||
-      completedPassages.includes(p.displayText) // legacy fallback for old bare-key entries
+      completedPassages.includes(makePassageKey(reading.date, p.displayText))
     );
     
     if (!isFullyCompleted) {
@@ -71,35 +73,25 @@ export function findNextUnreadReading(
 
 /**
  * Whether a plan passage is marked complete.
- * Achievement progress uses date-scoped keys only — legacy bare keys (e.g. "Matthew 1")
- * match every repeat in M'Cheyne and would inflate plan % to 100%.
+ * Plan progress uses date-scoped keys so repeated passages stay independent.
  */
-export function isPassageCompletedForPlan(
+function isPassageCompletedForPlan(
   date: string,
   displayText: string,
   completedPassages: string[],
-  options?: { allowLegacyBareKey?: boolean },
 ): boolean {
   if (!displayText || displayText.startsWith('Error:')) return false;
-
-  const scopedKey = makePassageKey(date, displayText);
-  if (completedPassages.includes(scopedKey)) return true;
-
-  if (options?.allowLegacyBareKey !== false) {
-    return completedPassages.includes(displayText);
-  }
-
-  return false;
+  return completedPassages.includes(makePassageKey(date, displayText));
 }
 
-export function isCountablePlanPassage(
+function isCountablePlanPassage(
   passage: StructuredPassage | null | undefined,
 ): passage is StructuredPassage {
   return !!passage?.displayText && !passage.displayText.startsWith('Error:');
 }
 
 /** Normalize plan passage metadata, parsing book/chapter from displayText when missing. */
-export function resolvePlanPassage(
+function resolvePlanPassage(
   passage: StructuredPassage | null | undefined,
 ): { book: string; chapter: number; displayText: string } | null {
   if (!isCountablePlanPassage(passage)) return null;
@@ -132,7 +124,6 @@ export type PlanPassageProgress = {
 export function countPlanPassageProgress(
   dailyReadings: DailyReading[] | undefined | null,
   completedPassages: string[],
-  options?: { allowLegacyBareKey?: boolean },
 ): PlanPassageProgress {
   if (!dailyReadings?.length) {
     return { total: 0, completed: 0, passagesLeft: 0 };
@@ -145,11 +136,7 @@ export function countPlanPassageProgress(
     day.passages?.forEach((passage) => {
       if (!isCountablePlanPassage(passage)) return;
       total += 1;
-      if (
-        isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, {
-          allowLegacyBareKey: options?.allowLegacyBareKey ?? true,
-        })
-      ) {
+      if (isPassageCompletedForPlan(day.date, passage.displayText, completedPassages)) {
         completed += 1;
       }
     });
@@ -163,15 +150,13 @@ export function calculatePlanProgressPercent(
   dailyReadings: DailyReading[] | undefined | null,
   completedPassages: string[],
 ): number {
-  const { total, completed } = countPlanPassageProgress(dailyReadings, completedPassages, {
-    allowLegacyBareKey: false,
-  });
+  const { total, completed } = countPlanPassageProgress(dailyReadings, completedPassages);
   if (total === 0) return 0;
   return Math.round((completed / total) * 100);
 }
 
 /** Plan passage keys for every assignment of a given chapter. */
-export function findPlanPassageKeysForChapter(
+function findPlanPassageKeysForChapter(
   dailyReadings: DailyReading[] | undefined | null,
   book: string,
   chapter: number,
@@ -189,7 +174,7 @@ export function findPlanPassageKeysForChapter(
   return keys;
 }
 
-export type ChapterPlanMatch = {
+type ChapterPlanMatch = {
   key: string;
   date: string;
   displayText: string;
@@ -256,46 +241,6 @@ export function getChapterPlanAssignmentStatus(
   };
 }
 
-/** Incomplete plan passage matches for a given chapter, in plan order. */
-export function findIncompletePlanPassagesForChapter(
-  dailyReadings: DailyReading[] | undefined | null,
-  book: string,
-  chapter: number,
-  completedPassages: string[],
-): ChapterPlanMatch[] {
-  if (!dailyReadings?.length) return [];
-
-  const matches: ChapterPlanMatch[] = [];
-
-  for (const day of dailyReadings) {
-    for (const passage of day.passages ?? []) {
-      const resolved = resolvePlanPassage(passage);
-      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) continue;
-
-      const key = makePassageKey(day.date, resolved.displayText);
-      if (!completedPassages.includes(key)) {
-        matches.push({
-          key,
-          date: day.date,
-          displayText: resolved.displayText,
-        });
-      }
-    }
-  }
-
-  return matches;
-}
-
-/** Earliest incomplete plan passage key for a given chapter assignment. */
-export function findEarliestIncompletePlanPassageKeyForChapter(
-  dailyReadings: DailyReading[] | undefined | null,
-  book: string,
-  chapter: number,
-  completedPassages: string[],
-): string | null {
-  return findIncompletePlanPassagesForChapter(dailyReadings, book, chapter, completedPassages)[0]?.key ?? null;
-}
-
 export function isChapterMarkedCompleteInPlan(
   dailyReadings: DailyReading[] | undefined | null,
   book: string,
@@ -304,13 +249,9 @@ export function isChapterMarkedCompleteInPlan(
 ): boolean {
   const keys = findPlanPassageKeysForChapter(dailyReadings, book, chapter);
   if (keys.length === 0) {
-    return completedPassages.includes(`${book} ${chapter}`);
+    return completedPassages.includes(makeManualPassageKey(`${book} ${chapter}`));
   }
   return keys.every((key) => completedPassages.includes(key));
-}
-
-export function isValidPlanPassage(p: StructuredPassage | null | undefined): boolean {
-  return resolvePlanPassage(p) !== null;
 }
 
 export type PlanPaceStats = {

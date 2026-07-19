@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { getAdminUserIds, sendUserNotification } from '@/lib/server-notifications';
+import { hasCapability } from '@/lib/role-capabilities';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = userSnap.data()!;
-    if (user.isApproved || user.isAdmin) {
+    if (user.isApproved || hasCapability(user.capabilityKeys, 'app.admin')) {
       return NextResponse.json({ success: true, sent: 0, skipped: 'already_approved' });
     }
 

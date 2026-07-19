@@ -20,10 +20,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
+import { ROLE_CAPABILITIES, type RoleCapability } from '@/lib/role-capabilities';
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name must be at least 2 characters."),
   createChat: z.boolean().default(true).optional(),
+  capabilities: z.array(z.enum(ROLE_CAPABILITIES)).default([]),
 });
 type RoleFormValues = z.infer<typeof roleSchema>;
 
@@ -42,18 +44,19 @@ export default function AdminRolesPage() {
     defaultValues: {
       name: '',
       createChat: true,
+      capabilities: [],
     },
   });
 
   const openAddDialog = () => {
     setEditingRole(null);
-    form.reset({ name: '', createChat: true });
+    form.reset({ name: '', createChat: true, capabilities: [] });
     setIsFormOpen(true);
   };
 
   const openEditDialog = (role: AppRole) => {
     setEditingRole(role);
-    form.reset({ name: role.name });
+    form.reset({ name: role.name, capabilities: role.capabilities || [] });
     setIsFormOpen(true);
   };
 
@@ -61,10 +64,10 @@ export default function AdminRolesPage() {
     setIsSaving(true);
     try {
       if (editingRole) {
-        await updateRole(editingRole.id, data.name);
+        await updateRole(editingRole.id, data.name, data.capabilities);
         toast({ title: "Role updated", description: `"${data.name}" saved.` });
       } else {
-        await addRole(data.name, data.createChat ?? false);
+        await addRole(data.name, data.createChat ?? false, data.capabilities);
         toast({ title: "Role created", description: `"${data.name}" added.` });
       }
       setIsFormOpen(false);
@@ -138,6 +141,36 @@ export default function AdminRolesPage() {
                           <Input {...field} disabled={isSaving} />
                         </FormControl>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="capabilities"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-micro-label">Capabilities</FormLabel>
+                        {([
+                          ['app.admin', 'Application admin'],
+                          ['member.youth', 'Youth restrictions'],
+                          ['worship.manage', 'Manage worship'],
+                        ] as Array<[RoleCapability, string]>).map(([value, label]) => (
+                          <label key={value} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={field.value.includes(value)}
+                              onCheckedChange={(checked) => field.onChange(
+                                checked
+                                  ? [...field.value, value]
+                                  : field.value.filter((item) => item !== value),
+                              )}
+                              disabled={isSaving}
+                            />
+                            {label}
+                          </label>
+                        ))}
+                        <FormDescription>
+                          Capabilities stay attached when this role is renamed.
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -220,7 +253,7 @@ export default function AdminRolesPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle className="text-section-title">{t.adminDeleteRole}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Delete &quot;{role.name}&quot;{role.chatId ? " and its chat" : ""}? {t.adminCannotUndo}
+                              Archive &quot;{role.name}&quot;? Assignments will be reconciled, while linked chat history is preserved.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

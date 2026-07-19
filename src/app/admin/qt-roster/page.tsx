@@ -1,23 +1,23 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useQTRoster } from '@/hooks/useQTRoster';
-import { useAllUsers } from '@/hooks/use-all-users';
-import type { QTRosterEntry } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, Trash2, Save, ChevronsLeft, ChevronsRight, Users, UserCheck, Calendar } from 'lucide-react';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, addMonths, subMonths } from 'date-fns';
 import UserSelector from '@/components/chat/UserSelector';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-layout';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
+import { useAllUsers } from '@/hooks/use-all-users';
+import { useToast } from '@/hooks/use-toast';
+import { useQTRoster } from '@/hooks/useQTRoster';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { QTRosterEntry } from '@/types';
+import { addMonths, eachDayOfInterval, endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronsLeft, ChevronsRight, Loader2, Save, Trash2, UserCheck, Users } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 export default function AdminQTRosterPage() {
   const { roster, loading: rosterLoading, upsertEntry, deleteEntry } = useQTRoster();

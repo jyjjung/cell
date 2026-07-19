@@ -1,13 +1,13 @@
 "use client";
 
-import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronDown, ChevronUp, Headphones, ListMusic, Pause, Play, SkipBack, SkipForward, X,
-} from 'lucide-react';
 import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
 import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    ChevronDown, Headphones, ListMusic, Pause, Play, SkipBack, SkipForward, X
+} from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';

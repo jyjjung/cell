@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Headphones, Pause, Play, X, Youtube } from 'lucide-react';
-import type { ReferenceTrack, SetlistSong } from '@/types';
+import {
+    Popover, PopoverContent, PopoverTrigger
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { fetchYoutubeVideoTitle, getReferenceTracks, parseYoutubeVideoId } from '@/lib/worship-utils';
 import {
-  loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer,
+    loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer
 } from '@/lib/youtube-player-api';
-import { cn } from '@/lib/utils';
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from '@/components/ui/popover';
+import type { ReferenceTrack, SetlistSong } from '@/types';
+import { Headphones, Pause, Play, X, Youtube } from 'lucide-react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -380,7 +380,7 @@ export function ReferenceTracksListen({
   compact = true,
   className,
 }: {
-  tracks: ReferenceTrack[] | Pick<SetlistSong, 'youtubeUrl' | 'referenceTracks'>;
+  tracks: ReferenceTrack[] | Pick<SetlistSong, 'referenceTracks'>;
   theme?: 'dark' | 'light';
   compact?: boolean;
   className?: string;
@@ -408,41 +408,4 @@ export function ReferenceTracksListen({
   }
 
   return <ReferenceTracksPopover tracks={tracks} theme={theme} className={className} />;
-}
-
-export function YoutubeReferenceEmbed({
-  url,
-  note,
-  theme = 'dark',
-  compact = false,
-  className,
-}: {
-  url: string;
-  note?: string;
-  theme?: 'dark' | 'light';
-  compact?: boolean;
-  className?: string;
-}) {
-  const videoId = parseYoutubeVideoId(url);
-  if (!videoId) return null;
-
-  if (compact) {
-    return (
-      <ReferenceTracksListen
-        tracks={[{ url, ...(note ? { note } : {}) }]}
-        theme={theme}
-        compact
-        className={className}
-      />
-    );
-  }
-
-  return (
-    <YoutubePlayerPanel
-      url={url}
-      note={note}
-      theme={theme}
-      className={cn('w-full', className)}
-    />
-  );
 }

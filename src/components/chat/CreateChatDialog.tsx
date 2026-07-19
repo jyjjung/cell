@@ -26,6 +26,7 @@ import UserSelector from './UserSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { hasCapability } from '@/lib/role-capabilities';
 
 const privateSchema = z.object({
   selectedUser: z.string().min(1, "Please select a user to chat with."),
@@ -65,7 +66,9 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   // Restriction: Youth cannot private chat with other Youth
   const usersForPrivateChat = useMemo(() => {
     if (isYouth) {
-      return otherUsers.filter((u) => !u.isYouth);
+      return otherUsers.filter(
+        (user) => !hasCapability(user.capabilityKeys, 'member.youth'),
+      );
     }
     return otherUsers;
   }, [isYouth, otherUsers]);

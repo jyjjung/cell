@@ -2,7 +2,6 @@
 import { format as formatDateFns, addDays, getDay, startOfDay } from 'date-fns';
 import type { DailyReading, StructuredPassage } from '@/types';
 import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER, PRESET_CUSTOM_ORDER_STRINGS, BOOK_NAME_LOOKUP_MAP } from './bible-data';
-import { MCHEYNE_PLAN_DATA } from './mcheyne-data';
 
 // ReadingUnit now directly matches StructuredPassage for internal consistency
 export type ReadingUnit = StructuredPassage;
@@ -12,7 +11,7 @@ function resolveBookName(name: string): string | null {
   return BOOK_NAME_LOOKUP_MAP.get(cleanedName) || null;
 }
 
-export function parsePassageString(entry: string): ReadingUnit[] {
+function parsePassageString(entry: string): ReadingUnit[] {
   const units: ReadingUnit[] = [];
   const originalEntry = entry;
 
@@ -200,12 +199,6 @@ export function generateReadingUnitsForCustomPreset(): ReadingUnit[] {
     allUnits.push(...unitsForEntry);
   });
   return allUnits;
-}
-
-export function generateReadingUnitsForMcheyne(): ReadingUnit[] {
-  // Flatten the 365 days of readings into a single sequence of units.
-  // Each day in MCHEYNE_PLAN_DATA is an array of StructuredPassage.
-  return MCHEYNE_PLAN_DATA.flat();
 }
 
 export function scheduleReadings(units: ReadingUnit[], startDateInput: Date, readingsPerDay: number, readingDays: number[]): DailyReading[] {

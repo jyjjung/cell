@@ -23,7 +23,7 @@ export type FontFamilyGroup = {
   fonts: { id: FontFamilyChoice; label: string }[];
 };
 
-export const FONT_FAMILY_STACKS: Record<FontFamilyChoice, string> = {
+const FONT_FAMILY_STACKS: Record<FontFamilyChoice, string> = {
   'geist-sans': 'var(--font-geist-sans), system-ui, sans-serif',
   inter: 'var(--font-inter), system-ui, sans-serif',
   'dm-sans': 'var(--font-dm-sans), system-ui, sans-serif',
@@ -80,21 +80,11 @@ export const FONT_FAMILY_GROUPS: FontFamilyGroup[] = [
   },
 ];
 
-export const ALL_FONT_FAMILY_CHOICES = FONT_FAMILY_GROUPS.flatMap((group) =>
-  group.fonts.map((font) => font.id)
-);
-
 const LEGACY_FONT_MAP: Record<string, FontFamilyChoice> = {
   sans: 'geist-sans',
   serif: 'lora',
   mono: 'geist-mono',
 };
-
-export function isFontFamilyChoice(value: string | undefined | null): value is FontFamilyChoice {
-  if (!value) return false;
-  if (value in FONT_FAMILY_STACKS) return true;
-  return value in LEGACY_FONT_MAP;
-}
 
 export function normalizeFontFamilyChoice(value: string | undefined | null): FontFamilyChoice {
   if (!value) return 'geist-sans';
@@ -105,12 +95,4 @@ export function normalizeFontFamilyChoice(value: string | undefined | null): Fon
 
 export function getFontFamilyStack(id: FontFamilyChoice): string {
   return FONT_FAMILY_STACKS[id];
-}
-
-export function getFontLabel(id: FontFamilyChoice): string {
-  for (const group of FONT_FAMILY_GROUPS) {
-    const match = group.fonts.find((font) => font.id === id);
-    if (match) return match.label;
-  }
-  return id;
 }

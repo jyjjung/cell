@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import { birthdayOccursOnCommunityDate, eventOccursOnDate, parseDay } from '@/lib/event-occurrences';
 import { userCanSeeEvent } from '@/lib/event-visibility';
 import { EventCategory, type AppEvent, type UserProfileData } from '@/types';
@@ -76,8 +75,4 @@ export function collectEventDayReminders(params: {
   }
 
   return results;
-}
-
-export function formatTodayLabel(todayIso: string): string {
-  return format(parseDay(todayIso), 'EEE, MMM d');
 }

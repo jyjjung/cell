@@ -9,7 +9,7 @@ import { MEDIA_CACHE_NAMES } from '@/lib/sw-cache-utils';
 export const STORAGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 /** Matches Workbox `maxEntries` in next.config.js. */
-export const PRIMED_MAX_ENTRIES = 2500;
+const PRIMED_MAX_ENTRIES = 2500;
 
 const PRIME_CONCURRENCY = 6;
 let primeQueue: string[] = [];
@@ -33,7 +33,7 @@ function isPrimed(url: string): boolean {
   return primedLru.has(url);
 }
 
-export function isFirebaseStorageMediaUrl(url: string): boolean {
+function isFirebaseStorageMediaUrl(url: string): boolean {
   try {
     const { hostname, pathname } = new URL(url);
     if (hostname === 'firebasestorage.googleapis.com') return true;
@@ -60,14 +60,14 @@ function filterFirebaseMediaUrls(urls: Iterable<string | undefined | null>): str
   ];
 }
 
-export function isQuotaExceededError(error: unknown): boolean {
+function isQuotaExceededError(error: unknown): boolean {
   if (error instanceof DOMException && error.name === 'QuotaExceededError') return true;
   if (error instanceof Error && /quota/i.test(error.message)) return true;
   return false;
 }
 
 /** True when the URL is already in a Cache Storage bucket (e.g. Workbox media cache). */
-export async function isMediaCached(url: string): Promise<boolean> {
+async function isMediaCached(url: string): Promise<boolean> {
   if (typeof caches === 'undefined') return false;
   try {
     const request = new Request(url, { mode: 'cors', credentials: 'omit' });

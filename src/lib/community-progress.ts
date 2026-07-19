@@ -17,7 +17,7 @@ import {
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
 
-export const COMMUNITY_PROGRESS_COLLECTION = 'communityProgress';
+const COMMUNITY_PROGRESS_COLLECTION = 'communityProgress';
 
 export type CommunityProgressDoc = {
   userId: string;

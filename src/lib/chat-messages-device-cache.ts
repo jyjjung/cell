@@ -15,28 +15,20 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ChatMessage } from '@/types';
-import { mergeMessageLists, mergeMessageListsStable } from '@/lib/chat-message-merge';
+import { mergeMessageListsStable } from '@/lib/chat-message-merge';
 
 /** Real-time listener window — keep small to limit ongoing read costs. */
 export const CHAT_MESSAGES_LIVE_LIMIT = 30;
 
 /** Page size when the user scrolls up to load older messages. */
-export const CHAT_MESSAGES_PAGE_SIZE = 30;
+const CHAT_MESSAGES_PAGE_SIZE = 30;
 
 /** Internal page size when reading the Firestore persistent cache. */
-export const CHAT_MESSAGES_CACHE_PAGE = 100;
+const CHAT_MESSAGES_CACHE_PAGE = 100;
 
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
-
-export function chatMessagesCacheKey(chatId: string) {
-  return chatId;
-}
-
-export function threadMessagesCacheKey(chatId: string, parentMessageId: string) {
-  return `${chatId}_thread_${parentMessageId}`;
-}
 
 export function chatMessagesCollection(chatId: string): CollectionReference {
   return collection(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION);
@@ -154,4 +146,4 @@ export async function fetchOlderMessagesPage(
   };
 }
 
-export { mergeMessageLists, mergeMessageListsStable };
+export { mergeMessageListsStable };

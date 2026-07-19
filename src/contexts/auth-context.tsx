@@ -1,27 +1,22 @@
 
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { auth, db } from '@/lib/firebase';
-import {
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signOut,
-  type User as FirebaseUser,
-  updateProfile as updateFirebaseProfile,
-} from 'firebase/auth';
-import { doc, getDoc, getDocFromServer, setDoc, serverTimestamp, Timestamp, collection, query, where, getDocs, arrayUnion, updateDoc, onSnapshot, writeBatch, arrayRemove, deleteField } from 'firebase/firestore';
-import type { AppUser, UserProfileData, DashboardPreferences, AvatarData, AppRole } from '@/types';
+import { resolveIsAdmin } from '@/lib/admin-access';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
-import { syncProfileToChats } from '@/lib/sync-profile-chats';
-import { notifySignupPending } from '@/lib/signup-notify';
-import { getAdminRoleIds, resolveIsAdmin, userHasAdminRole } from '@/lib/admin-access';
+import { auth, db } from '@/lib/firebase';
 import { normalizeInviteCode } from '@/lib/invite-utils';
+import { hasCapability } from '@/lib/role-capabilities';
 import { redeemSignupInvite } from '@/lib/signup-invite-redeem';
+import { notifySignupPending } from '@/lib/signup-notify';
+import { syncProfileToChats } from '@/lib/sync-profile-chats';
+import type { AppUser, DashboardPreferences, UserProfileData } from '@/types';
+import {
+    createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile as updateFirebaseProfile, type User as FirebaseUser
+} from 'firebase/auth';
+import { arrayUnion, doc, getDoc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { usePathname, useRouter } from 'next/navigation';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 interface AuthContextType {
   isAdmin: boolean;
@@ -44,32 +39,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const USERS_COLLECTION = 'users';
-const ROLES_COLLECTION = 'roles';
-
-let cachedWorshipRoleIds: string[] | null = null;
-let worshipRoleIdsPromise: Promise<string[]> | null = null;
-
-async function getWorshipRoleIds(): Promise<string[]> {
-  if (cachedWorshipRoleIds) return cachedWorshipRoleIds;
-  if (!worshipRoleIdsPromise) {
-    worshipRoleIdsPromise = (async () => {
-      const q = query(
-        collection(db, ROLES_COLLECTION),
-        where('name', 'in', ['Worship', 'Worship Team']),
-      );
-      const snap = await getDocs(q);
-      cachedWorshipRoleIds = snap.docs.map((d) => d.id);
-      return cachedWorshipRoleIds;
-    })().catch((err) => {
-      worshipRoleIdsPromise = null;
-      throw err;
-    });
-  }
-  return worshipRoleIdsPromise;
-}
-const CHATS_COLLECTION = 'chats';
-
-
 const defaultDashboardPreferences: DashboardPreferences['widgetVisibility'] = {
   notifications: true,
   todayReading: true,
@@ -86,12 +55,10 @@ function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, 
     lastName: profileData.lastName,
     displayName: hasName ? `${profileData.firstName} ${profileData.lastName}` : null,
     roleIds: profileData.roleIds || [],
+    capabilityKeys: profileData.capabilityKeys || [],
     showInCommunityProgress: profileData.showInCommunityProgress ?? true,
     preferredLanguage: profileData.preferredLanguage || 'en',
-    colorPalette: profileData.colorPalette,
-    surfaceBackground: profileData.surfaceBackground,
     appTheme: profileData.appTheme,
-    glassEnabled: profileData.glassEnabled,
     typography: profileData.typography,
     bibleTextVersion: profileData.bibleTextVersion,
     dashboard: {
@@ -100,7 +67,7 @@ function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, 
     },
     isAdmin,
     isApproved: profileData.isApproved || false,
-    isYouth: profileData.isYouth || false,
+    isYouth: hasCapability(profileData.capabilityKeys, 'member.youth'),
     avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
     avatarChangesEnabled: profileData.avatarChangesEnabled,
     fcmTokens: profileData.fcmTokens || [],
@@ -123,28 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     generation: number,
   ) => {
     try {
-      const adminRoleIds = await getAdminRoleIds();
-      if (generation !== profileGenerationRef.current) return;
-
-      const effectiveIsAdmin = resolveIsAdmin(profileData, adminRoleIds);
+      const effectiveIsAdmin = resolveIsAdmin(profileData);
       setCurrentUser(buildAppUser(firebaseUser, profileData, effectiveIsAdmin));
       setIsAdmin(effectiveIsAdmin);
-
-      if (userHasAdminRole(profileData.roleIds, adminRoleIds) && !profileData.isAdmin) {
-        void auth.currentUser?.getIdToken().then((token) =>
-          fetch('/api/auth/sync-admin-access', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch((error) => {
-            console.error('Error syncing admin access:', error);
-          }),
-        );
-      }
     } catch (error) {
       if (generation !== profileGenerationRef.current) return;
       console.error('Error resolving admin access:', error);
-      setCurrentUser(buildAppUser(firebaseUser, profileData, profileData.isAdmin || false));
-      setIsAdmin(profileData.isAdmin || false);
+      setCurrentUser(buildAppUser(firebaseUser, profileData, false));
+      setIsAdmin(false);
     }
   }, []);
 
@@ -232,31 +185,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applyProfile, hydrateProfileFromServer]);
 
   const uid = currentUser?.uid;
-  const roleIds = currentUser?.roleIds;
+  const capabilityKeys = currentUser?.capabilityKeys;
 
-  // Update isWorshipTeam whenever roleIds change (worship role IDs cached after first fetch)
   useEffect(() => {
     if (!uid) {
       setIsWorshipTeam(false);
       return;
     }
-
-    let cancelled = false;
-    void getWorshipRoleIds()
-      .then((worshipRoleIds) => {
-        if (cancelled) return;
-        const hasRole = roleIds?.some((id) => worshipRoleIds.includes(id));
-        setIsWorshipTeam(!!hasRole);
-      })
-      .catch((e) => {
-        console.error('Error checking worship role:', e);
-        if (!cancelled) setIsWorshipTeam(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [uid, roleIds]);
+    setIsWorshipTeam(
+      hasCapability(capabilityKeys, 'app.admin')
+      || hasCapability(capabilityKeys, 'worship.manage'),
+    );
+  }, [uid, capabilityKeys]);
 
   const adminPasswordLogin = async (password: string): Promise<boolean> => {
     if (!currentUser) {
@@ -285,13 +225,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
     }
     try {
-        const adminRoleIds = await getAdminRoleIds();
-        const hasAdminRole = userHasAdminRole(currentUser.roleIds, adminRoleIds);
-
-        if (!hasAdminRole) {
-            await updateUserProfile(currentUser.uid, { isAdmin: false });
-        }
-        
         router.push('/');
     } catch(err) {
         console.error("Failed to revoke admin status:", err);
@@ -317,12 +250,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           widgetVisibility: defaultDashboardPreferences,
           layouts: {},
         },
-        isAdmin: false,
         isApproved: false,
-        isYouth: false,
         avatar: DEFAULT_AVATAR_DATA,
         fcmTokens: [],
         roleIds: [],
+        capabilityKeys: [],
       };
       await setDoc(userDocRef, newProfileData);
       await updateFirebaseProfile(firebaseUser, { displayName: `${firstName} ${lastName}` });
@@ -431,7 +363,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const { adminUpdateUserProfileAction } = await import('@/app/actions/admin-actions');
-    const result = await adminUpdateUserProfileAction(currentUser.uid, userId, profileData);
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) throw new Error('Not authenticated.');
+    const result = await adminUpdateUserProfileAction(idToken, userId, profileData);
     
     if (!result.success) {
       throw new Error(result.error);

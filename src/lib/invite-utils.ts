@@ -21,12 +21,12 @@ export function generateInviteCode(): string {
   return Math.random().toString(36).slice(2, 14);
 }
 
-export function inviteMaxUses(invite: Pick<AppInvite, 'maxUses'>): number {
+function inviteMaxUses(invite: Pick<AppInvite, 'maxUses'>): number {
   const value = invite.maxUses ?? DEFAULT_INVITE_MAX_USES;
   return value > 0 ? value : DEFAULT_INVITE_MAX_USES;
 }
 
-export function inviteUseCount(invite: Pick<AppInvite, 'useCount'>): number {
+function inviteUseCount(invite: Pick<AppInvite, 'useCount'>): number {
   return invite.useCount ?? 0;
 }
 
@@ -46,7 +46,6 @@ export function resolveInviteExpiresAtMs(
     expiresAt?: TimestampLike;
     createdAt?: TimestampLike;
   },
-  nowMs = Date.now(),
 ): number | null {
   const explicitMs = timestampToMillis(invite.expiresAt ?? undefined);
   if (explicitMs > 0) return explicitMs;
@@ -59,11 +58,11 @@ export function resolveInviteExpiresAtMs(
   return null;
 }
 
-export function isInviteExpired(
+function isInviteExpired(
   invite: Pick<AppInvite, 'expiresAt' | 'createdAt'>,
   nowMs = Date.now(),
 ): boolean {
-  const expiresAtMs = resolveInviteExpiresAtMs(invite, nowMs);
+  const expiresAtMs = resolveInviteExpiresAtMs(invite);
   if (!expiresAtMs) return false;
   return expiresAtMs <= nowMs;
 }

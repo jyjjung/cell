@@ -29,6 +29,7 @@ import { useQTRoster } from "@/hooks/useQTRoster";
 import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
 import { translations } from "@/lib/translations";
+import { hasCapability } from "@/lib/role-capabilities";
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState("");
@@ -47,7 +48,9 @@ export default function AdminHubPage() {
     setIsMounted(true);
   }, []);
 
-  const pendingApprovals = allUsers.filter((u) => !u.isApproved && !u.isAdmin).length;
+  const pendingApprovals = allUsers.filter(
+    (user) => !user.isApproved && !hasCapability(user.capabilityKeys, "app.admin"),
+  ).length;
 
   const currentMonth = new Date();
   const unassignedRosterDays = roster.filter((r) => {

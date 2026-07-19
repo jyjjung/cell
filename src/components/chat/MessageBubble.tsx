@@ -1,31 +1,29 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
-import { useAuth } from '@/contexts/auth-context';
-import type { ChatMessage, Chat, ChatMemberInfo, UserProfileData } from '@/types';
+import { Button } from '@/components/ui/button';
+import { LinkifiedText } from '@/components/ui/linkified-text';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RemoteImage } from '@/components/ui/remote-image';
-import { cn, isPdfUrl } from '@/lib/utils';
-import { SmilePlus, Music, Maximize, FileText, Trash2, MessagesSquare, Lock, LockOpen } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
 import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
 import { resolveDeletedMessageLabel } from '@/lib/deleted-content';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { translations } from '@/lib/translations';
-import PollSummary from './summaries/PollSummary';
-import { LinkifiedText } from '@/components/ui/linkified-text';
-import { Button } from '@/components/ui/button';
-import { CornerUpLeft } from 'lucide-react';
-import { format } from 'date-fns';
 import { toDateSafe } from '@/lib/firestore-timestamp';
-import EventSummary from './summaries/EventSummary';
-import SetlistSummary from './summaries/SetlistSummary';
-import RosterSummary from './summaries/RosterSummary';
-import QTSummary from './summaries/QTSummary';
-import CleaningSummary from './summaries/CleaningSummary';
-import SongSummary from './summaries/SongSummary';
-import DocSummary from './summaries/DocSummary';
+import { translations } from '@/lib/translations';
+import { cn, isPdfUrl } from '@/lib/utils';
+import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
+import { format } from 'date-fns';
+import { CornerUpLeft, FileText, Lock, LockOpen, Maximize, MessagesSquare, Music, SmilePlus, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { PixelAvatar } from '../avatar/PixelAvatar';
+import CleaningSummary from './summaries/CleaningSummary';
+import DocSummary from './summaries/DocSummary';
+import EventSummary from './summaries/EventSummary';
+import PollSummary from './summaries/PollSummary';
+import QTSummary from './summaries/QTSummary';
+import RosterSummary from './summaries/RosterSummary';
+import SetlistSummary from './summaries/SetlistSummary';
+import SongSummary from './summaries/SongSummary';
 
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];

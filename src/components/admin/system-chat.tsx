@@ -1,33 +1,23 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Sparkles, 
-  Send, 
-  Calendar, 
-  Bell, 
-  ArrowUp,
-  User,
-  Loader2,
-  Edit,
-  MessageSquarePlus,
-  ArrowLeft
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth-context';
-import { translations } from '@/lib/translations';
 import { useEvents } from '@/hooks/use-events';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useToast } from '@/hooks/use-toast';
-import { parse, isValid, format } from 'date-fns';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
-import { Music, ListMusic, ClipboardList } from 'lucide-react';
+import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
+import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import { isValid, parse } from 'date-fns';
+import { motion } from 'framer-motion';
+import {
+    ArrowLeft, ArrowUp, Bell, Calendar, ClipboardList, Edit, ListMusic, Loader2, MessageSquarePlus, Music, Sparkles, User
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type WizardState = 
   | 'IDLE'

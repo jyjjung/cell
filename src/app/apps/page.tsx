@@ -1,18 +1,15 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Home, BookCheck, ListChecks, Brain,
-  Trophy, MessageCircle, CalendarDays, ClipboardList,
-  SprayCan, Music, Library, Users, Lightbulb, User,
-  Shield, Cpu, FileText
-} from 'lucide-react';
+import { FeedCard, NavPageHeader } from '@/components/ui/page-layout';
 import { useAuth } from '@/contexts/auth-context';
-import { NavPageHeader, FeedCard } from '@/components/ui/page-layout';
 import { translations } from '@/lib/translations';
+import { motion } from 'framer-motion';
+import {
+    ArrowLeft, BookCheck, Brain, CalendarDays, ClipboardList, Cpu, FileText, Home, Library, Lightbulb, ListChecks, MessageCircle, Music, Shield, SprayCan, Trophy, User, Users
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 type T = (typeof translations)['en'];
 
@@ -26,7 +23,7 @@ type AppItem = {
   requiresWorship?: boolean;
 };
 
-function getAppSections(t: T): { titleKey: string; apps: AppItem[] }[] {
+function getAppSections(): { titleKey: string; apps: AppItem[] }[] {
   return [
     {
       titleKey: 'appsSectionCore',
@@ -96,7 +93,7 @@ export default function AppsPage() {
   const router = useRouter();
   const { currentUser, isAdmin, isWorshipTeam } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
-  const appSections = getAppSections(t);
+  const appSections = getAppSections();
 
   const isVisible = (app: AppItem) => {
     if (app.requiresAdmin && !isAdmin) return false;

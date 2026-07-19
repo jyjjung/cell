@@ -99,7 +99,6 @@ export function useWorshipSetlists(enabled = true) {
         } else {
           delete next.referenceTracks;
         }
-        delete next.youtubeUrl;
       }
       if ('chordSheetIds' in patch) {
         if (patch.chordSheetIds && patch.chordSheetIds.length > 0) {

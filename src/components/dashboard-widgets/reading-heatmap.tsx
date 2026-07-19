@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+import { makePassageKey } from '@/lib/passage-keys';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 
@@ -38,8 +38,7 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
       const validPassages = day.passages?.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [];
       const total = validPassages.length;
       const complete = validPassages.filter(p =>
-        completedPassages.includes(makePassageKey(day.date, p.displayText)) ||
-        completedPassages.includes(p.displayText)
+        completedPassages.includes(makePassageKey(day.date, p.displayText))
       ).length;
       planMap.set(key, { total, complete });
     });

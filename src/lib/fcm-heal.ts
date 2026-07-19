@@ -10,8 +10,8 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { messaging, db } from '@/lib/firebase';
 import { getFCMRegistration } from '@/lib/fcm-registration';
 
-export const FCM_HEAL_VERSION = '2026-07-15-v2';
-export const FCM_HEAL_STORAGE_KEY = 'fcm_heal_version';
+const FCM_HEAL_VERSION = '2026-07-15-v2';
+const FCM_HEAL_STORAGE_KEY = 'fcm_heal_version';
 export const MAX_FCM_TOKENS = 5;
 
 function isMessagingSw(reg: ServiceWorkerRegistration): boolean {
@@ -19,7 +19,7 @@ function isMessagingSw(reg: ServiceWorkerRegistration): boolean {
   return url.includes('firebase-messaging-sw.js');
 }
 
-export async function hasHealthyMessagingSw(): Promise<boolean> {
+async function hasHealthyMessagingSw(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
   const regs = await navigator.serviceWorker.getRegistrations();
   return regs.some(isMessagingSw);

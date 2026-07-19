@@ -1,20 +1,17 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { 
-  Clock, 
-  MapPin, 
-  ChevronRight,
-  Star
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
-import type { AppEvent } from '@/types';
-import { format } from 'date-fns';
-import Link from 'next/link';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 import { useAuth } from '@/contexts/auth-context';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { AppEvent } from '@/types';
+import { format } from 'date-fns';
+import {
+    ChevronRight, Clock,
+    MapPin, Star
+} from 'lucide-react';
+import Link from 'next/link';
 
 interface EventSummaryProps {
   eventId: string;

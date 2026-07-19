@@ -13,7 +13,7 @@ export type DataPushPayload = {
   link: string;
 };
 
-export async function deliverDataPush(
+async function deliverDataPush(
   userId: string,
   tokens: string[],
   payload: DataPushPayload,

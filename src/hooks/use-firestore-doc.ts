@@ -6,14 +6,6 @@ import { db } from '@/lib/firebase';
 
 const inflight = new Map<string, Promise<Record<string, unknown> | null>>();
 
-export async function fetchFirestoreDoc<T extends { id: string }>(
-  collectionName: string,
-  docId: string,
-): Promise<T | null> {
-  const result = await fetchDocData(collectionName, docId);
-  return result as T | null;
-}
-
 async function fetchDocData(collectionName: string, docId: string) {
   const key = `${collectionName}/${docId}`;
   if (!inflight.has(key)) {

@@ -7,12 +7,15 @@ service cloud.firestore {
     }
 
     function isAppAdmin(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.isAdmin == true;
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId))
+            .data.get('capabilityKeys', []).hasAny(['app.admin']);
     }
 
     function isYouth(userId) {
       return exists(/databases/$(database)/documents/users/$(userId))
-        && get(/databases/$(database)/documents/users/$(userId)).data.isYouth == true;
+        && get(/databases/$(database)/documents/users/$(userId))
+            .data.get('capabilityKeys', []).hasAny(['member.youth']);
     }
 
     function userData(userId) {
@@ -24,9 +27,9 @@ service cloud.firestore {
         && roleId in userData(userId).get('roleIds', []);
     }
 
-    // Worship Team role in production (name: "Worship Team")
     function isWorshipTeamMember(userId) {
-      return hasRoleId(userId, 'nlRKkWBpxNvoIkPq2faN');
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && userData(userId).get('capabilityKeys', []).hasAny(['worship.manage']);
     }
 
     function canManageWorship(userId) {
@@ -56,23 +59,28 @@ service cloud.firestore {
       let diff = request.resource.data.diff(resource.data).affectedKeys();
       let allowed = [
         'firstName', 'lastName', 'avatar', 'showInCommunityProgress', 'preferredLanguage',
-        'colorPalette', 'surfaceBackground', 'appTheme', 'glassEnabled', 'typography',
+        'appTheme', 'typography',
         'bibleTextVersion', 'dashboard', 'fcmTokens', 'fcmNeedsResync', 'fcmLastHealedAt',
-        'fcmHealVersion', 'updatedAt', 'prayerRequestsLastSeenAt',
-        'isAdmin',
+        'fcmHealVersion', 'updatedAt', 'prayerRequestsLastSeenAt'
       ];
       return diff.hasOnly(allowed)
         && (!diff.hasAny(['avatar'])
-            || resource.data.get('avatarChangesEnabled', true) != false)
-        && (!diff.hasAny(['isAdmin']) || request.resource.data.isAdmin == false);
+            || resource.data.get('avatarChangesEnabled', true) != false);
+    }
+
+    function roleStateUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'roleIds', 'capabilityKeys', 'isAdmin', 'isYouth', 'roleSyncVersion', 'roleSyncedAt'
+      ]);
     }
 
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth.uid == userId
-                    && request.resource.data.isAdmin == false
+                    && request.resource.data.get('capabilityKeys', []).size() == 0
+                    && request.resource.data.get('roleIds', []).size() == 0
                     && request.resource.data.isApproved == false;
-      allow update: if isAppAdmin(request.auth.uid)
+      allow update: if (isAppAdmin(request.auth.uid) && roleStateUnchanged())
                     || (request.auth.uid == userId && userSelfUpdateAllowed());
       allow delete: if isAppAdmin(request.auth.uid);
     }
@@ -93,7 +101,7 @@ service cloud.firestore {
     
     match /roles/{roleId} {
       allow read: if request.auth != null;
-      allow write: if isAppAdmin(request.auth.uid);
+      allow write: if false;
     }
 
     match /memoryVerses/{verseId} {

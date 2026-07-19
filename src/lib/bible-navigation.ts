@@ -8,7 +8,7 @@ export interface ParsedPassage {
 }
 
 /** Collapse spaced-out QT passage strings (e.g. "J o e l 1 : 1 - 2 0" → "Joel 1:1-20"). */
-export function normalizeQtPassageReference(passageRef: string): string {
+function normalizeQtPassageReference(passageRef: string): string {
   if (!passageRef) return '';
 
   let s = passageRef.normalize('NFKC').replace(/[\u2013\u2014]/g, '-').trim();
