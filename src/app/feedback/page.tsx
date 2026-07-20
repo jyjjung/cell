@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.134",
+    subtitle: "Push notification reliability",
+    date: "July 20, 2026",
+    changes: [
+      "Chat push notifications are more reliable with retries, delivery locks, and fixes for Firestore timing races",
+      "Push badge counts no longer fail when notification indexes are missing",
+      "Firebase Admin credentials now prefer rotated split env vars over stale JSON keys",
+    ],
+  },
+  {
     version: "v1.3.133",
     subtitle: "Chat history restored",
     date: "July 19, 2026",

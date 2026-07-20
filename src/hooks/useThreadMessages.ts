@@ -10,7 +10,7 @@ import {
     readAllMessagesFromDeviceCache, threadMessagesCollection
 } from '@/lib/chat-messages-device-cache';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
-import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { db } from '@/lib/firebase';
 import { primeMediaUrls } from '@/lib/media-cache';
@@ -229,17 +229,12 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       });
       await batch.commit();
 
-      const headers = await getClientAuthHeaders();
-      fetch('/api/send-chat-push', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          chatId,
-          messageId: mainMessageRef.id,
-          senderId: currentUser.uid,
-          text: lastText,
-        }),
-      }).catch((error) => console.error('Thread push notification dispatch failed:', error));
+      void dispatchChatPush({
+        chatId,
+        messageId: mainMessageRef.id,
+        senderId: currentUser.uid,
+        text: lastText,
+      });
     } catch (error) {
       console.error('Failed to store thread message:', error);
       toast({

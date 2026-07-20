@@ -37,6 +37,7 @@ import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
 import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
@@ -285,17 +286,12 @@ export function useMessages(chatId: string | null) {
             lastMessageSentAt: serverTimestamp(),
             lastMessageSenderId: currentUser.uid,
         });
-        const headers = await getClientAuthHeaders();
-        fetch('/api/send-chat-push', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ 
-                chatId, 
-                messageId: docRef.id,
-                text: lastText, 
-                senderId: currentUser.uid 
-            }),
-        }).catch(error => console.error("Push notification dispatch failed:", error));
+        void dispatchChatPush({
+            chatId,
+            messageId: docRef.id,
+            text: lastText,
+            senderId: currentUser.uid,
+        });
     } catch (error) {
         console.error("Message lifecycle failure:", error);
         const code = typeof error === 'object' && error !== null && 'code' in error
