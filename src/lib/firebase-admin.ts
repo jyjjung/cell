@@ -5,6 +5,22 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 
+function normalizePrivateKey(privateKey: string): string {
+  return privateKey.replace(/\\n/g, '\n').trim();
+}
+
+function loadServiceAccountFromParts(): ServiceAccount | null {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
+  if (!projectId || !clientEmail || !privateKeyRaw) return null;
+  return {
+    projectId,
+    clientEmail,
+    privateKey: normalizePrivateKey(privateKeyRaw),
+  };
+}
+
 function loadServiceAccountFromEnv(): ServiceAccount | null {
   const raw =
     process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
@@ -20,7 +36,20 @@ function loadServiceAccountFromEnv(): ServiceAccount | null {
 
   for (const candidate of candidates) {
     try {
-      return JSON.parse(candidate) as ServiceAccount;
+      const parsed = JSON.parse(candidate) as ServiceAccount & {
+        project_id?: string;
+        client_email?: string;
+        private_key?: string;
+      };
+      const projectId = parsed.projectId || parsed.project_id;
+      const clientEmail = parsed.clientEmail || parsed.client_email;
+      const privateKey = parsed.privateKey || parsed.private_key;
+      if (!projectId || !clientEmail || !privateKey) return null;
+      return {
+        projectId,
+        clientEmail,
+        privateKey: normalizePrivateKey(privateKey),
+      };
     } catch {
       // try next parse strategy
     }
@@ -29,29 +58,23 @@ function loadServiceAccountFromEnv(): ServiceAccount | null {
   return null;
 }
 
-function loadServiceAccountFromParts(): ServiceAccount | null {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  if (!projectId || !clientEmail || !privateKey) return null;
-  return { projectId, clientEmail, privateKey };
-}
-
 /**
  * Singleton helper to initialize Firebase Admin reliably across all API routes.
- * Supports full JSON service account env vars or split project/email/key vars.
+ * Prefers split FIREBASE_* vars so a stale JSON env var cannot override a rotated key.
  */
 export function getAdminApp(): App {
   const UNIFIED_APP_NAME = 'firebase-admin-unified';
   const existingApp = getApps().find(app => app.name === UNIFIED_APP_NAME);
   if (existingApp) return existingApp;
 
+  // Prefer split vars: after key rotation, old FIREBASE_SERVICE_ACCOUNT_KEY often
+  // lingers on Vercel and would otherwise keep using a revoked key.
   const serviceAccount =
-    loadServiceAccountFromEnv() ?? loadServiceAccountFromParts();
+    loadServiceAccountFromParts() ?? loadServiceAccountFromEnv();
 
   if (!serviceAccount) {
     throw new Error(
-      'Firebase Admin credentials missing. Set FIREBASE_SERVICE_ACCOUNT_KEY (JSON) or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.',
+      'Firebase Admin credentials missing. Set FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY (preferred), or FIREBASE_SERVICE_ACCOUNT_KEY (JSON).',
     );
   }
 

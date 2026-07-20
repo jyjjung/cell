@@ -12,18 +12,23 @@ export async function calculateTotalUnread(userId: string, db: Firestore): Promi
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+        // Explicit orderBy matches existing composite indexes. A bare >= range
+        // defaults to ASC and fails when only DESC indexes exist (userId/type).
         const [personalSnap, globalSnap, announcementSnap, chatsSnapshot] = await Promise.all([
             db.collection('notifications')
                 .where('userId', '==', userId)
                 .where('createdAt', '>=', thirtyDaysAgo)
+                .orderBy('createdAt', 'desc')
                 .get(),
             db.collection('notifications')
                 .where('isGlobal', '==', true)
                 .where('createdAt', '>=', thirtyDaysAgo)
+                .orderBy('createdAt', 'asc')
                 .get(),
             db.collection('notifications')
                 .where('type', '==', 'announcement')
                 .where('createdAt', '>=', thirtyDaysAgo)
+                .orderBy('createdAt', 'desc')
                 .get(),
             db.collection('chats').where('members', 'array-contains', userId).get(),
         ]);

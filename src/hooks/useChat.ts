@@ -21,6 +21,7 @@ import {
 } from '@/lib/chat-utils';
 import { primeMediaUrl } from '@/lib/media-cache';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { UserProfileData } from '@/types';
 
@@ -28,19 +29,6 @@ const CHATS_COLLECTION = 'chats';
 
 function actorLabel(user: { firstName?: string | null; lastName?: string | null; displayName?: string | null }): string {
   return formatUserDisplayName(user, 'Someone');
-}
-
-async function dispatchChatPush(chatId: string, messageId: string, text: string, senderId: string) {
-  try {
-    const headers = await getClientAuthHeaders();
-    await fetch('/api/send-chat-push', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ chatId, messageId, text, senderId }),
-    });
-  } catch (error) {
-    console.error('[useChat] Push dispatch failed:', error);
-  }
 }
 
 export function useChat(chatId: string) {
@@ -150,7 +138,12 @@ export function useChat(chatId: string) {
 
         primeMediaUrl(photoURL);
         const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_CHANGED_PREVIEW}`;
-        void dispatchChatPush(chatId, data.messageId, pushBody, currentUser.uid);
+        void dispatchChatPush({
+          chatId,
+          messageId: data.messageId,
+          text: pushBody,
+          senderId: currentUser.uid,
+        });
         toast({ title: "Group photo updated" });
       } catch (error) {
         console.error("Error updating group photo:", error);
@@ -179,7 +172,12 @@ export function useChat(chatId: string) {
         }
 
         const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_REMOVED_PREVIEW}`;
-        void dispatchChatPush(chatId, data.messageId, pushBody, currentUser.uid);
+        void dispatchChatPush({
+          chatId,
+          messageId: data.messageId,
+          text: pushBody,
+          senderId: currentUser.uid,
+        });
         toast({ title: "Group photo removed" });
       } catch (error) {
         console.error("Error removing group photo:", error);
