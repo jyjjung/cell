@@ -70,18 +70,22 @@ export function useCleaningRoster(enabled = true) {
       updatedAt: serverTimestamp(),
     }, { merge: true });
 
-    // Trigger notifications for newly assigned users
+    // Trigger notifications for newly assigned users (await so push isn't dropped on navigation)
     if (newUsers.length > 0) {
-      for (const uid of newUsers) {
-        createNotification({
-          title: "New Cleaning Assignment",
-          message: `You've been added to the cleaning roster for ${entryData.date}.`,
-          type: 'reminder',
-          isGlobal: false,
-          userId: uid,
-          relatedUrl: '/cleaning-roster'
-        });
-      }
+      await Promise.all(
+        newUsers.map((uid) =>
+          createNotification({
+            title: "New Cleaning Assignment",
+            message: `You've been added to the cleaning roster for ${entryData.date}.`,
+            type: 'reminder',
+            isGlobal: false,
+            userId: uid,
+            relatedUrl: '/cleaning-roster'
+          }).catch((error) => {
+            console.error("[useCleaningRoster] Failed to notify assignee:", uid, error);
+          }),
+        ),
+      );
     }
   }, [roster, createNotification]);
   

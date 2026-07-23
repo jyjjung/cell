@@ -7,6 +7,7 @@ import {
 import { normalizeEventFromFirestore } from '@/lib/event-doc';
 import { collectEventDayReminders } from '@/lib/event-reminders';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
+import { retryFailedNotificationPushes } from '@/lib/retry-failed-notification-pushes';
 import { sendUserNotification } from '@/lib/server-notifications';
 import type {
     CleaningDay,
@@ -130,6 +131,7 @@ export async function GET(request: NextRequest) {
     }
 
     const scheduled = await deliverDueScheduledAnnouncements(adminDb, adminMessaging, timeZone);
+    const pushRetries = await retryFailedNotificationPushes(adminDb, adminMessaging);
 
     return NextResponse.json({
       success: true,
@@ -146,6 +148,7 @@ export async function GET(request: NextRequest) {
         skipped: eventSkipped,
       },
       scheduledAnnouncements: scheduled,
+      pushRetries,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
