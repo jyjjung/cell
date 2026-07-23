@@ -64,6 +64,8 @@ const changelogs = [
       "Push delivery no longer races with itself, and failed pushes are retried by the morning reminder job",
       "Scheduled announcements use community timezone wall-clock times instead of the admin’s browser timezone",
       "QT and cleaning assignment alerts are sent reliably when someone is added to the roster",
+      "Chat pushes retry when delivery fails, and no longer wipe your home-screen badge when the unread count is slow to calculate",
+      "Chat unread badges match across the dashboard, sidebar, and chat list; group photo alerts no longer double the sender’s name",
     ],
   },
   {

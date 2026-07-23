@@ -20,13 +20,13 @@ function isRetryableStatus(status: number): boolean {
 
 /**
  * Ask the server to deliver chat push notifications for a message.
- * Retries transient failures, including 404s while Firestore catches up.
+ * Retries transient failures, including zero-delivery FCM responses (503).
  */
 export async function dispatchChatPush(payload: ChatPushPayload): Promise<void> {
   const delivered = await tryDispatchChatPush(payload, MAX_ATTEMPTS);
   if (delivered) return;
 
-  // Firestore replication or network can lag beyond the initial burst.
+  // Network / FCM / Firestore lag can outlast the initial burst.
   for (const delayMs of [10_000, 30_000]) {
     setTimeout(() => {
       void tryDispatchChatPush(payload, 3);

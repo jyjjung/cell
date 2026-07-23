@@ -11,6 +11,7 @@ import {
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
 import { useChats } from '@/hooks/useChats';
+import { isChatUnread } from '@/lib/notification-utils';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -164,13 +165,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return isValid(last) ? Math.max(0, differenceInDays(last, startOfDay(new Date()))) : null;
   }, [plan]);
 
-  const unreadChatCount = useMemo(() => chats.filter(c => {
-    if (!c.lastMessageSentAt || !c.memberSeen?.[currentUser.uid] || c.lastMessageSenderId === currentUser.uid) return false;
-    const ms = (ts: { toMillis?: () => number; _seconds?: number } | Date) =>
-      (ts as { toMillis?: () => number })?.toMillis?.()
-      ?? (ts instanceof Date ? ts.getTime() : (ts as { _seconds?: number })?._seconds ? (ts as { _seconds: number })._seconds * 1000 : 0);
-    return ms(c.lastMessageSentAt) > ms(c.memberSeen[currentUser.uid]);
-  }).length, [chats, currentUser.uid]);
+  const unreadChatCount = useMemo(
+    () => chats.filter((c) => isChatUnread(c, currentUser.uid)).length,
+    [chats, currentUser.uid],
+  );
 
   const filteredEvents = useMemo(() => (events || []).filter((e) => {
     if (currentUser?.isAdmin) return true;

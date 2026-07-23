@@ -10,6 +10,7 @@ import { usePageLoading } from "@/contexts/page-loading-context";
 import { cn } from "@/lib/utils";
 import { getMemberDisplayName, resolveChatAvatar } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
+import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, ArrowRight, Plus, Sparkles, Images, Link2 } from "lucide-react";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
@@ -152,9 +153,9 @@ export default function ChatList() {
                 if (!details) return null;
 
                 const isActive = pathname === `/chat/${chat.id}`;
-                const lastSeenMillis = chat.memberSeen?.[currentUser!.uid]?.toMillis?.() || 0;
-                const lastSentMillis = chat.lastMessageSentAt?.toMillis?.() || 0;
-                const isUnread = currentUser && !isActive && lastSentMillis > lastSeenMillis && chat.lastMessageSenderId !== currentUser.uid;
+                const isUnread = Boolean(
+                  currentUser && !isActive && isChatUnread(chat, currentUser.uid),
+                );
                 const lastSenderProfile = allUsers.find(u => u.uid === chat.lastMessageSenderId);
                 const lastSenderName = formatUserDisplayName(lastSenderProfile);
 

@@ -14,7 +14,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { formatUserDisplayName } from '@/lib/formatting';
 import {
   GROUP_PHOTO_CHANGED_PREVIEW,
   GROUP_PHOTO_REMOVED_PREVIEW,
@@ -26,10 +25,6 @@ import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
-
-function actorLabel(user: { firstName?: string | null; lastName?: string | null; displayName?: string | null }): string {
-  return formatUserDisplayName(user, 'Someone');
-}
 
 export function useChat(chatId: string) {
     const { currentUser } = useAuth();
@@ -137,11 +132,11 @@ export function useChat(chatId: string) {
         }
 
         primeMediaUrl(photoURL);
-        const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_CHANGED_PREVIEW}`;
+        // Server prefixes the sender name for group pushes — send preview text only.
         void dispatchChatPush({
           chatId,
           messageId: data.messageId,
-          text: pushBody,
+          text: GROUP_PHOTO_CHANGED_PREVIEW,
           senderId: currentUser.uid,
         });
         toast({ title: "Group photo updated" });
@@ -171,11 +166,10 @@ export function useChat(chatId: string) {
           throw new Error(typeof data.error === 'string' ? data.error : 'Could not remove group photo.');
         }
 
-        const pushBody = `${actorLabel(currentUser)} ${GROUP_PHOTO_REMOVED_PREVIEW}`;
         void dispatchChatPush({
           chatId,
           messageId: data.messageId,
-          text: pushBody,
+          text: GROUP_PHOTO_REMOVED_PREVIEW,
           senderId: currentUser.uid,
         });
         toast({ title: "Group photo removed" });
