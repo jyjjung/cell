@@ -3,7 +3,7 @@
  * @fileOverview Firebase Messaging Service Worker.
  * Handles background push notifications when the app is closed or in the background.
  *
- * Heal version: 2026-07-15-v2 — bump this when clients need to rebind push subscriptions.
+ * Heal version: 2026-07-23-v1 — bump this when clients need to rebind push subscriptions.
  */
 
 // Import and configure the Firebase SDK
@@ -29,34 +29,57 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
+function normalizeAppPath(pathOrUrl) {
+  try {
+    const url = pathOrUrl.startsWith('http')
+      ? new URL(pathOrUrl)
+      : new URL(pathOrUrl, self.location.origin);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    return path;
+  } catch {
+    return '/';
+  }
+}
+
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-  // --- UPDATE APP BADGE ---
-  // This is the ONLY way to update the home screen badge when the app is closed.
-  // navigator.setAppBadge is available in service worker scope (iOS 16.4+ PWA, Chrome).
-  const badgeCount = parseInt(payload.data?.badge || '0', 10);
-  if ('setAppBadge' in navigator) {
-    if (badgeCount > 0) {
-      navigator.setAppBadge(badgeCount).catch(() => {});
-    } else {
-      navigator.clearAppBadge().catch(() => {});
-    }
-  }
+  const link = payload.data?.link || '/';
+  const targetPath = normalizeAppPath(link);
 
-  // --- SHOW NOTIFICATION ---
-  const notificationTitle = payload.data?.title || 'New Message';
-  const notificationOptions = {
-    body: payload.data?.body || 'You have a new update.',
-    icon: payload.data?.icon || '/icon-192x192-v4.png',
-    tag: payload.data?.tag || 'default-tag',
-    data: {
-        link: payload.data?.link || '/'
-    }
-  };
+  return clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    const viewingTarget = clientList.some((client) => {
+      const visible = client.visibilityState === 'visible' || client.focused;
+      if (!visible) return false;
+      return normalizeAppPath(client.url) === targetPath;
+    });
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+    // Only raise the badge when the server sent a positive count.
+    // Never clearAppBadge from a push — a missing/0 badge often means timeout, not "all read".
+    const badgeRaw = payload.data?.badge;
+    if (badgeRaw != null && badgeRaw !== '') {
+      const badgeCount = parseInt(badgeRaw, 10);
+      if (!Number.isNaN(badgeCount) && badgeCount > 0 && 'setAppBadge' in navigator) {
+        navigator.setAppBadge(badgeCount).catch(() => {});
+      }
+    }
+
+    if (viewingTarget) {
+      return;
+    }
+
+    const notificationTitle = payload.data?.title || 'New Message';
+    const notificationOptions = {
+      body: payload.data?.body || 'You have a new update.',
+      icon: payload.data?.icon || '/icon-192x192-v4.png',
+      tag: payload.data?.tag || 'default-tag',
+      data: {
+        link,
+      },
+    };
+
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+  });
 });
 
 // Handle notification clicks

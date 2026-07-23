@@ -67,7 +67,18 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
       const link = payload.data?.link || '/';
       const tag = payload.data?.tag || 'community-update';
 
-      if (pathname === link && link.startsWith('/chat/')) return;
+      const normalizePath = (value: string) => {
+        try {
+          const url = value.startsWith('http') ? new URL(value) : new URL(value, window.location.origin);
+          return url.pathname.replace(/\/+$/, '') || '/';
+        } catch {
+          return value.replace(/\/+$/, '') || '/';
+        }
+      };
+
+      if (normalizePath(pathname) === normalizePath(link) && normalizePath(link).startsWith('/chat/')) {
+        return;
+      }
 
       if (Notification.permission === 'granted') {
         getFCMRegistration()

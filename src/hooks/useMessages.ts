@@ -8,7 +8,6 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  addDoc,
   serverTimestamp,
   doc,
   updateDoc,
@@ -17,6 +16,7 @@ import {
   getDoc,
   getDocs,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
@@ -280,12 +280,16 @@ export function useMessages(chatId: string | null) {
     });
 
     try {
-        const docRef = await addDoc(messagesColRef, messageData);
-        await updateDoc(chatDocRef, {
+        // Atomic message + chat preview so push never runs against a stale lastMessage.
+        const docRef = doc(messagesColRef);
+        const batch = writeBatch(db);
+        batch.set(docRef, messageData);
+        batch.update(chatDocRef, {
             lastMessageText: lastText,
             lastMessageSentAt: serverTimestamp(),
             lastMessageSenderId: currentUser.uid,
         });
+        await batch.commit();
         void dispatchChatPush({
             chatId,
             messageId: docRef.id,

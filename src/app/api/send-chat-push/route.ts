@@ -54,11 +54,26 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
         }
 
-        return NextResponse.json({
-            success: true,
-            delivered: result.success,
-            alreadySent: result.alreadySent ?? false,
-        });
+        // Already claimed/sent, or nothing actionable (no recipients / no tokens).
+        if (result.alreadySent || !result.retryable) {
+            return NextResponse.json({
+                success: true,
+                delivered: result.success,
+                alreadySent: result.alreadySent ?? false,
+                reason: result.reason,
+            });
+        }
+
+        // Tokens exist but FCM delivered 0 — tell the client to keep retrying.
+        return NextResponse.json(
+            {
+                success: false,
+                delivered: result.success,
+                error: result.reason || 'Delivery failed',
+                retryable: true,
+            },
+            { status: 503 },
+        );
 
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';

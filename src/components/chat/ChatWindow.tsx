@@ -145,11 +145,18 @@ function ChatWindowBody({
   useEffect(() => {
     if (!chatId) return;
 
-    const timeoutId = window.setTimeout(() => {
-      updateSeenTimestamp();
-    }, 500);
+    const markSeen = () => updateSeenTimestamp();
+    const timeoutId = window.setTimeout(markSeen, 500);
 
-    return () => window.clearTimeout(timeoutId);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') markSeen();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [chatId, messages.length, updateSeenTimestamp]);
 
   useEffect(() => {
