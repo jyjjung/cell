@@ -4,6 +4,11 @@ import { LinkifiedText } from "@/components/ui/linkified-text";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth-context";
 import { useNotifications } from "@/hooks/use-notifications";
+import { toMillisSafe } from "@/lib/firestore-timestamp";
+import {
+  NOTIFICATION_UNREAD_LOOKBACK_DAYS,
+  countUnreadNotificationsForUser,
+} from "@/lib/notification-visibility";
 import { translations } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -86,11 +91,9 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
 
   const totalUnread = useMemo(() => {
     if (!currentUser || !mounted) return 0;
-    const unreadAlerts = notifications.filter(n => {
-      const readBy = Array.isArray(n.readBy) ? n.readBy : [];
-      return !readBy.includes(currentUser.uid);
-    }).length;
-    return unreadAlerts;
+    const lookbackMs = Date.now() - NOTIFICATION_UNREAD_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+    const recent = notifications.filter((n) => toMillisSafe(n.createdAt) >= lookbackMs);
+    return countUnreadNotificationsForUser(recent, currentUser.uid);
   }, [notifications, currentUser, mounted]);
 
   return (

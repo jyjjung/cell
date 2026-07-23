@@ -56,6 +56,17 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.135",
+    subtitle: "More consistent notifications",
+    date: "July 23, 2026",
+    changes: [
+      "In-app alerts, push badges, and the notification list now count the same set of items (including community-wide alerts like new memory verses)",
+      "Push delivery no longer races with itself, and failed pushes are retried by the morning reminder job",
+      "Scheduled announcements use community timezone wall-clock times instead of the admin’s browser timezone",
+      "QT and cleaning assignment alerts are sent reliably when someone is added to the roster",
+    ],
+  },
+  {
     version: "v1.3.134",
     subtitle: "Push notification reliability",
     date: "July 20, 2026",

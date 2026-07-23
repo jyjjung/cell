@@ -6,6 +6,11 @@ import { useChats } from '@/hooks/useChats';
 import { getFCMRegistration } from '@/lib/fcm-registration';
 import { messaging } from '@/lib/firebase';
 import { isChatUnread } from '@/lib/notification-utils';
+import {
+  NOTIFICATION_UNREAD_LOOKBACK_DAYS,
+  countUnreadNotificationsForUser,
+} from '@/lib/notification-visibility';
+import { toMillisSafe } from '@/lib/firestore-timestamp';
 import type { AppUser } from '@/types';
 import { onMessage } from 'firebase/messaging';
 import { usePathname } from 'next/navigation';
@@ -19,10 +24,11 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
   const { registerToken } = useFCMToken();
 
   const totalUnreadCount = useMemo(() => {
-    const unreadNotifs = notifications.filter((n) => {
-      const readBy = Array.isArray(n.readBy) ? n.readBy : [];
-      return !readBy.includes(currentUser.uid);
-    }).length;
+    const lookbackMs = Date.now() - NOTIFICATION_UNREAD_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+    const recentNotifications = notifications.filter(
+      (n) => toMillisSafe(n.createdAt) >= lookbackMs,
+    );
+    const unreadNotifs = countUnreadNotificationsForUser(recentNotifications, currentUser.uid);
 
     const unreadChatCount = chats.filter((chat) => {
       if (pathname === `/chat/${chat.id}`) return false;

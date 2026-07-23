@@ -10,6 +10,7 @@ import {
 } from '@/lib/collection-cache';
 import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
+import { NOTIFICATION_QUERY_LIMITS } from '@/lib/notification-visibility';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
 import type { AppNotification } from '@/types';
 import {
@@ -41,7 +42,7 @@ import {
 } from 'react';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
-const CACHE_KEY_PREFIX = 'notifications_v2';
+const CACHE_KEY_PREFIX = 'notifications_v3';
 
 function cacheKey(uid: string, mode: 'app' | 'admin') {
   return `${CACHE_KEY_PREFIX}_${mode}_${uid}`;
@@ -181,13 +182,21 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       collection(db, NOTIFICATIONS_COLLECTION),
       where('userId', '==', currentUser.uid),
       orderBy('createdAt', 'desc'),
-      limit(50),
+      limit(NOTIFICATION_QUERY_LIMITS.personal),
     );
     const announcementsQuery = query(
       collection(db, NOTIFICATIONS_COLLECTION),
       where('type', '==', 'announcement'),
       orderBy('createdAt', 'desc'),
-      limit(40),
+      limit(NOTIFICATION_QUERY_LIMITS.announcements),
+    );
+    // Globals (e.g. memory-verse alerts) are isGlobal but not always type=announcement.
+    // Must match server badge queries or icon badges disagree with the in-app list.
+    const globalsQuery = query(
+      collection(db, NOTIFICATIONS_COLLECTION),
+      where('isGlobal', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(NOTIFICATION_QUERY_LIMITS.globals),
     );
 
     let personalItems: AppNotification[] = cached
@@ -196,9 +205,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     let announcementItems: AppNotification[] = cached
       ? normalizeNotifications(cached).filter((n) => n.type === 'announcement')
       : [];
+    let globalItems: AppNotification[] = cached
+      ? normalizeNotifications(cached).filter((n) => n.isGlobal === true)
+      : [];
 
     const mergeAndPersist = () => {
-      persist(mergeById(personalItems, announcementItems));
+      persist(mergeById(personalItems, announcementItems, globalItems));
     };
 
     const unsubscribers = [
@@ -214,6 +226,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         announcementsQuery,
         (snapshot) => {
           announcementItems = mapSnapshot(snapshot.docs);
+          mergeAndPersist();
+        },
+        (error) => console.error('Notification listener error:', error),
+      ),
+      onSnapshot(
+        globalsQuery,
+        (snapshot) => {
+          globalItems = mapSnapshot(snapshot.docs);
           mergeAndPersist();
         },
         (error) => console.error('Notification listener error:', error),
@@ -257,7 +277,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     await setDoc(docRef, dataToSave);
     const deferPush = shouldDeferScheduledAnnouncement(notificationData.scheduledFor);
     if (!deferPush) {
-      void triggerPushNotification(notificationId);
+      await triggerPushNotification(notificationId);
     }
 
     return { notificationId };

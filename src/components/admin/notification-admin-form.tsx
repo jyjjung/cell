@@ -15,6 +15,10 @@ import type { AppNotification } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
+import { communityWallTimeToUtcDate, COMMUNITY_TIMEZONE_DEFAULT } from '@/lib/notification-visibility';
+
+const COMMUNITY_TIMEZONE =
+  process.env.NEXT_PUBLIC_DUTY_REMINDER_TIMEZONE || COMMUNITY_TIMEZONE_DEFAULT;
 
 const notificationFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
@@ -54,8 +58,10 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
     try {
       let scheduledFor: Timestamp | null = null;
       if (data.scheduledDate && data.scheduledTime) {
-          const dateStr = `${data.scheduledDate}T${data.scheduledTime}`;
-          scheduledFor = Timestamp.fromDate(new Date(dateStr));
+          // Interpret admin-entered wall time in the community timezone (not the browser's).
+          scheduledFor = Timestamp.fromDate(
+            communityWallTimeToUtcDate(data.scheduledDate, data.scheduledTime, COMMUNITY_TIMEZONE),
+          );
       }
 
       const notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'> = {

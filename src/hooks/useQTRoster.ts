@@ -60,13 +60,15 @@ export function useQTRoster(enabled = true) {
       await setDoc(docRef, { ...entryData, updatedAt: serverTimestamp() }, { merge: true });
 
       if (isNewUser && entryData.userId) {
-        createNotification({
+        await createNotification({
           title: "New QT Assignment",
           message: `You've been assigned for ${entryData.date}: "${entryData.title}" (${entryData.passage}).`,
           type: 'reminder',
           isGlobal: false,
           userId: entryData.userId,
           relatedUrl: '/qt'
+        }).catch((error) => {
+          console.error("[useQTRoster] Failed to notify assignee:", error);
         });
       }
     } catch (error) {

@@ -1,7 +1,7 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
 import type { AppNotification, AppNotificationType } from '@/types';
-import { deliverNotificationPush } from '@/lib/server-push';
+import { deliverPushWithLock } from '@/lib/push-delivery-lock';
 
 export async function resolveUserIdByEmail(
   adminDb: Firestore,
@@ -83,24 +83,12 @@ export async function sendUserNotification(
   };
 
   await notifRef.set(notification);
-  const delivered = await deliverNotificationPush(notification, adminDb, adminMessaging);
-
-  if (delivered > 0) {
-    await notifRef.update({
-      pushSentAt: FieldValue.serverTimestamp(),
-      pushDeliveredCount: delivered,
-    }).catch(() => {});
-  } else {
-    await notifRef.update({
-      pushDeliveredCount: 0,
-      pushNeedsRetry: true,
-    }).catch(() => {});
-  }
+  const result = await deliverPushWithLock(notifRef.id, adminDb, adminMessaging);
 
   if (dedupeId) {
     await adminDb.collection(dedupeCollection).doc(dedupeId).update({
       notificationId: notifRef.id,
-      pushDeliveredCount: delivered,
+      pushDeliveredCount: result.delivered,
     }).catch(() => {});
   }
 
