@@ -22,6 +22,7 @@ import { primeMediaUrl } from '@/lib/media-cache';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
+import { syncChatDocMembers } from '@/hooks/use-docs';
 import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
@@ -95,6 +96,9 @@ export function useChat(chatId: string) {
       updateDoc(chatDocRef, {
         members: arrayUnion(...memberIdsToAdd),
         ...memberInfoUpdates
+      }).then(() => {
+        // Expand docs previously shared into this chat so new members see them in Docs.
+        void syncChatDocMembers(chatId).catch(() => {});
       }).catch((error: any) => {
         console.error("Error adding members:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not add members." });

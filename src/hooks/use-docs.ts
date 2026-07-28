@@ -46,6 +46,7 @@ function docFromData(id: string, data: Record<string, unknown>): DocNote {
     authorIds,
     sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
     memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
+    sourceChatIds: Array.isArray(data.sourceChatIds) ? (data.sourceChatIds as string[]) : [],
     createdAt: data.createdAt as DocNote['createdAt'],
     updatedAt: data.updatedAt as DocNote['updatedAt'],
     updatedBy: (data.updatedBy as string) || '',
@@ -518,22 +519,23 @@ export function useDocComments(docId: string | undefined, enabled: boolean) {
   return { comments, loading, addComment, deleteComment };
 }
 
-/** Chat helpers — create/share via admin API so this works before rules deploy. */
+/** Chat helpers — create/share via admin API; server resolves chat members. */
 export async function createSharedDocForChat(input: {
   ownerId: string;
-  chatMemberIds: string[];
+  chatId: string;
+  chatMemberIds?: string[];
   title?: string;
   content?: string;
 }): Promise<string> {
-  const sharedWith = normalizeSharedWith('shared', input.chatMemberIds, input.ownerId);
-  const visibility: DocVisibility = sharedWith.length > 0 ? 'shared' : 'private';
   const data = await apiJson<{ id: string }>('/api/docs', {
     method: 'POST',
     body: JSON.stringify({
       title: input.title || '',
-      visibility,
-      sharedWith,
       content: input.content ?? '<p></p>',
+      chatId: input.chatId,
+      // Fallback for older servers; preferred path is chatId resolution.
+      visibility: 'shared',
+      sharedWith: (input.chatMemberIds || []).filter((id) => id && id !== input.ownerId),
     }),
   });
   return data.id;
@@ -541,16 +543,35 @@ export async function createSharedDocForChat(input: {
 
 export async function shareDocWithChatMembers(input: {
   docId: string;
-  note: DocNote;
+  note?: DocNote;
   actorId: string;
-  chatMemberIds: string[];
+  chatId: string;
+  chatMemberIds?: string[];
 }): Promise<void> {
-  if (input.note.ownerId !== input.actorId) return;
-  const merged = Array.from(new Set([...input.note.sharedWith, ...input.chatMemberIds]));
-  const sharedWith = normalizeSharedWith('shared', merged, input.actorId);
-  if (sharedWith.length === 0) return;
   await apiJson(`/api/docs/${input.docId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ visibility: 'shared', sharedWith }),
+    body: JSON.stringify({ shareWithChatId: input.chatId }),
+  });
+}
+
+/** Heal ACL for docs already visible to the caller in this chat. */
+export async function ensureDocsSharedWithChat(input: {
+  chatId: string;
+  docIds: string[];
+}): Promise<void> {
+  const docIds = Array.from(new Set(input.docIds.filter(Boolean)));
+  if (!input.chatId || docIds.length === 0) return;
+  await apiJson('/api/docs/ensure-chat-share', {
+    method: 'POST',
+    body: JSON.stringify({ chatId: input.chatId, docIds }),
+  });
+}
+
+/** After chat members change, sync docs previously shared into the chat. */
+export async function syncChatDocMembers(chatId: string): Promise<void> {
+  if (!chatId) return;
+  await apiJson('/api/docs/sync-chat-members', {
+    method: 'POST',
+    body: JSON.stringify({ chatId }),
   });
 }

@@ -334,7 +334,7 @@ service cloud.firestore {
                     && (
                       (isDocOwner()
                         && request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['title', 'content', 'visibility', 'sharedWith', 'memberIds', 'authorIds', 'updatedAt', 'updatedBy'])
+                            .hasOnly(['title', 'content', 'visibility', 'sharedWith', 'memberIds', 'authorIds', 'sourceChatIds', 'updatedAt', 'updatedBy'])
                         && request.resource.data.visibility in ['private', 'shared']
                         && request.resource.data.sharedWith is list
                         && request.resource.data.memberIds is list

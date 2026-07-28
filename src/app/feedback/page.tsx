@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.137",
+    subtitle: "Group chat docs show in Docs",
+    date: "July 28, 2026",
+    changes: [
+      "Documents shared in a group chat now appear under Docs for every chat member",
+      "Opening a chat repairs older shared docs that were missing from Docs",
+      "New group members automatically get access to docs previously shared in that chat",
+    ],
+  },
+  {
     version: "v1.3.136",
     subtitle: "Schedule, chat, and notification polish",
     date: "July 28, 2026",

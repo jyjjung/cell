@@ -31,6 +31,7 @@ import GroupSettingsDialog from './GroupSettingsDialog';
 import { ChatImageGallery } from './ImageLightbox';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
+import { ensureDocsSharedWithChat } from '@/hooks/use-docs';
 
 export default function ChatWindow({ chatId }: { chatId: string }) {
   const messageState = useMessages(chatId);
@@ -160,6 +161,27 @@ function ChatWindowBody({
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [chatId, messages.length, updateSeenTimestamp]);
+
+  const chatDocIdsKey = useMemo(() => {
+    const ids = Array.from(
+      new Set(messages.map((m) => m.docId).filter((id): id is string => Boolean(id))),
+    ).sort();
+    return ids.join(',');
+  }, [messages]);
+
+  useEffect(() => {
+    if (!chatId || !currentUser || !chatDocIdsKey) return;
+    const docIds = chatDocIdsKey.split(',');
+
+    // Heal legacy chat docs that were posted without expanding memberIds,
+    // so every chat member sees them under Docs.
+    const timer = window.setTimeout(() => {
+      void ensureDocsSharedWithChat({ chatId, docIds }).catch(() => {
+        // Best-effort; permission skips are expected for docs the viewer cannot access.
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [chatId, currentUser, chatDocIdsKey]);
 
   useEffect(() => {
     if (chatTab !== 'photos') {
@@ -498,7 +520,6 @@ function ChatWindowBody({
           replyToMessage={replyToId ? messages.find(m => m.id === replyToId) : undefined}
           onCancelReply={() => setReplyToId(null)}
           messageActions={{ sendMessage, sendImageMessage }}
-          chatMembers={chat?.members ?? []}
         />
       </div>
       )}
