@@ -21,9 +21,16 @@ async function assertMember(docId: string, uid: string) {
   const adminDb = getAdminDb(getAdminApp());
   const snap = await adminDb.collection('docs').doc(docId).get();
   if (!snap.exists) throw Object.assign(new Error('Not found'), { status: 404 });
-  const memberIds = Array.isArray(snap.data()?.memberIds) ? snap.data()!.memberIds : [];
-  if (!memberIds.includes(uid)) throw Object.assign(new Error('Forbidden'), { status: 403 });
-  return { adminDb, data: snap.data()! };
+  const data = snap.data()!;
+  const memberIds = Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [];
+  const sharedWith = Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [];
+  const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+  const allowed =
+    memberIds.includes(uid) ||
+    uid === ownerId ||
+    sharedWith.includes(uid);
+  if (!allowed) throw Object.assign(new Error('Forbidden'), { status: 403 });
+  return { adminDb, data };
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {

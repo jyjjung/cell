@@ -77,7 +77,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
       setLoading(false);
     };
 
-    const cachedFresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v2', COLLECTION_CACHE_TTL_MS);
+    const cachedFresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v3', COLLECTION_CACHE_TTL_MS);
     if (cachedFresh?.length) {
       applyUsers(cachedFresh);
     } else {
@@ -94,7 +94,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
 
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !currentUser?.uid) return;
-      const fresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v2', COLLECTION_CACHE_TTL_MS);
+      const fresh = readLocalCollectionCache<UserProfileData[]>('users_directory_v3', COLLECTION_CACHE_TTL_MS);
       if (fresh?.length) return;
       void loadUsersDirectory({ forceRefresh: true }).then((users) => {
         if (!cancelled) setAllUsers(users);

@@ -82,7 +82,7 @@ export function NewSongDialog({
 }
 
 // ── NewSetlistDialog ─────────────────────────────────────────────────────────
-export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string, name: string) => void }) {
   const { createSetlist } = useWorshipSetlists();
   const { toast } = useToast();
   const [name, setName] = useState('');
@@ -93,10 +93,11 @@ export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; 
     if (!name.trim() || !date) return;
     setSaving(true);
     try {
-      const id = await createSetlist(name, date);
-      toast({ title: 'Setlist created', description: `"${name}" is ready.` });
+      const trimmed = name.trim();
+      const id = await createSetlist(trimmed, date);
+      toast({ title: 'Setlist created', description: `"${trimmed}" is ready.` });
       setName(''); setDate(format(new Date(), 'yyyy-MM-dd'));
-      onCreated(id);
+      onCreated(id, trimmed);
       onClose();
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });

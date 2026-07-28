@@ -354,6 +354,11 @@
     @apply rounded-xl border border-primary/20 bg-primary/5 p-4;
   }
 
+  /* Opaque notice banner (notification permission, etc.) — not see-through */
+  .notice-surface-solid {
+    @apply rounded-xl border border-border bg-card p-4 text-card-foreground shadow-lg;
+  }
+
   .ui-empty {
     @apply flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-12 text-center;
   }
@@ -372,7 +377,7 @@
   }
 
   .notice-surface {
-    @apply ui-callout;
+    @apply notice-surface-solid;
   }
 
   .flow-section {

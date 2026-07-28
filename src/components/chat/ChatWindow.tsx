@@ -375,6 +375,7 @@ function ChatWindowBody({
           />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
+            chatId={chatId}
             messages={messages}
             allUsers={allUsers}
             onOpenImage={setOpenImageUrl}
@@ -497,9 +498,9 @@ function ChatWindowBody({
       <NewSetlistDialog 
         open={showNewSetlist} 
         onClose={() => setShowNewSetlist(false)} 
-        onCreated={(id) => {
+        onCreated={(id, name) => {
           // Automatically share the new setlist in chat
-          sendMessage(undefined, undefined, undefined, undefined, id);
+          sendMessage(undefined, undefined, undefined, undefined, id, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, name);
         }} 
       />
       <NewRosterDialog 

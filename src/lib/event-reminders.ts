@@ -35,12 +35,14 @@ export function collectEventDayReminders(params: {
   for (const event of events) {
     if (!event.date) continue;
 
+    const isBirthday = event.category === EventCategory.Birthday;
+    // Birthdays must always use community timezone so every recipient matches the same day.
+    const effectiveTz = timeZone || 'Australia/Brisbane';
     let occurs = false;
     try {
-      occurs =
-        event.category === EventCategory.Birthday && timeZone
-          ? birthdayOccursOnCommunityDate(event, todayIso, timeZone)
-          : eventOccursOnDate(event, today);
+      occurs = isBirthday
+        ? birthdayOccursOnCommunityDate(event, todayIso, effectiveTz)
+        : eventOccursOnDate(event, today);
     } catch (error) {
       console.warn('[collectEventDayReminders] skipped event', event.id, error);
       continue;
@@ -48,7 +50,6 @@ export function collectEventDayReminders(params: {
 
     if (!occurs) continue;
 
-    const isBirthday = event.category === EventCategory.Birthday;
     const timeLabel = formatEventTime(event);
     const locationLabel = event.location ? ` at ${event.location}` : '';
     const message = isBirthday

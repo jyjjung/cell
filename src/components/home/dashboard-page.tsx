@@ -42,7 +42,6 @@ import { getUserCustomRosterLabels } from '@/lib/roster-access';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import CalendarWidget from '@/components/dashboard-widgets/calendar-widget';
 import AgendaView, { type AgendaItem } from '@/components/dashboard-widgets/agenda-view';
 import TodayQtWidget from '@/components/dashboard-widgets/today-qt-widget';
 import HomeInfoWidgets from '@/components/dashboard-widgets/home-info-widgets';
@@ -121,7 +120,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
   const [selectedEvent, setSelectedEvent] = useState<DashboardListItem | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
 
   const go = useCallback((path: string) => {
     setIsPageLoading(true);
@@ -526,36 +524,6 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           </div>
         </aside>
       </div>
-
-      {/* Calendar */}
-      <section>
-        <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            <div className="border-b border-border/50 p-4 lg:border-b-0 lg:border-r">
-              <CalendarWidget
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                events={upcomingOnlyEvents}
-                cleaningRoster={cleaningRoster}
-                qtRoster={qtRoster}
-              />
-            </div>
-            <div className="p-3">
-              <AgendaView
-                selectedDate={selectedDate}
-                events={upcomingOnlyEvents}
-                cleaningRoster={cleaningRoster}
-                qtRoster={qtRoster}
-                worshipRosters={worshipRosters}
-                customRosterEntries={customRosterEntries}
-                allUsers={allUsers}
-                cleaningDays={cleaningDays}
-                onItemClick={handleAgendaItemClick}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
 
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
         <DialogContent className="max-w-sm rounded-xl border-border/70 p-5">

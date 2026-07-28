@@ -99,7 +99,8 @@ export default function CleaningRosterPage() {
                         <>
                         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
                             {upcoming.length > 0 ? (
-                                <div className="stack-gap-sm">
+                                <div className="ui-card !p-0">
+                                  <div className="ui-list px-2">
                                     {upcoming.map((entry) => {
                                         const dayName = daysMap.get(entry.dayId) || t.unknownDay;
                                         const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
@@ -114,28 +115,28 @@ export default function CleaningRosterPage() {
                                                     label={t.cleaningRosterTitle}
                                                     title={dayName}
                                                     description={(
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <p className="text-micro-label">
-                                                                {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                            </p>
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            <span>{format(parseDay(entry.date), 'EEE')}</span>
                                                             {assignedUsers.map((user, uidx) => (
-                                                                <span key={user.uid} className="text-micro-label">
+                                                                <span key={user.uid}>
                                                                     {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
                                                                 </span>
                                                             ))}
                                                         </div>
                                                     )}
                                                     rightElement={
-                                                        <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                            <p className="text-micro-label text-primary whitespace-nowrap">
+                                                        <div className="bg-muted px-2 py-0.5 rounded-md border border-border">
+                                                            <p className="text-micro-label text-muted-foreground whitespace-nowrap">
                                                                 {statusLabel(entry, completer)}
                                                             </p>
                                                         </div>
                                                     }
+                                                    hideChevron
                                                 />
                                             </div>
                                         );
                                     })}
+                                  </div>
                                 </div>
                             ) : (
                                 <EmptyState 
@@ -148,7 +149,8 @@ export default function CleaningRosterPage() {
 
                         <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
                             {past.length > 0 ? (
-                                <div className="stack-gap-sm">
+                                <div className="ui-card !p-0">
+                                  <div className="ui-list px-2">
                                     {past.slice(0, 10).map((entry) => {
                                         const dayName = daysMap.get(entry.dayId) || t.unknownDay;
                                         const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
@@ -156,34 +158,35 @@ export default function CleaningRosterPage() {
                                         const currentIndex = globalIdx++;
 
                                         return (
-                                            <RosterFeedCard 
-                                                key={entry.id}
-                                                index={currentIndex}
-                                                date={parseDay(entry.date)}
-                                                label={t.cleaningRosterTitle}
-                                                title={dayName}
-                                                description={(
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="text-micro-label">
-                                                            {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                        </p>
-                                                        {assignedUsers.map((user, uidx) => (
-                                                            <span key={user.uid} className="text-micro-label">
-                                                                {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                rightElement={
-                                                    <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                        <p className="text-micro-label text-primary whitespace-nowrap">
-                                                            {statusLabel(entry, completer)}
-                                                        </p>
-                                                    </div>
-                                                }
-                                            />
+                                            <div key={entry.id}>
+                                                <RosterFeedCard 
+                                                    index={currentIndex}
+                                                    date={parseDay(entry.date)}
+                                                    label={t.cleaningRosterTitle}
+                                                    title={dayName}
+                                                    description={(
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            <span>{format(parseDay(entry.date), 'EEE')}</span>
+                                                            {assignedUsers.map((user, uidx) => (
+                                                                <span key={user.uid}>
+                                                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    rightElement={
+                                                        <div className="bg-muted px-2 py-0.5 rounded-md border border-border">
+                                                            <p className="text-micro-label text-muted-foreground whitespace-nowrap">
+                                                                {statusLabel(entry, completer)}
+                                                            </p>
+                                                        </div>
+                                                    }
+                                                    hideChevron
+                                                />
+                                            </div>
                                         );
                                     })}
+                                  </div>
                                 </div>
                             ) : (
                                 <EmptyState

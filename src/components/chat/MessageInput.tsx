@@ -53,6 +53,7 @@ type MessageActions = {
     sheetKey?: string,
     poll?: ChatPoll,
     docId?: string,
+    setlistName?: string,
   ) => void | Promise<void>;
   sendImageMessage: (imageUrl: string, replyToId?: string) => void;
 };
@@ -143,11 +144,13 @@ export default function MessageInput({
     const trimmedText = text.trim();
     if (stagedAttachment) {
       const args: [
-        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?, string?,
+        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?, string?, string?,
       ] = [trimmedText || undefined, undefined, replyToMessage?.id];
 
-      if (stagedAttachment.type === 'setlist') args[4] = stagedAttachment.id;
-      else if (stagedAttachment.type === 'roster') args[5] = stagedAttachment.id;
+      if (stagedAttachment.type === 'setlist') {
+        args[4] = stagedAttachment.id;
+        args[13] = stagedAttachment.label;
+      } else if (stagedAttachment.type === 'roster') args[5] = stagedAttachment.id;
       else if (stagedAttachment.type === 'song') {
         args[8] = stagedAttachment.id;
         const meta = stagedAttachment.metadata;

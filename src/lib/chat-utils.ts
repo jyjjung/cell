@@ -15,6 +15,7 @@ type MessagePreviewFields = Pick<
   | 'imageUrl'
   | 'eventId'
   | 'setlistId'
+  | 'setlistName'
   | 'rosterId'
   | 'qtDate'
   | 'cleaningDate'
@@ -38,7 +39,11 @@ export function formatChatMessagePreview(message: MessagePreviewFields): string 
 
   let preview = message.text?.trim() || '📷 Image';
   if (message.eventId) preview = '📅 Event';
-  if (message.setlistId) preview = '🎵 Setlist';
+  if (message.setlistId) {
+    preview = message.setlistName
+      ? `🎵 Setlist: ${message.setlistName}`
+      : '🎵 Setlist';
+  }
   if (message.rosterId) preview = '📋 Roster';
   if (message.qtDate) preview = '📖 QT Roster';
   if (message.cleaningDate) preview = '🧹 Cleaning Roster';

@@ -183,6 +183,11 @@ service cloud.firestore {
         || (
           request.auth != null
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        )
+        || (
+          request.auth != null
+          && resource.data.type == 'announcement'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
         );
       allow delete: if isAppAdmin(request.auth.uid);
     }
@@ -251,9 +256,15 @@ service cloud.firestore {
     match /docs/{docId} {
       function isDocMember() {
         return request.auth != null
-          && resource.data.keys().hasAny(['memberIds'])
-          && resource.data.memberIds is list
-          && resource.data.memberIds.hasAny([request.auth.uid]);
+          && (
+            (resource.data.keys().hasAny(['memberIds'])
+              && resource.data.memberIds is list
+              && resource.data.memberIds.hasAny([request.auth.uid]))
+            || resource.data.ownerId == request.auth.uid
+            || (resource.data.keys().hasAny(['sharedWith'])
+              && resource.data.sharedWith is list
+              && resource.data.sharedWith.hasAny([request.auth.uid]))
+          );
       }
 
       function isDocOwner() {

@@ -22,6 +22,7 @@ import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFCMToken } from '@/hooks/use-fcm-token';
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -64,7 +65,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useChatVisualViewportVars(lockChatShell);
 
+  const { requestPermission } = useFCMToken();
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
+  const [enablingNotifications, setEnablingNotifications] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const showReadingsTabs =
     pathname.startsWith('/bible-checklist') ||
@@ -217,13 +220,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   Later
                 </button>
                 <button
-                  onClick={() => {
-                    setShowPermissionBanner(false);
-                    router.push('/profile');
+                  onClick={async () => {
+                    setEnablingNotifications(true);
+                    try {
+                      const granted = await requestPermission();
+                      setShowPermissionBanner(false);
+                      if (granted) {
+                        localStorage.setItem('pushBannerDismissed', 'true');
+                      } else {
+                        router.push('/profile');
+                      }
+                    } finally {
+                      setEnablingNotifications(false);
+                    }
                   }}
-                  className="bg-primary px-4 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground active:scale-95 transition-all"
+                  disabled={enablingNotifications}
+                  className="bg-primary px-4 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground active:scale-95 transition-all disabled:opacity-60"
                 >
-                  Set Up
+                  {enablingNotifications ? '…' : 'Turn on'}
                 </button>
               </div>
             </motion.div>

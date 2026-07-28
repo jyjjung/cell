@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import type { QTRosterEntry } from '@/types';
 import { format } from 'date-fns';
 import {
-    BookOpen, Calendar,
+    BookOpen,
     ChevronRight
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -31,8 +31,8 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading QT Entry...
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
+        Loading…
       </div>
     );
   }
@@ -46,15 +46,20 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
     ? formatNameString(entry.personName, 'TBD')
     : formatUserDisplayName(user, 'TBD');
 
-  const formatDateText = (dateStr: string) => {
+  const getDayInfo = () => {
     try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return format(d, 'EEEE, MMM do');
+      const d = new Date(date);
+      if (isNaN(d.getTime())) throw new Error();
+      return {
+        dayOfWeek: format(d, 'EEE'),
+        dayOfMonth: format(d, 'd'),
+      };
     } catch {
-      return dateStr;
+      return { dayOfWeek: '???', dayOfMonth: '??' };
     }
   };
+
+  const { dayOfWeek, dayOfMonth } = getDayInfo();
 
   return (
     <div 
@@ -67,34 +72,29 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
           ? "border-primary/30 bg-primary/5 text-foreground" 
           : "border-border/60 bg-card text-foreground"
       )}>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+            <span className="text-micro-label">{dayOfWeek}</span>
+            <span className="text-2xl font-semibold leading-none text-foreground">{dayOfMonth}</span>
+          </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
-                    <BookOpen className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-micro-label">QT roster</span>
+            <div className="mb-1 flex items-center gap-2">
+              <BookOpen className="h-3 w-3 text-primary" />
+              <span className="text-micro-label">QT roster</span>
             </div>
             <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{entry.passage}</h3>
-            <p className="text-micro-label">{formatDateText(date)}</p>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
-             <Calendar className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
-            <Avatar className="h-8 w-8 shrink-0 border border-border/60 overflow-hidden">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Avatar className="h-5 w-5 shrink-0 border border-border/60 overflow-hidden">
                 <PixelAvatar
                   avatar={user?.avatar}
                   className="w-full h-full"
                   nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
                 />
-            </Avatar>
-            <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{name}</p>
-                <p className="truncate text-micro-label">Reader</p>
+              </Avatar>
+              <span className="truncate">{name}</span>
             </div>
+          </div>
         </div>
 
         <div className="mt-1 flex items-center justify-between">

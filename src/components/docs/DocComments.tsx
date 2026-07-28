@@ -11,6 +11,7 @@ import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/fo
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { translations } from '@/lib/translations';
 import { DOC_COMMENT_MAX } from '@/lib/docs-utils';
+import { useToast } from '@/hooks/use-toast';
 
 type DocCommentsProps = {
   docId: string;
@@ -22,6 +23,7 @@ export function DocComments({ docId, ownerId }: DocCommentsProps) {
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const locale = getAppLocale(currentUser?.preferredLanguage);
   const usersById = useUsersById();
+  const { toast } = useToast();
   const { comments, loading, addComment, deleteComment } = useDocComments(docId, true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -34,6 +36,13 @@ export function DocComments({ docId, ownerId }: DocCommentsProps) {
     try {
       await addComment(currentUser.uid, text);
       setText('');
+    } catch (error: unknown) {
+      console.error('[DocComments] failed to post comment:', error);
+      toast({
+        title: t.error,
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      });
     } finally {
       setSending(false);
     }

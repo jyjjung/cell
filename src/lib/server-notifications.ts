@@ -83,13 +83,26 @@ export async function sendUserNotification(
   };
 
   await notifRef.set(notification);
-  const result = await deliverPushWithLock(notifRef.id, adminDb, adminMessaging);
+  try {
+    const result = await deliverPushWithLock(notifRef.id, adminDb, adminMessaging);
 
-  if (dedupeId) {
-    await adminDb.collection(dedupeCollection).doc(dedupeId).update({
-      notificationId: notifRef.id,
-      pushDeliveredCount: result.delivered,
-    }).catch(() => {});
+    if (dedupeId) {
+      await adminDb.collection(dedupeCollection).doc(dedupeId).update({
+        notificationId: notifRef.id,
+        pushDeliveredCount: result.delivered,
+      }).catch(() => {});
+    }
+  } catch (error) {
+    // In-app notification is already saved — never abort remaining recipients
+    // because one device's FCM delivery failed.
+    console.error('[sendUserNotification] push delivery failed:', error);
+    if (dedupeId) {
+      await adminDb.collection(dedupeCollection).doc(dedupeId).update({
+        notificationId: notifRef.id,
+        pushDeliveredCount: 0,
+        pushError: error instanceof Error ? error.message : 'push_failed',
+      }).catch(() => {});
+    }
   }
 
   return 'sent';

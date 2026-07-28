@@ -4,6 +4,10 @@
 import { useAuth } from '@/contexts/auth-context';
 import { BIBLE_BOOKS_DATA, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
 import { syncCommunityProgress } from '@/lib/community-progress';
+import {
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 import { db } from '@/lib/firebase';
 import { makePassageKey } from '@/lib/passage-keys';
 import type { UserBibleChecklist } from '@/types';
@@ -15,6 +19,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBiblePlan } from './use-bible-plan';
 
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
+
+function checklistCacheKey(uid: string) {
+  return `bible_checklist_${uid}`;
+}
 
 interface ScripturePoint {
   bookFullName: string;
@@ -48,61 +56,90 @@ function comparePoints(p1: ScripturePoint, p2: ScripturePoint): number {
 
 
 export function useUserBibleChecklist() {
-  const { currentUser } = useAuth();
-  const [completedPassages, setCompletedPassages] = useState<string[]>([]); 
-  const [loadingChecklist, setLoadingChecklist] = useState(true);
+  const { currentUser, loadingAuth } = useAuth();
+  const uid = currentUser?.uid;
+  const seeded = uid
+    ? readLocalCollectionCacheStale<string[]>(checklistCacheKey(uid))
+    : null;
+  const [completedPassages, setCompletedPassages] = useState<string[]>(() => seeded ?? []); 
+  const [loadingChecklist, setLoadingChecklist] = useState(() => !seeded);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
   const { plan: currentGlobalPlan } = useBiblePlan(); 
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleCommunityProgressSync = useCallback((passages: string[]) => {
-    if (!currentUser?.uid) return;
+    if (!uid) return;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
-      void syncCommunityProgress(currentUser.uid, passages).catch((e) => {
+      void syncCommunityProgress(uid, passages).catch((e) => {
         console.error('[BibleChecklist] communityProgress sync failed:', e);
       });
     }, 800);
-  }, [currentUser?.uid]);
+  }, [uid]);
 
   useEffect(() => {
-    if (!currentUser?.uid) {
+    if (loadingAuth) return;
+
+    if (!uid) {
       setCompletedPassages([]);
       setLoadingChecklist(false);
       setChecklistDocExists(false);
       return;
     }
 
-    setLoadingChecklist(true);
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
-
-    const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        const data = docSnapshot.data() as UserBibleChecklist;
-        const passages = data.completedPassages || [];
-        setCompletedPassages(passages);
-        setChecklistDocExists(true);
-        scheduleCommunityProgressSync(passages);
-      } else {
-        setCompletedPassages([]);
-        setChecklistDocExists(false);
-        // Do not sync empty progress — that would wipe communityProgress for users
-        // who only had leaderboard data or haven't created a checklist yet.
-      }
+    const cached = readLocalCollectionCacheStale<string[]>(checklistCacheKey(uid));
+    if (cached) {
+      setCompletedPassages(cached);
       setLoadingChecklist(false);
-    }, (error) => {
-      console.error("Error fetching user Bible checklist:", error);
-      setCompletedPassages([]);
-      setLoadingChecklist(false);
-      setChecklistDocExists(false);
-    });
+    } else {
+      setLoadingChecklist(true);
+    }
 
-    return () => unsubscribe();
-  }, [currentUser?.uid, scheduleCommunityProgressSync]);
+    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, uid);
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const attach = () => {
+      unsubscribe?.();
+      unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
+        if (cancelled) return;
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data() as UserBibleChecklist;
+          const passages = data.completedPassages || [];
+          setCompletedPassages(passages);
+          setChecklistDocExists(true);
+          writeLocalCollectionCache(checklistCacheKey(uid), passages);
+          scheduleCommunityProgressSync(passages);
+        } else {
+          setCompletedPassages([]);
+          setChecklistDocExists(false);
+          writeLocalCollectionCache(checklistCacheKey(uid), []);
+        }
+        setLoadingChecklist(false);
+      }, (error) => {
+        console.error("Error fetching user Bible checklist:", error);
+        // Keep cached passages on transient permission races; retry shortly.
+        setLoadingChecklist(false);
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => {
+          if (!cancelled) attach();
+        }, 1500);
+      });
+    };
+
+    attach();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [uid, loadingAuth, scheduleCommunityProgressSync]);
 
   const updateChecklistDocument = useCallback((updatePayload: Record<string, unknown>) => {
-    if (!currentUser?.uid) throw new Error("User not logged in.");
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
+    if (!uid) throw new Error("User not logged in.");
+    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, uid);
     
     const dataToSet: Partial<UserBibleChecklist> & { updatedAt: Timestamp } = {
       ...updatePayload,
@@ -111,28 +148,33 @@ export function useUserBibleChecklist() {
 
     if (!checklistDocExists && updatePayload.completedPassages) {
       setDoc(checklistDocRef, {
-        userId: currentUser.uid,
+        userId: uid,
         ...dataToSet
       }).catch(e => console.error("Error initializing checklist:", e));
     } else {
       setDoc(checklistDocRef, dataToSet, { merge: true }).catch(e => console.error("Error updating checklist:", e));
     }
-  }, [currentUser?.uid, checklistDocExists]);
+  }, [uid, checklistDocExists]);
 
   const togglePassageCompletion = useCallback(async (passageDisplayText: string, date?: string) => {
-    if (!currentUser?.uid || !passageDisplayText) {
+    if (!uid || !passageDisplayText) {
       throw new Error("User not logged in or invalid passage data.");
     }
 
     if (!date) throw new Error('A reading date is required.');
     const key = makePassageKey(date, passageDisplayText);
     const isCompleted = completedPassages.includes(key);
+    const next = isCompleted
+      ? completedPassages.filter((p) => p !== key)
+      : [...completedPassages, key];
+    setCompletedPassages(next);
+    writeLocalCollectionCache(checklistCacheKey(uid), next);
     const updatePayload = {
       completedPassages: isCompleted ? arrayRemove(key) : arrayUnion(key)
     };
     updateChecklistDocument(updatePayload);
 
-  }, [currentUser?.uid, completedPassages, updateChecklistDocument]);
+  }, [uid, completedPassages, updateChecklistDocument]);
 
 
   /**
@@ -140,21 +182,28 @@ export function useUserBibleChecklist() {
    * Pass date-scoped keys produced by makePassageKey.
    */
   const markMultiplePassages = useCallback(async (passageKeys: string[], markAsComplete: boolean) => {
-    if (!currentUser?.uid || passageKeys.length === 0) {
+    if (!uid || passageKeys.length === 0) {
         throw new Error("User not logged in or no passages to update.");
     }
+
+    const keySet = new Set(passageKeys);
+    const next = markAsComplete
+      ? Array.from(new Set([...completedPassages, ...passageKeys]))
+      : completedPassages.filter((p) => !keySet.has(p));
+    setCompletedPassages(next);
+    writeLocalCollectionCache(checklistCacheKey(uid), next);
 
     const updatePayload = {
       completedPassages: markAsComplete ? arrayUnion(...passageKeys) : arrayRemove(...passageKeys)
     };
     updateChecklistDocument(updatePayload);
-  }, [currentUser?.uid, updateChecklistDocument]);
+  }, [uid, completedPassages, updateChecklistDocument]);
 
   const markReadRange = useCallback(async (
     fromBook: string, fromChapter: number, fromVerse?: number,
     toBook?: string, toChapter?: number, toVerse?: number
   ) => {
-    if (!currentUser?.uid) throw new Error("User not logged in.");
+    if (!uid) throw new Error("User not logged in.");
     if (!currentGlobalPlan?.dailyReadings) throw new Error("Bible plan not loaded.");
     
     let effectiveToBook = toBook || fromBook;
@@ -210,10 +259,13 @@ export function useUserBibleChecklist() {
         return { markedCount: 0 };
     }
 
+    const next = Array.from(new Set([...completedPassages, ...passagesToComplete]));
+    setCompletedPassages(next);
+    writeLocalCollectionCache(checklistCacheKey(uid), next);
     updateChecklistDocument({ completedPassages: arrayUnion(...passagesToComplete) });
     return { markedCount: passagesToComplete.length };
 
-  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, completedPassages, updateChecklistDocument]);
+  }, [uid, currentGlobalPlan?.dailyReadings, completedPassages, updateChecklistDocument]);
 
 
   return {

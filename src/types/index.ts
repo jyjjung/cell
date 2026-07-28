@@ -298,6 +298,8 @@ export interface AppNotification {
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
   pushSentAt?: Timestamp | null;
+  /** Emoji → user ids who reacted (announcements). */
+  reactions?: { [emoji: string]: string[] };
 }
 
 export interface PrayerRequest {
@@ -385,6 +387,8 @@ export interface ChatMessage {
   latestReplyImageUrl?: string;
   eventId?: string;
   setlistId?: string;
+  /** Display name captured when the setlist was shared (for previews/pushes). */
+  setlistName?: string;
   rosterId?: string;
   qtDate?: string;
   cleaningDate?: string;

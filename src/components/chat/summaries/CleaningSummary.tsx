@@ -3,6 +3,8 @@
 import React from 'react';
 import { 
   ListTodo,
+  ChevronRight,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
@@ -14,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
+import { formatUserDisplayName } from '@/lib/formatting';
 
 interface CleaningSummaryProps {
   date: string;
@@ -33,8 +36,8 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
 
   if (entryLoading) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading Roster...
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
+        Loading…
       </div>
     );
   }
@@ -45,8 +48,8 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
 
   if (dayLoading) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading Roster...
+      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
+        Loading…
       </div>
     );
   }
@@ -55,15 +58,24 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
     .map((uid) => usersById.get(uid))
     .filter(Boolean);
 
-  const formatDateText = (dateStr: string) => {
+  const getDayInfo = () => {
     try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return format(d, 'EEEE, MMM do');
+      const d = new Date(date);
+      if (isNaN(d.getTime())) throw new Error();
+      return {
+        dayOfWeek: format(d, 'EEE'),
+        dayOfMonth: format(d, 'd'),
+      };
     } catch {
-      return dateStr;
+      return { dayOfWeek: '???', dayOfMonth: '??' };
     }
   };
+
+  const { dayOfWeek, dayOfMonth } = getDayInfo();
+  const names = assignedUsers
+    .map((user) => formatUserDisplayName(user))
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <div 
@@ -76,38 +88,48 @@ export default function CleaningSummary({ date, isSender }: CleaningSummaryProps
           ? "border-primary/30 bg-primary/5 text-foreground" 
           : "border-border/60 bg-card text-foreground"
       )}>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+            <span className="text-micro-label">{dayOfWeek}</span>
+            <span className="text-2xl font-semibold leading-none text-foreground">{dayOfMonth}</span>
+          </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
-                    <ListTodo className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-micro-label">Cleaning roster</span>
+            <div className="mb-1 flex items-center gap-2">
+              <ListTodo className="h-3 w-3 text-primary" />
+              <span className="text-micro-label">Cleaning roster</span>
             </div>
-            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{day?.name || 'Cleaning'}</h3>
-            <p className="text-micro-label">{formatDateText(date)}</p>
+            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">
+              {day?.name || 'Cleaning'}
+            </h3>
+            <div className="flex flex-col gap-1.5 text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <Users className="w-3.5 h-3.5" />
+                <span className="truncate">{names || 'No one assigned'}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex -space-x-3 mt-2">
+        {assignedUsers.length > 0 && (
+          <div className="flex -space-x-3">
             {assignedUsers.map((user, i) => (
-                <div key={user?.uid ?? i} className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-background">
-                    <PixelAvatar
-                      avatar={user?.avatar}
-                      className="w-full h-full"
-                      nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
-                    />
-                </div>
+              <div key={user?.uid ?? i} className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-background">
+                <PixelAvatar
+                  avatar={user?.avatar}
+                  className="w-full h-full"
+                  nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
+                />
+              </div>
             ))}
-            {assignedUsers.length === 0 && (
-                <div className="rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-2 text-micro-label text-muted-foreground">No one assigned</div>
-            )}
-        </div>
+          </div>
+        )}
 
         <div className="mt-1 flex items-center justify-between">
           <span className="text-micro-label transition-colors group-hover:text-foreground">
             View schedule
           </span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
         </div>
       </div>
     </div>

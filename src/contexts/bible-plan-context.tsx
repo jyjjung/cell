@@ -5,9 +5,14 @@ import type { BibleReadingPlan, DailyReading, StructuredPassage } from '@/types'
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import {
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 
 const BIBLE_PLAN_COLLECTION = 'config';
 const BIBLE_PLAN_DOC_ID = 'biblePlan';
+const BIBLE_PLAN_CACHE_KEY = 'bible_plan_v1';
 
 type BiblePlanContextValue = {
   plan: BibleReadingPlan | null;
@@ -75,30 +80,68 @@ function formatPlanFromSnapshot(docSnapshot: { id: string; data: () => Record<st
   };
 }
 
+function serializePlanForCache(plan: BibleReadingPlan): Record<string, unknown> {
+  return {
+    ...plan,
+    updatedAt: plan.updatedAt?.toMillis?.() ?? null,
+  };
+}
+
+function planFromCache(raw: Record<string, unknown> | null): BibleReadingPlan | null {
+  if (!raw || !Array.isArray(raw.dailyReadings)) return null;
+  return {
+    ...(raw as unknown as BibleReadingPlan),
+    updatedAt: undefined as unknown as Timestamp,
+  };
+}
+
 export function BiblePlanProvider({ children }: { children: ReactNode }) {
-  const [plan, setPlan] = useState<BibleReadingPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const seeded = planFromCache(
+    readLocalCollectionCacheStale<Record<string, unknown>>(BIBLE_PLAN_CACHE_KEY),
+  );
+  const [plan, setPlan] = useState<BibleReadingPlan | null>(seeded);
+  const [loading, setLoading] = useState(!seeded);
 
   useEffect(() => {
     const planDocRef = doc(db, BIBLE_PLAN_COLLECTION, BIBLE_PLAN_DOC_ID);
-    const unsubscribe = onSnapshot(
-      planDocRef,
-      (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          setPlan(formatPlanFromSnapshot(docSnapshot));
-        } else {
-          setPlan(null);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('[BiblePlanProvider] Firestore onSnapshot error:', error);
-        setPlan(null);
-        setLoading(false);
-      },
-    );
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
 
-    return () => unsubscribe();
+    const attach = () => {
+      unsubscribe?.();
+      unsubscribe = onSnapshot(
+        planDocRef,
+        (docSnapshot) => {
+          if (cancelled) return;
+          if (docSnapshot.exists()) {
+            const next = formatPlanFromSnapshot(docSnapshot);
+            setPlan(next);
+            writeLocalCollectionCache(BIBLE_PLAN_CACHE_KEY, serializePlanForCache(next));
+          } else {
+            setPlan(null);
+          }
+          setLoading(false);
+        },
+        (error) => {
+          console.error('[BiblePlanProvider] Firestore onSnapshot error:', error);
+          // Keep cached plan on transient errors; retry shortly for new-device sign-in races.
+          setLoading(false);
+          if (retryTimer) clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) attach();
+          }, 1500);
+        },
+      );
+    };
+
+    attach();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   const saveBiblePlan = async (newPlanData: Omit<BibleReadingPlan, 'id' | 'updatedAt'>) => {

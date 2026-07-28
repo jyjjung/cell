@@ -56,6 +56,21 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.136",
+    subtitle: "Chat, rosters, bible & notifications polish",
+    date: "July 28, 2026",
+    changes: [
+      "Cleaning, QT, and custom roster lists now use the same compact date-row formatting as events",
+      "Chat roster cards match the event card layout; deleted documents show as an inline notice like deleted setlists",
+      "Prayer requests page padding matches other pages; notifications prompt is opaque; calendar widget removed from the dashboard",
+      "Bible plan and reading progress load from local cache and retry after sign-in so new devices don’t need a refresh",
+      "Chat shows a spinner while loading older messages and a jump-to-latest button; photos tabs read the device cache and load faster",
+      "Setlist change and share notifications include the setlist name; birthday reminders no longer stop mid-list if one push fails",
+      "Announcements can be reacted to; document comments work for shared owners/members even when memberIds were stale",
+      "Turn on notifications banner requests permission directly instead of only opening Profile",
+    ],
+  },
+  {
     version: "v1.3.135",
     subtitle: "More consistent notifications",
     date: "July 23, 2026",

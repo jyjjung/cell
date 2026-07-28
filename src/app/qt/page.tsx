@@ -104,7 +104,8 @@ export default function QTRosterPage() {
                                 upcomingByMonth.map(([month, entries]) => (
                                     <div key={`upcoming-${month}`} className="stack-gap-sm">
                                         <p className="text-micro-label px-1">{month}</p>
-                                        <div className="stack-gap-sm">
+                                        <div className="ui-card !p-0">
+                                          <div className="ui-list px-2">
                                             {entries.map((entry) => {
                                                 const user = entry.userId ? usersMap.get(entry.userId) : undefined;
                                                 const displayName = entry.personName
@@ -121,29 +122,29 @@ export default function QTRosterPage() {
                                                             label={t.qtTitle}
                                                             title={displayName}
                                                             description={(
-                                                                <div className="flex items-center gap-2 flex-wrap">
-                                                                    <p className="text-micro-label">
-                                                                        {format(entryDate, 'EEEE, MMMM do, yyyy')}
-                                                                    </p>
+                                                                <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                                                                    <span>{format(entryDate, 'EEE')}</span>
                                                                     {entry.title && (
                                                                         <LinkifiedText
                                                                             text={entry.title}
-                                                                            className="block text-micro-label leading-relaxed"
+                                                                            className="block leading-relaxed"
                                                                         />
                                                                     )}
                                                                 </div>
                                                             )}
                                                             rightElement={(
-                                                                <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                                    <p className="text-micro-label text-primary font-mono whitespace-nowrap">
+                                                                <div className="bg-muted px-2 py-0.5 rounded-md border border-border">
+                                                                    <p className="text-micro-label text-muted-foreground font-mono whitespace-nowrap">
                                                                         {entry.passage || '—'}
                                                                     </p>
                                                                 </div>
                                                             )}
+                                                            hideChevron
                                                         />
                                                     </div>
                                                 );
                                             })}
+                                          </div>
                                         </div>
                                     </div>
                                 ))
@@ -159,7 +160,8 @@ export default function QTRosterPage() {
                                 pastByMonth.map(([month, entries]) => (
                                     <div key={`past-${month}`} className="stack-gap-sm">
                                         <p className="text-micro-label px-1">{month}</p>
-                                        <div className="stack-gap-sm">
+                                        <div className="ui-card !p-0">
+                                          <div className="ui-list px-2">
                                             {entries.map((entry) => {
                                                 const user = entry.userId ? usersMap.get(entry.userId) : undefined;
                                                 const displayName = entry.personName
@@ -176,20 +178,20 @@ export default function QTRosterPage() {
                                                         label={t.qtTitle}
                                                         title={displayName}
                                                         description={
-                                                            <p className="text-micro-label">
-                                                                {format(entryDate, 'EEEE, MMMM do, yyyy')}
-                                                            </p>
+                                                            <span>{format(entryDate, 'EEE')}</span>
                                                         }
                                                         rightElement={
-                                                            <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                                <p className="text-micro-label text-primary font-mono whitespace-nowrap">
+                                                            <div className="bg-muted px-2 py-0.5 rounded-md border border-border">
+                                                                <p className="text-micro-label text-muted-foreground font-mono whitespace-nowrap">
                                                                     {entry.passage || '—'}
                                                                 </p>
                                                             </div>
                                                         }
+                                                        hideChevron
                                                     />
                                                 );
                                             })}
+                                          </div>
                                         </div>
                                     </div>
                                 ))

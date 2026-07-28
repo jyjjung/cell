@@ -244,7 +244,7 @@ export default function CustomRosterDetailPage() {
           label={definition.name}
           title={title}
           description={
-            <p className="text-micro-label line-clamp-4">{summary || format(entryDate, "EEEE, MMMM do, yyyy")}</p>
+            <p className="line-clamp-4">{summary || format(entryDate, "EEE")}</p>
           }
           rightElement={
             canEdit ? (
@@ -259,6 +259,7 @@ export default function CustomRosterDetailPage() {
               </Button>
             ) : undefined
           }
+          hideChevron={!canEdit}
         />
       </div>
     );
@@ -267,7 +268,9 @@ export default function CustomRosterDetailPage() {
   const renderMonthGroup = (month: string, entries: CustomRosterEntry[], faded = false) => (
     <div key={month} className="stack-gap-sm">
       <p className="text-micro-label px-1">{month}</p>
-      <div className="stack-gap-sm">{entries.map((entry) => renderEntry(entry, faded))}</div>
+      <div className="ui-card !p-0">
+        <div className="ui-list px-2">{entries.map((entry) => renderEntry(entry, faded))}</div>
+      </div>
     </div>
   );
 

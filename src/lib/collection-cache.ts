@@ -58,9 +58,12 @@ export function readNonEmptyCollectionCache<T extends unknown[]>(
 const SHARED_DIRECTORY_CACHE_KEYS = [
   'users_directory_v1',
   'users_directory_v2',
+  'users_directory_v3',
+  'events_directory_v1',
   'community_progress_v2',
   'community_progress_v3',
   'custom_roster_entries_v1',
+  'bible_plan_v1',
 ] as const;
 
 export function clearSharedDirectoryCaches(): void {
@@ -71,5 +74,16 @@ export function clearSharedDirectoryCaches(): void {
     } catch {
       /* private mode */
     }
+  }
+  // Clear per-user bible checklist caches
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('bible_checklist_')) keysToRemove.push(key);
+    }
+    for (const key of keysToRemove) localStorage.removeItem(key);
+  } catch {
+    /* private mode */
   }
 }

@@ -26,7 +26,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
     const data = docSnap.data()!;
     const memberIds = Array.isArray(data.memberIds) ? data.memberIds : [];
-    if (!memberIds.includes(uid)) {
+    const sharedWith = Array.isArray(data.sharedWith) ? data.sharedWith : [];
+    const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+    const allowed =
+      memberIds.includes(uid) ||
+      uid === ownerId ||
+      sharedWith.includes(uid);
+    if (!allowed) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
