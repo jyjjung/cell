@@ -72,7 +72,6 @@ export default function MessageInput({
   parentMessageId,
   messageActions,
   attachmentsOnlyPhoto = false,
-  chatMembers = [],
 }: {
   chatId: string;
   disabled?: boolean;
@@ -81,7 +80,6 @@ export default function MessageInput({
   parentMessageId?: string;
   messageActions?: MessageActions;
   attachmentsOnlyPhoto?: boolean;
-  chatMembers?: string[];
 }) {
   const useOwnHooks = !messageActions;
   const mainChat = useMessages(!parentMessageId && useOwnHooks ? chatId : null);
@@ -171,7 +169,7 @@ export default function MessageInput({
     try {
       const docId = await createSharedDocForChat({
         ownerId: currentUser.uid,
-        chatMemberIds: chatMembers,
+        chatId,
         title: '',
         content: plainTextToDocHtml(rawText),
       });
@@ -325,7 +323,7 @@ export default function MessageInput({
           docId,
           note,
           actorId: currentUser.uid,
-          chatMemberIds: chatMembers,
+          chatId,
         });
       }
 
@@ -351,7 +349,7 @@ export default function MessageInput({
     try {
       const docId = await createSharedDocForChat({
         ownerId: currentUser.uid,
-        chatMemberIds: chatMembers,
+        chatId,
         title: '',
         content: '<p></p>',
       });

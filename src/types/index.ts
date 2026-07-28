@@ -574,6 +574,8 @@ export interface DocNote {
   authorIds: string[];
   sharedWith: string[];
   memberIds: string[];
+  /** Chats this doc was shared into (used to sync ACL when members join). */
+  sourceChatIds?: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
   updatedBy: string;

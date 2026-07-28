@@ -36,6 +36,7 @@ function noteFromSnapshot(snapshot: DocumentSnapshot): DocNote {
       : [data.ownerId as string],
     sharedWith: Array.isArray(data.sharedWith) ? (data.sharedWith as string[]) : [],
     memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
+    sourceChatIds: Array.isArray(data.sourceChatIds) ? (data.sourceChatIds as string[]) : [],
     createdAt: data.createdAt as DocNote['createdAt'],
     updatedAt: data.updatedAt as DocNote['updatedAt'],
     updatedBy: (data.updatedBy as string) || '',

@@ -8,6 +8,11 @@ import {
   mergeAuthorIds,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
+import { applyChatMembersToDocAcl } from '@/lib/docs-chat-share';
+import {
+  docAclFromData,
+  requireChatMembership,
+} from '@/lib/server-docs-chat-share';
 import type { DocVisibility } from '@/types';
 
 async function requireUid(request: NextRequest): Promise<string> {
@@ -93,7 +98,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       updates.authorIds = mergeAuthorIds(existingAuthors, uid);
     }
 
-    if (body.visibility != null || body.sharedWith != null) {
+    const shareWithChatId =
+      typeof body.shareWithChatId === 'string' ? body.shareWithChatId.trim() : '';
+
+    // Any current doc member can expand ACL to a chat they belong to.
+    // This is how docs shared in group chat become visible under Docs for everyone.
+    if (shareWithChatId) {
+      const chatMembers = await requireChatMembership(adminDb, shareWithChatId, uid);
+      const next = applyChatMembersToDocAcl(docAclFromData(data), chatMembers, shareWithChatId);
+      updates.visibility = next.visibility;
+      updates.sharedWith = next.sharedWith;
+      updates.memberIds = next.memberIds;
+      updates.sourceChatIds = next.sourceChatIds;
+      const existingAuthors = Array.isArray(data.authorIds)
+        ? (data.authorIds as string[])
+        : [data.ownerId as string];
+      updates.authorIds = mergeAuthorIds(existingAuthors, uid);
+    } else if (body.visibility != null || body.sharedWith != null) {
       if (!isOwner) {
         return NextResponse.json({ error: 'Only the owner can change sharing' }, { status: 403 });
       }
@@ -121,7 +142,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       ? Number((error as { status: number }).status)
       : 500;
     const message = error instanceof Error ? error.message : 'Failed to update document';
-    return NextResponse.json({ error: message }, { status: status === 401 ? 401 : 500 });
+    const safeStatus = status === 401 || status === 403 || status === 404 ? status : 500;
+    return NextResponse.json({ error: message }, { status: status === 401 ? 401 : safeStatus });
   }
 }
 

@@ -6,6 +6,8 @@ import {
   DOC_TITLE_MAX,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
+import { applyChatMembersToDocAcl, mergeSourceChatIds } from '@/lib/docs-chat-share';
+import { requireChatMembership } from '@/lib/server-docs-chat-share';
 import type { DocVisibility } from '@/types';
 
 async function requireUid(request: NextRequest): Promise<string> {
@@ -52,10 +54,34 @@ export async function POST(request: NextRequest) {
   try {
     const uid = await requireUid(request);
     const body = await request.json();
-    const visibility = (body.visibility === 'shared' ? 'shared' : 'private') as DocVisibility;
     const title = String(body.title ?? '').trim().slice(0, DOC_TITLE_MAX);
     const content = typeof body.content === 'string' ? body.content : '<p></p>';
-    const sharedInput = Array.isArray(body.sharedWith) ? body.sharedWith.map(String) : [];
+    const chatId = typeof body.chatId === 'string' ? body.chatId.trim() : '';
+
+    let visibility = (body.visibility === 'shared' ? 'shared' : 'private') as DocVisibility;
+    let sharedInput = Array.isArray(body.sharedWith) ? body.sharedWith.map(String) : [];
+    let sourceChatIds: string[] = [];
+
+    const adminDb = getAdminDb(getAdminApp());
+
+    // Prefer server-resolved chat membership over client-supplied member lists.
+    if (chatId) {
+      const chatMembers = await requireChatMembership(adminDb, chatId, uid);
+      const acl = applyChatMembersToDocAcl(
+        {
+          ownerId: uid,
+          sharedWith: [],
+          memberIds: [uid],
+          visibility: 'private',
+        },
+        chatMembers,
+        chatId,
+      );
+      visibility = acl.visibility;
+      sharedInput = acl.sharedWith;
+      sourceChatIds = acl.sourceChatIds || [chatId];
+    }
+
     const sharedWith = normalizeSharedWith(visibility, sharedInput, uid);
 
     if (visibility === 'shared' && sharedWith.length === 0) {
@@ -63,8 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const memberIds = buildMemberIds(uid, sharedWith);
-    const adminDb = getAdminDb(getAdminApp());
-    const ref = await adminDb.collection('docs').add({
+    const payload: Record<string, unknown> = {
       title,
       content,
       visibility,
@@ -75,7 +100,12 @@ export async function POST(request: NextRequest) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: uid,
-    });
+    };
+    if (sourceChatIds.length > 0) {
+      payload.sourceChatIds = mergeSourceChatIds(sourceChatIds, chatId);
+    }
+
+    const ref = await adminDb.collection('docs').add(payload);
 
     return NextResponse.json({ id: ref.id });
   } catch (error: unknown) {
@@ -83,6 +113,7 @@ export async function POST(request: NextRequest) {
       ? Number((error as { status: number }).status)
       : 500;
     const message = error instanceof Error ? error.message : 'Failed to create document';
-    return NextResponse.json({ error: message }, { status: status === 401 ? 401 : 500 });
+    const safeStatus = status === 401 || status === 403 || status === 404 ? status : 500;
+    return NextResponse.json({ error: message }, { status: status === 401 ? 401 : safeStatus });
   }
 }
