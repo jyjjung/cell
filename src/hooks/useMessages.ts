@@ -21,7 +21,7 @@ import {
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { getDeletedMessageContentType } from '@/lib/deleted-content';
-import { primeMediaUrls } from '@/lib/media-cache';
+import { primeChatPreviewMedia } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
   chatMessagesCollection,
@@ -59,6 +59,7 @@ export function useMessages(chatId: string | null) {
     toastRef.current = toast;
   }, [toast]);
   const loadingOlderRef = useRef(false);
+  const olderExhaustedRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
 
   useEffect(() => {
@@ -70,9 +71,12 @@ export function useMessages(chatId: string | null) {
     setMessages((prev) =>
       mergeMessageListsStable(latestWindow, prev, prev, { retainOnlyOlderSecondary: true }),
     );
-    setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
+    // Don't revive pagination after older history was already exhausted.
+    if (!olderExhaustedRef.current) {
+      setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
+    }
     setLoading(false);
-    primeMediaUrls(latestWindow.map((m) => m.imageUrl));
+    primeChatPreviewMedia(latestWindow);
   }, []);
 
   useEffect(() => {
@@ -113,30 +117,20 @@ export function useMessages(chatId: string | null) {
     setLoading(true);
     setMessages([]);
     setHasMoreOlder(false);
+    olderExhaustedRef.current = false;
     const aborted = { value: false };
 
     const messagesCol = chatMessagesCollection(chatId);
 
+    // Instant paint from IndexedDB; live listener syncs the latest window (no duplicate getDocs).
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
       if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
-      setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
-      setLoading(false);
-      primeMediaUrls(cached.map((m) => m.imageUrl));
-    });
-
-    void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
-      if (aborted.value) return;
-      if (latest.length === 0) {
-        setLoading(false);
-        return;
+      if (!olderExhaustedRef.current) {
+        setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
       }
-      setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
-      setHasMoreOlder(hasMore);
       setLoading(false);
-      primeMediaUrls(latest.map((m) => m.imageUrl));
-    }).catch((error) => {
-      console.error('[useMessages] Initial messages fetch failed:', error);
+      primeChatPreviewMedia(cached);
     });
 
     const messagesQuery = query(
@@ -156,9 +150,9 @@ export function useMessages(chatId: string | null) {
           if (aborted.value) return;
           if (latest.length > 0) {
             setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
-            setHasMoreOlder(hasMore);
+            if (!olderExhaustedRef.current) setHasMoreOlder(hasMore);
             setLoading(false);
-            primeMediaUrls(latest.map((m) => m.imageUrl));
+            primeChatPreviewMedia(latest);
             return;
           }
           setLoading(false);
@@ -199,10 +193,11 @@ export function useMessages(chatId: string | null) {
         chatMessagesCollection(chatId),
         oldest.id,
       );
+      if (!hasMore) olderExhaustedRef.current = true;
       setHasMoreOlder(hasMore);
       if (older.length > 0) {
         setMessages((prev) => mergeMessageListsStable(prev, older, prev));
-        primeMediaUrls(older.map((m) => m.imageUrl));
+        primeChatPreviewMedia(older);
       }
     } catch (error) {
       console.error('[useMessages] Failed to load older messages:', error);
@@ -226,6 +221,7 @@ export function useMessages(chatId: string | null) {
     sheetKey?: string,
     poll?: ChatPoll,
     docId?: string,
+    imageThumbUrl?: string,
   ) => {
     if (!currentUser || !chatId) return;
     if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId && !poll && !docId) return;
@@ -239,6 +235,7 @@ export function useMessages(chatId: string | null) {
 
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
+    if (imageThumbUrl) messageData.imageThumbUrl = imageThumbUrl;
     if (replyToId) messageData.replyToId = replyToId;
     if (eventId) messageData.eventId = eventId;
     if (setlistId) {
@@ -325,8 +322,23 @@ export function useMessages(chatId: string | null) {
 
   }, [currentUser, chatId]);
 
-  const sendImageMessage = useCallback((imageUrl: string, replyToId?: string) => {
-    sendMessage(undefined, imageUrl, replyToId);
+  const sendImageMessage = useCallback((imageUrl: string, replyToId?: string, imageThumbUrl?: string) => {
+    sendMessage(
+      undefined,
+      imageUrl,
+      replyToId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      imageThumbUrl,
+    );
   }, [sendMessage]);
 
   const markAsSeen = useCallback((messageId: string) => {
@@ -503,6 +515,9 @@ export function useMessages(chatId: string | null) {
       if (messageData?.imageUrl) {
         await deleteStorageObjectAtUrl(messageData.imageUrl);
       }
+      if (messageData?.imageThumbUrl) {
+        await deleteStorageObjectAtUrl(messageData.imageThumbUrl);
+      }
 
       await updateDoc(messageRef, {
         isDeleted: true,
@@ -510,6 +525,7 @@ export function useMessages(chatId: string | null) {
         deletedContentType,
         text: deleteField(),
         imageUrl: deleteField(),
+        imageThumbUrl: deleteField(),
         eventId: deleteField(),
         setlistId: deleteField(),
         rosterId: deleteField(),

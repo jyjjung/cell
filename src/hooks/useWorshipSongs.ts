@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
-import { primeMediaUrls, STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
+import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 
 import { useWorshipData } from '@/contexts/worship-data-context';
 
@@ -35,10 +35,6 @@ export function useWorshipSongs(enabled = true) {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSong));
       setSongs(loaded);
       setLoading(false);
-
-      primeMediaUrls(
-        loaded.flatMap((song) => song.chordSheets.map((sheet) => sheet.imageUrl)),
-      );
     }, () => setLoading(false));
     return unsub;
   }, [useShared, enabled, currentUser?.uid]);

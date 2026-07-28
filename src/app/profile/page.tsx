@@ -457,7 +457,6 @@ export default function ProfilePage() {
                 typography: t.typography,
                 websiteFont: t.websiteFont,
                 websiteFontSize: t.websiteFontSize,
-                bibleFont: t.bibleFont,
                 bibleFontSize: t.bibleFontSize,
               }}
             />

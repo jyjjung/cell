@@ -7,6 +7,7 @@ import { Download, X, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight } fro
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { RemoteImage } from '@/components/ui/remote-image';
+import { primeMediaUrls } from '@/lib/media-cache';
 
 interface ChatImageGalleryProps {
   images: string[];
@@ -39,6 +40,13 @@ export function ChatImageGallery({
   useEffect(() => {
     setIdx(initialIndex);
   }, [initialIndex]);
+
+  // Full-resolution originals download only when viewing — warm current + neighbors.
+  useEffect(() => {
+    if (!images.length) return;
+    const nearby = [images[idx], images[idx - 1], images[idx + 1]];
+    primeMediaUrls(nearby);
+  }, [images, idx]);
 
   useEffect(() => {
     transformRef.current?.resetTransform();

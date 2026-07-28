@@ -3,6 +3,11 @@
 
 import { resolveIsAdmin } from '@/lib/admin-access';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import {
+  clearCachedAuthProfile,
+  readCachedAuthProfile,
+  writeCachedAuthProfile,
+} from '@/lib/auth-profile-cache';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
 import { auth, db } from '@/lib/firebase';
 import { normalizeInviteCode } from '@/lib/invite-utils';
@@ -91,13 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       const effectiveIsAdmin = resolveIsAdmin(profileData);
+      if (generation !== profileGenerationRef.current) return;
       setCurrentUser(buildAppUser(firebaseUser, profileData, effectiveIsAdmin));
       setIsAdmin(effectiveIsAdmin);
+      writeCachedAuthProfile({ ...profileData, uid: profileData.uid || firebaseUser.uid });
     } catch (error) {
       if (generation !== profileGenerationRef.current) return;
       console.error('Error resolving admin access:', error);
       setCurrentUser(buildAppUser(firebaseUser, profileData, false));
       setIsAdmin(false);
+      writeCachedAuthProfile({ ...profileData, uid: profileData.uid || firebaseUser.uid });
     }
   }, []);
 
@@ -144,6 +152,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (firebaseUser) {
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
 
+        // Paint chrome immediately from last known profile while the live snapshot catches up.
+        const cachedProfile = readCachedAuthProfile(firebaseUser.uid);
+        if (cachedProfile) {
+          const generation = ++profileGenerationRef.current;
+          void applyProfile(firebaseUser, cachedProfile as UserProfileData, generation);
+        }
+
         unsubscribeFromProfile = onSnapshot(userDocRef, (userDocSnap) => {
           const generation = ++profileGenerationRef.current;
 
@@ -170,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       } else {
         profileGenerationRef.current += 1;
+        clearCachedAuthProfile();
         setCurrentUser(null);
         setIsAdmin(false);
         setLoadingAuth(false);
@@ -295,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOutUser = async (): Promise<void> => {
     try {
+      clearCachedAuthProfile(currentUser?.uid);
       clearSharedDirectoryCaches();
       await signOut(auth);
       if (pathname !== '/') {

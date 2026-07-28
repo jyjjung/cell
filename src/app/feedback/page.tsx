@@ -56,6 +56,19 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.140",
+    subtitle: "Faster photos and app load",
+    date: "July 29, 2026",
+    changes: [
+      "Chat Photos opens faster: albums use lightweight thumbnails, skip repeat history paging, and avoid full-resolution grid loads",
+      "New chat photos upload a small thumbnail for the album and bubbles while keeping the full image for viewing",
+      "The app loads quicker by painting the landing page and a dashboard skeleton sooner, caching your profile for instant chrome, and deferring analytics, FCM, and the command menu",
+      "Website font choices are simplified to Sans, Serif, and Mono; Bible text always uses Literata",
+      "Chat and photo grids prefetch small previews only; full-quality photos download when you open them, and worship no longer downloads every chord sheet just from opening the library",
+      "Fewer background Firestore reads: users directory cache works again, schedule and bible plan use short caches off those pages, notifications only load the last 30 days, and chat open no longer double-fetches the latest messages",
+    ],
+  },
+  {
     version: "v1.3.139",
     subtitle: "Setlist change alerts",
     date: "July 29, 2026",

@@ -10,7 +10,7 @@ import {
 } from '@/lib/collection-cache';
 import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
-import { NOTIFICATION_QUERY_LIMITS } from '@/lib/notification-visibility';
+import { NOTIFICATION_QUERY_LIMITS, NOTIFICATION_UNREAD_LOOKBACK_DAYS } from '@/lib/notification-visibility';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
 import type { AppNotification } from '@/types';
 import {
@@ -26,6 +26,7 @@ import {
     query,
     serverTimestamp,
     setDoc,
+    Timestamp,
     updateDoc,
     where,
     writeBatch
@@ -77,6 +78,33 @@ function mapSnapshot(docs: { id: string; data: () => Record<string, unknown> }[]
   return normalizeNotifications(
     docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification)),
   );
+}
+
+function notificationLookbackTimestamp(): Timestamp {
+  const since = new Date();
+  since.setDate(since.getDate() - NOTIFICATION_UNREAD_LOOKBACK_DAYS);
+  return Timestamp.fromDate(since);
+}
+
+function scheduleIdle(callback: () => void, timeoutMs = 2000): () => void {
+  const ric = (
+    window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }
+  ).requestIdleCallback;
+
+  if (typeof ric === 'function') {
+    const id = ric(callback, { timeout: timeoutMs });
+    return () => {
+      (
+        window as Window & { cancelIdleCallback?: (id: number) => void }
+      ).cancelIdleCallback?.(id);
+    };
+  }
+
+  const timer = window.setTimeout(callback, Math.min(timeoutMs, 1500));
+  return () => window.clearTimeout(timer);
 }
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {
@@ -187,12 +215,85 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    let detachListeners: (() => void) | null = null;
 
     const persist = (items: AppNotification[]) => {
       if (cancelled) return;
       setNotifications(items);
       writeLocalCollectionCache(key, items);
       setLoading(false);
+    };
+
+    const attachAppListeners = () => {
+      if (cancelled || detachListeners) return;
+
+      const since = notificationLookbackTimestamp();
+      const personalQuery = query(
+        collection(db, NOTIFICATIONS_COLLECTION),
+        where('userId', '==', currentUser.uid),
+        where('createdAt', '>=', since),
+        orderBy('createdAt', 'desc'),
+        limit(NOTIFICATION_QUERY_LIMITS.personal),
+      );
+      const announcementsQuery = query(
+        collection(db, NOTIFICATIONS_COLLECTION),
+        where('type', '==', 'announcement'),
+        where('createdAt', '>=', since),
+        orderBy('createdAt', 'desc'),
+        limit(NOTIFICATION_QUERY_LIMITS.announcements),
+      );
+      // Globals (birthdays, memory verses) are isGlobal but not always type=announcement.
+      // Must match server badge queries or icon badges disagree with the in-app list.
+      const globalsQuery = query(
+        collection(db, NOTIFICATIONS_COLLECTION),
+        where('isGlobal', '==', true),
+        where('createdAt', '>=', since),
+        orderBy('createdAt', 'desc'),
+        limit(NOTIFICATION_QUERY_LIMITS.globals),
+      );
+
+      let personalItems: AppNotification[] = cached
+        ? normalizeNotifications(cached).filter((n) => n.userId === currentUser.uid)
+        : [];
+      let announcementItems: AppNotification[] = cached
+        ? normalizeNotifications(cached).filter((n) => n.type === 'announcement')
+        : [];
+      let globalItems: AppNotification[] = cached
+        ? normalizeNotifications(cached).filter((n) => n.isGlobal === true)
+        : [];
+
+      const mergeAndPersist = () => {
+        persist(mergeById(personalItems, announcementItems, globalItems));
+      };
+
+      const unsubscribers = [
+        onSnapshot(
+          personalQuery,
+          (snapshot) => {
+            personalItems = mapSnapshot(snapshot.docs);
+            mergeAndPersist();
+          },
+          (error) => console.error('Notification listener error:', error),
+        ),
+        onSnapshot(
+          announcementsQuery,
+          (snapshot) => {
+            announcementItems = mapSnapshot(snapshot.docs);
+            mergeAndPersist();
+          },
+          (error) => console.error('Notification listener error:', error),
+        ),
+        onSnapshot(
+          globalsQuery,
+          (snapshot) => {
+            globalItems = mapSnapshot(snapshot.docs);
+            mergeAndPersist();
+          },
+          (error) => console.error('Notification listener error:', error),
+        ),
+      ];
+
+      detachListeners = () => unsubscribers.forEach((u) => u());
     };
 
     if (adminMode) {
@@ -217,71 +318,18 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const personalQuery = query(
-      collection(db, NOTIFICATIONS_COLLECTION),
-      where('userId', '==', currentUser.uid),
-      orderBy('createdAt', 'desc'),
-      limit(NOTIFICATION_QUERY_LIMITS.personal),
-    );
-    const announcementsQuery = query(
-      collection(db, NOTIFICATIONS_COLLECTION),
-      where('type', '==', 'announcement'),
-      orderBy('createdAt', 'desc'),
-      limit(NOTIFICATION_QUERY_LIMITS.announcements),
-    );
-    // Globals (birthdays, memory verses) are isGlobal but not always type=announcement.
-    // Must match server badge queries or icon badges disagree with the in-app list.
-    const globalsQuery = query(
-      collection(db, NOTIFICATIONS_COLLECTION),
-      where('isGlobal', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(NOTIFICATION_QUERY_LIMITS.globals),
-    );
-
-    let personalItems: AppNotification[] = cached
-      ? normalizeNotifications(cached).filter((n) => n.userId === currentUser.uid)
-      : [];
-    let announcementItems: AppNotification[] = cached
-      ? normalizeNotifications(cached).filter((n) => n.type === 'announcement')
-      : [];
-    let globalItems: AppNotification[] = cached
-      ? normalizeNotifications(cached).filter((n) => n.isGlobal === true)
-      : [];
-
-    const mergeAndPersist = () => {
-      persist(mergeById(personalItems, announcementItems, globalItems));
-    };
-
-    const unsubscribers = [
-      onSnapshot(
-        personalQuery,
-        (snapshot) => {
-          personalItems = mapSnapshot(snapshot.docs);
-          mergeAndPersist();
-        },
-        (error) => console.error('Notification listener error:', error),
-      ),
-      onSnapshot(
-        announcementsQuery,
-        (snapshot) => {
-          announcementItems = mapSnapshot(snapshot.docs);
-          mergeAndPersist();
-        },
-        (error) => console.error('Notification listener error:', error),
-      ),
-      onSnapshot(
-        globalsQuery,
-        (snapshot) => {
-          globalItems = mapSnapshot(snapshot.docs);
-          mergeAndPersist();
-        },
-        (error) => console.error('Notification listener error:', error),
-      ),
-    ];
+    // Fresh cache: paint immediately, attach live listeners after idle to protect LCP.
+    let cancelIdle: (() => void) | null = null;
+    if (cached) {
+      cancelIdle = scheduleIdle(attachAppListeners, 2000);
+    } else {
+      attachAppListeners();
+    }
 
     return () => {
       cancelled = true;
-      unsubscribers.forEach((u) => u());
+      cancelIdle?.();
+      detachListeners?.();
     };
   }, [currentUser, adminMode, mode]);
 
@@ -331,26 +379,59 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback((notificationId: string) => {
     if (!currentUser) return;
+    const uid = currentUser.uid;
+    const previous = notificationsRef.current;
+    const target = previous.find((n) => n.id === notificationId);
+    if (!target || (target.readBy || []).includes(uid)) {
+      updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
+        readBy: arrayUnion(uid),
+      }).catch((e) => console.error('Error marking read:', e));
+      return;
+    }
+    const next = previous.map((n) =>
+      n.id === notificationId ? { ...n, readBy: [...(n.readBy || []), uid] } : n,
+    );
+    setNotifications(next);
+    writeLocalCollectionCache(cacheKey(uid, mode), next);
     updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
-      readBy: arrayUnion(currentUser.uid),
-    }).catch((e) => console.error('Error marking read:', e));
-  }, [currentUser]);
+      readBy: arrayUnion(uid),
+    }).catch((e) => {
+      console.error('Error marking read:', e);
+      setNotifications(previous);
+      writeLocalCollectionCache(cacheKey(uid, mode), previous);
+    });
+  }, [currentUser, mode]);
 
   const markAllAsRead = useCallback((notificationIdsToMark?: string[]) => {
     if (!currentUser) return;
+    const uid = currentUser.uid;
 
     const notificationsToUpdate = notificationIdsToMark
       ? notificationsRef.current.filter((n) => notificationIdsToMark.includes(n.id))
-      : notificationsRef.current.filter((n) => !(n.readBy || []).includes(currentUser.uid));
+      : notificationsRef.current.filter((n) => !(n.readBy || []).includes(uid));
 
     if (notificationsToUpdate.length === 0) return;
 
+    const ids = new Set(notificationsToUpdate.map((n) => n.id));
+    const previous = notificationsRef.current;
+    const next = previous.map((n) =>
+      ids.has(n.id) && !(n.readBy || []).includes(uid)
+        ? { ...n, readBy: [...(n.readBy || []), uid] }
+        : n,
+    );
+    setNotifications(next);
+    writeLocalCollectionCache(cacheKey(uid, mode), next);
+
     const batch = writeBatch(db);
     notificationsToUpdate.forEach((n) => {
-      batch.update(doc(db, NOTIFICATIONS_COLLECTION, n.id), { readBy: arrayUnion(currentUser.uid) });
+      batch.update(doc(db, NOTIFICATIONS_COLLECTION, n.id), { readBy: arrayUnion(uid) });
     });
-    batch.commit().catch((e) => console.error('Batch mark all as read error:', e));
-  }, [currentUser]);
+    batch.commit().catch((e) => {
+      console.error('Batch mark all as read error:', e);
+      setNotifications(previous);
+      writeLocalCollectionCache(cacheKey(uid, mode), previous);
+    });
+  }, [currentUser, mode]);
 
   const toggleReaction = useCallback((notificationId: string, emoji: string) => {
     if (!currentUser) return;

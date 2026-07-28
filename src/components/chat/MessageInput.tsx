@@ -26,6 +26,7 @@ import {
     plainTextToDocHtml
 } from '@/lib/docs-utils';
 import { db, storage } from '@/lib/firebase';
+import { createChatImageThumbnail } from '@/lib/chat-image-thumb';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
@@ -53,8 +54,9 @@ type MessageActions = {
     sheetKey?: string,
     poll?: ChatPoll,
     docId?: string,
+    imageThumbUrl?: string,
   ) => void | Promise<void>;
-  sendImageMessage: (imageUrl: string, replyToId?: string) => void;
+  sendImageMessage: (imageUrl: string, replyToId?: string, imageThumbUrl?: string) => void;
 };
 
 type StagedAttachment = {
@@ -252,11 +254,15 @@ export default function MessageInput({
     fileInputRef.current?.click();
   };
 
-  const uploadChatImage = (file: File, index: number): Promise<string> => {
-    const storagePath = `chats/${chatId}/${Date.now()}_${index}_${file.name}`;
+  const uploadChatImage = async (
+    file: File,
+    index: number,
+  ): Promise<{ imageUrl: string; imageThumbUrl?: string }> => {
+    const stamp = Date.now();
+    const storagePath = `chats/${chatId}/${stamp}_${index}_${file.name}`;
     const storageRef = ref(storage, storagePath);
 
-    return new Promise((resolve, reject) => {
+    const uploadFull = new Promise<string>((resolve, reject) => {
       const uploadTask = uploadBytesResumable(storageRef, file, {
         contentType: file.type || 'image/jpeg',
         cacheControl: STORAGE_CACHE_CONTROL,
@@ -271,6 +277,29 @@ export default function MessageInput({
         },
       );
     });
+
+    const thumbBlob = await createChatImageThumbnail(file);
+    const uploadThumb = thumbBlob
+      ? new Promise<string>((resolve, reject) => {
+          const thumbRef = ref(storage, `chats/${chatId}/${stamp}_${index}_thumb.jpg`);
+          const uploadTask = uploadBytesResumable(thumbRef, thumbBlob, {
+            contentType: 'image/jpeg',
+            cacheControl: STORAGE_CACHE_CONTROL,
+          });
+          uploadTask.on(
+            'state_changed',
+            null,
+            (error) => reject(error),
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            },
+          );
+        }).catch(() => '')
+      : Promise.resolve('');
+
+    const [imageUrl, imageThumbUrl] = await Promise.all([uploadFull, uploadThumb]);
+    return imageThumbUrl ? { imageUrl, imageThumbUrl } : { imageUrl };
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -294,8 +323,8 @@ export default function MessageInput({
       setIsUploading(true);
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
-        const downloadURL = await uploadChatImage(file, i);
-        sendImageMessage(downloadURL, i === 0 ? replyToMessage?.id : undefined);
+        const { imageUrl, imageThumbUrl } = await uploadChatImage(file, i);
+        sendImageMessage(imageUrl, i === 0 ? replyToMessage?.id : undefined, imageThumbUrl);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed';

@@ -13,7 +13,7 @@ import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { db } from '@/lib/firebase';
-import { primeMediaUrls } from '@/lib/media-cache';
+import { primeChatPreviewMedia } from '@/lib/media-cache';
 import type { ChatMessage } from '@/types';
 import {
     collection, deleteField, doc, getDoc,
@@ -37,6 +37,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const { toast } = useToast();
   const loadingOlderRef = useRef(false);
+  const olderExhaustedRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
 
   useEffect(() => {
@@ -46,9 +47,11 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
   const applySnapshot = useCallback((docs: { id: string; data: () => Record<string, unknown> }[]) => {
     const latestWindow = docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as ChatMessage));
     setMessages((prev) => mergeMessageListsStable(latestWindow, prev, prev, { retainOnlyOlderSecondary: true }));
-    setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
+    if (!olderExhaustedRef.current) {
+      setHasMoreOlder(docs.length >= CHAT_MESSAGES_LIVE_LIMIT);
+    }
     setLoading(false);
-    primeMediaUrls(latestWindow.map((m) => m.imageUrl));
+    primeChatPreviewMedia(latestWindow);
   }, []);
 
   useEffect(() => {
@@ -83,6 +86,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     setLoading(true);
     setMessages([]);
     setHasMoreOlder(false);
+    olderExhaustedRef.current = false;
     const aborted = { value: false };
 
     const messagesCol = threadMessagesCollection(chatId, parentMessageId);
@@ -90,19 +94,11 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     void readAllMessagesFromDeviceCache(messagesCol).then((cached) => {
       if (aborted.value || cached.length === 0) return;
       setMessages((prev) => mergeMessageListsStable(prev, cached, prev));
-      setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
+      if (!olderExhaustedRef.current) {
+        setHasMoreOlder(cached.length >= CHAT_MESSAGES_LIVE_LIMIT);
+      }
       setLoading(false);
-      primeMediaUrls(cached.map((m) => m.imageUrl));
-    });
-
-    void fetchLatestMessagesWindow(messagesCol).then(({ messages: latest, hasMore }) => {
-      if (aborted.value || latest.length === 0) return;
-      setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
-      setHasMoreOlder(hasMore);
-      setLoading(false);
-      primeMediaUrls(latest.map((m) => m.imageUrl));
-    }).catch((error) => {
-      console.error('[useThreadMessages] Initial thread fetch failed:', error);
+      primeChatPreviewMedia(cached);
     });
 
     const messagesQuery = query(
@@ -122,7 +118,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
           if (aborted.value) return;
           if (latest.length > 0) {
             setMessages((prev) => mergeMessageListsStable(latest, prev, prev, { retainOnlyOlderSecondary: true }));
-            setHasMoreOlder(hasMore);
+            if (!olderExhaustedRef.current) setHasMoreOlder(hasMore);
           }
           setLoading(false);
         }).catch(() => {
@@ -151,10 +147,11 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         threadMessagesCollection(chatId, parentMessageId),
         oldest.id,
       );
+      if (!hasMore) olderExhaustedRef.current = true;
       setHasMoreOlder(hasMore);
       if (older.length > 0) {
         setMessages((prev) => mergeMessageListsStable(prev, older, prev));
-        primeMediaUrls(older.map((m) => m.imageUrl));
+        primeChatPreviewMedia(older);
       }
     } catch (error) {
       console.error('[useThreadMessages] Failed to load older messages:', error);
@@ -170,7 +167,15 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     _replyToId?: string,
     eventId?: string,
     setlistId?: string,
-    rosterId?: string
+    rosterId?: string,
+    _qtDate?: string,
+    _cleaningDate?: string,
+    _songId?: string,
+    _songTitle?: string,
+    _sheetKey?: string,
+    _poll?: unknown,
+    _docId?: string,
+    imageThumbUrl?: string,
   ) => {
     if (!currentUser || !chatId || !parentMessageId) return;
     if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId) return;
@@ -184,6 +189,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
+    if (imageThumbUrl) messageData.imageThumbUrl = imageThumbUrl;
     if (eventId) messageData.eventId = eventId;
     if (setlistId) {
       messageData.setlistId = setlistId;
@@ -257,8 +263,23 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     }
   }, [currentUser, chatId, parentMessageId, toast]);
 
-  const sendImageMessage = useCallback((imageUrl: string, replyToId?: string) => {
-    sendMessage(undefined, imageUrl, replyToId);
+  const sendImageMessage = useCallback((imageUrl: string, replyToId?: string, imageThumbUrl?: string) => {
+    sendMessage(
+      undefined,
+      imageUrl,
+      replyToId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      imageThumbUrl,
+    );
   }, [sendMessage]);
 
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
@@ -313,6 +334,9 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       if (messageData?.imageUrl) {
         await deleteStorageObjectAtUrl(messageData.imageUrl);
       }
+      if (messageData?.imageThumbUrl) {
+        await deleteStorageObjectAtUrl(messageData.imageThumbUrl);
+      }
 
       await updateDoc(messageRef, {
         isDeleted: true,
@@ -320,6 +344,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         deletedContentType,
         text: deleteField(),
         imageUrl: deleteField(),
+        imageThumbUrl: deleteField(),
         eventId: deleteField(),
         setlistId: deleteField(),
         rosterId: deleteField(),

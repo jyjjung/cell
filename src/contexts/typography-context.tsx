@@ -67,7 +67,7 @@ export function TypographyProvider({ children }: { children: ReactNode }) {
 
   const setTypography = useCallback(
     async (patch: Partial<TypographyPreferences>) => {
-      const next = { ...typography, ...patch };
+      const next = parseTypographyPreferences({ ...typography, ...patch });
       setTypographyState(next);
       await persistTypography(next);
     },

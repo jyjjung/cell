@@ -58,6 +58,7 @@ export function readNonEmptyCollectionCache<T extends unknown[]>(
 const SHARED_DIRECTORY_CACHE_KEYS = [
   'users_directory_v1',
   'users_directory_v2',
+  'users_directory_v3',
   'community_progress_v2',
   'community_progress_v3',
   'custom_roster_entries_v1',

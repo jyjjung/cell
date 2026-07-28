@@ -1,7 +1,5 @@
 
 import type { Metadata, Viewport } from 'next';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import dynamic from 'next/dynamic';
 import { appFontVariableClasses } from '@/lib/app-fonts';
 import './globals.css';
@@ -18,6 +16,7 @@ import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { OfflineBanner } from '@/components/layout/offline-banner';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
+import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
 
 const GlobalPageLoader = dynamic(() => import('@/components/layout/global-page-loader'), { ssr: false });
 const GlobalBibleReader = dynamic(
@@ -81,8 +80,7 @@ export default function RootLayout({
                     {children}
                   </AppLayout>
                   </SetlistPlaylistProvider>
-                  <Analytics />
-                  <SpeedInsights />
+                  <DeferredVercelMetrics />
                   <Toaster />
                   <GlobalPageLoader />
                   <GlobalBibleReader />

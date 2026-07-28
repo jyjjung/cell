@@ -61,40 +61,70 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !messaging) return;
 
-    const unsubscribe = onMessage(messaging, (payload) => {
-      const title = payload.data?.title || 'New Notification';
-      const body = payload.data?.body || '';
-      const link = payload.data?.link || '/';
-      const tag = payload.data?.tag || 'community-update';
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
 
-      const normalizePath = (value: string) => {
-        try {
-          const url = value.startsWith('http') ? new URL(value) : new URL(value, window.location.origin);
-          return url.pathname.replace(/\/+$/, '') || '/';
-        } catch {
-          return value.replace(/\/+$/, '') || '/';
+    const attach = () => {
+      if (cancelled || !messaging) return;
+      unsubscribe = onMessage(messaging, (payload) => {
+        const title = payload.data?.title || 'New Notification';
+        const body = payload.data?.body || '';
+        const link = payload.data?.link || '/';
+        const tag = payload.data?.tag || 'community-update';
+
+        const normalizePath = (value: string) => {
+          try {
+            const url = value.startsWith('http') ? new URL(value) : new URL(value, window.location.origin);
+            return url.pathname.replace(/\/+$/, '') || '/';
+          } catch {
+            return value.replace(/\/+$/, '') || '/';
+          }
+        };
+
+        if (normalizePath(pathname) === normalizePath(link) && normalizePath(link).startsWith('/chat/')) {
+          return;
         }
+
+        if (Notification.permission === 'granted') {
+          getFCMRegistration()
+            .then((registration) => {
+              registration.showNotification(title, {
+                body,
+                icon: payload.data?.icon || '/icon-192x192-v4.png',
+                tag,
+                data: { link },
+              });
+            })
+            .catch(() => {});
+        }
+      });
+    };
+
+    const ric = (
+      window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).requestIdleCallback;
+
+    let cancelSchedule: (() => void) | null = null;
+    if (typeof ric === 'function') {
+      const id = ric(attach, { timeout: 4000 });
+      cancelSchedule = () => {
+        (
+          window as Window & { cancelIdleCallback?: (id: number) => void }
+        ).cancelIdleCallback?.(id);
       };
+    } else {
+      const timer = window.setTimeout(attach, 2000);
+      cancelSchedule = () => window.clearTimeout(timer);
+    }
 
-      if (normalizePath(pathname) === normalizePath(link) && normalizePath(link).startsWith('/chat/')) {
-        return;
-      }
-
-      if (Notification.permission === 'granted') {
-        getFCMRegistration()
-          .then((registration) => {
-            registration.showNotification(title, {
-              body,
-              icon: payload.data?.icon || '/icon-192x192-v4.png',
-              tag,
-              data: { link },
-            });
-          })
-          .catch(() => {});
-      }
-    });
-
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      cancelSchedule?.();
+      unsubscribe?.();
+    };
   }, [currentUser.uid, pathname]);
 
   useEffect(() => {

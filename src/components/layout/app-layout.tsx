@@ -11,10 +11,9 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import Footer from './footer';
-import { Bell, Loader2 } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 
-import { CommandMenu } from './command-menu';
 import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
 import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
@@ -22,6 +21,12 @@ import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useIsMobile } from '@/hooks/use-mobile';
+import dynamic from 'next/dynamic';
+
+const CommandMenuLazy = dynamic(
+  () => import('./command-menu').then((m) => m.CommandMenu),
+  { ssr: false },
+);
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -114,20 +119,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [currentUser, loadingAuth, pathname, router]);
 
   if (!hasSession) {
-    if (loadingAuth) {
-      return (
-        <div className="flex min-h-svh items-center justify-center bg-background">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-        </div>
-      );
-    }
+    // Paint guest chrome immediately — don't block LCP on auth restore.
     return <GuestShell>{children}</GuestShell>;
   }
 
   if (!currentUser) {
+    // Session exists but profile still hydrating (cold cache) — light chrome stub.
     return (
-      <div className="flex min-h-svh items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+      <div className="flex min-h-svh flex-col bg-background">
+        <div className="h-14 border-b border-border/40 bg-background/80" />
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
+          <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
+          <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
+        </div>
       </div>
     );
   }
@@ -147,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex flex-1 flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
-          <CommandMenu open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
+          <CommandMenuLazy open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
 
           <div
             className={cn(

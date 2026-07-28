@@ -90,9 +90,30 @@ export function useFCMToken() {
   }, [registerToken]);
 
   useEffect(() => {
-    if (currentUser && typeof window !== 'undefined') {
-      registerToken();
+    if (!currentUser || typeof window === 'undefined') return;
+
+    const run = () => {
+      void registerToken();
+    };
+
+    const ric = (
+      window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).requestIdleCallback;
+
+    if (typeof ric === 'function') {
+      const id = ric(run, { timeout: 4000 });
+      return () => {
+        (
+          window as Window & { cancelIdleCallback?: (id: number) => void }
+        ).cancelIdleCallback?.(id);
+      };
     }
+
+    const timer = window.setTimeout(run, 2500);
+    return () => window.clearTimeout(timer);
   }, [currentUser, registerToken]);
 
   return { registerToken, requestPermission };
