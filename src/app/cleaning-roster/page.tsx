@@ -99,7 +99,6 @@ export default function CleaningRosterPage() {
                 id={`date-${entry.date}`}
                 index={currentIndex}
                 date={parseDay(entry.date)}
-                label={t.cleaningRosterTitle}
                 title={dayName}
                 meta={
                     assignedUsers.length > 0 ? (
