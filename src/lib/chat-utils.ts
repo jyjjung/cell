@@ -15,7 +15,9 @@ type MessagePreviewFields = Pick<
   | 'imageUrl'
   | 'eventId'
   | 'setlistId'
+  | 'setlistTitle'
   | 'rosterId'
+  | 'rosterTitle'
   | 'qtDate'
   | 'cleaningDate'
   | 'songId'
@@ -23,6 +25,7 @@ type MessagePreviewFields = Pick<
   | 'sheetKey'
   | 'poll'
   | 'docId'
+  | 'docTitle'
   | 'isDeleted'
   | 'deletedContentType'
   | 'systemEvent'
@@ -38,13 +41,25 @@ export function formatChatMessagePreview(message: MessagePreviewFields): string 
 
   let preview = message.text?.trim() || '📷 Image';
   if (message.eventId) preview = '📅 Event';
-  if (message.setlistId) preview = '🎵 Setlist';
-  if (message.rosterId) preview = '📋 Roster';
+  if (message.setlistId) {
+    preview = message.setlistTitle
+      ? `🎵 Setlist: ${message.setlistTitle}`
+      : '🎵 Setlist';
+  }
+  if (message.rosterId) {
+    preview = message.rosterTitle
+      ? `📋 Roster: ${message.rosterTitle}`
+      : '📋 Roster';
+  }
   if (message.qtDate) preview = '📖 QT Roster';
   if (message.cleaningDate) preview = '🧹 Cleaning Roster';
   if (message.songId) preview = `🎵 Chord Sheet: ${message.songTitle || 'Song'} (${message.sheetKey || ''})`;
   if (message.poll) preview = `📊 Poll: ${message.poll.question}`;
-  if (message.docId) preview = '📄 Document';
+  if (message.docId) {
+    preview = message.docTitle
+      ? `📄 ${message.docTitle}`
+      : '📄 Document';
+  }
   return preview;
 }
 

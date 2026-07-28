@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Button } from '@/components/ui/button';
-import { Check, Megaphone, CheckCheck, X } from 'lucide-react';
+import { Check, Megaphone, CheckCheck, SmilePlus, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -13,8 +13,37 @@ import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { toDateSafe } from '@/lib/firestore-timestamp';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import type { AppNotification } from '@/types';
 
-function AnnouncementItem({ notification, isRead, onMarkRead, index, justNowLabel }: { notification: any; isRead: boolean; onMarkRead?: () => void; index: number; justNowLabel: string }) {
+const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+function AnnouncementItem({
+  notification,
+  isRead,
+  onMarkRead,
+  onToggleReaction,
+  currentUserId,
+  index,
+  justNowLabel,
+  reactedByLabel,
+}: {
+  notification: AppNotification;
+  isRead: boolean;
+  onMarkRead?: () => void;
+  onToggleReaction: (emoji: string) => void;
+  currentUserId: string;
+  index: number;
+  justNowLabel: string;
+  reactedByLabel: string;
+}) {
+  const reactions = notification.reactions || {};
+  const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
+
   return (
     <motion.div
       layout
@@ -36,6 +65,53 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index, justNowLabe
             ? formatDistanceToNow(toDateSafe(notification.createdAt)!, { addSuffix: true })
             : justNowLabel}
         </p>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {reactionEntries.map(([emoji, uids]) => {
+            const userReacted = uids.includes(currentUserId);
+            return (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onToggleReaction(emoji)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
+                  userReacted
+                    ? "border-primary/35 bg-primary/15 text-primary"
+                    : "border-border bg-muted/80 text-foreground hover:bg-muted",
+                )}
+                title={`${reactedByLabel} ${uids.length}`}
+              >
+                <span>{emoji}</span>
+                <span className="text-[10px] font-bold">{uids.length}</span>
+              </button>
+            );
+          })}
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
+                aria-label="Add reaction"
+              >
+                <SmilePlus className="h-3.5 w-3.5 text-foreground/40" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
+              {STANDARD_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onToggleReaction(emoji)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
+                >
+                  <span className="text-lg">{emoji}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       {!isRead && onMarkRead && (
         <Button variant="ghost" size="icon" onClick={onMarkRead}
@@ -49,7 +125,7 @@ function AnnouncementItem({ notification, isRead, onMarkRead, index, justNowLabe
 
 export default function AnnouncementsPage() {
   const { currentUser } = useAuth();
-  const { notifications, loading, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, loading, markAsRead, markAllAsRead, toggleAnnouncementReaction } = useNotifications();
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -91,7 +167,17 @@ export default function AnnouncementsPage() {
               <AnimatePresence mode="popLayout">
                 <div className="flow-list">
                   {unread.map((n, i) => (
-                    <AnnouncementItem key={n.id} notification={n} isRead={false} onMarkRead={() => markAsRead(n.id)} index={i} justNowLabel={t.justNow} />
+                    <AnnouncementItem
+                      key={n.id}
+                      notification={n}
+                      isRead={false}
+                      onMarkRead={() => markAsRead(n.id)}
+                      onToggleReaction={(emoji) => toggleAnnouncementReaction(n.id, emoji)}
+                      currentUserId={uid}
+                      index={i}
+                      justNowLabel={t.justNow}
+                      reactedByLabel={t.reactedBy}
+                    />
                   ))}
                 </div>
               </AnimatePresence>
@@ -103,7 +189,18 @@ export default function AnnouncementsPage() {
           <TabsContent value="archive" className="mt-4">
             {read.length > 0 ? (
               <div className="flow-list">
-                {read.map((n, i) => <AnnouncementItem key={n.id} notification={n} isRead={true} index={i} justNowLabel={t.justNow} />)}
+                {read.map((n, i) => (
+                  <AnnouncementItem
+                    key={n.id}
+                    notification={n}
+                    isRead={true}
+                    onToggleReaction={(emoji) => toggleAnnouncementReaction(n.id, emoji)}
+                    currentUserId={uid}
+                    index={i}
+                    justNowLabel={t.justNow}
+                    reactedByLabel={t.reactedBy}
+                  />
+                ))}
               </div>
             ) : (
               <EmptyState icon={Megaphone} title={t.archiveEmpty} />

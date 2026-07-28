@@ -103,6 +103,7 @@ type NotificationsContextValue = {
   deleteNotification: (notificationId: string) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: (notificationIdsToMark?: string[]) => void;
+  toggleAnnouncementReaction: (notificationId: string, emoji: string) => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -311,6 +312,36 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     batch.commit().catch((e) => console.error('Batch mark all as read error:', e));
   }, [currentUser]);
 
+  const toggleAnnouncementReaction = useCallback((notificationId: string, emoji: string) => {
+    if (!currentUser) return;
+    const previous = notificationsRef.current.find((n) => n.id === notificationId);
+    if (!previous || previous.type !== 'announcement') return;
+
+    const uid = currentUser.uid;
+    const currentReactions = { ...(previous.reactions || {}) };
+    const reactors = new Set(currentReactions[emoji] || []);
+    if (reactors.has(uid)) reactors.delete(uid);
+    else reactors.add(uid);
+
+    if (reactors.size === 0) delete currentReactions[emoji];
+    else currentReactions[emoji] = [...reactors];
+
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, reactions: currentReactions } : n)),
+    );
+
+    updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
+      reactions: currentReactions,
+    }).catch((e) => {
+      console.error('Error toggling announcement reaction:', e);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, reactions: previous.reactions } : n,
+        ),
+      );
+    });
+  }, [currentUser]);
+
   const value = useMemo(
     () => ({
       notifications,
@@ -319,8 +350,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       deleteNotification,
       markAsRead,
       markAllAsRead,
+      toggleAnnouncementReaction,
     }),
-    [notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead],
+    [notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead, toggleAnnouncementReaction],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

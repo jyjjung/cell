@@ -62,6 +62,7 @@ export function collectEventDayReminders(params: {
       : users.filter((user) => user.uid && userCanSeeEvent(user, event));
 
     for (const user of recipients) {
+      // Always notify every approved user about birthdays (including the birthday person).
       results.push({
         userId: user.uid!,
         eventId: event.id,

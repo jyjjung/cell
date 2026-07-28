@@ -485,8 +485,8 @@ export function useDocComments(docId: string | undefined, enabled: boolean) {
         );
         setLoading(false);
       },
-      () => {
-        // Keep previous comments on transient listener errors.
+      (error) => {
+        console.error('[useDocComments] listener error:', error);
         setLoading(false);
       },
     );

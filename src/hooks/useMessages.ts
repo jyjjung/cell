@@ -226,6 +226,9 @@ export function useMessages(chatId: string | null) {
     sheetKey?: string,
     poll?: ChatPoll,
     docId?: string,
+    setlistTitle?: string,
+    rosterTitle?: string,
+    docTitle?: string,
   ) => {
     if (!currentUser || !chatId) return;
     if (!text?.trim() && !imageUrl && !eventId && !setlistId && !rosterId && !qtDate && !cleaningDate && !songId && !poll && !docId) return;
@@ -242,13 +245,16 @@ export function useMessages(chatId: string | null) {
     if (replyToId) messageData.replyToId = replyToId;
     if (eventId) messageData.eventId = eventId;
     if (setlistId) messageData.setlistId = setlistId;
+    if (setlistTitle) messageData.setlistTitle = setlistTitle;
     if (rosterId) messageData.rosterId = rosterId;
+    if (rosterTitle) messageData.rosterTitle = rosterTitle;
     if (qtDate) messageData.qtDate = qtDate;
     if (cleaningDate) messageData.cleaningDate = cleaningDate;
     if (songId) messageData.songId = songId;
     if (songTitle) messageData.songTitle = songTitle;
     if (sheetKey) messageData.sheetKey = sheetKey;
     if (docId) messageData.docId = docId;
+    if (docTitle) messageData.docTitle = docTitle;
     if (poll) {
       messageData.poll = {
         question: poll.question.trim(),
@@ -269,7 +275,9 @@ export function useMessages(chatId: string | null) {
       imageUrl,
       eventId,
       setlistId,
+      setlistTitle,
       rosterId,
+      rosterTitle,
       qtDate,
       cleaningDate,
       songId,
@@ -277,6 +285,7 @@ export function useMessages(chatId: string | null) {
       sheetKey,
       poll,
       docId,
+      docTitle,
     });
 
     try {

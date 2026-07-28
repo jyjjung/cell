@@ -38,6 +38,10 @@ export function useCommunityProgress() {
     const hasCached = getCachedCommunityProgress().length > 0;
     setLoading(!hasCached && !cachedFresh?.length);
 
+    // Always refresh from the server on a new session when the device cache is empty
+    // so first sign-in on a new browser shows progress without a manual reload.
+    const shouldForce = !hasCached && !cachedFresh?.length;
+
     if (cachedFresh?.length) {
       applyRows(cachedFresh);
     } else {
@@ -49,6 +53,13 @@ export function useCommunityProgress() {
         console.error('[useCommunityProgress] load error:', err);
         if (!cancelled) setLoading(false);
       });
+    }
+
+    if (!shouldForce && cachedFresh?.length) {
+      // Background refresh when we already showed a fresh cache.
+      void loadCommunityProgress({ forceRefresh: false }).then((rows) => {
+        if (!cancelled && rows.length > 0) setAllProgress(rows);
+      }).catch(() => {});
     }
 
     const onVisible = () => {

@@ -5,9 +5,16 @@ import type { BibleReadingPlan, DailyReading, StructuredPassage } from '@/types'
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import {
+  COLLECTION_CACHE_TTL_MS,
+  readLocalCollectionCache,
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 
 const BIBLE_PLAN_COLLECTION = 'config';
 const BIBLE_PLAN_DOC_ID = 'biblePlan';
+const BIBLE_PLAN_CACHE_KEY = 'bible_plan_v1';
 
 type BiblePlanContextValue = {
   plan: BibleReadingPlan | null;
@@ -17,57 +24,55 @@ type BiblePlanContextValue = {
 
 const BiblePlanContext = createContext<BiblePlanContextValue | null>(null);
 
+function sanitizePassage(p: unknown): StructuredPassage {
+  if (typeof p === 'string') {
+    const lastSpaceIndex = p.lastIndexOf(' ');
+    if (lastSpaceIndex > -1) {
+      const book = p.substring(0, lastSpaceIndex).trim();
+      const chapterStr = p.substring(lastSpaceIndex + 1).trim();
+      const chapter = parseInt(chapterStr, 10);
+      if (book && !isNaN(chapter)) {
+        return { book, chapter, displayText: p };
+      }
+    }
+    return { book: 'Error', chapter: 0, displayText: `Error: Invalid passage string '${p}'` };
+  }
+  if (typeof p === 'object' && p !== null && (p as StructuredPassage).displayText) {
+    const passage = p as StructuredPassage;
+    if (passage.book && passage.chapter) return passage;
+    const parsed = parsePassageReferenceForNavigation(passage.displayText);
+    if (parsed) return { ...passage, book: parsed.book, chapter: parsed.chapter };
+    return passage;
+  }
+  return { book: 'Error', chapter: 0, displayText: 'Error: Invalid passage format' };
+}
+
+function toIsoDate(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof (value as Timestamp).toDate === 'function') {
+    return (value as Timestamp).toDate().toISOString().split('T')[0];
+  }
+  return '';
+}
+
 function formatPlanFromSnapshot(docSnapshot: { id: string; data: () => Record<string, unknown> }): BibleReadingPlan {
   const data = docSnapshot.data();
-  const dailyReadings: DailyReading[] = (Array.isArray(data.dailyReadings) ? data.dailyReadings : []).map((dr: DailyReading) => {
-    const sanitizedPassages: StructuredPassage[] = (Array.isArray(dr.passages) ? dr.passages : []).map((p: unknown) => {
-      if (typeof p === 'string') {
-        const lastSpaceIndex = p.lastIndexOf(' ');
-        if (lastSpaceIndex > -1) {
-          const book = p.substring(0, lastSpaceIndex).trim();
-          const chapterStr = p.substring(lastSpaceIndex + 1).trim();
-          const chapter = parseInt(chapterStr, 10);
-          if (book && !isNaN(chapter)) {
-            return { book, chapter, displayText: p };
-          }
-        }
-        return { book: 'Error', chapter: 0, displayText: `Error: Invalid passage string '${p}'` };
-      }
-      if (typeof p === 'object' && p !== null && (p as StructuredPassage).displayText) {
-        const passage = p as StructuredPassage;
-        if (passage.book && passage.chapter) return passage;
-        const parsed = parsePassageReferenceForNavigation(passage.displayText);
-        if (parsed) return { ...passage, book: parsed.book, chapter: parsed.chapter };
-        return passage;
-      }
-      return { book: 'Error', chapter: 0, displayText: 'Error: Invalid passage format' };
-    });
+  const rawReadings = Array.isArray(data.dailyReadings) ? data.dailyReadings : [];
+  const dailyReadings: DailyReading[] = [];
 
-    return {
-      ...dr,
-      passages: sanitizedPassages,
-      date: dr.date
-        ? typeof dr.date === 'string'
-          ? dr.date
-          : (dr.date as Timestamp)?.toDate().toISOString().split('T')[0]
-        : '',
-    };
-  }).filter((dr) => dr.date);
+  for (const dr of rawReadings as DailyReading[]) {
+    const date = toIsoDate(dr.date);
+    if (!date) continue;
+    const passages = Array.isArray(dr.passages) ? dr.passages.map(sanitizePassage) : [];
+    dailyReadings.push({ ...dr, date, passages });
+  }
 
   return {
     id: docSnapshot.id,
     planType: (data.planType as BibleReadingPlan['planType']) || 'canonical',
     planDescription: (data.planDescription as string) || 'Unknown Plan',
-    startDate: data.startDate
-      ? typeof data.startDate === 'string'
-        ? data.startDate
-        : (data.startDate as Timestamp)?.toDate().toISOString().split('T')[0]
-      : 'Unknown Start Date',
-    generatedDate: data.generatedDate
-      ? typeof data.generatedDate === 'string'
-        ? data.generatedDate
-        : (data.generatedDate as Timestamp)?.toDate().toISOString().split('T')[0]
-      : 'Unknown Generation Date',
+    startDate: toIsoDate(data.startDate) || 'Unknown Start Date',
+    generatedDate: toIsoDate(data.generatedDate) || 'Unknown Generation Date',
     dailyReadings,
     updatedAt: data.updatedAt as Timestamp,
     readingsPerDay: data.readingsPerDay as number | undefined,
@@ -75,9 +80,17 @@ function formatPlanFromSnapshot(docSnapshot: { id: string; data: () => Record<st
   };
 }
 
+function readCachedPlan(): BibleReadingPlan | null {
+  const fresh = readLocalCollectionCache<BibleReadingPlan>(BIBLE_PLAN_CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+  if (fresh?.dailyReadings?.length) return fresh;
+  const stale = readLocalCollectionCacheStale<BibleReadingPlan>(BIBLE_PLAN_CACHE_KEY);
+  if (stale?.dailyReadings?.length) return stale;
+  return null;
+}
+
 export function BiblePlanProvider({ children }: { children: ReactNode }) {
-  const [plan, setPlan] = useState<BibleReadingPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<BibleReadingPlan | null>(() => readCachedPlan());
+  const [loading, setLoading] = useState(() => !readCachedPlan());
 
   useEffect(() => {
     const planDocRef = doc(db, BIBLE_PLAN_COLLECTION, BIBLE_PLAN_DOC_ID);
@@ -85,7 +98,9 @@ export function BiblePlanProvider({ children }: { children: ReactNode }) {
       planDocRef,
       (docSnapshot) => {
         if (docSnapshot.exists()) {
-          setPlan(formatPlanFromSnapshot(docSnapshot));
+          const next = formatPlanFromSnapshot(docSnapshot);
+          setPlan(next);
+          writeLocalCollectionCache(BIBLE_PLAN_CACHE_KEY, next);
         } else {
           setPlan(null);
         }
@@ -93,7 +108,8 @@ export function BiblePlanProvider({ children }: { children: ReactNode }) {
       },
       (error) => {
         console.error('[BiblePlanProvider] Firestore onSnapshot error:', error);
-        setPlan(null);
+        // Keep any cached plan visible on transient errors.
+        if (!readCachedPlan()) setPlan(null);
         setLoading(false);
       },
     );

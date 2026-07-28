@@ -10,7 +10,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { messaging, db } from '@/lib/firebase';
 import { getFCMRegistration } from '@/lib/fcm-registration';
 
-const FCM_HEAL_VERSION = '2026-07-23-v1';
+const FCM_HEAL_VERSION = '2026-07-28-v1';
 const FCM_HEAL_STORAGE_KEY = 'fcm_heal_version';
 export const MAX_FCM_TOKENS = 5;
 

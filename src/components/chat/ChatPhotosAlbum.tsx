@@ -1,20 +1,25 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
 import { RemoteImage } from '@/components/ui/remote-image';
+import { chatMessagesCollection, readAllMessagesFromDeviceCache } from '@/lib/chat-messages-device-cache';
+import { primeMediaUrls } from '@/lib/media-cache';
+import { mergeMessageListsStable } from '@/lib/chat-message-merge';
 
 export { extractChatPhotos } from '@/lib/chat-media-extract';
 
 export default function ChatPhotosAlbum({
+  chatId,
   messages,
   allUsers,
   onOpenImage,
 }: {
+  chatId: string;
   messages: ChatMessage[];
   allUsers: UserProfileData[];
   onOpenImage: (imageUrl: string) => void;
@@ -24,10 +29,51 @@ export default function ChatPhotosAlbum({
     [allUsers],
   );
 
-  const photos = useMemo(
-    () => extractChatPhotos(messages, usersById),
-    [messages, usersById],
+  const [cachedMessages, setCachedMessages] = useState<ChatMessage[]>([]);
+  const [hydrating, setHydrating] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHydrating(true);
+
+    void readAllMessagesFromDeviceCache(chatMessagesCollection(chatId))
+      .then((cached) => {
+        if (cancelled) return;
+        setCachedMessages(cached);
+        primeMediaUrls(cached.map((m) => m.imageUrl));
+      })
+      .finally(() => {
+        if (!cancelled) setHydrating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chatId]);
+
+  const allMessages = useMemo(
+    () => mergeMessageListsStable(messages, cachedMessages, messages),
+    [messages, cachedMessages],
   );
+
+  const photos = useMemo(
+    () => extractChatPhotos(allMessages, usersById),
+    [allMessages, usersById],
+  );
+
+  useEffect(() => {
+    if (photos.length === 0) return;
+    primeMediaUrls(photos.map((p) => p.imageUrl));
+  }, [photos]);
+
+  if (hydrating && photos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[40vh] px-6 text-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/50 mb-3" />
+        <p className="text-sm text-muted-foreground">Loading photos…</p>
+      </div>
+    );
+  }
 
   if (photos.length === 0) {
     return (
@@ -52,7 +98,7 @@ export default function ChatPhotosAlbum({
             type="button"
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: Math.min(i * 0.02, 0.3) }}
+            transition={{ delay: Math.min(i * 0.015, 0.2) }}
             onClick={() => onOpenImage(photo.imageUrl)}
             className="relative aspect-square overflow-hidden rounded-xl bg-muted/30 border border-border/30 group"
           >
@@ -62,6 +108,7 @@ export default function ChatPhotosAlbum({
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="200px"
+              priority={i < 12}
             />
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <p className="text-[9px] font-bold text-white truncate">{photo.senderLabel}</p>

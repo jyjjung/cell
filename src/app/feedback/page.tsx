@@ -56,6 +56,25 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.136",
+    subtitle: "Schedule polish, chat UX, and reliability",
+    date: "July 28, 2026",
+    changes: [
+      "QT, cleaning, and custom roster lists now use the same month-group and row layout as Events",
+      "Deleted documents in chat show as a simple inline notice, matching deleted setlists",
+      "Prayer Requests page width matches the rest of the app",
+      "Bible plan and progress load from a local cache so first open on a new device is much faster",
+      "Turn on notifications banner uses a solid card background so it is no longer see-through",
+      "Chat Photos tab hydrates from on-device cache and warms image URLs for faster browsing",
+      "Loading spinner appears at the top when fetching older chat messages, plus a jump-to-latest button",
+      "Calendar widget removed from the home dashboard (today’s agenda remains)",
+      "Setlist chat previews and pushes include the setlist name; linked worship team members are notified when songs are added, removed, or keys change",
+      "You can react to announcements",
+      "Document comments listen against the parent document’s members (fixes comments not loading)",
+      "Push subscription heal bumped so opted-in devices rebind to the current messaging service worker",
+    ],
+  },
+  {
     version: "v1.3.135",
     subtitle: "More consistent notifications",
     date: "July 23, 2026",

@@ -10,7 +10,7 @@ import { Loader2, CalendarOff } from 'lucide-react';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import { RosterFeedCard, RosterMonthGroup } from '@/components/ui/roster-feed-card';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
@@ -81,6 +81,46 @@ export default function QTRosterPage() {
     if(!isMounted) return null;
 
     let globalIdx = 0;
+
+    const renderEntry = (entry: QTRosterEntry, opts?: { faded?: boolean; scrollId?: boolean }) => {
+        const user = entry.userId ? usersMap.get(entry.userId) : undefined;
+        const displayName = entry.personName
+            ? formatNameString(entry.personName, t.member)
+            : formatUserDisplayName(user, t.member);
+        const entryDate = parseDay(entry.date);
+        const currentIndex = globalIdx++;
+
+        return (
+            <div
+                key={opts?.faded ? `past-${entry.id}` : entry.id}
+                id={opts?.scrollId ? `date-${entry.date}` : undefined}
+                className="scroll-mt-20 transition-all duration-500"
+            >
+                <RosterFeedCard
+                    index={currentIndex}
+                    date={entryDate}
+                    label={t.qtTitle}
+                    title={displayName}
+                    description={(
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span>{format(entryDate, 'EEE')}</span>
+                            {entry.title && (
+                                <LinkifiedText
+                                    text={entry.title}
+                                    className="block leading-relaxed"
+                                />
+                            )}
+                        </div>
+                    )}
+                    rightElement={(
+                        <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
+                            {entry.passage || '—'}
+                        </span>
+                    )}
+                />
+            </div>
+        );
+    };
     
     return (
       <div className="page-container">
@@ -102,50 +142,9 @@ export default function QTRosterPage() {
                         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
                             {upcomingByMonth.length > 0 ? (
                                 upcomingByMonth.map(([month, entries]) => (
-                                    <div key={`upcoming-${month}`} className="stack-gap-sm">
-                                        <p className="text-micro-label px-1">{month}</p>
-                                        <div className="stack-gap-sm">
-                                            {entries.map((entry) => {
-                                                const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                                                const displayName = entry.personName
-                                                    ? formatNameString(entry.personName, t.member)
-                                                    : formatUserDisplayName(user, t.member);
-                                                const entryDate = parseDay(entry.date);
-                                                const currentIndex = globalIdx++;
-
-                                                return (
-                                                    <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20 transition-all duration-500">
-                                                        <RosterFeedCard
-                                                            index={currentIndex}
-                                                            date={entryDate}
-                                                            label={t.qtTitle}
-                                                            title={displayName}
-                                                            description={(
-                                                                <div className="flex items-center gap-2 flex-wrap">
-                                                                    <p className="text-micro-label">
-                                                                        {format(entryDate, 'EEEE, MMMM do, yyyy')}
-                                                                    </p>
-                                                                    {entry.title && (
-                                                                        <LinkifiedText
-                                                                            text={entry.title}
-                                                                            className="block text-micro-label leading-relaxed"
-                                                                        />
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            rightElement={(
-                                                                <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                                    <p className="text-micro-label text-primary font-mono whitespace-nowrap">
-                                                                        {entry.passage || '—'}
-                                                                    </p>
-                                                                </div>
-                                                            )}
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                    <RosterMonthGroup key={`upcoming-${month}`} month={month}>
+                                        {entries.map((entry) => renderEntry(entry, { scrollId: true }))}
+                                    </RosterMonthGroup>
                                 ))
                             ) : (
                                 <EmptyState 
@@ -157,41 +156,9 @@ export default function QTRosterPage() {
                         <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
                             {pastByMonth.length > 0 ? (
                                 pastByMonth.map(([month, entries]) => (
-                                    <div key={`past-${month}`} className="stack-gap-sm">
-                                        <p className="text-micro-label px-1">{month}</p>
-                                        <div className="stack-gap-sm">
-                                            {entries.map((entry) => {
-                                                const user = entry.userId ? usersMap.get(entry.userId) : undefined;
-                                                const displayName = entry.personName
-                                                    ? formatNameString(entry.personName, t.member)
-                                                    : formatUserDisplayName(user, t.member);
-                                                const entryDate = parseDay(entry.date);
-                                                const currentIndex = globalIdx++;
-
-                                                return (
-                                                    <RosterFeedCard
-                                                        key={`past-${entry.id}`}
-                                                        index={currentIndex}
-                                                        date={entryDate}
-                                                        label={t.qtTitle}
-                                                        title={displayName}
-                                                        description={
-                                                            <p className="text-micro-label">
-                                                                {format(entryDate, 'EEEE, MMMM do, yyyy')}
-                                                            </p>
-                                                        }
-                                                        rightElement={
-                                                            <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                                <p className="text-micro-label text-primary font-mono whitespace-nowrap">
-                                                                    {entry.passage || '—'}
-                                                                </p>
-                                                            </div>
-                                                        }
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                    <RosterMonthGroup key={`past-${month}`} month={month}>
+                                        {entries.map((entry) => renderEntry(entry, { faded: true }))}
+                                    </RosterMonthGroup>
                                 ))
                             ) : (
                                 <EmptyState 

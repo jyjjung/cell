@@ -61,6 +61,7 @@ const SHARED_DIRECTORY_CACHE_KEYS = [
   'community_progress_v2',
   'community_progress_v3',
   'custom_roster_entries_v1',
+  'bible_plan_v1',
 ] as const;
 
 export function clearSharedDirectoryCaches(): void {

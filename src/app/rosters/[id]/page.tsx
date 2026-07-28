@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUserDisplayName } from "@/lib/formatting";
-import { RosterFeedCard } from "@/components/ui/roster-feed-card";
+import { RosterFeedCard, RosterMonthGroup } from "@/components/ui/roster-feed-card";
 import { parseDay } from "@/lib/event-occurrences";
 
 function emptyFieldValues(fields: RosterFieldDefinition[]): Record<string, RosterFieldValue> {
@@ -226,7 +226,7 @@ export default function CustomRosterDetailPage() {
 
   let globalIdx = 0;
 
-  const renderEntry = (entry: CustomRosterEntry, faded = false) => {
+  const renderEntry = (entry: CustomRosterEntry) => {
     const entryDate = parseDay(entry.date);
     const title = getCustomRosterEntryTitle(entry, definition, usersMap) || definition.name;
     const summary = formatCustomRosterEntrySummary(entry, definition, usersMap);
@@ -236,7 +236,7 @@ export default function CustomRosterDetailPage() {
       <div
         key={entry.id}
         id={`date-${entry.date}`}
-        className={cn("scroll-mt-20 transition-all duration-500", faded && "opacity-80")}
+        className="scroll-mt-20 transition-all duration-500"
       >
         <RosterFeedCard
           index={currentIndex}
@@ -244,7 +244,10 @@ export default function CustomRosterDetailPage() {
           label={definition.name}
           title={title}
           description={
-            <p className="text-micro-label line-clamp-4">{summary || format(entryDate, "EEEE, MMMM do, yyyy")}</p>
+            <p className="line-clamp-3">
+              <span>{format(entryDate, "EEE")}</span>
+              {summary ? ` · ${summary}` : null}
+            </p>
           }
           rightElement={
             canEdit ? (
@@ -252,10 +255,10 @@ export default function CustomRosterDetailPage() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-lg"
+                className="h-8 w-8 shrink-0 rounded-lg"
                 onClick={() => openEditEntry(entry)}
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
             ) : undefined
           }
@@ -264,11 +267,10 @@ export default function CustomRosterDetailPage() {
     );
   };
 
-  const renderMonthGroup = (month: string, entries: CustomRosterEntry[], faded = false) => (
-    <div key={month} className="stack-gap-sm">
-      <p className="text-micro-label px-1">{month}</p>
-      <div className="stack-gap-sm">{entries.map((entry) => renderEntry(entry, faded))}</div>
-    </div>
+  const renderMonthGroup = (month: string, entries: CustomRosterEntry[]) => (
+    <RosterMonthGroup key={month} month={month}>
+      {entries.map((entry) => renderEntry(entry))}
+    </RosterMonthGroup>
   );
 
   return (
@@ -303,9 +305,9 @@ export default function CustomRosterDetailPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="past" className="mt-4 stack-gap-sm">
+        <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
           {pastByMonth.length > 0 ? (
-            pastByMonth.map(([month, entries]) => renderMonthGroup(month, entries, true))
+            pastByMonth.map(([month, entries]) => renderMonthGroup(month, entries))
           ) : (
             <EmptyState icon={CalendarOff} title={t.rosterNoPastEntries} />
           )}

@@ -9,7 +9,7 @@ import { downloadChatImage } from '@/lib/chat-image-download';
 import { translations } from '@/lib/translations';
 import { Chat, ChatMemberInfo } from '@/types';
 import { differenceInDays, format, isToday, isYesterday } from 'date-fns';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, Loader2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ChatImageGallery } from './ImageLightbox';
 import MessageBubble from './MessageBubble';
@@ -38,7 +38,7 @@ export default function ThreadWindow({
   const { messages, parentMessage, loading, loadingOlder, hasMoreOlder, loadOlderMessages, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
   const usersById = useUsersById();
-  const scrollRef = useChatScrollLoadOlder({ onLoadOlder: loadOlderMessages, hasMoreOlder, loadingOlder });
+  const { scrollRef, showJumpToLatest, jumpToLatest } = useChatScrollLoadOlder({ onLoadOlder: loadOlderMessages, hasMoreOlder, loadingOlder });
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -128,11 +128,6 @@ export default function ThreadWindow({
             className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-4 flex flex-col-reverse custom-scrollbar"
         >
             <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
-                {loadingOlder && (
-                  <div className="flex justify-center py-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
-                  </div>
-                )}
                 {renderContent()}
 
                 {/* Parent Message Separator */}
@@ -159,6 +154,12 @@ export default function ThreadWindow({
                       </div>
                   </div>
                 )}
+
+                {loadingOlder && (
+                  <div className="flex justify-center py-3" aria-live="polite">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+                  </div>
+                )}
             </div>
 
             {loading && messages.length === 0 && (
@@ -167,6 +168,17 @@ export default function ThreadWindow({
                 </div>
             )}
         </div>
+
+        {showJumpToLatest && (
+          <button
+            type="button"
+            onClick={jumpToLatest}
+            className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition hover:bg-muted"
+            aria-label="Jump to latest messages"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="px-3 pb-3 pt-1 shrink-0">

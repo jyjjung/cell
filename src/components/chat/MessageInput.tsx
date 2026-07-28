@@ -53,6 +53,9 @@ type MessageActions = {
     sheetKey?: string,
     poll?: ChatPoll,
     docId?: string,
+    setlistTitle?: string,
+    rosterTitle?: string,
+    docTitle?: string,
   ) => void | Promise<void>;
   sendImageMessage: (imageUrl: string, replyToId?: string) => void;
 };
@@ -143,12 +146,16 @@ export default function MessageInput({
     const trimmedText = text.trim();
     if (stagedAttachment) {
       const args: [
-        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?, string?,
+        string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, string?, ChatPoll?, string?, string?, string?, string?,
       ] = [trimmedText || undefined, undefined, replyToMessage?.id];
 
-      if (stagedAttachment.type === 'setlist') args[4] = stagedAttachment.id;
-      else if (stagedAttachment.type === 'roster') args[5] = stagedAttachment.id;
-      else if (stagedAttachment.type === 'song') {
+      if (stagedAttachment.type === 'setlist') {
+        args[4] = stagedAttachment.id;
+        args[13] = stagedAttachment.label;
+      } else if (stagedAttachment.type === 'roster') {
+        args[5] = stagedAttachment.id;
+        args[14] = stagedAttachment.label;
+      } else if (stagedAttachment.type === 'song') {
         args[8] = stagedAttachment.id;
         const meta = stagedAttachment.metadata;
         if (meta?.songTitle) args[9] = meta.songTitle as string;
@@ -156,6 +163,7 @@ export default function MessageInput({
         if (meta?.imageUrl) args[1] = meta.imageUrl as string;
       } else if (stagedAttachment.type === 'doc') {
         args[12] = stagedAttachment.id;
+        args[15] = stagedAttachment.label;
       }
 
       void sendMessage(...args);
@@ -189,6 +197,9 @@ export default function MessageInput({
         undefined,
         undefined,
         docId,
+        undefined,
+        undefined,
+        t.untitledDocument,
       );
       clearComposer();
       toast({ title: t.documentSharedInChat });
@@ -369,6 +380,9 @@ export default function MessageInput({
         undefined,
         undefined,
         docId,
+        undefined,
+        undefined,
+        t.untitledDocument,
       );
       clearComposer();
       toast({ title: t.documentSharedInChat });

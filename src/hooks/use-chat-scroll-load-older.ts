@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 const SCROLL_THRESHOLD_PX = 120;
+const AWAY_FROM_BOTTOM_PX = 200;
 
 export function isNearOldestInReverseList({
   scrollTop,
@@ -18,6 +19,16 @@ export function isNearOldestInReverseList({
   return distanceFromNewest >= scrollableDistance - SCROLL_THRESHOLD_PX;
 }
 
+export function isAwayFromNewestInReverseList({
+  scrollTop,
+}: {
+  scrollTop: number;
+  scrollHeight?: number;
+  clientHeight?: number;
+}) {
+  return Math.abs(scrollTop) > AWAY_FROM_BOTTOM_PX;
+}
+
 /** In a flex-col-reverse list, browsers may report upward scrolling with a negative scrollTop. */
 export function useChatScrollLoadOlder({
   onLoadOlder,
@@ -29,13 +40,22 @@ export function useChatScrollLoadOlder({
   loadingOlder?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+
+  const jumpToLatest = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowJumpToLatest(false);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !onLoadOlder) return;
+    if (!el) return;
 
     const handleScroll = () => {
-      if (!hasMoreOlder || loadingOlder) return;
+      setShowJumpToLatest(isAwayFromNewestInReverseList(el));
+      if (!onLoadOlder || !hasMoreOlder || loadingOlder) return;
       const nearOldest = isNearOldestInReverseList(el);
       if (nearOldest) onLoadOlder();
     };
@@ -45,5 +65,5 @@ export function useChatScrollLoadOlder({
     return () => el.removeEventListener('scroll', handleScroll);
   }, [onLoadOlder, hasMoreOlder, loadingOlder]);
 
-  return scrollRef;
+  return { scrollRef, showJumpToLatest, jumpToLatest };
 }

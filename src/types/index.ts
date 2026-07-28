@@ -298,6 +298,8 @@ export interface AppNotification {
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
   pushSentAt?: Timestamp | null;
+  /** Emoji → user ids who reacted (announcements). */
+  reactions?: { [emoji: string]: string[] };
 }
 
 export interface PrayerRequest {
@@ -385,7 +387,11 @@ export interface ChatMessage {
   latestReplyImageUrl?: string;
   eventId?: string;
   setlistId?: string;
+  /** Display name captured when the setlist was shared (for previews / pushes). */
+  setlistTitle?: string;
   rosterId?: string;
+  /** Display name captured when the roster was shared. */
+  rosterTitle?: string;
   qtDate?: string;
   cleaningDate?: string;
   songId?: string;
@@ -393,6 +399,8 @@ export interface ChatMessage {
   sheetKey?: string;
   /** Shared document attached to this chat message. */
   docId?: string;
+  /** Display title captured when the document was shared. */
+  docTitle?: string;
   isDeleted?: boolean;
   deletedBy?: string;
   deletedContentType?: DeletedMessageContentType;

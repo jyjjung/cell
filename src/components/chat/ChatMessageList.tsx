@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { ArrowDown, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { resolveChatUserName, isMutedChatEvent } from '@/lib/chat-utils';
@@ -62,7 +62,11 @@ export default function ChatMessageList({
   loadingOlder = false,
   hasMoreOlder = false,
 }: ChatMessageListProps) {
-  const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
+  const { scrollRef, showJumpToLatest, jumpToLatest } = useChatScrollLoadOlder({
+    onLoadOlder,
+    hasMoreOlder,
+    loadingOlder,
+  });
 
   const messageList = useMemo(() => {
     const content: ReactNode[] = [];
@@ -150,20 +154,34 @@ export default function ChatMessageList({
   ]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
-    >
-      <TooltipProvider delayDuration={300}>
-        <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
-          {loadingOlder && (
-            <div className="flex justify-center py-3">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
-            </div>
-          )}
-          {messageList}
-        </div>
-      </TooltipProvider>
+    <div className="absolute inset-0">
+      <div
+        ref={scrollRef}
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
+      >
+        <TooltipProvider delayDuration={300}>
+          <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
+            {messageList}
+            {/* Last DOM child = visual top in flex-col-reverse */}
+            {loadingOlder && (
+              <div className="flex justify-center py-3" aria-live="polite">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+              </div>
+            )}
+          </div>
+        </TooltipProvider>
+      </div>
+
+      {showJumpToLatest && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-lg transition hover:bg-muted"
+          aria-label="Jump to latest messages"
+        >
+          <ArrowDown className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
