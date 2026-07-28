@@ -34,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { formatUserDisplayName } from '@/lib/formatting';
+import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { userCanSeeEvent } from '@/lib/event-visibility';
@@ -301,10 +301,43 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
   const upcomingDuties = useMemo(() => myRosterItems.slice(0, 8), [myRosterItems]);
 
-  const upcomingEvents = useMemo(
-    () => dashboardEventRows.slice(0, 6),
-    [dashboardEventRows],
-  );
+  /** Community "Next up" list: events + upcoming QT sharings, sorted by date. */
+  const nextUpItems = useMemo((): DashboardListItem[] => {
+    const items: DashboardListItem[] = [];
+
+    for (const row of dashboardEventRows) {
+      const isBirthday = row.event.category === EventCategory.Birthday;
+      items.push({
+        id: row.occurrenceKey,
+        date: row.occurrenceDate,
+        label: row.event.title,
+        sublabel: row.event.category,
+        type: isBirthday ? 'birthday' : 'event',
+        details: row.event.details,
+      });
+    }
+
+    for (const entry of qtRoster) {
+      const d = parseISO(entry.date || '');
+      if (!isValid(d) || isBefore(d, today)) continue;
+      const user = entry.userId ? usersMap.get(entry.userId) : undefined;
+      const sharerName = entry.personName
+        ? formatNameString(entry.personName, t.member)
+        : formatUserDisplayName(user, t.member);
+      items.push({
+        id: `next-qt-${entry.id}`,
+        date: d,
+        label: sharerName,
+        sublabel: entry.title || entry.passage || t.qtSharing,
+        type: 'qt',
+        href: '/qt',
+        passage: entry.passage,
+        qtTitle: entry.title,
+      });
+    }
+
+    return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 8);
+  }, [dashboardEventRows, qtRoster, usersMap, today, t.member, t.qtSharing]);
 
   const handleAgendaItemClick = useCallback((item: AgendaItem) => {
     if (item.kind === 'event') {
@@ -499,21 +532,21 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
             </div>
           )}
 
-          {upcomingEvents.length > 0 && (
+          {nextUpItems.length > 0 && (
             <div className="space-y-2 border-t border-border/50 pt-4">
               <p className="text-section-title">{t.nextUp}</p>
               <div className="ui-list">
-                {upcomingEvents.map((row) => (
+                {nextUpItems.map((item) => (
                   <button
-                    key={row.occurrenceKey}
+                    key={item.id}
                     type="button"
-                    onClick={() => openEventFromOccurrence(row)}
+                    onClick={() => setSelectedEvent(item)}
                     className="event-row group"
                   >
-                    <span className="event-row-time">{format(row.occurrenceDate, 'MMM d')}</span>
+                    <span className="event-row-time">{format(item.date, 'MMM d')}</span>
                     <div className="event-row-body">
-                      <p className="event-row-title">{row.event.title}</p>
-                      <p className="event-row-meta">{row.event.category}</p>
+                      <p className="event-row-title">{item.label}</p>
+                      <p className="event-row-meta">{item.sublabel || itemTypeLabel(item.type)}</p>
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
                   </button>
