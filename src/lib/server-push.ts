@@ -5,6 +5,8 @@ import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils'
 
 /** Keep in sync with client MAX_FCM_TOKENS — validate/send all stored tokens, not a silent first-3 subset. */
 const MAX_FCM_TOKENS = 5;
+const FCM_SEND_ATTEMPTS = 4;
+const FCM_RETRY_BASE_MS = 750;
 
 export type DataPushPayload = {
   title: string;
@@ -12,6 +14,41 @@ export type DataPushPayload = {
   tag: string;
   link: string;
 };
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientFcmError(error: unknown): boolean {
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code || '')
+      : '';
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /resource-exhausted|unavailable|internal|deadline-exceeded|quota/i.test(code) ||
+    /429|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|throttl/i.test(message)
+  );
+}
+
+async function sendMulticastWithRetry(
+  adminMessaging: Messaging,
+  message: Parameters<Messaging['sendEachForMulticast']>[0],
+) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= FCM_SEND_ATTEMPTS; attempt++) {
+    try {
+      return await adminMessaging.sendEachForMulticast(message);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientFcmError(error) || attempt === FCM_SEND_ATTEMPTS) {
+        throw error;
+      }
+      await wait(FCM_RETRY_BASE_MS * attempt);
+    }
+  }
+  throw lastError;
+}
 
 async function deliverDataPush(
   userId: string,
@@ -58,7 +95,10 @@ async function deliverDataPush(
     },
   };
 
-  const response = await adminMessaging.sendEachForMulticast(message as Parameters<Messaging['sendEachForMulticast']>[0]);
+  const response = await sendMulticastWithRetry(
+    adminMessaging,
+    message as Parameters<Messaging['sendEachForMulticast']>[0],
+  );
 
   if (response.failureCount > 0) {
     const staleTokens: string[] = [];
@@ -129,10 +169,14 @@ export async function deliverNotificationPush(
   if (notification.isGlobal) {
     const usersSnapshot = await adminDb.collection('users').get();
     let total = 0;
+    // Isolate per-user failures so one bad token/quota blip does not abort the fan-out.
     for (const doc of usersSnapshot.docs) {
       const user = doc.data() as UserProfileData;
-      if (user.fcmTokens?.length) {
+      if (!user.fcmTokens?.length) continue;
+      try {
         total += await deliverToUser(doc.id, user.fcmTokens, notification, adminDb, adminMessaging);
+      } catch (error) {
+        console.error(`[server-push] Global push failed for ${doc.id}:`, error);
       }
     }
     return total;

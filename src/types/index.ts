@@ -299,6 +299,10 @@ export interface AppNotification {
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
   pushSentAt?: Timestamp | null;
+  pushClaimedAt?: Timestamp | null;
+  pushDeliveredCount?: number;
+  pushNeedsRetry?: boolean;
+  pushRetryCount?: number;
 }
 
 export interface PrayerRequest {

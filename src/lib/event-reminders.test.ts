@@ -90,4 +90,27 @@ describe('collectEventDayReminders', () => {
       timeZone: 'Australia/Brisbane',
     })).toHaveLength(1);
   });
+
+  it('matches Brisbane-midnight Timestamps that land on the previous UTC calendar day', () => {
+    // 1995-07-27 00:00 Australia/Brisbane === 1995-07-26T14:00:00.000Z
+    const event = normalizeEventFromFirestore('ts-brisbane', {
+      title: 'Sam Park',
+      date: { toDate: () => new Date('1995-07-26T14:00:00.000Z') },
+      category: EventCategory.Birthday,
+    });
+
+    expect(collectEventDayReminders({
+      todayIso: '2026-07-27',
+      events: [event],
+      users,
+      timeZone: 'Australia/Brisbane',
+    })).toHaveLength(1);
+
+    expect(collectEventDayReminders({
+      todayIso: '2026-07-26',
+      events: [event],
+      users,
+      timeZone: 'Australia/Brisbane',
+    })).toHaveLength(0);
+  });
 });

@@ -80,11 +80,44 @@ export default function CleaningRosterPage() {
 
     let globalIdx = 0;
 
-    const statusLabel = (entry: CleaningRosterEntry, completer: UserProfileData | null | undefined) => {
-        if (entry.isCompleted) {
-            return completer ? `${t.done} ${formatUserDisplayName(completer)}` : t.done;
-        }
-        return t.scheduled;
+    const renderEntry = (entry: CleaningRosterEntry, key: string) => {
+        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
+        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+        const currentIndex = globalIdx++;
+        const doneLabel = entry.isCompleted
+            ? completer
+                ? `${t.done} ${formatUserDisplayName(completer)}`
+                : t.done
+            : null;
+
+        return (
+            <ScheduleOccurrenceRow
+                key={key}
+                id={`date-${entry.date}`}
+                index={currentIndex}
+                date={parseDay(entry.date)}
+                title={dayName}
+                meta={
+                    assignedUsers.length > 0 ? (
+                        <span>
+                            {assignedUsers.map((user, uidx) => (
+                                <span key={user.uid}>
+                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ', ' : ''}
+                                </span>
+                            ))}
+                        </span>
+                    ) : undefined
+                }
+                rightElement={
+                    doneLabel ? (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {doneLabel}
+                        </span>
+                    ) : undefined
+                }
+            />
+        );
     };
 
     const renderEntry = (entry: CleaningRosterEntry, key: string) => {

@@ -6,6 +6,43 @@ import { chatPushBadgeFields } from '@/lib/chat-push-badge';
 
 const BADGE_TIMEOUT_MS = 2500;
 const MAX_FCM_TOKENS = 5;
+const FCM_SEND_ATTEMPTS = 4;
+const FCM_RETRY_BASE_MS = 750;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientFcmError(error: unknown): boolean {
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code || '')
+      : '';
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /resource-exhausted|unavailable|internal|deadline-exceeded|quota/i.test(code) ||
+    /429|RESOURCE_EXHAUSTED|UNAVAILABLE|quota|throttl/i.test(message)
+  );
+}
+
+async function sendMulticastWithRetry(
+  adminMessaging: Messaging,
+  message: Parameters<Messaging['sendEachForMulticast']>[0],
+) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= FCM_SEND_ATTEMPTS; attempt++) {
+    try {
+      return await adminMessaging.sendEachForMulticast(message);
+    } catch (error) {
+      lastError = error;
+      if (!isTransientFcmError(error) || attempt === FCM_SEND_ATTEMPTS) {
+        throw error;
+      }
+      await wait(FCM_RETRY_BASE_MS * attempt);
+    }
+  }
+  throw lastError;
+}
 
 function chatPushLockId(chatId: string, messageId: string): string {
   return `${chatId}_${messageId}`;
@@ -219,7 +256,8 @@ export async function deliverChatPush(
           },
         };
 
-        const response = await adminMessaging.sendEachForMulticast(
+        const response = await sendMulticastWithRetry(
+          adminMessaging,
           payload as Parameters<Messaging['sendEachForMulticast']>[0],
         );
 

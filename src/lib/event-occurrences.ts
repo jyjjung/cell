@@ -14,19 +14,33 @@ function isBirthdayEvent(event: AppEvent): boolean {
   return event.category === EventCategory.Birthday;
 }
 
-/** Whether a birthday event falls on today (calendar MM-DD match). */
+/** Calendar YYYY-MM-DD for an instant in a community timezone (no startOfDay shift). */
+function communityCalendarDayFromInstant(isoOrDate: string, timeZone: string): string {
+  const instant = new Date(isoOrDate);
+  if (Number.isNaN(instant.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(instant);
+}
+
+/** Whether a birthday event falls on today in the community timezone. */
 export function birthdayOccursOnCommunityDate(
   event: AppEvent,
   todayIso: string,
-  _timeZone?: string,
+  timeZone = 'Australia/Brisbane',
 ): boolean {
   if (!isBirthdayEvent(event) || !event.date) return false;
-  // Birth dates are calendar dates — never timezone-shift the stored day.
-  const birth = event.date.slice(0, 10);
-  const birthMd = birth.slice(5, 10);
   const todayMd = todayIso.slice(5, 10);
-  if (!/^\d{2}-\d{2}$/.test(birthMd) || !/^\d{2}-\d{2}$/.test(todayMd)) return false;
-  return birthMd === todayMd;
+  if (!/^\d{2}-\d{2}$/.test(todayMd)) return false;
+
+  const raw = event.date.trim();
+  // Plain calendar dates (YYYY-MM-DD) must not be timezone-shifted.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw.slice(5, 10) === todayMd;
+  }
+
+  // Firestore Timestamp → ISO instant: interpret the civil day in community TZ.
+  const birthDay = communityCalendarDayFromInstant(raw, timeZone);
+  if (!birthDay || birthDay.length < 10) return false;
+  return birthDay.slice(5, 10) === todayMd;
 }
 
 function birthdayMonthDay(event: AppEvent): { month: number; day: number } {

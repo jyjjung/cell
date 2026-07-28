@@ -61,8 +61,8 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
       )}>
         <div className="flex items-start gap-4">
           <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border border-border/60 bg-muted/40">
-             <span className="text-micro-label">{dayOfWeek}</span>
              <span className="text-2xl font-semibold leading-none text-foreground">{dayOfMonth}</span>
+             <span className="mt-0.5 text-micro-label">{dayOfWeek}</span>
           </div>
           
           <div className="flex-1 min-w-0">
@@ -73,10 +73,12 @@ export default function EventSummary({ eventId, isSender }: EventSummaryProps) {
             <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{event.title}</h3>
             
             <div className="flex flex-col gap-1.5 text-muted-foreground">
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{event.startTime ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}` : 'All day'}</span>
-              </div>
+              {event.date && !event.allDay && event.startTime && (
+                <div className="flex items-center gap-2 text-xs font-medium">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{`${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}`}</span>
+                </div>
+              )}
               {event.location && (
                 <div className="flex items-center gap-2 text-xs font-medium">
                   <MapPin className="w-3.5 h-3.5" />
