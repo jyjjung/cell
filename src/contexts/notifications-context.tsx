@@ -80,21 +80,57 @@ function mapSnapshot(docs: { id: string; data: () => Record<string, unknown> }[]
 }
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {
-  try {
-    const headers = await getClientAuthHeaders();
-    const res = await fetch('/api/send-push', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ notificationId }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: 'Server returned a non-JSON or empty response.' }));
-      console.error('Failed to trigger push notification API:', res.status, body.error);
-    }
-  } catch (error) {
-    console.error('Error calling /api/send-push:', error);
+  const delivered = await tryTriggerPushNotification(notificationId, 5);
+  if (delivered) return;
+
+  // Firestore replication / transient FCM failures can clear after the first burst.
+  for (const delayMs of [10_000, 30_000]) {
+    setTimeout(() => {
+      void tryTriggerPushNotification(notificationId, 3);
+    }, delayMs);
   }
 };
+
+async function tryTriggerPushNotification(
+  notificationId: string,
+  maxAttempts: number,
+): Promise<boolean> {
+  const baseDelayMs = 500;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const headers = await getClientAuthHeaders();
+      const res = await fetch('/api/send-push', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ notificationId }),
+        keepalive: true,
+      });
+
+      if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.alreadySent || body.deferred) return true;
+        if (typeof body.delivered === 'number' && body.delivered > 0) return true;
+        // delivered === 0: keep retrying in case tokens appear / FCM recovers
+        lastError = new Error('Push delivered to 0 devices');
+      } else {
+        const body = await res.json().catch(() => ({ error: 'Server returned a non-JSON or empty response.' }));
+        lastError = new Error(`Push API failed (${res.status}): ${body.error || res.statusText}`);
+        if (res.status === 401 || res.status === 403 || res.status === 400) break;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * attempt));
+    }
+  }
+
+  console.error('Failed to trigger push notification API:', lastError);
+  return false;
+}
 
 type NotificationsContextValue = {
   notifications: AppNotification[];
@@ -193,7 +229,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       orderBy('createdAt', 'desc'),
       limit(NOTIFICATION_QUERY_LIMITS.announcements),
     );
-    // Globals (e.g. memory-verse alerts) are isGlobal but not always type=announcement.
+    // Globals (birthdays, memory verses) are isGlobal but not always type=announcement.
     // Must match server badge queries or icon badges disagree with the in-app list.
     const globalsQuery = query(
       collection(db, NOTIFICATIONS_COLLECTION),
@@ -280,6 +316,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     await setDoc(docRef, dataToSave);
     const deferPush = shouldDeferScheduledAnnouncement(notificationData.scheduledFor);
     if (!deferPush) {
+      // Await the first burst so navigation doesn't cancel auth/fetch mid-flight.
+      // Delayed follow-up retries continue in the background.
       await triggerPushNotification(notificationId);
     }
 

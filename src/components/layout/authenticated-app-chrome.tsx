@@ -100,7 +100,8 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        registerToken(true);
+        // Soft refresh only — never force-delete the FCM token on foreground.
+        registerToken({ refresh: true });
         window.dispatchEvent(new CustomEvent('chat:resync'));
       }
     };

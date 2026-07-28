@@ -11,15 +11,26 @@ import {
   healFcmSubscription,
 } from '@/lib/fcm-heal';
 
+type RegisterTokenOptions = {
+  /** Hard rebind: deleteToken + rewrite. Only for Repair / permission grant. */
+  force?: boolean;
+  /** Re-check token even if we already synced this session (e.g. app foreground). */
+  refresh?: boolean;
+};
+
 export function useFCMToken() {
   const { currentUser } = useAuth();
   const hasSynced = useRef(false);
 
-  const registerToken = useCallback(async (isManual = false) => {
+  const registerToken = useCallback(async (options: boolean | RegisterTokenOptions = false) => {
     if (!messaging || !currentUser) return;
 
-    if (!isManual && hasSynced.current) return;
-    if (isManual) hasSynced.current = false;
+    const opts: RegisterTokenOptions =
+      typeof options === 'boolean' ? { force: options, refresh: options } : options;
+    const force = Boolean(opts.force);
+    const refresh = Boolean(opts.refresh || opts.force);
+
+    if (!refresh && hasSynced.current) return;
     hasSynced.current = true;
 
     try {
@@ -32,8 +43,9 @@ export function useFCMToken() {
       }
 
       // Heal decides whether a hard rebind is needed (stale SW / heal version / fcmNeedsResync).
-      const healed = await healFcmSubscription(currentUser.uid, { force: isManual });
-      if (healed || isManual) return;
+      // Never force-delete on ordinary foreground refresh — that invalidates tokens mid-chat.
+      const healed = await healFcmSubscription(currentUser.uid, { force });
+      if (healed || force) return;
 
       const registration = await getFCMRegistration();
       const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
@@ -68,7 +80,7 @@ export function useFCMToken() {
     try {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        await registerToken(true);
+        await registerToken({ force: true });
         return true;
       }
     } catch (error) {

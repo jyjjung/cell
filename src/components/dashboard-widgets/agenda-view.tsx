@@ -225,7 +225,7 @@ export default function AgendaView({
           items.map((item) => {
             if (item.kind === 'event') {
               const { event } = item.row;
-              const time = event.allDay ? t.allDay : event.startTime || '—';
+              const time = event.allDay || !event.startTime ? '' : event.startTime;
               return (
                 <AgendaRow
                   key={item.row.occurrenceKey}

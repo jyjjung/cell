@@ -53,6 +53,7 @@ export default function EventOccurrenceCard({
         <div className="flex w-10 shrink-0 flex-col items-center leading-none">
           <span className="text-[10px] font-medium text-muted-foreground">{format(eventDate, "MMM")}</span>
           <span className="text-sm font-semibold tabular-nums text-foreground">{format(eventDate, "d")}</span>
+          <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">{format(eventDate, "EEE")}</span>
         </div>
 
         <div className="event-row-body">
@@ -65,23 +66,23 @@ export default function EventOccurrenceCard({
             )}
           </div>
           <p className="event-row-title">{event.title}</p>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-            <span>{format(eventDate, "EEE")}</span>
-            {!event.allDay && event.startTime && (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {event.startTime}
-                {event.endTime ? `–${event.endTime}` : ""}
-              </span>
-            )}
-            {event.allDay && <span>All day</span>}
-            {event.location && (
-              <span className="inline-flex items-center gap-1 truncate">
-                <MapPin className="h-3 w-3 shrink-0" />
-                {event.location}
-              </span>
-            )}
-          </div>
+          {((!event.allDay && event.startTime) || event.location) && (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              {!event.allDay && event.startTime && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {event.startTime}
+                  {event.endTime ? `–${event.endTime}` : ""}
+                </span>
+              )}
+              {event.location && (
+                <span className="inline-flex items-center gap-1 truncate">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {event.location}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <motion.div animate={{ rotate: onCardClick ? 0 : open ? 90 : 0 }} transition={{ duration: 0.15 }}>
