@@ -295,6 +295,7 @@ export interface AppNotification {
   userId?: string;
   createdAt: Timestamp;
   readBy: string[];
+  reactions?: { [emoji: string]: string[] };
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
   pushSentAt?: Timestamp | null;
@@ -385,6 +386,8 @@ export interface ChatMessage {
   latestReplyImageUrl?: string;
   eventId?: string;
   setlistId?: string;
+  /** Display name captured when the setlist was shared (for previews/pushes). */
+  setlistName?: string;
   rosterId?: string;
   qtDate?: string;
   cleaningDate?: string;

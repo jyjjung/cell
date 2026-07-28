@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUserDisplayName } from "@/lib/formatting";
-import { RosterFeedCard } from "@/components/ui/roster-feed-card";
+import { ScheduleMonthGroup, ScheduleOccurrenceRow } from "@/components/schedule/schedule-occurrence-row";
 import { parseDay } from "@/lib/event-occurrences";
 
 function emptyFieldValues(fields: RosterFieldDefinition[]): Record<string, RosterFieldValue> {
@@ -233,42 +233,36 @@ export default function CustomRosterDetailPage() {
     const currentIndex = globalIdx++;
 
     return (
-      <div
+      <ScheduleOccurrenceRow
         key={entry.id}
         id={`date-${entry.date}`}
-        className={cn("scroll-mt-20 transition-all duration-500", faded && "opacity-80")}
-      >
-        <RosterFeedCard
-          index={currentIndex}
-          date={entryDate}
-          label={definition.name}
-          title={title}
-          description={
-            <p className="text-micro-label line-clamp-4">{summary || format(entryDate, "EEEE, MMMM do, yyyy")}</p>
-          }
-          rightElement={
-            canEdit ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 shrink-0 rounded-lg"
-                onClick={() => openEditEntry(entry)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            ) : undefined
-          }
-        />
-      </div>
+        index={currentIndex}
+        date={entryDate}
+        label={definition.name}
+        title={title}
+        className={faded ? "opacity-80" : undefined}
+        meta={summary ? <span className="line-clamp-2">{summary}</span> : undefined}
+        rightElement={
+          canEdit ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 rounded-lg"
+              onClick={() => openEditEntry(entry)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          ) : undefined
+        }
+      />
     );
   };
 
   const renderMonthGroup = (month: string, entries: CustomRosterEntry[], faded = false) => (
-    <div key={month} className="stack-gap-sm">
-      <p className="text-micro-label px-1">{month}</p>
-      <div className="stack-gap-sm">{entries.map((entry) => renderEntry(entry, faded))}</div>
-    </div>
+    <ScheduleMonthGroup key={month} month={month}>
+      {entries.map((entry) => renderEntry(entry, faded))}
+    </ScheduleMonthGroup>
   );
 
   return (

@@ -19,6 +19,8 @@ import type { DocNote, DocVisibility } from '@/types';
 interface DocSummaryProps {
   docId: string;
   isSender: boolean;
+  /** When the document is gone, call so the parent can render an inline deleted notice. */
+  onMissing?: () => void;
 }
 
 function noteFromSnapshot(snapshot: DocumentSnapshot): DocNote {
@@ -43,7 +45,7 @@ function noteFromSnapshot(snapshot: DocumentSnapshot): DocNote {
 /** Offline fallback: show cached doc only if server never confirms in time. */
 const CACHE_FALLBACK_MS = 1500;
 
-export default function DocSummary({ docId, isSender }: DocSummaryProps) {
+export default function DocSummary({ docId, isSender, onMissing }: DocSummaryProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const locale = getAppLocale(currentUser?.preferredLanguage);
@@ -57,6 +59,7 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
       setNote(null);
       setMissing(true);
       setLoading(false);
+      onMissing?.();
       return;
     }
 
@@ -78,6 +81,7 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
       setNote(null);
       setMissing(true);
       setLoading(false);
+      onMissing?.();
     };
 
     const showNote = (next: DocNote) => {
@@ -131,7 +135,7 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
       if (cacheFallback) clearTimeout(cacheFallback);
       unsubscribe();
     };
-  }, [docId]);
+  }, [docId, onMissing]);
 
   const authorLabel = useMemo(() => {
     if (!note) return '';
@@ -151,6 +155,8 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
   }
 
   if (missing || !note) {
+    // Parent MessageBubble renders the inline deleted notice when onMissing is set.
+    if (onMissing) return null;
     return <DeletedContentNotice label={t.deletedContentDoc} />;
   }
 

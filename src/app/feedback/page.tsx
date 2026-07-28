@@ -56,6 +56,25 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.136",
+    subtitle: "Schedule, chat, and notification polish",
+    date: "July 28, 2026",
+    changes: [
+      "QT, cleaning, and custom rosters now use the same date-row layout as Events",
+      "Deleted documents in chat show an inline notice like deleted setlists",
+      "Prayer requests page padding matches other hub pages",
+      "Turn on notifications banner is opaque so it stays readable over chat",
+      "Calendar widget removed from the dashboard (today agenda remains)",
+      "Bible plan and reading progress load after sign-in without a refresh, with faster first paint from local cache",
+      "Chat shows a loading spinner while fetching older messages and a jump-to-latest button",
+      "Chat Photos tab warms the device cache and loads older photo history",
+      "Setlist change alerts name the setlist; shared setlist chat previews include the setlist name",
+      "Birthday alerts are sent as one community-wide notification so everyone gets the same delivery",
+      "Announcements can be reacted to with emoji",
+      "Document comments work again (Firestore rules now check the parent document)",
+    ],
+  },
+  {
     version: "v1.3.135",
     subtitle: "More consistent notifications",
     date: "July 23, 2026",

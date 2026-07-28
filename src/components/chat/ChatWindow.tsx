@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWorshipData, WorshipDataProvider } from '@/contexts/worship-data-context';
 import { downloadChatImage } from '@/lib/chat-image-download';
 import { translations } from '@/lib/translations';
+import { primeMediaUrls } from '@/lib/media-cache';
 import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
@@ -122,6 +123,7 @@ function ChatWindowBody({
   const usersById = useUsersById();
   const online = useOnlineStatus();
   const isInitialLoad = useRef(true);
+  const photosHydrationPagesRef = useRef(0);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -158,6 +160,20 @@ function ChatWindowBody({
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [chatId, messages.length, updateSeenTimestamp]);
+
+  useEffect(() => {
+    if (chatTab !== 'photos') {
+      photosHydrationPagesRef.current = 0;
+      return;
+    }
+    // Warm device/SW cache for visible photos, and page in older history so
+    // the album is not limited to the live message window.
+    primeMediaUrls(messages.map((m) => m.imageUrl));
+    if (hasMoreOlder && !loadingOlder && photosHydrationPagesRef.current < 20) {
+      photosHydrationPagesRef.current += 1;
+      void loadOlderMessages();
+    }
+  }, [chatTab, messages, hasMoreOlder, loadingOlder, loadOlderMessages]);
 
   useEffect(() => {
     if (isInitialLoad.current && messages.length > 0) {

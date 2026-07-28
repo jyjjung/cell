@@ -1,22 +1,37 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { WorshipSetlist, SetlistSong, ChordKey, ReferenceTrack } from '@/types';
+import type { WorshipSetlist, SetlistSong, ChordKey, ReferenceTrack, WorshipRoster } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
-  serverTimestamp, orderBy,
+  serverTimestamp, orderBy, getDocs,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
-
 import { useWorshipData } from '@/contexts/worship-data-context';
+import { useNotifications } from '@/hooks/use-notifications';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
+const ROSTERS_COLLECTION = 'worshipRosters';
+
+function collectLinkedRosterMemberIds(rosters: WorshipRoster[], setlistId: string): string[] {
+  const ids = new Set<string>();
+  for (const roster of rosters) {
+    if (roster.setlistId !== setlistId) continue;
+    for (const slot of roster.slots ?? []) {
+      for (const member of slot.members ?? []) {
+        if (member.userId) ids.add(member.userId);
+      }
+    }
+  }
+  return [...ids];
+}
 
 export function useWorshipSetlists(enabled = true) {
   const worshipData = useWorshipData();
   const useShared = enabled && worshipData !== null;
   const { currentUser } = useAuth();
+  const { createNotification } = useNotifications();
   const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
   const [loading, setLoading] = useState(!useShared);
 
@@ -35,6 +50,36 @@ export function useWorshipSetlists(enabled = true) {
     }, () => setLoading(false));
     return unsub;
   }, [useShared, enabled, currentUser?.uid]);
+
+  const notifySetlistChange = useCallback(async (
+    setlist: WorshipSetlist,
+    detail: string,
+  ) => {
+    if (!currentUser?.uid) return;
+    try {
+      const snap = await getDocs(query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc')));
+      const rosters = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
+      const memberIds = collectLinkedRosterMemberIds(rosters, setlist.id)
+        .filter((uid) => uid !== currentUser.uid);
+      if (memberIds.length === 0) return;
+
+      const setlistLabel = setlist.name?.trim() || 'Setlist';
+      await Promise.all(
+        memberIds.map((userId) =>
+          createNotification({
+            title: `Setlist updated: ${setlistLabel}`,
+            message: `${detail} in “${setlistLabel}”.`,
+            type: 'reminder',
+            isGlobal: false,
+            userId,
+            relatedUrl: '/worship',
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('[useWorshipSetlists] notifySetlistChange failed:', error);
+    }
+  }, [createNotification, currentUser?.uid]);
 
   const createSetlist = useCallback(async (name: string, date: string): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');
@@ -82,13 +127,16 @@ export function useWorshipSetlists(enabled = true) {
       songs: updated,
       updatedAt: serverTimestamp(),
     });
-  }, []);
+    const keyLabel = key === 'numbers' ? '#' : key;
+    void notifySetlistChange(setlist, `“${songTitle}” (${keyLabel}) was added`);
+  }, [notifySetlistChange]);
 
   const updateSetlistSong = useCallback(async (
     setlist: WorshipSetlist,
     songId: string,
     patch: Partial<Pick<SetlistSong, 'key' | 'referenceTracks' | 'chordSheetIds'>>,
   ) => {
+    const existing = setlist.songs.find((s) => s.songId === songId);
     const updated = setlist.songs.map((s) => {
       if (s.songId !== songId) return s;
       const next: SetlistSong = { ...s };
@@ -113,12 +161,20 @@ export function useWorshipSetlists(enabled = true) {
       songs: updated,
       updatedAt: serverTimestamp(),
     });
-  }, []);
+
+    if (patch.key !== undefined && existing && existing.key !== patch.key) {
+      const nextKey = patch.key === 'numbers' ? '#' : patch.key;
+      void notifySetlistChange(setlist, `Key for “${existing.title}” changed to ${nextKey}`);
+    } else if (existing) {
+      void notifySetlistChange(setlist, `“${existing.title}” was updated`);
+    }
+  }, [notifySetlistChange]);
 
   const removeSongFromSetlist = useCallback(async (
     setlist: WorshipSetlist,
     songId: string,
   ) => {
+    const removed = setlist.songs.find((s) => s.songId === songId);
     const updated = setlist.songs
       .filter(s => s.songId !== songId)
       .map((s, i) => ({ ...s, order: i }));
@@ -126,7 +182,10 @@ export function useWorshipSetlists(enabled = true) {
       songs: updated,
       updatedAt: serverTimestamp(),
     });
-  }, []);
+    if (removed) {
+      void notifySetlistChange(setlist, `“${removed.title}” was removed`);
+    }
+  }, [notifySetlistChange]);
 
   const reorderSetlistSongs = useCallback(async (
     setlistId: string,

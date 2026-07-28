@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
 import { RemoteImage } from '@/components/ui/remote-image';
+import { primeMediaUrls } from '@/lib/media-cache';
 
 export { extractChatPhotos } from '@/lib/chat-media-extract';
 
@@ -28,6 +29,10 @@ export default function ChatPhotosAlbum({
     () => extractChatPhotos(messages, usersById),
     [messages, usersById],
   );
+
+  useEffect(() => {
+    primeMediaUrls(photos.map((p) => p.imageUrl));
+  }, [photos]);
 
   if (photos.length === 0) {
     return (

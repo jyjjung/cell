@@ -241,7 +241,18 @@ export function useMessages(chatId: string | null) {
     if (imageUrl) messageData.imageUrl = imageUrl;
     if (replyToId) messageData.replyToId = replyToId;
     if (eventId) messageData.eventId = eventId;
-    if (setlistId) messageData.setlistId = setlistId;
+    if (setlistId) {
+      messageData.setlistId = setlistId;
+      try {
+        const setlistSnap = await getDoc(doc(db, 'worshipSetlists', setlistId));
+        const name = setlistSnap.exists() ? setlistSnap.data()?.name : undefined;
+        if (typeof name === 'string' && name.trim()) {
+          messageData.setlistName = name.trim();
+        }
+      } catch {
+        /* preview falls back to generic label */
+      }
+    }
     if (rosterId) messageData.rosterId = rosterId;
     if (qtDate) messageData.qtDate = qtDate;
     if (cleaningDate) messageData.cleaningDate = cleaningDate;
@@ -269,6 +280,7 @@ export function useMessages(chatId: string | null) {
       imageUrl,
       eventId,
       setlistId,
+      setlistName: typeof messageData.setlistName === 'string' ? messageData.setlistName : undefined,
       rosterId,
       qtDate,
       cleaningDate,

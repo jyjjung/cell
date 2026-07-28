@@ -78,6 +78,7 @@ const MessageBubble = React.memo(function MessageBubble({
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
   const [youtubePlaying, setYoutubePlaying] = useState(false);
+  const [attachmentMissing, setAttachmentMissing] = useState(false);
   const isSender = message.senderId === currentUser?.uid;
   const isGroup = chat?.type === 'group';
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -97,6 +98,19 @@ const MessageBubble = React.memo(function MessageBubble({
     !parentMessage &&
     !message.threadParentId
   );
+  const isAttachmentOnlyDeletedCandidate = !!(
+    (message.docId || message.setlistId) &&
+    !message.text &&
+    !message.imageUrl &&
+    !message.eventId &&
+    !message.rosterId &&
+    !message.songId &&
+    !message.qtDate &&
+    !message.cleaningDate &&
+    !message.poll &&
+    !parentMessage &&
+    !message.threadParentId
+  );
   const senderName = getMemberDisplayName(sender);
   const reactions = message.reactions || {};
   const reactionEntries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
@@ -109,12 +123,25 @@ const MessageBubble = React.memo(function MessageBubble({
     return match ? match[1] : null;
   }, [message.text]);
 
+  const markAttachmentMissing = React.useCallback(() => {
+    setAttachmentMissing(true);
+  }, []);
+
   if (message.isDeleted) {
     return (
       <div className="chat-message-row py-2 flex justify-center w-full">
         <p className="text-[11px] italic text-muted-foreground/60">
           {resolveDeletedMessageLabel(message, t)}
         </p>
+      </div>
+    );
+  }
+
+  if (attachmentMissing && isAttachmentOnlyDeletedCandidate) {
+    const label = message.docId ? t.deletedContentDoc : t.deletedContentSetlist;
+    return (
+      <div className="chat-message-row py-2 flex justify-center w-full">
+        <p className="text-[11px] italic text-muted-foreground/60">{label}</p>
       </div>
     );
   }
@@ -389,6 +416,7 @@ const MessageBubble = React.memo(function MessageBubble({
                             setlistId={message.setlistId} 
                             isSender={isSender} 
                             onOpenViewer={(songId) => onOpenWorshipViewer?.(message.setlistId!, songId)}
+                            onMissing={isAttachmentOnlyDeletedCandidate ? markAttachmentMissing : undefined}
                           />
                         )}
 
@@ -413,7 +441,11 @@ const MessageBubble = React.memo(function MessageBubble({
                         )}
 
                         {message.docId && (
-                          <DocSummary docId={message.docId} isSender={isSender} />
+                          <DocSummary
+                            docId={message.docId}
+                            isSender={isSender}
+                            onMissing={isAttachmentOnlyDeletedCandidate ? markAttachmentMissing : undefined}
+                          />
                         )}
                   </div>
 

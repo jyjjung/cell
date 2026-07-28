@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import { cn } from '@/lib/utils';
 
+/** Inline deleted notice — matches soft-deleted chat messages (no card chrome). */
 export function DeletedContentNotice({
   label,
   className,
@@ -10,13 +11,8 @@ export function DeletedContentNotice({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-medium italic text-muted-foreground',
-        className,
-      )}
-    >
+    <p className={cn('text-[11px] italic text-muted-foreground/60', className)}>
       {label}
-    </div>
+    </p>
   );
 }

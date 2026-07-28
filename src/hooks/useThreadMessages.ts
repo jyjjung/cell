@@ -185,7 +185,18 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     if (trimmedText) messageData.text = trimmedText;
     if (imageUrl) messageData.imageUrl = imageUrl;
     if (eventId) messageData.eventId = eventId;
-    if (setlistId) messageData.setlistId = setlistId;
+    if (setlistId) {
+      messageData.setlistId = setlistId;
+      try {
+        const setlistSnap = await getDoc(doc(db, 'worshipSetlists', setlistId));
+        const name = setlistSnap.exists() ? setlistSnap.data()?.name : undefined;
+        if (typeof name === 'string' && name.trim()) {
+          messageData.setlistName = name.trim();
+        }
+      } catch {
+        /* preview falls back to generic label */
+      }
+    }
     if (rosterId) messageData.rosterId = rosterId;
 
     const parentDocRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId);
@@ -198,6 +209,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       imageUrl,
       eventId,
       setlistId,
+      setlistName: typeof messageData.setlistName === 'string' ? messageData.setlistName : undefined,
       rosterId,
     });
 
@@ -212,7 +224,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
       if (messageData.text) parentUpdate.latestReplyText = messageData.text;
       if (messageData.imageUrl) parentUpdate.latestReplyImageUrl = messageData.imageUrl;
       if (eventId) parentUpdate.latestReplyText = '📅 Event';
-      if (setlistId) parentUpdate.latestReplyText = '🎵 Setlist';
+      if (setlistId) parentUpdate.latestReplyText = lastText;
       if (rosterId) parentUpdate.latestReplyText = '📋 Roster';
 
       const batch = writeBatch(db);

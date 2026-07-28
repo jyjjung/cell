@@ -14,19 +14,19 @@ function isBirthdayEvent(event: AppEvent): boolean {
   return event.category === EventCategory.Birthday;
 }
 
-/** Calendar date (yyyy-MM-dd) for an instant in a community timezone. */
-function communityCalendarDay(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(parseDay(iso));
-}
-
-/** Whether a birthday event falls on today in the community timezone. */
+/** Whether a birthday event falls on today (calendar MM-DD match). */
 export function birthdayOccursOnCommunityDate(
   event: AppEvent,
   todayIso: string,
-  timeZone: string,
+  _timeZone?: string,
 ): boolean {
   if (!isBirthdayEvent(event) || !event.date) return false;
-  return communityCalendarDay(event.date, timeZone).slice(5) === todayIso.slice(5);
+  // Birth dates are calendar dates — never timezone-shift the stored day.
+  const birth = event.date.slice(0, 10);
+  const birthMd = birth.slice(5, 10);
+  const todayMd = todayIso.slice(5, 10);
+  if (!/^\d{2}-\d{2}$/.test(birthMd) || !/^\d{2}-\d{2}$/.test(todayMd)) return false;
+  return birthMd === todayMd;
 }
 
 function birthdayMonthDay(event: AppEvent): { month: number; day: number } {

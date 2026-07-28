@@ -35,6 +35,7 @@ async function sendReminder(
     message: string;
     relatedUrl: string;
     dedupeId: string;
+    isGlobal?: boolean;
   },
   adminDb: FirebaseFirestore.Firestore,
   adminMessaging: ReturnType<typeof getAdminMessaging>,
@@ -47,6 +48,7 @@ async function sendReminder(
     relatedUrl: reminder.relatedUrl,
     dedupeId: reminder.dedupeId,
     dedupeCollection,
+    isGlobal: reminder.isGlobal,
   });
 }
 
@@ -124,10 +126,18 @@ export async function GET(request: NextRequest) {
       else dutySkipped++;
     }
 
-    for (const reminder of eventReminders) {
-      const result = await sendReminder(reminder, adminDb, adminMessaging, 'eventReminderLog');
-      if (result === 'sent') eventSent++;
-      else eventSkipped++;
+    // Parallelize with a modest concurrency cap to avoid cron timeouts
+    // when many users/events need reminders on the same day.
+    const EVENT_CONCURRENCY = 8;
+    for (let i = 0; i < eventReminders.length; i += EVENT_CONCURRENCY) {
+      const chunk = eventReminders.slice(i, i + EVENT_CONCURRENCY);
+      const results = await Promise.all(
+        chunk.map((reminder) => sendReminder(reminder, adminDb, adminMessaging, 'eventReminderLog')),
+      );
+      for (const result of results) {
+        if (result === 'sent') eventSent++;
+        else eventSkipped++;
+      }
     }
 
     const scheduled = await deliverDueScheduledAnnouncements(adminDb, adminMessaging, timeZone);
