@@ -16,7 +16,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
-import { primeMediaUrls } from '@/lib/media-cache';
 import type { WorshipSetlist, WorshipSong } from '@/types';
 
 const SONGS_COLLECTION = 'worshipSongs';
@@ -65,7 +64,6 @@ export function WorshipDataProvider({
         const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipSong));
         setSongs(loaded);
         setSongsLoading(false);
-        primeMediaUrls(loaded.flatMap((song) => song.chordSheets.map((sheet) => sheet.imageUrl)));
       },
       () => setSongsLoading(false),
     );

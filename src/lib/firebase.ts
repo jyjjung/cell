@@ -34,7 +34,7 @@ function createDb(): Firestore {
   try {
     return initializeFirestore(app, {
       localCache: persistentLocalCache({
-        cacheSizeBytes: 50 * 1024 * 1024, // 50 MB limit
+        cacheSizeBytes: 100 * 1024 * 1024, // 100 MB — keep more chat history on device
         tabManager: persistentMultipleTabManager(),
       }),
     });

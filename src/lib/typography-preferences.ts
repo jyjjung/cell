@@ -63,7 +63,8 @@ export function parseTypographyPreferences(raw: unknown): TypographyPreferences 
   return {
     appFontFamily: normalizeFontFamilyChoice(value.appFontFamily),
     appFontSize: isFontSizeChoice(value.appFontSize) ? value.appFontSize : DEFAULT_TYPOGRAPHY.appFontSize,
-    bibleFontFamily: normalizeFontFamilyChoice(value.bibleFontFamily ?? 'literata'),
+    // Bible reading always uses Literata.
+    bibleFontFamily: 'literata',
     bibleFontSize: isFontSizeChoice(value.bibleFontSize) ? value.bibleFontSize : DEFAULT_TYPOGRAPHY.bibleFontSize,
   };
 }

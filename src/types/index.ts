@@ -380,6 +380,8 @@ export interface ChatMessage {
   senderId: string;
   text?: string;
   imageUrl?: string;
+  /** Smaller JPEG for album grids / bubbles; full image stays in imageUrl. */
+  imageThumbUrl?: string;
   createdAt: Timestamp;
   seenBy: string[];
   reactions?: { [key: string]: string[] };

@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWorshipData, WorshipDataProvider } from '@/contexts/worship-data-context';
 import { downloadChatImage } from '@/lib/chat-image-download';
 import { translations } from '@/lib/translations';
-import { primeMediaUrls } from '@/lib/media-cache';
+import { primeChatPreviewMedia } from '@/lib/media-cache';
 import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
@@ -125,6 +125,7 @@ function ChatWindowBody({
   const online = useOnlineStatus();
   const isInitialLoad = useRef(true);
   const photosHydrationPagesRef = useRef(0);
+  const photosHydratedRef = useRef(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -184,14 +185,23 @@ function ChatWindowBody({
   }, [chatId, currentUser, chatDocIdsKey]);
 
   useEffect(() => {
-    if (chatTab !== 'photos') {
-      photosHydrationPagesRef.current = 0;
+    photosHydrationPagesRef.current = 0;
+    photosHydratedRef.current = false;
+  }, [chatId]);
+
+  useEffect(() => {
+    if (chatTab !== 'photos') return;
+
+    // Warm SW cache for album thumbs only — full originals download when opened.
+    primeChatPreviewMedia(messages);
+
+    // Once this chat's older history has been paged in this session, skip re-paging.
+    if (photosHydratedRef.current) return;
+    if (!hasMoreOlder) {
+      photosHydratedRef.current = true;
       return;
     }
-    // Warm device/SW cache for visible photos, and page in older history so
-    // the album is not limited to the live message window.
-    primeMediaUrls(messages.map((m) => m.imageUrl));
-    if (hasMoreOlder && !loadingOlder && photosHydrationPagesRef.current < 20) {
+    if (!loadingOlder && photosHydrationPagesRef.current < 20) {
       photosHydrationPagesRef.current += 1;
       void loadOlderMessages();
     }

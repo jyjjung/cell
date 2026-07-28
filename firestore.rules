@@ -541,7 +541,7 @@ service cloud.firestore {
                            // Thread summary on parent message
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount', 'latestReplySenderId', 'latestReplyText', 'latestReplyImageUrl'])) ||
                            // Soft delete
-                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
+                           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'imageThumbUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'threadParentId', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
                         );
 
         match /thread/{threadMessageId} {
@@ -558,7 +558,7 @@ service cloud.firestore {
                           && (
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
-                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
+                             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'deletedBy', 'deletedContentType', 'text', 'imageUrl', 'imageThumbUrl', 'eventId', 'setlistId', 'rosterId', 'qtDate', 'cleaningDate', 'songId', 'songTitle', 'sheetKey', 'reactions', 'poll', 'pollVotes', 'pollUpdatedAt', 'docId']))
                           );
         }
       }

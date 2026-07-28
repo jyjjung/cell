@@ -334,7 +334,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                   )}
                               >
                                 <RemoteImage 
-                                  src={message.imageUrl} 
+                                  src={message.imageThumbUrl || message.imageUrl} 
                                   alt={t.image || "Image"} 
                                   width={280}
                                   height={280}

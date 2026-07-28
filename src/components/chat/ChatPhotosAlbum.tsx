@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
 import { RemoteImage } from '@/components/ui/remote-image';
-import { primeMediaUrls } from '@/lib/media-cache';
+import { primeChatPreviewMedia } from '@/lib/media-cache';
 
 export { extractChatPhotos } from '@/lib/chat-media-extract';
 
@@ -31,7 +30,8 @@ export default function ChatPhotosAlbum({
   );
 
   useEffect(() => {
-    primeMediaUrls(photos.map((p) => p.imageUrl));
+    // Prefetch thumbs for the grid; full images load when tapped.
+    primeChatPreviewMedia(photos.map((p) => ({ imageUrl: p.imageUrl, imageThumbUrl: p.thumbUrl })));
   }, [photos]);
 
   if (photos.length === 0) {
@@ -51,18 +51,15 @@ export default function ChatPhotosAlbum({
   return (
     <div className="absolute inset-0 overflow-y-auto px-3 py-3 custom-scrollbar">
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-w-3xl mx-auto">
-        {photos.map((photo, i) => (
-          <motion.button
+        {photos.map((photo) => (
+          <button
             key={photo.id}
             type="button"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: Math.min(i * 0.02, 0.3) }}
             onClick={() => onOpenImage(photo.imageUrl)}
-            className="relative aspect-square overflow-hidden rounded-xl bg-muted/30 border border-border/30 group"
+            className="relative aspect-square overflow-hidden rounded-xl bg-muted/30 border border-border/30 group [content-visibility:auto] [contain-intrinsic-size:120px]"
           >
             <RemoteImage
-              src={photo.imageUrl}
+              src={photo.thumbUrl || photo.imageUrl}
               alt={`Photo by ${photo.senderLabel}`}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -71,7 +68,7 @@ export default function ChatPhotosAlbum({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <p className="text-[9px] font-bold text-white truncate">{photo.senderLabel}</p>
             </div>
-          </motion.button>
+          </button>
         ))}
       </div>
     </div>

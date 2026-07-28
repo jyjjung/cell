@@ -6,6 +6,8 @@ import { URL_REGEX, normalizeChatUrl } from '@/lib/chat-url-utils';
 export type ChatPhoto = {
   id: string;
   imageUrl: string;
+  /** Prefer for grids; falls back to imageUrl when missing (legacy messages). */
+  thumbUrl?: string;
   senderLabel: string;
   createdAt?: ChatMessage['createdAt'];
 };
@@ -29,6 +31,7 @@ export function extractChatPhotos(
     .map((m) => ({
       id: m.id,
       imageUrl: m.imageUrl!,
+      thumbUrl: m.imageThumbUrl,
       senderLabel: formatUserDisplayName(usersById.get(m.senderId), 'Someone'),
       createdAt: m.createdAt,
     }));

@@ -28,7 +28,6 @@ type AppearanceSettingsProps = {
     typography: string;
     websiteFont: string;
     websiteFontSize: string;
-    bibleFont: string;
     bibleFontSize: string;
   };
 };
@@ -185,12 +184,6 @@ export function AppearanceSettings({ labels }: AppearanceSettingsProps) {
               options={FONT_SIZE_OPTIONS}
               value={typography.appFontSize}
               onChange={(appFontSize) => setTypography({ appFontSize })}
-            />
-          </SettingRow>
-          <SettingRow label={labels.bibleFont}>
-            <FontSelect
-              value={typography.bibleFontFamily}
-              onChange={(bibleFontFamily) => setTypography({ bibleFontFamily })}
             />
           </SettingRow>
           <SettingRow label={labels.bibleFontSize}>

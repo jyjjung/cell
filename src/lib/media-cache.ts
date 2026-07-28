@@ -136,6 +136,18 @@ export function primeMediaUrls(urls: Iterable<string | undefined | null>): void 
   for (const url of urls) primeMediaUrl(url);
 }
 
+/**
+ * Warm the SW cache for chat list/album previews only.
+ * Prefers thumbnails so full-resolution originals download when opened, not on scroll.
+ */
+export function primeChatPreviewMedia(
+  items: Iterable<{ imageUrl?: string | null; imageThumbUrl?: string | null }>,
+): void {
+  for (const item of items) {
+    primeMediaUrl(item.imageThumbUrl || item.imageUrl);
+  }
+}
+
 export type OfflineCacheResult = {
   ok: number;
   failed: number;

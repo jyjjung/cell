@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { ArrowLeft, ImageIcon, Loader2 } from 'lucide-react';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
@@ -87,18 +86,15 @@ export default function AllChatPhotosPage() {
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
-          {photos.map((photo, i) => (
-            <motion.button
+          {photos.map((photo) => (
+            <button
               key={`${photo.chatId}-${photo.id}`}
               type="button"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: Math.min(i * 0.02, 0.3) }}
               onClick={() => setOpenImageUrl(photo.imageUrl)}
-              className="group relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-muted/30"
+              className="group relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-muted/30 [content-visibility:auto] [contain-intrinsic-size:120px]"
             >
               <RemoteImage
-                src={photo.imageUrl}
+                src={photo.thumbUrl || photo.imageUrl}
                 alt={`Photo from ${photo.chatName}`}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -108,7 +104,7 @@ export default function AllChatPhotosPage() {
                 <p className="truncate text-[9px] font-bold text-white">{photo.chatName}</p>
                 <p className="truncate text-[8px] text-white/70">{photo.senderLabel}</p>
               </div>
-            </motion.button>
+            </button>
           ))}
         </div>
       )}
