@@ -113,22 +113,45 @@ export async function GET(request: NextRequest) {
     let eventSent = 0;
     let eventSkipped = 0;
 
-    for (const reminder of dutyReminders) {
-      const result = await sendReminder(
-        mapDutyReminder(reminder),
-        adminDb,
-        adminMessaging,
-        'dutyReminderLog',
-      );
-      if (result === 'sent') dutySent++;
-      else dutySkipped++;
+    const CONCURRENCY = 6;
+
+    async function sendAll(
+      reminders: Array<{
+        userId: string;
+        title: string;
+        message: string;
+        relatedUrl: string;
+        dedupeId: string;
+      }>,
+      dedupeCollection: string,
+    ): Promise<{ sent: number; skipped: number }> {
+      let sent = 0;
+      let skipped = 0;
+      for (let i = 0; i < reminders.length; i += CONCURRENCY) {
+        const batch = reminders.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          batch.map((reminder) =>
+            sendReminder(reminder, adminDb, adminMessaging, dedupeCollection),
+          ),
+        );
+        for (const result of results) {
+          if (result === 'sent') sent++;
+          else skipped++;
+        }
+      }
+      return { sent, skipped };
     }
 
-    for (const reminder of eventReminders) {
-      const result = await sendReminder(reminder, adminDb, adminMessaging, 'eventReminderLog');
-      if (result === 'sent') eventSent++;
-      else eventSkipped++;
-    }
+    const dutyResult = await sendAll(
+      dutyReminders.map(mapDutyReminder),
+      'dutyReminderLog',
+    );
+    dutySent = dutyResult.sent;
+    dutySkipped = dutyResult.skipped;
+
+    const eventResult = await sendAll(eventReminders, 'eventReminderLog');
+    eventSent = eventResult.sent;
+    eventSkipped = eventResult.skipped;
 
     const scheduled = await deliverDueScheduledAnnouncements(adminDb, adminMessaging, timeZone);
     const pushRetries = await retryFailedNotificationPushes(adminDb, adminMessaging);

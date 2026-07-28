@@ -372,7 +372,7 @@
   }
 
   .notice-surface {
-    @apply ui-callout;
+    @apply rounded-xl border border-border/70 bg-card p-4 text-card-foreground shadow-md;
   }
 
   .flow-section {

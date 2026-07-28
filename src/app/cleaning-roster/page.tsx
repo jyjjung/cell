@@ -14,8 +14,18 @@ import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import { RosterFeedCard, RosterMonthGroup } from '@/components/ui/roster-feed-card';
 import { formatUserDisplayName } from '@/lib/formatting';
+
+function groupByMonth(entries: CleaningRosterEntry[]): [string, CleaningRosterEntry[]][] {
+    const map = new Map<string, CleaningRosterEntry[]>();
+    for (const entry of entries) {
+        const key = format(parseDay(entry.date), 'MMMM yyyy');
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(entry);
+    }
+    return Array.from(map.entries());
+}
 
 export default function CleaningRosterPage() {
     const { currentUser } = useAuth();
@@ -99,44 +109,35 @@ export default function CleaningRosterPage() {
                         <>
                         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
                             {upcoming.length > 0 ? (
-                                <div className="stack-gap-sm">
-                                    {upcoming.map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
-                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
-                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        const currentIndex = globalIdx++;
+                                groupByMonth(upcoming).map(([month, entries]) => (
+                                    <RosterMonthGroup key={`up-${month}`} month={month}>
+                                        {entries.map((entry) => {
+                                            const dayName = daysMap.get(entry.dayId) || t.unknownDay;
+                                            const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+                                            const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+                                            const currentIndex = globalIdx++;
+                                            const names = assignedUsers.map((u) => formatUserDisplayName(u)).join(', ');
 
-                                        return (
-                                            <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20">
-                                                <RosterFeedCard 
-                                                    index={currentIndex}
-                                                    date={parseDay(entry.date)}
-                                                    label={t.cleaningRosterTitle}
-                                                    title={dayName}
-                                                    description={(
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <p className="text-micro-label">
-                                                                {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                            </p>
-                                                            {assignedUsers.map((user, uidx) => (
-                                                                <span key={user.uid} className="text-micro-label">
-                                                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    rightElement={
-                                                        <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                            <p className="text-micro-label text-primary whitespace-nowrap">
-                                                                {statusLabel(entry, completer)}
-                                                            </p>
-                                                        </div>
-                                                    }
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                            return (
+                                                <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20">
+                                                    <RosterFeedCard
+                                                        index={currentIndex}
+                                                        date={parseDay(entry.date)}
+                                                        label={t.cleaningRosterTitle}
+                                                        title={dayName}
+                                                        description={
+                                                            <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                                <span>{format(parseDay(entry.date), 'EEE')}</span>
+                                                                {names ? <span>{names}</span> : null}
+                                                                <span>{statusLabel(entry, completer)}</span>
+                                                            </span>
+                                                        }
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </RosterMonthGroup>
+                                ))
                             ) : (
                                 <EmptyState 
                                     icon={ShieldCheck} 
@@ -148,43 +149,34 @@ export default function CleaningRosterPage() {
 
                         <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
                             {past.length > 0 ? (
-                                <div className="stack-gap-sm">
-                                    {past.slice(0, 10).map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
-                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
-                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        const currentIndex = globalIdx++;
+                                groupByMonth(past.slice(0, 30)).map(([month, entries]) => (
+                                    <RosterMonthGroup key={`past-${month}`} month={month}>
+                                        {entries.map((entry) => {
+                                            const dayName = daysMap.get(entry.dayId) || t.unknownDay;
+                                            const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+                                            const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+                                            const currentIndex = globalIdx++;
+                                            const names = assignedUsers.map((u) => formatUserDisplayName(u)).join(', ');
 
-                                        return (
-                                            <RosterFeedCard 
-                                                key={entry.id}
-                                                index={currentIndex}
-                                                date={parseDay(entry.date)}
-                                                label={t.cleaningRosterTitle}
-                                                title={dayName}
-                                                description={(
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="text-micro-label">
-                                                            {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                        </p>
-                                                        {assignedUsers.map((user, uidx) => (
-                                                            <span key={user.uid} className="text-micro-label">
-                                                                {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                rightElement={
-                                                    <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                        <p className="text-micro-label text-primary whitespace-nowrap">
-                                                            {statusLabel(entry, completer)}
-                                                        </p>
-                                                    </div>
-                                                }
-                                            />
-                                        );
-                                    })}
-                                </div>
+                                            return (
+                                                <RosterFeedCard
+                                                    key={entry.id}
+                                                    index={currentIndex}
+                                                    date={parseDay(entry.date)}
+                                                    label={t.cleaningRosterTitle}
+                                                    title={dayName}
+                                                    description={
+                                                        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            <span>{format(parseDay(entry.date), 'EEE')}</span>
+                                                            {names ? <span>{names}</span> : null}
+                                                            <span>{statusLabel(entry, completer)}</span>
+                                                        </span>
+                                                    }
+                                                />
+                                            );
+                                        })}
+                                    </RosterMonthGroup>
+                                ))
                             ) : (
                                 <EmptyState
                                     icon={ListTodo}

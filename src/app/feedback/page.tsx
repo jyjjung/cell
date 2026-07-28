@@ -56,6 +56,22 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.136",
+    subtitle: "Events, chats, bible, and notifications polish",
+    date: "July 28, 2026",
+    changes: [
+      "QT, cleaning, and custom roster feeds now match the Events list layout",
+      "Deleted documents in chat show as an inline notice, same as deleted setlists",
+      "Prayer requests page padding matches other pages; notifications prompt is opaque",
+      "Bible plan and reading progress load from device cache (and a fast first fetch) so new sign-ins don’t need a refresh",
+      "Chat Photos tab reads the on-device message cache; loading older messages shows a spinner and a Latest button jumps back to new messages",
+      "Dashboard calendar widget removed",
+      "Setlist change alerts name the setlist and notify linked worship roster members",
+      "Birthday and duty reminders send in parallel with safer dedupe; push badge counting no longer stalls delivery",
+      "Announcements support emoji reactions; document comments work again (Firestore rules fix)",
+    ],
+  },
+  {
     version: "v1.3.135",
     subtitle: "More consistent notifications",
     date: "July 23, 2026",

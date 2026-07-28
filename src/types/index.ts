@@ -298,6 +298,8 @@ export interface AppNotification {
   relatedUrl?: string;
   scheduledFor?: Timestamp | null;
   pushSentAt?: Timestamp | null;
+  /** Emoji → user ids who reacted (announcements). */
+  reactions?: { [emoji: string]: string[] };
 }
 
 export interface PrayerRequest {

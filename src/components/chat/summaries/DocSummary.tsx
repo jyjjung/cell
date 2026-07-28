@@ -144,8 +144,8 @@ export default function DocSummary({ docId, isSender }: DocSummaryProps) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
-        {t.loading}
+      <div className="flex w-full justify-center py-1">
+        <p className="text-[11px] italic text-muted-foreground/60">{t.loading}</p>
       </div>
     );
   }

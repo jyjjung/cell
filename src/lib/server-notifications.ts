@@ -56,19 +56,6 @@ export async function sendUserNotification(
     dedupeCollection = 'notificationLog',
   } = params;
 
-  if (dedupeId) {
-    const logRef = adminDb.collection(dedupeCollection).doc(dedupeId);
-    try {
-      await logRef.create({
-        userId,
-        title,
-        sentAt: FieldValue.serverTimestamp(),
-      });
-    } catch {
-      return 'skipped';
-    }
-  }
-
   const notifRef = adminDb.collection('notifications').doc();
   const notification: AppNotification = {
     id: notifRef.id,
@@ -82,7 +69,37 @@ export async function sendUserNotification(
     relatedUrl,
   };
 
-  await notifRef.set(notification);
+  // Claim dedupe only after the notification write succeeds, so a crash between
+  // claim and write cannot permanently skip a birthday/duty reminder for the day.
+  if (dedupeId) {
+    const logRef = adminDb.collection(dedupeCollection).doc(dedupeId);
+    try {
+      await adminDb.runTransaction(async (tx) => {
+        const existing = await tx.get(logRef);
+        if (existing.exists) {
+          throw new Error('DUPLICATE');
+        }
+        tx.set(notifRef, notification);
+        tx.set(logRef, {
+          userId,
+          title,
+          notificationId: notifRef.id,
+          sentAt: FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'DUPLICATE') {
+        return 'skipped';
+      }
+      // Race on create — treat as skipped when log already exists.
+      const existing = await logRef.get().catch(() => null);
+      if (existing?.exists) return 'skipped';
+      throw error;
+    }
+  } else {
+    await notifRef.set(notification);
+  }
+
   const result = await deliverPushWithLock(notifRef.id, adminDb, adminMessaging);
 
   if (dedupeId) {

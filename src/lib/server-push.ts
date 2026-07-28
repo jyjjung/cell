@@ -1,7 +1,9 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
 import type { AppNotification, UserProfileData } from '@/types';
-import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils';
+import { toSafeStringMap } from '@/lib/server-badge-utils';
+import { badgeCountWithTimeout } from '@/lib/server-chat-push';
+import { chatPushBadgeFields } from '@/lib/chat-push-badge';
 
 /** Keep in sync with client MAX_FCM_TOKENS — validate/send all stored tokens, not a silent first-3 subset. */
 const MAX_FCM_TOKENS = 5;
@@ -23,34 +25,44 @@ async function deliverDataPush(
   const uniqueTokens = [...new Set(tokens)].filter(Boolean).slice(0, MAX_FCM_TOKENS);
   if (uniqueTokens.length === 0) return 0;
 
-  const badgeCount = await calculateTotalUnread(userId, adminDb);
+  // Never block birthday/duty fan-out on a slow unread calc — omit badge instead of delaying/failing.
+  const badgeCount = await badgeCountWithTimeout(userId, adminDb);
+  const { dataBadge, apnsBadge } = chatPushBadgeFields(badgeCount);
   const title = payload.title || 'New Notification';
   const body = payload.body || '';
   const link = payload.link || '/';
 
-  const message = {
-    tokens: uniqueTokens,
-    data: toSafeStringMap({
+  const dataPayload: Record<string, unknown> = {
+    title,
+    body,
+    icon: '/icon-192x192-v4.png',
+    tag: payload.tag,
+    link,
+  };
+  if (dataBadge != null) {
+    dataPayload.badge = dataBadge;
+  }
+
+  const aps: Record<string, unknown> = {
+    alert: {
       title,
       body,
-      icon: '/icon-192x192-v4.png',
-      tag: payload.tag,
-      link,
-      badge: String(badgeCount),
-    }),
+    },
+    sound: 'default',
+    'mutable-content': 1,
+    'content-available': 1,
+  };
+  if (apnsBadge != null) {
+    aps.badge = apnsBadge;
+  }
+
+  const message = {
+    tokens: uniqueTokens,
+    data: toSafeStringMap(dataPayload),
     apns: {
       headers: { 'apns-priority': '10' },
       payload: {
-        aps: {
-          alert: {
-            title,
-            body,
-          },
-          badge: badgeCount,
-          sound: 'default',
-          'mutable-content': 1,
-          'content-available': 1,
-        },
+        aps,
       },
     },
     webpush: {
@@ -128,23 +140,28 @@ export async function deliverNotificationPush(
 ): Promise<number> {
   if (notification.isGlobal) {
     const usersSnapshot = await adminDb.collection('users').get();
-    let total = 0;
-    for (const doc of usersSnapshot.docs) {
-      const user = doc.data() as UserProfileData;
-      if (user.fcmTokens?.length) {
-        total += await deliverToUser(doc.id, user.fcmTokens, notification, adminDb, adminMessaging);
-      }
+    let delivered = 0;
+    const CONCURRENCY = 8;
+    const docs = usersSnapshot.docs;
+    for (let i = 0; i < docs.length; i += CONCURRENCY) {
+      const batch = docs.slice(i, i + CONCURRENCY);
+      const counts = await Promise.all(
+        batch.map(async (userDoc) => {
+          const user = { uid: userDoc.id, ...userDoc.data() } as UserProfileData;
+          if (user.isApproved === false) return 0;
+          if (!user.fcmTokens?.length) return 0;
+          return deliverToUser(userDoc.id, user.fcmTokens, notification, adminDb, adminMessaging);
+        }),
+      );
+      delivered += counts.reduce((sum, n) => sum + n, 0);
     }
-    return total;
+    return delivered;
   }
 
   if (!notification.userId) return 0;
-
   const userDoc = await adminDb.collection('users').doc(notification.userId).get();
   if (!userDoc.exists) return 0;
-
   const user = userDoc.data() as UserProfileData;
   if (!user.fcmTokens?.length) return 0;
-
   return deliverToUser(notification.userId, user.fcmTokens, notification, adminDb, adminMessaging);
 }

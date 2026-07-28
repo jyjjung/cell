@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUserDisplayName } from "@/lib/formatting";
-import { RosterFeedCard } from "@/components/ui/roster-feed-card";
+import { RosterFeedCard, RosterMonthGroup } from "@/components/ui/roster-feed-card";
 import { parseDay } from "@/lib/event-occurrences";
 
 function emptyFieldValues(fields: RosterFieldDefinition[]): Record<string, RosterFieldValue> {
@@ -244,7 +244,9 @@ export default function CustomRosterDetailPage() {
           label={definition.name}
           title={title}
           description={
-            <p className="text-micro-label line-clamp-4">{summary || format(entryDate, "EEEE, MMMM do, yyyy")}</p>
+            <span className="line-clamp-2">
+              {summary || format(entryDate, "EEE")}
+            </span>
           }
           rightElement={
             canEdit ? (
@@ -252,10 +254,10 @@ export default function CustomRosterDetailPage() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-lg"
+                className="h-8 w-8 shrink-0 rounded-lg"
                 onClick={() => openEditEntry(entry)}
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
             ) : undefined
           }
@@ -265,10 +267,9 @@ export default function CustomRosterDetailPage() {
   };
 
   const renderMonthGroup = (month: string, entries: CustomRosterEntry[], faded = false) => (
-    <div key={month} className="stack-gap-sm">
-      <p className="text-micro-label px-1">{month}</p>
-      <div className="stack-gap-sm">{entries.map((entry) => renderEntry(entry, faded))}</div>
-    </div>
+    <RosterMonthGroup key={month} month={month}>
+      {entries.map((entry) => renderEntry(entry, faded))}
+    </RosterMonthGroup>
   );
 
   return (

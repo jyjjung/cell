@@ -3,11 +3,16 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { BibleReadingPlan, DailyReading, StructuredPassage } from '@/types';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp, getDocFromCache, getDoc } from 'firebase/firestore';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import {
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 
 const BIBLE_PLAN_COLLECTION = 'config';
 const BIBLE_PLAN_DOC_ID = 'biblePlan';
+const BIBLE_PLAN_CACHE_KEY = 'bible_plan_v1';
 
 type BiblePlanContextValue = {
   plan: BibleReadingPlan | null;
@@ -75,17 +80,54 @@ function formatPlanFromSnapshot(docSnapshot: { id: string; data: () => Record<st
   };
 }
 
+function readSeededPlan(): BibleReadingPlan | null {
+  return readLocalCollectionCacheStale<BibleReadingPlan>(BIBLE_PLAN_CACHE_KEY);
+}
+
 export function BiblePlanProvider({ children }: { children: ReactNode }) {
-  const [plan, setPlan] = useState<BibleReadingPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const seeded = readSeededPlan();
+  const [plan, setPlan] = useState<BibleReadingPlan | null>(() => seeded);
+  const [loading, setLoading] = useState(() => !seeded);
 
   useEffect(() => {
     const planDocRef = doc(db, BIBLE_PLAN_COLLECTION, BIBLE_PLAN_DOC_ID);
+
+    // Warm from Firestore persistent cache immediately (fast on returning devices).
+    void getDocFromCache(planDocRef)
+      .then((snap) => {
+        if (!snap.exists()) return;
+        const next = formatPlanFromSnapshot(snap);
+        setPlan(next);
+        writeLocalCollectionCache(BIBLE_PLAN_CACHE_KEY, next);
+        setLoading(false);
+      })
+      .catch(() => {
+        /* cache miss is fine — fall through to getDoc / onSnapshot */
+      });
+
+    // Cold start (new device): don't wait only on the listener — fetch once ASAP.
+    void getDoc(planDocRef)
+      .then((snap) => {
+        if (!snap.exists()) {
+          setLoading(false);
+          return;
+        }
+        const next = formatPlanFromSnapshot(snap);
+        setPlan(next);
+        writeLocalCollectionCache(BIBLE_PLAN_CACHE_KEY, next);
+        setLoading(false);
+      })
+      .catch(() => {
+        /* onSnapshot will still reconcile */
+      });
+
     const unsubscribe = onSnapshot(
       planDocRef,
       (docSnapshot) => {
         if (docSnapshot.exists()) {
-          setPlan(formatPlanFromSnapshot(docSnapshot));
+          const next = formatPlanFromSnapshot(docSnapshot);
+          setPlan(next);
+          writeLocalCollectionCache(BIBLE_PLAN_CACHE_KEY, next);
         } else {
           setPlan(null);
         }
@@ -93,7 +135,7 @@ export function BiblePlanProvider({ children }: { children: ReactNode }) {
       },
       (error) => {
         console.error('[BiblePlanProvider] Firestore onSnapshot error:', error);
-        setPlan(null);
+        if (!readSeededPlan()) setPlan(null);
         setLoading(false);
       },
     );

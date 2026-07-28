@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { ArrowDown, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { resolveChatUserName, isMutedChatEvent } from '@/lib/chat-utils';
 import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
+import { Button } from '@/components/ui/button';
 import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
 
 const EMPTY_SEEN_NAMES: string[] = [];
+const SHOW_BACK_TO_BOTTOM_PX = 180;
 
 function formatMessageDate(date: Date) {
   if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
@@ -63,6 +65,27 @@ export default function ChatMessageList({
   hasMoreOlder = false,
 }: ChatMessageListProps) {
   const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
+  const [showBackToBottom, setShowBackToBottom] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const update = () => {
+      // flex-col-reverse: scrollTop ~ 0 at newest; grows as user scrolls toward older messages.
+      setShowBackToBottom(Math.abs(el.scrollTop) > SHOW_BACK_TO_BOTTOM_PX);
+    };
+
+    el.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => el.removeEventListener('scroll', update);
+  }, [scrollRef, messages.length]);
+
+  const scrollToBottom = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const messageList = useMemo(() => {
     const content: ReactNode[] = [];
@@ -150,20 +173,38 @@ export default function ChatMessageList({
   ]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
-    >
-      <TooltipProvider delayDuration={300}>
-        <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
-          {loadingOlder && (
-            <div className="flex justify-center py-3">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
-            </div>
-          )}
-          {messageList}
+    <div className="absolute inset-0">
+      <div
+        ref={scrollRef}
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
+      >
+        <TooltipProvider delayDuration={300}>
+          <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
+            {messageList}
+            {/* After messageList in flex-col-reverse → appears at the oldest (top) end */}
+            {loadingOlder && (
+              <div className="flex justify-center py-3" aria-live="polite" aria-busy="true">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+              </div>
+            )}
+          </div>
+        </TooltipProvider>
+      </div>
+
+      {showBackToBottom && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={scrollToBottom}
+            className="pointer-events-auto h-9 gap-1.5 rounded-full border border-border/70 bg-card px-3 shadow-md"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+            Latest
+          </Button>
         </div>
-      </TooltipProvider>
+      )}
     </div>
   );
 }

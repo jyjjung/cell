@@ -183,6 +183,12 @@ service cloud.firestore {
         || (
           request.auth != null
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        )
+        || (
+          // Anyone signed in can toggle reactions on announcements (and other notifs).
+          request.auth != null
+          && canReadNotification()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
         );
       allow delete: if isAppAdmin(request.auth.uid);
     }
@@ -334,16 +340,31 @@ service cloud.firestore {
       allow delete: if isDocOwner();
 
       match /comments/{commentId} {
-        allow get, list: if isDocMember();
+        // Comments do not carry memberIds — resolve membership from the parent doc.
+        function parentDocData() {
+          return get(/databases/$(database)/documents/docs/$(docId)).data;
+        }
+        function isParentDocMember() {
+          return request.auth != null
+            && parentDocData().keys().hasAny(['memberIds'])
+            && parentDocData().memberIds is list
+            && parentDocData().memberIds.hasAny([request.auth.uid]);
+        }
+        function isParentDocOwner() {
+          return request.auth != null
+            && parentDocData().ownerId == request.auth.uid;
+        }
 
-        allow create: if isDocMember()
+        allow get, list: if isParentDocMember();
+
+        allow create: if isParentDocMember()
                       && request.resource.data.authorId == request.auth.uid
                       && request.resource.data.keys().hasAll(['text', 'authorId', 'createdAt'])
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 2000;
 
-        allow update: if isDocMember()
+        allow update: if isParentDocMember()
                       && resource.data.authorId == request.auth.uid
                       && request.resource.data.authorId == resource.data.authorId
                       && request.resource.data.createdAt == resource.data.createdAt
@@ -353,8 +374,8 @@ service cloud.firestore {
                       && request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['text', 'updatedAt']);
 
-        allow delete: if isDocMember()
-                      && (resource.data.authorId == request.auth.uid || isDocOwner());
+        allow delete: if isParentDocMember()
+                      && (resource.data.authorId == request.auth.uid || isParentDocOwner());
       }
     }
 

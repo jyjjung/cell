@@ -375,6 +375,7 @@ function ChatWindowBody({
           />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
+            chatId={chat.id}
             messages={messages}
             allUsers={allUsers}
             onOpenImage={setOpenImageUrl}

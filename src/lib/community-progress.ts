@@ -4,6 +4,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromCache,
   getDocFromServer,
   getDocs,
   query,
@@ -52,9 +53,14 @@ export async function fetchCommunityProgressForUser(userId: string): Promise<Com
   try {
     let snap;
     try {
-      snap = await getDocFromServer(ref);
+      snap = await getDocFromCache(ref);
+      if (!snap.exists()) throw new Error('cache miss');
     } catch {
-      snap = await getDoc(ref);
+      try {
+        snap = await getDoc(ref);
+      } catch {
+        snap = await getDocFromServer(ref);
+      }
     }
     if (!snap.exists()) return null;
     return { userId: snap.id, ...snap.data() } as CommunityProgressDoc;

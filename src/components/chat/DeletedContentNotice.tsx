@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 
+/** Inline deleted-content label — matches soft-deleted chat messages. */
 export function DeletedContentNotice({
   label,
   className,
@@ -10,13 +11,8 @@ export function DeletedContentNotice({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-medium italic text-muted-foreground',
-        className,
-      )}
-    >
-      {label}
+    <div className={cn('chat-message-row flex w-full justify-center py-1', className)}>
+      <p className="text-[11px] italic text-muted-foreground/60">{label}</p>
     </div>
   );
 }
