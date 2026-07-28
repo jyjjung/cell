@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.138",
+    subtitle: "React to announcements from the header",
+    date: "July 28, 2026",
+    changes: [
+      "You can react to announcements directly from the notifications bell in the header—no need to open the Announcements page",
+    ],
+  },
+  {
     version: "v1.3.137",
     subtitle: "Group chat docs show in Docs",
     date: "July 28, 2026",

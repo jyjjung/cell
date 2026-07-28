@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Button } from '@/components/ui/button';
-import { Check, Megaphone, CheckCheck, X, SmilePlus } from 'lucide-react';
+import { AnnouncementReactions } from '@/components/announcements/announcement-reactions';
+import { Check, Megaphone, CheckCheck, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -13,72 +14,7 @@ import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { toDateSafe } from '@/lib/firestore-timestamp';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { AppNotification } from '@/types';
-
-const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-
-function AnnouncementReactions({
-  notification,
-  uid,
-  onToggle,
-}: {
-  notification: AppNotification;
-  uid: string;
-  onToggle: (emoji: string) => void;
-}) {
-  const reactions = notification.reactions || {};
-  const entries = Object.entries(reactions).filter(([, uids]) => uids.length > 0);
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-      {entries.map(([emoji, uids]) => {
-        const mine = uids.includes(uid);
-        return (
-          <button
-            key={emoji}
-            type="button"
-            onClick={() => onToggle(emoji)}
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
-              mine
-                ? 'border-primary/40 bg-primary/10 text-foreground'
-                : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted',
-            )}
-          >
-            <span>{emoji}</span>
-            <span className="tabular-nums">{uids.length}</span>
-          </button>
-        );
-      })}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-muted"
-            aria-label="Add reaction"
-          >
-            <SmilePlus className="h-3.5 w-3.5" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-2" align="start">
-          <div className="flex gap-1">
-            {STANDARD_REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => onToggle(emoji)}
-                className="rounded-lg px-2 py-1 text-base hover:bg-muted"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-}
 
 function AnnouncementItem({
   notification,

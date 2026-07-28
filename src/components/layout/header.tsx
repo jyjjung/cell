@@ -1,5 +1,6 @@
 "use client";
 
+import { AnnouncementReactions } from "@/components/announcements/announcement-reactions";
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth-context";
@@ -27,7 +28,7 @@ interface HeaderProps {
 
 export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderProps) {
   const { currentUser } = useAuth();
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead, toggleReaction } = useNotifications();
   const [mounted, setMounted] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'announcements' | 'notifications'>('announcements');
@@ -37,13 +38,14 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Close on outside click
+  // Close on outside click (ignore portaled reaction popovers)
   useEffect(() => {
     if (!panelOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setPanelOpen(false);
-      }
+      const target = e.target as Element | null;
+      if (panelRef.current?.contains(target as Node)) return;
+      if (target?.closest?.("[data-radix-popper-content-wrapper]")) return;
+      setPanelOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -253,6 +255,13 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
                                     <p className="text-[10px] text-muted-foreground/50 font-semibold pt-1">
                                       {n.createdAt ? formatDistanceToNow(n.createdAt?.toDate?.() ?? new Date(), { addSuffix: true }) : "Just now"}
                                     </p>
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <AnnouncementReactions
+                                        notification={n}
+                                        uid={uid}
+                                        onToggle={(emoji) => toggleReaction(n.id, emoji)}
+                                      />
+                                    </div>
                                   </div>
 
                                   {/* Dismiss button */}
