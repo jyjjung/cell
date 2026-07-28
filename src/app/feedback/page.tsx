@@ -60,7 +60,7 @@ const changelogs = [
     subtitle: "Schedule, chat, and notification polish",
     date: "July 28, 2026",
     changes: [
-      "Push notifications are more reliable: failed deliveries retry on the daily jobs, birthday alerts use correct community dates, and community-wide alerts show in the notification list",
+      "Push notifications are more reliable: failed deliveries are retried by the morning reminder job, birthday alerts use correct community dates, and community-wide alerts show in the notification list",
       "Opening the app no longer resets your push token (a common cause of on-and-off chat notifications)",
       "QT, cleaning, and custom rosters now use the same date-row layout as Events",
       "Roster rows no longer repeat the page title (e.g. Cleaning Roster / QT) on every item",
