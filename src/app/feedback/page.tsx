@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.139",
+    subtitle: "Setlist change alerts",
+    date: "July 29, 2026",
+    changes: [
+      "Linked setlists alert assigned roster members; unlinked setlists alert the worship team (not app admins), with a link that opens the setlist",
+    ],
+  },
+  {
     version: "v1.3.138",
     subtitle: "React to announcements from the header",
     date: "July 28, 2026",

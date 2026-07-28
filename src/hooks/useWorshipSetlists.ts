@@ -5,7 +5,7 @@ import type { WorshipSetlist, SetlistSong, ChordKey, ReferenceTrack, WorshipRost
 import { db } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
-  serverTimestamp, orderBy, getDocs,
+  serverTimestamp, orderBy, getDocs, where,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
@@ -13,6 +13,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
 const ROSTERS_COLLECTION = 'worshipRosters';
+const USERS_COLLECTION = 'users';
 
 function collectLinkedRosterMemberIds(rosters: WorshipRoster[], setlistId: string): string[] {
   const ids = new Set<string>();
@@ -25,6 +26,14 @@ function collectLinkedRosterMemberIds(rosters: WorshipRoster[], setlistId: strin
     }
   }
   return [...ids];
+}
+
+/** Worship team only (worship.manage) — not app admins unless they also have that capability. */
+async function collectWorshipTeamIds(): Promise<string[]> {
+  const managersSnap = await getDocs(
+    query(collection(db, USERS_COLLECTION), where('capabilityKeys', 'array-contains', 'worship.manage')),
+  );
+  return managersSnap.docs.map((d) => d.id);
 }
 
 export function useWorshipSetlists(enabled = true) {
@@ -57,22 +66,34 @@ export function useWorshipSetlists(enabled = true) {
   ) => {
     if (!currentUser?.uid) return;
     try {
-      const snap = await getDocs(query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc')));
-      const rosters = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
-      const memberIds = collectLinkedRosterMemberIds(rosters, setlist.id)
-        .filter((uid) => uid !== currentUser.uid);
-      if (memberIds.length === 0) return;
+      const rosterSnap = await getDocs(query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc')));
+      const rosters = rosterSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
+      const linkedMemberIds = collectLinkedRosterMemberIds(rosters, setlist.id);
+
+      // Linked → that roster’s assigned members.
+      // Unlinked → worship team only (worship.manage), not app admins.
+      const recipientIds = (
+        linkedMemberIds.length > 0
+          ? linkedMemberIds
+          : await collectWorshipTeamIds()
+      ).filter((uid) => uid !== currentUser.uid);
+
+      if (recipientIds.length === 0) return;
 
       const setlistLabel = setlist.name?.trim() || 'Setlist';
+      const relatedUrl = `/worship?tab=playlists&id=${encodeURIComponent(setlist.id)}`;
+
       await Promise.all(
-        memberIds.map((userId) =>
+        recipientIds.map((userId) =>
           createNotification({
             title: `Setlist updated: ${setlistLabel}`,
             message: `${detail} in “${setlistLabel}”.`,
             type: 'reminder',
             isGlobal: false,
             userId,
-            relatedUrl: '/worship',
+            relatedUrl,
+          }).catch((error) => {
+            console.error('[useWorshipSetlists] Failed to notify:', userId, error);
           }),
         ),
       );
@@ -128,7 +149,7 @@ export function useWorshipSetlists(enabled = true) {
       updatedAt: serverTimestamp(),
     });
     const keyLabel = key === 'numbers' ? '#' : key;
-    void notifySetlistChange(setlist, `“${songTitle}” (${keyLabel}) was added`);
+    await notifySetlistChange(setlist, `“${songTitle}” (${keyLabel}) was added`);
   }, [notifySetlistChange]);
 
   const updateSetlistSong = useCallback(async (
@@ -162,11 +183,10 @@ export function useWorshipSetlists(enabled = true) {
       updatedAt: serverTimestamp(),
     });
 
+    // Only notify for key changes — sheet/track tweaks are too noisy.
     if (patch.key !== undefined && existing && existing.key !== patch.key) {
       const nextKey = patch.key === 'numbers' ? '#' : patch.key;
-      void notifySetlistChange(setlist, `Key for “${existing.title}” changed to ${nextKey}`);
-    } else if (existing) {
-      void notifySetlistChange(setlist, `“${existing.title}” was updated`);
+      await notifySetlistChange(setlist, `Key for “${existing.title}” changed to ${nextKey}`);
     }
   }, [notifySetlistChange]);
 
@@ -183,7 +203,7 @@ export function useWorshipSetlists(enabled = true) {
       updatedAt: serverTimestamp(),
     });
     if (removed) {
-      void notifySetlistChange(setlist, `“${removed.title}” was removed`);
+      await notifySetlistChange(setlist, `“${removed.title}” was removed`);
     }
   }, [notifySetlistChange]);
 
