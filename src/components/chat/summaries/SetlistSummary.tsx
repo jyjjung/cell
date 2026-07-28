@@ -24,6 +24,8 @@ interface SetlistSummaryProps {
   setlistId: string;
   isSender: boolean;
   onOpenViewer?: (songId?: string) => void;
+  /** When the setlist is gone, call so the parent can render an inline deleted notice. */
+  onMissing?: () => void;
 }
 
 function offlineReadyKey(setlistId: string) {
@@ -59,10 +61,14 @@ function isOfflineReadyLocally(setlistId: string, urls: string[]): boolean {
   return record.count === urls.length && record.hash === mediaUrlsHash(urls);
 }
 
-export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: SetlistSummaryProps) {
+export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMissing }: SetlistSummaryProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data: setlist, loading: setlistLoading } = useFirestoreDoc<WorshipSetlist>('worshipSetlists', setlistId);
+
+  useEffect(() => {
+    if (!setlistLoading && !setlist) onMissing?.();
+  }, [setlistLoading, setlist, onMissing]);
   const worshipData = useWorshipData();
   const songHook = useWorshipSongs(!!setlist && !worshipData);
   const worshipSongs = worshipData?.songs ?? songHook.songs;
@@ -224,6 +230,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer }: Se
   }
 
   if (!setlist) {
+    if (onMissing) return null;
     return <DeletedContentNotice label={t.deletedContentSetlist} />;
   }
 

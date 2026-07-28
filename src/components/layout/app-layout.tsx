@@ -198,7 +198,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <motion.div
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="notice-surface flex items-center justify-between gap-4 p-4"
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-lg"
             >
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-muted p-2">

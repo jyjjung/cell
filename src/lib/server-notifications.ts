@@ -44,6 +44,7 @@ export async function sendUserNotification(
     type?: AppNotificationType;
     dedupeId?: string;
     dedupeCollection?: string;
+    isGlobal?: boolean;
   },
 ): Promise<'sent' | 'skipped'> {
   const {
@@ -54,13 +55,18 @@ export async function sendUserNotification(
     type = 'reminder',
     dedupeId,
     dedupeCollection = 'notificationLog',
+    isGlobal = false,
   } = params;
+
+  if (!isGlobal && !userId) {
+    throw new Error('A non-global notification must have a userId.');
+  }
 
   if (dedupeId) {
     const logRef = adminDb.collection(dedupeCollection).doc(dedupeId);
     try {
       await logRef.create({
-        userId,
+        userId: isGlobal ? 'global' : userId,
         title,
         sentAt: FieldValue.serverTimestamp(),
       });
@@ -75,8 +81,8 @@ export async function sendUserNotification(
     title,
     message,
     type,
-    isGlobal: false,
-    userId,
+    isGlobal,
+    ...(isGlobal ? {} : { userId }),
     createdAt: FieldValue.serverTimestamp() as AppNotification['createdAt'],
     readBy: [],
     relatedUrl,

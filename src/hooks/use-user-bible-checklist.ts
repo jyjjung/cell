@@ -3,6 +3,10 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { BIBLE_BOOKS_DATA, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
+import {
+  readLocalCollectionCacheStale,
+  writeLocalCollectionCache,
+} from '@/lib/collection-cache';
 import { syncCommunityProgress } from '@/lib/community-progress';
 import { db } from '@/lib/firebase';
 import { makePassageKey } from '@/lib/passage-keys';
@@ -15,6 +19,19 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBiblePlan } from './use-bible-plan';
 
 const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
+
+function checklistCacheKey(uid: string) {
+  return `user_bible_checklist_v1_${uid}`;
+}
+
+function readCachedPassages(uid: string): string[] | null {
+  const cached = readLocalCollectionCacheStale<string[]>(checklistCacheKey(uid));
+  return Array.isArray(cached) ? cached : null;
+}
+
+function writeCachedPassages(uid: string, passages: string[]) {
+  writeLocalCollectionCache(checklistCacheKey(uid), passages);
+}
 
 interface ScripturePoint {
   bookFullName: string;
@@ -49,7 +66,7 @@ function comparePoints(p1: ScripturePoint, p2: ScripturePoint): number {
 
 export function useUserBibleChecklist() {
   const { currentUser } = useAuth();
-  const [completedPassages, setCompletedPassages] = useState<string[]>([]); 
+  const [completedPassages, setCompletedPassages] = useState<string[]>([]);
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
   const { plan: currentGlobalPlan } = useBiblePlan(); 
@@ -73,8 +90,16 @@ export function useUserBibleChecklist() {
       return;
     }
 
-    setLoadingChecklist(true);
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
+    const uid = currentUser.uid;
+    const cached = readCachedPassages(uid);
+    if (cached) {
+      setCompletedPassages(cached);
+      setLoadingChecklist(false);
+    } else {
+      setLoadingChecklist(true);
+    }
+
+    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, uid);
 
     const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
@@ -82,17 +107,19 @@ export function useUserBibleChecklist() {
         const passages = data.completedPassages || [];
         setCompletedPassages(passages);
         setChecklistDocExists(true);
+        writeCachedPassages(uid, passages);
         scheduleCommunityProgressSync(passages);
       } else {
         setCompletedPassages([]);
         setChecklistDocExists(false);
+        writeCachedPassages(uid, []);
         // Do not sync empty progress — that would wipe communityProgress for users
         // who only had leaderboard data or haven't created a checklist yet.
       }
       setLoadingChecklist(false);
     }, (error) => {
       console.error("Error fetching user Bible checklist:", error);
-      setCompletedPassages([]);
+      if (!cached) setCompletedPassages([]);
       setLoadingChecklist(false);
       setChecklistDocExists(false);
     });

@@ -281,7 +281,7 @@ export default function PrayerRequestsPage() {
   }
 
   return (
-    <div className="page-container-narrow">
+    <div className="page-container">
       <NavPageHeader description={t.prayerRequestsDesc} />
 
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">

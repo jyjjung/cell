@@ -18,7 +18,7 @@ const birthday: AppEvent = {
 };
 
 describe('collectEventDayReminders', () => {
-  it('notifies every user about birthdays', () => {
+  it('notifies the community once about birthdays (global)', () => {
     const reminders = collectEventDayReminders({
       todayIso: '2026-06-26',
       events: [birthday],
@@ -26,9 +26,11 @@ describe('collectEventDayReminders', () => {
       timeZone: 'Australia/Brisbane',
     });
 
-    expect(reminders).toHaveLength(3);
-    expect(reminders.every((reminder) => reminder.title === 'Birthday today')).toBe(true);
-    expect(reminders.every((reminder) => reminder.message.includes('Alex Kim'))).toBe(true);
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0].isGlobal).toBe(true);
+    expect(reminders[0].title).toBe('Birthday today');
+    expect(reminders[0].message.includes('Alex Kim')).toBe(true);
+    expect(reminders[0].dedupeId).toBe('global_event_bday-1_2026-06-26_0d');
   });
 
   it('limits ordinary events to eligible roles', () => {
@@ -71,7 +73,7 @@ describe('collectEventDayReminders', () => {
       events: [leapYearBirthday],
       users,
       timeZone: 'Australia/Brisbane',
-    })).toHaveLength(3);
+    })).toHaveLength(1);
   });
 
   it('normalizes Firestore Timestamp birthdays', () => {
@@ -86,6 +88,6 @@ describe('collectEventDayReminders', () => {
       events: [event],
       users,
       timeZone: 'Australia/Brisbane',
-    })).toHaveLength(3);
+    })).toHaveLength(1);
   });
 });

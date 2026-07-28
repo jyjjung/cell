@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RosterFeedCard } from '@/components/ui/roster-feed-card';
+import { ScheduleMonthGroup, ScheduleOccurrenceRow } from '@/components/schedule/schedule-occurrence-row';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function CleaningRosterPage() {
@@ -45,28 +44,36 @@ export default function CleaningRosterPage() {
     const usersMap = useMemo(() => new Map(allUsers.map(u => [u.uid, u])), [allUsers]);
     const daysMap = useMemo(() => new Map(cleaningDays.map(d => [d.id, d.name])), [cleaningDays]);
 
-    const { upcoming, past } = useMemo(() => {
+    const { upcomingByMonth, pastByMonth } = useMemo(() => {
         const today = startOfToday();
-        const upcomingEntries: CleaningRosterEntry[] = [];
-        const pastEntries: CleaningRosterEntry[] = [];
+        const upcoming = new Map<string, CleaningRosterEntry[]>();
+        const past = new Map<string, CleaningRosterEntry[]>();
         
         const sortedRoster = [...roster].sort((a,b) => compareAsc(parseDay(a.date), parseDay(b.date)));
 
         for(const entry of sortedRoster) {
             try {
-                if(isBefore(parseDay(entry.date), today)) {
-                    pastEntries.push(entry);
+                const entryDate = parseDay(entry.date);
+                const monthKey = format(entryDate, 'MMMM yyyy');
+                if(isBefore(entryDate, today)) {
+                    if (!past.has(monthKey)) past.set(monthKey, []);
+                    past.get(monthKey)!.push(entry);
                 } else {
-                    upcomingEntries.push(entry);
+                    if (!upcoming.has(monthKey)) upcoming.set(monthKey, []);
+                    upcoming.get(monthKey)!.push(entry);
                 }
             } catch(e) {
                  console.error("Error processing roster entry for display:", entry, e);
             }
         }
         
-        pastEntries.reverse();
+        const pastArray = Array.from(past.entries()).reverse();
+        pastArray.forEach(([, monthEntries]) => monthEntries.reverse());
 
-        return { upcoming: upcomingEntries, past: pastEntries };
+        return {
+            upcomingByMonth: Array.from(upcoming.entries()),
+            pastByMonth: pastArray,
+        };
     }, [roster]);
 
     if (!isMounted) return null;
@@ -78,6 +85,40 @@ export default function CleaningRosterPage() {
             return completer ? `${t.done} ${formatUserDisplayName(completer)}` : t.done;
         }
         return t.scheduled;
+    };
+
+    const renderEntry = (entry: CleaningRosterEntry, key: string) => {
+        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
+        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
+        const currentIndex = globalIdx++;
+
+        return (
+            <ScheduleOccurrenceRow
+                key={key}
+                id={`date-${entry.date}`}
+                index={currentIndex}
+                date={parseDay(entry.date)}
+                label={t.cleaningRosterTitle}
+                title={dayName}
+                meta={
+                    assignedUsers.length > 0 ? (
+                        <span>
+                            {assignedUsers.map((user, uidx) => (
+                                <span key={user.uid}>
+                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ', ' : ''}
+                                </span>
+                            ))}
+                        </span>
+                    ) : undefined
+                }
+                rightElement={
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {statusLabel(entry, completer)}
+                    </span>
+                }
+            />
+        );
     };
 
     return (
@@ -98,45 +139,12 @@ export default function CleaningRosterPage() {
                     {roster.length > 0 ? (
                         <>
                         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
-                            {upcoming.length > 0 ? (
-                                <div className="stack-gap-sm">
-                                    {upcoming.map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
-                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
-                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        const currentIndex = globalIdx++;
-
-                                        return (
-                                            <div key={entry.id} id={`date-${entry.date}`} className="scroll-mt-20">
-                                                <RosterFeedCard 
-                                                    index={currentIndex}
-                                                    date={parseDay(entry.date)}
-                                                    label={t.cleaningRosterTitle}
-                                                    title={dayName}
-                                                    description={(
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <p className="text-micro-label">
-                                                                {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                            </p>
-                                                            {assignedUsers.map((user, uidx) => (
-                                                                <span key={user.uid} className="text-micro-label">
-                                                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    rightElement={
-                                                        <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                            <p className="text-micro-label text-primary whitespace-nowrap">
-                                                                {statusLabel(entry, completer)}
-                                                            </p>
-                                                        </div>
-                                                    }
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            {upcomingByMonth.length > 0 ? (
+                                upcomingByMonth.map(([month, entries]) => (
+                                    <ScheduleMonthGroup key={`upcoming-${month}`} month={month}>
+                                        {entries.map((entry) => renderEntry(entry, entry.id))}
+                                    </ScheduleMonthGroup>
+                                ))
                             ) : (
                                 <EmptyState 
                                     icon={ShieldCheck} 
@@ -147,44 +155,20 @@ export default function CleaningRosterPage() {
                         </TabsContent>
 
                         <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
-                            {past.length > 0 ? (
-                                <div className="stack-gap-sm">
-                                    {past.slice(0, 10).map((entry) => {
-                                        const dayName = daysMap.get(entry.dayId) || t.unknownDay;
-                                        const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
-                                        const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
-                                        const currentIndex = globalIdx++;
-
+                            {pastByMonth.length > 0 ? (
+                                (() => {
+                                    let remaining = 10;
+                                    return pastByMonth.map(([month, entries]) => {
+                                        if (remaining <= 0) return null;
+                                        const slice = entries.slice(0, remaining);
+                                        remaining -= slice.length;
                                         return (
-                                            <RosterFeedCard 
-                                                key={entry.id}
-                                                index={currentIndex}
-                                                date={parseDay(entry.date)}
-                                                label={t.cleaningRosterTitle}
-                                                title={dayName}
-                                                description={(
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="text-micro-label">
-                                                            {format(parseDay(entry.date), 'EEEE, MMMM do, yyyy')}
-                                                        </p>
-                                                        {assignedUsers.map((user, uidx) => (
-                                                            <span key={user.uid} className="text-micro-label">
-                                                                {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ',' : ''}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                rightElement={
-                                                    <div className="bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                                                        <p className="text-micro-label text-primary whitespace-nowrap">
-                                                            {statusLabel(entry, completer)}
-                                                        </p>
-                                                    </div>
-                                                }
-                                            />
+                                            <ScheduleMonthGroup key={`past-${month}`} month={month}>
+                                                {slice.map((entry) => renderEntry(entry, `past-${entry.id}`))}
+                                            </ScheduleMonthGroup>
                                         );
-                                    })}
-                                </div>
+                                    });
+                                })()
                             ) : (
                                 <EmptyState
                                     icon={ListTodo}
