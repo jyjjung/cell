@@ -61,6 +61,7 @@ const changelogs = [
     date: "July 28, 2026",
     changes: [
       "QT, cleaning, and custom rosters now use the same date-row layout as Events",
+      "Roster rows no longer repeat the page title (e.g. Cleaning Roster / QT) on every item",
       "Deleted documents in chat show an inline notice like deleted setlists",
       "Prayer requests page padding matches other hub pages",
       "Turn on notifications banner is opaque so it stays readable over chat",
