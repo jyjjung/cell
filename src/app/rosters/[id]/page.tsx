@@ -238,7 +238,6 @@ export default function CustomRosterDetailPage() {
         id={`date-${entry.date}`}
         index={currentIndex}
         date={entryDate}
-        label={definition.name}
         title={title}
         className={faded ? "opacity-80" : undefined}
         meta={summary ? <span className="line-clamp-2">{summary}</span> : undefined}

@@ -96,7 +96,6 @@ export default function QTRosterPage() {
                 id={`date-${entry.date}`}
                 index={currentIndex}
                 date={entryDate}
-                label={t.qtTitle}
                 title={displayName}
                 meta={
                     entry.title ? (
