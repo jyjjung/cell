@@ -49,7 +49,7 @@ export default function ChatPhotosAlbum({
   }
 
   return (
-    <div className="h-full min-h-0 flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
+    <div className="absolute inset-0 overflow-y-auto px-3 py-3 custom-scrollbar">
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-w-3xl mx-auto">
         {photos.map((photo) => (
           <button
