@@ -13,6 +13,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.6.0',
+    subtitle: 'Inbox sheet & clearer overlays',
+    date: 'July 29, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Announcements and notifications open in an Inbox sheet from the bell instead of separate pages',
+      },
+      {
+        type: 'Added',
+        text: 'Unread and All filters in Inbox, with older history available under All',
+      },
+      {
+        type: 'Improved',
+        text: 'Sidebar, dialogs, and popups use a blurred backdrop instead of a solid dim',
+      },
+    ],
+  },
+  {
     version: 'v1.5.0',
     subtitle: 'Design refresh & chat Domain UI',
     date: 'July 29, 2026',
