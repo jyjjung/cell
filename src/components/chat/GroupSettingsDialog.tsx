@@ -103,9 +103,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
           'state_changed',
           undefined,
           reject,
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject);
-          },
+          async () => resolve(await getDownloadURL(uploadTask.snapshot.ref)),
         );
       });
       await updateGroupPhoto(downloadURL);

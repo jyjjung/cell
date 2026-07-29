@@ -271,8 +271,9 @@ export default function MessageInput({
         'state_changed',
         null,
         (error) => reject(error),
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject);
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
         },
       );
     });
@@ -289,8 +290,9 @@ export default function MessageInput({
             'state_changed',
             null,
             (error) => reject(error),
-            () => {
-              getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject);
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
             },
           );
         }).catch(() => '')

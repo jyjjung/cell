@@ -23,10 +23,15 @@ service firebase.storage {
             || request.auth.token.email == 'yejoon7154@gmail.com');
     }
 
+    function isChatMember(chatId) {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/chats/$(chatId))
+        && request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('members', []);
+    }
+
     match /chats/{chatId}/{fileName} {
-      // Read must be open too — getDownloadURL after upload requires read access.
-      // Membership checks via Firestore were blocking both upload and URL fetch.
-      allow read, write: if isSignedIn();
+      allow read: if isChatMember(chatId);
+      allow write: if isChatMember(chatId);
     }
 
     match /worshipChordSheets/{songId}/{fileName} {
