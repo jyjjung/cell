@@ -289,9 +289,8 @@ export default function MessageInput({
             'state_changed',
             null,
             (error) => reject(error),
-            async () => {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadURL);
+            () => {
+              getDownloadURL(uploadTask.snapshot.ref).then(resolve).catch(reject);
             },
           );
         }).catch(() => '')
