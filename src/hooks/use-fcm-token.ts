@@ -48,6 +48,7 @@ export function useFCMToken() {
       if (healed || force) return;
 
       const registration = await getFCMRegistration();
+      if (!registration) return; // SW unavailable on this browser — skip silently
       const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
 
       if (token) {

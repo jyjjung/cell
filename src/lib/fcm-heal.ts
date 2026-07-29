@@ -54,6 +54,10 @@ export async function healFcmSubscription(uid: string, options?: { force?: boole
   }
 
   const registration = await getFCMRegistration();
+  if (!registration) {
+    console.warn('[fcm-heal] SW registration unavailable — skipping FCM heal.');
+    return null;
+  }
   try {
     await registration.update();
   } catch {
