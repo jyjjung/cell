@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { NavPageHeader, PageHeader, PageSection } from '@/components/ui/page-layout';
-import { Progress } from '@/components/ui/progress';
+import { PlanProgressBar } from '@/components/bible-plan/plan-progress';
 import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
@@ -346,20 +346,13 @@ export default function BibleChecklistPage() {
                   />
 
                   <PageSection title={t.overallProgress}>
-                      <div className="space-y-4">
-                          <div>
-                              <div className="flex items-center gap-4 mb-2">
-                                  <Progress value={overallProgress.percentage} className="flex-grow h-2 bg-muted shadow-inner" />
-                                  <span className="font-bold text-foreground text-xl tracking-tight">{Math.round(overallProgress.percentage)}%</span>
-                              </div>
-                              <p className="text-xs font-medium text-muted-foreground">
-                                {isGuest 
-                                    ? t.planProgressGuest(Math.round(overallProgress.percentage))
-                                    : t.planProgressUser(overallProgress.completed, overallProgress.total)
-                                }
-                              </p>
-                          </div>
-                      </div>
+                      <PlanProgressBar
+                          value={overallProgress.percentage}
+                          caption={isGuest
+                              ? t.planProgressGuest(Math.round(overallProgress.percentage))
+                              : t.planProgressUser(overallProgress.completed, overallProgress.total)
+                          }
+                      />
                   </PageSection>
                       {!isGuest && paceStats.passagesLeft > 0 && (
                         <div className="ui-metric-grid">

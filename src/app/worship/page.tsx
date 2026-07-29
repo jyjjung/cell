@@ -7,6 +7,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NavPageHeader } from '@/components/ui/page-layout';
+import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog, SetlistSongConfigPanel } from '@/components/worship/WorshipDialogs';
@@ -1175,18 +1176,11 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                   className="event-row group"
                   onClick={() => setDetail(pl)}
                 >
-                  <div className="flex w-10 shrink-0 flex-col items-center leading-none">
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {format(parseISO(pl.date), 'MMM')}
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {format(parseISO(pl.date), 'd')}
-                    </span>
-                  </div>
+                  <ScheduleRowDate date={parseISO(pl.date)} />
                   <div className="event-row-body">
                     <p className="event-row-title">{pl.name}</p>
                     <p className="event-row-meta">
-                      {pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''} · {format(parseISO(pl.date), 'EEEE')}
+                      {pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
@@ -1637,14 +1631,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                     className="event-row group"
                     onClick={() => setDetail(r)}
                   >
-                    <div className="flex w-10 shrink-0 flex-col items-center leading-none">
-                      <span className="text-[10px] font-medium text-muted-foreground">
-                        {format(parseISO(r.date), 'MMM')}
-                      </span>
-                      <span className="text-sm font-semibold tabular-nums text-foreground">
-                        {format(parseISO(r.date), 'd')}
-                      </span>
-                    </div>
+                    <ScheduleRowDate date={parseISO(r.date)} />
                     <div className="event-row-body">
                       <p className="event-row-title">{r.name}</p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2">

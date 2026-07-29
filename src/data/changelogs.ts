@@ -13,6 +13,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.7.1',
+    subtitle: 'Clearer schedule rows',
+    date: 'July 30, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Events, QT, cleaning, and home agenda rows share one layout, with the weekday under the date number',
+      },
+      {
+        type: 'Changed',
+        text: 'Schedule rows lead with names, then type, then detail — QT shows passage under the topic, cleaning shows day then Cleaning',
+      },
+      {
+        type: 'Improved',
+        text: 'Events, QT, cleaning, and roster pages show schedule skeletons while they load instead of a blank screen or spinner',
+      },
+    ],
+  },
+  {
     version: 'v1.7.0',
     subtitle: 'Redesigned home',
     date: 'July 29, 2026',

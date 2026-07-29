@@ -303,8 +303,16 @@
     @apply text-2xl font-semibold tracking-tight tabular-nums text-foreground;
   }
 
+  .text-stat-value-sm {
+    @apply text-xl font-bold tracking-tight tabular-nums text-foreground;
+  }
+
   .text-stat-label {
     @apply text-xs text-muted-foreground leading-relaxed;
+  }
+
+  .text-passage-ref {
+    @apply whitespace-nowrap font-mono text-xs text-muted-foreground;
   }
 
   .text-micro-label {

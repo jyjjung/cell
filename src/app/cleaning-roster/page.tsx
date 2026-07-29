@@ -7,13 +7,13 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import type { CleaningRosterEntry, UserProfileData } from '@/types';
 import { startOfToday, format, compareAsc, isBefore } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
-import { Loader2, ListTodo, ShieldCheck } from 'lucide-react';
+import { ListTodo, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScheduleMonthGroup, ScheduleOccurrenceRow } from '@/components/schedule/schedule-occurrence-row';
+import { ScheduleListSkeleton, ScheduleMonthGroup, ScheduleOccurrenceRow, ScheduleRowMeta } from '@/components/schedule/schedule-occurrence-row';
 import { formatUserDisplayName } from '@/lib/formatting';
 
 export default function CleaningRosterPage() {
@@ -83,6 +83,7 @@ export default function CleaningRosterPage() {
     const renderEntry = (entry: CleaningRosterEntry, key: string) => {
         const dayName = daysMap.get(entry.dayId) || t.unknownDay;
         const assignedUsers = entry.assignedUserIds.map(uid => usersMap.get(uid)).filter(Boolean) as UserProfileData[];
+        const assignedNames = assignedUsers.map(user => formatUserDisplayName(user)).join(', ');
         const completer = entry.completedBy ? usersMap.get(entry.completedBy) : null;
         const currentIndex = globalIdx++;
         const doneLabel = entry.isCompleted
@@ -97,18 +98,9 @@ export default function CleaningRosterPage() {
                 id={`date-${entry.date}`}
                 index={currentIndex}
                 date={parseDay(entry.date)}
-                title={dayName}
-                meta={
-                    assignedUsers.length > 0 ? (
-                        <span>
-                            {assignedUsers.map((user, uidx) => (
-                                <span key={user.uid}>
-                                    {formatUserDisplayName(user)}{uidx < assignedUsers.length - 1 ? ', ' : ''}
-                                </span>
-                            ))}
-                        </span>
-                    ) : undefined
-                }
+                title={assignedNames || dayName}
+                subtitle={assignedNames ? <ScheduleRowMeta>{dayName}</ScheduleRowMeta> : undefined}
+                meta={<ScheduleRowMeta>{t.cleaningDuty}</ScheduleRowMeta>}
                 rightElement={
                     doneLabel ? (
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -125,10 +117,7 @@ export default function CleaningRosterPage() {
             <NavPageHeader />
             
             {(rosterLoading || daysLoading || usersLoading) ? (
-                 <div className="empty-inline py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mb-3" />
-                    <p className="text-sm text-muted-foreground">{t.loadingRoster}</p>
-                 </div>
+                <ScheduleListSkeleton />
             ) : (
                 <Tabs defaultValue="upcoming" className="w-full">
                     <TabsList className="h-9">

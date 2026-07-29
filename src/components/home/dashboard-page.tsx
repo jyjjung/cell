@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { type AppUser } from '@/types';
+import { AnimatePresence } from 'framer-motion';
+import { type AppUser, type UserProfileData } from '@/types';
 import { translations } from '@/lib/translations';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import {
@@ -27,22 +27,32 @@ import {
   format, parseISO, isValid, differenceInDays, startOfDay,
   isBefore, isSameDay, startOfToday, compareAsc, endOfMonth, addMonths,
 } from 'date-fns';
-import { CalendarOff, Clock, MessageCircle, Users } from 'lucide-react';
+import { CalendarOff, MessageCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
 import { EmptyState, PageHeader, PageSection } from '@/components/ui/page-layout';
-import { ScheduleMonthGroup, ScheduleOccurrenceRow } from '@/components/schedule/schedule-occurrence-row';
-import { cn } from '@/lib/utils';
+import {
+  ScheduleMonthGroup,
+  ScheduleOccurrenceRow,
+  ScheduleRowHighlight,
+  ScheduleRowMeta,
+  ScheduleRowTime,
+  SchedulePassageRef,
+} from '@/components/schedule/schedule-occurrence-row';
+import {
+  ScheduleDetailDialog,
+  ScheduleDetailField,
+  ScheduleDetailGroup,
+  ScheduleDetailPassage,
+  ScheduleDetailPeople,
+  ScheduleDetailText,
+} from '@/components/schedule/schedule-detail-dialog';
+import { PlanProgressBar, ReadingCheckRow } from '@/components/bible-plan/plan-progress';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { userCanSeeEvent } from '@/lib/event-visibility';
 import { formatCustomRosterEntrySummary, getUserCustomRosterLabels } from '@/lib/roster-access';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '@/components/ui/dialog';
 import HomeInfoWidgets from '@/components/dashboard-widgets/home-info-widgets';
 import { EventCategory } from '@/types';
 
@@ -54,8 +64,8 @@ type AgendaEntry = {
   /** Stable key for the underlying record, so your own view replaces the community one. */
   sourceKey: string;
   date: Date;
-  label?: string;
   title: string;
+  subtitle?: ReactNode;
   meta?: ReactNode;
   rightElement?: ReactNode;
   type: 'event' | 'birthday' | 'cleaning' | 'qt' | 'worship' | 'custom';
@@ -66,9 +76,30 @@ type AgendaEntry = {
   details?: string;
 };
 
-const spring = { type: 'spring' as const, stiffness: 300, damping: 28 };
-
 const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** "Lead: Ana, Drums: Sam" — who is playing what on a worship set. */
+function formatWorshipRoleLines(
+  roster: { slots: { role: string; members: { userId?: string | null; displayName?: string }[] }[] },
+  usersMap: Map<string, UserProfileData>,
+) {
+  return roster.slots
+    .filter((slot) => slot.members.length > 0)
+    .map((slot) => {
+      const names = slot.members
+        .map((member) => {
+          if (member.userId) {
+            const user = usersMap.get(member.userId);
+            return user ? formatUserDisplayName(user) : member.displayName;
+          }
+          return member.displayName;
+        })
+        .filter(Boolean)
+        .join(', ');
+      return `${slot.role}: ${names}`;
+    })
+    .join(', ');
+}
 
 const MAX_AGENDA_ENTRIES = 12;
 
@@ -76,16 +107,6 @@ function getGreeting(lang: string) {
   const h = new Date().getHours();
   if (lang === 'ko') return h < 12 ? '좋은 아침이에요' : h < 17 ? '좋은 오후예요' : '좋은 저녁이에요';
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
-
-/** Highlights the part of a row that is about you. */
-function MineMeta({ lead, value }: { lead?: string; value?: string }) {
-  if (!value) return null;
-  return (
-    <span className="font-medium text-foreground">
-      {lead ? `${lead} ` : ''}{value}
-    </span>
-  );
 }
 
 export default function DashboardPage({ currentUser }: DashboardPageProps) {
@@ -194,13 +215,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `event-${row.occurrenceKey}`,
         date: row.occurrenceDate,
-        label: event.category,
         title: event.title,
+        subtitle: <ScheduleRowMeta>{event.category}</ScheduleRowMeta>,
         meta: !event.allDay && event.startTime ? (
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {event.startTime}{event.endTime ? `–${event.endTime}` : ''}
-          </span>
+          <ScheduleRowTime start={event.startTime} end={event.endTime} />
         ) : undefined,
         type: isBirthday ? 'birthday' : 'event',
         details: event.details,
@@ -217,12 +235,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `qt-${entry.id}`,
         date: d,
-        label: t.qtSharing,
         title: sharerName,
-        meta: entry.title ? <span>{entry.title}</span> : undefined,
-        rightElement: entry.passage ? (
-          <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">{entry.passage}</span>
-        ) : undefined,
+        subtitle: <ScheduleRowMeta>{entry.title || t.qtSharing}</ScheduleRowMeta>,
+        meta: entry.passage ? <SchedulePassageRef passage={entry.passage} /> : undefined,
         type: 'qt',
         passage: entry.passage,
         qtTitle: entry.title,
@@ -242,9 +257,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `cleaning-${r.id}`,
         date: d,
-        label: t.cleaningDuty,
-        title: dayName || t.churchCleaning,
-        meta: names ? <span>{names}</span> : undefined,
+        title: names || dayName || t.churchCleaning,
+        subtitle: names && dayName ? <ScheduleRowMeta>{dayName}</ScheduleRowMeta> : undefined,
+        meta: <ScheduleRowMeta>{t.cleaningDuty}</ScheduleRowMeta>,
         type: 'cleaning',
         assignedNames: names,
         dayName,
@@ -254,29 +269,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     worshipRosters.forEach((roster) => {
       const d = parseISO(roster.date || '');
       if (!isValid(d) || !isSameDay(d, today)) return;
-      const roleLines = roster.slots
-        .filter((slot) => slot.members.length > 0)
-        .map((slot) => {
-          const names = slot.members
-            .map((member) => {
-              if (member.userId) {
-                const user = usersMap.get(member.userId);
-                return user ? formatUserDisplayName(user) : member.displayName;
-              }
-              return member.displayName;
-            })
-            .filter(Boolean)
-            .join(', ');
-          return `${slot.role}: ${names}`;
-        })
-        .join(', ');
+      const roleLines = formatWorshipRoleLines(roster, usersMap);
       if (!roleLines) return;
       add({
         sourceKey: `worship-${roster.id}`,
         date: d,
-        label: t.worshipPortal,
-        title: roster.name || t.worshipPortal,
-        meta: <span className="truncate">{roleLines}</span>,
+        title: roleLines,
+        subtitle: <ScheduleRowMeta>{roster.name || t.worshipPortal}</ScheduleRowMeta>,
         type: 'worship',
         details: roleLines,
       });
@@ -294,9 +293,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `custom-${entry.id}`,
         date: d,
-        label: t.schedule,
-        title: entry.rosterName,
-        meta: <span className="truncate">{assignments}</span>,
+        title: assignments,
+        subtitle: <ScheduleRowMeta>{entry.rosterName}</ScheduleRowMeta>,
         type: 'custom',
         details: assignments,
       });
@@ -323,9 +321,14 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `cleaning-${r.id}`,
         date: d,
-        label: t.cleaningDuty,
-        title: dayName || t.churchCleaning,
-        meta: others ? <MineMeta lead={t.withLabel} value={others} /> : undefined,
+        title: names || dayName || t.churchCleaning,
+        subtitle: names && dayName ? <ScheduleRowMeta>{dayName}</ScheduleRowMeta> : undefined,
+        meta: (
+          <>
+            <ScheduleRowMeta>{t.cleaningDuty}</ScheduleRowMeta>
+            {others ? <ScheduleRowHighlight lead={t.withLabel} value={others} /> : null}
+          </>
+        ),
         rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
         type: 'cleaning',
         assignedNames: names,
@@ -340,9 +343,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       add({
         sourceKey: `qt-${r.id}`,
         date: d,
-        label: t.qtSharing,
         title: formatUserDisplayName(currentUser, t.member),
-        meta: <MineMeta lead={t.youreSharing} value={r.passage || r.title} />,
+        subtitle: <ScheduleRowMeta>{r.title || t.qtSharing}</ScheduleRowMeta>,
+        meta: <ScheduleRowHighlight lead={t.youreSharing} value={r.passage || r.title} />,
         rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
         type: 'qt',
         passage: r.passage,
@@ -357,12 +360,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         .filter((slot) => slot.members.some((m) => m.userId === currentUser.uid))
         .map((slot) => slot.role);
       if (myRoles.length === 0) return;
+      const roleLines = formatWorshipRoleLines(roster, usersMap);
       add({
         sourceKey: `worship-${roster.id}`,
         date: d,
-        label: t.worshipPortal,
-        title: roster.name || t.worshipPortal,
-        meta: <MineMeta lead={t.servingAs} value={myRoles.join(', ')} />,
+        title: roleLines || roster.name || t.worshipPortal,
+        subtitle: <ScheduleRowMeta>{roster.name || t.worshipPortal}</ScheduleRowMeta>,
+        meta: <ScheduleRowHighlight lead={t.servingAs} value={myRoles.join(', ')} />,
         rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
         type: 'worship',
         details: `${t.servingAs} ${myRoles.join(', ')}`,
@@ -378,12 +382,17 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         currentUser.uid,
       );
       if (myDuties.length === 0) return;
+      const assignments = formatCustomRosterEntrySummary(
+        entry,
+        { fields: entry.rosterFields },
+        usersMap,
+      );
       add({
         sourceKey: `custom-${entry.id}`,
         date: d,
-        label: t.schedule,
-        title: entry.rosterName,
-        meta: <MineMeta lead={t.servingAs} value={myDuties.join(', ')} />,
+        title: assignments || entry.rosterName,
+        subtitle: <ScheduleRowMeta>{entry.rosterName}</ScheduleRowMeta>,
+        meta: <ScheduleRowHighlight lead={t.servingAs} value={myDuties.join(', ')} />,
         rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
         type: 'custom',
         details: `${t.servingAs} ${myDuties.join(', ')}`,
@@ -449,17 +458,16 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         }
       >
         <div className="space-y-4">
-          <div>
-            <div className="mb-2 flex items-center gap-4">
-              <Progress value={overallPct} className="h-2 flex-grow bg-muted shadow-inner" />
-              <span className="text-xl font-bold tracking-tight text-foreground tabular-nums">{overallPct}%</span>
-            </div>
-            <p className="text-micro-label">
-              {daysLeft != null ? `${daysLeft} ${t.daysLeftLabel}` : null}
-              {daysLeft != null && todayPassages.length > 0 ? ' · ' : null}
-              {todayPassages.length > 0 ? `${todayDoneCount}/${todayPassages.length}` : null}
-            </p>
-          </div>
+          <PlanProgressBar
+            value={overallPct}
+            caption={
+              <>
+                {daysLeft != null ? `${daysLeft} ${t.daysLeftLabel}` : null}
+                {daysLeft != null && todayPassages.length > 0 ? ' · ' : null}
+                {todayPassages.length > 0 ? `${todayDoneCount}/${todayPassages.length}` : null}
+              </>
+            }
+          />
 
           {todayPassages.length > 0 ? (
             <div className="ui-list">
@@ -470,28 +478,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                     ? completedPassages.includes(makePassageKey(date, p.displayText))
                     : completedPassages.includes(makeManualPassageKey(p.displayText));
                   return (
-                    <motion.div
+                    <ReadingCheckRow
                       key={p.displayText}
-                      layout
-                      transition={spring}
-                      className={cn('flex items-center gap-3 py-2', done && 'opacity-45')}
-                    >
-                      <Checkbox
-                        checked={done}
-                        onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
-                        className="h-4 w-4 shrink-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => readPassage(p.displayText)}
-                        className={cn(
-                          'flex-1 text-left text-sm font-medium text-foreground',
-                          done && 'text-muted-foreground line-through',
-                        )}
-                      >
-                        {p.displayText}
-                      </button>
-                    </motion.div>
+                      label={p.displayText}
+                      done={done}
+                      onToggle={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
+                      onRead={() => readPassage(p.displayText)}
+                    />
                   );
                 })}
               </AnimatePresence>
@@ -501,21 +494,13 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           )}
 
           {nextMissedPassage && (
-            <div className="flex items-center gap-3 border-t border-border/60 pt-3">
-              <Checkbox
-                checked={false}
-                onCheckedChange={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
-                className="h-4 w-4 shrink-0"
-              />
-              <button
-                type="button"
-                onClick={() => readPassage(nextMissedPassage.displayText)}
-                className="flex-1 text-left"
-              >
-                <span className="text-micro-label">{t.missedReading}: </span>
-                <span className="text-sm font-medium text-foreground">{nextMissedPassage.displayText}</span>
-              </button>
-            </div>
+            <ReadingCheckRow
+              separated
+              lead={t.missedReading}
+              label={nextMissedPassage.displayText}
+              onToggle={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
+              onRead={() => readPassage(nextMissedPassage.displayText)}
+            />
           )}
         </div>
       </PageSection>
@@ -529,8 +514,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                   key={entry.sourceKey}
                   index={index}
                   date={entry.date}
-                  label={entry.label}
                   title={entry.title}
+                  subtitle={entry.subtitle}
                   meta={entry.meta}
                   rightElement={entry.rightElement}
                   onClick={() => setSelectedEntry(entry)}
@@ -545,48 +530,30 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
       <HomeInfoWidgets />
 
-      <Dialog open={!!selectedEntry} onOpenChange={open => !open && setSelectedEntry(null)}>
-        <DialogContent className="max-w-sm rounded-xl border-border/70 p-5">
-          <DialogHeader className="space-y-2 text-left">
-            <p className="text-eyebrow">{selectedEntry ? entryTypeLabel(selectedEntry.type) : ''}</p>
-            <DialogTitle className="text-base font-semibold leading-snug">{selectedEntry?.title}</DialogTitle>
-            <DialogDescription className="text-stat-label">
-              {selectedEntry && format(selectedEntry.date, 'EEEE, MMMM d, yyyy')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 pt-2">
-            {(selectedEntry?.type === 'event' || selectedEntry?.type === 'birthday' || selectedEntry?.type === 'worship' || selectedEntry?.type === 'custom') && selectedEntry.details && (
-              <p className="text-sm leading-relaxed text-muted-foreground">{selectedEntry.details}</p>
-            )}
-            {selectedEntry?.type === 'qt' && (
-              <div className="space-y-2 text-sm">
-                {selectedEntry.qtTitle && (
-                  <p><span className="text-muted-foreground">{t.topic}: </span>{selectedEntry.qtTitle}</p>
-                )}
-                {selectedEntry.passage && (
-                  <p className="font-mono font-medium">{selectedEntry.passage}</p>
-                )}
-              </div>
-            )}
-            {selectedEntry?.type === 'cleaning' && (
-              <div className="space-y-2 text-sm">
-                {selectedEntry.dayName && (
-                  <p><span className="text-muted-foreground">{t.dayType}: </span>{selectedEntry.dayName}</p>
-                )}
-                {selectedEntry.assignedNames && (
-                  <div className="flex items-start gap-2">
-                    <Users className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p>{selectedEntry.assignedNames}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <Button className="mt-2 w-full" onClick={() => setSelectedEntry(null)}>{t.done}</Button>
-        </DialogContent>
-      </Dialog>
+      <ScheduleDetailDialog
+        open={!!selectedEntry}
+        onOpenChange={open => !open && setSelectedEntry(null)}
+        eyebrow={selectedEntry ? entryTypeLabel(selectedEntry.type) : undefined}
+        title={selectedEntry?.title}
+        date={selectedEntry?.date}
+        closeLabel={t.done}
+      >
+        {(selectedEntry?.type === 'event' || selectedEntry?.type === 'birthday' || selectedEntry?.type === 'worship' || selectedEntry?.type === 'custom') && selectedEntry.details && (
+          <ScheduleDetailText>{selectedEntry.details}</ScheduleDetailText>
+        )}
+        {selectedEntry?.type === 'qt' && (
+          <ScheduleDetailGroup>
+            {selectedEntry.qtTitle && <ScheduleDetailField label={t.topic} value={selectedEntry.qtTitle} />}
+            {selectedEntry.passage && <ScheduleDetailPassage passage={selectedEntry.passage} />}
+          </ScheduleDetailGroup>
+        )}
+        {selectedEntry?.type === 'cleaning' && (
+          <ScheduleDetailGroup>
+            {selectedEntry.dayName && <ScheduleDetailField label={t.dayType} value={selectedEntry.dayName} />}
+            {selectedEntry.assignedNames && <ScheduleDetailPeople names={selectedEntry.assignedNames} />}
+          </ScheduleDetailGroup>
+        )}
+      </ScheduleDetailDialog>
     </div>
   );
 }
