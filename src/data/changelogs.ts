@@ -13,6 +13,29 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.7.0',
+    subtitle: 'Redesigned home',
+    date: 'July 29, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Home now reads as one continuous page instead of a stack of separate boxes',
+      },
+      {
+        type: 'Changed',
+        text: 'Upcoming duties, events, and daily QT are combined into a single agenda grouped by date',
+      },
+      {
+        type: 'Improved',
+        text: 'The duties you are serving on are marked and styled so they stand out at a glance',
+      },
+      {
+        type: 'Fixed',
+        text: 'Turning on notifications in a browser that blocks the notification service worker now explains what went wrong instead of failing quietly',
+      },
+    ],
+  },
+  {
     version: 'v1.6.1',
     subtitle: 'Chat push delivery fixes',
     date: 'July 29, 2026',

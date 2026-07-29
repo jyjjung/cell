@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { useInfoWidgets } from '@/hooks/use-info-widgets';
+import { PageSection } from '@/components/ui/page-layout';
 
 export default function HomeInfoWidgets() {
   const { currentUser } = useAuth();
@@ -18,22 +19,18 @@ export default function HomeInfoWidgets() {
   if (visible.length === 0) return null;
 
   return (
-    <section className="ui-card space-y-5">
-      {visible.map((widget, index) => {
+    <>
+      {visible.map((widget) => {
         const title = lang === 'ko' && widget.titleKo ? widget.titleKo : widget.title;
         const body = lang === 'ko' && widget.bodyKo ? widget.bodyKo : widget.body;
         return (
-          <div
-            key={widget.id}
-            className={index > 0 ? 'space-y-2 border-t border-border/50 pt-5' : 'space-y-2'}
-          >
-            <p className="text-eyebrow">{title}</p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+          <PageSection key={widget.id} title={title}>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
               {body}
             </p>
-          </div>
+          </PageSection>
         );
       })}
-    </section>
+    </>
   );
 }
