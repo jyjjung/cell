@@ -5,8 +5,9 @@ import { cn } from '@/lib/utils';
 import { useNavLabel } from '@/hooks/use-nav-label';
 
 interface PageHeaderProps {
-  title: string;
-  description?: string;
+  /** ReactNode so loading states can pass a Skeleton and reuse this layout. */
+  title: React.ReactNode;
+  description?: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
 }
@@ -29,7 +30,7 @@ export function NavPageHeader({
   description,
   action,
   className,
-}: Omit<PageHeaderProps, 'title'> & { title?: string }) {
+}: Omit<PageHeaderProps, 'title'> & { title?: React.ReactNode }) {
   const navTitle = useNavLabel();
   return (
     <PageHeader
@@ -42,8 +43,8 @@ export function NavPageHeader({
 }
 
 type PageSectionProps = {
-  title?: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   action?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;

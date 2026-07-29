@@ -11,19 +11,15 @@ import { userCanSeeEvent } from '@/lib/event-visibility';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
+import { ScheduleListSkeleton, ScheduleMonthGroup } from '@/components/schedule/schedule-occurrence-row';
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
-    <div className="ui-card !p-0">
-      <div className="border-b border-border/60 px-4 py-3">
-        <p className="text-eyebrow">{month}</p>
-      </div>
-      <div className="ui-list px-2">
-        {rows.map((row, i) => (
-          <EventOccurrenceCard key={row.occurrenceKey} row={row} index={i} />
-        ))}
-      </div>
-    </div>
+    <ScheduleMonthGroup month={month}>
+      {rows.map((row, i) => (
+        <EventOccurrenceCard key={row.occurrenceKey} row={row} index={i} />
+      ))}
+    </ScheduleMonthGroup>
   );
 }
 
@@ -82,7 +78,14 @@ export default function EventsPage() {
     };
   }, [events, currentUser, isAdmin]);
 
-  if (!isMounted || loading) return null;
+  if (!isMounted || loading) {
+    return (
+      <div className="page-container">
+        <NavPageHeader />
+        <ScheduleListSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">

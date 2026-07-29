@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatUserDisplayName } from "@/lib/formatting";
-import { ScheduleMonthGroup, ScheduleOccurrenceRow } from "@/components/schedule/schedule-occurrence-row";
+import { ScheduleListSkeleton, ScheduleMonthGroup, ScheduleOccurrenceRow } from "@/components/schedule/schedule-occurrence-row";
 import { parseDay } from "@/lib/event-occurrences";
 
 function emptyFieldValues(fields: RosterFieldDefinition[]): Record<string, RosterFieldValue> {
@@ -199,10 +199,7 @@ export default function CustomRosterDetailPage() {
   if (!isMounted || loading) {
     return (
       <div className="page-container">
-        <div className="empty-inline gap-3 py-16">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-micro-label">{t.loadingRoster}</p>
-        </div>
+        <ScheduleListSkeleton />
       </div>
     );
   }
@@ -240,7 +237,7 @@ export default function CustomRosterDetailPage() {
         date={entryDate}
         title={title}
         className={faded ? "opacity-80" : undefined}
-        meta={summary ? <span className="line-clamp-2">{summary}</span> : undefined}
+        subtitle={summary ? <span className="line-clamp-2">{summary}</span> : undefined}
         rightElement={
           canEdit ? (
             <Button

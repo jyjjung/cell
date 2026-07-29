@@ -6,11 +6,16 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import type { QTRosterEntry, UserProfileData } from '@/types';
 import { format, isBefore, startOfToday, compareAsc } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
-import { Loader2, CalendarOff } from 'lucide-react';
+import { CalendarOff } from 'lucide-react';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScheduleMonthGroup, ScheduleOccurrenceRow } from '@/components/schedule/schedule-occurrence-row';
+import {
+    ScheduleListSkeleton,
+    ScheduleMonthGroup,
+    ScheduleOccurrenceRow,
+    SchedulePassageRef,
+} from '@/components/schedule/schedule-occurrence-row';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
@@ -97,7 +102,7 @@ export default function QTRosterPage() {
                 index={currentIndex}
                 date={entryDate}
                 title={displayName}
-                meta={
+                subtitle={
                     entry.title ? (
                         <LinkifiedText
                             text={entry.title}
@@ -105,11 +110,7 @@ export default function QTRosterPage() {
                         />
                     ) : undefined
                 }
-                rightElement={
-                    <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                        {entry.passage || '—'}
-                    </span>
-                }
+                meta={entry.passage ? <SchedulePassageRef passage={entry.passage} /> : undefined}
             />
         );
     };
@@ -119,10 +120,7 @@ export default function QTRosterPage() {
             <NavPageHeader />
             
             {(rosterLoading || usersLoading) ? (
-                 <div className="empty-inline py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mb-3" />
-                    <p className="text-sm text-muted-foreground">{t.loadingRoster}</p>
-                 </div>
+                <ScheduleListSkeleton />
             ) : (
                 <Tabs defaultValue="upcoming" className="w-full">
                     <TabsList className="h-9">

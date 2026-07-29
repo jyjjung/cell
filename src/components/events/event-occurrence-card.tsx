@@ -2,11 +2,11 @@
 
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { type EventOccurrenceRow } from "@/lib/event-occurrences";
+import { ScheduleRowDate, ScheduleRowTime } from "@/components/schedule/schedule-occurrence-row";
 import { cn } from "@/lib/utils";
 import { EventCategory } from "@/types";
-import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Clock, MapPin } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import { useState } from "react";
 
 const categoryConfig: Record<EventCategory, { color: string }> = {
@@ -50,14 +50,11 @@ export default function EventOccurrenceCard({
         }}
         className={cn("event-row group", className)}
       >
-        <div className="flex w-10 shrink-0 flex-col items-center leading-none">
-          <span className="text-[10px] font-medium text-muted-foreground">{format(eventDate, "MMM")}</span>
-          <span className="text-sm font-semibold tabular-nums text-foreground">{format(eventDate, "d")}</span>
-          <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">{format(eventDate, "EEE")}</span>
-        </div>
+        <ScheduleRowDate date={eventDate} />
 
         <div className="event-row-body">
-          <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+          <p className="event-row-title">{event.title}</p>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             <span className={cn("text-xs text-muted-foreground", config.color)}>{event.category}</span>
             {isRecurring && (
               <span className="text-xs text-muted-foreground">
@@ -65,15 +62,10 @@ export default function EventOccurrenceCard({
               </span>
             )}
           </div>
-          <p className="event-row-title">{event.title}</p>
           {((!event.allDay && event.startTime) || event.location) && (
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
               {!event.allDay && event.startTime && (
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {event.startTime}
-                  {event.endTime ? `–${event.endTime}` : ""}
-                </span>
+                <ScheduleRowTime start={event.startTime} end={event.endTime} />
               )}
               {event.location && (
                 <span className="inline-flex items-center gap-1 truncate">
