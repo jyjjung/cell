@@ -4,13 +4,30 @@ import { deleteObject, ref, type StorageReference } from 'firebase/storage';
 function refFromDownloadUrl(imageUrl: string): StorageReference | null {
   try {
     const url = new URL(imageUrl);
-    if (!url.hostname.includes('firebasestorage.googleapis.com')) return null;
+    const host = url.hostname;
+    const isFirebaseHost =
+      host.includes('firebasestorage.googleapis.com') ||
+      host.endsWith('.firebasestorage.app') ||
+      host === 'storage.googleapis.com';
+    if (!isFirebaseHost) return null;
 
+    // Classic download URL: .../o/<encodedPath>?...
     const encodedPath = url.pathname.split('/o/')[1];
-    if (!encodedPath) return null;
+    if (encodedPath) {
+      const path = decodeURIComponent(encodedPath.split('?')[0] ?? encodedPath);
+      return ref(storage, path);
+    }
 
-    const path = decodeURIComponent(encodedPath.split('?')[0] ?? encodedPath);
-    return ref(storage, path);
+    // GCS-style: /<bucket>/avatars/... or /avatars/...
+    const parts = url.pathname.split('/').filter(Boolean);
+    const avatarsIdx = parts.indexOf('avatars');
+    const chatsIdx = parts.indexOf('chats');
+    const start = avatarsIdx >= 0 ? avatarsIdx : chatsIdx;
+    if (start >= 0) {
+      return ref(storage, parts.slice(start).join('/'));
+    }
+
+    return null;
   } catch {
     return null;
   }

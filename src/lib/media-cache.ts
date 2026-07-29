@@ -37,6 +37,7 @@ function isFirebaseStorageMediaUrl(url: string): boolean {
   try {
     const { hostname, pathname } = new URL(url);
     if (hostname === 'firebasestorage.googleapis.com') return true;
+    if (hostname.endsWith('.firebasestorage.app')) return true;
     if (hostname === 'storage.googleapis.com') {
       return (
         pathname.includes('firebasestorage') ||

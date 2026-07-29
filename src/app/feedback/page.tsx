@@ -56,6 +56,16 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.144",
+    subtitle: "Auth flash and avatars",
+    date: "July 29, 2026",
+    changes: [
+      "Signed-in visits no longer briefly flash the landing/sign-in screen before the dashboard",
+      "Custom pixel avatars and uploaded profile photos render more reliably across the app",
+      "Profile photo cropping and upload works more reliably on more browsers",
+    ],
+  },
+  {
     version: "v1.3.143",
     subtitle: "Chat photo uploads",
     date: "July 29, 2026",

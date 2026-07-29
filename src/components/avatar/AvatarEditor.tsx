@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import type { AvatarData, AvatarMode } from '@/types';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -29,7 +29,8 @@ function BackgroundSelector({
   onDataChange: (data: AvatarData) => void,
 }) {
   const BackgroundSwatch = ({ bgKey, gradient }: { bgKey: string, gradient: { stops: { offset: string; color: string }[] } }) => {
-    const backgroundId = `grad-swatch-${bgKey}`;
+    const reactId = useId().replace(/:/g, '');
+    const backgroundId = `grad-swatch-${reactId}-${bgKey}`;
     const isNone = bgKey === 'none';
 
     return (
