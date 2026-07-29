@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.142",
+    date: "July 29, 2026",
+    changes: [
+      "Reverted recent chat photo upload and chat input layout pull-request changes",
+    ],
+  },
+
+  {
     version: "v1.3.141",
     subtitle: "Hardening and Terms",
     date: "July 29, 2026",
