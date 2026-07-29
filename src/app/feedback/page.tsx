@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.146",
+    subtitle: "DiceBear avatar images",
+    date: "July 29, 2026",
+    changes: [
+      "Animal, initials, and other generated avatars load again instead of showing a broken image icon",
+    ],
+  },
+  {
     version: "v1.3.145",
     subtitle: "Pixel avatar CSP fix",
     date: "July 29, 2026",

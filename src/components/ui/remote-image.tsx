@@ -21,13 +21,15 @@ type RemoteImageProps = {
   optimize?: boolean;
 };
 
-/** Firebase Storage signed URLs must stay unoptimized (token rotation / CDN cache keys). */
+/** Prefer unoptimized for signed Storage URLs and remote SVGs (DiceBear). */
 function shouldOptimizeRemoteUrl(src: string): boolean {
   if (!src || src.startsWith('data:') || src.startsWith('blob:')) return false;
   if (src.startsWith('/')) return true;
   try {
-    const { hostname } = new URL(src);
-    if (hostname === 'api.dicebear.com') return true;
+    const { hostname, pathname } = new URL(src);
+    // DiceBear serves SVG — Next's optimizer often fails on remote SVG and shows a broken icon.
+    if (hostname === 'api.dicebear.com') return false;
+    if (pathname.toLowerCase().endsWith('.svg')) return false;
     if (hostname === 'img.youtube.com' || hostname === 'i.ytimg.com') return true;
     if (hostname === 'www.google.com' || hostname.endsWith('.google.com')) return true;
     if (hostname === 'picsum.photos') return true;
