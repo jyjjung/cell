@@ -54,25 +54,43 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
         }
 
-        // Already claimed/sent, or nothing actionable (no recipients / no tokens).
-        if (result.alreadySent || !result.retryable) {
+        // A duplicate request is an idempotent success.
+        if (result.alreadySent) {
             return NextResponse.json({
                 success: true,
-                delivered: result.success,
-                alreadySent: result.alreadySent ?? false,
+                delivered: 0,
+                alreadySent: true,
                 reason: result.reason,
             });
         }
 
-        // Tokens exist but FCM delivered 0 — tell the client to keep retrying.
+        // Do not report a successful request when no push reached FCM.
+        if (result.success === 0) {
+            console.error('[send-chat-push] Notification not sent', {
+                chatId,
+                messageId,
+                reason: result.reason,
+                failures: result.failure,
+                retryable: Boolean(result.retryable),
+            });
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    delivered: 0,
+                    error: result.reason || 'Notification not sent',
+                    retryable: Boolean(result.retryable),
+                },
+                { status: result.retryable ? 503 : 422 },
+            );
+        }
+
         return NextResponse.json(
             {
-                success: false,
+                success: true,
                 delivered: result.success,
-                error: result.reason || 'Delivery failed',
-                retryable: true,
+                failures: result.failure,
             },
-            { status: 503 },
         );
 
     } catch (error: unknown) {
