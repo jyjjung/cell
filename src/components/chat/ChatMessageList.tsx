@@ -114,30 +114,34 @@ export default function ChatMessageList({
           newerVisible.createdAt.toMillis() - msg.createdAt.toMillis() > 3600000));
 
       content.push(
-        <MessageBubble
+        <div
           key={msg.id}
-          message={msg}
-          chat={chat}
-          sender={sendersByUserId.get(msg.senderId) ?? null}
-          usersById={usersById}
-          toggleReaction={toggleReaction}
-          votePoll={votePoll}
-          setPollResultsLocked={setPollResultsLocked}
-          lastSeenNames={lastSeenNamesPerMessage[msg.id] ?? EMPTY_SEEN_NAMES}
-          onOpenThread={onOpenThread}
-          onOpenImage={onOpenImage}
-          onOpenWorshipViewer={onOpenWorshipViewer}
-          onDelete={deleteMessage}
-          parentMessage={msg.replyToId ? messagesById.get(msg.replyToId) : undefined}
-          parentSenderName={
-            msg.replyToId
-              ? resolveChatUserName(messagesById.get(msg.replyToId)?.senderId || '', chat, usersById)
-              : undefined
-          }
-          threadParentMessage={msg.threadParentId ? messagesById.get(msg.threadParentId) : undefined}
-          showAvatar={showAvatar}
-          showName={showName}
-        />,
+          className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]"
+        >
+          <MessageBubble
+            message={msg}
+            chat={chat}
+            sender={sendersByUserId.get(msg.senderId) ?? null}
+            usersById={usersById}
+            toggleReaction={toggleReaction}
+            votePoll={votePoll}
+            setPollResultsLocked={setPollResultsLocked}
+            lastSeenNames={lastSeenNamesPerMessage[msg.id] ?? EMPTY_SEEN_NAMES}
+            onOpenThread={onOpenThread}
+            onOpenImage={onOpenImage}
+            onOpenWorshipViewer={onOpenWorshipViewer}
+            onDelete={deleteMessage}
+            parentMessage={msg.replyToId ? messagesById.get(msg.replyToId) : undefined}
+            parentSenderName={
+              msg.replyToId
+                ? resolveChatUserName(messagesById.get(msg.replyToId)?.senderId || '', chat, usersById)
+                : undefined
+            }
+            threadParentMessage={msg.threadParentId ? messagesById.get(msg.threadParentId) : undefined}
+            showAvatar={showAvatar}
+            showName={showName}
+          />
+        </div>,
       );
 
       const olderMsg = messages[i + 1];

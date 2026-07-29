@@ -3,11 +3,18 @@ import { Timestamp } from 'firebase/firestore';
 export function reviveTimestamp(value: unknown): Timestamp | undefined {
   if (!value) return undefined;
   if (value instanceof Timestamp) return value;
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Timestamp.fromMillis(value);
+  }
   if (typeof value === 'object' && value !== null) {
     const record = value as Record<string, unknown>;
     if (typeof record.seconds === 'number') {
       const nanoseconds = typeof record.nanoseconds === 'number' ? record.nanoseconds : 0;
       return new Timestamp(record.seconds, nanoseconds);
+    }
+    if (typeof record._seconds === 'number') {
+      const nanoseconds = typeof record._nanoseconds === 'number' ? record._nanoseconds : 0;
+      return new Timestamp(record._seconds, nanoseconds);
     }
     if (typeof record.toDate === 'function') {
       try {

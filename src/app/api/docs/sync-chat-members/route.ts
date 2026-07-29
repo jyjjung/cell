@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import {
   requireChatMembership,
-  shareDocsWithChatMembers,
+  syncDocsForChatMembers,
 } from '@/lib/server-docs-chat-share';
 
 async function requireUid(request: NextRequest): Promise<string> {
@@ -32,26 +32,7 @@ export async function POST(request: NextRequest) {
 
     const adminDb = getAdminDb(getAdminApp());
     const chatMembers = await requireChatMembership(adminDb, chatId, uid);
-
-    const snap = await adminDb
-      .collection('docs')
-      .where('sourceChatIds', 'array-contains', chatId)
-      .limit(100)
-      .get();
-
-    const docIds = snap.docs.map((d) => d.id);
-    if (docIds.length === 0) {
-      return NextResponse.json({ updated: [], skipped: [] });
-    }
-
-    const result = await shareDocsWithChatMembers(adminDb, {
-      chatId,
-      chatMemberIds: chatMembers,
-      docIds,
-      actorId: uid,
-      trustSourceChatLink: true,
-    });
-
+    const result = await syncDocsForChatMembers(adminDb, chatId, chatMembers);
     return NextResponse.json(result);
   } catch (error: unknown) {
     const status = typeof error === 'object' && error && 'status' in error

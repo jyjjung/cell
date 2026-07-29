@@ -1,0 +1,32 @@
+---
+description: Prefer zero incremental cost and Keep a Changelog standards for user-facing work
+alwaysApply: true
+---
+
+# Cost and quality standards
+
+When implementing features, fixes, or refactors:
+
+## Cost (hard requirements)
+
+- **Zero additional paid services** unless the user explicitly approves a new vendor/SKU.
+- Prefer solutions that use existing Firebase/Next/Vercel capacity.
+- Avoid new standing listeners, unbounded collection scans, or per-user fan-out that grows linearly without a hard cap.
+- Bound batch jobs (e.g. `limit(100)`), debounce writes, cache static reads, and gate realtime work by route.
+- Growth should increase cost sub-linearly: indexes, caps, and on-demand sync beats continuous polling.
+
+## Quality
+
+- Match industry practice for the problem (security, ACL heal paths, caching, changelogs).
+- Preserve existing user-facing behavior unless the user asks to change it.
+- Prefer fixes that heal data in place over new parallel systems.
+
+## Changelog entries
+
+Follow [Keep a Changelog](https://keepachangelog.com/) + [SemVer](https://semver.org/) in `src/data/changelogs.ts`:
+
+- Product release notes: **one entry per ship**, typically **3–8 bullets** — not a commit diary.
+- Categories: **Added**, **Changed**, **Fixed**, **Improved**, **Security**.
+- Bump **MINOR** for features / meaningful bundles (`v1.4.0`), **PATCH** for fixes (`v1.4.1`), **MAJOR** for breaking changes (`v2.0.0`).
+- User-facing language; exact calendar dates (`July 29, 2026`).
+- New entry at the top of `changelogs` before push (see changelog-on-push rule).

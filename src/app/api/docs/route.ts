@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type QuerySnapshot } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import {
   buildMemberIds,
@@ -27,20 +27,57 @@ export async function GET(request: NextRequest) {
   try {
     const uid = await requireUid(request);
     const adminDb = getAdminDb(getAdminApp());
-    const snap = await adminDb
-      .collection('docs')
-      .where('memberIds', 'array-contains', uid)
-      .get();
 
-    const docs = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const aMs = (a as { updatedAt?: { toMillis?: () => number; _seconds?: number } }).updatedAt;
-        const bMs = (b as { updatedAt?: { toMillis?: () => number; _seconds?: number } }).updatedAt;
-        const aVal = aMs?.toMillis?.() ?? (aMs?._seconds ? aMs._seconds * 1000 : 0);
-        const bVal = bMs?.toMillis?.() ?? (bMs?._seconds ? bMs._seconds * 1000 : 0);
-        return bVal - aVal;
-      });
+    // Union of membership paths — a doc can be openable via ownerId/sharedWith
+    // even when memberIds is stale (common after chat-share edge cases).
+    const [byMember, byOwner, byShared] = await Promise.all([
+      adminDb.collection('docs').where('memberIds', 'array-contains', uid).get(),
+      adminDb.collection('docs').where('ownerId', '==', uid).get(),
+      adminDb.collection('docs').where('sharedWith', 'array-contains', uid).get(),
+    ]);
+
+    const byId = new Map<string, Record<string, unknown> & { id: string }>();
+    const ingest = (snap: QuerySnapshot) => {
+      for (const d of snap.docs) {
+        byId.set(d.id, { id: d.id, ...d.data() });
+      }
+    };
+    ingest(byMember);
+    ingest(byOwner);
+    ingest(byShared);
+
+    // Idempotent ACL heal: ensure owners / shared recipients appear in memberIds
+    // so client list queries and security rules stay consistent. Rare writes only.
+    const heals: Promise<unknown>[] = [];
+    for (const docData of byId.values()) {
+      const memberIds = Array.isArray(docData.memberIds)
+        ? Array.from(new Set(docData.memberIds.map(String).filter(Boolean)))
+        : [];
+      if (memberIds.includes(uid)) continue;
+
+      const sharedWith = Array.isArray(docData.sharedWith)
+        ? Array.from(new Set(docData.sharedWith.map(String).filter(Boolean)))
+        : [];
+      const ownerId = String(docData.ownerId || '');
+      const nextMembers = buildMemberIds(ownerId || uid, sharedWith);
+      if (!nextMembers.includes(uid)) nextMembers.push(uid);
+
+      heals.push(
+        adminDb.collection('docs').doc(docData.id).update({ memberIds: nextMembers }),
+      );
+      docData.memberIds = nextMembers;
+    }
+    if (heals.length > 0) {
+      await Promise.all(heals);
+    }
+
+    const docs = Array.from(byId.values()).sort((a, b) => {
+      const aMs = (a as { updatedAt?: { toMillis?: () => number; _seconds?: number } }).updatedAt;
+      const bMs = (b as { updatedAt?: { toMillis?: () => number; _seconds?: number } }).updatedAt;
+      const aVal = aMs?.toMillis?.() ?? (aMs?._seconds ? aMs._seconds * 1000 : 0);
+      const bVal = bMs?.toMillis?.() ?? (bMs?._seconds ? bMs._seconds * 1000 : 0);
+      return bVal - aVal;
+    });
     return NextResponse.json({ docs });
   } catch (error: unknown) {
     const status = typeof error === 'object' && error && 'status' in error

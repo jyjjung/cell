@@ -18,6 +18,7 @@ import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import {
   DOC_COMMENT_MAX,
   DOC_TITLE_MAX,
+  buildMemberIds,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
@@ -28,6 +29,15 @@ import {
   subscribeLocalDocDeletes,
   unmarkDocDeletedLocally,
 } from '@/lib/docs-deleted';
+import {
+  getCachedDoc,
+  getCachedDocsList,
+  removeDocCache,
+  removeDocFromListCache,
+  writeDocCache,
+  writeDocsListCache,
+  upsertDocInListCache,
+} from '@/lib/docs-directory';
 import type { DocComment, DocNote, DocVisibility } from '@/types';
 
 function docFromData(id: string, data: Record<string, unknown>): DocNote {
@@ -144,9 +154,15 @@ function firestoreError(err: FirestoreError): Error {
   return e;
 }
 
-export function useDocs(userId: string | undefined) {
-  const [docs, setDocs] = useState<DocNote[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useDocs(
+  userId: string | undefined,
+  options?: { /** When true, also load owner/sharedWith docs via Admin API (Docs page). */ authoritativeList?: boolean },
+) {
+  const authoritativeList = options?.authoritativeList === true;
+  const [docs, setDocs] = useState<DocNote[]>(() =>
+    userId ? filterOutLocallyDeletedDocs(getCachedDocsList(userId)) : [],
+  );
+  const [loading, setLoading] = useState(() => !(userId && getCachedDocsList(userId).length > 0));
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -157,16 +173,56 @@ export function useDocs(userId: string | undefined) {
       return;
     }
 
-    setLoading(true);
+    const cached = filterOutLocallyDeletedDocs(getCachedDocsList(userId));
+    if (cached.length > 0) {
+      setDocs(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    let cancelled = false;
     let hasServerSnapshot = false;
     let cacheFallback: ReturnType<typeof setTimeout> | undefined;
     let pendingCacheDocs: DocNote[] | null = null;
+    /** Docs discovered via API (owner / sharedWith) that memberIds query may miss. */
+    let apiExtras: DocNote[] = cached;
 
-    const applyDocs = (next: DocNote[]) => {
-      setDocs(filterOutLocallyDeletedDocs(next));
+    const publish = (memberDocs: DocNote[]) => {
+      const byId = new Map<string, DocNote>();
+      for (const d of apiExtras) byId.set(d.id, d);
+      for (const d of memberDocs) byId.set(d.id, d);
+      const next = filterOutLocallyDeletedDocs(
+        Array.from(byId.values()).sort(
+          (a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt),
+        ),
+      );
+      writeDocsListCache(userId, next);
+      setDocs(next);
       setError(null);
       setLoading(false);
     };
+
+    const loadFromApi = async () => {
+      if (!authoritativeList) return;
+      try {
+        const data = await apiJson<{ docs: Array<Record<string, unknown> & { id: string }> }>(
+          '/api/docs',
+        );
+        if (cancelled) return;
+        apiExtras = data.docs.map((d) => docFromData(d.id, d));
+        // Seed list immediately from authoritative server union query.
+        publish(apiExtras);
+      } catch (err) {
+        if (cancelled) return;
+        // Keep cached list visible; only surface error if we have nothing.
+        if (cached.length === 0) {
+          setError((prev) => prev ?? (err instanceof Error ? err : new Error('Failed to load documents')));
+        }
+      }
+    };
+
+    void loadFromApi();
 
     const docsQuery = query(
       collection(db, 'docs'),
@@ -177,7 +233,7 @@ export function useDocs(userId: string | undefined) {
       docsQuery,
       { includeMetadataChanges: true },
       (snapshot) => {
-        const next = snapshot.docs
+        const memberDocs = snapshot.docs
           .map((d) => docFromData(d.id, d.data() as Record<string, unknown>))
           .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt));
 
@@ -188,17 +244,17 @@ export function useDocs(userId: string | undefined) {
             cacheFallback = undefined;
           }
           pendingCacheDocs = null;
-          applyDocs(next);
+          publish(memberDocs);
           return;
         }
 
         // Cache can still contain deleted docs. Wait briefly for the server.
         if (hasServerSnapshot) return;
-        pendingCacheDocs = next;
+        pendingCacheDocs = memberDocs;
         if (!cacheFallback) {
           cacheFallback = setTimeout(() => {
             if (hasServerSnapshot || !pendingCacheDocs) return;
-            applyDocs(pendingCacheDocs);
+            publish(pendingCacheDocs);
           }, 1200);
         }
       },
@@ -209,16 +265,27 @@ export function useDocs(userId: string | undefined) {
       },
     );
 
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void loadFromApi();
+    };
+    if (authoritativeList) {
+      document.addEventListener('visibilitychange', onVisible);
+    }
+
     const unsubscribeLocalDeletes = subscribeLocalDocDeletes(() => {
       setDocs((prev) => filterOutLocallyDeletedDocs(prev));
     });
 
     return () => {
+      cancelled = true;
       if (cacheFallback) clearTimeout(cacheFallback);
       unsubscribe();
       unsubscribeLocalDeletes();
+      if (authoritativeList) {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
     };
-  }, [userId]);
+  }, [userId, authoritativeList]);
 
   const createDoc = useCallback(
     async (input: {
@@ -242,6 +309,28 @@ export function useDocs(userId: string | undefined) {
           content: input.content ?? '<p></p>',
         }),
       });
+      const created: DocNote = {
+        id: data.id,
+        title,
+        content: input.content ?? '<p></p>',
+        visibility: input.visibility,
+        ownerId: userId,
+        authorIds: [userId],
+        sharedWith,
+        memberIds: buildMemberIds(userId, sharedWith),
+        sourceChatIds: [],
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        updatedBy: userId,
+      };
+      upsertDocInListCache(userId, created);
+      setDocs((prev) => {
+        const byId = new Map(prev.map((d) => [d.id, d]));
+        byId.set(created.id, created);
+        return Array.from(byId.values()).sort(
+          (a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt),
+        );
+      });
       return data.id;
     },
     [userId],
@@ -250,13 +339,15 @@ export function useDocs(userId: string | undefined) {
   const deleteDocById = useCallback(async (docId: string) => {
     markDocDeletedLocally(docId);
     setDocs((prev) => prev.filter((d) => d.id !== docId));
+    if (userId) removeDocFromListCache(userId, docId);
+    else removeDocCache(docId);
     try {
       await deleteDocBestEffort(docId);
     } catch (err) {
       unmarkDocDeletedLocally(docId);
       throw err;
     }
-  }, []);
+  }, [userId]);
 
   const shareWithUsers = useCallback(
     async (docId: string, note: DocNote, additionalUids: string[]) => {
@@ -275,8 +366,15 @@ export function useDocs(userId: string | undefined) {
 }
 
 export function useDoc(docId: string | undefined, userId: string | undefined) {
-  const [note, setNote] = useState<DocNote | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [note, setNote] = useState<DocNote | null>(() => {
+    if (!docId || !userId || isDocDeletedLocally(docId)) return null;
+    return getCachedDoc(docId);
+  });
+  const [loading, setLoading] = useState(() => {
+    if (!docId || !userId) return false;
+    if (isDocDeletedLocally(docId)) return false;
+    return !getCachedDoc(docId);
+  });
   const [error, setError] = useState<Error | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -295,7 +393,14 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
       return;
     }
 
-    setLoading(true);
+    const cached = getCachedDoc(docId);
+    if (cached) {
+      setNote(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     let hasServerSnapshot = false;
     let pendingCacheNote: DocNote | null = null;
     let cacheFallback: ReturnType<typeof setTimeout> | undefined;
@@ -306,6 +411,8 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
         cacheFallback = undefined;
       }
       pendingCacheNote = null;
+      removeDocCache(docId);
+      if (userId) removeDocFromListCache(userId, docId);
       setNote(null);
       setError(new Error('Document not found'));
       setLoading(false);
@@ -317,6 +424,8 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
         cacheFallback = undefined;
       }
       pendingCacheNote = null;
+      writeDocCache(next);
+      if (userId) upsertDocInListCache(userId, next);
       setNote(next);
       setError(null);
       setLoading(false);
@@ -346,21 +455,36 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
         }
 
         // Cache-only: wait briefly for server so deleted docs don't flash back.
-        pendingCacheNote = next;
-        if (!cacheFallback) {
-          cacheFallback = setTimeout(() => {
-            if (hasServerSnapshot || isDocDeletedLocally(docId) || !pendingCacheNote) return;
-            showNote(pendingCacheNote);
-          }, 1500);
+        // Prefer showing localStorage / Firestore persistent cache immediately.
+        if (!cached) {
+          pendingCacheNote = next;
+          if (!cacheFallback) {
+            cacheFallback = setTimeout(() => {
+              if (hasServerSnapshot || isDocDeletedLocally(docId) || !pendingCacheNote) return;
+              showNote(pendingCacheNote);
+            }, 1500);
+          }
+        } else {
+          // Already painted from device cache; refresh when server confirms.
+          pendingCacheNote = next;
         }
       },
       (err) => {
         // Deleted / inaccessible docs often arrive as permission-denied, not not-found.
         if (err.code === 'permission-denied' || err.code === 'not-found') {
+          // Keep device-cached note if we have one (offline / transient deny).
+          if (cached && !hasServerSnapshot) {
+            setLoading(false);
+            return;
+          }
           showMissing();
           return;
         }
         if (cacheFallback) clearTimeout(cacheFallback);
+        if (cached) {
+          setLoading(false);
+          return;
+        }
         setNote(null);
         setError(firestoreError(err));
         setLoading(false);
@@ -393,17 +517,19 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
           }),
         });
         // Optimistic local update so soft-sync does not briefly revert after save.
-        setNote((prev) =>
-          prev
-            ? {
-                ...prev,
-                title: trimmed,
-                content,
-                updatedBy: userId,
-                updatedAt: Timestamp.now(),
-              }
-            : prev,
-        );
+        setNote((prev) => {
+          if (!prev) return prev;
+          const next = {
+            ...prev,
+            title: trimmed,
+            content,
+            updatedBy: userId,
+            updatedAt: Timestamp.now(),
+          };
+          writeDocCache(next);
+          upsertDocInListCache(userId, next);
+          return next;
+        });
       } finally {
         setSaving(false);
       }
@@ -421,6 +547,18 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
           method: 'PATCH',
           body: JSON.stringify({ visibility, sharedWith: sharedWithInput }),
         });
+        const sharedWith = normalizeSharedWith(visibility, sharedWithInput, userId);
+        const next: DocNote = {
+          ...note,
+          visibility,
+          sharedWith,
+          memberIds: buildMemberIds(userId, sharedWith),
+          updatedBy: userId,
+          updatedAt: Timestamp.now(),
+        };
+        writeDocCache(next);
+        upsertDocInListCache(userId, next);
+        setNote(next);
       } finally {
         setSaving(false);
       }
@@ -432,6 +570,7 @@ export function useDoc(docId: string | undefined, userId: string | undefined) {
     if (!docId || !userId || !note) return;
     if (note.ownerId !== userId) throw new Error('Only the owner can delete');
     markDocDeletedLocally(docId);
+    removeDocFromListCache(userId, docId);
     setNote(null);
     try {
       await deleteDocBestEffort(docId);

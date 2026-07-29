@@ -46,6 +46,49 @@ function noteFromSnapshot(snapshot: DocumentSnapshot): DocNote {
 /** Offline fallback: show cached doc only if server never confirms in time. */
 const CACHE_FALLBACK_MS = 1500;
 
+type DocSnapHandler = (snapshot: DocumentSnapshot | null, errored?: boolean) => void;
+
+type SharedDocListener = {
+  refCount: number;
+  unsub: () => void;
+  subscribers: Set<DocSnapHandler>;
+};
+
+/** One Firestore listener per docId shared across DocSummary instances. */
+const sharedDocListeners = new Map<string, SharedDocListener>();
+
+function subscribeSharedDoc(docId: string, handler: DocSnapHandler): () => void {
+  let entry = sharedDocListeners.get(docId);
+  if (!entry) {
+    const subscribers = new Set<DocSnapHandler>();
+    const unsub = onSnapshot(
+      doc(db, 'docs', docId),
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        subscribers.forEach((cb) => cb(snapshot));
+      },
+      () => {
+        subscribers.forEach((cb) => cb(null, true));
+      },
+    );
+    entry = { refCount: 0, unsub, subscribers };
+    sharedDocListeners.set(docId, entry);
+  }
+  entry.subscribers.add(handler);
+  entry.refCount += 1;
+
+  return () => {
+    const current = sharedDocListeners.get(docId);
+    if (!current) return;
+    current.subscribers.delete(handler);
+    current.refCount -= 1;
+    if (current.refCount <= 0) {
+      current.unsub();
+      sharedDocListeners.delete(docId);
+    }
+  };
+}
+
 export default function DocSummary({ docId, isSender, onMissing }: DocSummaryProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -97,39 +140,36 @@ export default function DocSummary({ docId, isSender, onMissing }: DocSummaryPro
       setLoading(false);
     };
 
-    const unsubscribe = onSnapshot(
-      doc(db, 'docs', docId),
-      { includeMetadataChanges: true },
-      (snapshot) => {
-        if (cancelled) return;
-        if (!snapshot.exists() || isDocDeletedLocally(docId)) {
-          showDeleted();
-          return;
-        }
-
-        const next = noteFromSnapshot(snapshot);
-
-        // Server-confirmed existence — safe to show.
-        if (!snapshot.metadata.fromCache) {
-          showNote(next);
-          return;
-        }
-
-        // From persistent cache only: don't flash content that may already be
-        // deleted on the server. Wait briefly for a server snapshot; if we're
-        // offline, fall back to the cached doc.
-        pendingCacheNote = next;
-        if (!cacheFallback) {
-          cacheFallback = setTimeout(() => {
-            if (cancelled || !pendingCacheNote) return;
-            showNote(pendingCacheNote);
-          }, CACHE_FALLBACK_MS);
-        }
-      },
-      () => {
+    const unsubscribe = subscribeSharedDoc(docId, (snapshot, errored) => {
+      if (cancelled) return;
+      if (errored || !snapshot) {
         showDeleted();
-      },
-    );
+        return;
+      }
+      if (!snapshot.exists() || isDocDeletedLocally(docId)) {
+        showDeleted();
+        return;
+      }
+
+      const next = noteFromSnapshot(snapshot);
+
+      // Server-confirmed existence — safe to show.
+      if (!snapshot.metadata.fromCache) {
+        showNote(next);
+        return;
+      }
+
+      // From persistent cache only: don't flash content that may already be
+      // deleted on the server. Wait briefly for a server snapshot; if we're
+      // offline, fall back to the cached doc.
+      pendingCacheNote = next;
+      if (!cacheFallback) {
+        cacheFallback = setTimeout(() => {
+          if (cancelled || !pendingCacheNote) return;
+          showNote(pendingCacheNote);
+        }, CACHE_FALLBACK_MS);
+      }
+    });
 
     return () => {
       cancelled = true;

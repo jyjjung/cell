@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect } from 'react';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
@@ -14,10 +14,12 @@ export default function ChatPhotosAlbum({
   messages,
   allUsers,
   onOpenImage,
+  loadingMore = false,
 }: {
   messages: ChatMessage[];
   allUsers: UserProfileData[];
   onOpenImage: (imageUrl: string) => void;
+  loadingMore?: boolean;
 }) {
   const usersById = useMemo(
     () => new Map(allUsers.map((u) => [u.uid, u])),
@@ -34,7 +36,7 @@ export default function ChatPhotosAlbum({
     primeChatPreviewMedia(photos.map((p) => ({ imageUrl: p.imageUrl, imageThumbUrl: p.thumbUrl })));
   }, [photos]);
 
-  if (photos.length === 0) {
+  if (photos.length === 0 && !loadingMore) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[40vh] px-6 text-center">
         <div className="h-14 w-14 rounded-2xl bg-muted/40 border border-border/40 flex items-center justify-center mb-4">
@@ -71,6 +73,11 @@ export default function ChatPhotosAlbum({
           </button>
         ))}
       </div>
+      {loadingMore && (
+        <div className="flex justify-center py-4" aria-live="polite">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" />
+        </div>
+      )}
     </div>
   );
 }
