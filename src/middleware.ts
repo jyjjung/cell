@@ -10,6 +10,7 @@ const PUBLIC_EXACT = new Set([
   '/privacy',
   '/terms',
   '/forgot-password',
+  '/sentry-example-page',
 ]);
 
 const PUBLIC_PREFIXES = [

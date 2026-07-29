@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.143",
+    subtitle: "Chat photo uploads",
+    date: "July 29, 2026",
+    changes: [
+      "Chat and group photo uploads work again for signed-in members",
+    ],
+  },
+  {
     version: "v1.3.142",
     date: "July 29, 2026",
     changes: [

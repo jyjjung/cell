@@ -104,19 +104,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem('pushBannerDismissed', 'true');
   };
 
+  const isSentryExamplePage = pathname === '/sentry-example-page';
+
   useEffect(() => {
     if (!loadingAuth && currentUser) {
       const isApproved = currentUser.isApproved || currentUser.isAdmin;
       const isQuarantineRoute = pathname === '/pending-approval';
       const isProfileRoute = pathname === '/profile';
 
-      if (!isApproved && !isQuarantineRoute && !isProfileRoute) {
+      if (!isApproved && !isQuarantineRoute && !isProfileRoute && !isSentryExamplePage) {
         router.push('/pending-approval');
       } else if (isApproved && isQuarantineRoute) {
         router.push('/');
       }
     }
-  }, [currentUser, loadingAuth, pathname, router]);
+  }, [currentUser, loadingAuth, pathname, router, isSentryExamplePage]);
+
+  // Temporary Sentry verify page — no app chrome / Firestore-backed shell.
+  if (isSentryExamplePage) {
+    return <GuestShell>{children}</GuestShell>;
+  }
 
   if (!hasSession) {
     // Paint guest chrome immediately — don't block LCP on auth restore.
