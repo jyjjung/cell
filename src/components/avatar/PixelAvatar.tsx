@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
-import { RemoteImage } from '@/components/ui/remote-image';
 import type { AvatarData } from '@/types';
 import { HAIR_STYLES, ACCESSORIES, OUTFITS, MOUTHS, FACIAL_HAIR_STYLES, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { avatarWithoutBrokenImage, resolveInitialsDisplaySeed, type AvatarNameHint } from '@/lib/avatar-utils';
@@ -24,7 +23,8 @@ function backgroundCss(backgroundColor?: string): CSSProperties {
 export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const normalized = avatarWithoutBrokenImage(avatar);
-  const finalAvatar = imageFailed && normalized.mode === 'image'
+  // Uploaded photo or DiceBear SVG failed — fall back to the pixel builder.
+  const finalAvatar = imageFailed && normalized.mode && normalized.mode !== 'custom'
     ? { ...normalized, mode: 'custom' as const }
     : normalized;
   const resolved = { ...DEFAULT_AVATAR_DATA, ...finalAvatar };
@@ -99,7 +99,7 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
     );
   }
 
-  // Handle generative modes via DiceBear
+  // Handle generative modes via DiceBear (native img — Next optimizer breaks remote SVG).
   if (mode && mode !== 'custom') {
     let style = 'pixel-art';
     switch (mode) {
@@ -119,13 +119,14 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
       : `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seedToUse)}&backgroundColor=transparent`;
 
     return withHalo(
-      <RemoteImage
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         key={url}
         src={url}
-        alt="Avatar"
-        fill
-        className="object-contain"
-        sizes="96px"
+        alt=""
+        className="absolute inset-0 h-full w-full object-contain"
+        draggable={false}
+        onError={() => setImageFailed(true)}
       />,
       undefined,
       bgStyle,
