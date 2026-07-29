@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { makePassageKey } from '@/lib/passage-keys';
+import { themeHeat } from '@/lib/theme-status';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 
@@ -106,14 +107,14 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
               {col.map((day, y) => {
                 if (!day) return <div key={y} className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm invisible" />;
 
-                let intensityClass = 'bg-muted/30 border border-transparent';
+                let intensityClass: string = themeHeat.empty;
                 if (day.hasReading) {
                   if (day.complete === day.total) {
-                    intensityClass = "bg-primary border border-primary/50";
+                    intensityClass = themeHeat.complete;
                   } else if (day.complete > 0) {
-                    intensityClass = "bg-primary/40 border border-primary/20";
+                    intensityClass = themeHeat.partial;
                   } else {
-                    intensityClass = "bg-muted/50 border border-input";
+                    intensityClass = themeHeat.missed;
                   }
                 }
 
@@ -138,10 +139,10 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
       <div className="flex items-center gap-2 mt-3 text-micro-label justify-end">
         {t.less}
         <div className="flex gap-1">
-          <div className="w-3 h-3 rounded-sm bg-muted/30" />
-          <div className="w-3 h-3 rounded-sm bg-muted/50 border border-input" />
-          <div className="w-3 h-3 rounded-sm bg-primary/40" />
-          <div className="w-3 h-3 rounded-sm bg-primary" />
+          <div className={cn("w-3 h-3 rounded-sm", themeHeat.empty)} />
+          <div className={cn("w-3 h-3 rounded-sm", themeHeat.missed)} />
+          <div className={cn("w-3 h-3 rounded-sm", themeHeat.partial)} />
+          <div className={cn("w-3 h-3 rounded-sm", themeHeat.complete)} />
         </div>
         {t.more}
       </div>

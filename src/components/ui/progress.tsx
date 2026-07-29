@@ -20,7 +20,7 @@ const Progress = React.forwardRef<
     {...props}
   >
     <motion.div
-      className="h-full w-full flex-1 bg-primary"
+      className="h-full w-full flex-1 bg-gradient-to-r from-primary via-chart-2 to-chart-3"
       style={{ width: `${value || 0}%` }}
     />
   </ProgressPrimitive.Root>

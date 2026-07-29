@@ -41,27 +41,28 @@ function AnnouncementItem({
       exit={{ opacity: 0, x: 20, scale: 0.98 }}
       transition={{ duration: 0.25, delay: index * 0.03 }}
       className={cn(
-        "flow-list-item transition-colors",
+        "flex flex-col gap-2 rounded-lg border border-border bg-card p-4 transition-colors",
         isRead && "opacity-60"
       )}
     >
-      <div className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", isRead ? "bg-muted-foreground/30" : "bg-primary")} />
-      <div className="flex-1 min-w-0 stack-gap-sm">
-        <p className={cn("font-semibold text-sm", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
-        <LinkifiedText text={notification.message} className="block text-sm text-muted-foreground leading-relaxed" />
-        <p className="text-micro-label">
-          {toDateSafe(notification.createdAt)
-            ? formatDistanceToNow(toDateSafe(notification.createdAt)!, { addSuffix: true })
-            : justNowLabel}
-        </p>
-        <AnnouncementReactions notification={notification} uid={uid} onToggle={onToggleReaction} />
+      <div className="flex items-start justify-between gap-3">
+        <p className={cn("min-w-0 text-base font-semibold", isRead ? "text-muted-foreground" : "text-foreground")}>{notification.title}</p>
+        <div className="flex shrink-0 items-center gap-1">
+          <p className="text-xs text-muted-foreground">
+            {toDateSafe(notification.createdAt)
+              ? formatDistanceToNow(toDateSafe(notification.createdAt)!, { addSuffix: true })
+              : justNowLabel}
+          </p>
+          {!isRead && onMarkRead && (
+            <Button variant="ghost" size="icon" onClick={onMarkRead}
+              className="h-7 w-7 rounded-lg hover:bg-muted">
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
-      {!isRead && onMarkRead && (
-        <Button variant="ghost" size="icon" onClick={onMarkRead}
-          className="h-8 w-8 shrink-0 rounded-lg hover:bg-muted">
-          <X className="h-4 w-4" />
-        </Button>
-      )}
+      <LinkifiedText text={notification.message} className="block text-sm leading-relaxed text-muted-foreground" />
+      <AnnouncementReactions notification={notification} uid={uid} onToggle={onToggleReaction} />
     </motion.div>
   );
 }

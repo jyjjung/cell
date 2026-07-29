@@ -193,57 +193,69 @@ export default function AdminQTRosterPage() {
                 const isLinked = !!(localChanges[dateStr]?.userId ?? entry?.userId);
 
                 return (
-                    <div key={dateStr} className={cn("widget-surface space-y-3", isDirty && "ring-2 ring-primary bg-primary/5")}>
-                         <div className="flex justify-between items-center">
+                    <div key={dateStr} className={cn(
+                      "flex flex-col gap-3 rounded-xl border border-border bg-card p-3.5",
+                      isDirty && "ring-2 ring-primary bg-primary/5"
+                    )}>
+                         <div className="flex items-center justify-between">
                              <div className="flex flex-col">
-                                 <span className="text-micro-label">{format(dateObj, 'EEE')}</span>
-                                 <span className="text-section-title">{format(dateObj, 'MMM d')}</span>
+                                 <span className="text-[11px] font-medium text-muted-foreground">{format(dateObj, 'EEE')}</span>
+                                 <span className="text-lg font-semibold text-foreground">{format(dateObj, 'MMM d')}</span>
                              </div>
                              <Button 
                                 size="icon" 
-                                variant="destructive" 
+                                variant="secondary" 
                                 onClick={() => handleDelete(dateStr)} 
                                 disabled={!entry}
-                                className="h-8 w-8 rounded-lg opacity-20 hover:opacity-100 transition-opacity"
+                                className="h-7 w-7 rounded-lg text-destructive opacity-40 hover:opacity-100 transition-opacity"
                              >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-3.5 w-3.5" />
                              </Button>
                          </div>
                          <div className="space-y-3">
-                             <div className="relative w-full">
-                               <Input
-                                 value={displayData.personName}
-                                 onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
-                                 placeholder={t.adminPerson}
-                                 className={cn(
-                                     "h-10 rounded-xl bg-muted border-white/5 transition-all text-xs",
-                                     isLinked && "pr-8 border-success/30 focus-visible:ring-success/30"
-                                 )}
-                               />
-                               <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
-                                  onClick={() => {
-                                    setEditingDate(dateStr);
-                                    setIsSelectorOpen(true);
-                                  }}
-                                >
-                                  <Users className="h-3 w-3" />
-                                </Button>
+                             <div className="space-y-1">
+                               <p className="text-[11px] font-medium text-muted-foreground">{t.adminPerson}</p>
+                               <div className="relative w-full">
+                                 <Input
+                                   value={displayData.personName}
+                                   onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
+                                   placeholder={t.adminPerson}
+                                   className={cn(
+                                       "h-9 rounded-[10px] border-border bg-muted pr-10 text-[13px]",
+                                       isLinked && "border-success/30 focus-visible:ring-success/30"
+                                   )}
+                                 />
+                                 <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 rounded-lg"
+                                    onClick={() => {
+                                      setEditingDate(dateStr);
+                                      setIsSelectorOpen(true);
+                                    }}
+                                  >
+                                    <Users className="h-3.5 w-3.5" />
+                                  </Button>
+                               </div>
                              </div>
-                             <Input
-                                value={displayData.title}
-                                onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
-                                placeholder={t.adminTitle}
-                                className="h-10 rounded-xl bg-muted border-white/5 text-xs"
-                             />
-                             <Input
-                                value={displayData.passage}
-                                onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
-                                placeholder={t.adminPassage}
-                                className="h-10 rounded-xl bg-muted border-white/5 font-mono text-xs"
-                             />
+                             <div className="space-y-1">
+                               <p className="text-[11px] font-medium text-muted-foreground">{t.adminTitle}</p>
+                               <Input
+                                  value={displayData.title}
+                                  onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
+                                  placeholder={t.adminTitle}
+                                  className="h-9 rounded-[10px] border-border bg-muted text-[13px]"
+                               />
+                             </div>
+                             <div className="space-y-1">
+                               <p className="text-[11px] font-medium text-muted-foreground">{t.adminPassage}</p>
+                               <Input
+                                  value={displayData.passage}
+                                  onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
+                                  placeholder={t.adminPassage}
+                                  className="h-9 rounded-[10px] border-border bg-muted font-mono text-[13px]"
+                               />
+                             </div>
                          </div>
                     </div>
                 );
@@ -292,7 +304,7 @@ export default function AdminQTRosterPage() {
                             onChange={(e) => handlePersonNameChange(dateStr, e.target.value)}
                             placeholder={t.adminPerson}
                             className={cn(
-                                "h-9 rounded-lg bg-muted border-white/5 transition-all focus:bg-background text-xs",
+                                "h-9 rounded-[10px] border-border bg-muted text-[13px] transition-all",
                                 isLinked && "pr-10 border-success/30 focus-visible:ring-success/30"
                             )}
                           />
@@ -305,7 +317,7 @@ export default function AdminQTRosterPage() {
                           </AnimatePresence>
                         </div>
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="icon"
                           className="h-9 w-9 shrink-0 rounded-lg"
                           onClick={() => {
@@ -322,7 +334,7 @@ export default function AdminQTRosterPage() {
                         value={displayData.title}
                         onChange={(e) => handleFieldChange(dateStr, 'title', e.target.value)}
                         placeholder={t.adminTitle}
-                        className="h-9 rounded-lg bg-muted border-white/5 text-xs"
+                        className="h-9 rounded-[10px] border-border bg-muted text-[13px]"
                       />
                     </TableCell>
                     <TableCell>
@@ -330,7 +342,7 @@ export default function AdminQTRosterPage() {
                         value={displayData.passage}
                         onChange={(e) => handleFieldChange(dateStr, 'passage', e.target.value)}
                         placeholder={t.adminPassage}
-                        className="h-9 rounded-lg bg-muted border-white/5 font-mono text-xs"
+                        className="h-9 rounded-[10px] border-border bg-muted font-mono text-[13px]"
                       />
                     </TableCell>
                     <TableCell className="text-right">

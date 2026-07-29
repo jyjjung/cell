@@ -73,7 +73,7 @@ export default function UserSelector({
   }
 
   const renderUserItem = (user: UserProfileData) => (
-    <div className="flex items-center gap-3 p-2 rounded-md transition-colors hover:bg-muted" key={user.uid}>
+    <div className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted" key={user.uid}>
       {selectionMode === 'multiple' ? (
         <Checkbox
           id={`user-selector-${user.uid}`}
@@ -84,10 +84,10 @@ export default function UserSelector({
       ) : (
         <RadioGroupItem value={user.uid} id={`user-selector-${user.uid}`} className="h-5 w-5" />
       )}
-      <Label htmlFor={`user-selector-${user.uid}`} className="flex flex-1 items-center gap-3 cursor-pointer">
+      <Label htmlFor={`user-selector-${user.uid}`} className="flex flex-1 cursor-pointer items-center gap-3">
         <UserListAvatar user={user} />
         <div className="min-w-0">
-          <p className="font-semibold truncate">{user.firstName} {user.lastName}</p>
+          <p className="truncate text-sm font-medium text-foreground">{user.firstName} {user.lastName}</p>
         </div>
       </Label>
     </div>

@@ -86,8 +86,8 @@ export default function ThreadWindow({
         const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
         if (diff > 3600000) {
           content.push(
-            <div key={`time-${msg.id}`} className="py-6 flex justify-center w-full">
-              <span className="text-micro-label text-muted-foreground/40">
+            <div key={`time-${msg.id}`} className="py-3 flex justify-center w-full">
+              <span className="text-xs font-medium text-muted-foreground">
                 {formatMessageDate(msg.createdAt.toDate())}
               </span>
             </div>

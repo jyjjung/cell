@@ -19,6 +19,16 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  chatCardAction,
+  chatCardEyebrow,
+  chatCardFooter,
+  chatCardIcon,
+  chatCardLoading,
+  chatCardMeta,
+  chatCardShell,
+  chatCardTitle,
+} from './chat-card-styles';
 
 interface SetlistSummaryProps {
   setlistId: string;
@@ -226,11 +236,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
   };
 
   if (setlistLoading) {
-    return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading Setlist...
-      </div>
-    );
+    return <div className={chatCardLoading}>Loading…</div>;
   }
 
   if (!setlist) {
@@ -260,42 +266,33 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
           router.push(`/worship?tab=playlists&id=${setlistId}${firstSongId ? `&songId=${firstSongId}` : ''}`);
         }
       }}
-      className="block w-full min-w-0 max-w-full transition-transform active:scale-95 cursor-pointer"
+      className="block w-full min-w-0 max-w-full cursor-pointer transition-transform active:scale-95"
     >
-      <div
-        className={cn(
-          'group flex w-full min-w-0 max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200 overflow-hidden',
-          isSender
-            ? 'border-primary/30 bg-primary/5 text-foreground'
-            : 'border-border/60 bg-card text-foreground',
-        )}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
-                <Music className="w-3.5 h-3.5 text-primary" />
+      <div className={chatCardShell(isSender, 'gap-3.5')}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+              <div className={chatCardIcon}>
+                <Music className="h-3.5 w-3.5" />
               </div>
-              <span className="text-micro-label">
-                Setlist
-              </span>
+              <span className={chatCardEyebrow}>Setlist</span>
               {partialOffline && !offlineCaching && (
-                <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-micro-label">
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                   {offlineCached!.cached}/{offlineCached!.total} saved
                 </span>
               )}
             </div>
-            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{setlist.name}</h3>
-            <p className="text-micro-label">{dateText}</p>
+            <h3 className={cn(chatCardTitle, 'mb-1')}>{setlist.name}</h3>
+            <p className={chatCardMeta}>{dateText}</p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-muted">
             <Play className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
         {(offlineCaching || partialOffline) && offlineCached && offlineCached.total > 0 && (
           <div className="space-y-1">
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300"
                 style={{
@@ -306,7 +303,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
               />
             </div>
             {!allOfflineReady && (
-              <p className="text-[10px] font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {offlineCaching
                   ? `Saving ${offlineProgress.done} of ${offlineProgress.total} pages…`
                   : `${offlineCached.cached} of ${offlineCached.total} pages saved offline`}
@@ -315,7 +312,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
           </div>
         )}
 
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="flex flex-col gap-1.5">
           {setlistSongs.map((song, i) => (
             <div
               key={song.songId}
@@ -327,11 +324,11 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                   router.push(`/worship?tab=playlists&id=${setlistId}&songId=${song.songId}`);
                 }
               }}
-              className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50 min-w-0"
+              className="pointer-events-auto flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-transparent p-2.5 transition-colors hover:bg-muted/30"
             >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="w-4 shrink-0 text-[10px] font-semibold text-muted-foreground">{i + 1}</span>
-                <p className="truncate text-[13px] font-medium text-foreground min-w-0">{song.title}</p>
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="w-4 shrink-0 text-xs font-semibold text-muted-foreground">{i + 1}</span>
+                <p className="min-w-0 truncate text-sm font-medium text-foreground">{song.title}</p>
                 {hasReferenceTracks(song) && (
                   <Youtube
                     className="h-3 w-3 shrink-0 text-red-500"
@@ -339,29 +336,27 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                   />
                 )}
               </div>
-              <div className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-micro-label">
+              <div className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
                 {song.key === 'numbers' ? '#' : song.key}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {playlistQueue.length > 0 && (
             <button
               type="button"
               onClick={handlePlayPlaylist}
               className={cn(
-                'pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-micro-label font-semibold transition-colors',
-                playlistActiveForSetlist
-                  ? 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/20'
-                  : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                chatCardAction,
+                playlistActiveForSetlist && 'border-primary/40 text-primary hover:bg-primary/10',
               )}
             >
               {playlistActiveForSetlist && playlist?.playing ? (
-                <Pause className="h-3.5 w-3.5" />
+                <Pause className="h-3.5 w-3.5 shrink-0" />
               ) : (
-                <ListMusic className="h-3.5 w-3.5" />
+                <ListMusic className="h-3.5 w-3.5 shrink-0" />
               )}
               {playlistActiveForSetlist
                 ? playlist?.playing
@@ -375,14 +370,14 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
               type="button"
               onClick={handleCacheOffline}
               disabled={offlineCaching}
-              className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 text-micro-label font-semibold transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-60"
+              className={chatCardAction}
             >
               {offlineCaching ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
               ) : allOfflineReady ? (
-                <Check className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5 shrink-0" />
               ) : (
-                <CloudDownload className="h-3.5 w-3.5" />
+                <CloudDownload className="h-3.5 w-3.5 shrink-0" />
               )}
               {offlineCaching
                 ? `${offlineProgress.done}/${offlineProgress.total}`
@@ -393,12 +388,10 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                     : 'Save offline'}
             </button>
           )}
-          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-            <span className="truncate text-micro-label transition-colors group-hover:text-foreground">
-              Open charts
-            </span>
+          <div className={cn(chatCardFooter, 'min-w-0 flex-1 pt-0')}>
+            <span className="truncate">Open charts</span>
             <ChevronRight
-              className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+              className="h-4 w-4 shrink-0"
               strokeWidth={2.5}
             />
           </div>

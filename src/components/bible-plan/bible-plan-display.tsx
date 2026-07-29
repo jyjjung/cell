@@ -135,8 +135,8 @@ export default function BiblePlanDisplay({
   const surfaceClass = cn(
     'ui-card space-y-3',
     isAllPassagesForThisReadingComplete && 'ring-1 ring-success/25',
-    isCurrentDay && !isAllPassagesForThisReadingComplete && 'ring-1 ring-blue-500/25',
-    isOverdueDay && 'ring-1 ring-destructive/25',
+    isCurrentDay && !isAllPassagesForThisReadingComplete && 'ring-1 ring-primary/30',
+    isOverdueDay && 'ring-1 ring-destructive/30',
   );
 
   if (!isMounted) {
@@ -188,9 +188,9 @@ export default function BiblePlanDisplay({
           <p className={cn(
             'text-eyebrow',
             isAllPassagesForThisReadingComplete ? 'text-success' :
-            isCurrentDay ? 'text-blue-600 dark:text-blue-400' :
+            isCurrentDay ? 'text-primary' :
             isOverdueDay ? 'text-destructive' :
-            undefined,
+            'text-chart-2',
           )}>
             {format(parsedDayDate, 'EEEE')}
           </p>

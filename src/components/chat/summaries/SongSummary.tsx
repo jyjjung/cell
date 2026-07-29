@@ -1,14 +1,17 @@
 "use client";
 
-import React from 'react';
-import { Music2, ChevronRight, User } from 'lucide-react';
-import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
-import type { WorshipSong } from '@/types';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
 import { useAuth } from '@/contexts/auth-context';
+import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { translations } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { WorshipSong } from '@/types';
+import { ChevronRight, Loader2, Music2, User } from 'lucide-react';
+import {
+  chatCardLoading,
+  chatCardMeta,
+  chatCardShell,
+} from './chat-card-styles';
 
 interface SongSummaryProps {
   songId: string;
@@ -23,9 +26,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
 
   if (loading) {
     return (
-      <div className={cn(
-        "flex w-full min-w-0 items-center justify-center rounded-2xl border border-border/50 bg-muted/30 p-4"
-      )}>
+      <div className={cn(chatCardLoading, 'flex items-center justify-center')}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
@@ -39,24 +40,21 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
     <div
       onClick={() => onOpenViewer?.(songId)}
       className={cn(
-        "group flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-2xl border p-4 shadow-sm transition-all duration-200 active:scale-95",
-        isSender
-          ? "border-primary/30 bg-primary/5"
-          : "border-border/60 bg-card"
+        chatCardShell(isSender, 'max-w-[280px] cursor-pointer flex-row items-center gap-3 active:scale-95'),
       )}
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/40">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-muted">
         <Music2 className="h-5 w-5 text-primary" />
       </div>
       <div className="min-w-0 flex-1">
-        <h4 className="truncate text-sm font-semibold text-foreground">{song.title}</h4>
+        <h4 className="truncate text-base font-semibold text-foreground">{song.title}</h4>
         {song.artist && (
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
             <span className="truncate">{song.artist}</span>
           </div>
         )}
-        <p className="mt-1 text-micro-label group-hover:text-foreground">
+        <p className={cn(chatCardMeta, 'mt-1 group-hover:text-foreground')}>
           {song.chordSheets.length} chart{song.chordSheets.length !== 1 ? 's' : ''}
         </p>
       </div>

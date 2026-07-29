@@ -119,7 +119,7 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
             <button
               id="header-search-pill"
               onClick={onOpenCommandMenu}
-              className="glass-thin flex items-center gap-2 h-8 px-2.5 md:px-3 rounded-xl hover:border-ring/40 transition-all text-muted-foreground hover:text-foreground group"
+              className="flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground group"
               aria-label="Open command menu"
             >
               <Search className="h-4 w-4 md:h-3.5 md:w-3.5" />
@@ -175,8 +175,8 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
                     {/* Panel Tabs */}
                     <div className="flex items-center p-1.5 border-b border-border gap-1 bg-card">
                       <button onClick={() => setActiveTab('announcements')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'announcements' ? "glass-card text-foreground" : "text-muted-foreground hover:bg-background/35")}>
-                        <Megaphone className={cn("h-3.5 w-3.5", activeTab === 'announcements' && "text-orange-500")} /> Announcements
-                        {unreadAnnouncements.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'announcements' ? "bg-orange-500 text-white" : "bg-muted-foreground/20 text-foreground")}>{unreadAnnouncements.length}</span>}
+                        <Megaphone className={cn("h-3.5 w-3.5", activeTab === 'announcements' && "text-chart-4")} /> Announcements
+                        {unreadAnnouncements.length > 0 && <span className={cn("px-1.5 rounded-full text-[9px] leading-[14px]", activeTab === 'announcements' ? "bg-chart-4 text-primary-foreground" : "bg-muted-foreground/20 text-foreground")}>{unreadAnnouncements.length}</span>}
                       </button>
                       <button onClick={() => setActiveTab('notifications')} className={cn("flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all", activeTab === 'notifications' ? "glass-card text-foreground" : "text-muted-foreground hover:bg-background/35")}>
                         <Bell className={cn("h-3.5 w-3.5", activeTab === 'notifications' && "text-primary")} /> Notifications
@@ -213,8 +213,8 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
                       {activeTab === 'announcements' ? (
                         announcements.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                              <div className="p-3 rounded-xl bg-orange-500/10">
-                                <Megaphone className="h-6 w-6 text-orange-500" />
+                              <div className="p-3 rounded-xl bg-chart-4/10">
+                                <Megaphone className="h-6 w-6 text-chart-4" />
                               </div>
                               <p className="text-sm font-semibold text-foreground">No announcements yet</p>
                               <p className="text-xs text-muted-foreground">Community updates will appear here.</p>
@@ -240,7 +240,7 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
                                   {/* Unread dot */}
                                   <div className={cn(
                                     "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                                    isRead ? "bg-muted-foreground/20" : "bg-orange-500 animate-pulse"
+                                    isRead ? "bg-muted-foreground/20" : "bg-chart-4 animate-pulse"
                                   )} />
 
                                   {/* Content */}
@@ -268,7 +268,7 @@ export default function Header({ onOpenCommandMenu, pinStatic = false }: HeaderP
                                   {!isRead && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
-                                      className="mt-0.5 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/40 hover:text-orange-500 hover:bg-orange-500/10 transition-colors shrink-0"
+                                      className="mt-0.5 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/40 hover:text-chart-4 hover:bg-chart-4/10 transition-colors shrink-0"
                                     >
                                       <X className="h-3.5 w-3.5" />
                                     </button>

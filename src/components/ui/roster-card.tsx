@@ -57,42 +57,41 @@ export function RosterCard({
     <div
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-4 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 transition-all overflow-hidden",
-        onClick && "cursor-pointer hover:border-primary/20",
-        isCompleted && "bg-green-500/5 border-green-500/20 hover:border-green-500/30"
+        "group relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3.5 rounded-2xl bg-card border transition-colors overflow-hidden",
+        onClick && "cursor-pointer hover:bg-muted/40",
+        isCompleted ? "border-success" : "border-border",
       )}
     >
       {/* Visual Connection Line (Desktop) */}
-      {showLine && <div className="hidden sm:block absolute left-[2.5rem] top-0 bottom-0 w-px bg-border/30" />}
+      {showLine && <div className="hidden sm:block absolute left-[2.5rem] top-0 bottom-0 w-px bg-border/50" />}
 
       {/* Date Side */}
-      <div className="flex sm:flex-col items-center justify-start sm:justify-center w-full sm:w-12 shrink-0 sm:border-r border-border/40 sm:pr-3 gap-2 sm:gap-0">
-        <p className={cn("text-micro-label !opacity-100", accentColor)}>{format(date, 'EEE')}</p>
+      <div className="flex sm:flex-col items-center justify-start sm:justify-center w-full sm:w-12 shrink-0 sm:border-r border-border sm:pr-3 gap-2 sm:gap-0.5">
+        <p className={cn("text-[11px] font-medium uppercase tracking-wide", accentColor)}>{format(date, 'EEE')}</p>
         <p className="text-xl font-semibold text-foreground leading-none">{format(date, 'd')}</p>
       </div>
 
       {/* Avatars & Content Block */}
       <div className="flex items-start gap-4 flex-grow min-w-0 w-full">
-        {/* Avatars Stack or Single */}
         {!hideAvatars && (
           <div className="flex -space-x-3 shrink-0">
             {users.length > 0 ? (
               users.slice(0, 3).map((user, idx) => (
                 <div
                   key={user.uid}
-                  className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted/30 border border-border/60 shadow-sm group-hover:scale-105 transition-transform duration-500 relative"
+                  className="h-10 w-10 rounded-full bg-muted border-2 border-card relative"
                   style={{ zIndex: 10 - idx }}
                 >
                   <PixelAvatar avatar={user.avatar} />
                 </div>
               ))
             ) : (
-              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted/30 border border-border/60 shrink-0 shadow-sm flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-muted border-2 border-card shrink-0 flex items-center justify-center">
                 <User className="h-5 w-5 text-muted-foreground/40" />
               </div>
             )}
             {users.length > 3 && (
-              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-muted border border-border/60 flex items-center justify-center text-xs font-bold text-muted-foreground shadow-sm">
+              <div className="h-10 w-10 rounded-full bg-muted border-2 border-card flex items-center justify-center text-xs font-semibold text-muted-foreground">
                 +{users.length - 3}
               </div>
             )}
@@ -101,15 +100,14 @@ export function RosterCard({
 
         <div className="flex-grow min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <h3 className="text-sm font-bold tracking-tight text-foreground truncate">{title}</h3>
-            {/* Mobile Only Right Element (Compact) */}
+            <h3 className="text-[13px] font-semibold tracking-tight text-foreground truncate">{title}</h3>
             <div className="sm:hidden">
               {rightElement}
             </div>
           </div>
-          <div className="mt-1.5 min-h-[1.25rem]">
+          <div className="mt-1 min-h-[1.25rem]">
             {typeof subtitle === 'string' ? (
-              <p className="text-xs font-medium text-muted-foreground/70 leading-relaxed truncate">
+              <p className="text-xs font-normal text-muted-foreground leading-relaxed truncate">
                 {subtitle}
               </p>
             ) : (
@@ -119,7 +117,6 @@ export function RosterCard({
         </div>
       </div>
 
-      {/* Right Element (Desktop) & Completion Status */}
       <div className="hidden sm:flex items-center gap-2 shrink-0 ml-auto">
         {rightElement}
 
@@ -129,32 +126,30 @@ export function RosterCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="h-8 w-8 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
-                      {completedBy.avatar ? <PixelAvatar avatar={completedBy.avatar} /> : <Check className="h-4 w-4 text-green-500" />}
+                    <div className="h-8 w-8 rounded-full bg-success flex items-center justify-center text-success-foreground">
+                      {completedBy.avatar ? <PixelAvatar avatar={completedBy.avatar} /> : <Check className="h-4 w-4" strokeWidth={3} />}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs font-bold">Completed by {formatUserDisplayName(completedBy)}</p>
+                    <p className="text-xs font-semibold">Completed by {formatUserDisplayName(completedBy)}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <div className="p-2 rounded-xl bg-green-500/20 text-green-500">
-                <Check className="h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success text-success-foreground">
+                <Check className="h-4 w-4" strokeWidth={3} />
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Mobile Completion Mark */}
       {isCompleted && !rightElement && (
-        <div className="sm:hidden absolute top-4 right-4 p-1.5 rounded-full bg-green-500/20 text-green-500">
-          <Check className="h-3 w-3" />
+        <div className="sm:hidden absolute top-4 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-success text-success-foreground">
+          <Check className="h-3.5 w-3.5" strokeWidth={3} />
         </div>
       )}
 
-      {/* Background decoration */}
       <div className={cn("absolute -bottom-8 -right-8 w-20 h-20 blur-3xl opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity", accentBg)} />
     </div>
   );
