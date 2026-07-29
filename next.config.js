@@ -158,7 +158,6 @@ module.exports = withSentryConfig(withPWA(nextConfig), {
   silent: !process.env.CI,
   widenClientFileUpload: true,
   disableLogger: true,
-  tunnelRoute: '/monitoring',
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
