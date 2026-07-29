@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import type { AvatarData, AvatarMode } from '@/types';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -29,9 +29,8 @@ function BackgroundSelector({
   onDataChange: (data: AvatarData) => void,
 }) {
   const BackgroundSwatch = ({ bgKey, gradient }: { bgKey: string, gradient: { stops: { offset: string; color: string }[] } }) => {
-    const reactId = useId().replace(/:/g, '');
-    const backgroundId = `grad-swatch-${reactId}-${bgKey}`;
     const isNone = bgKey === 'none';
+    const stops = gradient.stops.map((s) => `${s.color} ${s.offset}`).join(', ');
 
     return (
         <button
@@ -40,23 +39,13 @@ function BackgroundSelector({
                 "h-10 w-10 rounded-full border-2 transition-all hover:scale-110 flex items-center justify-center overflow-hidden bg-muted/20 shrink-0",
                 currentData.backgroundColor === bgKey ? 'border-primary ring-2 ring-primary/40' : 'border-border'
             )}
+            style={isNone ? undefined : { background: `linear-gradient(to bottom, ${stops})` }}
             onClick={() => onDataChange({ ...currentData, backgroundColor: bgKey })}
             aria-label={`Set background to ${bgKey}`}
         >
             {isNone ? (
                 <Eraser className="h-5 w-5 text-muted-foreground" />
-            ) : (
-                <svg viewBox="0 0 1 1" className="h-full w-full">
-                    <defs>
-                        <linearGradient id={backgroundId} x1="0" y1="0" x2="0" y2="1">
-                            {gradient.stops.map((stop, i) => (
-                                <stop key={i} offset={stop.offset} stopColor={stop.color} />
-                            ))}
-                        </linearGradient>
-                    </defs>
-                    <rect width="1" height="1" fill={`url(#${backgroundId})`} />
-                </svg>
-            )}
+            ) : null}
         </button>
     );
   };

@@ -56,6 +56,14 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.145",
+    subtitle: "Pixel avatar CSP fix",
+    date: "July 29, 2026",
+    changes: [
+      "Custom pixel avatars render again — backgrounds no longer rely on SVG fills blocked by the site security policy",
+    ],
+  },
+  {
     version: "v1.3.144",
     subtitle: "Auth flash and avatars",
     date: "July 29, 2026",
