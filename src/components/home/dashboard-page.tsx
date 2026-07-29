@@ -22,28 +22,27 @@ import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, type ReactNode } from 'react';
 import {
-  format, parseISO, isValid, differenceInDays, startOfDay, isBefore,
-  startOfToday, compareAsc, endOfMonth, addMonths,
+  format, parseISO, isValid, differenceInDays, startOfDay,
+  isBefore, isSameDay, startOfToday, compareAsc, endOfMonth, addMonths,
 } from 'date-fns';
-import {
-  ChevronRight, BookOpen, Calendar, Users, HeartHandshake, MessageCircle,
-} from 'lucide-react';
+import { CalendarOff, Clock, MessageCircle, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { EmptyState, PageHeader, PageSection } from '@/components/ui/page-layout';
+import { ScheduleMonthGroup, ScheduleOccurrenceRow } from '@/components/schedule/schedule-occurrence-row';
 import { cn } from '@/lib/utils';
 import { formatUserDisplayName, formatNameString } from '@/lib/formatting';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { userCanSeeEvent } from '@/lib/event-visibility';
-import { getUserCustomRosterLabels } from '@/lib/roster-access';
+import { formatCustomRosterEntrySummary, getUserCustomRosterLabels } from '@/lib/roster-access';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
-import AgendaView, { type AgendaItem } from '@/components/dashboard-widgets/agenda-view';
-import TodayQtWidget from '@/components/dashboard-widgets/today-qt-widget';
 import HomeInfoWidgets from '@/components/dashboard-widgets/home-info-widgets';
 import { EventCategory } from '@/types';
 
@@ -51,21 +50,27 @@ interface DashboardPageProps {
   currentUser: AppUser;
 }
 
-type DashboardListItem = {
-  id: string;
+type AgendaEntry = {
+  /** Stable key for the underlying record, so your own view replaces the community one. */
+  sourceKey: string;
   date: Date;
-  label: string;
-  sublabel?: string;
+  label?: string;
+  title: string;
+  meta?: ReactNode;
+  rightElement?: ReactNode;
   type: 'event' | 'birthday' | 'cleaning' | 'qt' | 'worship' | 'custom';
-  href?: string;
-  details?: string;
   passage?: string;
   qtTitle?: string;
   assignedNames?: string;
   dayName?: string;
+  details?: string;
 };
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 28 };
+
+const KO_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+const MAX_AGENDA_ENTRIES = 12;
 
 function getGreeting(lang: string) {
   const h = new Date().getHours();
@@ -73,31 +78,13 @@ function getGreeting(lang: string) {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 
-function ShortcutPill({
-  icon: Icon,
-  label,
-  badge,
-  onClick,
-}: {
-  icon: React.ElementType;
-  label: string;
-  badge?: number;
-  onClick: () => void;
-}) {
+/** Highlights the part of a row that is about you. */
+function MineMeta({ lead, value }: { lead?: string; value?: string }) {
+  if (!value) return null;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/50"
-    >
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      {label}
-      {badge != null && badge > 0 && (
-        <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
-          {badge}
-        </span>
-      )}
-    </button>
+    <span className="font-medium text-foreground">
+      {lead ? `${lead} ` : ''}{value}
+    </span>
   );
 }
 
@@ -119,7 +106,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const router = useRouter();
   const { setIsPageLoading } = usePageLoading();
   const { openBibleReader } = useGlobalBibleReader();
-  const [selectedEvent, setSelectedEvent] = useState<DashboardListItem | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<AgendaEntry | null>(null);
 
   const go = useCallback((path: string) => {
     setIsPageLoading(true);
@@ -181,19 +168,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     return rows.sort((a, b) => compareAsc(a.occurrenceDate, b.occurrenceDate));
   }, [filteredEvents, today]);
 
-  const upcomingOnlyEvents = useMemo(
-    () => filteredEvents.filter((event) => {
-      const rows = expandEventsToOccurrenceRows([event], {
-        from: today,
-        until: endOfMonth(addMonths(today, 1)),
-      });
-      return rows.length > 0;
-    }),
-    [filteredEvents, today],
-  );
-
-
-  const itemTypeLabel = (type: DashboardListItem['type']) => {
+  const entryTypeLabel = (type: AgendaEntry['type']) => {
     switch (type) {
       case 'cleaning': return t.cleaningRoster;
       case 'qt': return t.qtTitle;
@@ -204,116 +179,31 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     }
   };
 
-  const openEventFromOccurrence = useCallback((row: EventOccurrenceRow) => {
-    const isBirthday = row.event.category === EventCategory.Birthday;
-    setSelectedEvent({
-      id: row.occurrenceKey,
-      date: row.occurrenceDate,
-      label: row.event.title,
-      sublabel: row.event.category,
-      type: isBirthday ? 'birthday' : 'event',
-      details: row.event.details,
-    });
-  }, []);
-
-  const myRosterItems = useMemo((): DashboardListItem[] => {
-    const items: DashboardListItem[] = [];
-
-    cleaningRoster.forEach(r => {
-      const d = parseISO(r.date || '');
-      if (!isValid(d) || isBefore(d, today)) return;
-      if (!r.assignedUserIds.includes(currentUser.uid)) return;
-      const dayLabel = cleaningDaysMap.get(r.dayId);
-      const names = r.assignedUserIds
-        .map((uid) => usersMap.get(uid))
-        .filter(Boolean)
-        .map((user) => formatUserDisplayName(user!))
-        .join(', ');
-      items.push({
-        id: `my-cleaning-${r.id}`,
-        date: d,
-        label: 'Church Cleaning',
-        sublabel: dayLabel,
-        type: 'cleaning',
-        href: '/cleaning-roster',
-        assignedNames: names,
-        dayName: dayLabel,
-      });
-    });
-
-    qtRoster.forEach(r => {
-      const d = parseISO(r.date || '');
-      if (!isValid(d) || isBefore(d, today)) return;
-      if (r.userId !== currentUser.uid) return;
-      items.push({
-        id: `my-qt-${r.id}`,
-        date: d,
-        label: 'QT Sharing',
-        sublabel: r.title || r.passage,
-        type: 'qt',
-        href: '/qt',
-        passage: r.passage,
-        qtTitle: r.title,
-      });
-    });
-
-    worshipRosters.forEach(roster => {
-      const d = parseISO(roster.date || '');
-      if (!isValid(d) || isBefore(d, today)) return;
-      const myRoles: string[] = [];
-      roster.slots.forEach(slot => {
-        if (slot.members.some(m => m.userId === currentUser.uid)) myRoles.push(slot.role);
-      });
-      if (myRoles.length === 0) return;
-      items.push({
-        id: `my-worship-${roster.id}`,
-        date: d,
-        label: roster.name || 'Worship Roster',
-        sublabel: myRoles.join(', '),
-        type: 'worship',
-        href: '/worship',
-        details: `Your roles: ${myRoles.join(', ')}`,
-      });
-    });
-
-    customRosterEntries.forEach(entry => {
-      const d = parseISO(entry.date || '');
-      if (!isValid(d) || isBefore(d, today)) return;
-      const myDuties = getUserCustomRosterLabels(
-        entry,
-        { fields: entry.rosterFields },
-        currentUser.uid,
-      );
-      if (myDuties.length === 0) return;
-      items.push({
-        id: `my-custom-${entry.id}`,
-        date: d,
-        label: entry.rosterName,
-        sublabel: myDuties.join(', '),
-        type: 'custom',
-        href: `/rosters/${entry.rosterDefId}?date=${entry.date}`,
-        details: `Your assignments: ${myDuties.join(', ')}`,
-      });
-    });
-
-    return items.sort((a, b) => compareAsc(a.date, b.date));
-  }, [cleaningRoster, qtRoster, worshipRosters, customRosterEntries, currentUser.uid, cleaningDaysMap, usersMap, today]);
-
-  const upcomingDuties = useMemo(() => myRosterItems.slice(0, 8), [myRosterItems]);
-
-  /** Community "Next up" list: events + upcoming QT sharings, sorted by date. */
-  const nextUpItems = useMemo((): DashboardListItem[] => {
-    const items: DashboardListItem[] = [];
+  /**
+   * One schedule instead of separate "today", "my duties" and "next up" lists.
+   * Community entries land first; your own version of the same roster replaces it
+   * so a Sunday you are serving on is never listed twice.
+   */
+  const agenda = useMemo((): AgendaEntry[] => {
+    const byKey = new Map<string, AgendaEntry>();
+    const add = (entry: AgendaEntry) => byKey.set(entry.sourceKey, entry);
 
     for (const row of dashboardEventRows) {
-      const isBirthday = row.event.category === EventCategory.Birthday;
-      items.push({
-        id: row.occurrenceKey,
+      const { event } = row;
+      const isBirthday = event.category === EventCategory.Birthday;
+      add({
+        sourceKey: `event-${row.occurrenceKey}`,
         date: row.occurrenceDate,
-        label: row.event.title,
-        sublabel: row.event.category,
+        label: event.category,
+        title: event.title,
+        meta: !event.allDay && event.startTime ? (
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {event.startTime}{event.endTime ? `–${event.endTime}` : ''}
+          </span>
+        ) : undefined,
         type: isBirthday ? 'birthday' : 'event',
-        details: row.event.details,
+        details: event.details,
       });
     }
 
@@ -324,38 +214,203 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       const sharerName = entry.personName
         ? formatNameString(entry.personName, t.member)
         : formatUserDisplayName(user, t.member);
-      items.push({
-        id: `next-qt-${entry.id}`,
+      add({
+        sourceKey: `qt-${entry.id}`,
         date: d,
-        label: sharerName,
-        sublabel: entry.title || entry.passage || t.qtSharing,
+        label: t.qtSharing,
+        title: sharerName,
+        meta: entry.title ? <span>{entry.title}</span> : undefined,
+        rightElement: entry.passage ? (
+          <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">{entry.passage}</span>
+        ) : undefined,
         type: 'qt',
-        href: '/qt',
         passage: entry.passage,
         qtTitle: entry.title,
       });
     }
 
-    return items.sort((a, b) => compareAsc(a.date, b.date)).slice(0, 8);
-  }, [dashboardEventRows, qtRoster, usersMap, today, t.member, t.qtSharing]);
-
-  const handleAgendaItemClick = useCallback((item: AgendaItem) => {
-    if (item.kind === 'event') {
-      openEventFromOccurrence(item.row);
-      return;
-    }
-    setSelectedEvent({
-      id: item.id,
-      date: item.date,
-      label: item.title,
-      type: item.type,
-      passage: item.passage,
-      qtTitle: item.qtTitle,
-      assignedNames: item.assignedNames,
-      dayName: item.dayName,
-      details: item.details,
+    // Community rosters only show for today; your own show for the full window.
+    cleaningRoster.forEach((r) => {
+      const d = parseISO(r.date || '');
+      if (!isValid(d) || !isSameDay(d, today)) return;
+      const names = r.assignedUserIds
+        .map((uid) => usersMap.get(uid))
+        .filter(Boolean)
+        .map((user) => formatUserDisplayName(user!))
+        .join(', ');
+      const dayName = cleaningDaysMap.get(r.dayId);
+      add({
+        sourceKey: `cleaning-${r.id}`,
+        date: d,
+        label: t.cleaningDuty,
+        title: dayName || t.churchCleaning,
+        meta: names ? <span>{names}</span> : undefined,
+        type: 'cleaning',
+        assignedNames: names,
+        dayName,
+      });
     });
-  }, [openEventFromOccurrence]);
+
+    worshipRosters.forEach((roster) => {
+      const d = parseISO(roster.date || '');
+      if (!isValid(d) || !isSameDay(d, today)) return;
+      const roleLines = roster.slots
+        .filter((slot) => slot.members.length > 0)
+        .map((slot) => {
+          const names = slot.members
+            .map((member) => {
+              if (member.userId) {
+                const user = usersMap.get(member.userId);
+                return user ? formatUserDisplayName(user) : member.displayName;
+              }
+              return member.displayName;
+            })
+            .filter(Boolean)
+            .join(', ');
+          return `${slot.role}: ${names}`;
+        })
+        .join(', ');
+      if (!roleLines) return;
+      add({
+        sourceKey: `worship-${roster.id}`,
+        date: d,
+        label: t.worshipPortal,
+        title: roster.name || t.worshipPortal,
+        meta: <span className="truncate">{roleLines}</span>,
+        type: 'worship',
+        details: roleLines,
+      });
+    });
+
+    customRosterEntries.forEach((entry) => {
+      const d = parseISO(entry.date || '');
+      if (!isValid(d) || !isSameDay(d, today)) return;
+      const assignments = formatCustomRosterEntrySummary(
+        entry,
+        { fields: entry.rosterFields },
+        usersMap,
+      );
+      if (!assignments) return;
+      add({
+        sourceKey: `custom-${entry.id}`,
+        date: d,
+        label: t.schedule,
+        title: entry.rosterName,
+        meta: <span className="truncate">{assignments}</span>,
+        type: 'custom',
+        details: assignments,
+      });
+    });
+
+    // ── Your own commitments, which replace the community entry above ──
+
+    cleaningRoster.forEach((r) => {
+      const d = parseISO(r.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      if (!r.assignedUserIds.includes(currentUser.uid)) return;
+      const names = r.assignedUserIds
+        .map((uid) => usersMap.get(uid))
+        .filter(Boolean)
+        .map((user) => formatUserDisplayName(user!))
+        .join(', ');
+      const others = r.assignedUserIds
+        .filter((uid) => uid !== currentUser.uid)
+        .map((uid) => usersMap.get(uid))
+        .filter(Boolean)
+        .map((user) => formatUserDisplayName(user!))
+        .join(', ');
+      const dayName = cleaningDaysMap.get(r.dayId);
+      add({
+        sourceKey: `cleaning-${r.id}`,
+        date: d,
+        label: t.cleaningDuty,
+        title: dayName || t.churchCleaning,
+        meta: others ? <MineMeta lead={t.withLabel} value={others} /> : undefined,
+        rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
+        type: 'cleaning',
+        assignedNames: names,
+        dayName,
+      });
+    });
+
+    qtRoster.forEach((r) => {
+      const d = parseISO(r.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      if (r.userId !== currentUser.uid) return;
+      add({
+        sourceKey: `qt-${r.id}`,
+        date: d,
+        label: t.qtSharing,
+        title: formatUserDisplayName(currentUser, t.member),
+        meta: <MineMeta lead={t.youreSharing} value={r.passage || r.title} />,
+        rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
+        type: 'qt',
+        passage: r.passage,
+        qtTitle: r.title,
+      });
+    });
+
+    worshipRosters.forEach((roster) => {
+      const d = parseISO(roster.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      const myRoles = roster.slots
+        .filter((slot) => slot.members.some((m) => m.userId === currentUser.uid))
+        .map((slot) => slot.role);
+      if (myRoles.length === 0) return;
+      add({
+        sourceKey: `worship-${roster.id}`,
+        date: d,
+        label: t.worshipPortal,
+        title: roster.name || t.worshipPortal,
+        meta: <MineMeta lead={t.servingAs} value={myRoles.join(', ')} />,
+        rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
+        type: 'worship',
+        details: `${t.servingAs} ${myRoles.join(', ')}`,
+      });
+    });
+
+    customRosterEntries.forEach((entry) => {
+      const d = parseISO(entry.date || '');
+      if (!isValid(d) || isBefore(d, today)) return;
+      const myDuties = getUserCustomRosterLabels(
+        entry,
+        { fields: entry.rosterFields },
+        currentUser.uid,
+      );
+      if (myDuties.length === 0) return;
+      add({
+        sourceKey: `custom-${entry.id}`,
+        date: d,
+        label: t.schedule,
+        title: entry.rosterName,
+        meta: <MineMeta lead={t.servingAs} value={myDuties.join(', ')} />,
+        rightElement: <Badge variant="secondary">{t.youLabel}</Badge>,
+        type: 'custom',
+        details: `${t.servingAs} ${myDuties.join(', ')}`,
+      });
+    });
+
+    return Array.from(byKey.values())
+      .sort((a, b) => compareAsc(a.date, b.date))
+      .slice(0, MAX_AGENDA_ENTRIES);
+  }, [
+    dashboardEventRows, qtRoster, cleaningRoster, worshipRosters, customRosterEntries,
+    usersMap, cleaningDaysMap, today, currentUser,
+    t.member, t.qtSharing, t.churchCleaning, t.cleaningDuty, t.worshipPortal, t.schedule,
+    t.servingAs, t.youreSharing, t.withLabel, t.youLabel,
+  ]);
+
+  /** Month buckets, matching the Events / QT / Cleaning pages. */
+  const agendaByMonth = useMemo(() => {
+    const groups = new Map<string, AgendaEntry[]>();
+    for (const entry of agenda) {
+      const month = format(entry.date, 'MMMM yyyy');
+      const bucket = groups.get(month);
+      if (bucket) bucket.push(entry);
+      else groups.set(month, [entry]);
+    }
+    return Array.from(groups.entries());
+  }, [agenda]);
 
   const nextMissedPassage = useMemo(() => {
     if (!nextUnread) return null;
@@ -367,237 +422,169 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [nextUnread, completedPassages]);
 
   const displayName = `${formatUserDisplayName(currentUser, 'Guest')}${lang === 'ko' ? '님' : ''}`;
-  const dateLabel = format(today, lang === 'ko' ? 'M월 d일 EEEE' : 'EEEE, MMMM d');
+  const dateLabel = lang === 'ko'
+    ? `${format(today, 'M월 d일')} ${KO_WEEKDAYS[today.getDay()]}요일`
+    : format(today, 'EEEE, d MMMM');
 
   return (
     <div className="page-container">
 
-      {/* Header */}
-      <header className="flex items-start justify-between gap-4">
-        <div className="min-w-0 space-y-1">
-          <p className="text-eyebrow">{dateLabel}</p>
-          <h1 className="text-page-title leading-tight">
-            {getGreeting(lang)}, {displayName}
-          </h1>
-        </div>
-        {unreadChatCount > 0 && (
-          <button
-            type="button"
-            onClick={() => go('/chat')}
-            className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-          >
-            {unreadChatCount} {t.unread}
-          </button>
-        )}
-      </header>
+      <PageHeader
+        title={`${getGreeting(lang)}, ${displayName}`}
+        description={dateLabel}
+        action={unreadChatCount > 0 ? (
+          <Button variant="outline" size="sm" onClick={() => go('/chat')}>
+            <MessageCircle className="mr-2 h-4 w-4" />
+            {t.unreadMessagesLine.replace('{count}', String(unreadChatCount))}
+          </Button>
+        ) : undefined}
+      />
 
-      {/* Shortcuts */}
-      <div className="flex flex-wrap gap-2">
-        <ShortcutPill icon={MessageCircle} label={t.messagesLabel} badge={unreadChatCount} onClick={() => go('/chat')} />
-        <ShortcutPill icon={HeartHandshake} label={t.prayerRequests} onClick={() => go('/prayer-requests')} />
-        <ShortcutPill icon={Calendar} label={t.events} onClick={() => go('/events')} />
-        <ShortcutPill icon={BookOpen} label={t.bibleReadingHub} onClick={() => go('/bible-checklist')} />
-      </div>
-
-      {/* Main grid: reading + today */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
-
-        <div className="space-y-5 lg:col-span-3">
-          {/* Bible reading */}
-          <section className="ui-card space-y-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-eyebrow">{t.bibleReadingHub}</p>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-4xl font-semibold tabular-nums tracking-tight">{overallPct}</span>
-                  <span className="text-lg text-muted-foreground">%</span>
-                </div>
-                {daysLeft != null && (
-                  <p className="text-stat-label mt-1">{daysLeft} {t.daysLeftLabel}</p>
-                )}
-              </div>
-              {todayPassages.length > 0 && (
-                <p className="text-sm font-medium text-muted-foreground tabular-nums">
-                  {todayDoneCount}/{todayPassages.length}
-                </p>
-              )}
-            </div>
-
-            <Progress value={overallPct} className="h-1.5 bg-muted" />
-
-            {todayPassages.length > 0 ? (
-              <div className="space-y-0.5">
-                <p className="text-eyebrow pb-2">{t.todaysAssigned}</p>
-                <AnimatePresence mode="popLayout">
-                  {todayPassages.map(p => {
-                    const date = todaysReading?.date;
-                    const done = date
-                      ? completedPassages.includes(makePassageKey(date, p.displayText))
-                      : completedPassages.includes(makeManualPassageKey(p.displayText));
-                    return (
-                      <motion.div
-                        key={p.displayText}
-                        layout
-                        transition={spring}
-                        className={cn('flex items-center gap-3 rounded-lg py-2', done && 'opacity-45')}
-                      >
-                        <Checkbox
-                          checked={done}
-                          onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
-                          className="h-4 w-4 shrink-0"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => readPassage(p.displayText)}
-                          className={cn(
-                            'flex-1 text-left text-sm font-medium',
-                            done && 'line-through text-muted-foreground',
-                          )}
-                        >
-                          {p.displayText}
-                        </button>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t.restDayMessage}</p>
-            )}
-
-            {nextMissedPassage && (
-              <div className="border-t border-border/50 pt-4">
-                <p className="text-eyebrow mb-2">{t.missedReading}</p>
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={false}
-                    onCheckedChange={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
-                    className="h-4 w-4 shrink-0"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => readPassage(nextMissedPassage.displayText)}
-                    className="flex-1 text-left text-sm font-medium"
-                  >
-                    {nextMissedPassage.displayText}
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <HomeInfoWidgets />
-        </div>
-
-        {/* Today snapshot */}
-        <aside className="ui-card space-y-4 lg:col-span-2">
-          <TodayQtWidget />
-
+      <PageSection
+        title={t.bibleReadingHub}
+        action={
+          <Button variant="ghost" size="sm" onClick={() => go('/bible-checklist')}>
+            {t.fullPlanLink}
+          </Button>
+        }
+      >
+        <div className="space-y-4">
           <div>
-            <p className="text-eyebrow">{t.todayLabel}</p>
-            <AgendaView
-              selectedDate={today}
-              hideHeader
-              hideQt
-              events={upcomingOnlyEvents}
-              cleaningRoster={cleaningRoster}
-              qtRoster={qtRoster}
-              worshipRosters={worshipRosters}
-              customRosterEntries={customRosterEntries}
-              allUsers={allUsers}
-              cleaningDays={cleaningDays}
-              onItemClick={handleAgendaItemClick}
-            />
-
-          {upcomingDuties.length > 0 && (
-            <div className="space-y-2 border-t border-border/50 pt-4">
-              <p className="text-section-title">{t.myUpcomingDuties}</p>
-              <div className="ui-list">
-                {upcomingDuties.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedEvent(item)}
-                    className="event-row group"
-                  >
-                    <span className="event-row-time">{format(item.date, 'MMM d')}</span>
-                    <div className="event-row-body">
-                      <p className="event-row-title">{item.label}</p>
-                      <p className="event-row-meta">{item.sublabel || itemTypeLabel(item.type)}</p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
+            <div className="mb-2 flex items-center gap-4">
+              <Progress value={overallPct} className="h-2 flex-grow bg-muted shadow-inner" />
+              <span className="text-xl font-bold tracking-tight text-foreground tabular-nums">{overallPct}%</span>
             </div>
-          )}
-
-          {nextUpItems.length > 0 && (
-            <div className="space-y-2 border-t border-border/50 pt-4">
-              <p className="text-section-title">{t.nextUp}</p>
-              <div className="ui-list">
-                {nextUpItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedEvent(item)}
-                    className="event-row group"
-                  >
-                    <span className="event-row-time">{format(item.date, 'MMM d')}</span>
-                    <div className="event-row-body">
-                      <p className="event-row-title">{item.label}</p>
-                      <p className="event-row-meta">{item.sublabel || itemTypeLabel(item.type)}</p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+            <p className="text-micro-label">
+              {daysLeft != null ? `${daysLeft} ${t.daysLeftLabel}` : null}
+              {daysLeft != null && todayPassages.length > 0 ? ' · ' : null}
+              {todayPassages.length > 0 ? `${todayDoneCount}/${todayPassages.length}` : null}
+            </p>
           </div>
-        </aside>
+
+          {todayPassages.length > 0 ? (
+            <div className="ui-list">
+              <AnimatePresence mode="popLayout">
+                {todayPassages.map(p => {
+                  const date = todaysReading?.date;
+                  const done = date
+                    ? completedPassages.includes(makePassageKey(date, p.displayText))
+                    : completedPassages.includes(makeManualPassageKey(p.displayText));
+                  return (
+                    <motion.div
+                      key={p.displayText}
+                      layout
+                      transition={spring}
+                      className={cn('flex items-center gap-3 py-2', done && 'opacity-45')}
+                    >
+                      <Checkbox
+                        checked={done}
+                        onCheckedChange={() => togglePassageCompletion(p.displayText, todaysReading?.date)}
+                        className="h-4 w-4 shrink-0"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => readPassage(p.displayText)}
+                        className={cn(
+                          'flex-1 text-left text-sm font-medium text-foreground',
+                          done && 'text-muted-foreground line-through',
+                        )}
+                      >
+                        {p.displayText}
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <p className="text-micro-label">{t.restDayMessage}</p>
+          )}
+
+          {nextMissedPassage && (
+            <div className="flex items-center gap-3 border-t border-border/60 pt-3">
+              <Checkbox
+                checked={false}
+                onCheckedChange={() => togglePassageCompletion(nextMissedPassage.displayText, nextUnread?.date)}
+                className="h-4 w-4 shrink-0"
+              />
+              <button
+                type="button"
+                onClick={() => readPassage(nextMissedPassage.displayText)}
+                className="flex-1 text-left"
+              >
+                <span className="text-micro-label">{t.missedReading}: </span>
+                <span className="text-sm font-medium text-foreground">{nextMissedPassage.displayText}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </PageSection>
+
+      <div className="stack-gap-sm">
+        {agendaByMonth.length > 0 ? (
+          agendaByMonth.map(([month, entries]) => (
+            <ScheduleMonthGroup key={month} month={month}>
+              {entries.map((entry, index) => (
+                <ScheduleOccurrenceRow
+                  key={entry.sourceKey}
+                  index={index}
+                  date={entry.date}
+                  label={entry.label}
+                  title={entry.title}
+                  meta={entry.meta}
+                  rightElement={entry.rightElement}
+                  onClick={() => setSelectedEntry(entry)}
+                />
+              ))}
+            </ScheduleMonthGroup>
+          ))
+        ) : (
+          <EmptyState icon={CalendarOff} title={t.clearSchedule} description={t.nothingComingUp} />
+        )}
       </div>
 
-      <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
+      <HomeInfoWidgets />
+
+      <Dialog open={!!selectedEntry} onOpenChange={open => !open && setSelectedEntry(null)}>
         <DialogContent className="max-w-sm rounded-xl border-border/70 p-5">
           <DialogHeader className="space-y-2 text-left">
-            <p className="text-eyebrow">{selectedEvent ? itemTypeLabel(selectedEvent.type) : ''}</p>
-            <DialogTitle className="text-base font-semibold leading-snug">{selectedEvent?.label}</DialogTitle>
+            <p className="text-eyebrow">{selectedEntry ? entryTypeLabel(selectedEntry.type) : ''}</p>
+            <DialogTitle className="text-base font-semibold leading-snug">{selectedEntry?.title}</DialogTitle>
             <DialogDescription className="text-stat-label">
-              {selectedEvent && format(selectedEvent.date, 'EEEE, MMMM d, yyyy')}
+              {selectedEntry && format(selectedEntry.date, 'EEEE, MMMM d, yyyy')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 pt-2">
-            {(selectedEvent?.type === 'event' || selectedEvent?.type === 'birthday' || selectedEvent?.type === 'worship' || selectedEvent?.type === 'custom') && selectedEvent.details && (
-              <p className="text-sm leading-relaxed text-muted-foreground">{selectedEvent.details}</p>
+            {(selectedEntry?.type === 'event' || selectedEntry?.type === 'birthday' || selectedEntry?.type === 'worship' || selectedEntry?.type === 'custom') && selectedEntry.details && (
+              <p className="text-sm leading-relaxed text-muted-foreground">{selectedEntry.details}</p>
             )}
-            {selectedEvent?.type === 'qt' && (
+            {selectedEntry?.type === 'qt' && (
               <div className="space-y-2 text-sm">
-                {selectedEvent.qtTitle && (
-                  <p><span className="text-muted-foreground">{t.topic}: </span>{selectedEvent.qtTitle}</p>
+                {selectedEntry.qtTitle && (
+                  <p><span className="text-muted-foreground">{t.topic}: </span>{selectedEntry.qtTitle}</p>
                 )}
-                {selectedEvent.passage && (
-                  <p className="font-mono font-medium">{selectedEvent.passage}</p>
+                {selectedEntry.passage && (
+                  <p className="font-mono font-medium">{selectedEntry.passage}</p>
                 )}
               </div>
             )}
-            {selectedEvent?.type === 'cleaning' && (
+            {selectedEntry?.type === 'cleaning' && (
               <div className="space-y-2 text-sm">
-                {selectedEvent.dayName && (
-                  <p><span className="text-muted-foreground">{t.dayType}: </span>{selectedEvent.dayName}</p>
+                {selectedEntry.dayName && (
+                  <p><span className="text-muted-foreground">{t.dayType}: </span>{selectedEntry.dayName}</p>
                 )}
-                {selectedEvent.assignedNames && (
+                {selectedEntry.assignedNames && (
                   <div className="flex items-start gap-2">
                     <Users className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p>{selectedEvent.assignedNames}</p>
+                    <p>{selectedEntry.assignedNames}</p>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <Button className="mt-2 w-full" onClick={() => setSelectedEvent(null)}>{t.done}</Button>
+          <Button className="mt-2 w-full" onClick={() => setSelectedEntry(null)}>{t.done}</Button>
         </DialogContent>
       </Dialog>
     </div>
