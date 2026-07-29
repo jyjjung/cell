@@ -3,7 +3,11 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
     const image = new Image()
     image.addEventListener('load', () => resolve(image))
     image.addEventListener('error', (error) => reject(error))
-    image.setAttribute('crossOrigin', 'anonymous') // needed to avoid cross-origin issues on CodeSandbox
+    // crossOrigin on data:/blob: URLs can fail the load or taint the canvas in some browsers.
+    // Only needed for http(s) sources when drawing to canvas.
+    if (/^https?:\/\//i.test(url)) {
+      image.crossOrigin = 'anonymous'
+    }
     image.src = url
   })
 

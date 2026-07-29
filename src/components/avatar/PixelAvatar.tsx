@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useId, type CSSProperties, type ReactNode } from 'react';
 import { RemoteImage } from '@/components/ui/remote-image';
 import type { AvatarData } from '@/types';
 import { HAIR_STYLES, ACCESSORIES, OUTFITS, MOUTHS, FACIAL_HAIR_STYLES, BACKGROUNDS, DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
@@ -17,6 +17,9 @@ interface PixelAvatarProps {
 
 export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false);
+  // Unique per instance — shared gradient IDs break when many avatars share a page
+  // (url(#id) can resolve to a hidden/unmounted SVG and paint a blank face).
+  const reactId = useId().replace(/:/g, '');
   const normalized = avatarWithoutBrokenImage(avatar);
   const finalAvatar = imageFailed && normalized.mode === 'image'
     ? { ...normalized, mode: 'custom' as const }
@@ -50,6 +53,7 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const bg = BACKGROUNDS[backgroundColor || 'blue-gradient'] || BACKGROUNDS['blue-gradient'];
   const stops = bg.stops.map(s => `${s.color} ${s.offset}`).join(', ');
   const bgStyle = { background: `linear-gradient(to bottom, ${stops})` };
+  const backgroundId = `avatar-bg-${reactId}`;
 
   const withHalo = (content: ReactNode, extraClassName?: string, style?: CSSProperties) => (
     <div
@@ -71,17 +75,17 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
     </div>
   );
 
-  // Handle custom uploaded image
+  // Handle custom uploaded image — native img avoids Next/Image domain quirks on Storage URLs.
   if (mode === 'image') {
     return withHalo(
       resolved.imageUrl ? (
-        <RemoteImage
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           key={resolved.imageUrl}
           src={resolved.imageUrl}
           alt=""
-          fill
-          className="object-cover"
-          sizes="96px"
+          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
           onError={() => setImageFailed(true)}
         />
       ) : (
@@ -133,8 +137,6 @@ export function PixelAvatar({ avatar, className, nameHint }: PixelAvatarProps) {
   const outfitPaths = OUTFITS[outfit || 'tshirt'] || OUTFITS['tshirt'];
   const mouthPaths = MOUTHS[mouth || 'smile'] || MOUTHS['none'];
   const facialHairPaths = FACIAL_HAIR_STYLES[facialHair || 'none'] || FACIAL_HAIR_STYLES['none'];
-
-  const backgroundId = `background-${backgroundColor}`;
 
   return (
     <div key={avatarRenderKey} className={cn("aspect-square relative", className)}>

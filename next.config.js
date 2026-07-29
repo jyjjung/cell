@@ -61,7 +61,8 @@ function patchCrossOriginCaching(entries) {
         if (
           host === 'firebasestorage.googleapis.com' ||
           host === 'storage.googleapis.com' ||
-          host === 'api.dicebear.com'
+          host === 'api.dicebear.com' ||
+          host.endsWith('.firebasestorage.app')
         ) {
           return false;
         }
@@ -108,6 +109,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.firebasestorage.app',
         port: '',
         pathname: '/**',
       },

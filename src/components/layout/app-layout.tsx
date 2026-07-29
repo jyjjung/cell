@@ -118,8 +118,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, loadingAuth, pathname, router]);
 
+  // hasSession starts false until onAuthStateChanged — wait so signed-in users
+  // don't flash guest chrome / landing before the session restores.
   if (!hasSession) {
-    // Paint guest chrome immediately — don't block LCP on auth restore.
+    if (loadingAuth) {
+      return (
+        <div className="flex min-h-svh flex-col bg-background">
+          <div className="h-14 border-b border-border/40 bg-background/80" />
+          <div className="flex flex-1 flex-col gap-3 p-4">
+            <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
+            <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
+            <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
+          </div>
+        </div>
+      );
+    }
     return <GuestShell>{children}</GuestShell>;
   }
 

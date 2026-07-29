@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 import LandingPage from '@/components/home/landing-page';
 import { DashboardSkeleton } from '@/components/home/dashboard-skeleton';
 
@@ -16,7 +15,11 @@ export default function HomePage() {
   const { currentUser, hasSession, loadingAuth } = useAuth();
   const router = useRouter();
 
-  // Guests: paint landing immediately (don't wait on auth restore).
+  // Wait for Firebase auth restore — hasSession starts false and would flash landing.
+  if (loadingAuth || (hasSession && !currentUser)) {
+    return <DashboardSkeleton />;
+  }
+
   if (!hasSession) {
     return (
       <LandingPage
@@ -26,18 +29,5 @@ export default function HomePage() {
     );
   }
 
-  // Cached profile can paint the dashboard while the live snapshot finishes.
-  if (currentUser) {
-    return <DashboardPage currentUser={currentUser} />;
-  }
-
-  if (loadingAuth) {
-    return <DashboardSkeleton />;
-  }
-
-  return (
-    <div className="page-container flex min-h-[50vh] items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-    </div>
-  );
+  return <DashboardPage currentUser={currentUser} />;
 }
