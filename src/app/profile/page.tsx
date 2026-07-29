@@ -185,6 +185,9 @@ export default function ProfilePage() {
 
         if (permission === 'granted') {
             const registration = await getFCMRegistration();
+            if (!registration) {
+                throw new Error("This browser blocked the notification service worker.");
+            }
             const currentToken = await getToken(messaging, { 
                 vapidKey,
                 serviceWorkerRegistration: registration 
