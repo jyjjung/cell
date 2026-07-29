@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.6.1',
+    subtitle: 'Chat push delivery fixes',
+    date: 'July 29, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Chat push requests that fail to deliver are reported as errors so the app can retry when possible',
+      },
+    ],
+  },
+  {
     version: 'v1.6.0',
     subtitle: 'Inbox sheet & clearer overlays',
     date: 'July 29, 2026',
