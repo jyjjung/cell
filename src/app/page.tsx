@@ -16,7 +16,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // Wait for Firebase auth restore — hasSession starts false and would flash landing.
-  if (loadingAuth || (hasSession && !currentUser)) {
+  if (loadingAuth) {
     return <DashboardSkeleton />;
   }
 
@@ -27,6 +27,10 @@ export default function HomePage() {
         onSignUp={() => router.push('/signup')}
       />
     );
+  }
+
+  if (!currentUser) {
+    return <DashboardSkeleton />;
   }
 
   return <DashboardPage currentUser={currentUser} />;
