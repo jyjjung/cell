@@ -4,6 +4,7 @@ import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { DEFAULT_INVITE_MAX_USES, normalizeInviteCode, normalizeInviteEmail, resolveInviteExpiresAtMs } from '@/lib/invite-utils';
 import { deriveRoleState } from '@/lib/role-capabilities';
 import { reconcileUserRoleState } from '@/lib/server-role-state';
+import { clientIpFromRequest, rateLimit } from '@/lib/rate-limit';
 
 const USERS_COLLECTION = 'users';
 const INVITES_COLLECTION = 'invites';
@@ -14,6 +15,15 @@ function inviteError(error: string, message: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = clientIpFromRequest(request);
+  const limited = rateLimit(`signup-redeem:${ip}`, 20, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', message: 'Too many requests. Try again shortly.' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
+  }
+
   try {
     const body = await request.json();
     const inviteCode = typeof body.inviteCode === 'string' ? normalizeInviteCode(body.inviteCode) : '';

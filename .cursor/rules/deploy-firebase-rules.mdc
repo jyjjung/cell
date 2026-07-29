@@ -1,0 +1,30 @@
+---
+description: Always deploy Firebase rules after changing them
+globs: firestore.rules,storage.rules
+alwaysApply: false
+---
+
+# Deploy Firebase Rules
+
+Whenever you change `firestore.rules` and/or `storage.rules`, deploy the updated rules before finishing the task. Do not leave deploy as a manual step for the user.
+
+## Commands
+
+Deploy only what changed:
+
+```bash
+# Storage rules only
+npx -y firebase-tools@latest deploy --only storage
+
+# Firestore rules only
+npx -y firebase-tools@latest deploy --only firestore:rules
+
+# Both
+npx -y firebase-tools@latest deploy --only firestore:rules,storage
+```
+
+## Notes
+
+- Request network permissions as needed for Firebase CLI.
+- If deploy fails due to auth, tell the user and stop — do not skip silently.
+- Mention in the final response that rules were deployed (or that deploy failed).

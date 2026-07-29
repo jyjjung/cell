@@ -1,4 +1,5 @@
 import type { DocVisibility } from '@/types';
+import { escapeHtml } from '@/lib/sanitize-html';
 
 export const DOCS_COLLECTION = 'docs';
 export const DOC_TITLE_MAX = 200;
@@ -29,14 +30,6 @@ export function mergeAuthorIds(existing: string[] | undefined, uid: string): str
 export function displayDocTitle(title: string | undefined | null, untitledLabel = 'Untitled'): string {
   const trimmed = (title || '').trim();
   return trimmed || untitledLabel;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 /** Convert plain chat text into simple TipTap-compatible HTML paragraphs. */

@@ -4,6 +4,7 @@ import path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import { BIBLE_BOOKS_DATA } from '../bible-data';
 import type { BibleXmlVersion } from '@/lib/bible-versions';
+import { escapeHtml } from '@/lib/sanitize-html';
 
 interface BibleVerse {
   number: number;
@@ -145,14 +146,15 @@ export async function getLocalBiblePassage(
 }
 
 export function formatPassageToHtml(passage: BiblePassage): string {
+  // Escape all interpolated text — HTML is rendered via dangerouslySetInnerHTML.
   let html = `<div class="bible-passage">`;
-  html += `<h2>${passage.book} ${passage.chapter}</h2>`;
+  html += `<h2>${escapeHtml(passage.book)} ${escapeHtml(String(passage.chapter))}</h2>`;
   html += `<div class="passage-text">`;
-  
-  passage.verses.forEach(v => {
-    html += `<p><span class="verse-num">${v.number}</span> ${v.text}</p>`;
+
+  passage.verses.forEach((v) => {
+    html += `<p><span class="verse-num">${escapeHtml(String(v.number))}</span> ${escapeHtml(v.text)}</p>`;
   });
-  
+
   html += `</div></div>`;
   return html;
 }

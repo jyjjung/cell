@@ -403,6 +403,7 @@ export const translations = {
     getStarted: "Get started",
     howItWorks: "How it works",
     privacyPolicy: "Privacy",
+    termsOfService: "Terms",
     prayerRequests: "Prayer requests",
     prayerRequestsDesc: "Only Shepherd Claire will be able to see your prayer requests",
 
@@ -1193,6 +1194,7 @@ export const translations = {
     getStarted: "시작하기",
     howItWorks: "사용 방법",
     privacyPolicy: "개인정보",
+    termsOfService: "이용약관",
     prayerRequests: "기도 제목",
     prayerRequestsDesc: "Shepherd Claire만이 기도 제목을 볼 수 있습니다",
 

@@ -56,6 +56,18 @@ function StatusBadge({ status, locale }: { status: string; locale: 'en' | 'ko' }
 
 const changelogs = [
   {
+    version: "v1.3.141",
+    subtitle: "Hardening and Terms",
+    date: "July 29, 2026",
+    changes: [
+      "Private pages now check a secure login cookie before loading, so guests are sent to sign-in sooner",
+      "The site sends standard browser security headers and cleans Bible/document HTML before display or save",
+      "Worship chord sheet uploads are limited to worship team members and admins",
+      "New Terms of Service page (linked next to Privacy), clearer not-found/error screens, and public sitemap metadata",
+      "Unexpected crashes are reported so issues can be fixed faster",
+    ],
+  },
+  {
     version: "v1.3.140",
     subtitle: "Faster photos and app load",
     date: "July 29, 2026",

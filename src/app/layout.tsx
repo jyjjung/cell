@@ -17,6 +17,7 @@ import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { OfflineBanner } from '@/components/layout/offline-banner';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
+import { DocumentLang } from '@/components/layout/document-lang';
 
 const GlobalPageLoader = dynamic(() => import('@/components/layout/global-page-loader'), { ssr: false });
 const GlobalBibleReader = dynamic(
@@ -24,11 +25,24 @@ const GlobalBibleReader = dynamic(
   { ssr: false }
 );
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   manifest: '/manifest.webmanifest',
   title: "em.",
   description: "A simple app for community and faith.",
+  openGraph: {
+    title: 'em.',
+    description: 'A simple app for community and faith.',
+    siteName: 'em.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'em.',
+    description: 'A simple app for community and faith.',
+  },
   icons: {
     icon: [
       { url: '/icon-v4.svg', type: 'image/svg+xml' },
@@ -70,6 +84,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
             <PageLoadingProvider>
               <AuthProvider>
+                <DocumentLang />
                 <AppDataProviders>
                 <ColorPaletteProvider>
                 <TypographyProvider>

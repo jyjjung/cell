@@ -174,6 +174,10 @@ export default function FeaturesPage() {
             <Link href="/privacy" className="font-medium text-foreground underline-offset-4 hover:underline">
               Read the privacy policy
             </Link>
+            {" · "}
+            <Link href="/terms" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Read the terms of service
+            </Link>
           </p>
         </DocSection>
       </DocArticle>

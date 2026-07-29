@@ -9,6 +9,7 @@ import {
   writeCachedAuthProfile,
 } from '@/lib/auth-profile-cache';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
+import { clearServerSession, syncServerSession } from '@/lib/client-session';
 import { auth, db } from '@/lib/firebase';
 import { normalizeInviteCode } from '@/lib/invite-utils';
 import { hasCapability } from '@/lib/role-capabilities';
@@ -16,6 +17,7 @@ import { redeemSignupInvite } from '@/lib/signup-invite-redeem';
 import { notifySignupPending } from '@/lib/signup-notify';
 import { syncProfileToChats } from '@/lib/sync-profile-chats';
 import type { AppUser, DashboardPreferences, UserProfileData } from '@/types';
+import * as Sentry from '@sentry/nextjs';
 import {
     createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile as updateFirebaseProfile, type User as FirebaseUser
 } from 'firebase/auth';
@@ -150,6 +152,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setHasSession(!!firebaseUser);
 
       if (firebaseUser) {
+        // UID only — no email/name in Sentry for privacy.
+        Sentry.setUser({ id: firebaseUser.uid });
+
+        void firebaseUser.getIdToken()
+          .then((idToken) => syncServerSession(idToken))
+          .catch((error) => {
+            console.error('[AuthProvider] Failed to sync server session:', error);
+          });
+
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
 
         // Paint chrome immediately from last known profile while the live snapshot catches up.
@@ -189,6 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCurrentUser(null);
         setIsAdmin(false);
         setLoadingAuth(false);
+        Sentry.setUser(null);
+        void clearServerSession();
       }
     });
 
@@ -292,6 +305,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void notifySignupPending(firebaseUser.uid);
       }
 
+      const idToken = await firebaseUser.getIdToken();
+      await syncServerSession(idToken);
+
       return firebaseUser as AppUser;
     } catch (error) {
       console.error("Error signing up user:", error);
@@ -302,6 +318,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInUser = async (email: string, password: string): Promise<AppUser | null> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      await syncServerSession(idToken);
       return userCredential.user as AppUser;
     } catch (error) {
       console.error("Error signing in user:", error);
@@ -313,6 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       clearCachedAuthProfile(currentUser?.uid);
       clearSharedDirectoryCaches();
+      await clearServerSession();
       await signOut(auth);
       if (pathname !== '/') {
         router.push('/');

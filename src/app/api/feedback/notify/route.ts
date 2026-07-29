@@ -3,6 +3,7 @@ import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/
 import { getStatusLabel } from '@/lib/formatting';
 import { resolveUserIdByEmail, sendUserNotification } from '@/lib/server-notifications';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
+import { clientIpFromRequest, rateLimit } from '@/lib/rate-limit';
 
 const FEEDBACK_ADMIN_EMAIL =
   process.env.FEEDBACK_NOTIFY_EMAIL || 'yejoon7154@gmail.com';
@@ -22,6 +23,15 @@ async function getFeedbackAdminUserId(
 }
 
 export async function POST(request: NextRequest) {
+  const ip = clientIpFromRequest(request);
+  const limited = rateLimit(`feedback-notify:${ip}`, 40, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
+  }
+
   try {
     const body = await request.json();
     const action = body.action as FeedbackAction;
