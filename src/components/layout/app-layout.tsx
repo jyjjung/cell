@@ -19,6 +19,7 @@ import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
 import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
+import { InboxSheet } from '@/components/inbox/InboxSheet';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useIsMobile } from '@/hooks/use-mobile';
 import dynamic from 'next/dynamic';
@@ -166,6 +167,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-1 flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
           <CommandMenuLazy open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
+          <InboxSheet />
 
           <div
             className={cn(

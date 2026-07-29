@@ -70,7 +70,7 @@ export function BibleReaderOverlay({ placement }: BibleReaderOverlayProps) {
         <button
           type="button"
           aria-label="Close bible reader"
-          className="fixed inset-0 z-[120] bg-black/20"
+          className="fixed inset-0 z-[120] ui-scrim"
           onClick={() => setIsOpen(false)}
         />
       ) : null}

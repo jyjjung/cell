@@ -38,6 +38,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useInboxOptional } from "@/contexts/inbox-context";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { useChats } from "@/hooks/useChats";
 import { useAllUsers } from "@/hooks/use-all-users";
@@ -158,6 +159,7 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const { currentUser, isAdmin, isWorshipTeam } = useAuth();
+  const inbox = useInboxOptional();
   const { setIsPageLoading } = usePageLoading();
   const { chats } = useChats();
   const { allUsers } = useAllUsers();
@@ -166,10 +168,18 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
   const handleNavigate = useCallback(
     (path: string) => {
       onClose();
+      if (path === "/announcements" && inbox) {
+        inbox.openInbox("announcements");
+        return;
+      }
+      if (path === "/notifications" && inbox) {
+        inbox.openInbox("notifications");
+        return;
+      }
       if (pathname !== path) setIsPageLoading(true);
       router.push(path);
     },
-    [router, pathname, setIsPageLoading, onClose],
+    [router, pathname, setIsPageLoading, onClose, inbox],
   );
 
   const isActivePath = useCallback(

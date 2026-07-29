@@ -1017,6 +1017,22 @@
   }
 }
 
+/* Modal / sidebar / popup scrims — always blurred (works even with data-glass="off") */
+.ui-scrim {
+  background-color: hsl(var(--foreground) / 0.12);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+}
+
+.dark .ui-scrim {
+  background-color: hsl(0 0% 0% / 0.28);
+}
+
+html[data-glass="off"] .ui-scrim {
+  backdrop-filter: blur(18px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.35) !important;
+}
+
 /* TipTap editor placeholder */
 .tiptap p.is-editor-empty:first-child::before,
 .tiptap p.is-empty:first-child::before {
