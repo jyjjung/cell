@@ -157,9 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div
             className={cn(
               'flex flex-1 flex-col min-h-0',
-              isIndividualChat
-                ? 'h-full overflow-hidden'
-                : 'overflow-y-auto overflow-x-hidden p-0 relative' 
+              !isIndividualChat ? 'overflow-y-auto overflow-x-hidden p-0 relative' : 'overflow-hidden'
             )}
           >
             <main

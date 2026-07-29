@@ -173,10 +173,10 @@ export default function ChatMessageList({
   ]);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-1 flex-col">
+    <div className="absolute inset-0">
       <div
         ref={scrollRef}
-        className="h-full min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden px-4 py-2 flex flex-col-reverse custom-scrollbar touch-pan-y"
       >
         <TooltipProvider delayDuration={300}>
           <div className="flex flex-col-reverse gap-1 max-w-3xl mx-auto w-full min-w-0">
