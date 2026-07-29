@@ -88,6 +88,7 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
         if (Notification.permission === 'granted') {
           getFCMRegistration()
             .then((registration) => {
+              if (!registration) return;
               registration.showNotification(title, {
                 body,
                 icon: payload.data?.icon || '/icon-192x192-v4.png',
