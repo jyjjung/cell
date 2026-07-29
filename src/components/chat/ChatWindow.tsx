@@ -5,10 +5,12 @@ import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMessages } from '@/hooks/useMessages';
+import { useChatPhotoMessages } from '@/hooks/use-chat-photo-messages';
 import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare, WifiOff } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -19,10 +21,7 @@ import { primeChatPreviewMedia } from '@/lib/media-cache';
 import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
-import { FullScreenViewer, ViewerSlide } from '../worship/FullScreenViewer';
-import {
-    AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog
-} from '../worship/WorshipDialogs';
+import type { ViewerSlide } from '../worship/viewer-types';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatMessageList from './ChatMessageList';
 import ChatPhotosAlbum, { extractChatPhotos } from './ChatPhotosAlbum';
@@ -31,8 +30,28 @@ import GroupSettingsDialog from './GroupSettingsDialog';
 import { ChatImageGallery } from './ImageLightbox';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
-import { ensureDocsSharedWithChat } from '@/hooks/use-docs';
+import { ensureDocsSharedWithChat, syncChatDocMembers } from '@/hooks/use-docs';
 
+const FullScreenViewer = dynamic(
+  () => import('../worship/FullScreenViewer').then((m) => m.FullScreenViewer),
+  { ssr: false },
+);
+const NewSongDialog = dynamic(
+  () => import('../worship/WorshipDialogs').then((m) => m.NewSongDialog),
+  { ssr: false },
+);
+const NewSetlistDialog = dynamic(
+  () => import('../worship/WorshipDialogs').then((m) => m.NewSetlistDialog),
+  { ssr: false },
+);
+const NewRosterDialog = dynamic(
+  () => import('../worship/WorshipDialogs').then((m) => m.NewRosterDialog),
+  { ssr: false },
+);
+const AddChordSheetDialog = dynamic(
+  () => import('../worship/WorshipDialogs').then((m) => m.AddChordSheetDialog),
+  { ssr: false },
+);
 export default function ChatWindow({ chatId }: { chatId: string }) {
   const messageState = useMessages(chatId);
   const { messages } = messageState;
@@ -124,17 +143,24 @@ function ChatWindowBody({
   const usersById = useUsersById();
   const online = useOnlineStatus();
   const isInitialLoad = useRef(true);
-  const photosHydrationPagesRef = useRef(0);
-  const photosHydratedRef = useRef(false);
+  const seenDebounceRef = useRef<number | null>(null);
+  const lastSeenMessageIdRef = useRef<string | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [chatTab, setChatTab] = useState<'messages' | 'photos' | 'links'>('messages');
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
 
+  const photosEnabled = chatTab === 'photos';
+  const { photoMessages, loadingMore: loadingMorePhotos } = useChatPhotoMessages(
+    chatId,
+    photosEnabled,
+    messages,
+  );
+
   const photoCount = useMemo(
-    () => extractChatPhotos(messages, usersById).length,
-    [messages, usersById],
+    () => extractChatPhotos(photoMessages.length > 0 ? photoMessages : messages, usersById).length,
+    [photoMessages, messages, usersById],
   );
 
   const linkCount = useMemo(
@@ -146,11 +172,23 @@ function ChatWindowBody({
   const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
 
-  useEffect(() => {
-    if (!chatId) return;
+  const newestMessageId = messages[0]?.id ?? null;
 
-    const markSeen = () => updateSeenTimestamp();
-    const timeoutId = window.setTimeout(markSeen, 500);
+  useEffect(() => {
+    if (!chatId || !newestMessageId) return;
+
+    const markSeen = () => {
+      lastSeenMessageIdRef.current = newestMessageId;
+      updateSeenTimestamp();
+    };
+
+    const alreadyMarked = lastSeenMessageIdRef.current === newestMessageId;
+    const delay = lastSeenMessageIdRef.current === null ? 500 : 8_000;
+
+    if (!alreadyMarked) {
+      if (seenDebounceRef.current) window.clearTimeout(seenDebounceRef.current);
+      seenDebounceRef.current = window.setTimeout(markSeen, delay);
+    }
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') markSeen();
@@ -158,10 +196,15 @@ function ChatWindowBody({
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
-      window.clearTimeout(timeoutId);
+      if (seenDebounceRef.current) window.clearTimeout(seenDebounceRef.current);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [chatId, messages.length, updateSeenTimestamp]);
+  }, [chatId, newestMessageId, updateSeenTimestamp]);
+
+  // Reset seen tracking when switching chats.
+  useEffect(() => {
+    lastSeenMessageIdRef.current = null;
+  }, [chatId]);
 
   const chatDocIdsKey = useMemo(() => {
     const ids = Array.from(
@@ -171,41 +214,27 @@ function ChatWindowBody({
   }, [messages]);
 
   useEffect(() => {
-    if (!chatId || !currentUser || !chatDocIdsKey) return;
-    const docIds = chatDocIdsKey.split(',');
+    if (!chatId || !currentUser) return;
 
-    // Heal legacy chat docs that were posted without expanding memberIds,
-    // so every chat member sees them under Docs.
+    // Heal ACL for docs posted in this chat + sync sourceChatIds-linked docs
+    // (worship/role circles often change members without a client add-member call).
     const timer = window.setTimeout(() => {
-      void ensureDocsSharedWithChat({ chatId, docIds }).catch(() => {
-        // Best-effort; permission skips are expected for docs the viewer cannot access.
-      });
+      if (chatDocIdsKey) {
+        const docIds = chatDocIdsKey.split(',');
+        void ensureDocsSharedWithChat({ chatId, docIds }).catch(() => {
+          // Best-effort; skips are expected for docs the viewer cannot prove.
+        });
+      }
+      void syncChatDocMembers(chatId).catch(() => {});
     }, 600);
     return () => window.clearTimeout(timer);
   }, [chatId, currentUser, chatDocIdsKey]);
 
   useEffect(() => {
-    photosHydrationPagesRef.current = 0;
-    photosHydratedRef.current = false;
-  }, [chatId]);
-
-  useEffect(() => {
     if (chatTab !== 'photos') return;
-
     // Warm SW cache for album thumbs only — full originals download when opened.
-    primeChatPreviewMedia(messages);
-
-    // Once this chat's older history has been paged in this session, skip re-paging.
-    if (photosHydratedRef.current) return;
-    if (!hasMoreOlder) {
-      photosHydratedRef.current = true;
-      return;
-    }
-    if (!loadingOlder && photosHydrationPagesRef.current < 20) {
-      photosHydrationPagesRef.current += 1;
-      void loadOlderMessages();
-    }
-  }, [chatTab, messages, hasMoreOlder, loadingOlder, loadOlderMessages]);
+    primeChatPreviewMedia(photoMessages);
+  }, [chatTab, photoMessages]);
 
   useEffect(() => {
     if (isInitialLoad.current && messages.length > 0) {
@@ -250,14 +279,13 @@ function ChatWindowBody({
     return { name: chat.name || 'Unnamed Circle', avatar: null, photoURL: chat.photoURL || null };
   }, [chat, currentUser, allUsers]);
 
-  const chatImages = useMemo(
-    () =>
-      [...messages]
-        .filter((m) => m.imageUrl && !m.songId && !m.isDeleted)
-        .reverse()
-        .map((m) => m.imageUrl!),
-    [messages],
-  );
+  const chatImages = useMemo(() => {
+    const source = photoMessages.length > 0 ? photoMessages : messages;
+    return [...source]
+      .filter((m) => m.imageUrl && !m.songId && !m.isDeleted)
+      .reverse()
+      .map((m) => m.imageUrl!);
+  }, [photoMessages, messages]);
 
   const openImageIndex = openImageUrl ? chatImages.indexOf(openImageUrl) : 0;
 
@@ -423,9 +451,10 @@ function ChatWindowBody({
           />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
-            messages={messages}
+            messages={photoMessages.length > 0 ? photoMessages : messages}
             allUsers={allUsers}
             onOpenImage={setOpenImageUrl}
+            loadingMore={loadingMorePhotos}
           />
         ) : (
           <ChatLinksList messages={messages} allUsers={allUsers} />
@@ -534,34 +563,42 @@ function ChatWindowBody({
       </div>
       )}
 
-      <NewSongDialog 
-        open={showNewSong} 
-        onClose={() => setShowNewSong(false)} 
-        onCreated={() => {
-          // Could optionally send a message about the new song
-        }} 
-      />
-      <NewSetlistDialog 
-        open={showNewSetlist} 
-        onClose={() => setShowNewSetlist(false)} 
-        onCreated={(id) => {
-          // Automatically share the new setlist in chat
-          sendMessage(undefined, undefined, undefined, undefined, id);
-        }} 
-      />
-      <NewRosterDialog 
-        open={showNewRoster} 
-        onClose={() => setShowNewRoster(false)} 
-        onCreated={(id) => {
-          // Automatically share the new roster in chat
-          sendMessage(undefined, undefined, undefined, undefined, undefined, id);
-        }} 
-      />
-      <AddChordSheetDialog 
-        open={!!addSheetSong} 
-        song={addSheetSong} 
-        onClose={() => setAddSheetSong(null)} 
-      />
+      {showNewSong && (
+        <NewSongDialog
+          open={showNewSong}
+          onClose={() => setShowNewSong(false)}
+          onCreated={() => {
+            // Could optionally send a message about the new song
+          }}
+        />
+      )}
+      {showNewSetlist && (
+        <NewSetlistDialog
+          open={showNewSetlist}
+          onClose={() => setShowNewSetlist(false)}
+          onCreated={(id) => {
+            // Automatically share the new setlist in chat
+            sendMessage(undefined, undefined, undefined, undefined, id);
+          }}
+        />
+      )}
+      {showNewRoster && (
+        <NewRosterDialog
+          open={showNewRoster}
+          onClose={() => setShowNewRoster(false)}
+          onCreated={(id) => {
+            // Automatically share the new roster in chat
+            sendMessage(undefined, undefined, undefined, undefined, undefined, id);
+          }}
+        />
+      )}
+      {addSheetSong && (
+        <AddChordSheetDialog
+          open={!!addSheetSong}
+          song={addSheetSong}
+          onClose={() => setAddSheetSong(null)}
+        />
+      )}
 
       {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
 

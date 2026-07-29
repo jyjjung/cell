@@ -5,35 +5,56 @@ alwaysApply: true
 
 # Changelog on Push
 
-Before running `git push`, update the changelog in `src/app/feedback/page.tsx`.
+Before running `git push`, update the changelog in `src/data/changelogs.ts`.
 
 ## When to update
 
 Update the changelog whenever a push includes user-facing changes (features, fixes, UI, docs shown in-app). Skip only for purely internal or tooling-only commits with no user-visible effect.
 
+## Style (product release notes, not a commit diary)
+
+- Prefer **one release entry per ship**, especially for same-day work.
+- Typically **3–8 bullets**. Bundle related fixes; omit reverts, refactors, and tiny polish users will not notice.
+- User-facing language only.
+- Do **not** recreate micro-patch history (`v1.3.xxx` spam). Historical notes were consolidated into era releases; keep the list short going forward.
+
+## SemVer
+
+Follow [Semantic Versioning](https://semver.org/):
+
+| Bump | Example | When |
+|------|---------|------|
+| **MAJOR** | `v2.0.0` | Breaking user-facing changes |
+| **MINOR** | `v1.5.0` | New features or a meaningful bundled improvement set |
+| **PATCH** | `v1.4.1` | Bug fixes and small polish |
+
+After a MINOR (`v1.4.0`), patches are `v1.4.1`, `v1.4.2`, … until the next feature bundle → `v1.5.0`.
+
 ## How to update
 
-Add a **new object at the top** of the `changelogs` array (before the existing first entry):
+Add a **new object at the top** of the `changelogs` array in `src/data/changelogs.ts`:
 
 ```typescript
 {
-  version: "v1.3.6",           // increment patch from the current latest entry
-  subtitle: "Short Title",   // optional but preferred for feature releases
-  date: "July 9, 2026",        // use the exact calendar date for the release
+  version: 'v1.4.1',
+  subtitle: 'Short Title',
+  date: 'July 29, 2026',
   changes: [
-    "User-facing change written in plain language",
-    "Another bullet if needed",
+    { type: 'Fixed', text: 'User-facing fix in plain language' },
+    { type: 'Improved', text: 'User-facing improvement in plain language' },
   ],
 },
 ```
 
+Categories (Keep a Changelog style): `Added` | `Changed` | `Fixed` | `Improved` | `Security`.
+
+Always use an exact date like `July 9, 2026`, never `Early/Mid/Late-Month Year`.
+
 ## Workflow
 
 1. Finish code changes and commit them.
-2. Add the changelog entry summarizing what shipped.
+2. Add the changelog entry summarizing what shipped (correct SemVer bump).
 3. Commit the changelog update (same commit or a follow-up `chore: update changelog` commit).
 4. Push to GitHub.
 
 Never push code changes without a matching changelog entry in the same push.
-
-Always use an exact date like `July 9, 2026` for new changelog entries, never `Early/Mid/Late-Month Year`.

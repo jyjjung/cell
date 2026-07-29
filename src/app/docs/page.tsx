@@ -166,7 +166,9 @@ export default function DocsPage() {
   const locale = getAppLocale(currentUser?.preferredLanguage);
   const { toast } = useToast();
   const usersById = useUsersById();
-  const { docs, loading, createDoc, deleteDocById } = useDocs(currentUser?.uid);
+  const { docs, loading, createDoc, deleteDocById } = useDocs(currentUser?.uid, {
+    authoritativeList: true,
+  });
   const [tab, setTab] = useState<FilterTab>('all');
   const [createOpen, setCreateOpen] = useState(false);
 

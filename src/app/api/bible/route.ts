@@ -43,7 +43,15 @@ export async function GET(request: NextRequest) {
     }
 
     const passageHtml = formatPassageToHtml(passage);
-    return NextResponse.json({ html: passageHtml, version });
+    return NextResponse.json(
+      { html: passageHtml, version },
+      {
+        headers: {
+          // Local XML is static; long CDN/browser cache is safe. SW also NetworkFirst-caches this.
+          'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',
+        },
+      },
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[API Route /api/bible] Error retrieving local passage:', error);

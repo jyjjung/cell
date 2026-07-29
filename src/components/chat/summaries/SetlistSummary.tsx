@@ -6,7 +6,7 @@ import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context'
 import { useWorshipData } from '@/contexts/worship-data-context';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { useToast } from '@/hooks/use-toast';
-import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { useWorshipSongsByIds } from '@/hooks/use-worship-songs-by-ids';
 import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cache';
 import { buildSetlistPlaylistQueue } from '@/lib/setlist-playlist-queue';
 import { translations } from '@/lib/translations';
@@ -70,7 +70,11 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
     if (!setlistLoading && !setlist) onMissing?.();
   }, [setlistLoading, setlist, onMissing]);
   const worshipData = useWorshipData();
-  const songHook = useWorshipSongs(!!setlist && !worshipData);
+  const setlistSongIds = useMemo(
+    () => (setlist?.songs ?? []).map((s) => s.songId).filter(Boolean),
+    [setlist],
+  );
+  const songHook = useWorshipSongsByIds(setlistSongIds, !!setlist && !worshipData);
   const worshipSongs = worshipData?.songs ?? songHook.songs;
   const { toast } = useToast();
   const router = useRouter();

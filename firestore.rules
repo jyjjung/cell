@@ -270,11 +270,27 @@ service cloud.firestore {
           && resource.data.memberIds.hasAny([request.auth.uid]);
       }
 
-      function isParentDocMember() {
+      function isDocSharedWith() {
         return request.auth != null
-          && docData().keys().hasAny(['memberIds'])
-          && docData().memberIds is list
-          && docData().memberIds.hasAny([request.auth.uid]);
+          && resource.data.keys().hasAny(['sharedWith'])
+          && resource.data.sharedWith is list
+          && resource.data.sharedWith.hasAny([request.auth.uid]);
+      }
+
+      function canReadDoc() {
+        return isDocMember() || isDocOwner() || isDocSharedWith();
+      }
+
+      function canReadParentDoc() {
+        return request.auth != null && (
+          (docData().keys().hasAny(['memberIds'])
+            && docData().memberIds is list
+            && docData().memberIds.hasAny([request.auth.uid]))
+          || docData().ownerId == request.auth.uid
+          || (docData().keys().hasAny(['sharedWith'])
+            && docData().sharedWith is list
+            && docData().sharedWith.hasAny([request.auth.uid]))
+        );
       }
 
       function isDocOwner() {
@@ -306,7 +322,7 @@ service cloud.firestore {
                && request.resource.data.updatedBy == request.auth.uid;
       }
 
-      allow get, list: if isDocMember();
+      allow get, list: if canReadDoc();
 
       // Authenticated owners may create private or shared docs they belong to.
       // Note: do not require createdAt == request.time; serverTimestamp() is enough.
@@ -322,7 +338,7 @@ service cloud.firestore {
                         && request.resource.data.memberIds.size() > 1)
                     );
 
-      allow update: if isDocMember()
+      allow update: if (isDocMember() || isDocOwner())
                     && request.resource.data.ownerId == resource.data.ownerId
                     && request.resource.data.createdAt == resource.data.createdAt
                     && request.resource.data.updatedBy == request.auth.uid
@@ -360,16 +376,16 @@ service cloud.firestore {
       allow delete: if isDocOwner();
 
       match /comments/{commentId} {
-        allow get, list: if isParentDocMember();
+        allow get, list: if canReadParentDoc();
 
-        allow create: if isParentDocMember()
+        allow create: if canReadParentDoc()
                       && request.resource.data.authorId == request.auth.uid
                       && request.resource.data.keys().hasAll(['text', 'authorId', 'createdAt'])
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 2000;
 
-        allow update: if isParentDocMember()
+        allow update: if canReadParentDoc()
                       && resource.data.authorId == request.auth.uid
                       && request.resource.data.authorId == resource.data.authorId
                       && request.resource.data.createdAt == resource.data.createdAt
@@ -379,7 +395,7 @@ service cloud.firestore {
                       && request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['text', 'updatedAt']);
 
-        allow delete: if isParentDocMember()
+        allow delete: if canReadParentDoc()
                       && (resource.data.authorId == request.auth.uid || isParentDocOwner());
       }
     }

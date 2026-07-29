@@ -99,7 +99,6 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    setLoading(events.length === 0);
 
     void loadEventsDirectory().then((loaded) => {
       if (!cancelled) {
@@ -119,7 +118,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [realtime, events.length]);
+  }, [realtime]);
 
   const refreshEvents = useCallback(async () => {
     const loaded = await loadEventsDirectory({ forceRefresh: true });

@@ -6,6 +6,7 @@ import {
   type DerivedRoleState,
   type RoleCapability,
 } from '@/lib/role-capabilities';
+import { syncDocsForChatMembers } from '@/lib/server-docs-chat-share';
 
 const USERS_COLLECTION = 'users';
 const ROLES_COLLECTION = 'roles';
@@ -103,6 +104,9 @@ export async function reconcileRoleMembers(adminDb: Firestore, roleId: string): 
       lastMessageSentAt: FieldValue.serverTimestamp(),
       memberSeen: {},
     });
+    await syncDocsForChatMembers(adminDb, roleData.chatId, memberIds).catch((err) => {
+      console.error('[reconcileRoleMembers] Doc ACL sync failed:', err);
+    });
     return memberIds.length;
   }
 
@@ -115,6 +119,13 @@ export async function reconcileRoleMembers(adminDb: Firestore, roleId: string): 
     memberInfo,
     admins: existingAdmins,
   });
+
+  // Keep Docs ACL in sync when worship/role circle membership changes.
+  // Bounded query (≤100 docs); no standing listeners or extra paid services.
+  await syncDocsForChatMembers(adminDb, roleData.chatId, memberIds).catch((err) => {
+    console.error('[reconcileRoleMembers] Doc ACL sync failed:', err);
+  });
+
   return memberIds.length;
 }
 

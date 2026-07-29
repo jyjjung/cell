@@ -76,7 +76,9 @@ const withPWA = pwa.default({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: false,
+  // Production PWA stays enabled. Disable only in local `next dev` so the
+  // service worker does not cache stale chunks during development (no prod cost change).
+  disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     runtimeCaching: [
       ...FIREBASE_MEDIA_CACHING,
@@ -86,7 +88,11 @@ const withPWA = pwa.default({
 });
 
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'],
+  },
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
         protocol: 'https',

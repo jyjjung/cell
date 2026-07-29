@@ -9,6 +9,7 @@ import {
   writeCachedAuthProfile,
 } from '@/lib/auth-profile-cache';
 import { clearSharedDirectoryCaches } from '@/lib/collection-cache';
+import { clearDocsCaches } from '@/lib/docs-directory';
 import { clearServerSession, syncServerSession } from '@/lib/client-session';
 import { auth, db } from '@/lib/firebase';
 import { normalizeInviteCode } from '@/lib/invite-utils';
@@ -331,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       clearCachedAuthProfile(currentUser?.uid);
       clearSharedDirectoryCaches();
+      clearDocsCaches();
       await clearServerSession();
       await signOut(auth);
       if (pathname !== '/') {

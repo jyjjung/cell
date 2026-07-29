@@ -15,15 +15,17 @@ import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types
 import { format } from 'date-fns';
 import { CornerUpLeft, FileText, Lock, LockOpen, Maximize, MessagesSquare, Music, SmilePlus, Trash2 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { PixelAvatar } from '../avatar/PixelAvatar';
-import CleaningSummary from './summaries/CleaningSummary';
-import DocSummary from './summaries/DocSummary';
-import EventSummary from './summaries/EventSummary';
-import PollSummary from './summaries/PollSummary';
-import QTSummary from './summaries/QTSummary';
-import RosterSummary from './summaries/RosterSummary';
-import SetlistSummary from './summaries/SetlistSummary';
-import SongSummary from './summaries/SongSummary';
+
+const CleaningSummary = dynamic(() => import('./summaries/CleaningSummary'), { ssr: false });
+const DocSummary = dynamic(() => import('./summaries/DocSummary'), { ssr: false });
+const EventSummary = dynamic(() => import('./summaries/EventSummary'), { ssr: false });
+const PollSummary = dynamic(() => import('./summaries/PollSummary'), { ssr: false });
+const QTSummary = dynamic(() => import('./summaries/QTSummary'), { ssr: false });
+const RosterSummary = dynamic(() => import('./summaries/RosterSummary'), { ssr: false });
+const SetlistSummary = dynamic(() => import('./summaries/SetlistSummary'), { ssr: false });
+const SongSummary = dynamic(() => import('./summaries/SongSummary'), { ssr: false });
 
 
 const standardReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];

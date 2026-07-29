@@ -32,6 +32,34 @@ export function docAclFromData(data: Record<string, unknown>): DocShareAclFields
   };
 }
 
+/**
+ * Expand ACL for docs linked to a chat so current members see them under Docs.
+ * Bounded to 100 docs per call — runs only on membership/share events (no standing cost).
+ */
+export async function syncDocsForChatMembers(
+  adminDb: Firestore,
+  chatId: string,
+  chatMemberIds: string[],
+): Promise<{ updated: string[]; skipped: string[] }> {
+  const snap = await adminDb
+    .collection('docs')
+    .where('sourceChatIds', 'array-contains', chatId)
+    .limit(100)
+    .get();
+
+  if (snap.empty) {
+    return { updated: [], skipped: [] };
+  }
+
+  return shareDocsWithChatMembers(adminDb, {
+    chatId,
+    chatMemberIds,
+    docIds: snap.docs.map((d) => d.id),
+    actorId: 'system',
+    trustSourceChatLink: true,
+  });
+}
+
 export async function shareDocsWithChatMembers(
   adminDb: Firestore,
   input: {
@@ -64,7 +92,10 @@ export async function shareDocsWithChatMembers(
     const actorCanAccess =
       acl.memberIds.includes(input.actorId) || acl.ownerId === input.actorId;
 
-    if (!actorCanAccess && !(input.trustSourceChatLink && linkedToChat)) {
+    let allowed =
+      actorCanAccess || (Boolean(input.trustSourceChatLink) && linkedToChat);
+
+    if (!allowed) {
       skipped.push(docId);
       continue;
     }

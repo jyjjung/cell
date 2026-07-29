@@ -42,6 +42,18 @@ import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
 
+async function shareDocWithChatBestEffort(chatId: string, docId: string) {
+  try {
+    const headers = await getClientAuthHeaders();
+    await fetch(`/api/docs/${docId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ shareWithChatId: chatId }),
+    });
+  } catch (err) {
+    console.error('[useMessages] Failed to share doc with chat members:', err);
+  }
+}
 export function useMessages(chatId: string | null) {
   const { currentUser } = useAuth();
   const chatsContext = useChatsContext();
@@ -267,6 +279,11 @@ export function useMessages(chatId: string | null) {
       messageData.pollVotes = Object.fromEntries(
         messageData.poll.options.map((_: string, index: number) => [String(index), [] as string[]]),
       );
+    }
+
+    // Ensure Docs ACL includes every chat member whenever a doc is posted.
+    if (docId) {
+      await shareDocWithChatBestEffort(chatId, docId);
     }
 
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
