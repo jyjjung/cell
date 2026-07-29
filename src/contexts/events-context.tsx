@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { getCachedEvents, loadEventsDirectory } from '@/lib/events-directory';
 import { writeLocalCollectionCache } from '@/lib/collection-cache';
+import { useAuth } from '@/contexts/auth-context';
 
 const EVENTS_COLLECTION = 'events';
 const CACHE_KEY = 'events_directory_v1';
@@ -53,11 +54,20 @@ function toIsoString(v: unknown): string | undefined {
 
 export function EventsProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { currentUser, loadingAuth } = useAuth();
   const realtime = pathname.startsWith('/admin/events');
   const [events, setEvents] = useState<AppEvent[]>(() => getCachedEvents());
   const [loading, setLoading] = useState(events.length === 0);
 
   useEffect(() => {
+    if (loadingAuth) return;
+
+    if (!currentUser) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+
     if (realtime) {
       setLoading(true);
       const q = query(collection(db, EVENTS_COLLECTION), orderBy('date', 'asc'));
@@ -118,7 +128,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [realtime]);
+  }, [realtime, currentUser, loadingAuth]);
 
   const refreshEvents = useCallback(async () => {
     const loaded = await loadEventsDirectory({ forceRefresh: true });
