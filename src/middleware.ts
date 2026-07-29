@@ -10,13 +10,11 @@ const PUBLIC_EXACT = new Set([
   '/privacy',
   '/terms',
   '/forgot-password',
-  '/sentry-example-page',
 ]);
 
 const PUBLIC_PREFIXES = [
   '/_next',
   '/api/',
-  '/monitoring',
   '/icon',
   '/favicon',
   '/apple-touch-icon',
@@ -55,7 +53,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://api.dicebear.com https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.vercel-insights.com https://*.ingest.sentry.io https://*.sentry.io",
+      "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://api.dicebear.com https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.vercel-insights.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.sentry.io",
       "media-src 'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com",
       "worker-src 'self' blob:",
       "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://www.youtube.com https://youtube.com",
