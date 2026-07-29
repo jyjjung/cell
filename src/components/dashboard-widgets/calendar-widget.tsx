@@ -18,6 +18,7 @@ import type { AppEvent, CleaningRosterEntry, QTRosterEntry } from "@/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
+import { themeCategory } from "@/lib/theme-status";
 
 interface CalendarWidgetProps {
   selectedDate: Date;
@@ -164,7 +165,7 @@ export default function CalendarWidget({
                       <span
                         className={cn(
                           "h-1 w-1 rounded-full",
-                          isSelected ? "bg-primary-foreground/90" : "bg-orange-500"
+                          isSelected ? "bg-primary-foreground/90" : themeCategory.event
                         )}
                       />
                     )}
@@ -172,7 +173,7 @@ export default function CalendarWidget({
                       <span
                         className={cn(
                           "h-1 w-1 rounded-full",
-                          isSelected ? "bg-primary-foreground/90" : "bg-emerald-500"
+                          isSelected ? "bg-primary-foreground/90" : themeCategory.cleaning
                         )}
                       />
                     )}
@@ -180,7 +181,7 @@ export default function CalendarWidget({
                       <span
                         className={cn(
                           "h-1 w-1 rounded-full",
-                          isSelected ? "bg-primary-foreground/90" : "bg-sky-500"
+                          isSelected ? "bg-primary-foreground/90" : themeCategory.qt
                         )}
                       />
                     )}
@@ -188,7 +189,7 @@ export default function CalendarWidget({
                       <span
                         className={cn(
                           "h-1 w-1 rounded-full",
-                          isSelected ? "bg-primary-foreground/90" : "bg-violet-500"
+                          isSelected ? "bg-primary-foreground/90" : themeCategory.duty
                         )}
                       />
                     )}
@@ -202,20 +203,20 @@ export default function CalendarWidget({
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border/40 px-3 py-2 text-micro-label">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+          <span className={cn("h-1.5 w-1.5 rounded-full", themeCategory.event)} />
           {t.legendEvent}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span className={cn("h-1.5 w-1.5 rounded-full", themeCategory.cleaning)} />
           {t.legendCleaning}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+          <span className={cn("h-1.5 w-1.5 rounded-full", themeCategory.qt)} />
           {t.legendQt}
         </span>
         {myDutyDateKeys && myDutyDateKeys.size > 0 && (
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+            <span className={cn("h-1.5 w-1.5 rounded-full", themeCategory.duty)} />
             {t.legendMyDuty}
           </span>
         )}

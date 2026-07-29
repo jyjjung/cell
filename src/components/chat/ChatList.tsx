@@ -12,7 +12,7 @@ import { getMemberDisplayName, resolveChatAvatar } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
 import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, ArrowRight, Plus, Sparkles, Images, Link2 } from "lucide-react";
+import { MessageCircle, Plus, Sparkles, Images, Link2 } from "lucide-react";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import CreateChatDialog from "./CreateChatDialog";
@@ -121,29 +121,28 @@ export default function ChatList() {
             description={t.startConversation}
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="overflow-hidden border-y border-border bg-background">
             <AnimatePresence mode="popLayout">
               {isAdmin && (
-                <motion.div key="system-assistant" layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+                <motion.div key="system-assistant" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
                   <Link
                     href={`/chat/system`}
                     onClick={() => handleLinkClick(`/chat/system`)}
                     className={cn(
-                      "ui-card flex items-center gap-3 p-3 transition-shadow hover:shadow-md w-full",
-                      pathname === '/chat/system' && "ring-1 ring-primary bg-primary/5"
+                      "flex h-16 w-full items-center gap-3 border-b border-border px-3 transition-colors hover:bg-muted/40",
+                      pathname === '/chat/system' && "bg-accent"
                     )}
                   >
-                    <div className="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center border border-border/40 bg-primary/5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
                       <Sparkles className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <p className="font-semibold truncate text-sm">{t.systemAssistant}</p>
-                        <span className="text-micro-label text-primary shrink-0">{t.adminTool}</span>
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="mb-0.5 flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">{t.systemAssistant}</p>
+                        <span className="shrink-0 text-xs text-primary">{t.adminTool}</span>
                       </div>
-                      <p className="text-micro-label truncate">{t.launchWizard}</p>
+                      <p className="truncate text-xs text-muted-foreground">{t.launchWizard}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </Link>
                 </motion.div>
               )}
@@ -158,64 +157,66 @@ export default function ChatList() {
                 );
                 const lastSenderProfile = allUsers.find(u => u.uid === chat.lastMessageSenderId);
                 const lastSenderName = formatUserDisplayName(lastSenderProfile);
+                const isLast = i === filteredChats.length - 1;
 
                 return (
                   <motion.div
                     key={chat.id}
                     layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ delay: i * 0.02 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: i * 0.015 }}
                     className="w-full"
                   >
                     <Link
                       href={`/chat/${chat.id}`}
                       onClick={() => handleLinkClick(`/chat/${chat.id}`)}
                       className={cn(
-                        "ui-card flex items-center gap-3 p-3 transition-shadow hover:shadow-md w-full",
-                        isActive && "ring-1 ring-primary bg-primary/5",
-                        isUnread && !isActive && "ring-1 ring-primary/20"
+                        "flex h-16 w-full items-center gap-3 px-3 transition-colors hover:bg-muted/40",
+                        !isLast && "border-b border-border",
+                        isActive && "bg-accent",
                       )}
                     >
                       <div className="relative h-10 w-10 shrink-0">
-                        <div className="h-full w-full rounded-full border border-border/40 bg-muted/20">
+                        <div className="h-full w-full overflow-hidden rounded-full bg-muted">
                           {details.avatarData || details.photoURL ? (
                             <GroupChatAvatar avatar={details.avatarData} photoURL={details.photoURL} active={isActive} />
                           ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-primary/5 rounded-full">
-                              <MessageCircle className="h-5 w-5 text-primary/60" />
+                            <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
+                              <MessageCircle className="h-5 w-5 text-muted-foreground" />
                             </div>
                           )}
                         </div>
                         {isUnread && (
-                          <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary border-2 border-background" />
+                          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-primary" />
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <p className="font-semibold truncate text-sm">{details.name}</p>
+                      <div className="min-w-0 flex-1 text-left">
+                        <div className="mb-0.5 flex items-center justify-between gap-2">
+                          <p className={cn(
+                            "truncate text-sm",
+                            isUnread ? "font-semibold text-foreground" : "font-medium text-foreground"
+                          )}>{details.name}</p>
                           {chat.lastMessageSentAt && (
-                            <span className="text-micro-label whitespace-nowrap shrink-0">
+                            <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
                               {formatDistanceToNow(chat.lastMessageSentAt.toDate(), { addSuffix: true })}
                             </span>
                           )}
                         </div>
                         <p className={cn(
-                          "text-xs truncate",
+                          "truncate text-xs",
                           isUnread ? "font-medium text-foreground" : "text-muted-foreground"
                         )}>
                           {chat.lastMessageText ? (
                             <>
-                              <span className="font-medium text-primary/80 mr-1">{lastSenderName}:</span>
+                              <span className="mr-1 font-medium text-foreground/80">{lastSenderName}:</span>
                               {chat.lastMessageText}
                             </>
                           ) : t.messenger}
                         </p>
                       </div>
-
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                     </Link>
                   </motion.div>
                 );

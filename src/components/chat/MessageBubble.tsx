@@ -8,11 +8,9 @@ import { RemoteImage } from '@/components/ui/remote-image';
 import { useAuth } from '@/contexts/auth-context';
 import { getMemberDisplayName, resolveChatUserName } from '@/lib/chat-utils';
 import { resolveDeletedMessageLabel } from '@/lib/deleted-content';
-import { toDateSafe } from '@/lib/firestore-timestamp';
 import { translations } from '@/lib/translations';
 import { cn, isPdfUrl } from '@/lib/utils';
 import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types';
-import { format } from 'date-fns';
 import { CornerUpLeft, FileText, Lock, LockOpen, Maximize, MessagesSquare, Music, SmilePlus, Trash2 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -132,7 +130,7 @@ const MessageBubble = React.memo(function MessageBubble({
   if (message.isDeleted) {
     return (
       <div className="chat-message-row py-2 flex justify-center w-full">
-        <p className="text-[11px] italic text-muted-foreground/60">
+        <p className="text-xs italic text-muted-foreground/60">
           {resolveDeletedMessageLabel(message, t)}
         </p>
       </div>
@@ -143,7 +141,7 @@ const MessageBubble = React.memo(function MessageBubble({
     const label = message.docId ? t.deletedContentDoc : t.deletedContentSetlist;
     return (
       <div className="chat-message-row py-2 flex justify-center w-full">
-        <p className="text-[11px] italic text-muted-foreground/60">{label}</p>
+        <p className="text-xs italic text-muted-foreground/60">{label}</p>
       </div>
     );
   }
@@ -156,7 +154,7 @@ const MessageBubble = React.memo(function MessageBubble({
         : t.removedGroupPhoto;
     return (
       <div className="chat-message-row py-2 flex justify-center w-full">
-        <p className="text-[11px] italic text-muted-foreground/60">
+        <p className="text-xs italic text-muted-foreground/60">
           {actorName} {eventLabel}
         </p>
       </div>
@@ -177,17 +175,15 @@ const MessageBubble = React.memo(function MessageBubble({
 
   if (isCenteredPoll) {
     const pollAuthor = resolveChatUserName(message.senderId, chat, usersById);
-    const activityTime = message.pollUpdatedAt ?? message.createdAt;
-    const activityDate = toDateSafe(activityTime);
 
     return (
       <div className="chat-message-row group isolate relative z-[1] flex w-full flex-col items-center py-2">
         {showName && (
           <p className="mb-1.5 text-center text-micro-label text-muted-foreground">{pollAuthor}</p>
         )}
-        <div className="w-full max-w-[min(100%,340px)] overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="w-full max-w-[min(100%,340px)] overflow-hidden rounded-2xl border border-border bg-card">
           {message.text && (
-            <div className="border-b border-border/50 px-3 pt-2.5 pb-2 text-[15px] leading-snug text-foreground">
+            <div className="border-b border-border/50 px-3 pt-2.5 pb-2 text-base leading-snug text-foreground">
               <LinkifiedText text={message.text} isSender={false} className="font-normal" />
             </div>
           )}
@@ -199,11 +195,6 @@ const MessageBubble = React.memo(function MessageBubble({
             currentUserId={currentUser?.uid}
             onVote={(optionIndex) => votePoll(message.id, optionIndex)}
           />
-          {activityDate && (
-            <p className="px-3 pb-2 text-center text-[11px] tabular-nums text-muted-foreground">
-              {format(activityDate, "HH:mm")}
-            </p>
-          )}
         </div>
 
         {(isSender || isAdmin) && (onDelete || (isSender && setPollResultsLocked)) && (
@@ -282,17 +273,27 @@ const MessageBubble = React.memo(function MessageBubble({
                   isSender ? "items-end" : "items-start"
               )}>
                   {!isSender && isGroup && senderName && showName && (
-                      <p className="text-micro-label text-primary mb-1 ml-3.5 opacity-90 truncate">{senderName}</p>
+                      <p className="mb-0.5 ml-1 truncate text-xs font-medium text-muted-foreground">{senderName}</p>
                   )}
                   <div
                       className={cn(
-                      'relative rounded-[1.25rem] min-w-0 max-w-full',
+                      'relative min-w-0 max-w-full',
                       isStandaloneImage ? 'w-fit' : isSpecialContent ? 'w-full' : 'w-fit min-w-[40px]',
                       youtubeId && !isSpecialContent && "w-full sm:min-w-[300px] max-w-full",
                       !isSpecialContent && (
                           isSender
-                          ? cn('bg-primary text-primary-foreground ml-auto shadow-sm px-2.5 py-1', showAvatar ? 'rounded-br-[0.25rem]' : 'rounded-br-[1.25rem]')
-                          : cn('bg-card text-foreground mr-auto border border-border px-2.5 py-1', showAvatar ? 'rounded-bl-[0.25rem]' : 'rounded-bl-[1.25rem]')
+                          ? cn(
+                              'bg-primary text-primary-foreground ml-auto px-3 py-2 text-base leading-snug',
+                              showAvatar
+                                ? 'rounded-tl-[18px] rounded-tr-[18px] rounded-bl-[18px] rounded-br-[4px]'
+                                : 'rounded-[18px]',
+                            )
+                          : cn(
+                              'bg-muted text-foreground mr-auto px-3 py-2 text-base leading-snug',
+                              showAvatar
+                                ? 'rounded-tl-[18px] rounded-tr-[18px] rounded-br-[18px] rounded-bl-[4px]'
+                                : 'rounded-[18px]',
+                            )
                       ),
                       isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                       )}
@@ -404,7 +405,7 @@ const MessageBubble = React.memo(function MessageBubble({
                               <LinkifiedText 
                                 text={message.text} 
                                 isSender={isSender} 
-                                className="text-[15px] font-normal" 
+                                className="text-base font-normal" 
                               />
                           </div>
                         )}
@@ -655,7 +656,7 @@ function ThreadReplyBadge({
       <p className="text-micro-label text-primary">
         {t.replyCount(count)}
       </p>
-      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+      <p className="text-xs text-muted-foreground truncate mt-0.5">
         <span className="font-bold text-foreground/80">{replierName}:</span> {preview}
       </p>
     </button>

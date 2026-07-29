@@ -48,7 +48,7 @@ function OptionToggle<T extends string>({
   return (
     <div
       className={cn(
-        'grid w-full gap-1 rounded-xl border border-border/60 p-1 bg-background/30',
+        'grid w-full gap-1 rounded-lg border border-input bg-background p-1',
         columns === 2 ? 'grid-cols-2' : columns === 3 ? 'grid-cols-3' : 'grid-cols-4',
       )}
     >
@@ -58,10 +58,10 @@ function OptionToggle<T extends string>({
           type="button"
           onClick={() => onChange(option.id)}
           className={cn(
-            'min-h-[var(--app-control-height-sm)] rounded-lg px-1 py-2 text-[length:var(--app-ui-font-xs)] font-semibold leading-tight text-center transition-colors',
+            'min-h-9 rounded-md px-1 py-2 text-[length:var(--app-ui-font-xs)] font-semibold leading-tight text-center transition-colors',
             value === option.id
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground',
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60',
           )}
           aria-pressed={value === option.id}
         >
@@ -138,7 +138,7 @@ export function AppearanceSettings({ labels }: AppearanceSettingsProps) {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {APP_THEME_LIST.map((theme) => {
             const selected = themeId === theme.id;
             return (
@@ -149,21 +149,27 @@ export function AppearanceSettings({ labels }: AppearanceSettingsProps) {
                 onClick={() => setThemeId(theme.id as AppThemeId)}
                 aria-label={theme.label}
                 aria-pressed={selected}
-                className="rounded-full transition-transform active:scale-95"
+                className={cn(
+                  'flex flex-col items-center gap-1.5 rounded-xl border p-2.5 transition-colors',
+                  selected
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border bg-card hover:bg-muted/40',
+                )}
               >
                 <div
                   className={cn(
-                    'relative size-7 rounded-full transition-shadow sm:size-8',
-                    selected && 'ring-2 ring-primary',
+                    'relative size-8 rounded-full',
+                    selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                   )}
                   style={{ background: appThemePreviewCss(theme.id, isDark) }}
                 >
                   {selected && (
                     <span className="absolute inset-0 flex items-center justify-center">
-                      <Check className="h-3 w-3 text-white drop-shadow-sm" strokeWidth={3} />
+                      <Check className="h-3.5 w-3.5 text-white drop-shadow-sm" strokeWidth={3} />
                     </span>
                   )}
                 </div>
+                <span className="text-[11px] font-medium text-foreground">{theme.label}</span>
               </button>
             );
           })}

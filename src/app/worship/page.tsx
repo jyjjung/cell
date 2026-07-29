@@ -249,7 +249,7 @@ function SongDetailView({
                           title="Convert PDF to Images"
                           onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
                           disabled={convertingId === sheet.id}
-                          className="p-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/10 text-white transition-colors">
+                          className="p-1.5 rounded-lg bg-success/15 hover:bg-success/20 text-success-foreground transition-colors">
                           {convertingId === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         </button>
                       )}
@@ -902,7 +902,7 @@ function SetlistDetailView({
         <div className="flex items-center gap-1.5 shrink-0">
           {orderedSongs.length > 1 && (
             <Button size="sm" variant="outline"
-              className={cn('rounded-xl h-9 gap-1.5 transition-all', reorderMode && 'border-amber-500/50 text-amber-600 bg-amber-500/10')}
+              className={cn('rounded-xl h-9 gap-1.5 transition-all', reorderMode && 'border-chart-4/50 text-chart-4 bg-chart-4/10')}
               onClick={() => reorderMode ? handleCancelReorder() : setReorderMode(true)}>
               <GripVertical className="h-3.5 w-3.5" />
               {reorderMode ? 'Cancel' : 'Reorder'}
@@ -931,7 +931,7 @@ function SetlistDetailView({
       ) : (
         <div className="space-y-2">
           {reorderMode && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600">
+            <div className="flex items-center gap-2 rounded-lg border border-chart-4/25 bg-chart-4/10 px-3 py-2 text-xs font-medium text-chart-4">
               <GripVertical className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Drag songs to reorder, then click Save.</span>
               <span className="sm:hidden">Use arrows to reorder, then click Save.</span>
@@ -979,14 +979,14 @@ function SetlistDetailView({
                   <div className="mt-0.5 flex flex-wrap items-center gap-2">
                     <KeyBadge keyName={ps.key} accent />
                     {sheetsForKey.length > 0 ? (
-                      <span className="text-[10px] font-bold text-green-600 dark:text-green-600 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-success flex items-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> {sheetsForKey.length} {sheetsForKey.length > 1 ? 'pages' : 'page'}
                       </span>
                     ) : (
                       <span className="text-[10px] font-bold text-muted-foreground/40">no sheet</span>
                     )}
                     {hasReferenceTracks(ps) && (
-                      <span className="text-[10px] font-bold text-red-500 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-destructive flex items-center gap-0.5">
                         <Youtube className="h-2.5 w-2.5" />
                         {refTracks.length > 1 ? `${refTracks.length} ref tracks` : 'ref track'}
                       </span>
@@ -1230,16 +1230,16 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
 // ── Worship Roster Components ─────────────────────────────────────────────────
 
 function roleBadgeClass(role: WorshipRole) {
-  if (role === 'Lead') return 'bg-muted border-border text-primary';
-  if (role === 'Drums') return 'bg-muted border-border text-primary';
-  if (role.startsWith('Keys')) return 'bg-amber-500/15 border-amber-500/30 text-amber-500';
-  if (role === 'Bass') return 'bg-muted border-border text-primary';
-  if (role.startsWith('Vox')) return 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600';
-  if (role.startsWith('E/G')) return 'bg-muted border-border text-primary';
-  if (role === 'A/G') return 'bg-muted border-border text-primary';
-  if (role === 'PPT') return 'bg-muted border-border text-primary';
-  if (role === 'Sound') return 'bg-muted border-border text-primary';
-  if (role === 'Lighting') return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-500';
+  if (role === 'Lead') return 'bg-primary/10 border-primary/30 text-primary';
+  if (role === 'Drums') return 'bg-chart-4/15 border-chart-4/30 text-chart-4';
+  if (role.startsWith('Keys')) return 'bg-chart-4/15 border-chart-4/30 text-chart-4';
+  if (role === 'Bass') return 'bg-chart-3/15 border-chart-3/30 text-chart-3';
+  if (role.startsWith('Vox')) return 'bg-success/10 border-success/30 text-success';
+  if (role.startsWith('E/G')) return 'bg-chart-2/15 border-chart-2/30 text-chart-2';
+  if (role === 'A/G') return 'bg-chart-5/15 border-chart-5/30 text-chart-5';
+  if (role === 'PPT') return 'bg-secondary border-border text-secondary-foreground';
+  if (role === 'Sound') return 'bg-chart-3/10 border-chart-3/25 text-chart-3';
+  if (role === 'Lighting') return 'bg-chart-4/10 border-chart-4/25 text-chart-4';
   return 'bg-muted border-border/40 text-muted-foreground';
 }
 
@@ -1423,7 +1423,7 @@ function RosterDetailView({
                   slot.members.map((m, mi) => (
                     <span key={mi} className={cn(
                       'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border',
-                      m.userId ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600' : 'bg-muted border-border/50 text-muted-foreground'
+                      m.userId ? 'bg-success/10 border-success/30 text-success' : 'bg-muted border-border/50 text-muted-foreground'
                     )}>
                       {m.userId ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
                       {formatNameString(m.displayName, 'Guest')}
@@ -1480,7 +1480,7 @@ function RosterDetailView({
                           ? 'opacity-40 cursor-not-allowed bg-muted'
                           : 'hover:bg-muted hover:border-border border border-transparent'
                       )}>
-                      <UserCheck className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      <UserCheck className="h-3.5 w-3.5 text-success shrink-0" />
                       <span className="font-semibold">{u.firstName} {u.lastName}</span>
                       {already && <span className="ml-auto text-[10px] text-muted-foreground/40">added</span>}
                     </button>

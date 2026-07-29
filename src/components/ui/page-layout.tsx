@@ -103,14 +103,18 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
   return (
-    <div className="ui-empty">
+    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
       {Icon ? (
-        <div className="ui-empty-icon">
+        <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <Icon className="h-5 w-5" />
         </div>
+      ) : (
+        <div className="mb-1 h-12 w-12 rounded-full bg-muted" />
+      )}
+      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      {description ? (
+        <p className="max-w-[260px] text-sm leading-relaxed text-muted-foreground">{description}</p>
       ) : null}
-      <h3 className="text-sm font-medium text-foreground">{title}</h3>
-      {description ? <p className="mt-1 max-w-sm text-stat-label">{description}</p> : null}
     </div>
   );
 }

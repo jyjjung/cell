@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { ArrowDown, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
@@ -66,13 +66,37 @@ export default function ChatMessageList({
 }: ChatMessageListProps) {
   const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const pinnedChatIdRef = useRef<string | null>(null);
+
+  const scrollToNewest = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // flex-col-reverse: newest messages live at scrollTop ≈ 0
+    el.scrollTop = 0;
+  };
+
+  // Opening a chat (or first messages paint) should land on the latest messages.
+  useLayoutEffect(() => {
+    if (messages.length === 0) return;
+    const isNewChat = pinnedChatIdRef.current !== chat.id;
+    if (isNewChat) {
+      pinnedChatIdRef.current = chat.id;
+      scrollToNewest();
+      requestAnimationFrame(scrollToNewest);
+      return;
+    }
+    // Stay pinned while layout settles (tall cards / content-visibility).
+    const el = scrollRef.current;
+    if (el && Math.abs(el.scrollTop) <= NEAR_BOTTOM_PX) {
+      scrollToNewest();
+    }
+  }, [chat.id, messages.length, scrollRef]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     const update = () => {
-      // flex-col-reverse: scrollTop ≈ 0 at the newest messages
       setShowJumpToLatest(Math.abs(el.scrollTop) > NEAR_BOTTOM_PX);
     };
 
@@ -150,7 +174,7 @@ export default function ChatMessageList({
         if (diff > 3600000) {
           content.push(
             <div key={`time-${msg.id}`} className="chat-message-row py-3 flex justify-center w-full">
-              <span className="text-micro-label text-muted-foreground/30">
+              <span className="text-xs font-medium text-muted-foreground">
                 {formatMessageDate(msg.createdAt.toDate())}
               </span>
             </div>,

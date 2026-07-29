@@ -13,6 +13,33 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.5.0',
+    subtitle: 'Design refresh & chat Domain UI',
+    date: 'July 29, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Ten Appearance themes with coordinated surfaces, accents, and status colours',
+      },
+      {
+        type: 'Changed',
+        text: 'Chat uses iMessage-style bubbles, a clearer list, and an outlined message composer',
+      },
+      {
+        type: 'Improved',
+        text: 'Buttons, inputs, tabs, and other controls follow a quieter shared design system',
+      },
+      {
+        type: 'Improved',
+        text: 'Chat cards for setlists, events, polls, docs, and rosters look consistent and scale with your font size',
+      },
+      {
+        type: 'Fixed',
+        text: 'Opening a chat lands on the latest messages',
+      },
+    ],
+  },
+  {
     version: 'v1.4.0',
     subtitle: 'Docs sync, performance & stability',
     date: 'July 29, 2026',

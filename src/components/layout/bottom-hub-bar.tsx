@@ -10,6 +10,7 @@ type BottomHubBarProps = {
   maxWidth?: "default" | "wide";
 };
 
+/** Floating hub shell — Figma BottomHubBar tokens (card surface, hairline border). */
 const shellBase =
   "fixed bottom-3 left-1/2 z-40 -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)]";
 
@@ -26,20 +27,28 @@ export function BottomHubBar({
 }: BottomHubBarProps) {
   return (
     <div className={cn(shellBase, widthClass[maxWidth], className)}>
-      <div className={cn("glass-elevated rounded-xl border-transparent px-2 py-1.5", innerClassName)}>
+      <div
+        className={cn(
+          "rounded-2xl border border-border bg-card px-2 py-1.5 shadow-sm",
+          innerClassName,
+        )}
+      >
         {children}
       </div>
     </div>
   );
 }
 
+/** Figma hub tab: active = primary icon + foreground label; inactive = muted. */
 export function bottomHubTabClass(active: boolean) {
   return cn(
-    "flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors text-xs",
-    active ? "bg-background/40 text-foreground font-medium" : "text-muted-foreground hover:text-foreground",
+    "flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 transition-colors text-[10px] font-medium",
+    active
+      ? "text-foreground"
+      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
   );
 }
 
 export function bottomHubIconClass(active: boolean) {
-  return cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground");
+  return cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground");
 }

@@ -11,25 +11,25 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
         primary:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-border bg-background hover:bg-muted/60",
+          "border border-border bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-muted text-foreground hover:bg-muted/80",
-        ghost: "hover:bg-muted/60",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         premium:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 rounded-md px-3 text-xs",
+        default: "h-9 px-4",
+        sm: "h-8 rounded-lg px-3 text-sm",
         xs: "h-7 rounded-md px-2 text-xs",
-        lg: "h-11 rounded-lg px-6",
+        lg: "h-11 rounded-lg px-5 text-base",
         hero: "h-12 rounded-xl px-8 text-base font-semibold",
         icon: "h-9 w-9 rounded-lg",
       },

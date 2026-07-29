@@ -1,8 +1,6 @@
 "use client";
 
-import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
-import { Avatar } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/contexts/users-context';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
@@ -11,11 +9,19 @@ import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { QTRosterEntry } from '@/types';
 import { format } from 'date-fns';
-import {
-    BookOpen, Calendar,
-    ChevronRight
-} from 'lucide-react';
+import { BookOpen, Calendar, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Avatar } from '@/components/ui/avatar';
+import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import {
+  chatCardEyebrow,
+  chatCardFooter,
+  chatCardIcon,
+  chatCardLoading,
+  chatCardMeta,
+  chatCardShell,
+  chatCardTitle,
+} from './chat-card-styles';
 
 interface QTSummaryProps {
   date: string;
@@ -30,11 +36,7 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
   const router = useRouter();
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-semibold text-muted-foreground">
-        Loading QT Entry...
-      </div>
-    );
+    return <div className={chatCardLoading}>Loading…</div>;
   }
 
   if (!entry) {
@@ -57,51 +59,44 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
   };
 
   return (
-    <div 
+    <div
       onClick={() => router.push(`/qt?date=${date}`)}
-      className="block transition-transform active:scale-95 cursor-pointer"
+      className="block cursor-pointer transition-transform active:scale-95"
     >
-      <div className={cn(
-        "group flex w-full max-w-full flex-col gap-4 rounded-2xl border p-4 shadow-sm transition-all duration-200",
-        isSender 
-          ? "border-primary/30 bg-primary/5 text-foreground" 
-          : "border-border/60 bg-card text-foreground"
-      )}>
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-muted/40">
-                    <BookOpen className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-micro-label">QT roster</span>
+      <div className={chatCardShell(isSender, 'max-w-[280px]')}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center gap-2">
+              <div className={chatCardIcon}>
+                <BookOpen className="h-3.5 w-3.5" />
+              </div>
+              <span className={chatCardEyebrow}>QT roster</span>
             </div>
-            <h3 className="mb-2 truncate text-base font-semibold leading-tight text-foreground">{entry.passage}</h3>
-            <p className="text-micro-label">{formatDateText(date)}</p>
+            <h3 className={cn(chatCardTitle, 'mb-1')}>{entry.passage}</h3>
+            <p className={chatCardMeta}>{formatDateText(date)}</p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
-             <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-muted">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 p-3 transition-colors group-hover:bg-muted/50">
-            <Avatar className="h-8 w-8 shrink-0 border border-border/60 overflow-hidden">
-                <PixelAvatar
-                  avatar={user?.avatar}
-                  className="w-full h-full"
-                  nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
-                />
-            </Avatar>
-            <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{name}</p>
-                <p className="truncate text-micro-label">Reader</p>
-            </div>
+        <div className="flex items-center gap-3 rounded-[10px] bg-muted/50 p-3">
+          <Avatar className="h-8 w-8 shrink-0 overflow-hidden border border-border">
+            <PixelAvatar
+              avatar={user?.avatar}
+              className="h-full w-full"
+              nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
+            />
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{name}</p>
+            <p className={chatCardMeta}>Reader</p>
+          </div>
         </div>
 
-        <div className="mt-1 flex items-center justify-between">
-          <span className="text-micro-label transition-colors group-hover:text-foreground">
-            View roster
-          </span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={2.5} />
+        <div className={chatCardFooter}>
+          <span>View roster</span>
+          <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
         </div>
       </div>
     </div>

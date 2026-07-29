@@ -58,7 +58,7 @@ export function LinkifiedText({ text, className, linkClassName, isSender, trunca
           "underline underline-offset-2 decoration-current/30 transition-all duration-200 font-medium break-all leading-normal",
           isSender 
             ? "text-white hover:text-white decoration-white/60 brightness-110" 
-            : "text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300",
+            : "text-primary hover:text-primary/80",
           linkClassName
         );
 

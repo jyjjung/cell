@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { resolveChatUserName } from "@/lib/chat-utils";
 import { BarChart3, Check, Lock } from "lucide-react";
 import type { Chat, ChatMessage, UserProfileData } from "@/types";
+import { chatCardEyebrow, chatCardIcon } from "./chat-card-styles";
 
 type PollSummaryProps = {
   message: ChatMessage;
@@ -46,28 +47,53 @@ export default function PollSummary({
     footerText = `${uniqueVoters} ${uniqueVoters === 1 ? "person" : "people"} voted`;
   }
 
+  // Centered poll cards always use the card surface (isSender=false from MessageBubble).
+  // Inline sender bubbles keep primary-tinted option chrome.
+  const onPrimary = isSender;
+
   return (
     <div className="w-full min-w-[200px]">
       <div
         className={cn(
-          "flex items-start gap-2 px-3 pt-2.5 pb-2",
-          isSender ? "text-primary-foreground" : "text-foreground",
+          "flex items-start gap-2 px-3.5 pb-2 pt-3.5",
+          onPrimary ? "text-primary-foreground" : "text-foreground",
         )}
       >
-        <BarChart3 className={cn("mt-0.5 h-4 w-4 shrink-0", isSender ? "text-primary-foreground/80" : "text-primary")} />
+        <div
+          className={cn(
+            chatCardIcon,
+            "mt-0.5",
+            onPrimary && "border border-primary-foreground/25 bg-primary-foreground/15 text-primary-foreground",
+          )}
+        >
+          <BarChart3 className="h-3 w-3" />
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-snug">{poll.question}</p>
+          <p
+            className={cn(
+              chatCardEyebrow,
+              onPrimary && "text-primary-foreground/70",
+            )}
+          >
+            Poll
+          </p>
+          <p className="mt-1 text-base font-semibold leading-snug">{poll.question}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             {allowMultiple && (
-              <p className={cn("text-[11px]", isSender ? "text-primary-foreground/60" : "text-muted-foreground")}>
+              <p
+                className={cn(
+                  "text-xs",
+                  onPrimary ? "text-primary-foreground/60" : "text-muted-foreground",
+                )}
+              >
                 Choose any that apply
               </p>
             )}
             {votingLocked && (
               <p
                 className={cn(
-                  "inline-flex items-center gap-1 text-[11px]",
-                  isSender ? "text-primary-foreground/60" : "text-muted-foreground",
+                  "inline-flex items-center gap-1 text-xs",
+                  onPrimary ? "text-primary-foreground/60" : "text-muted-foreground",
                 )}
               >
                 <Lock className="h-3 w-3" />
@@ -78,7 +104,7 @@ export default function PollSummary({
         </div>
       </div>
 
-      <div className="space-y-1 px-2 pb-2">
+      <div className="space-y-1.5 px-3.5 pb-2">
         {poll.options.map((option, index) => {
           const voterIds = votes[String(index)] ?? [];
           const optionVotes = voterIds.length;
@@ -96,39 +122,38 @@ export default function PollSummary({
                 onVote(index);
               }}
               className={cn(
-                "relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left transition-colors",
+                "relative w-full overflow-hidden rounded-lg border px-2.5 py-2 text-left transition-colors",
                 votingLocked && "cursor-default",
-                isSender
+                onPrimary
                   ? isSelected
                     ? "border-primary-foreground/40 bg-primary-foreground/15"
-                    : "border-primary-foreground/20 bg-primary-foreground/10"
+                    : "border-primary-foreground/20 bg-transparent"
                   : isSelected
-                    ? "border-primary/50 bg-primary/10"
-                    : "border-border/60 bg-muted/30",
+                    ? "border-primary bg-transparent"
+                    : "border-border bg-transparent",
                 !votingLocked &&
-                  (isSender
-                    ? !isSelected && "hover:bg-primary-foreground/15"
-                    : !isSelected && "hover:bg-muted/50"),
+                  (onPrimary
+                    ? !isSelected && "hover:bg-primary-foreground/10"
+                    : !isSelected && "hover:bg-muted/40"),
               )}
             >
-              {totalVotes > 0 && (
+              {totalVotes > 0 && !onPrimary && (
                 <span
                   className={cn(
                     "absolute inset-y-0 left-0 transition-all",
-                    isSender ? "bg-primary-foreground/15" : "bg-primary/10",
-                    isSelected && (isSender ? "bg-primary-foreground/25" : "bg-primary/20"),
+                    isSelected ? "bg-primary/10" : "bg-foreground/[0.04]",
                   )}
                   style={{ width: `${pct}%` }}
                 />
               )}
               <span className="relative block">
                 <span className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5">
                     {isSelected && (
                       <Check
                         className={cn(
                           "h-3.5 w-3.5 shrink-0",
-                          isSender ? "text-primary-foreground" : "text-primary",
+                          onPrimary ? "text-primary-foreground" : "text-primary",
                         )}
                       />
                     )}
@@ -137,7 +162,7 @@ export default function PollSummary({
                   <span
                     className={cn(
                       "shrink-0 text-xs tabular-nums",
-                      isSender ? "text-primary-foreground/70" : "text-muted-foreground",
+                      onPrimary ? "text-primary-foreground/70" : "text-muted-foreground",
                     )}
                   >
                     {totalVotes > 0 ? `${pct}%` : "0"}
@@ -146,8 +171,8 @@ export default function PollSummary({
                 {voterNames.length > 0 && (
                   <span
                     className={cn(
-                      "mt-1 block text-[11px] leading-snug",
-                      isSender ? "text-primary-foreground/65" : "text-muted-foreground",
+                      "mt-1 block text-xs leading-snug",
+                      onPrimary ? "text-primary-foreground/65" : "text-muted-foreground",
                     )}
                   >
                     {voterNames.join(", ")}
@@ -161,10 +186,8 @@ export default function PollSummary({
 
       <p
         className={cn(
-          "border-t px-3 py-1.5 text-[11px]",
-          isSender
-            ? "border-primary-foreground/15 text-primary-foreground/60"
-            : "border-border/50 text-muted-foreground",
+          "px-3.5 pb-3.5 pt-1.5 text-xs",
+          onPrimary ? "text-primary-foreground/60" : "text-muted-foreground",
         )}
       >
         {footerText}

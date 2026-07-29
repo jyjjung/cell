@@ -129,10 +129,10 @@ export default function AppSidebar() {
                     tooltip={item.label}
                     onClick={() => navigate(item.href)}
                     className={cn(
-                      "h-9 rounded-lg px-2.5 text-[13px] font-medium transition-colors gap-2.5 focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "h-9 rounded-lg px-3 text-[13px] font-medium transition-colors gap-2.5 focus-visible:ring-2 focus-visible:ring-ring/50",
                       active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                        ? "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground [&>svg]:text-primary"
+                        : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground"
                     )}
                   >
                     <Link href={item.href}>
@@ -160,10 +160,10 @@ export default function AppSidebar() {
                     tooltip="Admin"
                     onClick={() => navigate('/admin')}
                     className={cn(
-                      "h-9 rounded-lg px-2.5 text-[13px] font-medium gap-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "h-9 rounded-lg px-3 text-[13px] font-medium gap-2.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
                       pathname.startsWith('/admin')
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                        ? "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground [&>svg]:text-primary"
+                        : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground"
                     )}
                   >
                     <Link href="/admin">

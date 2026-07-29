@@ -61,7 +61,7 @@ export function NewSongDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="s-title">Song Title <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="s-title">Song Title <span className="text-destructive">*</span></Label>
             <Input id="s-title" placeholder="e.g. Way Maker" value={title} onChange={e => setTitle(e.target.value)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
@@ -70,7 +70,7 @@ export function NewSongDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
+            <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!title.trim() || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
             </Button>
@@ -114,17 +114,17 @@ export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; 
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="pl-name">Service Name <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="pl-name">Service Name <span className="text-destructive">*</span></Label>
             <Input id="pl-name" placeholder="e.g. Sunday Morning Service" value={name} onChange={e => setName(e.target.value)}
               className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pl-date">Date <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="pl-date">Date <span className="text-destructive">*</span></Label>
             <Input id="pl-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="rounded-xl" />
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
+            <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!name.trim() || !date || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
             </Button>
@@ -182,11 +182,11 @@ export function NewRosterDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="r-name">Roster Name <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="r-name">Roster Name <span className="text-destructive">*</span></Label>
             <Input id="r-name" placeholder="e.g. Sunday Morning" value={name} onChange={e => setName(e.target.value)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="r-date">Date <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="r-date">Date <span className="text-destructive">*</span></Label>
             <Input id="r-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
@@ -199,7 +199,7 @@ export function NewRosterDialog({
                 const sl = playlists.find(p => p.id === e.target.value);
                 if (sl) { setName(sl.name); setDate(sl.date); }
               }}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring/40"
             >
               <option value="">None</option>
               {playlists.map(pl => (
@@ -211,7 +211,7 @@ export function NewRosterDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleSubmit}
+            <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!name.trim() || !date || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
             </Button>
@@ -297,9 +297,9 @@ export function SetlistSongConfigPanel({
                 className={cn(
                   'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all relative',
                   selectedKey === k
-                    ? 'bg-muted border-border text-white shadow-md shadow-rose-500/20'
+                    ? 'bg-muted border-border text-white shadow-md shadow-primary/20'
                     : hasSheet
-                    ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-600 hover:border-border'
+                    ? 'bg-success/10 border-success/30 text-success hover:border-border'
                     : 'bg-muted border-border/40 text-muted-foreground hover:border-border',
                 )}
               >
@@ -323,7 +323,7 @@ export function SetlistSongConfigPanel({
             No chart for this key — upload one or pick a different key.
           </p>
         ) : sheetsForKey.length === 1 ? (
-          <p className="text-xs text-green-600 dark:text-green-600 font-semibold flex items-center gap-1">
+          <p className="text-xs text-success font-semibold flex items-center gap-1">
             <Check className="h-3 w-3" /> 1 page selected
           </p>
         ) : (
@@ -474,7 +474,7 @@ export function AddChordSheetDialog({
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-rose-500">*</span></Label>
+            <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-destructive">*</span></Label>
             <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
           </div>
           <div className="space-y-1.5">
@@ -484,7 +484,7 @@ export function AddChordSheetDialog({
               value={key}
               disabled={lockKey}
               onChange={e => setKey(e.target.value as ChordKey)}
-              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-rose-500/40 disabled:opacity-60"
+              className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
             >
               {WORSHIP_ALL_KEYS.map(k => (
                 <option key={k} value={k}>{k === 'numbers' ? '#' : k}</option>
@@ -493,7 +493,7 @@ export function AddChordSheetDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600" onClick={handleUpload}
+            <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
               disabled={!file || saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
             </Button>

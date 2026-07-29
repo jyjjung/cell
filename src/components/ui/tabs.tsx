@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -8,6 +7,7 @@ import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root
 
+/** Figma Tab list — underline strip, not pill track. */
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -15,7 +15,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 w-full items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+      "inline-flex h-auto w-full items-stretch justify-start gap-0 border-b border-border bg-transparent p-0 text-muted-foreground",
       className
     )}
     {...props}
@@ -30,12 +30,17 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-full flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "relative inline-flex flex-1 items-center justify-center whitespace-nowrap px-3 pb-2.5 pt-2 text-[13px] font-medium transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "text-muted-foreground hover:text-foreground",
+      "data-[state=active]:font-semibold data-[state=active]:text-foreground",
+      "after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:rounded-full after:bg-transparent data-[state=active]:after:bg-primary",
       className
     )}
     {...props}
   >
-    <span className="flex items-center">{children}</span>
+    <span className="flex items-center gap-1.5">{children}</span>
   </TabsPrimitive.Trigger>
 ))
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
@@ -47,7 +52,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-3 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className
     )}
     {...props}

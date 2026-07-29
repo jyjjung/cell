@@ -61,7 +61,7 @@ export default function ReadingsHubTabs() {
           <div className="flex items-center justify-center">
             <button
               type="button"
-              className="glass-elevated border-transparent flex h-10 w-10 items-center justify-center rounded-full"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-primary transition-colors hover:bg-accent"
               onClick={() => setIsOpen(!isOpen)}
             >
               <BookOpen className="h-4 w-4 text-primary" />

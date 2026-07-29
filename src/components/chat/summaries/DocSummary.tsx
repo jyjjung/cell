@@ -15,6 +15,13 @@ import { formatAppDateTime, formatUserDisplayName, getAppLocale } from '@/lib/fo
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { db } from '@/lib/firebase';
 import type { DocNote, DocVisibility } from '@/types';
+import {
+  chatCardEyebrow,
+  chatCardLoading,
+  chatCardMeta,
+  chatCardShell,
+  chatCardTitle,
+} from './chat-card-styles';
 
 interface DocSummaryProps {
   docId: string;
@@ -188,11 +195,7 @@ export default function DocSummary({ docId, isSender, onMissing }: DocSummaryPro
   }, [note, usersById, t.communityMember]);
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-micro-label font-medium text-muted-foreground">
-        {t.loading}
-      </div>
-    );
+    return <div className={chatCardLoading}>{t.loading}</div>;
   }
 
   if (missing || !note) {
@@ -207,28 +210,21 @@ export default function DocSummary({ docId, isSender, onMissing }: DocSummaryPro
 
   return (
     <Link href={`/docs/${docId}`} className="block transition-transform active:scale-95">
-      <div
-        className={cn(
-          'group flex w-full max-w-full flex-col gap-3 rounded-2xl border p-4 shadow-sm transition-all duration-200',
-          isSender
-            ? 'border-primary/30 bg-primary/5 text-foreground'
-            : 'border-border/60 bg-card text-foreground',
-        )}
-      >
+      <div className={chatCardShell(isSender, 'max-w-[280px]')}>
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/40">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-muted">
             <FileText className="h-5 w-5 text-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-micro-label text-muted-foreground mb-0.5">{t.documentAttachment}</p>
-            <h3 className="truncate text-base font-semibold leading-tight">{title}</h3>
+            <p className={cn(chatCardEyebrow, 'mb-0.5')}>{t.documentAttachment}</p>
+            <h3 className={chatCardTitle}>{title}</h3>
             {preview ? (
-              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{preview}</p>
+              <p className={cn(chatCardMeta, 'mt-1 line-clamp-2')}>{preview}</p>
             ) : null}
           </div>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground mt-1 opacity-60 group-hover:opacity-100" />
+          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground opacity-60 group-hover:opacity-100" />
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {authorLabel ? <span>{authorLabel}</span> : null}
           {updated ? <span>{updated}</span> : null}
           {note.visibility === 'shared' ? (

@@ -38,19 +38,27 @@ function PaceStatCard({
   value,
   unit,
   description,
+  tone = 'primary',
 }: {
   title: string;
   value: string | number;
   unit?: string;
   description?: string;
+  tone?: 'primary' | 'chart-2' | 'chart-3' | 'chart-4';
 }) {
+  const toneClass =
+    tone === 'chart-2' ? 'text-chart-2' :
+    tone === 'chart-3' ? 'text-chart-3' :
+    tone === 'chart-4' ? 'text-chart-4' :
+    'text-primary';
+
   return (
     <div className="ui-metric">
       <div className="mb-2">
         <p className="text-micro-label">{title}</p>
       </div>
       <div>
-        <p className="text-stat-value">
+        <p className={cn("text-stat-value", toneClass)}>
           {value}{' '}
           {unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}
         </p>
@@ -355,9 +363,9 @@ export default function BibleChecklistPage() {
                   </PageSection>
                       {!isGuest && paceStats.passagesLeft > 0 && (
                         <div className="ui-metric-grid">
-                          <PaceStatCard title={t.passagesLeft} value={paceStats.passagesLeft} />
-                          <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} />
-                          <PaceStatCard title={t.avgPerDay} value={paceStats.passagesPerDay} unit="passages" />
+                          <PaceStatCard title={t.passagesLeft} value={paceStats.passagesLeft} tone="primary" />
+                          <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} tone="chart-2" />
+                          <PaceStatCard title={t.avgPerDay} value={paceStats.passagesPerDay} unit="passages" tone="chart-3" />
                         </div>
                       )}
                       <ReadingHeatmap dailyReadings={plan.dailyReadings} completedPassages={completedPassages} />
@@ -387,9 +395,9 @@ export default function BibleChecklistPage() {
                                 key={week.weekNumber}
                                 className={cn(
                                     "ui-card cursor-pointer transition-shadow hover:shadow-md",
-                                    !isGuest && week.isCurrent ? "ring-1 ring-blue-500/35" :
-                                    !isGuest && week.isOverdue ? "ring-1 ring-destructive/35" : 
-                                    "ring-1 ring-border/60"
+                                    !isGuest && week.isCurrent ? "ring-1 ring-primary/35 bg-accent/50" :
+                                    !isGuest && week.isOverdue ? "ring-1 ring-destructive/35 bg-destructive/5" :
+                                    "ring-1 ring-border/60 hover:bg-secondary/40"
                                 )}
                                 onClick={() => setViewState({ view: 'single-week-details', week: week })}
                             >
@@ -397,15 +405,20 @@ export default function BibleChecklistPage() {
                                     <div className="flex-1 min-w-0">
                                         <p className={cn(
                                             "text-micro-label mb-1",
-                                            !isGuest && week.isCurrent ? "text-blue-600 dark:text-blue-400" :
+                                            !isGuest && week.isCurrent ? "text-primary" :
                                             !isGuest && week.isOverdue ? "text-destructive" :
-                                            "text-muted-foreground/80"
+                                            "text-chart-2"
                                         )}>{t.week} {week.weekNumber}</p>
                                         <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{`${format(week.startDate, 'MMM d')} - ${format(week.endDate, 'MMM d, yyyy')}`}</h3>
                                         <p className="text-xs text-muted-foreground mt-1 truncate max-w-lg">{week.passageSummary}</p>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <p className="text-lg font-bold">{Math.round(week.progressPercentage)}%</p>
+                                        <p className={cn(
+                                          "text-lg font-bold",
+                                          !isGuest && week.isCurrent ? "text-primary" :
+                                          !isGuest && week.isOverdue ? "text-destructive" :
+                                          week.progressPercentage > 0 ? "text-chart-3" : "text-foreground"
+                                        )}>{Math.round(week.progressPercentage)}%</p>
                                         <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{week.completedCount} / {week.totalCount} CH</p>
                                     </div>
                               </div>
