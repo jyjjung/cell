@@ -42,7 +42,7 @@ export default function ChatLinksList({
   }
 
   return (
-    <div className="absolute inset-0 overflow-y-auto px-3 py-3 custom-scrollbar">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
       <div className="mx-auto flex max-w-2xl flex-col gap-2">
         {links.map((link, i) => (
           <motion.div
