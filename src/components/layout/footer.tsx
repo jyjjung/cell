@@ -1,14 +1,17 @@
-
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 export default function Footer() {
   const pathname = usePathname();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
 
   // Only show footer on public-facing pages
-  const publicRoutes = ['/', '/login', '/signup', '/features', '/privacy', '/forgot-password', '/pending-approval'];
+  const publicRoutes = ['/', '/login', '/signup', '/features', '/privacy', '/terms', '/forgot-password', '/pending-approval'];
   const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'));
 
   // Always hide on individual chat routes
@@ -24,19 +27,26 @@ export default function Footer() {
           em. © 2026
         </p>
         
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           <Link 
             href="/features" 
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            How it works
+            {t.howItWorks}
           </Link>
 
           <Link 
             href="/privacy" 
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Privacy Policy
+            {t.privacyPolicy}
+          </Link>
+
+          <Link
+            href="/terms"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t.termsOfService}
           </Link>
         </div>
       </div>

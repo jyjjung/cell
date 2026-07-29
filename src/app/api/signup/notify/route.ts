@@ -3,8 +3,18 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { getAdminUserIds, sendUserNotification } from '@/lib/server-notifications';
 import { hasCapability } from '@/lib/role-capabilities';
+import { clientIpFromRequest, rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
+  const ip = clientIpFromRequest(request);
+  const limited = rateLimit(`signup-notify:${ip}`, 20, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
+  }
+
   try {
     const body = await request.json();
     const userId = body.userId as string | undefined;

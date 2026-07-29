@@ -19,7 +19,7 @@ const loginFormSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
-export default function LoginForm() {
+export default function LoginForm({ redirectTo = '/' }: { redirectTo?: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const { signInUser } = useAuth();
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function LoginForm() {
 
     try {
       await signInUser(data.email, data.password);
-      router.push('/');
+      router.push(redirectTo || '/');
     } catch (error: any) {
       setIsLoading(false);
       let message = "An unexpected error occurred. Please try again.";

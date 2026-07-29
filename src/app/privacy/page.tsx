@@ -78,7 +78,11 @@ export default function PrivacyPolicyPage() {
             and chat. This page explains what information the app stores and what you can control.
           </p>
           <p>
-            By using the app you agree to this policy. For a feature overview, see{" "}
+            By using the app you agree to this policy and the{" "}
+            <Link href="/terms" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Terms of Service
+            </Link>
+            . For a feature overview, see{" "}
             <Link href="/features" className="font-medium text-foreground underline-offset-4 hover:underline">
               How it works
             </Link>

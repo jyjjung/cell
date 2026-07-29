@@ -8,6 +8,7 @@ import {
   mergeAuthorIds,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { applyChatMembersToDocAcl } from '@/lib/docs-chat-share';
 import {
   docAclFromData,
@@ -91,7 +92,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         ) {
           // Keep existing content; still allow title / metadata updates.
         } else {
-          updates.content = body.content;
+          updates.content = sanitizeRichHtml(body.content);
         }
       }
       const existingAuthors = Array.isArray(data.authorIds) ? (data.authorIds as string[]) : [data.ownerId as string];

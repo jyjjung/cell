@@ -6,6 +6,7 @@ import {
   DOC_TITLE_MAX,
   normalizeSharedWith,
 } from '@/lib/docs-utils';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { applyChatMembersToDocAcl, mergeSourceChatIds } from '@/lib/docs-chat-share';
 import { requireChatMembership } from '@/lib/server-docs-chat-share';
 import type { DocVisibility } from '@/types';
@@ -55,7 +56,9 @@ export async function POST(request: NextRequest) {
     const uid = await requireUid(request);
     const body = await request.json();
     const title = String(body.title ?? '').trim().slice(0, DOC_TITLE_MAX);
-    const content = typeof body.content === 'string' ? body.content : '<p></p>';
+    const content = sanitizeRichHtml(
+      typeof body.content === 'string' ? body.content : '<p></p>',
+    );
     const chatId = typeof body.chatId === 'string' ? body.chatId.trim() : '';
 
     let visibility = (body.visibility === 'shared' ? 'shared' : 'private') as DocVisibility;

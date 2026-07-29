@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
-const pwa = require("@ducanh2912/next-pwa");
+const { withSentryConfig } = require('@sentry/nextjs');
+const pwa = require('@ducanh2912/next-pwa');
 const defaultRuntimeCaching = pwa.runtimeCaching;
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -10,37 +11,37 @@ const MEDIA_CACHE_MAX_ENTRIES = 2500;
 const FIREBASE_MEDIA_CACHING = [
   {
     urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
-    handler: "CacheFirst",
+    handler: 'CacheFirst',
     options: {
-      cacheName: "firebase-storage-media",
+      cacheName: 'firebase-storage-media',
       expiration: { maxEntries: MEDIA_CACHE_MAX_ENTRIES, maxAgeSeconds: ONE_YEAR_SECONDS },
       cacheableResponse: { statuses: [0, 200] },
     },
   },
   {
     urlPattern: /^https:\/\/storage\.googleapis\.com\/cell-abca4\.firebasestorage\.app\/.*/i,
-    handler: "CacheFirst",
+    handler: 'CacheFirst',
     options: {
-      cacheName: "google-cloud-storage-media",
+      cacheName: 'google-cloud-storage-media',
       expiration: { maxEntries: MEDIA_CACHE_MAX_ENTRIES, maxAgeSeconds: ONE_YEAR_SECONDS },
       cacheableResponse: { statuses: [0, 200] },
     },
   },
   {
     urlPattern: /^https:\/\/api\.dicebear\.com\/.*/i,
-    handler: "CacheFirst",
+    handler: 'CacheFirst',
     options: {
-      cacheName: "dicebear-avatars",
+      cacheName: 'dicebear-avatars',
       expiration: { maxEntries: 512, maxAgeSeconds: ONE_YEAR_SECONDS },
       cacheableResponse: { statuses: [0, 200] },
     },
   },
   {
     urlPattern: ({ sameOrigin, url }) =>
-      sameOrigin && url.pathname.startsWith("/api/bible"),
-    handler: "NetworkFirst",
+      sameOrigin && url.pathname.startsWith('/api/bible'),
+    handler: 'NetworkFirst',
     options: {
-      cacheName: "bible-passage-api",
+      cacheName: 'bible-passage-api',
       networkTimeoutSeconds: 4,
       expiration: { maxEntries: 512, maxAgeSeconds: ONE_YEAR_SECONDS },
       cacheableResponse: { statuses: [0, 200] },
@@ -51,16 +52,16 @@ const FIREBASE_MEDIA_CACHING = [
 /** Default cross-origin rule only caches 1h — exclude our media hosts (handled above). */
 function patchCrossOriginCaching(entries) {
   return entries.map((entry) => {
-    if (entry.options?.cacheName !== "cross-origin") return entry;
+    if (entry.options?.cacheName !== 'cross-origin') return entry;
     return {
       ...entry,
       urlPattern: ({ sameOrigin, url }) => {
         if (sameOrigin) return false;
         const host = url.hostname;
         if (
-          host === "firebasestorage.googleapis.com" ||
-          host === "storage.googleapis.com" ||
-          host === "api.dicebear.com"
+          host === 'firebasestorage.googleapis.com' ||
+          host === 'storage.googleapis.com' ||
+          host === 'api.dicebear.com'
         ) {
           return false;
         }
@@ -71,7 +72,7 @@ function patchCrossOriginCaching(entries) {
 }
 
 const withPWA = pwa.default({
-  dest: "public",
+  dest: 'public',
   register: true,
   skipWaiting: true,
   disable: false,
@@ -127,10 +128,38 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '6.1',
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+        ],
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve.alias.canvas = false;
     return config;
   },
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = withSentryConfig(withPWA(nextConfig), {
+  // Optional source-map upload — set these in CI/Vercel when you want readable stack traces.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  tunnelRoute: '/monitoring',
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

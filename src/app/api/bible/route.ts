@@ -2,8 +2,18 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getLocalBiblePassage, formatPassageToHtml } from '@/lib/bible/xml-bible-parser';
 import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
 import { normalizeBibleVersion, toXmlVersion } from '@/lib/bible-versions';
+import { clientIpFromRequest, rateLimit } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
+  const ip = clientIpFromRequest(request);
+  const limited = rateLimit(`bible:${ip}`, 120, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const passageParam = searchParams.get('passage');
   const version = normalizeBibleVersion(searchParams.get('version'));

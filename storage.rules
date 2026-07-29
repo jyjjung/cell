@@ -1,10 +1,19 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function canManageWorship() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && userDoc().data.get('capabilityKeys', []).hasAny(['app.admin', 'worship.manage']);
     }
 
     match /avatars/{fileName} {
@@ -27,7 +36,7 @@ service firebase.storage {
 
     match /worshipChordSheets/{songId}/{fileName} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if canManageWorship();
     }
 
     match /{allPaths=**} {
