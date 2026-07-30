@@ -15,6 +15,11 @@ import { useInbox, type InboxTab } from '@/contexts/inbox-context';
 import { useNotifications } from '@/hooks/use-notifications';
 import { db } from '@/lib/firebase';
 import { reviveTimestamp, toDateSafe, toMillisSafe } from '@/lib/firestore-timestamp';
+import {
+  reactionsMapsEqual,
+  toggleReactionMap,
+  type ReactionMap,
+} from '@/lib/reaction-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/types';
@@ -202,6 +207,8 @@ export function InboxSheet() {
   const [viewFilter, setViewFilter] = useState<ViewFilter>('unread');
   const [history, setHistory] = useState<AppNotification[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  /** Local optimistic reactions so pills update immediately inside the sheet. */
+  const [reactionOverrides, setReactionOverrides] = useState<Record<string, ReactionMap>>({});
 
   // Prefer All when opening with nothing unread, so older items are visible immediately.
   useEffect(() => {
@@ -210,6 +217,13 @@ export function InboxSheet() {
     setViewFilter(hasUnread ? 'unread' : 'all');
     // Intentionally only when the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setReactionOverrides({});
+      return;
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -277,10 +291,34 @@ export function InboxSheet() {
       .sort(sortNewest);
   }, [history, notifications]);
 
+  const applyReactionOverride = (n: AppNotification): AppNotification => {
+    const override = reactionOverrides[n.id];
+    return override ? { ...n, reactions: override } : n;
+  };
+
   const shownAnnouncements =
-    viewFilter === 'unread' ? unreadAnnouncements : historyAnnouncements;
+    (viewFilter === 'unread' ? unreadAnnouncements : historyAnnouncements).map(applyReactionOverride);
   const shownGeneral =
     viewFilter === 'unread' ? unreadGeneral : historyGeneral;
+
+  // Drop local overrides once live/history data has caught up.
+  useEffect(() => {
+    setReactionOverrides((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        const server =
+          notifications.find((n) => n.id === id)?.reactions ??
+          history?.find((n) => n.id === id)?.reactions;
+        if (reactionsMapsEqual(server, next[id])) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [notifications, history]);
 
   const activeUnread = tab === 'announcements' ? unreadAnnouncements : unreadGeneral;
 
@@ -298,27 +336,12 @@ export function InboxSheet() {
     router.push(n.relatedUrl);
   };
 
-  const applyLocalReaction = (notificationId: string, emoji: string) => {
+  const handleToggleReaction = (notification: AppNotification, emoji: string) => {
     if (!uid) return;
-    setHistory((prev) => {
-      if (!prev) return prev;
-      return prev.map((item) => {
-        if (item.id !== notificationId) return item;
-        const reactors = item.reactions?.[emoji] ?? [];
-        const hasReacted = reactors.includes(uid);
-        const nextReactors = hasReacted
-          ? reactors.filter((id) => id !== uid)
-          : [...reactors, uid];
-        const nextReactions = { ...(item.reactions || {}) };
-        if (nextReactors.length === 0) {
-          delete nextReactions[emoji];
-        } else {
-          nextReactions[emoji] = nextReactors;
-        }
-        return { ...item, reactions: nextReactions };
-      });
-    });
-    toggleReaction(notificationId, emoji);
+    const base = reactionOverrides[notification.id] ?? notification.reactions;
+    const nextReactions = toggleReactionMap(base, emoji, uid);
+    setReactionOverrides((prev) => ({ ...prev, [notification.id]: nextReactions }));
+    toggleReaction(notification.id, emoji, base);
   };
 
   const tabButton = (id: InboxTab, label: string, count: number, Icon: typeof Megaphone) => (
@@ -443,7 +466,7 @@ export function InboxSheet() {
                       showReactions
                       accentClass="bg-chart-4"
                       onMarkRead={() => markAsRead(n.id)}
-                      onToggleReaction={(emoji) => applyLocalReaction(n.id, emoji)}
+                      onToggleReaction={(emoji) => handleToggleReaction(n, emoji)}
                       onOpen={n.relatedUrl ? () => openItem(n) : undefined}
                     />
                   ))}
