@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.7.2',
+    subtitle: 'Announcement reaction names',
+    date: 'July 30, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Announcement reactions open a popover that lists who reacted, matching chat',
+      },
+    ],
+  },
+  {
     version: 'v1.7.1',
     subtitle: 'Clearer schedule rows',
     date: 'July 30, 2026',
