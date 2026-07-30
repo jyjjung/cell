@@ -254,14 +254,28 @@ export function InboxSheet() {
     [liveGeneral, uid],
   );
 
-  const historyAnnouncements = useMemo(
-    () => (history ?? notifications).filter((n) => n.type === 'announcement').sort(sortNewest),
-    [history, notifications],
-  );
-  const historyGeneral = useMemo(
-    () => (history ?? notifications).filter((n) => n.type !== 'announcement').sort(sortNewest),
-    [history, notifications],
-  );
+  const historyAnnouncements = useMemo(() => {
+    const base = (history ?? notifications).filter((n) => n.type === 'announcement');
+    const liveById = new Map(notifications.map((n) => [n.id, n]));
+    return base
+      .map((n) => {
+        const live = liveById.get(n.id);
+        if (!live) return n;
+        return { ...n, reactions: live.reactions, readBy: live.readBy };
+      })
+      .sort(sortNewest);
+  }, [history, notifications]);
+  const historyGeneral = useMemo(() => {
+    const base = (history ?? notifications).filter((n) => n.type !== 'announcement');
+    const liveById = new Map(notifications.map((n) => [n.id, n]));
+    return base
+      .map((n) => {
+        const live = liveById.get(n.id);
+        if (!live) return n;
+        return { ...n, reactions: live.reactions, readBy: live.readBy };
+      })
+      .sort(sortNewest);
+  }, [history, notifications]);
 
   const shownAnnouncements =
     viewFilter === 'unread' ? unreadAnnouncements : historyAnnouncements;
@@ -282,6 +296,29 @@ export function InboxSheet() {
     if (!n.relatedUrl) return;
     closeInbox();
     router.push(n.relatedUrl);
+  };
+
+  const applyLocalReaction = (notificationId: string, emoji: string) => {
+    if (!uid) return;
+    setHistory((prev) => {
+      if (!prev) return prev;
+      return prev.map((item) => {
+        if (item.id !== notificationId) return item;
+        const reactors = item.reactions?.[emoji] ?? [];
+        const hasReacted = reactors.includes(uid);
+        const nextReactors = hasReacted
+          ? reactors.filter((id) => id !== uid)
+          : [...reactors, uid];
+        const nextReactions = { ...(item.reactions || {}) };
+        if (nextReactors.length === 0) {
+          delete nextReactions[emoji];
+        } else {
+          nextReactions[emoji] = nextReactors;
+        }
+        return { ...item, reactions: nextReactions };
+      });
+    });
+    toggleReaction(notificationId, emoji);
   };
 
   const tabButton = (id: InboxTab, label: string, count: number, Icon: typeof Megaphone) => (
@@ -406,7 +443,7 @@ export function InboxSheet() {
                       showReactions
                       accentClass="bg-chart-4"
                       onMarkRead={() => markAsRead(n.id)}
-                      onToggleReaction={(emoji) => toggleReaction(n.id, emoji)}
+                      onToggleReaction={(emoji) => applyLocalReaction(n.id, emoji)}
                       onOpen={n.relatedUrl ? () => openItem(n) : undefined}
                     />
                   ))}

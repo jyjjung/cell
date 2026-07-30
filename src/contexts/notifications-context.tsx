@@ -435,13 +435,43 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const toggleReaction = useCallback((notificationId: string, emoji: string) => {
     if (!currentUser) return;
+    const uid = currentUser.uid;
     const existing = notificationsRef.current.find((n) => n.id === notificationId);
     const reactors = existing?.reactions?.[emoji] ?? [];
-    const hasReacted = reactors.includes(currentUser.uid);
+    const hasReacted = reactors.includes(uid);
+    const nextReactors = hasReacted
+      ? reactors.filter((id) => id !== uid)
+      : [...reactors, uid];
+
+    // Optimistic local update so inbox (including archive) reflects the change immediately.
+    if (existing) {
+      const nextReactions = { ...(existing.reactions || {}) };
+      if (nextReactors.length === 0) {
+        delete nextReactions[emoji];
+      } else {
+        nextReactions[emoji] = nextReactors;
+      }
+      const previous = notificationsRef.current;
+      const next = previous.map((n) =>
+        n.id === notificationId ? { ...n, reactions: nextReactions } : n,
+      );
+      setNotifications(next);
+      writeLocalCollectionCache(cacheKey(uid, mode), next);
+
+      updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
+        [`reactions.${emoji}`]: hasReacted ? arrayRemove(uid) : arrayUnion(uid),
+      }).catch((e) => {
+        console.error('Error toggling announcement reaction:', e);
+        setNotifications(previous);
+        writeLocalCollectionCache(cacheKey(uid, mode), previous);
+      });
+      return;
+    }
+
     updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
-      [`reactions.${emoji}`]: hasReacted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid),
+      [`reactions.${emoji}`]: hasReacted ? arrayRemove(uid) : arrayUnion(uid),
     }).catch((e) => console.error('Error toggling announcement reaction:', e));
-  }, [currentUser]);
+  }, [currentUser, mode]);
 
   const value = useMemo(
     () => ({

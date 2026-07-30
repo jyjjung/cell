@@ -21,6 +21,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'Announcement reactions open a popover that lists who reacted, matching chat',
       },
+      {
+        type: 'Fixed',
+        text: 'Announcement reaction popovers open correctly over the inbox sheet',
+      },
     ],
   },
   {
