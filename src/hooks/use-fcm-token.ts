@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { getToken } from 'firebase/messaging';
-import { messaging, db } from '@/lib/firebase';
+import { messagingPromise, db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getFCMRegistration } from '@/lib/fcm-registration';
@@ -23,6 +23,7 @@ export function useFCMToken() {
   const hasSynced = useRef(false);
 
   const registerToken = useCallback(async (options: boolean | RegisterTokenOptions = false) => {
+    const messaging = await messagingPromise;
     if (!messaging || !currentUser) return;
 
     const opts: RegisterTokenOptions =
