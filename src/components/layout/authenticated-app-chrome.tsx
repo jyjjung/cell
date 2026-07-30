@@ -4,7 +4,7 @@ import { useFCMToken } from '@/hooks/use-fcm-token';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { getFCMRegistration } from '@/lib/fcm-registration';
-import { messaging } from '@/lib/firebase';
+import { messagingPromise } from '@/lib/firebase';
 import { isChatUnread } from '@/lib/notification-utils';
 import {
   NOTIFICATION_UNREAD_LOOKBACK_DAYS,
@@ -59,12 +59,13 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
   }, [totalUnreadCount, updateNativeBadge]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !messaging) return;
+    if (typeof window === 'undefined') return;
 
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
-    const attach = () => {
+    const attach = async () => {
+      const messaging = await messagingPromise;
       if (cancelled || !messaging) return;
       unsubscribe = onMessage(messaging, (payload) => {
         const title = payload.data?.title || 'New Notification';
