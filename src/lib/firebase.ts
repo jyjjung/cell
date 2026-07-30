@@ -7,7 +7,7 @@ import {
     persistentLocalCache,
     persistentMultipleTabManager, type Firestore
 } from 'firebase/firestore';
-import { getMessaging, type Messaging } from 'firebase/messaging';
+import { getMessaging, isSupported, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -56,12 +56,25 @@ if (typeof window !== 'undefined') {
 const storage = getStorage(app);
 
 let messaging: Messaging | null = null;
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    try {
-        messaging = getMessaging(app);
-    } catch (e) {
-        console.warn("Firebase Messaging not supported in this browser. Push notifications will be disabled.", e);
-    }
-}
+
+/**
+ * Resolves to a Messaging instance when the browser supports all APIs required
+ * by Firebase Messaging (Service Worker, Push, Notifications, IndexedDB).
+ * Resolves to null on unsupported browsers (e.g. Safari without Push support).
+ */
+export const messagingPromise: Promise<Messaging | null> =
+  typeof window !== 'undefined'
+    ? isSupported()
+        .then((supported) => {
+          if (!supported) return null;
+          try {
+            messaging = getMessaging(app);
+            return messaging;
+          } catch {
+            return null;
+          }
+        })
+        .catch(() => null)
+    : Promise.resolve(null);
 
 export { db, auth, storage, messaging, };
