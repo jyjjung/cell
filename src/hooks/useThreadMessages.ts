@@ -10,6 +10,7 @@ import {
     readAllMessagesFromDeviceCache, threadMessagesCollection
 } from '@/lib/chat-messages-device-cache';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { db } from '@/lib/firebase';
@@ -287,6 +288,8 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, parentMessageId, THREAD_SUBCOLLECTION, messageId);
     const previous = messagesRef.current.find((m) => m.id === messageId);
     const previousReactions = previous?.reactions ? { ...previous.reactions } : {};
+    const wasReacted = (previousReactions[emoji] || []).includes(currentUser.uid);
+    const isAdding = !wasReacted;
 
     let nextReactions: ChatMessage['reactions'] = {};
     setMessages((prev) =>
@@ -306,6 +309,14 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
 
     try {
       await updateDoc(messageRef, { reactions: nextReactions });
+      if (isAdding && previous?.senderId && previous.senderId !== currentUser.uid) {
+        const headers = await getClientAuthHeaders();
+        fetch('/api/send-chat-reaction-push', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId, messageId, emoji, parentMessageId }),
+        }).catch((error) => console.error('[useThreadMessages] Reaction push failed:', error));
+      }
     } catch {
       setMessages((prev) =>
         prev.map((m) => (m.id === messageId ? { ...m, reactions: previousReactions } : m)),
