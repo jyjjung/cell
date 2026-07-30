@@ -12,9 +12,9 @@ import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
 import { NOTIFICATION_QUERY_LIMITS, NOTIFICATION_UNREAD_LOOKBACK_DAYS } from '@/lib/notification-visibility';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
+import { reactionsMapsEqual, toggleReactionMap, type ReactionMap } from '@/lib/reaction-utils';
 import type { AppNotification } from '@/types';
 import {
-    arrayRemove,
     arrayUnion,
     collection,
     deleteDoc,
@@ -169,7 +169,11 @@ type NotificationsContextValue = {
   deleteNotification: (notificationId: string) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: (notificationIdsToMark?: string[]) => void;
-  toggleReaction: (notificationId: string, emoji: string) => void;
+  toggleReaction: (
+    notificationId: string,
+    emoji: string,
+    baseReactions?: ReactionMap,
+  ) => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -187,6 +191,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   });
   const [loading, setLoading] = useState(notifications.length === 0);
   const notificationsRef = useRef(notifications);
+  /** Pending optimistic reactions so unrelated snapshot merges don't clobber them. */
+  const reactionOverridesRef = useRef<Map<string, ReactionMap>>(new Map());
 
   useEffect(() => {
     notificationsRef.current = notifications;
@@ -217,10 +223,25 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let detachListeners: (() => void) | null = null;
 
+    const applyReactionOverrides = (items: AppNotification[]): AppNotification[] => {
+      if (reactionOverridesRef.current.size === 0) return items;
+      return items.map((n) => {
+        const override = reactionOverridesRef.current.get(n.id);
+        if (!override) return n;
+        if (reactionsMapsEqual(n.reactions, override)) {
+          reactionOverridesRef.current.delete(n.id);
+          return n;
+        }
+        return { ...n, reactions: override };
+      });
+    };
+
     const persist = (items: AppNotification[]) => {
       if (cancelled) return;
-      setNotifications(items);
-      writeLocalCollectionCache(key, items);
+      const next = applyReactionOverrides(items);
+      notificationsRef.current = next;
+      setNotifications(next);
+      writeLocalCollectionCache(key, next);
       setLoading(false);
     };
 
@@ -433,44 +454,38 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     });
   }, [currentUser, mode]);
 
-  const toggleReaction = useCallback((notificationId: string, emoji: string) => {
+  const toggleReaction = useCallback((
+    notificationId: string,
+    emoji: string,
+    baseReactions?: ReactionMap,
+  ) => {
     if (!currentUser) return;
     const uid = currentUser.uid;
     const existing = notificationsRef.current.find((n) => n.id === notificationId);
-    const reactors = existing?.reactions?.[emoji] ?? [];
-    const hasReacted = reactors.includes(uid);
-    const nextReactors = hasReacted
-      ? reactors.filter((id) => id !== uid)
-      : [...reactors, uid];
+    const base = baseReactions ?? existing?.reactions;
+    const nextReactions = toggleReactionMap(base, emoji, uid);
 
-    // Optimistic local update so inbox (including archive) reflects the change immediately.
-    if (existing) {
-      const nextReactions = { ...(existing.reactions || {}) };
-      if (nextReactors.length === 0) {
-        delete nextReactions[emoji];
-      } else {
-        nextReactions[emoji] = nextReactors;
-      }
-      const previous = notificationsRef.current;
-      const next = previous.map((n) =>
-        n.id === notificationId ? { ...n, reactions: nextReactions } : n,
-      );
-      setNotifications(next);
-      writeLocalCollectionCache(cacheKey(uid, mode), next);
+    reactionOverridesRef.current.set(notificationId, nextReactions);
 
-      updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
-        [`reactions.${emoji}`]: hasReacted ? arrayRemove(uid) : arrayUnion(uid),
-      }).catch((e) => {
-        console.error('Error toggling announcement reaction:', e);
-        setNotifications(previous);
-        writeLocalCollectionCache(cacheKey(uid, mode), previous);
-      });
-      return;
-    }
+    const previous = notificationsRef.current;
+    const next = existing
+      ? previous.map((n) =>
+          n.id === notificationId ? { ...n, reactions: nextReactions } : n,
+        )
+      : previous;
+    notificationsRef.current = next;
+    setNotifications(next);
+    writeLocalCollectionCache(cacheKey(uid, mode), next);
 
     updateDoc(doc(db, NOTIFICATIONS_COLLECTION, notificationId), {
-      [`reactions.${emoji}`]: hasReacted ? arrayRemove(uid) : arrayUnion(uid),
-    }).catch((e) => console.error('Error toggling announcement reaction:', e));
+      reactions: nextReactions,
+    }).catch((e) => {
+      console.error('Error toggling announcement reaction:', e);
+      reactionOverridesRef.current.delete(notificationId);
+      notificationsRef.current = previous;
+      setNotifications(previous);
+      writeLocalCollectionCache(cacheKey(uid, mode), previous);
+    });
   }, [currentUser, mode]);
 
   const value = useMemo(

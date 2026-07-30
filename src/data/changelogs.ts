@@ -25,6 +25,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Announcement reaction popovers open correctly over the inbox sheet',
       },
+      {
+        type: 'Fixed',
+        text: 'Announcement reactions update immediately when you add or remove them, without closing the inbox',
+      },
     ],
   },
   {
