@@ -35,7 +35,8 @@ export function AnnouncementReactions({
           .join(', ');
 
         return (
-          <Popover key={emoji}>
+          // modal + elevated z-index: Radix Sheet (Dialog) otherwise traps/hides portaled popovers
+          <Popover key={emoji} modal>
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -52,7 +53,8 @@ export function AnnouncementReactions({
             </PopoverTrigger>
             <PopoverContent
               side="top"
-              className="w-auto max-w-[220px] rounded-xl border border-border !bg-popover px-3 py-2.5 text-popover-foreground shadow-xl"
+              className="z-[100] w-auto max-w-[220px] rounded-xl border border-border !bg-popover px-3 py-2.5 text-popover-foreground shadow-xl"
+              onOpenAutoFocus={(e) => e.preventDefault()}
             >
               <div className="flex flex-col gap-2">
                 <div className="break-words text-xs leading-snug">
@@ -76,7 +78,7 @@ export function AnnouncementReactions({
           </Popover>
         );
       })}
-      <Popover>
+      <Popover modal>
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -86,7 +88,11 @@ export function AnnouncementReactions({
             <SmilePlus className="h-3.5 w-3.5" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2" align="start">
+        <PopoverContent
+          className="z-[100] w-auto p-2"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <div className="flex gap-1">
             {STANDARD_REACTIONS.map((emoji) => (
               <button
