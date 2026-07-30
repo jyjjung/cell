@@ -375,6 +375,8 @@ export function useMessages(chatId: string | null) {
     const messageRef = doc(db, CHATS_COLLECTION, chatId, MESSAGES_SUBCOLLECTION, messageId);
     const previous = messagesRef.current.find((m) => m.id === messageId);
     const previousReactions = previous?.reactions ? { ...previous.reactions } : {};
+    const wasReacted = (previousReactions[emoji] || []).includes(currentUser.uid);
+    const isAdding = !wasReacted;
 
     let nextReactions: ChatMessage['reactions'] = {};
     setMessages((prev) =>
@@ -394,6 +396,14 @@ export function useMessages(chatId: string | null) {
 
     try {
       await updateDoc(messageRef, { reactions: nextReactions });
+      if (isAdding && previous?.senderId && previous.senderId !== currentUser.uid) {
+        const headers = await getClientAuthHeaders();
+        fetch('/api/send-chat-reaction-push', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chatId, messageId, emoji }),
+        }).catch((error) => console.error('[useMessages] Reaction push failed:', error));
+      }
     } catch {
       setMessages((prev) =>
         prev.map((m) => (m.id === messageId ? { ...m, reactions: previousReactions } : m)),
