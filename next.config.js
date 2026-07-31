@@ -89,7 +89,7 @@ const withPWA = pwa.default({
 
 const nextConfig = {
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns'],
+    optimizePackageImports: ['lucide-react', 'date-fns', 'framer-motion'],
   },
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -142,6 +142,23 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '6.1',
   },
   async headers() {
+    // Static headers at the CDN — avoids rebuilding CSP in middleware on every hit.
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://va.vercel-scripts.com https://*.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.firebasestorage.app https://api.dicebear.com https://vitals.vercel-insights.com https://va.vercel-scripts.com https://*.vercel-insights.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.sentry.io",
+      "media-src 'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.firebasestorage.app",
+      "worker-src 'self' blob:",
+      "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://www.youtube.com https://youtube.com",
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
@@ -153,6 +170,7 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), payment=()',
           },
+          { key: 'Content-Security-Policy', value: csp },
         ],
       },
     ];

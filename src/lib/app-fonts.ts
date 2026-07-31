@@ -8,7 +8,8 @@ import { GeistSans } from 'geist/font/sans';
 const literata = Literata({ subsets: ['latin'], variable: '--font-literata', display: 'swap' });
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  // Cover regular + semibold; avoid shipping four mono files on every page.
+  weight: ['400', '600'],
   variable: '--font-ibm-plex-mono',
   display: 'swap',
 });

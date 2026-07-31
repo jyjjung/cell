@@ -1,37 +1,13 @@
-"use client";
+import { cookies } from 'next/headers';
+import { SESSION_COOKIE_NAME } from '@/lib/auth-session';
+import HomeClient from './home-client';
 
-import dynamic from 'next/dynamic';
-import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
-import LandingPage from '@/components/home/landing-page';
-import { DashboardSkeleton } from '@/components/home/dashboard-skeleton';
-
-const DashboardPage = dynamic(() => import('@/components/home/dashboard-page'), {
-  ssr: false,
-  loading: () => <DashboardSkeleton />,
-});
-
-export default function HomePage() {
-  const { currentUser, hasSession, loadingAuth } = useAuth();
-  const router = useRouter();
-
-  // Wait for Firebase auth restore — hasSession starts false and would flash landing.
-  if (loadingAuth) {
-    return <DashboardSkeleton />;
-  }
-
-  if (!hasSession) {
-    return (
-      <LandingPage
-        onSignIn={() => router.push('/login')}
-        onSignUp={() => router.push('/signup')}
-      />
-    );
-  }
-
-  if (!currentUser) {
-    return <DashboardSkeleton />;
-  }
-
-  return <DashboardPage currentUser={currentUser} />;
+/**
+ * Server-read session cookie so guests paint the landing page immediately
+ * instead of waiting on Firebase auth restore (FCP/LCP).
+ */
+export default async function HomePage() {
+  const jar = await cookies();
+  const initialHasSession = Boolean(jar.get(SESSION_COOKIE_NAME)?.value);
+  return <HomeClient initialHasSession={initialHasSession} />;
 }
