@@ -396,7 +396,7 @@ export function useMessages(chatId: string | null) {
 
     try {
       await updateDoc(messageRef, { reactions: nextReactions });
-      if (isAdding && previous?.senderId && previous.senderId !== currentUser.uid) {
+      if (isAdding) {
         const headers = await getClientAuthHeaders();
         fetch('/api/send-chat-reaction-push', {
           method: 'POST',

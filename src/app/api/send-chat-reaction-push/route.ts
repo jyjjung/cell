@@ -42,7 +42,7 @@ function messagePreview(message: ChatMessage): string {
   if (message.text?.trim()) return preview(message.text);
   if (message.imageUrl) return 'a photo';
   if (message.poll?.question) return preview(message.poll.question);
-  return 'your message';
+  return 'a message';
 }
 
 export async function POST(request: NextRequest) {
@@ -111,14 +111,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 });
     }
 
-    const authorId = message.senderId;
-    if (!authorId || authorId === authResult.uid) {
-      return NextResponse.json({ success: true, delivered: 0, reason: 'skipped_self' });
-    }
-
     const reactors = message.reactions?.[trimmedEmoji] || [];
     if (!reactors.includes(authResult.uid)) {
       return NextResponse.json({ success: true, delivered: 0, reason: 'not_reacted' });
+    }
+
+    const recipientIds = members.filter(
+      (uid): uid is string => typeof uid === 'string' && uid !== authResult.uid,
+    );
+    if (recipientIds.length === 0) {
+      return NextResponse.json({ success: true, delivered: 0, reason: 'no_recipients' });
     }
 
     // One push per reactor per emoji per message (skip remove/re-add spam).
@@ -126,7 +128,7 @@ export async function POST(request: NextRequest) {
     const logRef = adminDb.collection('notificationLog').doc(dedupeId);
     try {
       await logRef.create({
-        userId: authorId,
+        recipientIds,
         reactorId: authResult.uid,
         chatId,
         messageId,
@@ -151,17 +153,32 @@ export async function POST(request: NextRequest) {
       bodyText = `Reacted ${trimmedEmoji} to "${previewText}"`;
     }
 
-    const delivered = await deliverDataPushToUser(
-      authorId,
-      {
-        title,
-        body: bodyText,
-        tag: `chat-reaction-${messageId}`,
-        link: `/chat/${chatId}`,
-      },
-      adminDb,
-      adminMessaging,
+    const pushPayload = {
+      title,
+      body: bodyText,
+      tag: `chat-reaction-${messageId}`,
+      link: `/chat/${chatId}`,
+    };
+
+    const deliveryResults = await Promise.all(
+      recipientIds.map(async (recipientId) => {
+        try {
+          return await deliverDataPushToUser(
+            recipientId,
+            pushPayload,
+            adminDb,
+            adminMessaging,
+          );
+        } catch (error) {
+          console.error(
+            `[send-chat-reaction-push] Delivery failed for ${recipientId}:`,
+            error,
+          );
+          return 0;
+        }
+      }),
     );
+    const delivered = deliveryResults.reduce((sum, count) => sum + count, 0);
 
     await logRef.update({ pushDeliveredCount: delivered }).catch(() => {});
 
