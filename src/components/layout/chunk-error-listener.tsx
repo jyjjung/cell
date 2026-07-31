@@ -51,6 +51,21 @@ export function ChunkErrorListener() {
     const handleRejection = (e: PromiseRejectionEvent) => {
       if (e.reason?.name === 'ChunkLoadError' || e.reason?.message?.includes('Loading chunk')) {
         handleChunkError();
+        return;
+      }
+
+      // Safari reports failed fetch() calls as an unhandled "TypeError: Load failed".
+      // Next.js App Router RSC navigation requests throw this when the network is
+      // unavailable, and the stack trace originates inside _next/static/chunks.
+      // Suppress only those — application-level fetch errors should still reach Sentry.
+      if (
+        e.reason instanceof TypeError &&
+        e.reason.message === 'Load failed' &&
+        typeof e.reason.stack === 'string' &&
+        e.reason.stack.includes('/_next/static/chunks/')
+      ) {
+        e.preventDefault();
+        console.warn('[ChunkErrorListener] Next.js RSC fetch failed (network unavailable) — suppressed.');
       }
     };
 
