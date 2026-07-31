@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.8.2',
+    subtitle: 'Group reaction notifications',
+    date: 'July 31, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Chat reaction pushes go to everyone in the chat, not only the message author',
+      },
+      {
+        type: 'Changed',
+        text: 'Thread reply reactions notify all chat members the same way',
+      },
+    ],
+  },
+  {
     version: 'v1.8.1',
     subtitle: 'Faster first load',
     date: 'July 31, 2026',
