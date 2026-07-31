@@ -13,6 +13,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.8.1',
+    subtitle: 'Faster first load',
+    date: 'July 31, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Landing and sign-in pages show up sooner instead of waiting on a loading skeleton',
+      },
+      {
+        type: 'Improved',
+        text: 'The first screen after open paints faster by doing less work up front',
+      },
+      {
+        type: 'Improved',
+        text: 'Signed-out browsing no longer loads the signed-in data layer in the background',
+      },
+    ],
+  },
+  {
     version: 'v1.8.0',
     subtitle: 'Chat reaction notifications',
     date: 'July 30, 2026',

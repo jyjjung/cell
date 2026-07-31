@@ -1,7 +1,8 @@
-
 import type { Metadata, Viewport } from 'next';
 import dynamic from 'next/dynamic';
+import { cookies } from 'next/headers';
 import { appFontVariableClasses } from '@/lib/app-fonts';
+import { SESSION_COOKIE_NAME } from '@/lib/auth-session';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -71,11 +72,14 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-content',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jar = await cookies();
+  const initialSessionCookie = Boolean(jar.get(SESSION_COOKIE_NAME)?.value);
+
   return (
     <html lang="en" suppressHydrationWarning data-glass="off" className={appFontVariableClasses}>
       <body className="antialiased">
@@ -83,7 +87,7 @@ export default function RootLayout({
         <OfflineBanner />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
             <PageLoadingProvider>
-              <AuthProvider>
+              <AuthProvider initialSessionCookie={initialSessionCookie}>
                 <DocumentLang />
                 <AppDataProviders>
                 <ColorPaletteProvider>

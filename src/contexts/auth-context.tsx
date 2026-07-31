@@ -34,6 +34,8 @@ interface AuthContextType {
 
   currentUser: AppUser | null;
   hasSession: boolean;
+  /** Server cookie was present on first paint — expect Firebase restore (avoid guest flash). */
+  initialSessionCookie: boolean;
   loadingAuth: boolean;
   signUpUser: (email: string, password: string, firstName: string, lastName: string, inviteCode?: string) => Promise<AppUser | null>;
   signInUser: (email: string, password: string) => Promise<AppUser | null>;
@@ -82,9 +84,16 @@ function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, 
   } as AppUser;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  initialSessionCookie = false,
+}: {
+  children: ReactNode;
+  /** HttpOnly `__session` presence from the server layout (FCP hint). */
+  initialSessionCookie?: boolean;
+}) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [hasSession, setHasSession] = useState(false);
+  const [hasSession, setHasSession] = useState(initialSessionCookie);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isWorshipTeam, setIsWorshipTeam] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -419,6 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminUpdateUserProfile,
       currentUser,
       hasSession,
+      initialSessionCookie,
       loadingAuth,
       signUpUser,
       signInUser,

@@ -328,6 +328,21 @@
     @apply w-full min-h-full px-5 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5;
   }
 
+  @keyframes permission-banner-in {
+    from {
+      opacity: 0;
+      transform: translateY(1.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-permission-banner {
+    animation: permission-banner-in 0.28s ease-out both;
+  }
+
   .page-container {
     @apply relative mx-auto flex w-full max-w-3xl flex-col gap-7 pb-24;
   }

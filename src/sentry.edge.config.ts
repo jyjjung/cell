@@ -6,5 +6,6 @@ Sentry.init({
   dsn,
   enabled: Boolean(dsn),
   environment: process.env.NODE_ENV,
-  tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.05,
+  // Middleware is the main Edge surface — keep tracing off to cut Edge CPU.
+  tracesSampleRate: 0,
 });

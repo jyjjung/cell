@@ -1,31 +1,43 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import Header from './header';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import Footer from './footer';
 import { Bell } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
-
-import ReadingsHubTabs from '@/components/readings/readings-hub-tabs';
-import ScheduleHubTabs from '@/components/schedule/schedule-hub-tabs';
-import AdminHubTabs from '@/components/admin/admin-hub-tabs';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
-import { SetlistPlaylistBar } from '@/components/worship/SetlistPlaylistBar';
-import { InboxSheet } from '@/components/inbox/InboxSheet';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useIsMobile } from '@/hooks/use-mobile';
-import dynamic from 'next/dynamic';
 
 const CommandMenuLazy = dynamic(
   () => import('./command-menu').then((m) => m.CommandMenu),
+  { ssr: false },
+);
+const InboxSheetLazy = dynamic(
+  () => import('@/components/inbox/InboxSheet').then((m) => m.InboxSheet),
+  { ssr: false },
+);
+const SetlistPlaylistBarLazy = dynamic(
+  () => import('@/components/worship/SetlistPlaylistBar').then((m) => m.SetlistPlaylistBar),
+  { ssr: false },
+);
+const ReadingsHubTabsLazy = dynamic(
+  () => import('@/components/readings/readings-hub-tabs'),
+  { ssr: false },
+);
+const ScheduleHubTabsLazy = dynamic(
+  () => import('@/components/schedule/schedule-hub-tabs'),
+  { ssr: false },
+);
+const AdminHubTabsLazy = dynamic(
+  () => import('@/components/admin/admin-hub-tabs'),
   { ssr: false },
 );
 
@@ -47,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { currentUser, hasSession, loadingAuth } = useAuth();
+  const { currentUser, hasSession, loadingAuth, initialSessionCookie } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
@@ -119,10 +131,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, loadingAuth, pathname, router]);
 
-  // hasSession starts false until onAuthStateChanged — wait so signed-in users
-  // don't flash guest chrome / landing before the session restores.
+  // Cookie hint from the server: only block with a skeleton when we expect a restore.
+  // Guests (no cookie) paint immediately — better FCP/LCP on landing and auth pages.
   if (!hasSession) {
-    if (loadingAuth) {
+    if (loadingAuth && initialSessionCookie) {
       return (
         <div className="flex min-h-svh flex-col bg-background">
           <div className="h-14 border-b border-border/40 bg-background/80" />
@@ -167,7 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-1 flex-col min-h-0">
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
           <CommandMenuLazy open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
-          <InboxSheet />
+          <InboxSheetLazy />
 
           <div
             className={cn(
@@ -191,35 +203,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {isIndividualChat ? (
                   children
                 ) : (
-                  <motion.div
-                    key={pathname}
-                    initial={false}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                    className="page-shell"
-                  >
-                    {children}
-                  </motion.div>
+                  <div className="page-shell">{children}</div>
                 )}
               </div>
             </main>
           </div>
           <Footer />
         </div>
-        {showReadingsTabs && <ReadingsHubTabs />}
-        {showScheduleTabs && <ScheduleHubTabs />}
-        {showAdminTabs && <AdminHubTabs />}
+        {showReadingsTabs && <ReadingsHubTabsLazy />}
+        {showScheduleTabs && <ScheduleHubTabsLazy />}
+        {showAdminTabs && <AdminHubTabsLazy />}
         <PWAInstallPrompt />
 
-        <SetlistPlaylistBar />
+        <SetlistPlaylistBarLazy />
 
         {showPermissionBanner && (
           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-lg"
-            >
+            <div className="flex animate-permission-banner items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-lg">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-muted p-2">
                   <Bell className="h-5 w-5 text-foreground" />
@@ -246,7 +246,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   Set Up
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
       </SidebarInset>
