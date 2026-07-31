@@ -90,8 +90,11 @@ export function ChatImageGallery({
 
   if (!imageUrl) return null;
 
+  // Keep solid dark controls — do not use backdrop-blur-* here.
+  // With data-glass="off", global CSS remaps backdrop-blur utilities to the
+  // theme card background, which makes white icons invisible in light mode.
   const controlBtn =
-    'h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md shrink-0';
+    'h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/15 hover:bg-white/25 !text-white hover:!text-white shrink-0 disabled:opacity-30';
 
   return (
     <AnimatePresence>
@@ -114,7 +117,7 @@ export function ChatImageGallery({
                   variant="ghost"
                   onClick={goPrev}
                   disabled={idx === 0}
-                  className={cn(controlBtn, idx === 0 && 'opacity-30')}
+                  className={controlBtn}
                   aria-label="Previous photo"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -127,7 +130,7 @@ export function ChatImageGallery({
                   variant="ghost"
                   onClick={goNext}
                   disabled={idx === images.length - 1}
-                  className={cn(controlBtn, idx === images.length - 1 && 'opacity-30')}
+                  className={controlBtn}
                   aria-label="Next photo"
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -151,7 +154,7 @@ export function ChatImageGallery({
               variant="ghost"
               onClick={() => transformRef.current?.zoomOut(0.5)}
               disabled={scale <= 1.01}
-              className={cn(controlBtn, scale <= 1.01 && 'opacity-30')}
+              className={controlBtn}
               aria-label="Zoom out"
             >
               <ZoomOut className="h-4 w-4 md:h-5 md:w-5" />
