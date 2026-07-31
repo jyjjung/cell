@@ -51,8 +51,20 @@ function createDb(): Firestore {
         tabManager: persistentMultipleTabManager(),
       }),
     });
-  } catch {
-    return getFirestore(app);
+  } catch (err) {
+    // If IndexedDB is corrupted (e.g. "refusing to open IndexedDB"), trigger
+    // the same recovery flow used for async errors: clear persistence and reload.
+    // Use a session flag to avoid an infinite reload loop.
+    if (isIndexedDbCorruptionError(err) && sessionStorage.getItem(IDB_RECOVERY_FLAG) !== '1') {
+      sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
+      // Fall back to memory cache for this session while we schedule a reload.
+      const fallbackDb = initializeFirestore(app, { localCache: memoryLocalCache() });
+      clearIndexedDbPersistence(fallbackDb)
+        .catch(() => { /* ignore secondary errors */ })
+        .finally(() => window.location.reload());
+      return fallbackDb;
+    }
+    return initializeFirestore(app, { localCache: memoryLocalCache() });
   }
 }
 
@@ -64,8 +76,9 @@ function isIndexedDbCorruptionError(reason: unknown): boolean {
   if (!(reason instanceof Error)) return false;
   const msg = reason.message ?? '';
   return (
-    msg.includes('IndexedDB transaction') &&
-    (msg.includes('AbortError') || msg.includes('code=unavailable'))
+    msg.includes('refusing to open IndexedDB') ||
+    (msg.includes('IndexedDB transaction') &&
+      (msg.includes('AbortError') || msg.includes('code=unavailable')))
   );
 }
 
