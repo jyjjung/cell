@@ -334,6 +334,8 @@ export interface Chat {
   lastMessageSenderId?: string;
   typing?: { [uid: string]: Timestamp };
   memberSeen: { [uid: string]: Timestamp };
+  /** Per-member unseen message counts for badges (incremented on send, cleared on seen). */
+  memberUnreadCount?: { [uid: string]: number };
   createdAt: Timestamp;
 }
 

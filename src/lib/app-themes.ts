@@ -342,21 +342,3 @@ export function normalizeAppThemeId(
   return isAppThemeId(value) ? value : DEFAULT_APP_THEME_ID;
 }
 
-/** Export recipe tokens for design-system sync / Theme Specs. */
-export function getAllThemeSpecs(): Array<{
-  id: AppThemeId;
-  label: string;
-  accentH: number;
-  accentS: number;
-  light: ColorPaletteTokens;
-  dark: ColorPaletteTokens;
-}> {
-  return THEME_LIST.map((theme) => ({
-    id: theme.id,
-    label: theme.label,
-    accentH: theme.accent.h,
-    accentS: theme.accent.s,
-    light: buildThemeTokens(false, theme),
-    dark: buildThemeTokens(true, theme),
-  }));
-}

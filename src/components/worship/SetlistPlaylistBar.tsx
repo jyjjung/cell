@@ -5,7 +5,7 @@ import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    ChevronDown, Headphones, ListMusic, Pause, Play, SkipBack, SkipForward, X
+    ChevronDown, Headphones, ListMusic, Pause, Play, RotateCw, SkipBack, SkipForward, X
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
@@ -25,7 +25,7 @@ export function SetlistPlaylistBar() {
 
   const {
     isActive,
-    queue, setlistName, currentIndex, currentItem, playing, ready,
+    queue, setlistName, currentIndex, currentItem, playing, ready, failed, retry,
     currentTime, duration, expanded, setExpanded,
     togglePlay, playIndex, next, previous, seek, stopPlaylist,
   } = playlist;
@@ -37,6 +37,18 @@ export function SetlistPlaylistBar() {
 
   return (
     <AnimatePresence>
+      {isActive && expanded && (
+        <motion.button
+          key="setlist-playlist-dismiss"
+          type="button"
+          aria-label="Collapse playlist"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[249] cursor-default bg-black/20"
+          onClick={() => setExpanded(false)}
+        />
+      )}
       {isActive && (
       <motion.div
         key="setlist-playlist-bar"
@@ -102,22 +114,33 @@ export function SetlistPlaylistBar() {
             >
               <p className="text-xs font-semibold truncate">{displayTitle || 'Reference track'}</p>
               <p className="text-[10px] text-muted-foreground truncate">
-                {subtitle || setlistName}
+                {failed ? "Couldn't load YouTube — tap retry" : (subtitle || setlistName)}
               </p>
             </button>
             <div className="flex items-center gap-0.5 shrink-0">
               <button type="button" onClick={previous} className="p-2 rounded-lg hover:bg-muted" aria-label="Previous">
                 <SkipBack className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={togglePlay}
-                disabled={!ready}
-                className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
-                aria-label={playing ? 'Pause' : 'Play'}
-              >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-              </button>
+              {failed ? (
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="p-2 rounded-lg bg-primary text-primary-foreground"
+                  aria-label="Retry loading player"
+                >
+                  <RotateCw className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  disabled={!ready}
+                  className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                  aria-label={playing ? 'Pause' : 'Play'}
+                >
+                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+                </button>
+              )}
               <button type="button" onClick={next} className="p-2 rounded-lg hover:bg-muted" aria-label="Next">
                 <SkipForward className="h-4 w-4" />
               </button>

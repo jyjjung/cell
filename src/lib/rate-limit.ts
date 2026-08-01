@@ -49,11 +49,3 @@ export function clientIpFromRequest(request: Request): string {
   }
   return request.headers.get('x-real-ip') || 'unknown';
 }
-
-/** Periodically drop expired buckets to avoid unbounded growth. */
-export function pruneRateLimitBuckets(): void {
-  const now = Date.now();
-  for (const [key, bucket] of buckets) {
-    if (bucket.resetAt <= now) buckets.delete(key);
-  }
-}

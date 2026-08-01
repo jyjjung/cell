@@ -11,7 +11,7 @@ import {
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
 import { useChats } from '@/hooks/useChats';
-import { isChatUnread } from '@/lib/notification-utils';
+import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -172,7 +172,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [plan]);
 
   const unreadChatCount = useMemo(
-    () => chats.filter((c) => isChatUnread(c, currentUser.uid)).length,
+    () => sumChatUnreadMessageCounts(chats, currentUser.uid),
     [chats, currentUser.uid],
   );
 

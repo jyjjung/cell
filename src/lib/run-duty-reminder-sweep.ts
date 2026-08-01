@@ -20,8 +20,8 @@ const DEFAULT_TIMEZONE = 'Australia/Brisbane';
 const SEND_CONCURRENCY = 8;
 
 /** Heartbeat lives in `config` so admins can read it without a new rules deploy. */
-export const CRON_HEARTBEAT_COLLECTION = 'config';
-export const CRON_HEARTBEAT_DOC_ID = 'dutyReminderCron';
+const CRON_HEARTBEAT_COLLECTION = 'config';
+const CRON_HEARTBEAT_DOC_ID = 'dutyReminderCron';
 
 /**
  * `scheduled` is the morning run, `catchup` the midday safety net, `manual` a

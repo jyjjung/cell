@@ -27,7 +27,7 @@ export type CachedAuthProfile = Pick<
   | 'fcmTokens'
 >;
 
-export function authProfileCacheKey(uid: string): string {
+function authProfileCacheKey(uid: string): string {
   return `${PROFILE_CACHE_PREFIX}${uid}`;
 }
 

@@ -5,7 +5,7 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { useChats } from '@/hooks/useChats';
 import { getFCMRegistration } from '@/lib/fcm-registration';
 import { messagingPromise } from '@/lib/firebase';
-import { isChatUnread } from '@/lib/notification-utils';
+import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import {
   NOTIFICATION_UNREAD_LOOKBACK_DAYS,
   countUnreadNotificationsForUser,
@@ -30,12 +30,13 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
     );
     const unreadNotifs = countUnreadNotificationsForUser(recentNotifications, currentUser.uid);
 
-    const unreadChatCount = chats.filter((chat) => {
-      if (pathname === `/chat/${chat.id}`) return false;
-      return isChatUnread(chat, currentUser.uid);
-    }).length;
+    const unreadMessages = sumChatUnreadMessageCounts(
+      chats,
+      currentUser.uid,
+      (chat) => pathname === `/chat/${chat.id}`,
+    );
 
-    return unreadNotifs + unreadChatCount;
+    return unreadNotifs + unreadMessages;
   }, [notifications, chats, currentUser.uid, pathname]);
 
   const updateNativeBadge = useCallback((count: number) => {

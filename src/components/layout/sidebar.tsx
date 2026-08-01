@@ -32,7 +32,7 @@ import { PixelAvatar } from '../avatar/PixelAvatar';
 import { useChats } from '@/hooks/useChats';
 import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
 import { translations } from '@/lib/translations';
-import { isChatUnread } from '@/lib/notification-utils';
+import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -66,10 +66,7 @@ export default function AppSidebar() {
 
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
-    return chats.filter(chat => {
-      if (pathname === `/chat/${chat.id}`) return false;
-      return isChatUnread(chat, currentUser.uid);
-    }).length;
+    return sumChatUnreadMessageCounts(chats, currentUser.uid, (chat) => pathname === `/chat/${chat.id}`);
   }, [chats, currentUser, pathname]);
 
   const navigate = (path: string) => {

@@ -1,6 +1,6 @@
 import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
-import type { Chat, ChatMessage, UserProfileData } from '@/types';
+import type { Chat, UserProfileData } from '@/types';
 import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils';
 import { chatPushBadgeFields } from '@/lib/chat-push-badge';
 
@@ -52,7 +52,7 @@ function chatPushLockId(chatId: string, messageId: string): string {
  * Prefer a real unread count. On timeout/error return null so callers omit badge
  * instead of wiping the home-screen badge with 0.
  */
-export async function badgeCountWithTimeout(
+async function badgeCountWithTimeout(
   userId: string,
   db: Firestore,
   timeoutMs = BADGE_TIMEOUT_MS,
@@ -68,8 +68,6 @@ export async function badgeCountWithTimeout(
     return null;
   }
 }
-
-export { chatPushBadgeFields } from '@/lib/chat-push-badge';
 
 async function getSenderDisplayName(senderId: string, chat: Chat, db: Firestore): Promise<string> {
   try {
@@ -312,23 +310,4 @@ export async function deliverChatPush(
     await releasePushLock(adminDb, chatId, messageId);
     throw error;
   }
-}
-
-/** @deprecated Use deliverChatPush with explicit text instead. */
-export async function deliverChatPushFromMessage(
-  chat: Chat,
-  message: ChatMessage,
-  adminDb: Firestore,
-  adminMessaging: Messaging,
-): Promise<ChatPushResult> {
-  return deliverChatPush(
-    {
-      chatId: chat.id,
-      messageId: String(message.id),
-      senderId: message.senderId,
-      text: message.text ?? 'Sent a file',
-    },
-    adminDb,
-    adminMessaging,
-  );
 }

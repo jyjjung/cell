@@ -17,6 +17,7 @@ import {
   getDocs,
   Timestamp,
   writeBatch,
+  increment,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
@@ -38,6 +39,10 @@ import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
+import {
+  buildUnreadCountClear,
+  buildUnreadCountIncrements,
+} from '@/lib/notification-utils';
 
 const MESSAGES_SUBCOLLECTION = 'messages';
 const CHATS_COLLECTION = 'chats';
@@ -310,10 +315,15 @@ export function useMessages(chatId: string | null) {
         const docRef = doc(messagesColRef);
         const batch = writeBatch(db);
         batch.set(docRef, messageData);
+        const memberIds =
+          chat?.members?.length
+            ? chat.members
+            : chatsContext?.chats.find((c) => c.id === chatId)?.members ?? [];
         batch.update(chatDocRef, {
             lastMessageText: lastText,
             lastMessageSentAt: serverTimestamp(),
             lastMessageSenderId: currentUser.uid,
+            ...buildUnreadCountIncrements(memberIds, currentUser.uid, increment),
         });
         await batch.commit();
         void dispatchChatPush({
@@ -337,7 +347,7 @@ export function useMessages(chatId: string | null) {
         });
     }
 
-  }, [currentUser, chatId]);
+  }, [currentUser, chatId, chat, chatsContext?.chats]);
 
   const sendImageMessage = useCallback((imageUrl: string, replyToId?: string, imageThumbUrl?: string) => {
     sendMessage(
@@ -367,7 +377,10 @@ export function useMessages(chatId: string | null) {
   const updateSeenTimestamp = useCallback(() => {
     if (!currentUser || !chatId) return;
     const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
-    updateDoc(chatDocRef, { [`memberSeen.${currentUser.uid}`]: serverTimestamp() }).catch(() => {});
+    updateDoc(chatDocRef, {
+      [`memberSeen.${currentUser.uid}`]: serverTimestamp(),
+      ...buildUnreadCountClear(currentUser.uid),
+    }).catch(() => {});
   }, [currentUser, chatId]);
 
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
