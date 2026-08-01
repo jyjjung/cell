@@ -23,7 +23,8 @@ import {
 
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 const ENTRIES_SUBCOLLECTION = 'entries';
-const CACHE_KEY = 'custom_roster_entries_v1';
+/** v2: per-user cache key so viewers are not stuck with another account's empty/partial snapshot. */
+const CACHE_KEY_PREFIX = 'custom_roster_entries_v2';
 
 export interface CustomRosterEntryWithMeta extends CustomRosterEntry {
   rosterDefId: string;
@@ -35,18 +36,24 @@ function todayDateString() {
   return format(new Date(), 'yyyy-MM-dd');
 }
 
+function cacheKeyForUser(uid: string) {
+  return `${CACHE_KEY_PREFIX}:${uid}`;
+}
+
 async function loadDefinitions(): Promise<RosterDefinition[]> {
   const q = query(collection(db, ROSTER_DEFINITIONS_COLLECTION), orderBy('name', 'asc'));
+  // Prefer server so visibility/edit ACL used for filtering is current. Cache is offline fallback only.
   try {
-    const cached = await getDocsFromCache(q);
-    if (!cached.empty) {
-      return cached.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
-    }
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
   } catch {
-    /* cache miss */
+    try {
+      const cached = await getDocsFromCache(q);
+      return cached.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
+    } catch {
+      return [];
+    }
   }
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as RosterDefinition));
 }
 
 async function loadEntriesForDefinition(
@@ -61,10 +68,14 @@ async function loadEntriesForDefinition(
 
   let snap;
   try {
-    snap = await getDocsFromCache(q);
-    if (snap.empty) snap = await getDocs(q);
-  } catch {
     snap = await getDocs(q);
+  } catch (serverErr) {
+    try {
+      snap = await getDocsFromCache(q);
+      if (snap.empty) throw serverErr;
+    } catch {
+      throw serverErr;
+    }
   }
 
   return snap.docs.map((docSnap) => ({
@@ -82,23 +93,48 @@ async function loadEntriesWithMeta(
 ): Promise<CustomRosterEntryWithMeta[]> {
   if (definitions.length === 0) return [];
 
-  const batches = await Promise.all(
+  // One roster's permission failure must not wipe the rest of the dashboard agenda.
+  const settled = await Promise.allSettled(
     definitions.map((def) => loadEntriesForDefinition(def, fromDate)),
   );
-  return batches.flat().sort((a, b) => a.date.localeCompare(b.date));
+
+  const entries: CustomRosterEntryWithMeta[] = [];
+  settled.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      entries.push(...result.value);
+      return;
+    }
+    console.warn(
+      `[useAllCustomRosterEntries] skipped roster ${definitions[index]?.id}:`,
+      result.reason,
+    );
+  });
+
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Dashboard helper: cached definitions + entries for visible rosters. */
 export function useAllCustomRosterEntries() {
   const { currentUser, loadingAuth, isAdmin } = useAuth();
+  const cacheKey = currentUser?.uid ? cacheKeyForUser(currentUser.uid) : null;
   const [entries, setEntries] = useState<CustomRosterEntryWithMeta[]>(() => {
-    return readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(CACHE_KEY) ?? [];
+    if (!cacheKey) return [];
+    return readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(cacheKey) ?? [];
   });
   const [loading, setLoading] = useState(entries.length === 0);
 
   const load = useCallback(async (forceRefresh = false) => {
+    if (!currentUser?.uid || !cacheKey) {
+      setEntries([]);
+      setLoading(false);
+      return [];
+    }
+
     if (!forceRefresh) {
-      const fresh = readNonEmptyCollectionCache<CustomRosterEntryWithMeta[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
+      const fresh = readNonEmptyCollectionCache<CustomRosterEntryWithMeta[]>(
+        cacheKey,
+        COLLECTION_CACHE_TTL_MS,
+      );
       if (fresh) {
         setEntries(fresh);
         setLoading(false);
@@ -107,15 +143,15 @@ export function useAllCustomRosterEntries() {
     }
 
     const definitions = await loadDefinitions();
-    const visibleDefs = currentUser
-      ? definitions.filter((def) => userCanSeeRoster(currentUser, def, isAdmin))
-      : [];
+    const visibleDefs = definitions.filter((def) =>
+      userCanSeeRoster(currentUser, def, isAdmin),
+    );
     const enriched = await loadEntriesWithMeta(todayDateString(), visibleDefs);
-    writeLocalCollectionCache(CACHE_KEY, enriched);
+    writeLocalCollectionCache(cacheKey, enriched);
     setEntries(enriched);
     setLoading(false);
     return enriched;
-  }, [currentUser, isAdmin]);
+  }, [cacheKey, currentUser, isAdmin]);
 
   useEffect(() => {
     if (loadingAuth) return;
@@ -125,6 +161,13 @@ export function useAllCustomRosterEntries() {
       setLoading(false);
       return;
     }
+
+    // Hydrate from this user's cache when the account changes.
+    const cached =
+      readLocalCollectionCacheStale<CustomRosterEntryWithMeta[]>(cacheKeyForUser(currentUser.uid)) ??
+      [];
+    setEntries(cached);
+    setLoading(cached.length === 0);
 
     let cancelled = false;
 

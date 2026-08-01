@@ -64,6 +64,10 @@ const SHARED_DIRECTORY_CACHE_KEYS = [
   'custom_roster_entries_v1',
 ] as const;
 
+const SHARED_DIRECTORY_CACHE_PREFIXES = [
+  'custom_roster_entries_v2:',
+] as const;
+
 export function clearSharedDirectoryCaches(): void {
   if (typeof window === 'undefined') return;
   for (const key of SHARED_DIRECTORY_CACHE_KEYS) {
@@ -72,5 +76,18 @@ export function clearSharedDirectoryCaches(): void {
     } catch {
       /* private mode */
     }
+  }
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (SHARED_DIRECTORY_CACHE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        toRemove.push(key);
+      }
+    }
+    for (const key of toRemove) localStorage.removeItem(key);
+  } catch {
+    /* private mode */
   }
 }
