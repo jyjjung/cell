@@ -6,6 +6,7 @@ import {
 import { cn } from '@/lib/utils';
 import { fetchYoutubeVideoTitle, getReferenceTracks, parseYoutubeVideoId } from '@/lib/worship-utils';
 import {
+    captureYoutubeLoadFailure,
     loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer
 } from '@/lib/youtube-player-api';
 import type { ReferenceTrack, SetlistSong } from '@/types';
@@ -118,8 +119,9 @@ function useYoutubePlayer(
           },
         });
       })
-      .catch(() => {
+      .catch((err) => {
         // Script blocked / offline — leave controls disabled.
+        captureYoutubeLoadFailure(err, 'reference-track-panel');
         if (!cancelled) setFailed(true);
       });
 
