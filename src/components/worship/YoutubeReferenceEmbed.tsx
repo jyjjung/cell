@@ -48,6 +48,7 @@ function useYoutubePlayer(
   const onTitleRef = useRef(onTitle);
   onTitleRef.current = onTitle;
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -60,60 +61,67 @@ function useYoutubePlayer(
     const mount = document.getElementById(containerId);
     if (!mount) return;
 
-    void loadYoutubeIframeApi().then((YT) => {
-      if (cancelled || !document.getElementById(containerId)) return;
-      new YT.Player(containerId, {
-        videoId,
-        height: '0',
-        width: '0',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-        },
-        events: {
-          onReady: (event) => {
-            if (cancelled) return;
-            playerRef.current = event.target;
-            const d = event.target.getDuration();
-            if (Number.isFinite(d) && d > 0) setDuration(d);
-            try {
-              const videoTitle = event.target.getVideoData()?.title?.trim();
-              if (videoTitle) onTitleRef.current?.(videoTitle);
-            } catch { /* ignore */ }
-            setReady(true);
+    setFailed(false);
+
+    void loadYoutubeIframeApi()
+      .then((YT) => {
+        if (cancelled || !document.getElementById(containerId)) return;
+        new YT.Player(containerId, {
+          videoId,
+          height: '0',
+          width: '0',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
           },
-          onStateChange: (event) => {
-            if (event.data === YT_PLAYING) {
-              setPlaying(true);
-              if (tick) clearInterval(tick);
-              tick = setInterval(() => {
-                const t = playerRef.current?.getCurrentTime() ?? 0;
-                const d = playerRef.current?.getDuration() ?? 0;
-                setCurrentTime(t);
-                if (Number.isFinite(d) && d > 0) setDuration(d);
-              }, 250);
-            } else {
-              setPlaying(false);
-              if (tick) {
-                clearInterval(tick);
-                tick = null;
+          events: {
+            onReady: (event) => {
+              if (cancelled) return;
+              playerRef.current = event.target;
+              const d = event.target.getDuration();
+              if (Number.isFinite(d) && d > 0) setDuration(d);
+              try {
+                const videoTitle = event.target.getVideoData()?.title?.trim();
+                if (videoTitle) onTitleRef.current?.(videoTitle);
+              } catch { /* ignore */ }
+              setReady(true);
+            },
+            onStateChange: (event) => {
+              if (event.data === YT_PLAYING) {
+                setPlaying(true);
+                if (tick) clearInterval(tick);
+                tick = setInterval(() => {
+                  const t = playerRef.current?.getCurrentTime() ?? 0;
+                  const d = playerRef.current?.getDuration() ?? 0;
+                  setCurrentTime(t);
+                  if (Number.isFinite(d) && d > 0) setDuration(d);
+                }, 250);
+              } else {
+                setPlaying(false);
+                if (tick) {
+                  clearInterval(tick);
+                  tick = null;
+                }
+                if (event.data === YT_PAUSED || event.data === YT_ENDED) {
+                  setCurrentTime(playerRef.current?.getCurrentTime() ?? 0);
+                }
+                if (event.data === YT_ENDED) {
+                  setCurrentTime(0);
+                }
               }
-              if (event.data === YT_PAUSED || event.data === YT_ENDED) {
-                setCurrentTime(playerRef.current?.getCurrentTime() ?? 0);
-              }
-              if (event.data === YT_ENDED) {
-                setCurrentTime(0);
-              }
-            }
+            },
           },
-        },
+        });
+      })
+      .catch(() => {
+        // Script blocked / offline — leave controls disabled.
+        if (!cancelled) setFailed(true);
       });
-    });
 
     return () => {
       cancelled = true;
@@ -121,6 +129,7 @@ function useYoutubePlayer(
       try { playerRef.current?.destroy(); } catch { /* already destroyed */ }
       playerRef.current = null;
       setReady(false);
+      setFailed(false);
       setPlaying(false);
       setCurrentTime(0);
       setDuration(0);
@@ -139,7 +148,7 @@ function useYoutubePlayer(
     setCurrentTime(time);
   }, [ready]);
 
-  return { ready, playing, currentTime, duration, togglePlay, seek };
+  return { ready, failed, playing, currentTime, duration, togglePlay, seek };
 }
 
 /** Full audio player panel with title, play/pause, and scrubber. */
@@ -163,7 +172,7 @@ export function YoutubePlayerPanel({
   const containerId = `yt-ref-${reactId}`;
   const oembedTitle = useYoutubeVideoTitle(videoId);
   const [playerTitle, setPlayerTitle] = useState<string | null>(null);
-  const { ready, playing, currentTime, duration, togglePlay, seek } = useYoutubePlayer(
+  const { ready, failed, playing, currentTime, duration, togglePlay, seek } = useYoutubePlayer(
     videoId,
     containerId,
     enabled,
@@ -206,7 +215,9 @@ export function YoutubePlayerPanel({
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className={titleClass} title={displayTitle ?? undefined}>
             <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
-            <span className="truncate">{displayTitle ?? 'Loading…'}</span>
+            <span className="truncate">
+              {failed ? 'Unavailable' : (displayTitle ?? 'Loading…')}
+            </span>
           </p>
           {note && <p className={noteClass}>{note}</p>}
         </div>

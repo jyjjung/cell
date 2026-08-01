@@ -68,13 +68,21 @@ function createDb(): Firestore {
   }
 }
 
+function getErrorMessage(reason: unknown): string {
+  if (reason instanceof Error) return reason.message ?? '';
+  if (typeof reason === 'string') return reason;
+  if (reason && typeof reason === 'object' && 'message' in reason) {
+    return String((reason as { message: unknown }).message);
+  }
+  return '';
+}
+
 /**
  * Detects Firestore IndexedDB corruption (e.g. after the user clears site data)
  * and automatically recovers by wiping the stale IndexedDB and reloading once.
  */
 function isIndexedDbCorruptionError(reason: unknown): boolean {
-  if (!(reason instanceof Error)) return false;
-  const msg = reason.message ?? '';
+  const msg = getErrorMessage(reason);
   return (
     msg.includes('refusing to open IndexedDB') ||
     (msg.includes('IndexedDB transaction') &&
@@ -82,23 +90,34 @@ function isIndexedDbCorruptionError(reason: unknown): boolean {
   );
 }
 
+function recoverFromIndexedDbCorruption(): void {
+  if (sessionStorage.getItem(IDB_RECOVERY_FLAG) === '1') {
+    // Already tried once — don't loop; let the memory-cache fallback handle it.
+    return;
+  }
+  sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
+  // clearIndexedDbPersistence must be called before any Firestore operations;
+  // since we're mid-session we reload immediately after clearing.
+  clearIndexedDbPersistence(db)
+    .catch(() => { /* ignore secondary errors */ })
+    .finally(() => window.location.reload());
+}
+
 const db = createDb();
 
 if (typeof window !== 'undefined') {
+  // Safari often surfaces IDB corruption via window.onerror (sync throw), not
+  // only as an unhandled promise rejection — listen for both.
   window.addEventListener('unhandledrejection', (event) => {
     if (isIndexedDbCorruptionError(event.reason)) {
-      // Prevent the error from surfacing further while we recover.
       event.preventDefault();
-      if (sessionStorage.getItem(IDB_RECOVERY_FLAG) === '1') {
-        // Already tried once — don't loop; let the memory-cache fallback handle it.
-        return;
-      }
-      sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
-      // clearIndexedDbPersistence must be called before any Firestore operations;
-      // since we're mid-session we reload immediately after clearing.
-      clearIndexedDbPersistence(db)
-        .catch(() => { /* ignore secondary errors */ })
-        .finally(() => window.location.reload());
+      recoverFromIndexedDbCorruption();
+    }
+  });
+  window.addEventListener('error', (event) => {
+    if (isIndexedDbCorruptionError(event.error ?? event.message)) {
+      event.preventDefault();
+      recoverFromIndexedDbCorruption();
     }
   });
 }
