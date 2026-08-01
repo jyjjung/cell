@@ -18,8 +18,8 @@ export const changelogs: ChangelogEntry[] = [
     date: 'August 1, 2026',
     changes: [
       {
-        type: 'Fixed',
-        text: 'The reading streak heatmap fills the card with square days across the plan window',
+        type: 'Changed',
+        text: 'The reading streak heatmap uses a GitHub-style week grid with readable square days',
       },
       {
         type: 'Changed',
