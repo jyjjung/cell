@@ -30,6 +30,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
 import { translations } from "@/lib/translations";
 import { hasCapability } from "@/lib/role-capabilities";
+import { ReminderCronHealth } from "@/components/admin/reminder-cron-health";
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState("");
@@ -160,6 +161,8 @@ export default function AdminHubPage() {
   return (
     <div className="admin-page">
       <PageHeader title={t.admin} description={t.adminHubDesc} />
+
+      <ReminderCronHealth />
 
       <section className="space-y-2">
         <h2 className="text-micro-label">{t.adminQuickActions}</h2>

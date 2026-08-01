@@ -13,6 +13,33 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.0',
+    subtitle: 'Reliable roster reminders',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Sent the day-before roster reminders for Sunday duties that were skipped this morning',
+      },
+      {
+        type: 'Added',
+        text: 'A second daily reminder run recovers a missed morning send on the same day, so a day-before heads-up is no longer lost for good',
+      },
+      {
+        type: 'Added',
+        text: 'The admin hub now shows when roster reminders last went out and warns if they stop arriving',
+      },
+      {
+        type: 'Improved',
+        text: 'Reminders send in parallel, so a busy roster day finishes in seconds instead of minutes',
+      },
+      {
+        type: 'Improved',
+        text: 'Push notifications that failed to arrive retry faster',
+      },
+    ],
+  },
+  {
     version: 'v1.8.2',
     subtitle: 'Group reaction notifications',
     date: 'July 31, 2026',
