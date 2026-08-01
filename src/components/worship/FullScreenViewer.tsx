@@ -147,7 +147,9 @@ function SlidesFullScreenViewer({
   onClose: () => void;
 }) {
   const [idx, setIdx] = useState(startIndex);
-  const [listenOpen, setListenOpen] = useState(false);
+  // Pinned to the song the user started, so moving between songs doesn't
+  // interrupt playback.
+  const [listenSlideIdx, setListenSlideIdx] = useState<number | null>(null);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
   const viewerTheme = useViewerTheme();
   const isDark = viewerTheme === 'dark';
@@ -171,13 +173,11 @@ function SlidesFullScreenViewer({
 
   useImagePreloader(slides);
 
-  // Reset when slide changes
+  // Reset when slide changes (playback intentionally survives — see listenSlideIdx)
   useEffect(() => {
     setImgPxWidth(null);
     fitWidthRef.current = 0;
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    setListenOpen(false);
-    setActiveTrackIdx(0);
   }, [idx]);
 
   // Calculate the "fit the whole page" pixel width from the first image's natural dims
@@ -431,12 +431,20 @@ function SlidesFullScreenViewer({
 
         {/* Footer */}
         <div className="shrink-0 flex flex-col gap-2 pb-6 pt-2 px-4">
-          {listenOpen && slide.referenceTracks && slide.referenceTracks.length > 0 && (() => {
-            const activeTrack = slide.referenceTracks[activeTrackIdx] ?? slide.referenceTracks[0];
+          {listenSlideIdx !== null && (() => {
+            const listenSlide = slides[listenSlideIdx];
+            const tracks = listenSlide?.referenceTracks;
+            if (!tracks || tracks.length === 0) return null;
+            const activeTrack = tracks[activeTrackIdx] ?? tracks[0];
+            // Name the song once the user has moved on from it.
+            const note = [
+              listenSlideIdx === idx ? null : listenSlide.songTitle,
+              activeTrack.note,
+            ].filter(Boolean).join(' · ');
             return (
               <div className="space-y-2 max-w-lg mx-auto w-full">
                 <TrackPicker
-                  tracks={slide.referenceTracks}
+                  tracks={tracks}
                   activeIndex={activeTrackIdx}
                   onSelect={setActiveTrackIdx}
                   theme={viewerTheme}
@@ -444,10 +452,10 @@ function SlidesFullScreenViewer({
                 <YoutubePlayerPanel
                   key={activeTrack.url}
                   url={activeTrack.url}
-                  note={activeTrack.note}
-                  enabled={listenOpen}
+                  note={note || undefined}
+                  enabled
                   theme={viewerTheme}
-                  onClose={() => setListenOpen(false)}
+                  onClose={() => setListenSlideIdx(null)}
                 />
               </div>
             );
@@ -460,10 +468,13 @@ function SlidesFullScreenViewer({
             {slide.referenceTracks && slide.referenceTracks.length > 0 && (
               <button
                 type="button"
-                onClick={() => setListenOpen((open) => !open)}
+                onClick={() => {
+                  setActiveTrackIdx(0);
+                  setListenSlideIdx((current) => (current === idx ? null : idx));
+                }}
                 className={cn(
                   'flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold backdrop-blur-sm transition-colors',
-                  listenOpen
+                  listenSlideIdx === idx
                     ? 'bg-rose-500/90 hover:bg-rose-500 text-white'
                     : isDark
                       ? 'bg-white/10 hover:bg-white/20 text-white'

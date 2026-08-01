@@ -90,8 +90,7 @@ function SectionTitleBar({
   title,
   keyName,
   hasTracks,
-  listenOpen,
-  isActive,
+  listening,
   isDark,
   onListen,
 }: {
@@ -99,8 +98,7 @@ function SectionTitleBar({
   title: string;
   keyName: ChordKey;
   hasTracks: boolean;
-  listenOpen: boolean;
-  isActive: boolean;
+  listening: boolean;
   isDark: boolean;
   onListen: () => void;
 }) {
@@ -119,7 +117,7 @@ function SectionTitleBar({
             onClick={(e) => { e.stopPropagation(); onListen(); }}
             className={cn(
               'setlist-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
-              viewerListenBtn(isDark, listenOpen && isActive),
+              viewerListenBtn(isDark, listening),
             )}
           >
             <Headphones className="h-3.5 w-3.5" />
@@ -153,7 +151,9 @@ export function ContinuousSetlistViewer({
 
   const [scale, setScale] = useState(1);
   const [activeSection, setActiveSection] = useState(startIndex);
-  const [listenOpen, setListenOpen] = useState(false);
+  // Pinned to the song the user started, not the one in view, so scrolling
+  // through the setlist doesn't interrupt playback.
+  const [listenSection, setListenSection] = useState<number | null>(null);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
   const didInitialScroll = useRef(false);
   const viewerTheme = useViewerTheme();
@@ -240,7 +240,7 @@ export function ContinuousSetlistViewer({
   const openListenForSection = (index: number) => {
     setActiveSection(index);
     setActiveTrackIdx(0);
-    setListenOpen(true);
+    setListenSection((current) => (current === index ? null : index));
     jumpToSection(index);
   };
 
@@ -382,8 +382,7 @@ export function ContinuousSetlistViewer({
                           title={section.songTitle}
                           keyName={section.key}
                           hasTracks={hasTracks}
-                          listenOpen={listenOpen}
-                          isActive={activeSection === sectionIdx}
+                          listening={listenSection === sectionIdx}
                           isDark={isDark}
                           onListen={() => openListenForSection(sectionIdx)}
                         />
@@ -427,12 +426,20 @@ export function ContinuousSetlistViewer({
       </div>
 
       <div className={viewerFooter(isDark)}>
-        {listenOpen && activeSlide?.referenceTracks && activeSlide.referenceTracks.length > 0 && (() => {
-          const activeTrack = activeSlide.referenceTracks![activeTrackIdx] ?? activeSlide.referenceTracks![0];
+        {listenSection !== null && (() => {
+          const listenSlide = slides[listenSection];
+          const tracks = listenSlide?.referenceTracks;
+          if (!tracks || tracks.length === 0) return null;
+          const activeTrack = tracks[activeTrackIdx] ?? tracks[0];
+          // Name the song once the user has scrolled away from it.
+          const note = [
+            listenSection === activeSection ? null : listenSlide.songTitle,
+            activeTrack.note,
+          ].filter(Boolean).join(' · ');
           return (
             <div className="mx-auto w-full max-w-lg space-y-2">
               <TrackPicker
-                tracks={activeSlide.referenceTracks!}
+                tracks={tracks}
                 activeIndex={activeTrackIdx}
                 onSelect={setActiveTrackIdx}
                 theme={viewerTheme}
@@ -440,10 +447,10 @@ export function ContinuousSetlistViewer({
               <YoutubePlayerPanel
                 key={activeTrack.url}
                 url={activeTrack.url}
-                note={activeTrack.note}
-                enabled={listenOpen}
+                note={note || undefined}
+                enabled
                 theme={viewerTheme}
-                onClose={() => setListenOpen(false)}
+                onClose={() => setListenSection(null)}
               />
             </div>
           );
