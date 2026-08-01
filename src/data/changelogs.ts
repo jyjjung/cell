@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.1',
+    subtitle: 'Playback and offline recovery',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'YouTube reference tracks and setlist playback no longer crash when the YouTube script is blocked or fails to load',
+      },
+      {
+        type: 'Fixed',
+        text: 'Safari users recover automatically when local chat cache data becomes corrupted after clearing site data',
+      },
+    ],
+  },
+  {
     version: 'v1.9.0',
     subtitle: 'Reliable roster reminders',
     date: 'August 1, 2026',
