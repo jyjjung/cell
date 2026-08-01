@@ -19,11 +19,15 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Fixed',
-        text: 'Upcoming dates from other rosters now appear on the dashboard for everyone who can view them, not only editors',
+        text: 'Upcoming dates from other rosters now appear on the dashboard for viewers, not only people with edit access',
       },
       {
         type: 'Improved',
         text: 'The dashboard shows all upcoming other-roster dates, not only the ones that list your name',
+      },
+      {
+        type: 'Fixed',
+        text: 'A permission error on one roster no longer hides the rest of the other-roster schedule on Home',
       },
     ],
   },

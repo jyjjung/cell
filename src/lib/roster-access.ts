@@ -26,17 +26,6 @@ function matchesAccessList(
   return false;
 }
 
-export function userCanSeeRoster(
-  user: Pick<UserProfileData, 'uid' | 'roleIds'>,
-  def: Pick<RosterDefinition, 'visibility'>,
-  isAdmin = false,
-): boolean {
-  if (isAdmin) return true;
-  const visibility: RosterVisibility = def.visibility ?? { type: 'public' };
-  if (visibility.type === 'public') return true;
-  return matchesAccessList(user, visibility.allowedUserIds, visibility.allowedRoleIds);
-}
-
 export function userCanEditRoster(
   user: Pick<UserProfileData, 'uid' | 'roleIds'>,
   def: Pick<RosterDefinition, 'editPermissions'>,
@@ -45,6 +34,19 @@ export function userCanEditRoster(
   if (isAdmin) return true;
   const perms: RosterEditPermissions = def.editPermissions ?? {};
   return matchesAccessList(user, perms.allowedUserIds, perms.allowedRoleIds);
+}
+
+export function userCanSeeRoster(
+  user: Pick<UserProfileData, 'uid' | 'roleIds'>,
+  def: Pick<RosterDefinition, 'visibility' | 'editPermissions'>,
+  isAdmin = false,
+): boolean {
+  if (isAdmin) return true;
+  // Editors can always view the rosters they manage.
+  if (userCanEditRoster(user, def, false)) return true;
+  const visibility: RosterVisibility = def.visibility ?? { type: 'public' };
+  if (visibility.type === 'public') return true;
+  return matchesAccessList(user, visibility.allowedUserIds, visibility.allowedRoleIds);
 }
 
 export function sortedRosterFields(fields?: RosterFieldDefinition[]): RosterFieldDefinition[] {

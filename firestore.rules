@@ -131,19 +131,21 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/rosterDefinitions/$(rosterDefId)).data;
     }
 
-    function canSeeRoster(userId, rosterDefId) {
-      let visibility = rosterDefData(rosterDefId).get('visibility', {'type': 'public'});
-      return visibility.type == 'public'
-        || isAppAdmin(userId)
-        || userId in visibility.get('allowedUserIds', [])
-        || visibility.get('allowedRoleIds', []).hasAny(userData(userId).get('roleIds', []));
-    }
-
     function canEditRosterEntries(userId, rosterDefId) {
       let perms = rosterDefData(rosterDefId).get('editPermissions', {});
       return isAppAdmin(userId)
         || userId in perms.get('allowedUserIds', [])
         || perms.get('allowedRoleIds', []).hasAny(userData(userId).get('roleIds', []));
+    }
+
+    function canSeeRoster(userId, rosterDefId) {
+      let visibility = rosterDefData(rosterDefId).get('visibility', {'type': 'public'});
+      // Edit access implies view so managers are never locked out of their own roster.
+      return visibility.type == 'public'
+        || isAppAdmin(userId)
+        || canEditRosterEntries(userId, rosterDefId)
+        || userId in visibility.get('allowedUserIds', [])
+        || visibility.get('allowedRoleIds', []).hasAny(userData(userId).get('roleIds', []));
     }
 
     match /rosterDefinitions/{rosterDefId} {
