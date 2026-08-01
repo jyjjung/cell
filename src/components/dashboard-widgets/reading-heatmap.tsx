@@ -1,7 +1,17 @@
 "use client";
 
 import { useMemo } from 'react';
-import { format, parseISO, isValid, subDays } from 'date-fns';
+import {
+  addDays,
+  differenceInCalendarDays,
+  eachDayOfInterval,
+  format,
+  isAfter,
+  isBefore,
+  isValid,
+  parseISO,
+  startOfDay,
+} from 'date-fns';
 import { DailyReading } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -18,8 +28,11 @@ import { translations } from '@/lib/translations';
 interface ReadingHeatmapProps {
   dailyReadings: DailyReading[];
   completedPassages: string[];
-  daysToShow?: number;
+  /** Minimum days so the wrapping grid can fill the card. */
+  minDays?: number;
 }
+
+type DayKind = 'outside' | 'future' | 'active';
 
 type HeatmapDay = {
   date: Date;
@@ -27,21 +40,48 @@ type HeatmapDay = {
   total: number;
   complete: number;
   hasReading: boolean;
+  kind: DayKind;
+  outsideSide?: 'before' | 'after';
 };
 
+/** Enough cells for several filled rows on a typical phone/desktop card. */
+const DEFAULT_MIN_DAYS = 180;
+
 function heatClassForDay(day: HeatmapDay): string {
+  if (day.kind === 'outside' || day.kind === 'future') return themeHeat.outside;
   if (!day.hasReading || day.complete <= 0) return themeHeat.empty;
   if (day.complete >= day.total) return themeHeat.complete;
   return themeHeat.partial;
 }
 
-export default function ReadingHeatmap({ dailyReadings, completedPassages, daysToShow = 90 }: ReadingHeatmapProps) {
+function parsePlanBounds(dailyReadings: DailyReading[]): { start: Date; end: Date } | null {
+  let start: Date | null = null;
+  let end: Date | null = null;
+
+  for (const day of dailyReadings) {
+    const d = parseISO(day.date);
+    if (!isValid(d)) continue;
+    const dayStart = startOfDay(d);
+    if (!start || isBefore(dayStart, start)) start = dayStart;
+    if (!end || isAfter(dayStart, end)) end = dayStart;
+  }
+
+  if (!start || !end) return null;
+  return { start, end };
+}
+
+export default function ReadingHeatmap({
+  dailyReadings,
+  completedPassages,
+  minDays = DEFAULT_MIN_DAYS,
+}: ReadingHeatmapProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const { columns } = useMemo(() => {
-    const today = new Date();
+  const { days, rangeLabel } = useMemo(() => {
+    const today = startOfDay(new Date());
     const planMap = new Map<string, { total: number; complete: number }>();
+    const bounds = parsePlanBounds(dailyReadings);
 
     dailyReadings.forEach((day) => {
       const d = parseISO(day.date);
@@ -57,44 +97,72 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
       planMap.set(key, { total, complete });
     });
 
-    const heatmapData: HeatmapDay[] = [];
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const d = subDays(today, i);
+    const planStart = bounds?.start ?? today;
+    const planEnd = bounds?.end ?? today;
+    let rangeStart = planStart;
+    let rangeEnd = isAfter(planEnd, today) ? planEnd : today;
+
+    const span = differenceInCalendarDays(rangeEnd, rangeStart) + 1;
+    if (span < minDays) {
+      const missing = minDays - span;
+      const padBefore = Math.ceil(missing / 2);
+      const padAfter = missing - padBefore;
+      rangeStart = addDays(rangeStart, -padBefore);
+      rangeEnd = addDays(rangeEnd, padAfter);
+    }
+
+    const days: HeatmapDay[] = eachDayOfInterval({
+      start: rangeStart,
+      end: rangeEnd,
+    }).map((d) => {
       const key = format(d, 'yyyy-MM-dd');
       const stats = planMap.get(key);
-      heatmapData.push({
+      const hasReading = !!stats && stats.total > 0;
+      const beforePlan = isBefore(d, planStart);
+      const afterPlan = isAfter(d, planEnd);
+      const isFuture = isAfter(d, today);
+
+      let kind: DayKind = 'active';
+      let outsideSide: HeatmapDay['outsideSide'];
+      if (beforePlan) {
+        kind = 'outside';
+        outsideSide = 'before';
+      } else if (afterPlan) {
+        kind = 'outside';
+        outsideSide = 'after';
+      } else if (isFuture) {
+        kind = 'future';
+      }
+
+      return {
         date: d,
         key,
         total: stats?.total || 0,
         complete: stats?.complete || 0,
-        hasReading: !!stats && stats.total > 0,
-      });
-    }
-
-    const nextColumns: (HeatmapDay | null)[][] = [];
-    let currentCol: (HeatmapDay | null)[] = [];
-
-    const firstDay = heatmapData[0]?.date.getDay() || 0;
-    for (let i = 0; i < firstDay; i++) currentCol.push(null);
-
-    heatmapData.forEach((day) => {
-      currentCol.push(day);
-      if (currentCol.length === 7) {
-        nextColumns.push(currentCol);
-        currentCol = [];
-      }
+        hasReading,
+        kind,
+        outsideSide,
+      };
     });
 
-    if (currentCol.length > 0) {
-      while (currentCol.length < 7) currentCol.push(null);
-      nextColumns.push(currentCol);
-    }
-
-    return { columns: nextColumns };
-  }, [dailyReadings, completedPassages, daysToShow]);
+    return {
+      days,
+      rangeLabel: `${format(rangeStart, 'MMM d')} – ${format(rangeEnd, 'MMM d, yyyy')}`,
+    };
+  }, [dailyReadings, completedPassages, minDays]);
 
   const getTooltipLabel = (day: HeatmapDay) => {
     const dateStr = format(day.date, 'MMM d, yyyy');
+    if (day.kind === 'outside') {
+      return day.outsideSide === 'after'
+        ? `${t.afterPlan} · ${dateStr}`
+        : `${t.beforePlan} · ${dateStr}`;
+    }
+    if (day.kind === 'future') {
+      return day.hasReading
+        ? `${t.upcomingReading} · ${dateStr}`
+        : `${t.noAssignedReading} · ${dateStr}`;
+    }
     if (!day.hasReading) return `${t.noAssignedReading} · ${dateStr}`;
     const status =
       day.complete === day.total
@@ -109,45 +177,40 @@ export default function ReadingHeatmap({ dailyReadings, completedPassages, daysT
     <div className="widget-surface w-full">
       <div className="panel-header">
         <h3 className="panel-title">{t.readingConsistency}</h3>
-        <p className="text-micro-label">{t.lastNDays(daysToShow)}</p>
+        <p className="text-micro-label">{rangeLabel}</p>
       </div>
 
-      <div className="flex w-full gap-[3px] sm:gap-1">
-        <TooltipProvider>
-          {columns.map((col, x) => (
-            <div key={x} className="flex min-w-0 flex-1 flex-col gap-[3px] sm:gap-1">
-              {col.map((day, y) => {
-                if (!day) {
-                  return <div key={y} className="aspect-square w-full rounded-[3px] sm:rounded-[4px] invisible" />;
-                }
-
-                const ratio = day.hasReading ? `${day.complete}/${day.total}` : '0/0';
-
-                return (
-                  <Tooltip key={day.key} delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          "aspect-square w-full rounded-[3px] sm:rounded-[4px] transition-transform hover:scale-110 cursor-pointer z-10",
-                          heatClassForDay(day),
-                        )}
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
-                      {getTooltipLabel(day)}{' '}
-                      <span className="text-muted-foreground ml-1">({ratio})</span>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          ))}
-        </TooltipProvider>
-      </div>
+      <TooltipProvider>
+        <div
+          className="grid w-full gap-[3px] sm:gap-1"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(0.7rem, 1fr))' }}
+        >
+          {days.map((day) => {
+            const ratio = day.hasReading ? `${day.complete}/${day.total}` : '0/0';
+            return (
+              <Tooltip key={day.key} delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "aspect-square w-full rounded-[3px] sm:rounded-[4px] transition-transform hover:scale-110 cursor-pointer z-10",
+                      heatClassForDay(day),
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
+                  {getTooltipLabel(day)}{' '}
+                  <span className="text-muted-foreground ml-1">({ratio})</span>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
 
       <div className="mt-3 flex items-center justify-end gap-2 text-micro-label">
         {t.less}
         <div className="flex gap-1">
+          <div className={cn("h-3 w-3 rounded-sm", themeHeat.outside)} />
           <div className={cn("h-3 w-3 rounded-sm", themeHeat.empty)} />
           <div className={cn("h-3 w-3 rounded-sm", themeHeat.partial)} />
           <div className={cn("h-3 w-3 rounded-sm", themeHeat.complete)} />
