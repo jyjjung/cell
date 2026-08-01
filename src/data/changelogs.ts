@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.3',
+    subtitle: 'Smoother setlist playback',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'The setlist player no longer slows the app down while a track is playing',
+      },
+      {
+        type: 'Fixed',
+        text: 'Scrolling and tapping stay responsive with the playlist open',
+      },
+    ],
+  },
+  {
     version: 'v1.9.2',
     subtitle: 'Unread counts and YouTube playback',
     date: 'August 1, 2026',

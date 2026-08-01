@@ -1,6 +1,9 @@
 "use client";
 
-import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
+import {
+    useSetlistPlaylistOptional, useSetlistPlaylistProgress
+} from '@/contexts/setlist-playlist-context';
+import type { PlaylistQueueItem } from '@/lib/setlist-playlist-queue';
 import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -8,12 +11,101 @@ import {
     ChevronDown, Headphones, ListMusic, Pause, Play, RotateCw, SkipBack, SkipForward, X
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { memo } from 'react';
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Memoized so the twice-a-second position updates don't re-render the list. */
+const TrackList = memo(function TrackList({
+  queue,
+  setlistName,
+  currentIndex,
+  playing,
+  playIndex,
+}: {
+  queue: PlaylistQueueItem[];
+  setlistName: string | null;
+  currentIndex: number;
+  playing: boolean;
+  playIndex: (index: number) => void;
+}) {
+  return (
+    <div className="max-h-[45vh] overflow-y-auto border-b border-border/50">
+      <div className="px-4 pt-3 pb-2">
+        <p className="text-sm font-semibold truncate">{setlistName}</p>
+        <p className="text-micro-label">
+          {queue.length} tracks
+        </p>
+      </div>
+      <div className="px-2 pb-2 space-y-0.5">
+        {queue.map((item, i) => {
+          const active = i === currentIndex;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => playIndex(i)}
+              className={cn(
+                'w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors',
+                active ? 'bg-primary/15' : 'hover:bg-muted/60',
+              )}
+            >
+              <span className={cn(
+                'w-5 shrink-0 text-center text-micro-label font-semibold tabular-nums',
+                active ? 'text-primary' : 'text-muted-foreground',
+              )}>
+                {active && playing ? '▶' : i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={cn('text-sm font-semibold truncate', active && 'text-primary')}>
+                  {playlistItemLabel(item)}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">{item.songTitle}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+/** Only this row subscribes to position, so ticks repaint just the scrubber. */
+function ProgressRow({
+  ready,
+  seek,
+}: {
+  ready: boolean;
+  seek: (time: number) => void;
+}) {
+  const { currentTime, duration } = useSetlistPlaylistProgress();
+
+  return (
+    <div className="flex items-center gap-2 px-3 pb-3">
+      <span className="text-[10px] font-semibold tabular-nums text-muted-foreground w-8">
+        {formatTime(currentTime)}
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={duration > 0 ? duration : 100}
+        step={0.1}
+        value={duration > 0 ? currentTime : 0}
+        disabled={!ready || duration <= 0}
+        onChange={(e) => seek(Number(e.target.value))}
+        className="flex-1 h-1 appearance-none rounded-full bg-muted [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+        aria-label="Track position"
+      />
+      <span className="text-[10px] font-semibold tabular-nums text-muted-foreground w-8 text-right">
+        {formatTime(duration)}
+      </span>
+    </div>
+  );
 }
 
 export function SetlistPlaylistBar() {
@@ -26,7 +118,7 @@ export function SetlistPlaylistBar() {
   const {
     isActive,
     queue, setlistName, currentIndex, currentItem, playing, ready, failed, retry,
-    currentTime, duration, expanded, setExpanded,
+    expanded, setExpanded,
     togglePlay, playIndex, next, previous, seek, stopPlaylist,
   } = playlist;
 
@@ -64,43 +156,13 @@ export function SetlistPlaylistBar() {
       >
         <div className="pointer-events-auto mx-auto max-w-lg overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-2xl backdrop-blur-xl">
           {expanded && (
-            <div className="max-h-[45vh] overflow-y-auto border-b border-border/50">
-              <div className="px-4 pt-3 pb-2">
-                <p className="text-sm font-semibold truncate">{setlistName}</p>
-                <p className="text-micro-label">
-                  {queue.length} tracks
-                </p>
-              </div>
-              <div className="px-2 pb-2 space-y-0.5">
-                {queue.map((item, i) => {
-                  const active = i === currentIndex;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => playIndex(i)}
-                      className={cn(
-                        'w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors',
-                        active ? 'bg-primary/15' : 'hover:bg-muted/60',
-                      )}
-                    >
-                      <span className={cn(
-                        'w-5 shrink-0 text-center text-micro-label font-semibold tabular-nums',
-                        active ? 'text-primary' : 'text-muted-foreground',
-                      )}>
-                        {active && playing ? '▶' : i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className={cn('text-sm font-semibold truncate', active && 'text-primary')}>
-                          {playlistItemLabel(item)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate">{item.songTitle}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <TrackList
+              queue={queue}
+              setlistName={setlistName}
+              currentIndex={currentIndex}
+              playing={playing}
+              playIndex={playIndex}
+            />
           )}
 
           <div className="flex items-center gap-2 px-3 py-2.5">
@@ -158,25 +220,7 @@ export function SetlistPlaylistBar() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-3 pb-3">
-            <span className="text-[10px] font-semibold tabular-nums text-muted-foreground w-8">
-              {formatTime(currentTime)}
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={duration > 0 ? duration : 100}
-              step={0.1}
-              value={duration > 0 ? currentTime : 0}
-              disabled={!ready || duration <= 0}
-              onChange={(e) => seek(Number(e.target.value))}
-              className="flex-1 h-1 appearance-none rounded-full bg-muted [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
-              aria-label="Track position"
-            />
-            <span className="text-[10px] font-semibold tabular-nums text-muted-foreground w-8 text-right">
-              {formatTime(duration)}
-            </span>
-          </div>
+          <ProgressRow ready={ready} seek={seek} />
         </div>
       </motion.div>
       )}

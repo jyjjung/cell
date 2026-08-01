@@ -107,6 +107,21 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
   return apiReadyPromise;
 }
 
+/**
+ * Report a swallowed player-load failure. Callers degrade gracefully, so
+ * without this the breakage would be invisible in error tracking.
+ */
+export function captureYoutubeLoadFailure(error: unknown, where: string): void {
+  void import('@sentry/nextjs')
+    .then((Sentry) => {
+      Sentry.captureException(error, {
+        level: 'warning',
+        tags: { feature: 'youtube-player', where },
+      });
+    })
+    .catch(() => { /* reporting is best-effort */ });
+}
+
 export type { YTPlayer, YTNamespace };
 
 export const YT_PLAYING = 1;

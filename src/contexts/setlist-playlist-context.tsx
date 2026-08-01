@@ -10,6 +10,7 @@ import type { PlaylistQueueItem } from '@/lib/setlist-playlist-queue';
 import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
 import { fetchYoutubeVideoTitle } from '@/lib/worship-utils';
 import {
+    captureYoutubeLoadFailure,
     loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer
 } from '@/lib/youtube-player-api';
 import React, {
@@ -29,8 +30,6 @@ type SetlistPlaylistContextValue = {
   /** YouTube's player API could not be loaded (blocked script / offline). */
   failed: boolean;
   retry: () => void;
-  currentTime: number;
-  duration: number;
   expanded: boolean;
   setExpanded: (open: boolean) => void;
   isActive: boolean;
@@ -43,10 +42,28 @@ type SetlistPlaylistContextValue = {
   seek: (time: number) => void;
 };
 
+/**
+ * Playback position lives in its own context: it changes twice a second, and
+ * keeping it out of the main value stops every consumer (chat setlist cards,
+ * the whole player bar) from re-rendering on each tick.
+ */
+type SetlistPlaylistProgress = {
+  currentTime: number;
+  duration: number;
+};
+
 const SetlistPlaylistContext = createContext<SetlistPlaylistContextValue | null>(null);
+const SetlistPlaylistProgressContext = createContext<SetlistPlaylistProgress>({
+  currentTime: 0,
+  duration: 0,
+});
 
 export function useSetlistPlaylistOptional() {
   return useContext(SetlistPlaylistContext);
+}
+
+export function useSetlistPlaylistProgress() {
+  return useContext(SetlistPlaylistProgressContext);
 }
 
 export function SetlistPlaylistProvider({ children }: { children: React.ReactNode }) {
@@ -57,6 +74,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
   const indexRef = useRef(0);
   const playingRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const durationRef = useRef(0);
   const titleCacheRef = useRef<Map<string, string>>(new Map());
   const pendingStartIndexRef = useRef<number | null>(null);
   const loadIndexRef = useRef<(index: number, autoplay: boolean) => void>(() => {});
@@ -91,7 +109,10 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
       const t = playerRef.current?.getCurrentTime() ?? 0;
       const d = playerRef.current?.getDuration() ?? 0;
       setCurrentTime(t);
-      if (Number.isFinite(d) && d > 0) setDuration(d);
+      if (Number.isFinite(d) && d > 0) {
+        durationRef.current = d;
+        setDuration(d);
+      }
       syncMediaSessionPosition({ duration: d, position: t, playing: true });
     }, 500);
   }, [clearTick]);
@@ -179,8 +200,12 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     if (!playerRef.current || !ready) return;
     playerRef.current.seekTo(time, true);
     setCurrentTime(time);
-    syncMediaSessionPosition({ duration, position: time, playing: playingRef.current });
-  }, [duration, ready]);
+    syncMediaSessionPosition({
+      duration: durationRef.current,
+      position: time,
+      playing: playingRef.current,
+    });
+  }, [ready]);
 
   const playIndex = useCallback((index: number) => {
     if (index < 0 || index >= queueRef.current.length) return;
@@ -298,9 +323,10 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
           },
         });
       })
-      .catch(() => {
+      .catch((err) => {
         // Script blocked / offline — keep the bar up so the user can retry
         // rather than having playback silently disappear.
+        captureYoutubeLoadFailure(err, 'setlist-playlist-bar');
         if (!cancelled) {
           setReady(false);
           setFailed(true);
@@ -348,8 +374,6 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     ready,
     failed,
     retry,
-    currentTime,
-    duration,
     expanded,
     setExpanded,
     isActive: queue.length > 0,
@@ -362,13 +386,19 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     seek,
   }), [
     queue, setlistId, setlistName, currentIndex, currentItem, playing, ready, failed, retry,
-    currentTime, duration,
     expanded, startPlaylist, stopPlaylist, togglePlay, playIndex, next, previous, seek,
   ]);
 
+  const progress = useMemo<SetlistPlaylistProgress>(
+    () => ({ currentTime, duration }),
+    [currentTime, duration],
+  );
+
   return (
     <SetlistPlaylistContext.Provider value={value}>
-      {children}
+      <SetlistPlaylistProgressContext.Provider value={progress}>
+        {children}
+      </SetlistPlaylistProgressContext.Provider>
     </SetlistPlaylistContext.Provider>
   );
 }
