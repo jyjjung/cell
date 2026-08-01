@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.4',
+    subtitle: 'Other rosters on the dashboard',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Upcoming dates from other rosters now appear on the dashboard for everyone who can view them, not only editors',
+      },
+      {
+        type: 'Improved',
+        text: 'The dashboard shows all upcoming other-roster dates, not only the ones that list your name',
+      },
+    ],
+  },
+  {
     version: 'v1.9.3',
     subtitle: 'Smoother setlist playback',
     date: 'August 1, 2026',
