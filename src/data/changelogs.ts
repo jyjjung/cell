@@ -13,6 +13,33 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.2',
+    subtitle: 'Unread counts and YouTube playback',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Chat and home-screen badges count unread messages, not just how many chats have something new',
+      },
+      {
+        type: 'Fixed',
+        text: 'Setlist and reference-track YouTube playback works again — the app now allows the YouTube player script to load',
+      },
+      {
+        type: 'Improved',
+        text: 'YouTube links in chat play with one tap on the thumbnail',
+      },
+      {
+        type: 'Improved',
+        text: 'Tapping outside an open setlist playlist collapses the track list',
+      },
+      {
+        type: 'Improved',
+        text: 'If YouTube fails to load, the playlist stays open with a retry instead of vanishing',
+      },
+    ],
+  },
+  {
     version: 'v1.9.1',
     subtitle: 'Playback and offline recovery',
     date: 'August 1, 2026',

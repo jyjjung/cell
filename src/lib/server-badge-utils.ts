@@ -1,6 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import type { Chat } from '@/types';
-import { isChatUnread } from '@/lib/notification-utils';
+import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import {
   NOTIFICATION_QUERY_LIMITS,
   NOTIFICATION_UNREAD_LOOKBACK_DAYS,
@@ -73,15 +73,12 @@ export async function calculateTotalUnread(userId: string, db: Firestore): Promi
       userId,
     );
 
-    let unreadChats = 0;
-    chatsSnapshot.forEach((docSnap) => {
-      const chat = { id: docSnap.id, ...docSnap.data() } as Chat;
-      if (isChatUnread(chat, userId)) {
-        unreadChats++;
-      }
-    });
+    const chats = chatsSnapshot.docs.map(
+      (docSnap) => ({ id: docSnap.id, ...docSnap.data() }) as Chat,
+    );
+    const unreadMessages = sumChatUnreadMessageCounts(chats, userId);
 
-    return unreadNotifications + unreadChats;
+    return unreadNotifications + unreadMessages;
   } catch (error) {
     console.error(`[calculateTotalUnread] Error for ${userId}:`, error);
     return 0;

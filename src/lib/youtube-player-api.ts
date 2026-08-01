@@ -57,42 +57,51 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
   }
   if (!apiReadyPromise) {
     apiReadyPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>('script[src*="youtube.com/iframe_api"]');
+
       const fail = (message: string) => {
         apiReadyPromise = null;
+        // Drop the dead tag so a retry re-requests the script instead of
+        // waiting on a load that already failed.
+        (existing ?? tag)?.remove();
         reject(new Error(message));
       };
       const finish = () => {
         if (window.YT?.Player) resolve(window.YT);
         else fail('YouTube API failed to load');
       };
-      const existing = document.querySelector<HTMLScriptElement>('script[src*="youtube.com/iframe_api"]');
+
       const previousReady = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
         previousReady?.();
         finish();
       };
+
+      let tag: HTMLScriptElement | null = null;
       if (!existing) {
-        const tag = document.createElement('script');
+        tag = document.createElement('script');
         tag.src = 'https://www.youtube.com/iframe_api';
         tag.async = true;
         tag.onerror = () => fail('YouTube API script failed');
         document.head.appendChild(tag);
-      } else {
-        // Script tag already present — poll briefly if ready callback already ran
-        let attempts = 0;
-        const check = () => {
-          if (window.YT?.Player) {
-            finish();
-            return;
-          }
-          if (++attempts > 100) {
-            fail('YouTube API script failed');
-            return;
-          }
-          setTimeout(check, 50);
-        };
-        check();
       }
+
+      // The ready callback may already have fired for an existing tag, and a
+      // silently blocked script never fires onerror — poll as a backstop.
+      let attempts = 0;
+      const check = () => {
+        if (window.YT?.Player) {
+          finish();
+          return;
+        }
+        if (apiReadyPromise === null) return; // already failed
+        if (++attempts > 200) {
+          fail('YouTube API failed to load');
+          return;
+        }
+        setTimeout(check, 50);
+      };
+      check();
     });
   }
   return apiReadyPromise;

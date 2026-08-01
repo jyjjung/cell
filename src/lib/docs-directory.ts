@@ -8,7 +8,7 @@ import type { DocNote } from '@/types';
 const LIST_KEY_PREFIX = 'docs_list_v1_';
 const DOC_KEY_PREFIX = 'docs_note_v1_';
 
-export type CachedDocNote = Omit<DocNote, 'createdAt' | 'updatedAt'> & {
+type CachedDocNote = Omit<DocNote, 'createdAt' | 'updatedAt'> & {
   createdAt: number | null;
   updatedAt: number | null;
 };
@@ -21,7 +21,7 @@ function docKey(docId: string): string {
   return `${DOC_KEY_PREFIX}${docId}`;
 }
 
-export function serializeDocForCache(note: DocNote): CachedDocNote {
+function serializeDocForCache(note: DocNote): CachedDocNote {
   return {
     id: note.id,
     title: note.title,
@@ -38,7 +38,7 @@ export function serializeDocForCache(note: DocNote): CachedDocNote {
   };
 }
 
-export function deserializeCachedDoc(cached: CachedDocNote): DocNote {
+function deserializeCachedDoc(cached: CachedDocNote): DocNote {
   return {
     ...cached,
     createdAt: cached.createdAt as unknown as DocNote['createdAt'],

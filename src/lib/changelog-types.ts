@@ -17,15 +17,6 @@ export type ChangelogEntry = {
   changes: ChangelogChange[];
 };
 
-/** Display / sort order aligned with Keep a Changelog (+ Improved). */
-export const CHANGELOG_TYPE_ORDER: ChangelogChangeType[] = [
-  'Added',
-  'Changed',
-  'Fixed',
-  'Improved',
-  'Security',
-];
-
 export const CHANGELOG_TYPE_CLASSES: Record<ChangelogChangeType, string> = {
   Added: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   Changed: 'bg-sky-500/10 text-sky-700 dark:text-sky-400',

@@ -145,7 +145,7 @@ export function SchedulePassageRef({ passage }: { passage: string }) {
  * Loading row. Mirrors ScheduleOccurrenceRow's three-line body so the agenda
  * does not collapse in height when real data arrives.
  */
-export function ScheduleOccurrenceRowSkeleton() {
+function ScheduleOccurrenceRowSkeleton() {
   return (
     <div className="event-row">
       <div className="flex w-10 shrink-0 flex-col items-center gap-1 leading-none">

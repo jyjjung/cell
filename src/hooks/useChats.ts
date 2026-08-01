@@ -67,6 +67,10 @@ export function useChats() {
         [currentUser.uid]: serverTimestamp() as Timestamp,
         [peerUser.uid]: new Timestamp(0, 0),
       },
+      memberUnreadCount: {
+        [currentUser.uid]: 0,
+        [peerUser.uid]: 0,
+      },
     };
 
     await runTransaction(db, async (transaction) => {
@@ -96,8 +100,10 @@ export function useChats() {
     });
 
     const memberSeen: { [uid: string]: Timestamp | ReturnType<typeof serverTimestamp> } = {};
+    const memberUnreadCount: { [uid: string]: number } = {};
     memberIds.forEach((id) => {
       memberSeen[id] = id === currentUser.uid ? serverTimestamp() : new Timestamp(0, 0);
+      memberUnreadCount[id] = 0;
     });
 
     const newChat = {
@@ -110,6 +116,7 @@ export function useChats() {
       lastMessageText: `${formatUserDisplayName(currentUser)} created the circle.`,
       lastMessageSentAt: serverTimestamp() as Timestamp,
       memberSeen,
+      memberUnreadCount,
     };
 
     const chatDocRef = doc(collection(db, CHATS_COLLECTION));

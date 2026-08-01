@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/types';
 import { SmilePlus } from 'lucide-react';
 
-export const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 export function AnnouncementReactions({
   notification,

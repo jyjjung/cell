@@ -26,6 +26,9 @@ type SetlistPlaylistContextValue = {
   currentItem: PlaylistQueueItem | null;
   playing: boolean;
   ready: boolean;
+  /** YouTube's player API could not be loaded (blocked script / offline). */
+  failed: boolean;
+  retry: () => void;
   currentTime: number;
   duration: number;
   expanded: boolean;
@@ -65,6 +68,8 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -217,10 +222,16 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     setMediaSessionPlaybackState(false);
   }, [clearTick]);
 
+  const retry = useCallback(() => {
+    setFailed(false);
+    setAttempt((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     if (!playerEnabled) return;
 
     let cancelled = false;
+    setFailed(false);
 
     // Mount outside React's tree — YouTube replaces this node's children and
     // React must not try to reconcile/remove them on unmount.
@@ -288,10 +299,11 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
         });
       })
       .catch(() => {
-        // Script blocked / offline — tear down mount; user can retry by starting again.
+        // Script blocked / offline — keep the bar up so the user can retry
+        // rather than having playback silently disappear.
         if (!cancelled) {
-          setPlayerEnabled(false);
           setReady(false);
+          setFailed(true);
         }
       });
 
@@ -304,7 +316,7 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
       mount.replaceChildren();
       mount.remove();
     };
-  }, [clearTick, startTick, playerEnabled]);
+  }, [clearTick, startTick, playerEnabled, attempt]);
 
   useEffect(() => {
     if (!currentItem || !setlistName) return;
@@ -334,6 +346,8 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     currentItem,
     playing,
     ready,
+    failed,
+    retry,
     currentTime,
     duration,
     expanded,
@@ -347,7 +361,8 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     previous,
     seek,
   }), [
-    queue, setlistId, setlistName, currentIndex, currentItem, playing, ready, currentTime, duration,
+    queue, setlistId, setlistName, currentIndex, currentItem, playing, ready, failed, retry,
+    currentTime, duration,
     expanded, startPlaylist, stopPlaylist, togglePlay, playIndex, next, previous, seek,
   ]);
 

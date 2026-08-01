@@ -6,6 +6,7 @@ import {
   GROUP_PHOTO_CHANGED_PREVIEW,
   GROUP_PHOTO_REMOVED_PREVIEW,
 } from '@/lib/chat-utils';
+import { buildUnreadCountIncrements } from '@/lib/notification-utils';
 import type { Chat } from '@/types';
 
 function isGroupMember(chat: Chat, uid: string): boolean {
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
       lastMessageText: announcement,
       lastMessageSentAt: FieldValue.serverTimestamp(),
       lastMessageSenderId: authResult.uid,
+      ...buildUnreadCountIncrements(chat.members || [], authResult.uid, (n) => FieldValue.increment(n)),
     };
 
     if (remove) {

@@ -2,6 +2,7 @@
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
+import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
 import {
@@ -15,6 +16,7 @@ import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getDeletedMessageContentType } from '@/lib/deleted-content';
 import { db } from '@/lib/firebase';
 import { primeChatPreviewMedia } from '@/lib/media-cache';
+import { buildUnreadCountIncrements } from '@/lib/notification-utils';
 import type { ChatMessage } from '@/types';
 import {
     collection, deleteField, doc, getDoc,
@@ -31,6 +33,7 @@ const CHATS_COLLECTION = 'chats';
 
 export function useThreadMessages(chatId: string | null, parentMessageId: string | null) {
   const { currentUser } = useAuth();
+  const chatsContext = useChatsContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [parentMessage, setParentMessage] = useState<ChatMessage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -241,10 +244,15 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         ...messageData,
         threadParentId: parentMessageId,
       });
+      const memberIds =
+        chatsContext?.chats.find((c) => c.id === chatId)?.members
+        ?? ((await getDoc(chatDocRef)).data()?.members as string[] | undefined)
+        ?? [];
       batch.update(chatDocRef, {
         lastMessageText: lastText,
         lastMessageSentAt: serverTimestamp(),
         lastMessageSenderId: currentUser.uid,
+        ...buildUnreadCountIncrements(memberIds, currentUser.uid, increment),
       });
       await batch.commit();
 
@@ -262,7 +270,7 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         description: error instanceof Error ? error.message : 'Could not save this reply. Try again.',
       });
     }
-  }, [currentUser, chatId, parentMessageId, toast]);
+  }, [currentUser, chatId, parentMessageId, toast, chatsContext?.chats]);
 
   const sendImageMessage = useCallback((imageUrl: string, replyToId?: string, imageThumbUrl?: string) => {
     sendMessage(
