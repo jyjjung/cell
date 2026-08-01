@@ -20,7 +20,7 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { parseDay } from '@/lib/event-occurrences';
 import { makePassageKey } from '@/lib/passage-keys';
-import { calculatePlanPaceStats, countPlanPassageProgress } from '@/lib/reading-utils';
+import { calculatePlanPaceStats, calculatePlanProgressToDatePercent, countPlanPassageProgress, countPlanPassagesDueThrough } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { DailyReading, WeeklyProgress } from '@/types';
@@ -217,6 +217,19 @@ export default function BibleChecklistPage() {
     return calculatePlanPaceStats(plan.dailyReadings, completedPassages, today);
   }, [plan, completedPassages, today, isGuest]);
 
+  const progressSoFar = useMemo(() => {
+    if (!plan?.dailyReadings || isGuest || loadingChecklist) {
+      return { percentage: 0, dueThroughToday: 0 };
+    }
+    const dueThroughToday = countPlanPassagesDueThrough(plan.dailyReadings, today);
+    const percentage = calculatePlanProgressToDatePercent(
+      plan.dailyReadings,
+      completedPassages,
+      today,
+    );
+    return { percentage, dueThroughToday };
+  }, [plan, completedPassages, today, isGuest, loadingChecklist]);
+
 
   const { completedWeeks, upcomingWeeks } = useMemo(() => {
     const completed: WeeklyProgress[] = [];
@@ -354,11 +367,24 @@ export default function BibleChecklistPage() {
                           }
                       />
                   </PageSection>
-                      {!isGuest && paceStats.passagesLeft > 0 && (
+                      {!isGuest && (paceStats.passagesLeft > 0 || progressSoFar.dueThroughToday > 0) && (
                         <div className="ui-metric-grid">
-                          <PaceStatCard title={t.passagesLeft} value={paceStats.passagesLeft} tone="primary" />
-                          <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} tone="chart-2" />
-                          <PaceStatCard title={t.avgPerDay} value={paceStats.passagesPerDay} unit="passages" tone="chart-3" />
+                          <PaceStatCard
+                            title={t.progressSoFar}
+                            value={`${Math.round(progressSoFar.percentage)}%`}
+                            description={t.progressBasedOn.replace(
+                              '{count}',
+                              String(progressSoFar.dueThroughToday),
+                            )}
+                            tone="chart-4"
+                          />
+                          {paceStats.passagesLeft > 0 && (
+                            <>
+                              <PaceStatCard title={t.passagesLeft} value={paceStats.passagesLeft} tone="primary" />
+                              <PaceStatCard title={t.daysLeft} value={paceStats.daysLeft} tone="chart-2" />
+                              <PaceStatCard title={t.avgPerDay} value={paceStats.passagesPerDay} unit="passages" tone="chart-3" />
+                            </>
+                          )}
                         </div>
                       )}
                       <ReadingHeatmap dailyReadings={plan.dailyReadings} completedPassages={completedPassages} />

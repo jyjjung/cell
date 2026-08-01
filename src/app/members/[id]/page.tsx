@@ -16,13 +16,14 @@ import { isAvatarCurator } from '@/lib/avatar-curator';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { hasCapability } from '@/lib/role-capabilities';
 import { translations } from '@/lib/translations';
-import { format, isBefore, isSameDay, isValid, parseISO, startOfDay } from 'date-fns';
+import { format, isValid, parseISO, startOfDay } from 'date-fns';
 import { motion } from 'framer-motion';
 import {
     BookOpen, Cake, ChevronLeft, Shield, Trophy
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { countPlanPassagesDueThrough } from '@/lib/reading-utils';
 
 export default function MemberProfilePage() {
   const params = useParams();
@@ -60,18 +61,7 @@ export default function MemberProfilePage() {
   }, [events, userId]);
 
   const totalPassagesToDate = useMemo(() => {
-    if (!plan?.dailyReadings) return 0;
-    const today = startOfDay(new Date());
-    return plan.dailyReadings
-      .filter(r => {
-        try {
-          const d = parseISO(r.date);
-          return isValid(d) && (isBefore(d, today) || isSameDay(d, today));
-        } catch {
-          return false;
-        }
-      })
-      .reduce((acc, day) => acc + (day.passages?.filter(p => p?.displayText && !p.displayText.startsWith('Error:'))?.length ?? 0), 0);
+    return countPlanPassagesDueThrough(plan?.dailyReadings, startOfDay(new Date()));
   }, [plan]);
 
   const completedCount = progress?.completedCount ?? progress?.completedPassages?.length ?? 0;

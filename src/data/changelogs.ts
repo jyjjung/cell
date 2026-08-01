@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.5',
+    subtitle: 'Reading plan progress so far',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Your reading plan now shows progress so far against passages due through today, like the leaderboard',
+      },
+    ],
+  },
+  {
     version: 'v1.9.4',
     subtitle: 'Other rosters on the dashboard',
     date: 'August 1, 2026',

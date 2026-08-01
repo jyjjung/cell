@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useCommunityProgress } from '@/hooks/use-community-progress';
 import { useAllUsers } from '@/hooks/use-all-users';
-import { startOfDay, parseISO, isValid, isBefore, isSameDay } from 'date-fns';
+import { startOfDay } from 'date-fns';
 import { Trophy, Medal, Award, Users } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
@@ -14,6 +14,7 @@ import { translations } from '@/lib/translations';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatUserDisplayName } from '@/lib/formatting';
+import { countPlanPassagesDueThrough } from '@/lib/reading-utils';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 
@@ -44,11 +45,7 @@ export default function LeaderboardPage() {
   useEffect(() => { setIsMounted(true); }, []);
 
   const totalPassagesToDate = useMemo(() => {
-    if (!plan?.dailyReadings) return 0;
-    const today = startOfDay(new Date());
-    return plan.dailyReadings
-      .filter(r => { try { const d = parseISO(r.date); return isValid(d) && (isBefore(d, today) || isSameDay(d, today)); } catch { return false; } })
-      .reduce((acc, day) => acc + (day.passages?.filter(p => p?.displayText && !p.displayText.startsWith('Error:'))?.length ?? 0), 0);
+    return countPlanPassagesDueThrough(plan?.dailyReadings, startOfDay(new Date()));
   }, [plan]);
 
   const userProgressData = useMemo((): UserProgressDisplay[] => {
