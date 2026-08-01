@@ -40,6 +40,17 @@ export const changelogs: ChangelogEntry[] = [
     ],
   },
   {
+    version: 'v1.8.3',
+    subtitle: 'Photo viewer controls',
+    date: 'July 31, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Photo viewer zoom, download, and close icons stay visible in light mode',
+      },
+    ],
+  },
+  {
     version: 'v1.8.2',
     subtitle: 'Group reaction notifications',
     date: 'July 31, 2026',
