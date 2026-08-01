@@ -2,15 +2,16 @@
 
 import { useMemo } from 'react';
 import {
-  addDays,
-  differenceInCalendarDays,
   eachDayOfInterval,
+  endOfWeek,
   format,
   isAfter,
   isBefore,
   isValid,
   parseISO,
   startOfDay,
+  startOfWeek,
+  subWeeks,
 } from 'date-fns';
 import { DailyReading } from '@/types';
 import { cn } from '@/lib/utils';
@@ -28,8 +29,8 @@ import { translations } from '@/lib/translations';
 interface ReadingHeatmapProps {
   dailyReadings: DailyReading[];
   completedPassages: string[];
-  /** Minimum days so the wrapping grid can fill the card. */
-  minDays?: number;
+  /** Week columns to show, matching GitHub’s year graph. */
+  weeksToShow?: number;
 }
 
 type DayKind = 'outside' | 'future' | 'active';
@@ -44,8 +45,11 @@ type HeatmapDay = {
   outsideSide?: 'before' | 'after';
 };
 
-/** Enough cells for several filled rows on a typical phone/desktop card. */
-const DEFAULT_MIN_DAYS = 180;
+/** GitHub contribution graphs use ~53 week columns. */
+const DEFAULT_WEEKS = 53;
+
+const CELL_CLASS =
+  "size-[11px] sm:size-3 rounded-[2px] sm:rounded-[3px] transition-transform hover:scale-125 cursor-pointer z-10";
 
 function heatClassForDay(day: HeatmapDay): string {
   if (day.kind === 'outside' || day.kind === 'future') return themeHeat.outside;
@@ -73,12 +77,12 @@ function parsePlanBounds(dailyReadings: DailyReading[]): { start: Date; end: Dat
 export default function ReadingHeatmap({
   dailyReadings,
   completedPassages,
-  minDays = DEFAULT_MIN_DAYS,
+  weeksToShow = DEFAULT_WEEKS,
 }: ReadingHeatmapProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const { days, rangeLabel } = useMemo(() => {
+  const { columns, rangeLabel } = useMemo(() => {
     const today = startOfDay(new Date());
     const planMap = new Map<string, { total: number; complete: number }>();
     const bounds = parsePlanBounds(dailyReadings);
@@ -99,22 +103,12 @@ export default function ReadingHeatmap({
 
     const planStart = bounds?.start ?? today;
     const planEnd = bounds?.end ?? today;
-    let rangeStart = planStart;
-    let rangeEnd = isAfter(planEnd, today) ? planEnd : today;
 
-    const span = differenceInCalendarDays(rangeEnd, rangeStart) + 1;
-    if (span < minDays) {
-      const missing = minDays - span;
-      const padBefore = Math.ceil(missing / 2);
-      const padAfter = missing - padBefore;
-      rangeStart = addDays(rangeStart, -padBefore);
-      rangeEnd = addDays(rangeEnd, padAfter);
-    }
+    // GitHub-style: fixed week columns ending this week (or plan end if later).
+    const rangeEnd = endOfWeek(isAfter(planEnd, today) ? planEnd : today);
+    const rangeStart = startOfWeek(subWeeks(rangeEnd, weeksToShow - 1));
 
-    const days: HeatmapDay[] = eachDayOfInterval({
-      start: rangeStart,
-      end: rangeEnd,
-    }).map((d) => {
+    const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((d) => {
       const key = format(d, 'yyyy-MM-dd');
       const stats = planMap.get(key);
       const hasReading = !!stats && stats.total > 0;
@@ -142,14 +136,19 @@ export default function ReadingHeatmap({
         hasReading,
         kind,
         outsideSide,
-      };
+      } satisfies HeatmapDay;
     });
 
+    const nextColumns: HeatmapDay[][] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      nextColumns.push(days.slice(i, i + 7));
+    }
+
     return {
-      days,
+      columns: nextColumns,
       rangeLabel: `${format(rangeStart, 'MMM d')} – ${format(rangeEnd, 'MMM d, yyyy')}`,
     };
-  }, [dailyReadings, completedPassages, minDays]);
+  }, [dailyReadings, completedPassages, weeksToShow]);
 
   const getTooltipLabel = (day: HeatmapDay) => {
     const dateStr = format(day.date, 'MMM d, yyyy');
@@ -180,32 +179,30 @@ export default function ReadingHeatmap({
         <p className="text-micro-label">{rangeLabel}</p>
       </div>
 
-      <TooltipProvider>
-        <div
-          className="grid w-full gap-[3px] sm:gap-1"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(0.7rem, 1fr))' }}
-        >
-          {days.map((day) => {
-            const ratio = day.hasReading ? `${day.complete}/${day.total}` : '0/0';
-            return (
-              <Tooltip key={day.key} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      "aspect-square w-full rounded-[3px] sm:rounded-[4px] transition-transform hover:scale-110 cursor-pointer z-10",
-                      heatClassForDay(day),
-                    )}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
-                  {getTooltipLabel(day)}{' '}
-                  <span className="text-muted-foreground ml-1">({ratio})</span>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+      <div className="w-full overflow-x-auto">
+        <TooltipProvider>
+          <div className="inline-flex min-w-full justify-between gap-[3px] sm:gap-1">
+            {columns.map((col, x) => (
+              <div key={x} className="flex flex-col gap-[3px] sm:gap-1">
+                {col.map((day) => {
+                  const ratio = day.hasReading ? `${day.complete}/${day.total}` : '0/0';
+                  return (
+                    <Tooltip key={day.key} delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <div className={cn(CELL_CLASS, heatClassForDay(day))} />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
+                        {getTooltipLabel(day)}{' '}
+                        <span className="text-muted-foreground ml-1">({ratio})</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </TooltipProvider>
+      </div>
 
       <div className="mt-3 flex items-center justify-end gap-2 text-micro-label">
         {t.less}
