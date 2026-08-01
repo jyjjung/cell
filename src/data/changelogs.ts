@@ -19,11 +19,11 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Fixed',
-        text: 'The reading streak heatmap now fills the card instead of leaving empty space on the right',
+        text: 'The reading streak heatmap fills the card with square days across the plan window',
       },
       {
         type: 'Changed',
-        text: 'Unread days use the empty heat color; only partial and completed days show heat',
+        text: 'Days before the plan and upcoming days are shaded; unread plan days stay empty until you read',
       },
     ],
   },
