@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.9.6',
+    subtitle: 'Reading streak heatmap',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'The reading streak heatmap now fills the card instead of leaving empty space on the right',
+      },
+      {
+        type: 'Changed',
+        text: 'Unread days use the empty heat color; only partial and completed days show heat',
+      },
+    ],
+  },
+  {
     version: 'v1.9.5',
     subtitle: 'Reading plan progress so far',
     date: 'August 1, 2026',
