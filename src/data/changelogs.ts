@@ -13,6 +13,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.10.0',
+    subtitle: 'Other roster reminders',
+    date: 'August 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Other rosters now send assignment notifications when you are added as a member',
+      },
+      {
+        type: 'Added',
+        text: 'Duty reminders for other rosters — coming up, tomorrow, and today — same as cleaning, QT, and worship',
+      },
+      {
+        type: 'Fixed',
+        text: 'Other roster pages show the roster name in the header instead of the internal ID',
+      },
+    ],
+  },
+  {
     version: 'v1.9.6',
     subtitle: 'Reading streak heatmap',
     date: 'August 1, 2026',

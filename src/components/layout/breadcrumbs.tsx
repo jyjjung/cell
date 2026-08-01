@@ -23,6 +23,7 @@ export function Breadcrumbs() {
   const t = translations[lang];
   const pathsegments = pathname.split('/').filter(Boolean);
   const chatId = pathname.startsWith('/chat/') ? pathsegments[1] : null;
+  const rosterId = pathname.match(/^\/rosters\/([^/]+)$/)?.[1] ?? null;
   const chatLabel = useChatNavLabel(chatId);
 
   const crumbs = React.useMemo(() => {
@@ -33,19 +34,25 @@ export function Breadcrumbs() {
 
     pathsegments.forEach((segment, index) => {
       currentPath += `/${segment}`;
+      const isLast = index === pathsegments.length - 1;
       const isChatIdCrumb =
         currentPath.startsWith('/chat/') &&
         !CHAT_SUBPAGES.has(segment) &&
-        index === pathsegments.length - 1;
+        isLast;
+      const isRosterIdCrumb = Boolean(rosterId) && currentPath === `/rosters/${rosterId}`;
 
       items.push({
         href: currentPath,
-        label: isChatIdCrumb ? chatLabel : getNavLabelForPath(currentPath, lang),
+        label: isChatIdCrumb
+          ? chatLabel
+          : isRosterIdCrumb
+            ? currentLabel
+            : getNavLabelForPath(currentPath, lang),
       });
     });
 
     return items;
-  }, [pathsegments, lang, t.home, chatLabel]);
+  }, [pathsegments, lang, t.home, chatLabel, rosterId, currentLabel]);
 
   if (pathname === '/') return null;
 

@@ -24,7 +24,8 @@ import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const ROSTER_DEFINITIONS_COLLECTION = 'rosterDefinitions';
 
-export function useRosterDefinitions() {
+export function useRosterDefinitions(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { currentUser, loadingAuth, isAdmin } = useAuth();
   const [definitions, setDefinitions] = useState<RosterDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,7 @@ export function useRosterDefinitions() {
   useEffect(() => {
     if (loadingAuth) return;
 
-    if (!currentUser?.uid) {
+    if (!enabled || !currentUser?.uid) {
       setDefinitions([]);
       setLoading(false);
       return;
@@ -53,7 +54,7 @@ export function useRosterDefinitions() {
     });
 
     return () => unsubscribe();
-  }, [loadingAuth, currentUser?.uid]);
+  }, [loadingAuth, currentUser?.uid, enabled]);
 
   const addDefinition = useCallback(async (name: string): Promise<string> => {
     if (!isAdmin) throw new Error("User is not authorized.");
