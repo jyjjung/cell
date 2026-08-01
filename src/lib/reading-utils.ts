@@ -155,6 +155,46 @@ export function calculatePlanProgressPercent(
   return Math.round((completed / total) * 100);
 }
 
+/**
+ * Count valid plan passages scheduled through `asOf` (inclusive).
+ * Same denominator the leaderboard uses for “progress so far.”
+ */
+export function countPlanPassagesDueThrough(
+  dailyReadings: DailyReading[] | undefined | null,
+  asOf: Date = startOfDay(new Date()),
+): number {
+  if (!dailyReadings?.length) return 0;
+
+  const day = startOfDay(asOf);
+  let total = 0;
+
+  for (const reading of dailyReadings) {
+    const date = parseDay(reading.date);
+    if (!isValid(date) || !(isBefore(date, day) || isSameDay(date, day))) continue;
+    for (const passage of reading.passages ?? []) {
+      if (!isCountablePlanPassage(passage)) continue;
+      total += 1;
+    }
+  }
+
+  return total;
+}
+
+/**
+ * Completed passages vs passages due through `asOf` (leaderboard-style %).
+ * Can exceed 100 when the reader is ahead of schedule.
+ */
+export function calculatePlanProgressToDatePercent(
+  dailyReadings: DailyReading[] | undefined | null,
+  completedPassages: string[],
+  asOf: Date = startOfDay(new Date()),
+): number {
+  const due = countPlanPassagesDueThrough(dailyReadings, asOf);
+  if (due === 0) return 0;
+  const { completed } = countPlanPassageProgress(dailyReadings, completedPassages);
+  return parseFloat(((completed / due) * 100).toFixed(1));
+}
+
 /** Plan passage keys for every assignment of a given chapter. */
 function findPlanPassageKeysForChapter(
   dailyReadings: DailyReading[] | undefined | null,
