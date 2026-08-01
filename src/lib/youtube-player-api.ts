@@ -44,6 +44,10 @@ declare global {
 
 let apiReadyPromise: Promise<YTNamespace> | null = null;
 
+/**
+ * Loads the YouTube IFrame API once. Failures (blocked script, network) reject
+ * and clear the cached promise so a later call can retry.
+ */
 export function loadYoutubeIframeApi(): Promise<YTNamespace> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('YouTube API is browser-only'));
@@ -53,9 +57,13 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
   }
   if (!apiReadyPromise) {
     apiReadyPromise = new Promise((resolve, reject) => {
+      const fail = (message: string) => {
+        apiReadyPromise = null;
+        reject(new Error(message));
+      };
       const finish = () => {
         if (window.YT?.Player) resolve(window.YT);
-        else reject(new Error('YouTube API failed to load'));
+        else fail('YouTube API failed to load');
       };
       const existing = document.querySelector<HTMLScriptElement>('script[src*="youtube.com/iframe_api"]');
       const previousReady = window.onYouTubeIframeAPIReady;
@@ -67,13 +75,21 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
         const tag = document.createElement('script');
         tag.src = 'https://www.youtube.com/iframe_api';
         tag.async = true;
-        tag.onerror = () => reject(new Error('YouTube API script failed'));
+        tag.onerror = () => fail('YouTube API script failed');
         document.head.appendChild(tag);
       } else {
         // Script tag already present — poll briefly if ready callback already ran
+        let attempts = 0;
         const check = () => {
-          if (window.YT?.Player) finish();
-          else setTimeout(check, 50);
+          if (window.YT?.Player) {
+            finish();
+            return;
+          }
+          if (++attempts > 100) {
+            fail('YouTube API script failed');
+            return;
+          }
+          setTimeout(check, 50);
         };
         check();
       }

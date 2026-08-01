@@ -239,53 +239,61 @@ export function SetlistPlaylistProvider({ children }: { children: React.ReactNod
     });
     document.body.appendChild(mount);
 
-    void loadYoutubeIframeApi().then((YT) => {
-      if (cancelled || playerRef.current || !mount.isConnected) return;
+    void loadYoutubeIframeApi()
+      .then((YT) => {
+        if (cancelled || playerRef.current || !mount.isConnected) return;
 
-      playerRef.current = new YT.Player(mount, {
-        height: '1',
-        width: '1',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-        },
-        events: {
-          onReady: () => {
-            if (cancelled) return;
-            setReady(true);
-            if (pendingStartIndexRef.current !== null && queueRef.current.length > 0) {
-              const idx = pendingStartIndexRef.current;
-              pendingStartIndexRef.current = null;
-              loadIndexRef.current(idx, true);
-            }
+        playerRef.current = new YT.Player(mount, {
+          height: '1',
+          width: '1',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
           },
-          onStateChange: (event) => {
-            if (event.data === YT_PLAYING) {
-              playingRef.current = true;
-              setPlaying(true);
-              setMediaSessionPlaybackState(true);
-              startTick();
-            } else {
-              playingRef.current = false;
-              setPlaying(false);
-              setMediaSessionPlaybackState(false);
-              clearTick();
-              if (event.data === YT_PAUSED || event.data === YT_ENDED) {
-                setCurrentTime(playerRef.current?.getCurrentTime() ?? 0);
+          events: {
+            onReady: () => {
+              if (cancelled) return;
+              setReady(true);
+              if (pendingStartIndexRef.current !== null && queueRef.current.length > 0) {
+                const idx = pendingStartIndexRef.current;
+                pendingStartIndexRef.current = null;
+                loadIndexRef.current(idx, true);
               }
-              if (event.data === YT_ENDED) {
-                nextRef.current();
+            },
+            onStateChange: (event) => {
+              if (event.data === YT_PLAYING) {
+                playingRef.current = true;
+                setPlaying(true);
+                setMediaSessionPlaybackState(true);
+                startTick();
+              } else {
+                playingRef.current = false;
+                setPlaying(false);
+                setMediaSessionPlaybackState(false);
+                clearTick();
+                if (event.data === YT_PAUSED || event.data === YT_ENDED) {
+                  setCurrentTime(playerRef.current?.getCurrentTime() ?? 0);
+                }
+                if (event.data === YT_ENDED) {
+                  nextRef.current();
+                }
               }
-            }
+            },
           },
-        },
+        });
+      })
+      .catch(() => {
+        // Script blocked / offline — tear down mount; user can retry by starting again.
+        if (!cancelled) {
+          setPlayerEnabled(false);
+          setReady(false);
+        }
       });
-    });
 
     return () => {
       cancelled = true;
