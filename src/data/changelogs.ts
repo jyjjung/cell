@@ -25,6 +25,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Scrolling and tapping stay responsive with the playlist open',
       },
+      {
+        type: 'Changed',
+        text: 'A reference track keeps playing as you move through the setlist, and names the song it belongs to once you scroll past it',
+      },
     ],
   },
   {
