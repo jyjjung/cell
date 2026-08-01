@@ -8,6 +8,7 @@ import { getNavLabelForPath } from '@/lib/nav-labels';
 import { translations } from '@/lib/translations';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { useRosterDefinitions } from '@/hooks/useRosterDefinitions';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { isProfileTabId } from '@/components/profile/profile-hub-tabs';
 
@@ -38,6 +39,11 @@ function getChatIdFromPath(pathname: string): string | null {
   return segment;
 }
 
+function getRosterIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/rosters\/([^/]+)$/);
+  return match?.[1] ?? null;
+}
+
 export function useNavLabel(pathnameOverride?: string) {
   const pathname = usePathname();
   const searchParams = useClientSearchParams();
@@ -46,6 +52,8 @@ export function useNavLabel(pathnameOverride?: string) {
   const { allUsers } = useAllUsers();
   const lang = (currentUser?.preferredLanguage || 'en') as 'en' | 'ko';
   const resolved = pathnameOverride ?? pathname;
+  const rosterId = getRosterIdFromPath(resolved);
+  const { definitions } = useRosterDefinitions({ enabled: !!rosterId });
 
   const chatName = useMemo(() => {
     const chatId = getChatIdFromPath(resolved);
@@ -55,7 +63,13 @@ export function useNavLabel(pathnameOverride?: string) {
     return getChatDisplayDetails(chat, currentUser.uid, allUsers)?.name ?? null;
   }, [resolved, chats, currentUser, allUsers]);
 
+  const rosterName = useMemo(() => {
+    if (!rosterId) return null;
+    return definitions.find((def) => def.id === rosterId)?.name?.trim() || null;
+  }, [rosterId, definitions]);
+
   if (chatName) return chatName;
+  if (rosterName) return rosterName;
 
   if (resolved === '/profile') {
     const tab = searchParams.get('tab');

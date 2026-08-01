@@ -4,6 +4,7 @@ import { getReferenceTracks } from './worship-utils';
 import {
   entryHasContent,
   formatCustomRosterEntrySummary,
+  getAssignedUserIdsFromCustomEntry,
   getCustomRosterEntryTitle,
   getUserCustomRosterLabels,
 } from './roster-access';
@@ -53,6 +54,7 @@ describe('canonical data helpers', () => {
     expect(entryHasContent(entry, definition)).toBeTruthy();
     expect(getCustomRosterEntryTitle(entry, definition)).toBe('Alex K.');
     expect(getUserCustomRosterLabels(entry, definition, 'user-1')).toEqual(['Leader']);
+    expect(getAssignedUserIdsFromCustomEntry(entry, definition)).toEqual(['user-1']);
     expect(formatCustomRosterEntrySummary(entry, definition)).toBe(
       'Leader: Alex K., Task: Welcome',
     );

@@ -1,15 +1,23 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Messaging } from 'firebase-admin/messaging';
+import { addDays, format } from 'date-fns';
 import { deliverDueScheduledAnnouncements } from '@/lib/deliver-scheduled-announcements';
-import { collectDutyReminders, getCommunityTodayIso } from '@/lib/duty-reminders';
+import {
+  collectDutyReminders,
+  getCommunityTodayIso,
+  type CustomRosterDutySource,
+} from '@/lib/duty-reminders';
 import { normalizeEventFromFirestore } from '@/lib/event-doc';
 import { collectEventDayReminders } from '@/lib/event-reminders';
+import { parseDay } from '@/lib/event-occurrences';
 import { retryFailedNotificationPushes } from '@/lib/retry-failed-notification-pushes';
 import { sendUserNotification } from '@/lib/server-notifications';
 import type {
   CleaningDay,
   CleaningRosterEntry,
+  CustomRosterEntry,
   QTRosterEntry,
+  RosterDefinition,
   UserProfileData,
   WorshipRoster,
 } from '@/types';
@@ -22,6 +30,9 @@ const SEND_CONCURRENCY = 8;
 /** Heartbeat lives in `config` so admins can read it without a new rules deploy. */
 const CRON_HEARTBEAT_COLLECTION = 'config';
 const CRON_HEARTBEAT_DOC_ID = 'dutyReminderCron';
+
+/** Match duty-reminders week window: today through +7 days inclusive. */
+const CUSTOM_ROSTER_LOOKAHEAD_DAYS = 7;
 
 /**
  * `scheduled` is the morning run, `catchup` the midday safety net, `manual` a
@@ -108,7 +119,7 @@ export async function runDutyReminderSweep(params: {
   const timeZone = process.env.DUTY_REMINDER_TIMEZONE || DEFAULT_TIMEZONE;
   const todayIso = getCommunityTodayIso(timeZone);
 
-  const [cleaningSnap, cleaningDaysSnap, qtSnap, worshipSnap, eventsSnap, usersSnap] =
+  const [cleaningSnap, cleaningDaysSnap, qtSnap, worshipSnap, eventsSnap, usersSnap, customDefsSnap] =
     await Promise.all([
       adminDb.collection('cleaningRosters').get(),
       adminDb.collection('cleaningDays').get(),
@@ -116,6 +127,7 @@ export async function runDutyReminderSweep(params: {
       adminDb.collection('worshipRosters').get(),
       adminDb.collection('events').get(),
       adminDb.collection('users').get(),
+      adminDb.collection('rosterDefinitions').get(),
     ]);
 
   const cleaningRoster = cleaningSnap.docs.map(
@@ -131,12 +143,24 @@ export async function runDutyReminderSweep(params: {
     .map((d) => ({ uid: d.id, ...d.data() }) as UserProfileData)
     .filter((u) => u.isApproved !== false);
 
+  const windowEndIso = format(
+    addDays(parseDay(todayIso), CUSTOM_ROSTER_LOOKAHEAD_DAYS),
+    'yyyy-MM-dd',
+  );
+  const customRosters = await loadCustomRosterDutySources(
+    adminDb,
+    customDefsSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as RosterDefinition),
+    todayIso,
+    windowEndIso,
+  );
+
   const dutyReminders = collectDutyReminders({
     todayIso,
     cleaningRoster,
     cleaningDays,
     qtRoster,
     worshipRosters,
+    customRosters,
   });
   const eventReminders = collectEventDayReminders({ todayIso, events, users, timeZone });
 
@@ -180,6 +204,38 @@ export async function runDutyReminderSweep(params: {
   await recordSweepHeartbeat(adminDb, result);
 
   return result;
+}
+
+async function loadCustomRosterDutySources(
+  adminDb: Firestore,
+  definitions: RosterDefinition[],
+  fromDate: string,
+  toDate: string,
+): Promise<CustomRosterDutySource[]> {
+  if (definitions.length === 0) return [];
+
+  const sources = await Promise.all(
+    definitions.map(async (def) => {
+      const entriesSnap = await adminDb
+        .collection('rosterDefinitions')
+        .doc(def.id)
+        .collection('entries')
+        .where('date', '>=', fromDate)
+        .where('date', '<=', toDate)
+        .get();
+
+      return {
+        rosterDefId: def.id,
+        rosterName: def.name,
+        fields: def.fields,
+        entries: entriesSnap.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as CustomRosterEntry,
+        ),
+      } satisfies CustomRosterDutySource;
+    }),
+  );
+
+  return sources.filter((source) => source.entries.length > 0);
 }
 
 async function recordSweepHeartbeat(

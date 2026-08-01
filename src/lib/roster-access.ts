@@ -102,6 +102,21 @@ export function getUserCustomRosterLabels(
     .map((field) => field.label);
 }
 
+/** Member-field assignees only — Name/Text fields have no UID to notify. */
+export function getAssignedUserIdsFromCustomEntry(
+  entry: Pick<CustomRosterEntry, 'fieldValues'>,
+  def: Pick<RosterDefinition, 'fields'>,
+): string[] {
+  const fields = sortedRosterFields(def.fields);
+  const ids = new Set<string>();
+  for (const field of fields) {
+    if (field.type !== 'user') continue;
+    const userId = entry.fieldValues?.[field.id]?.userId;
+    if (userId) ids.add(userId);
+  }
+  return [...ids];
+}
+
 export function formatCustomRosterEntrySummary(
   entry: CustomRosterEntry,
   def: Pick<RosterDefinition, 'fields'>,

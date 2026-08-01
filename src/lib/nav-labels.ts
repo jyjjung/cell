@@ -42,6 +42,7 @@ export function getNavLabelForPath(
   if (pathname.startsWith('/docs/')) return t.docs as string;
   if (pathname.startsWith('/admin/')) return t.admin as string;
   if (pathname.startsWith('/members/')) return t.members as string;
+  if (pathname.startsWith('/rosters/')) return t.customRosters as string;
 
   const segment = pathname.split('/').filter(Boolean).pop();
   if (!segment) return t.home as string;
