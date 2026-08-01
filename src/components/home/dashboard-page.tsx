@@ -244,7 +244,8 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
       });
     }
 
-    // Community rosters only show for today; your own show for the full window.
+    // Cleaning / worship: community rows for today only; your own rows cover the full window.
+    // Other (custom) rosters: show every upcoming date for anyone who can view the roster.
     cleaningRoster.forEach((r) => {
       const d = parseISO(r.date || '');
       if (!isValid(d) || !isSameDay(d, today)) return;
@@ -283,7 +284,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
 
     customRosterEntries.forEach((entry) => {
       const d = parseISO(entry.date || '');
-      if (!isValid(d) || !isSameDay(d, today)) return;
+      if (!isValid(d) || isBefore(d, today)) return;
       const assignments = formatCustomRosterEntrySummary(
         entry,
         { fields: entry.rosterFields },
