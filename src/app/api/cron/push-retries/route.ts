@@ -1,17 +1,12 @@
 import { retryFailedNotificationPushes } from '@/lib/retry-failed-notification-pushes';
+import { isAuthorizedCronRequest } from '@/lib/cron-auth';
 import { getAdminApp, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { NextResponse, type NextRequest } from 'next/server';
 
-function isAuthorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (request.headers.get('authorization') === `Bearer ${secret}`) return true;
-  if (process.env.VERCEL === '1' && request.headers.get('x-vercel-cron') === '1') return true;
-  return false;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
