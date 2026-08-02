@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.10.1',
+    subtitle: 'Stale tab recovery',
+    date: 'August 2, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'After a slow or failed app update download, the error screen reloads cleanly instead of getting stuck on Try again',
+      },
+      {
+        type: 'Improved',
+        text: 'Long-open tabs recover more reliably when a chunk times out or the router state is corrupted',
+      },
+    ],
+  },
+  {
     version: 'v1.10.0',
     subtitle: 'Other roster reminders',
     date: 'August 1, 2026',
