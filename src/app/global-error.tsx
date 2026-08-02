@@ -1,7 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as Sentry from '@sentry/nextjs';
+import {
+  hasClientRecoveryAlreadyRun,
+  isUnrecoverableNextClientError,
+  recoverStaleNextClient,
+} from '@/lib/next-client-recovery';
 
 export default function GlobalError({
   error,
@@ -10,10 +15,34 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const unrecoverable = isUnrecoverableNextClientError(error);
+  const [manualReload, setManualReload] = useState(false);
+
   useEffect(() => {
     console.error('[app/global-error]', error);
-    Sentry.captureException(error);
-  }, [error]);
+    Sentry.captureException(error, {
+      tags: unrecoverable ? { next_client_recovery: 'true' } : undefined,
+    });
+
+    if (!unrecoverable) return;
+
+    // Soft React reset cannot rebuild a null App Router tree after a chunk
+    // timeout — hard-reload once. If we already tried this session, show UI.
+    if (hasClientRecoveryAlreadyRun()) {
+      setManualReload(true);
+      return;
+    }
+
+    void recoverStaleNextClient(error.name || 'unrecoverable Next client error');
+  }, [error, unrecoverable]);
+
+  const handleTryAgain = () => {
+    if (unrecoverable) {
+      window.location.reload();
+      return;
+    }
+    reset();
+  };
 
   return (
     <html lang="en">
@@ -34,7 +63,11 @@ export default function GlobalError({
         <div>
           <h2 style={{ fontSize: 20, marginBottom: 12 }}>Something went wrong</h2>
           <p style={{ fontSize: 14, opacity: 0.75, maxWidth: 420, margin: '0 auto 20px' }}>
-            The app hit an unexpected error. You can try again or reload the page.
+            {manualReload
+              ? 'The app could not recover automatically. Reload the page or go home.'
+              : unrecoverable
+                ? 'Updating the app… If this stays stuck, reload the page.'
+                : 'The app hit an unexpected error. You can try again or reload the page.'}
             {error.digest ? (
               <span style={{ display: 'block', marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>
                 Reference: {error.digest}
@@ -44,7 +77,7 @@ export default function GlobalError({
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button
               type="button"
-              onClick={() => reset()}
+              onClick={handleTryAgain}
               style={{
                 padding: '8px 14px',
                 borderRadius: 8,
@@ -54,7 +87,7 @@ export default function GlobalError({
                 cursor: 'pointer',
               }}
             >
-              Try again
+              {unrecoverable ? 'Reload' : 'Try again'}
             </button>
             <button
               type="button"
