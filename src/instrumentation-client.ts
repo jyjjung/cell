@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { shouldDropSentryEvent } from '@/lib/sentry-noise';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
 const isDev = process.env.NODE_ENV === 'development';
@@ -14,6 +15,10 @@ Sentry.init({
   // Dev: capture all sessions while testing. Prod: 10% of sessions; 100% of error sessions.
   replaysSessionSampleRate: isDev ? 1.0 : 0.1,
   replaysOnErrorSampleRate: 1.0,
+  beforeSend(event) {
+    if (shouldDropSentryEvent(event)) return null;
+    return event;
+  },
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

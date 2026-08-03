@@ -112,6 +112,16 @@ if (typeof window !== 'undefined') {
     if (isIndexedDbCorruptionError(event.reason)) {
       event.preventDefault();
       recoverFromIndexedDbCorruption();
+      return;
+    }
+    // Stale tabs on older bundles still call getMessaging() without isSupported().
+    // Suppress the known unsupported-browser rejection so it does not spam Sentry.
+    const msg = getErrorMessage(event.reason);
+    if (
+      msg.includes('messaging/unsupported-browser') ||
+      msg.includes("doesn't support the API's required to use the Firebase SDK")
+    ) {
+      event.preventDefault();
     }
   });
   window.addEventListener('error', (event) => {
