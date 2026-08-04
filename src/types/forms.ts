@@ -7,6 +7,7 @@ export type FormFieldType =
   | 'checkbox' // multi
   | 'name' // profile-linked short text
   | 'email' // profile-linked email
+  | 'birthday' // profile-linked date (yyyy-MM-dd)
   | 'date'
   | 'time'
   | 'number'

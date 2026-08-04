@@ -19,43 +19,31 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Added',
-        text: 'Configurable forms with guest links, email-gated submit, conditional questions, deadlines, and publish reminders.',
+        text: 'Forms with guest share links, admin Build/Preview/Responses, deadlines, reminders, and many question types including Name, Email, Phone, and Birthday.',
       },
       {
         type: 'Added',
-        text: 'Admin Forms area to build forms, review submissions, edit answers, and export CSV or PDF reports.',
+        text: 'Signed-in members get profile pre-fill for common fields, and submitting those answers updates their profile for next time.',
       },
       {
         type: 'Improved',
-        text: 'Admin Forms opens to a list where you can open, copy a link, or delete; each form has its own Build, Preview, and Submissions page.',
-      },
-      {
-        type: 'Added',
-        text: 'Forms can include Name and Email questions that pre-fill from a signed-in member’s profile (guests still type them in).',
+        text: 'After submit you see a thank-you screen; yes/no and single choice show every option as radios; Create form sits under the question list.',
       },
       {
         type: 'Improved',
-        text: 'Forms are cheaper to run: publish notices only fire when a form goes live, recipient fan-out is capped, submissions are paginated, and guest form pages cache briefly.',
+        text: 'Admin Responses is a clearer list with a report-only view, CSV/PDF export, and a guest link you can share when someone needs to reopen their response.',
       },
       {
-        type: 'Added',
-        text: 'Form questions now include date, time, number, phone, URL, and yes/no, with quick-add buttons at the bottom of the builder.',
+        type: 'Improved',
+        text: 'Forms stay cheaper to run: publish notices only when a form goes live, capped recipient fan-out, paginated submissions, and brief guest-page caching.',
       },
       {
         type: 'Fixed',
-        text: 'Creating or saving a form no longer fails when questions have empty optional settings.',
-      },
-      {
-        type: 'Improved',
-        text: 'Filling forms checks required fields before submit, shows clearer errors, and accepts a full guest link or token.',
+        text: 'Form create/save no longer fails on empty optional settings; the Forms list no longer crashes after submit; PDF export and the update prompt behave reliably.',
       },
       {
         type: 'Changed',
-        text: 'Forms appear in the main sidebar and as a card on the Admin hub.',
-      },
-      {
-        type: 'Fixed',
-        text: 'Adding fields in the admin builder no longer crashes, and forms load without extra Firestore indexes.',
+        text: 'Forms appear in the main sidebar and on the Admin hub; CSV/PDF reports are admin-only.',
       },
     ],
   },

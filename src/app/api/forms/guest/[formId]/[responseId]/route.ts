@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { getFormById, getFormResponseById, updateFormResponseAnswers } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
+import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import type { FormAnswerValue } from '@/types/forms';
 
 export async function GET(_request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
@@ -28,6 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
+    const adminAuth = getAdminAuth(adminApp);
 
     const [form, response] = await Promise.all([
       getFormById(adminDb, params.formId),
@@ -54,10 +56,40 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
       lastValidationErrors: hasErrors ? errorsByFieldId : null,
     });
 
-    return NextResponse.json({ success: true, errorsByFieldId: hasErrors ? errorsByFieldId : null });
+    let profileSynced: string[] = [];
+    let userId = typeof response.submitterUserId === 'string' ? response.submitterUserId : null;
+    const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!userId && token) {
+      try {
+        const decoded = await adminAuth.verifyIdToken(token);
+        userId = decoded.uid;
+      } catch {
+        userId = null;
+      }
+    }
+
+    if (userId && !hasErrors) {
+      try {
+        const sync = await syncFormAnswersToUserProfile({
+          adminDb,
+          userId,
+          form,
+          answers,
+        });
+        profileSynced = sync.fields;
+      } catch (syncError: unknown) {
+        console.error('[forms/guest PUT] profile sync failed', syncError);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      errorsByFieldId: hasErrors ? errorsByFieldId : null,
+      profileSynced,
+    });
   } catch (error: unknown) {
+    console.error('[forms/guest PUT]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
 }
-

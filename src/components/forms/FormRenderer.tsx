@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
 
 type Props = {
   form: FormDefinition;
@@ -64,6 +65,7 @@ export default function FormRenderer({
           field.type === 'phone' ||
           field.type === 'number' ||
           field.type === 'date' ||
+          field.type === 'birthday' ||
           field.type === 'time' ||
           field.type === 'url';
 
@@ -74,7 +76,7 @@ export default function FormRenderer({
               ? 'tel'
               : field.type === 'number'
                 ? 'number'
-                : field.type === 'date'
+                : field.type === 'date' || field.type === 'birthday'
                   ? 'date'
                   : field.type === 'time'
                     ? 'time'
@@ -90,7 +92,9 @@ export default function FormRenderer({
                 {required ? <span className="text-destructive ml-0.5">*</span> : null}
               </Label>
               {linked && profileLinkedHint ? (
-                <span className="text-[11px] text-muted-foreground">Filled from your profile — you can edit it</span>
+                <span className="text-[11px] text-muted-foreground">
+                  From your profile — editing here can update your account
+                </span>
               ) : null}
             </div>
 
@@ -105,9 +109,11 @@ export default function FormRenderer({
                       ? 'name'
                       : field.type === 'phone'
                         ? 'tel'
-                        : field.type === 'url'
-                          ? 'url'
-                          : undefined
+                        : field.type === 'birthday'
+                          ? 'bday'
+                          : field.type === 'url'
+                            ? 'url'
+                            : undefined
                 }
                 inputMode={field.type === 'number' ? 'decimal' : field.type === 'phone' ? 'tel' : undefined}
                 disabled={readOnly}
@@ -142,32 +148,38 @@ export default function FormRenderer({
             )}
 
             {(field.type === 'select' || field.type === 'yesno') && (
-              <Select
-                disabled={readOnly}
+              <RadioGroup
                 value={selectValue || undefined}
                 onValueChange={(v) => setAnswer(field.id, v)}
+                disabled={readOnly}
+                className={cn(
+                  'gap-2 rounded-xl border border-border/60 bg-muted/10 p-3',
+                  fieldError ? 'border-destructive' : undefined,
+                )}
+                aria-invalid={!!fieldError}
               >
-                <SelectTrigger
-                  id={`field-${field.id}`}
-                  aria-invalid={!!fieldError}
-                  className={errorClass}
-                >
-                  <SelectValue placeholder="Select…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).length === 0 ? (
-                    <SelectItem value="__empty__" disabled>
-                      No options configured
-                    </SelectItem>
-                  ) : (
-                    (field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                {(field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No options configured</p>
+                ) : (
+                  (field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).map((opt) => {
+                    const id = `field-${field.id}-${opt}`;
+                    return (
+                      <label
+                        key={opt}
+                        htmlFor={id}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm cursor-pointer transition-colors',
+                          selectValue === opt ? 'bg-primary/10 text-foreground' : 'hover:bg-muted/40',
+                          readOnly ? 'cursor-default' : undefined,
+                        )}
+                      >
+                        <RadioGroupItem value={opt} id={id} disabled={readOnly} />
+                        <span>{opt}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </RadioGroup>
             )}
 
             {field.type === 'checkbox' && (
