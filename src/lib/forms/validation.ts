@@ -2,6 +2,28 @@ import type { FormDefinition, FormFieldDefinition, FormAnswerValue } from '@/typ
 
 export type VisibleFieldMap = Record<string, boolean>;
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidEmail(email: string): boolean {
+  return EMAIL_RE.test(email.trim());
+}
+
+/** Accept a bare public token or a full /forms/public/<token> URL. */
+export function extractPublicFormToken(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed);
+    const match = url.pathname.match(/\/forms\/public\/([^/?#]+)/i);
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  } catch {
+    // Not an absolute URL — try path-style paste.
+  }
+  const pathMatch = trimmed.match(/\/forms\/public\/([^/?#]+)/i);
+  if (pathMatch?.[1]) return decodeURIComponent(pathMatch[1]);
+  return trimmed;
+}
+
 function isConditionalSatisfied(field: FormFieldDefinition, answers: Record<string, FormAnswerValue>): boolean {
   if (!field.conditional) return true;
   const dependsOnValue = answers[field.conditional.dependsOnFieldId];
@@ -28,19 +50,23 @@ export function validateFormResponse(
   for (const field of form.fields) {
     const isVisible = visibleFields[field.id] ?? true;
     if (!isVisible) continue;
-    if (!field.required) continue;
 
     const value = answers[field.id];
+    const stringValue = typeof value === 'string' ? value.trim() : '';
     const hasValue =
       field.type === 'checkbox'
         ? Array.isArray(value) && value.length > 0
-        : typeof value === 'string' && value.trim().length > 0;
+        : stringValue.length > 0;
 
-    if (!hasValue) {
+    if (field.required && !hasValue) {
       errorsByFieldId[field.id] = 'This field is required.';
+      continue;
+    }
+
+    if (field.type === 'email' && hasValue && !isValidEmail(stringValue)) {
+      errorsByFieldId[field.id] = 'Enter a valid email address.';
     }
   }
 
   return { errorsByFieldId };
 }
-

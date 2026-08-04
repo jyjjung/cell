@@ -3,7 +3,11 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { parseDay } from '@/lib/event-occurrences';
 import type { UserProfileData } from '@/types';
 import type { FormDefinition } from '@/types/forms';
-import { listAccessibleFormRecipientUserIds, listSubmittedUserIdsForForm } from '@/lib/server-forms';
+import {
+  FORM_PUBLISH_NOTIFY_CAP,
+  listAccessibleFormRecipientUserIds,
+  listSubmittedUserIdsForForm,
+} from '@/lib/server-forms';
 
 export interface FormReminderPayload {
   userId: string;
@@ -51,7 +55,9 @@ export async function collectFormDeadlineReminders(params: {
       listSubmittedUserIdsForForm(adminDb, form.id),
     ]);
 
+    let added = 0;
     for (const userId of allowedUserIds) {
+      if (added >= FORM_PUBLISH_NOTIFY_CAP) break;
       if (!approvedUserIds.has(userId)) continue;
       if (submittedUserIds.has(userId)) continue;
       reminders.push({
@@ -62,9 +68,9 @@ export async function collectFormDeadlineReminders(params: {
         relatedUrl: '/forms',
         dedupeId: `${userId}_form_${form.id}_${form.deadlineDate}_${daysUntil}d`,
       });
+      added++;
     }
   }
 
   return reminders;
 }
-

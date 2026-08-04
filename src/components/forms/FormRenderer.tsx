@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { FormDefinition, FormAnswerValue, FormFieldDefinition } from '@/types/forms';
 import { computeVisibleFields } from '@/lib/forms/validation';
+import { isProfileLinkedFieldType } from '@/lib/forms/field-types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +17,8 @@ type Props = {
   onChange?: (next: Record<string, FormAnswerValue>) => void;
   errorsByFieldId?: Record<string, string> | null;
   readOnly?: boolean;
+  /** When true, show “from your profile” hints on name/email fields. */
+  profileLinkedHint?: boolean;
 };
 
 function getFieldOrder(fields: FormFieldDefinition[]) {
@@ -28,6 +31,7 @@ export default function FormRenderer({
   onChange,
   errorsByFieldId,
   readOnly = false,
+  profileLinkedHint = false,
 }: Props) {
   const visible = useMemo(() => computeVisibleFields(form, value), [form, value]);
   const fields = useMemo(() => getFieldOrder(form.fields), [form.fields]);
@@ -37,6 +41,10 @@ export default function FormRenderer({
     onChange({ ...value, [fieldId]: nextValue });
   };
 
+  if (fields.length === 0) {
+    return <p className="text-sm text-muted-foreground">This form has no fields yet.</p>;
+  }
+
   return (
     <div className="space-y-5">
       {fields.map((field) => {
@@ -45,26 +53,33 @@ export default function FormRenderer({
 
         const fieldError = errorsByFieldId?.[field.id];
         const required = field.required;
+        const selectValue = typeof value[field.id] === 'string' ? (value[field.id] as string) : '';
+        const errorClass = fieldError ? 'border-destructive focus-visible:ring-destructive' : undefined;
+        const linked = isProfileLinkedFieldType(field.type);
 
         return (
           <div key={field.id} className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <Label className="text-sm font-medium" htmlFor={`field-${field.id}`}>
                 {field.label}
-                {required ? <span className="text-destructive">*</span> : null}
+                {required ? <span className="text-destructive ml-0.5">*</span> : null}
               </Label>
-              {fieldError ? (
-                <span className="text-xs text-destructive">{fieldError}</span>
+              {linked && profileLinkedHint ? (
+                <span className="text-[11px] text-muted-foreground">Filled from your profile — you can edit it</span>
               ) : null}
             </div>
 
-            {field.type === 'text' && (
+            {(field.type === 'text' || field.type === 'name' || field.type === 'email') && (
               <Input
                 id={`field-${field.id}`}
+                type={field.type === 'email' ? 'email' : 'text'}
+                autoComplete={field.type === 'email' ? 'email' : field.type === 'name' ? 'name' : undefined}
                 disabled={readOnly}
-                value={typeof value[field.id] === 'string' ? (value[field.id] as string) : ''}
+                value={selectValue}
                 onChange={(e) => setAnswer(field.id, e.target.value)}
-                className={fieldError ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                aria-invalid={!!fieldError}
+                className={errorClass}
+                placeholder={field.type === 'email' ? 'you@example.com' : field.type === 'name' ? 'Your name' : undefined}
               />
             )}
 
@@ -72,60 +87,81 @@ export default function FormRenderer({
               <Textarea
                 id={`field-${field.id}`}
                 disabled={readOnly}
-                value={typeof value[field.id] === 'string' ? (value[field.id] as string) : ''}
+                value={selectValue}
                 onChange={(e) => setAnswer(field.id, e.target.value)}
-                className={fieldError ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                aria-invalid={!!fieldError}
+                className={errorClass}
+                rows={4}
               />
             )}
 
             {field.type === 'select' && (
               <Select
                 disabled={readOnly}
-                value={typeof value[field.id] === 'string' ? (value[field.id] as string) : ''}
+                value={selectValue || undefined}
                 onValueChange={(v) => setAnswer(field.id, v)}
               >
-                <SelectTrigger id={`field-${field.id}`}>
+                <SelectTrigger
+                  id={`field-${field.id}`}
+                  aria-invalid={!!fieldError}
+                  className={errorClass}
+                >
                   <SelectValue placeholder="Select…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(field.options ?? []).map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                  {(field.options ?? []).length === 0 ? (
+                    <SelectItem value="__empty__" disabled>
+                      No options configured
                     </SelectItem>
-                  ))}
+                  ) : (
+                    (field.options ?? []).map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             )}
 
             {field.type === 'checkbox' && (
-              <div className="space-y-2">
-                {(field.options ?? []).map((opt) => {
-                  const selected = Array.isArray(value[field.id]) && (value[field.id] as string[]).includes(opt);
-                  return (
-                    <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox
-                        checked={selected}
-                        disabled={readOnly}
-                        onCheckedChange={(checked) => {
-                          const current = Array.isArray(value[field.id]) ? (value[field.id] as string[]) : [];
-                          if (checked === true) {
-                            if (current.includes(opt)) return;
-                            setAnswer(field.id, [...current, opt]);
-                          } else {
-                            setAnswer(field.id, current.filter((x) => x !== opt));
-                          }
-                        }}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  );
-                })}
+              <div className="space-y-2 rounded-xl border border-border/60 bg-muted/10 p-3">
+                {(field.options ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No options configured</p>
+                ) : (
+                  (field.options ?? []).map((opt) => {
+                    const selected = Array.isArray(value[field.id]) && (value[field.id] as string[]).includes(opt);
+                    return (
+                      <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={selected}
+                          disabled={readOnly}
+                          onCheckedChange={(checked) => {
+                            const current = Array.isArray(value[field.id]) ? (value[field.id] as string[]) : [];
+                            if (checked === true) {
+                              if (current.includes(opt)) return;
+                              setAnswer(field.id, [...current, opt]);
+                            } else {
+                              setAnswer(field.id, current.filter((x) => x !== opt));
+                            }
+                          }}
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             )}
+
+            {fieldError ? (
+              <p className="text-xs text-destructive" role="alert">
+                {fieldError}
+              </p>
+            ) : null}
           </div>
         );
       })}
     </div>
   );
 }
-

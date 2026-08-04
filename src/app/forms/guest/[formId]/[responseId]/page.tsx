@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import type { FormAnswerValue, FormDefinition, FormResponse } from '@/types/forms';
 import FormRenderer from '@/components/forms/FormRenderer';
 import ReportPanel from '@/components/forms/ReportPanel';
+import { validateFormResponse } from '@/lib/forms/validation';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Save } from 'lucide-react';
 
@@ -21,13 +21,16 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   const [loading, setLoading] = useState(true);
 
   const [draftAnswers, setDraftAnswers] = useState<Record<string, FormAnswerValue>>({});
+  const [clientErrors, setClientErrors] = useState<Record<string, string> | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`);
+        const res = await fetch(
+          `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
+        );
         if (!res.ok) throw new Error('Response not found');
         const data = await res.json();
         setForm(data.form as FormDefinition);
@@ -45,40 +48,63 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   useEffect(() => {
     if (!response) return;
     setDraftAnswers(response.answers ?? {});
+    setClientErrors(null);
   }, [response]);
 
+  const serverErrors = response?.lastValidationErrors ?? null;
+  const displayErrors = clientErrors ?? serverErrors;
+
   const hasErrors = useMemo(() => {
-    const errs = response?.lastValidationErrors;
-    return errs && typeof errs === 'object' ? Object.keys(errs).length > 0 : false;
-  }, [response]);
+    return displayErrors && typeof displayErrors === 'object' ? Object.keys(displayErrors).length > 0 : false;
+  }, [displayErrors]);
+
+  const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
+    setDraftAnswers(next);
+    if (clientErrors) setClientErrors(null);
+  };
 
   const handleSave = async () => {
     if (!form || !response) return;
+
+    const { errorsByFieldId } = validateFormResponse(form, draftAnswers);
+    if (Object.keys(errorsByFieldId).length > 0) {
+      setClientErrors(errorsByFieldId);
+      toast({
+        variant: 'destructive',
+        title: 'Fix required fields',
+        description: 'Fill in the required fields below before saving.',
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await fetch(`/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: draftAnswers }),
-      });
+      const res = await fetch(
+        `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers: draftAnswers }),
+        },
+      );
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Save failed');
 
-      // Refresh the response to pull updated validation errors + timestamps.
-      const refreshedRes = await fetch(`/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`);
+      const refreshedRes = await fetch(
+        `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
+      );
       if (refreshedRes.ok) {
         const refreshed = await refreshedRes.json();
         setForm(refreshed.form as FormDefinition);
         setResponse(refreshed.response as FormResponse);
       } else {
-        // Still allow the optimistic save.
         setResponse((prev) =>
           prev
             ? {
                 ...prev,
                 answers: draftAnswers,
-                lastValidationErrors: data.errorsByFieldId ?? null,
+                lastValidationErrors: data.errorsByFieldId ?? undefined,
               }
             : prev,
         );
@@ -86,9 +112,9 @@ export default function GuestResponsePage({ params }: { params: { formId: string
 
       if (!data.errorsByFieldId || Object.keys(data.errorsByFieldId).length === 0) {
         toast({ title: 'Saved', description: 'Your response has been updated.' });
-        // “Return to home” for forms UX.
         router.push('/forms');
       } else {
+        setClientErrors(data.errorsByFieldId);
         toast({ variant: 'destructive', title: 'Fix required fields', description: 'Some required fields are missing.' });
       }
     } catch (e: unknown) {
@@ -102,20 +128,20 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   if (loading) return <PageLoading />;
   if (!form || !response) return <div className="page-container">Response not found.</div>;
 
-  const errorsList = response.lastValidationErrors ?? {};
+  const errorsList = displayErrors ?? {};
   const submittedOk = searchParams.get('submitted') === '1';
 
   return (
     <div className="page-container">
-      <div className="ui-card p-4 md:p-6 space-y-5">
+      <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
-          <p className="text-sm text-muted-foreground">Submitter email: {response.submitterEmail}</p>
+          <p className="text-sm text-muted-foreground">Submitted as {response.submitterEmail}</p>
         </div>
 
         {submittedOk && !hasErrors ? (
           <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm">
-            Saved successfully. You can review answers and download a report below.
+            Saved successfully. You can review answers, download a report, or make edits below.
           </div>
         ) : null}
 
@@ -138,23 +164,19 @@ export default function GuestResponsePage({ params }: { params: { formId: string
         <FormRenderer
           form={form}
           value={draftAnswers}
-          onChange={setDraftAnswers}
-          errorsByFieldId={response.lastValidationErrors}
+          onChange={handleAnswersChange}
+          errorsByFieldId={displayErrors}
           readOnly={saving}
         />
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div className="flex gap-2">
-            <Button variant="outline" className="rounded-xl" onClick={() => router.push('/forms')} disabled={saving}>
-              Back to forms
-            </Button>
-          </div>
+          <Button variant="outline" className="rounded-xl" onClick={() => router.push('/forms')} disabled={saving}>
+            Back to forms
+          </Button>
 
           <div className="flex gap-2 sm:justify-end">
             <Button variant="outline" className="rounded-xl" asChild>
-              <a href="#report">
-                Report
-              </a>
+              <a href="#report">Report</a>
             </Button>
             <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving}>
               {saving ? (
@@ -170,10 +192,9 @@ export default function GuestResponsePage({ params }: { params: { formId: string
         </div>
 
         <div id="report">
-          <ReportPanel form={form} response={response} />
+          <ReportPanel form={form} response={{ ...response, answers: draftAnswers }} />
         </div>
       </div>
     </div>
   );
 }
-

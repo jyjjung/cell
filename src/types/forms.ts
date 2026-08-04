@@ -4,7 +4,9 @@ export type FormFieldType =
   | 'text'
   | 'textarea'
   | 'select'
-  | 'checkbox'; // multi
+  | 'checkbox' // multi
+  | 'name' // profile-linked short text
+  | 'email'; // profile-linked email
 
 export interface FormConditionalRule {
   dependsOnFieldId: string;
@@ -59,6 +61,14 @@ export interface FormDefinition {
    */
   allowedRoleIds?: string[];
   allowedUserIds?: string[];
+  /**
+   * True when both allowedRoleIds and allowedUserIds are empty.
+   * Denormalized for cheap member listing queries.
+   */
+  isOpenToAll?: boolean;
+  /** Denormalized submission counters for admin list badges. */
+  responseCount?: number;
+  needsAttentionCount?: number;
   createdBy?: string;
 }
 
