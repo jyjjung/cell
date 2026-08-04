@@ -13,13 +13,51 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
-    version: 'v1.10.1',
+    version: 'v1.10.3',
     subtitle: 'Safari offline cache recovery',
     date: 'August 4, 2026',
     changes: [
       {
         type: 'Fixed',
         text: 'On iPhone Safari, the app recovers automatically when the offline cache breaks after switching apps',
+      },
+    ],
+  },
+  {
+    version: 'v1.10.2',
+    subtitle: 'Quieter crash reporting',
+    date: 'August 3, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Push setup no longer errors on browsers that do not support notifications',
+      },
+      {
+        type: 'Fixed',
+        text: 'Blocked or offline YouTube embeds fail quietly instead of flooding error reports',
+      },
+      {
+        type: 'Improved',
+        text: 'Temporary Safari network blips during page loads are filtered out of crash monitoring',
+      },
+      {
+        type: 'Improved',
+        text: 'Profile notification enable now waits for a supported messaging setup before requesting permission',
+      },
+    ],
+  },
+  {
+    version: 'v1.10.1',
+    subtitle: 'Stale tab recovery',
+    date: 'August 2, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'After a slow or failed app update download, the error screen reloads cleanly instead of getting stuck on Try again',
+      },
+      {
+        type: 'Improved',
+        text: 'Long-open tabs recover more reliably when a chunk times out or the router state is corrupted',
       },
     ],
   },

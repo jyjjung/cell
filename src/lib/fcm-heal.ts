@@ -7,7 +7,7 @@
  */
 import { deleteToken, getToken } from 'firebase/messaging';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { messaging, db } from '@/lib/firebase';
+import { messagingPromise, db } from '@/lib/firebase';
 import { getFCMRegistration } from '@/lib/fcm-registration';
 
 const FCM_HEAL_VERSION = '2026-07-23-v1';
@@ -30,7 +30,9 @@ async function hasHealthyMessagingSw(): Promise<boolean> {
  * and write it to Firestore. Clears fcmNeedsResync when present.
  */
 export async function healFcmSubscription(uid: string, options?: { force?: boolean }): Promise<string | null> {
-  if (!messaging || typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') return null;
+  const messaging = await messagingPromise;
+  if (!messaging) return null;
   if (Notification.permission !== 'granted') return null;
 
   const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;

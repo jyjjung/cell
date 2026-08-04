@@ -25,7 +25,7 @@ import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { sanitizeAvatarData } from '@/lib/avatar-utils';
 import { healFcmSubscription, MAX_FCM_TOKENS } from '@/lib/fcm-heal';
 import { getFCMRegistration } from '@/lib/fcm-registration';
-import { db, messaging } from '@/lib/firebase';
+import { db, messagingPromise } from '@/lib/firebase';
 import { formatAppDate, getAppLocale } from '@/lib/formatting';
 import { calculatePlanProgressPercent } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
@@ -175,10 +175,19 @@ export default function ProfilePage() {
 
 
   const handleEnableNotifications = useCallback(async () => {
-    if (!currentUser || !messaging) return;
-    
+    if (!currentUser) return;
+    const messaging = await messagingPromise;
+    if (!messaging) {
+      toast({
+        variant: 'destructive',
+        title: 'Not supported',
+        description: 'Push notifications are not available in this browser.',
+      });
+      return;
+    }
+
     setIsSubscriptionLoading(true);
-    
+
     try {
         const vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY!;
         const permission = await Notification.requestPermission();

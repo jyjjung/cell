@@ -47,6 +47,9 @@ let apiReadyPromise: Promise<YTNamespace> | null = null;
 /**
  * Loads the YouTube IFrame API once. Failures (blocked script, network) reject
  * and clear the cached promise so a later call can retry.
+ *
+ * A silent rejection handler is attached immediately so a slow caller cannot
+ * leave the shared promise as an unhandledrejection in Sentry.
  */
 export function loadYoutubeIframeApi(): Promise<YTNamespace> {
   if (typeof window === 'undefined') {
@@ -56,7 +59,7 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
     return Promise.resolve(window.YT);
   }
   if (!apiReadyPromise) {
-    apiReadyPromise = new Promise((resolve, reject) => {
+    const pending = new Promise<YTNamespace>((resolve, reject) => {
       const existing = document.querySelector<HTMLScriptElement>('script[src*="youtube.com/iframe_api"]');
 
       const fail = (message: string) => {
@@ -84,6 +87,9 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
         tag.async = true;
         tag.onerror = () => fail('YouTube API script failed');
         document.head.appendChild(tag);
+      } else if (!existing.onerror) {
+        // Prior failed insert left a dead tag — ensure retry can observe failure.
+        existing.onerror = () => fail('YouTube API script failed');
       }
 
       // The ready callback may already have fired for an existing tag, and a
@@ -103,6 +109,9 @@ export function loadYoutubeIframeApi(): Promise<YTNamespace> {
       };
       check();
     });
+    // Mark handled for the event loop; callers still attach their own .catch().
+    void pending.catch(() => {});
+    apiReadyPromise = pending;
   }
   return apiReadyPromise;
 }
