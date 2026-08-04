@@ -30,6 +30,10 @@ export const changelogs: ChangelogEntry[] = [
         text: 'Created an admin workflow to review submissions, edit responses, and export per-response reports as PDF (print) or CSV.',
       },
       {
+        type: 'Improved',
+        text: 'Guest submissions now show a clear success confirmation on the response page before returning to the forms area.',
+      },
+      {
         type: 'Changed',
         text: 'Expanded the admin navigation with a new Forms section.',
       },
