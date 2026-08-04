@@ -13,6 +13,29 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.12.0',
+    subtitle: 'Forms with admin submissions',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Introduced configurable forms that guests can open via link, gated by an email step before submitting.',
+      },
+      {
+        type: 'Added',
+        text: 'Added conditional fields and required/optional behavior for form definitions created in the admin builder.',
+      },
+      {
+        type: 'Added',
+        text: 'Created an admin workflow to review submissions, edit responses, and export per-response reports as PDF (print) or CSV.',
+      },
+      {
+        type: 'Changed',
+        text: 'Expanded the admin navigation with a new Forms section.',
+      },
+    ],
+  },
+  {
     version: 'v1.11.4',
     subtitle: 'Single offline banner',
     date: 'August 4, 2026',
