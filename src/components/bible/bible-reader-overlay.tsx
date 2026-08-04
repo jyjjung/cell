@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { useGlobalBibleReader } from "@/contexts/global-bible-reader-context";
 import MiniBibleReader from "@/components/bible/mini-bible-reader";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,10 @@ const COMPACT_HEIGHT = "min(600px, calc(100dvh - 8rem))";
 
 export function BibleReaderOverlay({ placement }: BibleReaderOverlayProps) {
   const { isOpen, isExpanded, setIsOpen, setIsExpanded } = useGlobalBibleReader();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  // Match GlobalBibleReader FAB offset above the home footer.
+  const fabBottom = pathname === "/" ? "10rem" : "6rem";
 
   useEffect(() => {
     setMounted(true);
@@ -58,7 +62,7 @@ export function BibleReaderOverlay({ placement }: BibleReaderOverlayProps) {
           height: COMPACT_HEIGHT,
         }
       : {
-          bottom: "6rem",
+          bottom: fabBottom,
           right: "1.5rem",
           width: COMPACT_WIDTH,
           height: COMPACT_HEIGHT,
