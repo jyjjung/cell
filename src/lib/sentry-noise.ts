@@ -3,6 +3,11 @@
  * consume Sentry quota or reopen already-hardened issues.
  */
 
+import {
+  isFirestorePersistenceClearOrderError,
+  isIndexedDbPersistenceError,
+} from '@/lib/firestore-idb-errors';
+
 function eventExceptionValues(event: {
   exception?: { values?: Array<{ type?: string; value?: string; stacktrace?: { frames?: Array<{ filename?: string }> } }> };
 }): Array<{ type?: string; value?: string; frames: string[] }> {
@@ -87,12 +92,8 @@ export function shouldDropSentryEvent(event: {
     return true;
   }
 
-  // IndexedDB wipe / clear-site-data — recovered in firebase.ts
-  if (
-    message.includes('refusing to open IndexedDB') ||
-    (message.includes('IndexedDB transaction') &&
-      (message.includes('AbortError') || message.includes('code=unavailable')))
-  ) {
+  // Firestore IndexedDB / AsyncQueue bricks — recovered via terminate+clear+reload
+  if (isIndexedDbPersistenceError(message) || isFirestorePersistenceClearOrderError(message)) {
     return true;
   }
 

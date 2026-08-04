@@ -62,6 +62,35 @@ describe('shouldDropSentryEvent', () => {
     ).toBe(true);
   });
 
+  it('drops Firestore ca9/b815 bricks and mis-ordered persistence clears', () => {
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'Error',
+              value:
+                'FIRESTORE (11.7.3) INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9) CONTEXT: {"Fe":-1}',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'FirebaseError',
+              value:
+                'Persistence can only be cleared before a Firestore instance is initialized or after it is terminated.',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it('keeps real application errors', () => {
     expect(
       shouldDropSentryEvent({
