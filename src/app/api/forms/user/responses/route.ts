@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
     const snap = await adminDb
       .collection('formResponses')
       .where('submitterEmail', '==', submitterEmail)
-      .orderBy('updatedAt', 'desc')
       .limit(200)
       .get();
 

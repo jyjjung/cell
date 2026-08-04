@@ -128,10 +128,11 @@ export async function getFormByPublicToken(adminDb: Firestore, publicToken: stri
 export async function listAccessibleForms(adminDb: Firestore, userId: string): Promise<FormDefinition[]> {
   const isAdmin = await userIsAppAdmin(adminDb, userId);
   if (isAdmin) {
-    const snap = await adminDb.collection(FORMS_COLLECTION).orderBy('updatedAt', 'desc').limit(100).get();
+    const snap = await adminDb.collection(FORMS_COLLECTION).limit(100).get();
     return snap.docs
       .map((d) => toFormDefinition(d.data(), d.id))
-      .filter((x): x is FormDefinition => !!x);
+      .filter((x): x is FormDefinition => !!x)
+      .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0));
   }
 
   const roleIds = await getUserRoleIds(adminDb, userId);
@@ -140,7 +141,6 @@ export async function listAccessibleForms(adminDb: Firestore, userId: string): P
   const byUsersSnap = await adminDb
     .collection(FORMS_COLLECTION)
     .where('allowedUserIds', 'array-contains', userId)
-    .orderBy('updatedAt', 'desc')
     .limit(100)
     .get();
 
@@ -148,7 +148,6 @@ export async function listAccessibleForms(adminDb: Firestore, userId: string): P
     ? await adminDb
         .collection(FORMS_COLLECTION)
         .where('allowedRoleIds', 'array-contains-any', roleQueryValues)
-        .orderBy('updatedAt', 'desc')
         .limit(100)
         .get()
     : null;
@@ -328,7 +327,6 @@ export async function listFormResponsesForAdmin(adminDb: Firestore, formId: stri
   const snap = await adminDb
     .collection(FORM_RESPONSES_COLLECTION)
     .where('formId', '==', formId)
-    .orderBy('updatedAt', 'desc')
     .limit(200)
     .get();
 
@@ -350,7 +348,8 @@ export async function listFormResponsesForAdmin(adminDb: Firestore, formId: stri
         updatedAt: data.updatedAt,
         updatedBy: data.updatedBy === 'admin' ? 'admin' : 'guest',
       } satisfies FormResponse;
-    });
+    })
+    .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0));
 }
 
 export async function getFormResponseById(adminDb: Firestore, responseId: string): Promise<FormResponse | null> {
