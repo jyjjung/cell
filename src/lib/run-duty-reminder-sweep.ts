@@ -14,6 +14,7 @@ import {
 import { normalizeEventFromFirestore } from '@/lib/event-doc';
 import { collectEventDayReminders } from '@/lib/event-reminders';
 import { parseDay } from '@/lib/event-occurrences';
+import { collectFormDeadlineReminders } from '@/lib/forms/reminders';
 import { retryFailedNotificationPushes } from '@/lib/retry-failed-notification-pushes';
 import { sendUserNotification } from '@/lib/server-notifications';
 import type {
@@ -25,6 +26,7 @@ import type {
   UserProfileData,
   WorshipRoster,
 } from '@/types';
+import type { FormDefinition } from '@/types/forms';
 
 const DEFAULT_TIMEZONE = 'Australia/Brisbane';
 
@@ -58,6 +60,7 @@ export interface DutyReminderSweepResult {
   durationMs: number;
   duty: ReminderCounts;
   events: ReminderCounts;
+  forms: ReminderCounts;
   scheduledAnnouncements: ReminderCounts;
   pushRetries: ReminderCounts;
   /** True when catch-up skipped roster/event/user scans (morning already OK). */
@@ -161,6 +164,7 @@ export async function runDutyReminderSweep(params: {
         durationMs: Date.now() - startedAt,
         duty: { ...EMPTY_REMINDER_COUNTS },
         events: { ...EMPTY_REMINDER_COUNTS },
+        forms: { ...EMPTY_REMINDER_COUNTS },
         scheduledAnnouncements,
         pushRetries,
         fullScanSkipped: true,
@@ -170,7 +174,7 @@ export async function runDutyReminderSweep(params: {
     }
   }
 
-  const [cleaningSnap, cleaningDaysSnap, qtSnap, worshipSnap, eventsSnap, usersSnap, customDefsSnap] =
+  const [cleaningSnap, cleaningDaysSnap, qtSnap, worshipSnap, eventsSnap, usersSnap, customDefsSnap, formsSnap] =
     await Promise.all([
       adminDb.collection('cleaningRosters').get(),
       adminDb.collection('cleaningDays').get(),
@@ -179,6 +183,7 @@ export async function runDutyReminderSweep(params: {
       adminDb.collection('events').get(),
       adminDb.collection('users').get(),
       adminDb.collection('rosterDefinitions').get(),
+      adminDb.collection('formDefinitions').where('status', '==', 'published').limit(50).get(),
     ]);
 
   const cleaningRoster = cleaningSnap.docs.map(
@@ -193,6 +198,10 @@ export async function runDutyReminderSweep(params: {
   const users = usersSnap.docs
     .map((d) => ({ uid: d.id, ...d.data() }) as UserProfileData)
     .filter((u) => u.isApproved !== false);
+  const forms = formsSnap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  })) as unknown as FormDefinition[];
 
   const windowEndIso = format(
     addDays(parseDay(todayIso), CUSTOM_ROSTER_LOOKAHEAD_DAYS),
@@ -214,6 +223,12 @@ export async function runDutyReminderSweep(params: {
     customRosters,
   });
   const eventReminders = collectEventDayReminders({ todayIso, events, users, timeZone });
+  const formReminders = await collectFormDeadlineReminders({
+    adminDb,
+    todayIso,
+    forms,
+    users,
+  });
 
   const duty = await sendBatched(
     dutyReminders.map((reminder) => ({
@@ -233,6 +248,18 @@ export async function runDutyReminderSweep(params: {
     adminMessaging,
     'eventReminderLog',
   );
+  const formCounts = await sendBatched(
+    formReminders.map((reminder) => ({
+      userId: reminder.userId,
+      title: reminder.title,
+      message: reminder.message,
+      relatedUrl: reminder.relatedUrl,
+      dedupeId: reminder.dedupeId,
+    })),
+    adminDb,
+    adminMessaging,
+    'formReminderLog',
+  );
 
   const scheduledAnnouncements = await deliverDueScheduledAnnouncements(
     adminDb,
@@ -248,6 +275,7 @@ export async function runDutyReminderSweep(params: {
     durationMs: Date.now() - startedAt,
     duty,
     events: eventCounts,
+    forms: formCounts,
     scheduledAnnouncements,
     pushRetries,
   };
@@ -310,6 +338,8 @@ async function recordSweepHeartbeat(
     base.lastRunDutySent = result.duty.sent;
     base.lastRunDutyCandidates = result.duty.candidates;
     base.lastRunEventsSent = result.events.sent;
+    base.lastRunFormsSent = result.forms.sent;
+    base.lastRunFormsCandidates = result.forms.candidates;
   }
 
   await adminDb

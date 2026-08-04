@@ -13,6 +13,57 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.12.0',
+    subtitle: 'Forms with admin submissions',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Forms with guest share links, admin Forms maker, deadlines, optional response limits, reminders, and many question types including Name, Email, Phone, and Birthday.',
+      },
+      {
+        type: 'Added',
+        text: 'Signed-in members’ Name and Email from profile attach to responses for admin reports only (hidden on the form); add separate Name/Email questions when you need people to type them. Phone and Birthday still pre-fill and can update the profile.',
+      },
+      {
+        type: 'Improved',
+        text: 'After submit you see a thank-you screen; yes/no and single choice show every option as radios; Create form sits under the question list.',
+      },
+      {
+        type: 'Added',
+        text: 'Delete your own form submissions from Forms or the response page (signed-in owners only).',
+      },
+      {
+        type: 'Added',
+        text: 'When downloading responses, admins can choose which questions and which submitters to include in CSV or PDF.',
+      },
+      {
+        type: 'Improved',
+        text: 'PDF downloads use a landscape spreadsheet table (same columns as CSV) with clear headers and alternating rows.',
+      },
+      {
+        type: 'Changed',
+        text: 'Removed the bottom “A new version is ready” update banner.',
+      },
+      {
+        type: 'Improved',
+        text: 'Admin Forms splits into Forms maker and Responses — view or download submissions; share a guest responses link so people can see answers without signing in.',
+      },
+      {
+        type: 'Improved',
+        text: 'Forms stay cheaper to run: publish notices only when a form goes live, capped recipient fan-out, paginated submissions, and brief guest-page caching.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Form create/save no longer fails on empty optional settings; the Forms list no longer crashes after submit; PDF export behaves reliably; drafts no longer stay visible on the member Forms page after you unpublish.',
+      },
+      {
+        type: 'Changed',
+        text: 'Forms appear in the main sidebar and on the Admin hub; CSV/PDF reports are admin-only.',
+      },
+    ],
+  },
+  {
     version: 'v1.11.4',
     subtitle: 'Single offline banner',
     date: 'August 4, 2026',

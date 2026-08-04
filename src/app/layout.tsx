@@ -15,7 +15,6 @@ import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-context';
 import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
-import { UpdateAvailableBanner } from '@/components/layout/update-available-banner';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
 import { DocumentLang } from '@/components/layout/document-lang';
@@ -97,7 +96,6 @@ export default async function RootLayout({
                   <AppLayout>
                     {children}
                   </AppLayout>
-                  <UpdateAvailableBanner />
                   </SetlistPlaylistProvider>
                   <DeferredVercelMetrics />
                   <Toaster />
