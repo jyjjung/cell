@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.11.1',
+    subtitle: 'Home agenda & reading stats polish',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Home upcoming schedule shows as a clean list without an extra section header',
+      },
+      {
+        type: 'Improved',
+        text: 'Reading plan pace numbers (progress so far, passages left, and related stats) are easier to read',
+      },
+    ],
+  },
+  {
     version: 'v1.11.0',
     subtitle: 'Reliability, quieter sessions & admin clarity',
     date: 'August 4, 2026',
@@ -35,7 +50,7 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Improved',
-        text: 'Home schedule labels your duties clearly; pending-approval and offline Bible messages are clearer',
+        text: 'Pending-approval and offline Bible messages are clearer',
       },
       {
         type: 'Improved',

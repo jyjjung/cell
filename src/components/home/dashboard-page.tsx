@@ -506,7 +506,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         </div>
       </PageSection>
 
-      <PageSection title={t.homeScheduleTitle} description={t.homeScheduleDesc}>
+      <PageSection variant="plain">
       <div className="stack-gap-sm">
         {agendaByMonth.length > 0 ? (
           agendaByMonth.map(([month, entries]) => (

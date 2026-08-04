@@ -58,7 +58,7 @@ function PaceStatCard({
         <p className="text-micro-label">{title}</p>
       </div>
       <div>
-        <p className={cn("text-stat-value", toneClass)}>
+        <p className={cn("text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl", toneClass)}>
           {value}{' '}
           {unit && <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>}
         </p>
