@@ -8,7 +8,7 @@ import { useMessages } from '@/hooks/useMessages';
 import { useChatPhotoMessages } from '@/hooks/use-chat-photo-messages';
 import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
-import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare, WifiOff } from 'lucide-react';
+import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -169,7 +169,6 @@ function ChatWindowBody({
   );
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
-  const showOfflineRibbon = !online;
   const blockingLoad = loadingMessages && messages.length === 0;
 
   const newestMessageId = messages[0]?.id ?? null;
@@ -342,13 +341,6 @@ function ChatWindowBody({
 
   return (
     <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden">
-      {showOfflineRibbon && (
-        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-500/15 border-b border-amber-500/25 text-[11px] font-semibold text-amber-200/90">
-          <WifiOff className="h-3.5 w-3.5 shrink-0 opacity-80" />
-          <span>{t.chatOfflineBanner}</span>
-        </div>
-      )}
-
       <header
         className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background z-20"
         style={{ touchAction: 'none' }}

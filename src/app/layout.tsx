@@ -15,7 +15,6 @@ import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-context';
 import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
-import { OfflineBanner } from '@/components/layout/offline-banner';
 import { UpdateAvailableBanner } from '@/components/layout/update-available-banner';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
@@ -85,7 +84,6 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning data-glass="off" className={appFontVariableClasses}>
       <body className="antialiased">
         <ChunkErrorListener />
-        <OfflineBanner />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
             <PageLoadingProvider>
               <AuthProvider initialSessionCookie={initialSessionCookie}>

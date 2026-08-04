@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.11.4',
+    subtitle: 'Single offline banner',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Offline status now shows as one banner above the header instead of stacking in chat and covering photo controls',
+      },
+    ],
+  },
+  {
     version: 'v1.11.3',
     subtitle: 'Offline cache recovery',
     date: 'August 4, 2026',
