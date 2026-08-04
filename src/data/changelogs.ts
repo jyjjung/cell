@@ -49,6 +49,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'Forms now default to being open to everyone unless an admin narrows access to specific roles or people.',
       },
+      {
+        type: 'Fixed',
+        text: 'The admin form builder now adds new fields reliably across browsers and environments.',
+      },
     ],
   },
   {
