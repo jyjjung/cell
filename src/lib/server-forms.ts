@@ -104,6 +104,7 @@ export async function canUserViewForm(adminDb: Firestore, userId: string, form: 
   const roleIds = await getUserRoleIds(adminDb, userId);
   const allowedUserIds = form.allowedUserIds ?? [];
   const allowedRoleIds = form.allowedRoleIds ?? [];
+  if (allowedUserIds.length === 0 && allowedRoleIds.length === 0) return true;
   return allowedUserIds.includes(userId) || allowedRoleIds.some((r) => roleIds.includes(r));
 }
 
@@ -151,8 +152,24 @@ export async function listAccessibleForms(adminDb: Firestore, userId: string): P
         .limit(100)
         .get()
     : null;
+  const unrestrictedSnap = await adminDb
+    .collection(FORMS_COLLECTION)
+    .orderBy('updatedAt', 'desc')
+    .limit(100)
+    .get();
 
   const map = new Map<string, FormDefinition>();
+  for (const d of unrestrictedSnap.docs) {
+    const parsed = toFormDefinition(d.data(), d.id);
+    if (
+      parsed
+      && parsed.status !== 'draft'
+      && (parsed.allowedRoleIds?.length ?? 0) === 0
+      && (parsed.allowedUserIds?.length ?? 0) === 0
+    ) {
+      map.set(parsed.id, parsed);
+    }
+  }
   for (const d of byUsersSnap.docs) {
     const parsed = toFormDefinition(d.data(), d.id);
     if (parsed && parsed.status !== 'draft') map.set(parsed.id, parsed);
@@ -264,6 +281,15 @@ export async function listAccessibleFormRecipientUserIds(
   if (form.status === 'draft') return [];
   const allowedUsers = new Set((form.allowedUserIds ?? []).filter(Boolean));
   const allowedRoles = (form.allowedRoleIds ?? []).filter(Boolean);
+
+  if (allowedUsers.size === 0 && allowedRoles.length === 0) {
+    const allUsersSnap = await adminDb.collection(USERS_COLLECTION).get();
+    for (const doc of allUsersSnap.docs) {
+      if (doc.data()?.isApproved === false) continue;
+      allowedUsers.add(doc.id);
+    }
+    return [...allowedUsers];
+  }
 
   if (allowedRoles.length > 0) {
     const roleChunks: string[][] = [];
