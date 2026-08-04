@@ -134,8 +134,8 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         // Soft refresh only — never force-delete the FCM token on foreground.
+        // Throttled inside useFCMToken (20m) to limit Firestore getDoc/writes.
         registerToken({ refresh: true });
-        window.dispatchEvent(new CustomEvent('chat:resync'));
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

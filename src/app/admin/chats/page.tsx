@@ -97,12 +97,12 @@ export default function AdminChatsPage() {
       setChats(Array.isArray(data.chats) ? data.chats : []);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Could not load chats.';
-      toast({ variant: 'destructive', title: 'Load failed', description: message });
+      toast({ variant: 'destructive', title: t.adminLoadFailed, description: message });
       setChats([]);
     } finally {
       setLoadingChats(false);
     }
-  }, [toast]);
+  }, [toast, t.adminLoadFailed]);
 
   useEffect(() => {
     void fetchChats();
@@ -172,7 +172,7 @@ export default function AdminChatsPage() {
       toast({ title: t.adminChatPermissionsSaved, description: t.adminChatPermissionsSavedDesc });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Could not save permissions.';
-      toast({ variant: 'destructive', title: 'Save failed', description: message });
+      toast({ variant: 'destructive', title: t.adminSaveFailed, description: message });
     }
   };
 
@@ -204,10 +204,10 @@ export default function AdminChatsPage() {
       }
 
       setChats((prev) => prev.filter((c) => c.id !== chatId));
-      toast({ title: 'Chat deleted', description: 'Messages removed for all members.' });
+      toast({ title: t.adminChatDeleted, description: t.adminChatDeletedDesc });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Delete failed.';
-      toast({ variant: 'destructive', title: 'Delete failed', description: message });
+      toast({ variant: 'destructive', title: t.adminPurgeFailed, description: message });
     } finally {
       setIsDeleting(null);
     }

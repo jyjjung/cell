@@ -63,8 +63,11 @@ export default function PendingApprovalPage() {
                 </p>
             </div>
 
-            <div className="widget-surface p-4 text-sm text-muted-foreground italic">
-                {t.contactAdmin}
+            <div className="widget-surface p-4 text-left text-sm text-muted-foreground space-y-2 not-italic">
+                <p>{t.pendingApprovalStep1}</p>
+                <p>{t.pendingApprovalStep2}</p>
+                <p className="text-foreground/80">{t.pendingApprovalCheckAgain}</p>
+                <p className="italic pt-1">{t.contactAdmin}</p>
             </div>
 
             <Button 

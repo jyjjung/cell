@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,14 +20,21 @@ import { communityWallTimeToUtcDate, COMMUNITY_TIMEZONE_DEFAULT } from '@/lib/no
 const COMMUNITY_TIMEZONE =
   process.env.NEXT_PUBLIC_DUTY_REMINDER_TIMEZONE || COMMUNITY_TIMEZONE_DEFAULT;
 
-const notificationFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
-  message: z.string().min(5, "Message must be at least 5 characters").max(2000, "Message is too long"),
-  scheduledDate: z.string().optional(),
-  scheduledTime: z.string().optional(),
-});
+function createNotificationFormSchema(messages: {
+  titleMin: string;
+  titleMax: string;
+  messageMin: string;
+  messageMax: string;
+}) {
+  return z.object({
+    title: z.string().min(3, messages.titleMin).max(100, messages.titleMax),
+    message: z.string().min(5, messages.messageMin).max(2000, messages.messageMax),
+    scheduledDate: z.string().optional(),
+    scheduledTime: z.string().optional(),
+  });
+}
 
-type NotificationFormValues = z.infer<typeof notificationFormSchema>;
+type NotificationFormValues = z.infer<ReturnType<typeof createNotificationFormSchema>>;
 
 
 interface NotificationAdminFormProps {
@@ -42,6 +49,22 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const buttonText = submitButtonText ?? t.adminSendAnnouncement;
+
+  const notificationFormSchema = useMemo(
+    () =>
+      createNotificationFormSchema({
+        titleMin: t.adminValidationNotifTitleMin,
+        titleMax: t.adminValidationNotifTitleMax,
+        messageMin: t.adminValidationNotifMessageMin,
+        messageMax: t.adminValidationNotifMessageMax,
+      }),
+    [
+      t.adminValidationNotifTitleMin,
+      t.adminValidationNotifTitleMax,
+      t.adminValidationNotifMessageMin,
+      t.adminValidationNotifMessageMax,
+    ],
+  );
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationFormSchema),

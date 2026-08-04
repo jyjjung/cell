@@ -1,9 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
-import { getAdminUserIds, sendUserNotification } from '@/lib/server-notifications';
+import { resolveUserIdByEmail, sendUserNotification } from '@/lib/server-notifications';
 import { hasCapability } from '@/lib/role-capabilities';
 import { clientIpFromRequest, rateLimit } from '@/lib/rate-limit';
+
+const SIGNUP_NOTIFY_EMAIL =
+  process.env.SIGNUP_NOTIFY_EMAIL || 'yejoon7154@gmail.com';
 
 export async function POST(request: NextRequest) {
   const ip = clientIpFromRequest(request);
@@ -64,9 +67,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Notification window expired.' }, { status: 400 });
     }
 
-    const adminIds = await getAdminUserIds(adminDb);
-    if (adminIds.length === 0) {
-      return NextResponse.json({ success: true, sent: 0, skipped: 'no_admins' });
+    const notifyUserId = await resolveUserIdByEmail(adminDb, SIGNUP_NOTIFY_EMAIL);
+    if (!notifyUserId || notifyUserId === userId) {
+      return NextResponse.json({ success: true, sent: 0, skipped: 'no_recipient' });
     }
 
     const firstName = (user.firstName as string) || '';
@@ -74,26 +77,20 @@ export async function POST(request: NextRequest) {
     const email = (user.email as string) || '';
     const displayName = `${firstName} ${lastName}`.trim() || email || 'Someone';
 
-    let sent = 0;
-    let skipped = 0;
+    const result = await sendUserNotification(adminDb, adminMessaging, {
+      userId: notifyUserId,
+      title: 'New signup pending approval',
+      message: `${displayName} (${email}) signed up and is waiting for approval.`,
+      relatedUrl: '/admin/users',
+      type: 'reminder',
+      dedupeId: `signup-pending-${userId}-${notifyUserId}`,
+    });
 
-    for (const adminId of adminIds) {
-      if (adminId === userId) continue;
-
-      const result = await sendUserNotification(adminDb, adminMessaging, {
-        userId: adminId,
-        title: 'New signup pending approval',
-        message: `${displayName} (${email}) signed up and is waiting for approval.`,
-        relatedUrl: '/admin/users',
-        type: 'reminder',
-        dedupeId: `signup-pending-${userId}-${adminId}`,
-      });
-
-      if (result === 'sent') sent++;
-      else skipped++;
-    }
-
-    return NextResponse.json({ success: true, sent, skipped });
+    return NextResponse.json({
+      success: true,
+      sent: result === 'sent' ? 1 : 0,
+      skipped: result === 'skipped' ? 1 : 0,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[signup/notify]', message);

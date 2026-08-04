@@ -217,7 +217,7 @@ export default function SystemChat() {
             addEvent(formData).then(() => {
                 systemSay(`SUCCESS! The event **${formData.title}** is live.`);
                 setWizardState('IDLE');
-                toast({ title: "Event Created" });
+                toast({ title: t.adminEventCreated });
             });
         } else {
             systemSay("Aborted. What else?");
@@ -240,7 +240,7 @@ export default function SystemChat() {
             createNotification(formData).then(() => {
                 systemSay("Announcement sent.");
                 setWizardState('IDLE');
-                toast({ title: "Announcement Live" });
+                toast({ title: t.adminAnnouncementLive });
             });
         } else {
             systemSay("Discarded. Anything else?");
@@ -262,7 +262,7 @@ export default function SystemChat() {
             addSong(formData.title, formData.artist).then(() => {
                 systemSay(`Song **${formData.title}** has been added.`);
                 setWizardState('IDLE');
-                toast({ title: "Song Added" });
+                toast({ title: t.adminSongAdded });
             });
         } else {
             systemSay("Cancelled.");
@@ -284,7 +284,7 @@ export default function SystemChat() {
             createSetlist(formData.name, formData.date).then(() => {
                 systemSay("Setlist created.");
                 setWizardState('IDLE');
-                toast({ title: "Setlist Created" });
+                toast({ title: t.adminSetlistCreated });
             });
         } else {
             systemSay("Discarded.");
@@ -306,7 +306,7 @@ export default function SystemChat() {
             createRoster(formData.name, formData.date).then(() => {
                 systemSay("Worship roster is ready.");
                 setWizardState('IDLE');
-                toast({ title: "Roster Created" });
+                toast({ title: t.adminRosterCreated });
             });
         } else {
             systemSay("Cancelled.");

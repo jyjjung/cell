@@ -511,6 +511,47 @@ export default function ProfilePage() {
                   </div>
                   <div className="shrink-0 w-full sm:w-auto">{renderNotificationButton}</div>
                 </div>
+                <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 stack-gap-sm">
+                  <p className="text-[length:var(--app-ui-font-xs)] font-medium text-foreground">{t.pushHealthTitle}</p>
+                  <ul className="text-[length:var(--app-ui-font-xs)] text-muted-foreground space-y-1">
+                    <li>
+                      {t.pushHealthPermission}:{' '}
+                      {typeof Notification !== 'undefined' && Notification.permission === 'granted'
+                        ? t.pushHealthGranted
+                        : typeof Notification !== 'undefined'
+                          ? Notification.permission
+                          : t.pushHealthUnknown}
+                    </li>
+                    <li>
+                      {t.pushHealthToken}:{' '}
+                      {currentUser.fcmTokens && currentUser.fcmTokens.length > 0
+                        ? `${t.pushHealthOk} (${currentUser.fcmTokens.length})`
+                        : t.pushHealthMissing}
+                    </li>
+                    <li>
+                      {t.pushHealthNeedsResync}:{' '}
+                      {currentUser.fcmNeedsResync ? t.pushHealthNeedsResync : t.pushHealthOk}
+                    </li>
+                    <li>
+                      {t.pushHealthLastHealed}:{' '}
+                      {currentUser.fcmLastHealedAt?.toDate
+                        ? formatAppDate(currentUser.fcmLastHealedAt.toDate(), locale, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })
+                        : t.pushHealthUnknown}
+                    </li>
+                  </ul>
+                  {(currentUser.fcmNeedsResync ||
+                    !currentUser.fcmTokens ||
+                    currentUser.fcmTokens.length === 0) && (
+                    <p className="text-[length:var(--app-ui-font-xs)] text-amber-700 dark:text-amber-400">
+                      {t.pushHealthTroubleshoot}
+                    </p>
+                  )}
+                </div>
                 {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
                   <div className="stack-gap-sm">
                     <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl" size="sm">
@@ -521,6 +562,19 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 )}
+                {(pushSupport === 'SUPPORTED' || pushSupport === 'NEEDS_PERMISSION') &&
+                  (!currentUser.fcmTokens || currentUser.fcmTokens.length === 0 || currentUser.fcmNeedsResync) && (
+                    <Button
+                      onClick={handleRepairPush}
+                      disabled={isSubscriptionLoading}
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-xl"
+                    >
+                      {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />}
+                      {t.repairPushNotifications}
+                    </Button>
+                  )}
                 {pushSupport === 'NEEDS_PWA_INSTALL' && (
                   <Alert variant="default">
                     <Download className="h-4 w-4" />

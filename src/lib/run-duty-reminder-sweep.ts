@@ -3,6 +3,10 @@ import type { Messaging } from 'firebase-admin/messaging';
 import { addDays, format } from 'date-fns';
 import { deliverDueScheduledAnnouncements } from '@/lib/deliver-scheduled-announcements';
 import {
+  EMPTY_REMINDER_COUNTS,
+  shouldSkipCatchupFullScan,
+} from '@/lib/duty-reminder-catchup';
+import {
   collectDutyReminders,
   getCommunityTodayIso,
   type CustomRosterDutySource,
@@ -56,6 +60,8 @@ export interface DutyReminderSweepResult {
   events: ReminderCounts;
   scheduledAnnouncements: ReminderCounts;
   pushRetries: ReminderCounts;
+  /** True when catch-up skipped roster/event/user scans (morning already OK). */
+  fullScanSkipped?: boolean;
 }
 
 interface SendableReminder {
@@ -118,6 +124,51 @@ export async function runDutyReminderSweep(params: {
 
   const timeZone = process.env.DUTY_REMINDER_TIMEZONE || DEFAULT_TIMEZONE;
   const todayIso = getCommunityTodayIso(timeZone);
+
+  // Catch-up: if morning already succeeded today, skip full collection scans
+  // (Vercel Fluid CPU + Admin Firestore). Still deliver announcements + push retries.
+  if (source === 'catchup') {
+    const heartbeatSnap = await adminDb
+      .collection(CRON_HEARTBEAT_COLLECTION)
+      .doc(CRON_HEARTBEAT_DOC_ID)
+      .get();
+    const heartbeat = heartbeatSnap.data() as
+      | {
+          lastRunTodayIso?: string;
+          lastRunSource?: string;
+          lastError?: string;
+        }
+      | undefined;
+
+    if (
+      shouldSkipCatchupFullScan({
+        todayIso,
+        lastRunTodayIso: heartbeat?.lastRunTodayIso,
+        lastRunSource: heartbeat?.lastRunSource,
+        lastError: heartbeat?.lastError,
+      })
+    ) {
+      const scheduledAnnouncements = await deliverDueScheduledAnnouncements(
+        adminDb,
+        adminMessaging,
+        timeZone,
+      );
+      const pushRetries = await retryFailedNotificationPushes(adminDb, adminMessaging);
+      const result: DutyReminderSweepResult = {
+        todayIso,
+        timeZone,
+        source,
+        durationMs: Date.now() - startedAt,
+        duty: { ...EMPTY_REMINDER_COUNTS },
+        events: { ...EMPTY_REMINDER_COUNTS },
+        scheduledAnnouncements,
+        pushRetries,
+        fullScanSkipped: true,
+      };
+      await recordSweepHeartbeat(adminDb, result);
+      return result;
+    }
+  }
 
   const [cleaningSnap, cleaningDaysSnap, qtSnap, worshipSnap, eventsSnap, usersSnap, customDefsSnap] =
     await Promise.all([
@@ -242,25 +293,29 @@ async function recordSweepHeartbeat(
   adminDb: Firestore,
   result: DutyReminderSweepResult,
 ): Promise<void> {
+  const base: Record<string, unknown> = {
+    lastRunAt: FieldValue.serverTimestamp(),
+    lastRunSource: result.source,
+    lastRunTodayIso: result.todayIso,
+    lastRunTimeZone: result.timeZone,
+    lastRunDurationMs: result.durationMs,
+    lastRunPushRetriesSent: result.pushRetries.sent,
+    lastRunFullScanSkipped: Boolean(result.fullScanSkipped),
+    lastError: FieldValue.delete(),
+    lastErrorAt: FieldValue.delete(),
+  };
+
+  // Light catch-up must not wipe morning duty/event send counts in admin health.
+  if (!result.fullScanSkipped) {
+    base.lastRunDutySent = result.duty.sent;
+    base.lastRunDutyCandidates = result.duty.candidates;
+    base.lastRunEventsSent = result.events.sent;
+  }
+
   await adminDb
     .collection(CRON_HEARTBEAT_COLLECTION)
     .doc(CRON_HEARTBEAT_DOC_ID)
-    .set(
-      {
-        lastRunAt: FieldValue.serverTimestamp(),
-        lastRunSource: result.source,
-        lastRunTodayIso: result.todayIso,
-        lastRunTimeZone: result.timeZone,
-        lastRunDurationMs: result.durationMs,
-        lastRunDutySent: result.duty.sent,
-        lastRunDutyCandidates: result.duty.candidates,
-        lastRunEventsSent: result.events.sent,
-        lastRunPushRetriesSent: result.pushRetries.sent,
-        lastError: FieldValue.delete(),
-        lastErrorAt: FieldValue.delete(),
-      },
-      { merge: true },
-    )
+    .set(base, { merge: true })
     // A heartbeat failure must never fail the sweep that already sent reminders.
     .catch((error) => {
       console.error('[runDutyReminderSweep] heartbeat write failed', error);

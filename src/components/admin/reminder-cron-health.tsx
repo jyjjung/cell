@@ -21,6 +21,11 @@ interface CronHeartbeat {
   lastRunSource?: string;
   lastError?: string;
   lastErrorAt?: Timestamp;
+  lastRunDutySent?: number;
+  lastRunDutyCandidates?: number;
+  lastRunEventsSent?: number;
+  lastRunPushRetriesSent?: number;
+  lastRunFullScanSkipped?: boolean;
 }
 
 /**
@@ -52,8 +57,26 @@ export function ReminderCronHealth() {
   } else {
     const relative = formatDistanceToNow(lastRun, { addSuffix: true });
     const viaCatchup =
-      data?.lastRunSource === 'catchup' ? ` (${t.adminReminderHealthCatchup})` : '';
+      data?.lastRunSource === 'catchup'
+        ? data?.lastRunFullScanSkipped
+          ? ` (${t.adminReminderHealthCatchupSkipped})`
+          : ` (${t.adminReminderHealthCatchup})`
+        : '';
     detail = `${t.adminReminderHealthLastRun} ${relative}${viaCatchup}`;
+  }
+
+  const metrics: string[] = [];
+  if (typeof data?.lastRunDutySent === 'number') {
+    metrics.push(`${t.adminReminderHealthDutySent}: ${data.lastRunDutySent}`);
+  }
+  if (typeof data?.lastRunDutyCandidates === 'number') {
+    metrics.push(`${t.adminReminderHealthDutyCandidates}: ${data.lastRunDutyCandidates}`);
+  }
+  if (typeof data?.lastRunEventsSent === 'number') {
+    metrics.push(`${t.adminReminderHealthEventsSent}: ${data.lastRunEventsSent}`);
+  }
+  if (typeof data?.lastRunPushRetriesSent === 'number') {
+    metrics.push(`${t.adminReminderHealthPushRetries}: ${data.lastRunPushRetriesSent}`);
   }
 
   return (
@@ -70,16 +93,26 @@ export function ReminderCronHealth() {
       ) : (
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       )}
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{t.adminReminderHealth}</p>
-        <p
-          className={cn(
-            'text-xs',
-            needsAttention ? 'text-destructive' : 'text-muted-foreground',
-          )}
-        >
-          {detail}
-        </p>
+      <div className="min-w-0 stack-gap-sm">
+        <div>
+          <p className="text-sm font-medium">{t.adminReminderHealth}</p>
+          <p
+            className={cn(
+              'text-xs',
+              needsAttention ? 'text-destructive' : 'text-muted-foreground',
+            )}
+          >
+            {detail}
+          </p>
+        </div>
+        {metrics.length > 0 && (
+          <p className="text-xs text-muted-foreground">{metrics.join(' · ')}</p>
+        )}
+        {failedSinceLastRun && data?.lastError && (
+          <p className="text-xs text-destructive break-words">
+            {t.adminReminderHealthErrorDetail}: {data.lastError}
+          </p>
+        )}
       </div>
     </div>
   );

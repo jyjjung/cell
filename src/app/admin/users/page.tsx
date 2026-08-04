@@ -33,13 +33,15 @@ import { hasCapability } from '@/lib/role-capabilities';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 
-const editUserSchema = z.object({
-  firstName: z.string().min(1, "First name is required."),
-  lastName: z.string().min(1, "Last name is required."),
-  roleIds: z.array(z.string()).optional(),
-  isApproved: z.boolean().optional(),
-});
-type EditUserFormValues = z.infer<typeof editUserSchema>;
+function createEditUserSchema(messages: { firstName: string; lastName: string }) {
+  return z.object({
+    firstName: z.string().min(1, messages.firstName),
+    lastName: z.string().min(1, messages.lastName),
+    roleIds: z.array(z.string()).optional(),
+    isApproved: z.boolean().optional(),
+  });
+}
+type EditUserFormValues = z.infer<ReturnType<typeof createEditUserSchema>>;
 
 function userIsAdmin(user: Pick<UserProfileData, 'capabilityKeys'>): boolean {
   return hasCapability(user.capabilityKeys, 'app.admin');
@@ -59,25 +61,58 @@ export default function AdminUsersPage() {
   const [isApproving, setIsApproving] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'noPush' | 'inactive'>('all');
 
   // Bulk Selection
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
 
+  const editUserSchema = useMemo(
+    () =>
+      createEditUserSchema({
+        firstName: t.adminValidationFirstNameRequired,
+        lastName: t.adminValidationLastNameRequired,
+      }),
+    [t.adminValidationFirstNameRequired, t.adminValidationLastNameRequired],
+  );
+
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
   });
 
   const filteredUsers = useMemo(() => {
-    if (!searchTerm) return allUsers;
+    let list = allUsers;
+    if (statusFilter === 'pending') {
+      list = list.filter((user) => !user.isApproved && !userIsAdmin(user));
+    } else if (statusFilter === 'noPush') {
+      list = list.filter((user) => !user.fcmTokens || user.fcmTokens.length === 0);
+    } else if (statusFilter === 'inactive') {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      list = list.filter((user) => {
+        const seenMs =
+          user.lastSeenAt && typeof (user.lastSeenAt as { toMillis?: () => number }).toMillis === 'function'
+            ? (user.lastSeenAt as { toMillis: () => number }).toMillis()
+            : user.lastSeenAt && typeof (user.lastSeenAt as { toDate?: () => Date }).toDate === 'function'
+              ? (user.lastSeenAt as { toDate: () => Date }).toDate().getTime()
+              : 0;
+        if (seenMs > 0) return seenMs < cutoff;
+        const createdMs =
+          user.createdAt && typeof (user.createdAt as { toMillis?: () => number }).toMillis === 'function'
+            ? (user.createdAt as { toMillis: () => number }).toMillis()
+            : 0;
+        // No lastSeen yet: treat as inactive only if the account is older than 30 days.
+        return createdMs > 0 && createdMs < cutoff;
+      });
+    }
+    if (!searchTerm) return list;
     const searchLower = searchTerm.toLowerCase();
-    return allUsers.filter(user => {
+    return list.filter(user => {
       const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
       const email = user.email?.toLowerCase() || '';
       return fullName.includes(searchLower) || email.includes(searchLower);
     });
-  }, [allUsers, searchTerm]);
+  }, [allUsers, searchTerm, statusFilter]);
 
   const rolesMap = useMemo(() => new Map(roles.map(r => [r.id, r.name])), [roles]);
 
@@ -117,11 +152,11 @@ export default function AdminUsersPage() {
         roleIds: data.roleIds || [],
         isApproved: data.isApproved,
       });
-      toast({ title: "User Updated", description: `${data.firstName} ${data.lastName} updated.` });
+      toast({ title: t.adminUserUpdated, description: `${data.firstName} ${data.lastName}` });
       setIsEditUserOpen(false);
       setEditingUser(null);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Sync Failed", description: error.message });
+      toast({ variant: "destructive", title: t.adminSyncFailed, description: error.message });
     } finally {
       setIsSaving(false);
     }
@@ -134,9 +169,9 @@ export default function AdminUsersPage() {
             isApproved: true,
             roleIds: user.roleIds || [] 
         });
-        toast({ title: "User Approved", description: `${user.firstName} has been approved.` });
+        toast({ title: t.adminUserApproved, description: `${user.firstName}` });
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Approval Failed", description: error.message });
+        toast({ variant: "destructive", title: t.adminApprovalFailed, description: error.message });
     } finally {
         setIsApproving(null);
     }
@@ -159,10 +194,10 @@ export default function AdminUsersPage() {
         return Promise.resolve();
       });
       await Promise.all(promises);
-      toast({ title: "Users Approved", description: `${selectedUserIds.size} users have been approved.` });
+      toast({ title: t.adminUsersApproved, description: `${selectedUserIds.size}` });
       setSelectedUserIds(new Set());
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Bulk Approval Failed", description: error.message });
+        toast({ variant: "destructive", title: t.adminBulkApprovalFailed, description: error.message });
     } finally {
         setIsBulkApproving(false);
     }
@@ -190,10 +225,10 @@ export default function AdminUsersPage() {
             throw new Error(errorData.error || "Termination failed.");
         }
 
-        toast({ title: "User Deleted", description: `User ${user.email} deleted.` });
+        toast({ title: t.adminUserDeleted, description: `${user.email}` });
 
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Purge Failed", description: error.message });
+      toast({ variant: "destructive", title: t.adminPurgeFailed, description: error.message });
     } finally {
       setIsDeleting(false);
     }
@@ -217,16 +252,16 @@ export default function AdminUsersPage() {
             onClick={() => handleApprove(user)}
             disabled={isApproving === user.uid}
         >
-            {isApproving === user.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : "Approve"}
+            {isApproving === user.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : t.adminApprove}
         </Button>
       )}
       <Button variant="outline" size={size} className={cn("h-8 rounded-lg hover:bg-primary hover:text-white transition-all", size === "icon" ? "w-8 p-0" : "px-3 text-xs")} onClick={() => openEditDialog(user)}>
-          {size === "icon" ? <Edit className="h-4 w-4" /> : "Edit"}
+          {size === "icon" ? <Edit className="h-4 w-4" /> : t.adminEdit}
       </Button>
       <AlertDialog>
           <AlertDialogTrigger asChild>
           <Button variant="destructive" size={size} className={cn("h-8 rounded-lg opacity-50 hover:opacity-100 transition-opacity", size === "icon" ? "w-8 p-0" : "px-3 text-xs")} disabled={isDeleting}>
-              {size === "icon" ? <Trash2 className="h-4 w-4" /> : "Delete"}
+              {size === "icon" ? <Trash2 className="h-4 w-4" /> : t.adminDelete}
           </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="rounded-2xl">
@@ -323,6 +358,26 @@ export default function AdminUsersPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-9 rounded-lg text-sm"
             />
+          </div>
+
+          <div className="flex w-full md:w-auto gap-1.5 shrink-0">
+            {([
+              ['all', t.adminFilterAll],
+              ['pending', t.adminFilterPending],
+              ['noPush', t.adminFilterNoPush],
+              ['inactive', t.adminFilterInactive],
+            ] as const).map(([id, label]) => (
+              <Button
+                key={id}
+                type="button"
+                size="sm"
+                variant={statusFilter === id ? 'default' : 'outline'}
+                className="h-9 rounded-lg"
+                onClick={() => setStatusFilter(id)}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
 
           <Button

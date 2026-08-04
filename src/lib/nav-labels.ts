@@ -26,7 +26,6 @@ const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
   '/prayer-requests': 'prayerRequests',
   '/feedback': 'feedback',
   '/features': 'features',
-  '/apps': 'allApps',
   '/rosters': 'schedule',
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { db } from '@/lib/firebase';
 import { isPrayerShepherd, PRAYER_REQUESTS_COLLECTION } from '@/lib/prayer-requests';
@@ -26,15 +27,27 @@ type PrayerRequestsContextValue = {
 
 const PrayerRequestsContext = createContext<PrayerRequestsContextValue | null>(null);
 
+function needsLivePrayer(pathname: string): boolean {
+  return (
+    pathname === '/prayer-requests' ||
+    pathname.startsWith('/prayer-requests/') ||
+    pathname.startsWith('/admin')
+  );
+}
+
 export function PrayerRequestsProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const { currentUser } = useAuth();
   const isShepherd = isPrayerShepherd(currentUser?.email);
+  const live = needsLivePrayer(pathname);
   const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.uid || !isShepherd) {
-      setRequests([]);
+    if (!currentUser?.uid || !isShepherd || !live) {
+      if (!live) {
+        setRequests([]);
+      }
       setLoading(false);
       return;
     }
@@ -59,7 +72,7 @@ export function PrayerRequestsProvider({ children }: { children: ReactNode }) {
       },
       () => setLoading(false),
     );
-  }, [currentUser?.uid, isShepherd]);
+  }, [currentUser?.uid, isShepherd, live]);
 
   const value = useMemo(
     () => ({ requests, loading, isShepherd }),

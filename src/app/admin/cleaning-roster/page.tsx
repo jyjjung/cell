@@ -29,7 +29,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-const daySchema = z.object({ name: z.string().min(1, "Name required.") });
+const daySchema = z.object({ name: z.string().min(1) });
 type DayFormValues = z.infer<typeof daySchema>;
 
 function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
@@ -38,16 +38,21 @@ function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    const form = useForm<DayFormValues>({ resolver: zodResolver(daySchema) });
+    const schema = useMemo(
+      () => z.object({ name: z.string().min(1, t.adminValidationNameRequired) }),
+      [t.adminValidationNameRequired],
+    );
+
+    const form = useForm<DayFormValues>({ resolver: zodResolver(schema) });
 
     const handleAdd = async (data: DayFormValues) => {
         setIsSaving(true);
         try {
             await addCleaningDay(data.name);
-            toast({ title: "Duty added" });
+            toast({ title: t.adminDutyAdded });
             form.reset({ name: "" });
         } catch (e: any) {
-            toast({ variant: "destructive", title: "Error", description: e.message });
+            toast({ variant: "destructive", title: t.error, description: e.message });
         } finally {
             setIsSaving(false);
         }
@@ -58,11 +63,11 @@ function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
         setIsSaving(true);
         try {
             await updateCleaningDay(editingDay.id, data.name);
-            toast({ title: "Duty updated" });
+            toast({ title: t.adminDutyUpdated });
             setEditingDay(null);
             form.reset({ name: "" });
         } catch (e: any) {
-            toast({ variant: "destructive", title: "Error", description: e.message });
+            toast({ variant: "destructive", title: t.error, description: e.message });
         } finally {
             setIsSaving(false);
         }
@@ -182,7 +187,11 @@ export default function AdminCleaningRosterPage() {
     const changes = localChanges[date];
 
     if (!changes || (!changes.dayId && !existingEntry?.dayId) || (!changes.assignedUserIds && !existingEntry?.assignedUserIds)) {
-        toast({ variant: "destructive", title: "Incomplete", description: `Pick duty and members for ${format(new Date(date), "MMM d")}` });
+        toast({
+          variant: "destructive",
+          title: t.adminIncomplete,
+          description: t.adminIncompleteDutyDesc.replace('{date}', format(new Date(date), "MMM d")),
+        });
         setSavingStates(prev => ({ ...prev, [date]: false }));
         return;
     }
@@ -195,14 +204,14 @@ export default function AdminCleaningRosterPage() {
 
     try {
       await upsertEntry(dataToSave);
-      toast({ title: "Saved", description: format(new Date(date), "MMM d") });
+      toast({ title: t.saved, description: format(new Date(date), "MMM d") });
       setLocalChanges(prev => {
         const newChanges = { ...prev };
         delete newChanges[date];
         return newChanges;
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "Save failed" });
+      toast({ variant: "destructive", title: t.adminSaveFailed });
     } finally {
       setSavingStates(prev => ({ ...prev, [date]: false }));
     }
@@ -212,9 +221,9 @@ export default function AdminCleaningRosterPage() {
     if (!rosterMap.has(date)) return;
     try {
         await deleteEntry(date);
-        toast({ title: "Entry removed" });
+        toast({ title: t.adminEntryRemoved });
     } catch (error) {
-        toast({ variant: "destructive", title: "Purge Error" });
+        toast({ variant: "destructive", title: t.adminPurgeFailed });
     }
   };
 

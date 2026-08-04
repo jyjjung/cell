@@ -110,8 +110,8 @@ function RosterSettingsPanel({
     } catch (err: unknown) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to save",
+        title: t.error,
+        description: err instanceof Error ? err.message : t.adminCouldNotSave,
       });
     } finally {
       setSaving(false);
@@ -343,8 +343,8 @@ export default function AdminCustomRostersPage() {
     } catch (err: unknown) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to create roster",
+        title: t.error,
+        description: err instanceof Error ? err.message : t.adminCreateRosterFailed,
       });
     } finally {
       setCreating(false);

@@ -23,11 +23,23 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
   const patchUsers = usersContext?.patchUsers;
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tabVisible, setTabVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState !== 'hidden',
+  );
 
   useEffect(() => {
-    if (!enabled || !currentUser?.uid) {
-      setChats([]);
-      setLoading(false);
+    if (typeof document === 'undefined') return;
+    const onVis = () => setTabVisible(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !currentUser?.uid || !tabVisible) {
+      if (!enabled || !currentUser?.uid) {
+        setChats([]);
+        setLoading(false);
+      }
       return;
     }
 
@@ -91,7 +103,7 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
     );
 
     return () => unsubscribe();
-  }, [enabled, currentUser?.uid, patchUsers]);
+  }, [enabled, currentUser?.uid, patchUsers, tabVisible]);
 
   return { chats, loading };
 }

@@ -29,6 +29,13 @@ export function usePrayerRequestBadge() {
 }
 
 export async function markPrayerRequestsSeen(userId: string) {
+  if (typeof window !== 'undefined') {
+    const key = `em_prayer_seen_at:${userId}`;
+    const last = Number(window.sessionStorage.getItem(key) || '0');
+    // Shepherd revisits shouldn't rewrite every open in the same session burst.
+    if (Date.now() - last < 5 * 60 * 1000) return;
+    window.sessionStorage.setItem(key, String(Date.now()));
+  }
   await updateDoc(doc(db, 'users', userId), {
     prayerRequestsLastSeenAt: serverTimestamp(),
   });

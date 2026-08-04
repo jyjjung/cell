@@ -108,15 +108,13 @@ function scheduleIdle(callback: () => void, timeoutMs = 2000): () => void {
 }
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {
-  const delivered = await tryTriggerPushNotification(notificationId, 5);
+  const delivered = await tryTriggerPushNotification(notificationId, 3);
   if (delivered) return;
 
-  // Firestore replication / transient FCM failures can clear after the first burst.
-  for (const delayMs of [10_000, 30_000]) {
-    setTimeout(() => {
-      void tryTriggerPushNotification(notificationId, 3);
-    }, delayMs);
-  }
+  // One delayed retry only — extra bursts burn Vercel Fluid CPU for little gain.
+  setTimeout(() => {
+    void tryTriggerPushNotification(notificationId, 2);
+  }, 15_000);
 };
 
 async function tryTriggerPushNotification(
@@ -193,6 +191,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const notificationsRef = useRef(notifications);
   /** Pending optimistic reactions so unrelated snapshot merges don't clobber them. */
   const reactionOverridesRef = useRef<Map<string, ReactionMap>>(new Map());
+  const [tabVisible, setTabVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState !== 'hidden',
+  );
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onVis = () => setTabVisible(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   useEffect(() => {
     notificationsRef.current = notifications;
@@ -202,6 +210,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     if (!currentUser) {
       setNotifications([]);
       setLoading(false);
+      return;
+    }
+
+    // Pause live listeners while the tab is backgrounded (Firebase reads; no Vercel).
+    if (!tabVisible && !adminMode) {
       return;
     }
 
@@ -352,7 +365,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       cancelIdle?.();
       detachListeners?.();
     };
-  }, [currentUser, adminMode, mode]);
+  }, [currentUser, adminMode, mode, tabVisible]);
 
   const createNotification = useCallback(async (
     notificationData: Omit<AppNotification, 'id' | 'createdAt' | 'readBy'>,

@@ -18,6 +18,10 @@ type RegisterTokenOptions = {
   refresh?: boolean;
 };
 
+const FCM_SOFT_REFRESH_KEY = 'em_fcm_soft_refresh_at';
+/** Soft foreground refresh at most once per interval — cuts Firestore getDoc churn. */
+const FCM_SOFT_REFRESH_MS = 20 * 60 * 1000;
+
 export function useFCMToken() {
   const { currentUser } = useAuth();
   const hasSynced = useRef(false);
@@ -30,6 +34,15 @@ export function useFCMToken() {
       typeof options === 'boolean' ? { force: options, refresh: options } : options;
     const force = Boolean(opts.force);
     const refresh = Boolean(opts.refresh || opts.force);
+
+    if (refresh && !force && typeof window !== 'undefined') {
+      const last = Number(window.localStorage.getItem(FCM_SOFT_REFRESH_KEY) || '0');
+      if (Date.now() - last < FCM_SOFT_REFRESH_MS) {
+        hasSynced.current = true;
+        return;
+      }
+      window.localStorage.setItem(FCM_SOFT_REFRESH_KEY, String(Date.now()));
+    }
 
     if (!refresh && hasSynced.current) return;
     hasSynced.current = true;
