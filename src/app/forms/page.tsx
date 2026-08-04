@@ -1,20 +1,18 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { FormDefinition, FormResponse } from '@/types/forms';
-import { extractPublicFormToken } from '@/lib/forms/validation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/page-layout';
 import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { AlertTriangle } from 'lucide-react';
+import { toMillisSafe } from '@/lib/firestore-timestamp';
 
 export default function FormsPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -23,7 +21,6 @@ export default function FormsPage() {
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [loading, setLoading] = useState(false);
-  const [linkInput, setLinkInput] = useState('');
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -68,8 +65,6 @@ export default function FormsPage() {
     return map;
   }, [responses]);
 
-  const resolvedToken = extractPublicFormToken(linkInput);
-
   if (loadingAuth) return <PageLoading />;
 
   return (
@@ -77,50 +72,20 @@ export default function FormsPage() {
       <PageHeader title="Forms" description="Open a form, submit answers, and revisit your responses." />
 
       {!currentUser ? (
-        <div className="space-y-4 ui-surface max-w-xl">
+        <div className="ui-surface max-w-xl space-y-3">
           <p className="text-sm text-muted-foreground">
-            Paste the form link you were given (or just the token) to open it as a guest.
+            Sign in to see forms shared with you. If someone sent you a guest form link, open that link
+            directly — no account needed.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 items-end">
-            <div className="flex-1 w-full">
-              <Label htmlFor="publicToken">Form link</Label>
-              <Input
-                id="publicToken"
-                value={linkInput}
-                onChange={(e) => setLinkInput(e.target.value)}
-                placeholder="Paste link or token"
-                className="mt-1"
-              />
-            </div>
-            <Button asChild disabled={!resolvedToken} className="rounded-xl">
-              <Link href={`/forms/public/${encodeURIComponent(resolvedToken)}`}>Open form</Link>
-            </Button>
-          </div>
+          <Button asChild className="rounded-xl">
+            <Link href="/login">Sign in</Link>
+          </Button>
         </div>
       ) : (
         <div className="space-y-6">
           <section className="ui-section">
             <div className="ui-card space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3 justify-between">
-                <h2 className="text-section-title">Available forms</h2>
-                <div className="flex flex-col sm:flex-row gap-2 items-end w-full sm:w-auto sm:max-w-md">
-                  <div className="flex-1 w-full">
-                    <Label htmlFor="openLink" className="text-xs text-muted-foreground">
-                      Or open a guest link
-                    </Label>
-                    <Input
-                      id="openLink"
-                      value={linkInput}
-                      onChange={(e) => setLinkInput(e.target.value)}
-                      placeholder="Paste link or token"
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button asChild variant="outline" disabled={!resolvedToken} className="rounded-xl shrink-0">
-                    <Link href={`/forms/public/${encodeURIComponent(resolvedToken)}`}>Open</Link>
-                  </Button>
-                </div>
-              </div>
+              <h2 className="text-section-title">Available forms</h2>
 
               {loading && forms.length === 0 ? (
                 <div className="empty-inline">
@@ -132,7 +97,7 @@ export default function FormsPage() {
                 <div className="space-y-2">
                   {forms
                     .slice()
-                    .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0))
+                    .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt))
                     .map((form) => {
                       const submissionCount = responsesByFormId.get(form.id)?.length ?? 0;
                       return (
@@ -181,10 +146,11 @@ export default function FormsPage() {
                 <div className="space-y-2">
                   {responses
                     .slice()
-                    .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0))
+                    .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt))
                     .slice(0, 50)
                     .map((r) => {
                       const hasErrors = r.lastValidationErrors && Object.keys(r.lastValidationErrors).length > 0;
+                      const submittedMs = toMillisSafe(r.createdAt);
                       return (
                         <div
                           key={r.id}
@@ -201,8 +167,7 @@ export default function FormsPage() {
                               ) : null}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Submitted:{' '}
-                              {r.createdAt ? new Date(r.createdAt.toMillis()).toLocaleString() : '—'}
+                              Submitted: {submittedMs ? new Date(submittedMs).toLocaleString() : '—'}
                             </p>
                           </div>
                           <Button asChild variant="secondary" className="rounded-xl">

@@ -9,6 +9,7 @@ export const FORM_FIELD_TYPES: FormFieldType[] = [
   'name',
   'email',
   'phone',
+  'birthday',
   'number',
   'date',
   'time',
@@ -19,8 +20,10 @@ export function isFormFieldType(value: unknown): value is FormFieldType {
   return typeof value === 'string' && (FORM_FIELD_TYPES as string[]).includes(value);
 }
 
-export function isProfileLinkedFieldType(type: FormFieldType): type is 'name' | 'email' {
-  return type === 'name' || type === 'email';
+export function isProfileLinkedFieldType(
+  type: FormFieldType,
+): type is 'name' | 'email' | 'phone' | 'birthday' {
+  return type === 'name' || type === 'email' || type === 'phone' || type === 'birthday';
 }
 
 export function isChoiceFieldType(type: FormFieldType): boolean {
@@ -39,7 +42,8 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   yesno: 'Yes / No',
   name: 'Name (from profile)',
   email: 'Email (from profile)',
-  phone: 'Phone',
+  phone: 'Phone (from profile)',
+  birthday: 'Birthday (from profile)',
   number: 'Number',
   date: 'Date',
   time: 'Time',
@@ -50,6 +54,7 @@ export function defaultLabelForFieldType(type: FormFieldType, order: number): st
   if (type === 'name') return 'Name';
   if (type === 'email') return 'Email';
   if (type === 'phone') return 'Phone';
+  if (type === 'birthday') return 'Birthday';
   if (type === 'date') return 'Date';
   if (type === 'time') return 'Time';
   if (type === 'url') return 'Website';

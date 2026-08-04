@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import type { FormAnswerValue, FormDefinition, FormResponse } from '@/types/forms';
 import FormRenderer from '@/components/forms/FormRenderer';
-import ReportPanel from '@/components/forms/ReportPanel';
+import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
+import { auth } from '@/lib/firebase';
 import { AlertTriangle, Save } from 'lucide-react';
 
+/** Guest / member view of a single response — edit answers only (no CSV/PDF report). */
 export default function GuestResponsePage({ params }: { params: { formId: string; responseId: string } }) {
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
 
   const [form, setForm] = useState<FormDefinition | null>(null);
   const [response, setResponse] = useState<FormResponse | null>(null);
@@ -23,6 +27,7 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   const [draftAnswers, setDraftAnswers] = useState<Record<string, FormAnswerValue>>({});
   const [clientErrors, setClientErrors] = useState<Record<string, string> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +63,9 @@ export default function GuestResponsePage({ params }: { params: { formId: string
     return displayErrors && typeof displayErrors === 'object' ? Object.keys(displayErrors).length > 0 : false;
   }, [displayErrors]);
 
+  const submittedOk = searchParams.get('submitted') === '1';
+  const showThanks = (submittedOk || justSaved) && !hasErrors;
+
   const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
     setDraftAnswers(next);
     if (clientErrors) setClientErrors(null);
@@ -79,11 +87,15 @@ export default function GuestResponsePage({ params }: { params: { formId: string
 
     setSaving(true);
     try {
+      const token = currentUser ? await auth.currentUser?.getIdToken() : null;
       const res = await fetch(
         `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ answers: draftAnswers }),
         },
       );
@@ -91,28 +103,18 @@ export default function GuestResponsePage({ params }: { params: { formId: string
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Save failed');
 
-      const refreshedRes = await fetch(
-        `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
-      );
-      if (refreshedRes.ok) {
-        const refreshed = await refreshedRes.json();
-        setForm(refreshed.form as FormDefinition);
-        setResponse(refreshed.response as FormResponse);
-      } else {
+      if (!data.errorsByFieldId || Object.keys(data.errorsByFieldId).length === 0) {
+        setJustSaved(true);
+        setClientErrors(null);
         setResponse((prev) =>
           prev
             ? {
                 ...prev,
                 answers: draftAnswers,
-                lastValidationErrors: data.errorsByFieldId ?? undefined,
+                lastValidationErrors: undefined,
               }
             : prev,
         );
-      }
-
-      if (!data.errorsByFieldId || Object.keys(data.errorsByFieldId).length === 0) {
-        toast({ title: 'Saved', description: 'Your response has been updated.' });
-        router.push('/forms');
       } else {
         setClientErrors(data.errorsByFieldId);
         toast({ variant: 'destructive', title: 'Fix required fields', description: 'Some required fields are missing.' });
@@ -128,8 +130,15 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   if (loading) return <PageLoading />;
   if (!form || !response) return <div className="page-container">Response not found.</div>;
 
+  if (showThanks) {
+    return (
+      <div className="page-container">
+        <FormSubmitThanks formTitle={form.title} />
+      </div>
+    );
+  }
+
   const errorsList = displayErrors ?? {};
-  const submittedOk = searchParams.get('submitted') === '1';
 
   return (
     <div className="page-container">
@@ -138,12 +147,6 @@ export default function GuestResponsePage({ params }: { params: { formId: string
           <h1 className="text-page-title">{form.title}</h1>
           <p className="text-sm text-muted-foreground">Submitted as {response.submitterEmail}</p>
         </div>
-
-        {submittedOk && !hasErrors ? (
-          <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm">
-            Saved successfully. You can review answers, download a report, or make edits below.
-          </div>
-        ) : null}
 
         {hasErrors ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
@@ -167,32 +170,23 @@ export default function GuestResponsePage({ params }: { params: { formId: string
           onChange={handleAnswersChange}
           errorsByFieldId={displayErrors}
           readOnly={saving}
+          profileLinkedHint={!!currentUser}
         />
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <Button variant="outline" className="rounded-xl" onClick={() => router.push('/forms')} disabled={saving}>
             Back to forms
           </Button>
-
-          <div className="flex gap-2 sm:justify-end">
-            <Button variant="outline" className="rounded-xl" asChild>
-              <a href="#report">Report</a>
-            </Button>
-            <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving}>
-              {saving ? (
-                'Saving…'
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div id="report">
-          <ReportPanel form={form} response={{ ...response, answers: draftAnswers }} />
+          <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving}>
+            {saving ? (
+              'Saving…'
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

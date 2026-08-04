@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import FormRenderer from '@/components/forms/FormRenderer';
+import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import type { FormAnswerValue, FormDefinition } from '@/types/forms';
 import { isValidEmail, validateFormResponse } from '@/lib/forms/validation';
 import {
@@ -15,18 +16,17 @@ import {
   formHasEmailField,
   formatProfileName,
 } from '@/lib/forms/prefill';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 
 export default function PublicFormPage({ params }: { params: { publicToken: string } }) {
   const { currentUser, loadingAuth } = useAuth();
-  const router = useRouter();
   const { toast } = useToast();
 
   const [loadingForm, setLoadingForm] = useState(true);
   const [form, setForm] = useState<FormDefinition | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const [email, setEmail] = useState<string>('');
   const [emailTouched, setEmailTouched] = useState(false);
@@ -65,19 +65,20 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   }, [params.publicToken, toast]);
 
   useEffect(() => {
-    if (!form) return;
+    if (!form || submitted) return;
     const profile = currentUser
       ? {
           name: formatProfileName(currentUser),
           email: currentUser.email,
+          phone: currentUser.phone,
+          birthday: currentUser.birthday,
         }
       : null;
     setAnswers(buildInitialAnswers(form, profile));
     setFieldErrors(null);
-  }, [form, currentUser]);
+  }, [form, currentUser, submitted]);
 
   const emailValid = useMemo(() => isValidEmail(email), [email]);
-  // Separate email step only when the form does not already include an email field.
   const askForEmail = !currentUser && !hasEmailField;
   const canSubmit = !!form && !submitting;
 
@@ -164,11 +165,11 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
           title: 'Fix required fields',
           description: 'Some answers still need attention.',
         });
-        router.push(`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}`);
+        window.location.href = `/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}`;
         return;
       }
 
-      router.push(`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}?submitted=1`);
+      setSubmitted(true);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Could not submit form';
       toast({ variant: 'destructive', title: 'Submit failed', description: message });
@@ -188,6 +189,14 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
             {loadError ?? 'This form could not be found. Ask an admin for a fresh link.'}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div className="page-container">
+        <FormSubmitThanks formTitle={form.title} />
       </div>
     );
   }

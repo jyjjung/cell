@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { getFormByPublicToken, createFormResponse, normalizeEmail } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
+import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import type { FormAnswerValue } from '@/types/forms';
 
 export async function POST(request: NextRequest, { params }: { params: { publicToken: string } }) {
@@ -47,13 +48,29 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
       submitterUserId,
     });
 
+    let profileSynced: string[] = [];
+    if (submitterUserId && Object.keys(errorsByFieldId).length === 0) {
+      try {
+        const sync = await syncFormAnswersToUserProfile({
+          adminDb,
+          userId: submitterUserId,
+          form,
+          answers,
+        });
+        profileSynced = sync.fields;
+      } catch (syncError: unknown) {
+        console.error('[forms/public POST] profile sync failed', syncError);
+      }
+    }
+
     return NextResponse.json({
       responseId,
       errorsByFieldId: Object.keys(errorsByFieldId).length ? errorsByFieldId : null,
+      profileSynced,
     });
   } catch (error: unknown) {
+    console.error('[forms/public POST]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
 }
-

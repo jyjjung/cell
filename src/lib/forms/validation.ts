@@ -68,6 +68,19 @@ export function validateFormResponse(
       continue;
     }
 
+    if ((field.type === 'date' || field.type === 'birthday') && hasValue) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
+        errorsByFieldId[field.id] = 'Enter a valid date.';
+        continue;
+      }
+      const [y, m, d] = stringValue.split('-').map(Number);
+      const dt = new Date(Date.UTC(y!, m! - 1, d!));
+      if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m! - 1 || dt.getUTCDate() !== d) {
+        errorsByFieldId[field.id] = 'Enter a valid date.';
+      }
+      continue;
+    }
+
     if (field.type === 'url' && hasValue) {
       try {
         // Allow bare domains by prefixing https when missing.

@@ -204,6 +204,9 @@ export interface AppUser extends FirebaseUser {
   firstName: string | null;
   lastName: string | null;
   displayName: string | null;
+  phone?: string | null;
+  /** ISO date yyyy-MM-dd when known (e.g. from forms). */
+  birthday?: string | null;
   roleIds?: string[];
   capabilityKeys?: RoleCapability[];
   showInCommunityProgress?: boolean;
@@ -233,6 +236,10 @@ export interface UserProfileData {
   email: string | null;
   firstName: string;
   lastName: string;
+  /** Optional contact phone collected from forms / profile. */
+  phone?: string | null;
+  /** ISO date yyyy-MM-dd collected from forms / profile. */
+  birthday?: string | null;
   roleIds?: string[];
   capabilityKeys?: RoleCapability[];
   photoURL?: string | null;

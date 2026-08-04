@@ -7,11 +7,26 @@ import { useAuth } from '@/contexts/auth-context';
 import { RefreshCw } from 'lucide-react';
 
 const DISMISS_KEY = 'em_update_banner_dismissed_at';
-const DISMISS_MS = 6 * 60 * 60 * 1000;
+const RELOADED_KEY = 'em_update_banner_reloaded_at';
+/** Hide after "Later" for the rest of the tab session (or 12h). */
+const DISMISS_MS = 12 * 60 * 60 * 1000;
+/** After Reload, suppress the banner so controllerchange does not re-prompt. */
+const RELOAD_COOLDOWN_MS = 5 * 60 * 1000;
+/** Do not hammer update() on every tab focus. */
+const UPDATE_CHECK_MIN_MS = 30 * 60 * 1000;
+
+function isDismissed(): boolean {
+  const dismissedAt = Number(sessionStorage.getItem(DISMISS_KEY) || '0');
+  if (Date.now() - dismissedAt < DISMISS_MS) return true;
+  const reloadedAt = Number(sessionStorage.getItem(RELOADED_KEY) || '0');
+  if (Date.now() - reloadedAt < RELOAD_COOLDOWN_MS) return true;
+  return false;
+}
 
 /**
- * Client-only deploy refresh prompt.
- * Uses the service worker lifecycle — no Vercel API / Fluid CPU.
+ * Prompt once when a new PWA service worker is ready while this page is still
+ * on the old controller. Avoids the old bug of showing on every controllerchange
+ * (including right after Reload).
  */
 export function UpdateAvailableBanner() {
   const { currentUser } = useAuth();
@@ -21,37 +36,70 @@ export function UpdateAvailableBanner() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-    const dismissedAt = Number(sessionStorage.getItem(DISMISS_KEY) || '0');
-    if (Date.now() - dismissedAt < DISMISS_MS) return;
+    if (isDismissed()) return;
 
     let cancelled = false;
+    let lastUpdateCheckAt = 0;
 
     const show = () => {
-      if (cancelled) return;
-      const last = Number(sessionStorage.getItem(DISMISS_KEY) || '0');
-      if (Date.now() - last < DISMISS_MS) return;
+      if (cancelled || isDismissed()) return;
       setVisible(true);
     };
 
-    const onControllerChange = () => show();
-    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    const watchWorker = (worker: ServiceWorker | null) => {
+      if (!worker) return;
+      // New SW finished installing while this tab still has an old controller.
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+        show();
+      }
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          show();
+        }
+      });
+    };
 
-    const checkWaiting = async () => {
+    const checkRegistration = async (opts?: { requestUpdate?: boolean }) => {
       try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (!reg) return;
-        if (reg.waiting) show();
-        // Cheap: ask SW to check for updates (static sw.js from CDN — not Fluid functions).
-        void reg.update().catch(() => {});
+        const reg = await navigator.serviceWorker.getRegistration('/');
+        if (!reg || cancelled) return;
+
+        // Prefer the Workbox/PWA worker — ignore the FCM push-scope registration.
+        const scriptUrl = reg.active?.scriptURL || reg.waiting?.scriptURL || reg.installing?.scriptURL || '';
+        if (scriptUrl.includes('firebase-messaging-sw.js')) return;
+
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          show();
+        }
+        watchWorker(reg.installing);
+
+        reg.addEventListener('updatefound', () => {
+          watchWorker(reg.installing);
+        });
+
+        if (opts?.requestUpdate) {
+          const now = Date.now();
+          if (now - lastUpdateCheckAt >= UPDATE_CHECK_MIN_MS) {
+            lastUpdateCheckAt = now;
+            void reg.update().catch(() => {});
+          }
+        }
       } catch {
         // ignore
       }
     };
 
-    void checkWaiting();
+    void checkRegistration({ requestUpdate: true });
+
+    // With skipWaiting, the new worker may activate before we observe "installed".
+    // Prompt once when control changes mid-session — but never right after Reload.
+    const onControllerChange = () => show();
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void checkWaiting();
+      if (document.visibilityState === 'visible') {
+        void checkRegistration({ requestUpdate: true });
+      }
     };
     document.addEventListener('visibilitychange', onVisible);
 
@@ -73,7 +121,20 @@ export function UpdateAvailableBanner() {
           size="sm"
           className="shrink-0 rounded-lg"
           onClick={() => {
-            window.location.reload();
+            sessionStorage.setItem(RELOADED_KEY, String(Date.now()));
+            const reload = () => window.location.reload();
+            void navigator.serviceWorker
+              .getRegistration('/')
+              .then((reg) => {
+                if (reg?.waiting) {
+                  reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+              })
+              .catch(() => {})
+              .finally(() => {
+                // Give skipWaiting a tick when a waiting worker exists.
+                window.setTimeout(reload, 50);
+              });
           }}
         >
           {t.appUpdateReload}
