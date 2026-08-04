@@ -20,6 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Plus, Save as SaveIcon } from 'lucide-react';
 
+const NONE_SELECT_VALUE = '__none__';
+
 function createFieldId(): string {
   if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
@@ -482,9 +484,9 @@ export default function AdminFormsPage() {
                         <Label>Conditional (optional)</Label>
                         <div className="grid gap-2 md:grid-cols-2">
                           <Select
-                            value={field.conditional?.dependsOnFieldId ?? ''}
+                            value={field.conditional?.dependsOnFieldId ?? NONE_SELECT_VALUE}
                             onValueChange={(v) => {
-                              if (!v) setField(field.id, { conditional: undefined });
+                              if (v === NONE_SELECT_VALUE) setField(field.id, { conditional: undefined });
                               else setField(field.id, { conditional: { dependsOnFieldId: v, equals: field.conditional?.equals ?? '' } });
                             }}
                           >
@@ -492,7 +494,7 @@ export default function AdminFormsPage() {
                               <SelectValue placeholder="Depends on field…" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value={NONE_SELECT_VALUE}>None</SelectItem>
                               {dependsOnOptions.map((opt) => (
                                 <SelectItem key={opt.value} value={opt.value}>
                                   {opt.label}
