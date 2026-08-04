@@ -8,6 +8,8 @@ export const FORM_FIELD_TYPES: FormFieldType[] = [
   'yesno',
   'name',
   'email',
+  'contactName',
+  'contactEmail',
   'phone',
   'birthday',
   'number',
@@ -20,10 +22,14 @@ export function isFormFieldType(value: unknown): value is FormFieldType {
   return typeof value === 'string' && (FORM_FIELD_TYPES as string[]).includes(value);
 }
 
-export function isProfileLinkedFieldType(
-  type: FormFieldType,
-): type is 'name' | 'email' | 'phone' | 'birthday' {
-  return type === 'name' || type === 'email' || type === 'phone' || type === 'birthday';
+/** Hidden on the fill-out form; auto-filled from profile for admin reports. */
+export function isProfileReferenceFieldType(type: FormFieldType): type is 'name' | 'email' {
+  return type === 'name' || type === 'email';
+}
+
+/** Shown on the form; may pre-fill and write back to profile (phone/birthday). */
+export function isProfileLinkedFieldType(type: FormFieldType): type is 'phone' | 'birthday' {
+  return type === 'phone' || type === 'birthday';
 }
 
 export function isChoiceFieldType(type: FormFieldType): boolean {
@@ -40,8 +46,10 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   select: 'Single choice',
   checkbox: 'Multiple choice',
   yesno: 'Yes / No',
-  name: 'Name (from profile)',
-  email: 'Email (from profile)',
+  name: 'Name from profile (admin only)',
+  email: 'Email from profile (admin only)',
+  contactName: 'Name question',
+  contactEmail: 'Email question',
   phone: 'Phone (from profile)',
   birthday: 'Birthday (from profile)',
   number: 'Number',
@@ -51,8 +59,10 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
 };
 
 export function defaultLabelForFieldType(type: FormFieldType, order: number): string {
-  if (type === 'name') return 'Name';
-  if (type === 'email') return 'Email';
+  if (type === 'name') return 'Name (profile)';
+  if (type === 'email') return 'Email (profile)';
+  if (type === 'contactName') return 'Name';
+  if (type === 'contactEmail') return 'Email';
   if (type === 'phone') return 'Phone';
   if (type === 'birthday') return 'Birthday';
   if (type === 'date') return 'Date';

@@ -9,15 +9,15 @@ import { useAllUsers } from '@/hooks/use-all-users';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { db } from '@/lib/firebase';
 import type { AppRole } from '@/types';
-import type { FormDefinition, FormFieldDefinition, FormAnswerValue, FormResponse } from '@/types/forms';
+import type { FormDefinition, FormFieldDefinition, FormAnswerValue } from '@/types/forms';
 import {
   defaultLabelForFieldType,
   FORM_FIELD_TYPE_LABELS,
   isChoiceFieldType,
+  isProfileReferenceFieldType,
   serializeFieldForFirestore,
 } from '@/lib/forms/field-types';
 import { buildInitialAnswers, formatProfileName } from '@/lib/forms/prefill';
-import { toMillisSafe } from '@/lib/firestore-timestamp';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,6 @@ import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FormRenderer from '@/components/forms/FormRenderer';
 import FieldOptionsEditor from '@/components/forms/FieldOptionsEditor';
-import ReportPanel from '@/components/forms/ReportPanel';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -44,20 +43,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  AlertTriangle,
   ArrowLeft,
   Check,
   ChevronDown,
   ChevronUp,
   Copy,
   Eye,
-  Link2,
-  Pencil,
   Plus,
   Save as SaveIcon,
-  Share2,
   Trash2,
-  X,
 } from 'lucide-react';
 
 const NONE_SELECT_VALUE = '__none__';
@@ -75,7 +69,7 @@ function defaultField(order: number, type: FormFieldDefinition['type'] = 'text')
     label: defaultLabelForFieldType(type, order),
     type,
     order,
-    required: type === 'name' || type === 'email',
+    required: type === 'contactName' || type === 'contactEmail',
     options: isChoiceFieldType(type) ? [] : undefined,
     conditional: undefined,
     visibility: undefined,
@@ -107,6 +101,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
   const [builderDescription, setBuilderDescription] = useState('');
   const [builderStatus, setBuilderStatus] = useState<'draft' | 'published'>('draft');
   const [builderDeadlineDate, setBuilderDeadlineDate] = useState('');
+  const [builderMaxResponses, setBuilderMaxResponses] = useState('');
   const [builderAllowedRoleIds, setBuilderAllowedRoleIds] = useState<string[]>([]);
   const [builderAllowedUserIds, setBuilderAllowedUserIds] = useState<string[]>([]);
   const [builderFields, setBuilderFields] = useState<FormFieldDefinition[]>([]);
@@ -121,14 +116,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
   const [accessOptionsLoading, setAccessOptionsLoading] = useState(false);
   const [accessOptionsLoaded, setAccessOptionsLoaded] = useState(false);
 
-  const [responses, setResponses] = useState<FormResponse[]>([]);
-  const [responsesCursor, setResponsesCursor] = useState<string | null>(null);
-  const [loadingMoreResponses, setLoadingMoreResponses] = useState(false);
-  const [editingResponseId, setEditingResponseId] = useState<string | null>(null);
-  const [draftAnswers, setDraftAnswers] = useState<Record<string, FormAnswerValue>>({});
-  const [editingAnswers, setEditingAnswers] = useState(false);
-  const [guestLinkCopied, setGuestLinkCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, FormAnswerValue>>({});
 
   const roleOptions: MultiSelectItem[] = useMemo(
@@ -145,11 +132,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     [allUsers],
   );
 
-  const editingResponse = useMemo(() => {
-    if (!editingResponseId) return null;
-    return responses.find((r) => r.id === editingResponseId) ?? null;
-  }, [responses, editingResponseId]);
-
   const previewForm = useMemo((): FormDefinition => {
     return {
       id: formId ?? 'preview',
@@ -158,10 +140,12 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
       fields: [...builderFields].sort((a, b) => a.order - b.order),
       status: builderStatus,
       deadlineDate: builderDeadlineDate || undefined,
+      maxResponses: builderMaxResponses ? Number(builderMaxResponses) : undefined,
       createdAt: formMeta?.createdAt as FormDefinition['createdAt'],
       publicToken: formMeta?.publicToken,
       allowedRoleIds: builderAllowedRoleIds,
       allowedUserIds: builderAllowedUserIds,
+      responseCount: formMeta?.responseCount,
     };
   }, [
     formId,
@@ -170,6 +154,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     builderFields,
     builderStatus,
     builderDeadlineDate,
+    builderMaxResponses,
     formMeta,
     builderAllowedRoleIds,
     builderAllowedUserIds,
@@ -207,6 +192,9 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     setBuilderDescription(form.description ?? '');
     setBuilderStatus(form.status === 'draft' ? 'draft' : 'published');
     setBuilderDeadlineDate(form.deadlineDate ?? '');
+    setBuilderMaxResponses(
+      typeof form.maxResponses === 'number' && form.maxResponses > 0 ? String(form.maxResponses) : '',
+    );
     setBuilderAllowedRoleIds(form.allowedRoleIds ?? []);
     setBuilderAllowedUserIds(form.allowedUserIds ?? []);
     setBuilderFields([...form.fields].sort((a, b) => a.order - b.order));
@@ -267,41 +255,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     currentUser?.lastName,
   ]);
 
-  const refreshResponses = async (id: string, options?: { append?: boolean; cursor?: string | null }) => {
-    try {
-      if (options?.append) setLoadingMoreResponses(true);
-      const headers = await getClientAuthHeaders();
-      const params = new URLSearchParams({ limit: '50' });
-      if (options?.cursor) params.set('cursor', options.cursor);
-      const res = await fetch(
-        `/api/forms/admin/definitions/${encodeURIComponent(id)}/responses?${params.toString()}`,
-        { headers },
-      );
-      if (!res.ok) throw new Error('Failed to load responses');
-      const data = await res.json();
-      const next = Array.isArray(data.responses) ? (data.responses as FormResponse[]) : [];
-      setResponses((prev) => (options?.append ? [...prev, ...next] : next));
-      setResponsesCursor(typeof data.nextCursor === 'string' ? data.nextCursor : null);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load responses';
-      toast({ variant: 'destructive', title: 'Forms', description: message });
-    } finally {
-      setLoadingMoreResponses(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!formId) {
-      setResponses([]);
-      setResponsesCursor(null);
-      setEditingResponseId(null);
-      setEditingAnswers(false);
-      return;
-    }
-    void refreshResponses(formId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formId]);
-
   if (!loadingAuth && !isAdmin) {
     return (
       <div className="page-container">
@@ -314,8 +267,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
   if (loading) return <PageLoading />;
 
   const canSaveBuilder = builderTitle.trim().length > 0;
-  const needsAttentionCount = formMeta?.needsAttentionCount ?? 0;
-  const responseCount = formMeta?.responseCount ?? responses.length;
+  const responseCount = formMeta?.responseCount ?? 0;
 
   const handleSaveBuilder = async () => {
     if (!canSaveBuilder) return;
@@ -327,6 +279,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
         description: builderDescription.trim() || undefined,
         status: builderStatus,
         deadlineDate: builderDeadlineDate || undefined,
+        maxResponses: builderMaxResponses.trim() ? Number(builderMaxResponses) : null,
         allowedRoleIds: builderAllowedRoleIds,
         allowedUserIds: builderAllowedUserIds,
         fields: [...builderFields].sort((a, b) => a.order - b.order).map(sanitizeFieldForApi),
@@ -439,7 +392,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
           description={
             isNew
               ? 'Add questions, then save. You can publish and share a guest link afterward.'
-              : 'Edit questions, preview the form, and review submissions.'
+              : 'Edit questions and preview. Open Responses from the Forms hub to review submissions.'
           }
         />
       </div>
@@ -473,6 +426,14 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             {formId ? (
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link href={`/admin/forms/${encodeURIComponent(formId)}/responses`}>
+                  Responses
+                  {responseCount > 0 ? ` (${responseCount})` : ''}
+                </Link>
+              </Button>
+            ) : null}
+            {formId ? (
               <Button
                 variant="outline"
                 className="rounded-xl text-destructive"
@@ -500,18 +461,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
               <Eye className="h-3.5 w-3.5" />
               Preview
             </TabsTrigger>
-            <TabsTrigger value="submissions" disabled={!formId}>
-              Responses
-              {needsAttentionCount > 0 ? (
-                <Badge variant="destructive" className="ml-1">
-                  {needsAttentionCount}
-                </Badge>
-              ) : responseCount > 0 ? (
-                <Badge variant="secondary" className="ml-1">
-                  {responseCount}
-                </Badge>
-              ) : null}
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="build" className="space-y-5">
@@ -536,7 +485,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={builderStatus} onValueChange={(v) => setBuilderStatus(v as 'draft' | 'published')}>
@@ -557,6 +506,26 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                   value={builderDeadlineDate}
                   onChange={(e) => setBuilderDeadlineDate(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="form-max-responses">Max responses (optional)</Label>
+                <Input
+                  id="form-max-responses"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="Unlimited"
+                  value={builderMaxResponses}
+                  onChange={(e) => setBuilderMaxResponses(e.target.value.replace(/[^\d]/g, ''))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty for no limit
+                  {formMeta?.responseCount != null && builderMaxResponses
+                    ? ` · ${formMeta.responseCount} so far`
+                    : ''}
+                  .
+                </p>
               </div>
             </div>
 
@@ -625,10 +594,16 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('name')}>
-                  + Name
+                  + Profile name
                 </Button>
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('email')}>
-                  + Email
+                  + Profile email
+                </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => addField('contactName')}>
+                  + Name question
+                </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => addField('contactEmail')}>
+                  + Email question
                 </Button>
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('phone')}>
                   + Phone
@@ -681,12 +656,11 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                           <div className="min-w-0">
                             <p className="text-xs text-muted-foreground">
                               Question {idx + 1}
-                              {field.type === 'name' ||
-                              field.type === 'email' ||
-                              field.type === 'phone' ||
-                              field.type === 'birthday'
-                                ? ' · Linked to profile'
-                                : ''}
+                              {isProfileReferenceFieldType(field.type)
+                                ? ' · Profile · admin report only'
+                                : field.type === 'phone' || field.type === 'birthday'
+                                  ? ' · Linked to profile'
+                                  : ''}
                             </p>
                             <p className="text-sm font-semibold truncate">
                               {field.label.trim() || 'Untitled question'}
@@ -755,7 +729,9 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                                       : field.label,
                                   options: isChoiceFieldType(nextType) ? field.options ?? [] : undefined,
                                   required:
-                                    nextType === 'name' || nextType === 'email' ? true : field.required,
+                                    nextType === 'contactName' || nextType === 'contactEmail'
+                                      ? true
+                                      : field.required,
                                 });
                               }}
                             >
@@ -775,13 +751,23 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                           </div>
                         </div>
 
-                        {(field.type === 'name' ||
-                          field.type === 'email' ||
-                          field.type === 'phone' ||
-                          field.type === 'birthday') && (
+                        {isProfileReferenceFieldType(field.type) ? (
+                          <p className="text-xs text-muted-foreground">
+                            Not shown on the form people fill out. For signed-in members, their profile{' '}
+                            {field.type} is saved on the response for your report only (not editable).
+                          </p>
+                        ) : null}
+
+                        {(field.type === 'phone' || field.type === 'birthday') && (
                           <p className="text-xs text-muted-foreground">
                             Signed-in members see their profile {field.type} pre-filled, and submitting updates their
                             profile. Guests type it in for this response only.
+                          </p>
+                        )}
+
+                        {(field.type === 'contactName' || field.type === 'contactEmail') && (
+                          <p className="text-xs text-muted-foreground">
+                            Shown on the form as a normal question anyone can answer (separate from profile).
                           </p>
                         )}
 
@@ -910,6 +896,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                     'yesno',
                     'name',
                     'email',
+                    'contactName',
+                    'contactEmail',
                     'phone',
                     'birthday',
                     'number',
@@ -965,6 +953,11 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                 {previewForm.deadlineDate ? (
                   <p className="text-xs text-muted-foreground">Deadline: {previewForm.deadlineDate}</p>
                 ) : null}
+                {typeof previewForm.maxResponses === 'number' && previewForm.maxResponses > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Limit: {previewForm.responseCount ?? 0} / {previewForm.maxResponses} responses
+                  </p>
+                ) : null}
               </div>
               <FormRenderer
                 form={previewForm}
@@ -975,263 +968,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
             </div>
           </TabsContent>
 
-          <TabsContent value="submissions" className="space-y-4">
-            {!formId ? (
-              <EmptyState title="Save the form first" description="Create the form, then review submissions here." />
-            ) : (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-section-title">Responses</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {responseCount} total
-                      {needsAttentionCount > 0 ? ` · ${needsAttentionCount} need attention` : ''}
-                    </p>
-                  </div>
-                  <Button variant="outline" className="rounded-xl" onClick={() => void refreshResponses(formId)}>
-                    Refresh
-                  </Button>
-                </div>
-
-                {responses.length === 0 ? (
-                  <EmptyState
-                    title="No submissions yet"
-                    description="Share the public link once the form is published."
-                  />
-                ) : (
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start">
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        All responses
-                      </p>
-                      {responses.map((r) => {
-                        const errs = r.lastValidationErrors ?? {};
-                        const hasErrors = Object.keys(errs).length > 0;
-                        const updatedMs = toMillisSafe(r.updatedAt);
-                        const selected = editingResponseId === r.id;
-                        return (
-                          <button
-                            key={r.id}
-                            type="button"
-                            onClick={() => {
-                              setEditingResponseId(r.id);
-                              setDraftAnswers(r.answers ?? {});
-                              setEditingAnswers(false);
-                              setGuestLinkCopied(false);
-                            }}
-                            className={`w-full text-left rounded-xl border px-3.5 py-3 transition-colors ${
-                              selected
-                                ? 'border-primary/50 bg-primary/10'
-                                : 'border-border/60 bg-card/40 hover:bg-muted/30'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">{r.submitterEmail || 'Unknown'}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {updatedMs ? new Date(updatedMs).toLocaleString() : '—'}
-                                </p>
-                              </div>
-                              {hasErrors ? (
-                                <Badge variant="destructive" className="shrink-0 gap-1">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Needs attention
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="shrink-0">
-                                  Complete
-                                </Badge>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-
-                      {responsesCursor ? (
-                        <div className="flex justify-center pt-1">
-                          <Button
-                            variant="outline"
-                            className="rounded-xl"
-                            disabled={loadingMoreResponses}
-                            onClick={() =>
-                              void refreshResponses(formId, { append: true, cursor: responsesCursor })
-                            }
-                          >
-                            {loadingMoreResponses ? 'Loading…' : 'Load more'}
-                          </Button>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="rounded-xl border border-border/60 bg-background p-4 space-y-4 min-h-[240px]">
-                      {!editingResponse || !formMeta ? (
-                        <div className="flex h-full min-h-[200px] items-center justify-center">
-                          <p className="text-sm text-muted-foreground text-center px-4">
-                            Select a response to view its report.
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                Report
-                              </p>
-                              <h3 className="text-section-title truncate mt-0.5">
-                                {editingResponse.submitterEmail}
-                              </h3>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Updated{' '}
-                                {toMillisSafe(editingResponse.updatedAt)
-                                  ? new Date(toMillisSafe(editingResponse.updatedAt)).toLocaleString()
-                                  : '—'}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-xl"
-                                onClick={async () => {
-                                  const path = `/forms/guest/${encodeURIComponent(formMeta.id)}/${encodeURIComponent(editingResponse.id)}`;
-                                  const absolute = `${window.location.origin}${path}`;
-                                  try {
-                                    await navigator.clipboard.writeText(absolute);
-                                    setGuestLinkCopied(true);
-                                    window.setTimeout(() => setGuestLinkCopied(false), 2000);
-                                    toast({
-                                      title: 'Guest link copied',
-                                      description: 'Share this so they can open or update their response.',
-                                    });
-                                  } catch {
-                                    toast({
-                                      variant: 'destructive',
-                                      title: 'Copy failed',
-                                      description: absolute,
-                                    });
-                                  }
-                                }}
-                              >
-                                {guestLinkCopied ? (
-                                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                                ) : (
-                                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                                )}
-                                {guestLinkCopied ? 'Copied' : 'Share with guest'}
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-xl"
-                                asChild
-                              >
-                                <Link
-                                  href={`/forms/guest/${encodeURIComponent(formMeta.id)}/${encodeURIComponent(editingResponse.id)}`}
-                                  target="_blank"
-                                >
-                                  <Link2 className="h-3.5 w-3.5 mr-1.5" />
-                                  Open guest view
-                                </Link>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="rounded-xl"
-                                onClick={() => {
-                                  setEditingResponseId(null);
-                                  setEditingAnswers(false);
-                                }}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {!editingAnswers ? (
-                            <ReportPanel
-                              form={formMeta}
-                              response={{ ...editingResponse, answers: editingResponse.answers ?? {} }}
-                              compactHeader
-                            />
-                          ) : (
-                            <div className="space-y-3">
-                              <p className="text-sm text-muted-foreground">
-                                Edit answers below, then save. CSV/PDF use the saved report view.
-                              </p>
-                              <FormRenderer
-                                form={formMeta}
-                                value={draftAnswers}
-                                onChange={setDraftAnswers}
-                                errorsByFieldId={editingResponse.lastValidationErrors ?? null}
-                              />
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  variant="outline"
-                                  className="rounded-xl"
-                                  onClick={() => {
-                                    setDraftAnswers(editingResponse.answers ?? {});
-                                    toast({ title: 'Reverted', description: 'Draft reset to saved answers.' });
-                                  }}
-                                >
-                                  Revert
-                                </Button>
-                                <Button
-                                  className="rounded-xl"
-                                  disabled={saving}
-                                  onClick={async () => {
-                                    setSaving(true);
-                                    try {
-                                      const headers = await getClientAuthHeaders();
-                                      const res = await fetch(
-                                        `/api/forms/admin/definitions/${encodeURIComponent(formMeta.id)}/responses/${encodeURIComponent(editingResponse.id)}`,
-                                        {
-                                          method: 'PUT',
-                                          headers: { ...headers, 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ answers: draftAnswers }),
-                                        },
-                                      );
-                                      const data = await res.json().catch(() => ({}));
-                                      if (!res.ok) throw new Error(data.error || 'Save failed');
-                                      await refreshResponses(formMeta.id);
-                                      setEditingAnswers(false);
-                                      toast({ title: 'Saved' });
-                                    } catch (e: unknown) {
-                                      const message = e instanceof Error ? e.message : 'Save failed';
-                                      toast({ variant: 'destructive', title: 'Forms', description: message });
-                                    } finally {
-                                      setSaving(false);
-                                    }
-                                  }}
-                                >
-                                  <SaveIcon className="h-4 w-4 mr-2" />
-                                  Save answers
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="border-t border-border/60 pt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="rounded-xl"
-                              onClick={() => {
-                                setDraftAnswers(editingResponse.answers ?? {});
-                                setEditingAnswers((v) => !v);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                              {editingAnswers ? 'Back to report' : 'Edit answers'}
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
 

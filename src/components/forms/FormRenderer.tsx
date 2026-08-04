@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import { useMemo } from 'react';
 import type { FormDefinition, FormAnswerValue, FormFieldDefinition } from '@/types/forms';
 import { computeVisibleFields } from '@/lib/forms/validation';
-import { isProfileLinkedFieldType } from '@/lib/forms/field-types';
+import { isProfileLinkedFieldType, isProfileReferenceFieldType } from '@/lib/forms/field-types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,13 +42,15 @@ export default function FormRenderer({
     onChange({ ...value, [fieldId]: nextValue });
   };
 
-  if (fields.length === 0) {
-    return <p className="text-sm text-muted-foreground">This form has no fields yet.</p>;
+  const fillableFields = fields.filter((f) => !isProfileReferenceFieldType(f.type));
+
+  if (fillableFields.length === 0) {
+    return <p className="text-sm text-muted-foreground">This form has no questions to fill out yet.</p>;
   }
 
   return (
     <div className="space-y-5">
-      {fields.map((field) => {
+      {fillableFields.map((field) => {
         const isVisible = visible[field.id] ?? true;
         if (!isVisible) return null;
 
@@ -60,8 +62,8 @@ export default function FormRenderer({
 
         const textLike =
           field.type === 'text' ||
-          field.type === 'name' ||
-          field.type === 'email' ||
+          field.type === 'contactName' ||
+          field.type === 'contactEmail' ||
           field.type === 'phone' ||
           field.type === 'number' ||
           field.type === 'date' ||
@@ -70,7 +72,7 @@ export default function FormRenderer({
           field.type === 'url';
 
         const inputType =
-          field.type === 'email'
+          field.type === 'contactEmail'
             ? 'email'
             : field.type === 'phone'
               ? 'tel'
@@ -103,9 +105,9 @@ export default function FormRenderer({
                 id={`field-${field.id}`}
                 type={inputType}
                 autoComplete={
-                  field.type === 'email'
+                  field.type === 'contactEmail'
                     ? 'email'
-                    : field.type === 'name'
+                    : field.type === 'contactName'
                       ? 'name'
                       : field.type === 'phone'
                         ? 'tel'
@@ -122,9 +124,9 @@ export default function FormRenderer({
                 aria-invalid={!!fieldError}
                 className={errorClass}
                 placeholder={
-                  field.type === 'email'
+                  field.type === 'contactEmail'
                     ? 'you@example.com'
-                    : field.type === 'name'
+                    : field.type === 'contactName'
                       ? 'Your name'
                       : field.type === 'phone'
                         ? '+61…'

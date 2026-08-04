@@ -11,8 +11,18 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/page-layout';
 import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function FormsPage() {
   const { currentUser, loadingAuth } = useAuth();
@@ -21,6 +31,8 @@ export default function FormsPage() {
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FormResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -64,6 +76,28 @@ export default function FormsPage() {
     }
     return map;
   }, [responses]);
+
+  const handleDeleteResponse = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const headers = await getClientAuthHeaders();
+      const res = await fetch(
+        `/api/forms/guest/${encodeURIComponent(deleteTarget.formId)}/${encodeURIComponent(deleteTarget.id)}`,
+        { method: 'DELETE', headers },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not delete response');
+      setResponses((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      toast({ title: 'Response deleted', description: 'Your submission was removed.' });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Could not delete response';
+      toast({ variant: 'destructive', title: 'Forms', description: message });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loadingAuth) return <PageLoading />;
 
@@ -170,11 +204,22 @@ export default function FormsPage() {
                               Submitted: {submittedMs ? new Date(submittedMs).toLocaleString() : '—'}
                             </p>
                           </div>
-                          <Button asChild variant="secondary" className="rounded-xl">
-                            <Link href={`/forms/guest/${encodeURIComponent(r.formId)}/${encodeURIComponent(r.id)}`}>
-                              {hasErrors ? 'Fix' : 'View'}
-                            </Link>
-                          </Button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Button asChild variant="secondary" className="rounded-xl">
+                              <Link href={`/forms/guest/${encodeURIComponent(r.formId)}/${encodeURIComponent(r.id)}`}>
+                                {hasErrors ? 'Fix' : 'View'}
+                              </Link>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-xl text-destructive hover:text-destructive"
+                              aria-label="Delete submission"
+                              onClick={() => setDeleteTarget(r)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
@@ -184,6 +229,37 @@ export default function FormsPage() {
           </section>
         </div>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!deleting && !open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes your response
+              {deleteTarget?.formTitleSnapshot ? ` for “${deleteTarget.formTitleSnapshot}”` : ''}. You can’t undo
+              this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDeleteResponse();
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

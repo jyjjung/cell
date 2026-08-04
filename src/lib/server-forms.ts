@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
 import { hasCapability } from '@/lib/role-capabilities';
 import { isFormFieldType, serializeFieldsForFirestore } from '@/lib/forms/field-types';
+import { formHasResponseCapacity } from '@/lib/forms/capacity';
 
 const USERS_COLLECTION = 'users';
 const FORMS_COLLECTION = 'formDefinitions';
@@ -93,6 +94,8 @@ function toFormDefinition(raw: any, id: string): FormDefinition | null {
     fields,
     status: raw.status === 'draft' ? 'draft' : 'published',
     deadlineDate: typeof raw.deadlineDate === 'string' ? raw.deadlineDate : undefined,
+    maxResponses:
+      typeof raw.maxResponses === 'number' && raw.maxResponses > 0 ? Math.floor(raw.maxResponses) : undefined,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     publicToken: typeof raw.publicToken === 'string' ? raw.publicToken : undefined,
@@ -237,6 +240,7 @@ export async function createFormDefinition(input: {
   allowedUserIds?: string[];
   status?: 'draft' | 'published';
   deadlineDate?: string;
+  maxResponses?: number | null;
   createdBy: string;
 }): Promise<{ formId: string; publicToken: string }> {
   const adminApp = getAdminApp();
@@ -247,6 +251,8 @@ export async function createFormDefinition(input: {
   const allowedRoleIds = input.allowedRoleIds ?? [];
   const allowedUserIds = input.allowedUserIds ?? [];
   const isOpenToAll = computeIsOpenToAll(allowedRoleIds, allowedUserIds);
+  const maxResponses =
+    typeof input.maxResponses === 'number' && input.maxResponses > 0 ? Math.floor(input.maxResponses) : null;
 
   await formDocRef.set({
     title: input.title,
@@ -254,6 +260,7 @@ export async function createFormDefinition(input: {
     fields: serializeFieldsForFirestore(input.fields),
     status: input.status ?? 'draft',
     deadlineDate: input.deadlineDate ?? null,
+    maxResponses,
     allowedRoleIds,
     allowedUserIds,
     isOpenToAll,
@@ -287,6 +294,7 @@ export async function updateFormDefinition(
     allowedUserIds?: string[];
     status?: 'draft' | 'published';
     deadlineDate?: string;
+    maxResponses?: number | null;
     updatedBy: string;
   },
 ): Promise<{ statusChangedToPublished: boolean; publishVersion: number }> {
@@ -307,6 +315,8 @@ export async function updateFormDefinition(
   const allowedRoleIds = input.allowedRoleIds ?? [];
   const allowedUserIds = input.allowedUserIds ?? [];
   const isOpenToAll = computeIsOpenToAll(allowedRoleIds, allowedUserIds);
+  const maxResponses =
+    typeof input.maxResponses === 'number' && input.maxResponses > 0 ? Math.floor(input.maxResponses) : null;
 
   await ref.set(
     {
@@ -315,6 +325,7 @@ export async function updateFormDefinition(
       fields: serializeFieldsForFirestore(input.fields),
       status: nextStatus,
       deadlineDate: input.deadlineDate ?? null,
+      maxResponses,
       allowedRoleIds,
       allowedUserIds,
       isOpenToAll,
@@ -475,6 +486,15 @@ export async function getFormResponseById(adminDb: Firestore, responseId: string
   return mapResponseDoc(snap.id, snap.data());
 }
 
+export class FormCapacityError extends Error {
+  constructor(message = 'This form is no longer accepting responses.') {
+    super(message);
+    this.name = 'FormCapacityError';
+  }
+}
+
+export { formHasResponseCapacity };
+
 export async function createFormResponse(input: {
   formId: string;
   submitterEmail: string;
@@ -486,30 +506,45 @@ export async function createFormResponse(input: {
   const adminApp = getAdminApp();
   const adminDb = getAdminDb(adminApp);
   const responseRef = adminDb.collection(FORM_RESPONSES_COLLECTION).doc();
+  const formRef = adminDb.collection(FORMS_COLLECTION).doc(input.formId);
   const hasErrors = !!(input.lastValidationErrors && Object.keys(input.lastValidationErrors).length > 0);
 
-  await responseRef.set({
-    formId: input.formId,
-    submitterEmail: input.submitterEmail,
-    submitterUserId: input.submitterUserId ?? null,
-    formTitleSnapshot: input.formTitleSnapshot ?? null,
-    answers: input.answers,
-    lastValidationErrors: input.lastValidationErrors ?? null,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: 'guest',
-  });
+  await adminDb.runTransaction(async (tx) => {
+    const formSnap = await tx.get(formRef);
+    if (!formSnap.exists) {
+      throw new Error('Form not found');
+    }
+    const formData = formSnap.data() as Record<string, unknown>;
+    const maxResponses =
+      typeof formData.maxResponses === 'number' && formData.maxResponses > 0
+        ? Math.floor(formData.maxResponses)
+        : null;
+    const responseCount = typeof formData.responseCount === 'number' ? formData.responseCount : 0;
+    if (maxResponses !== null && responseCount >= maxResponses) {
+      throw new FormCapacityError();
+    }
 
-  await adminDb
-    .collection(FORMS_COLLECTION)
-    .doc(input.formId)
-    .set(
+    tx.set(responseRef, {
+      formId: input.formId,
+      submitterEmail: input.submitterEmail,
+      submitterUserId: input.submitterUserId ?? null,
+      formTitleSnapshot: input.formTitleSnapshot ?? null,
+      answers: input.answers,
+      lastValidationErrors: input.lastValidationErrors ?? null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: 'guest',
+    });
+
+    tx.set(
+      formRef,
       {
         responseCount: FieldValue.increment(1),
         ...(hasErrors ? { needsAttentionCount: FieldValue.increment(1) } : {}),
       },
       { merge: true },
     );
+  });
 
   return responseRef.id;
 }
@@ -553,6 +588,56 @@ export async function updateFormResponseAnswers(input: {
         { merge: true },
       );
   }
+}
+
+export function userOwnsFormResponse(
+  response: Pick<FormResponse, 'submitterUserId' | 'submitterEmail'>,
+  user: { uid: string; email?: string | null },
+): boolean {
+  if (response.submitterUserId && response.submitterUserId === user.uid) return true;
+  const userEmail = typeof user.email === 'string' ? normalizeEmail(user.email) : '';
+  const responseEmail =
+    typeof response.submitterEmail === 'string' ? normalizeEmail(response.submitterEmail) : '';
+  return !!userEmail && !!responseEmail && userEmail === responseEmail;
+}
+
+/** Delete a single response owned by the signed-in user; adjusts form counters. */
+export async function deleteFormResponseForOwner(input: {
+  responseId: string;
+  formId: string;
+  userId: string;
+  userEmail?: string | null;
+}): Promise<{ deleted: boolean; reason?: 'not_found' | 'forbidden' }> {
+  const adminApp = getAdminApp();
+  const adminDb = getAdminDb(adminApp);
+  const ref = adminDb.collection(FORM_RESPONSES_COLLECTION).doc(input.responseId);
+  const snap = await ref.get();
+  if (!snap.exists) return { deleted: false, reason: 'not_found' };
+
+  const response = mapResponseDoc(snap.id, snap.data());
+  if (response.formId !== input.formId) return { deleted: false, reason: 'not_found' };
+  if (!userOwnsFormResponse(response, { uid: input.userId, email: input.userEmail })) {
+    return { deleted: false, reason: 'forbidden' };
+  }
+
+  const hadErrors = !!(
+    response.lastValidationErrors && Object.keys(response.lastValidationErrors).length > 0
+  );
+
+  await ref.delete();
+  await adminDb
+    .collection(FORMS_COLLECTION)
+    .doc(input.formId)
+    .set(
+      {
+        responseCount: FieldValue.increment(-1),
+        ...(hadErrors ? { needsAttentionCount: FieldValue.increment(-1) } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+  return { deleted: true };
 }
 
 export { normalizeEmail };
