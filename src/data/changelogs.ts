@@ -38,6 +38,14 @@ export const changelogs: ChangelogEntry[] = [
         text: 'Forms are cheaper to run: publish notices only fire when a form goes live, recipient fan-out is capped, submissions are paginated, and guest form pages cache briefly.',
       },
       {
+        type: 'Added',
+        text: 'Form questions now include date, time, number, phone, URL, and yes/no, with quick-add buttons at the bottom of the builder.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Creating or saving a form no longer fails when questions have empty optional settings.',
+      },
+      {
         type: 'Improved',
         text: 'Filling forms checks required fields before submit, shows clearer errors, and accepts a full guest link or token.',
       },

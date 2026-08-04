@@ -12,18 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 type Props = {
   form: FormDefinition;
-  /** Current answers (fieldId -> value). */
   value: Record<string, FormAnswerValue>;
   onChange?: (next: Record<string, FormAnswerValue>) => void;
   errorsByFieldId?: Record<string, string> | null;
   readOnly?: boolean;
-  /** When true, show “from your profile” hints on name/email fields. */
   profileLinkedHint?: boolean;
 };
 
 function getFieldOrder(fields: FormFieldDefinition[]) {
   return [...fields].sort((a, b) => a.order - b.order);
 }
+
+const YES_NO_OPTIONS = ['Yes', 'No'];
 
 export default function FormRenderer({
   form,
@@ -57,6 +57,31 @@ export default function FormRenderer({
         const errorClass = fieldError ? 'border-destructive focus-visible:ring-destructive' : undefined;
         const linked = isProfileLinkedFieldType(field.type);
 
+        const textLike =
+          field.type === 'text' ||
+          field.type === 'name' ||
+          field.type === 'email' ||
+          field.type === 'phone' ||
+          field.type === 'number' ||
+          field.type === 'date' ||
+          field.type === 'time' ||
+          field.type === 'url';
+
+        const inputType =
+          field.type === 'email'
+            ? 'email'
+            : field.type === 'phone'
+              ? 'tel'
+              : field.type === 'number'
+                ? 'number'
+                : field.type === 'date'
+                  ? 'date'
+                  : field.type === 'time'
+                    ? 'time'
+                    : field.type === 'url'
+                      ? 'url'
+                      : 'text';
+
         return (
           <div key={field.id} className="space-y-2">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -69,17 +94,38 @@ export default function FormRenderer({
               ) : null}
             </div>
 
-            {(field.type === 'text' || field.type === 'name' || field.type === 'email') && (
+            {textLike && (
               <Input
                 id={`field-${field.id}`}
-                type={field.type === 'email' ? 'email' : 'text'}
-                autoComplete={field.type === 'email' ? 'email' : field.type === 'name' ? 'name' : undefined}
+                type={inputType}
+                autoComplete={
+                  field.type === 'email'
+                    ? 'email'
+                    : field.type === 'name'
+                      ? 'name'
+                      : field.type === 'phone'
+                        ? 'tel'
+                        : field.type === 'url'
+                          ? 'url'
+                          : undefined
+                }
+                inputMode={field.type === 'number' ? 'decimal' : field.type === 'phone' ? 'tel' : undefined}
                 disabled={readOnly}
                 value={selectValue}
                 onChange={(e) => setAnswer(field.id, e.target.value)}
                 aria-invalid={!!fieldError}
                 className={errorClass}
-                placeholder={field.type === 'email' ? 'you@example.com' : field.type === 'name' ? 'Your name' : undefined}
+                placeholder={
+                  field.type === 'email'
+                    ? 'you@example.com'
+                    : field.type === 'name'
+                      ? 'Your name'
+                      : field.type === 'phone'
+                        ? '+61…'
+                        : field.type === 'url'
+                          ? 'https://'
+                          : undefined
+                }
               />
             )}
 
@@ -95,7 +141,7 @@ export default function FormRenderer({
               />
             )}
 
-            {field.type === 'select' && (
+            {(field.type === 'select' || field.type === 'yesno') && (
               <Select
                 disabled={readOnly}
                 value={selectValue || undefined}
@@ -109,12 +155,12 @@ export default function FormRenderer({
                   <SelectValue placeholder="Select…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(field.options ?? []).length === 0 ? (
+                  {(field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).length === 0 ? (
                     <SelectItem value="__empty__" disabled>
                       No options configured
                     </SelectItem>
                   ) : (
-                    (field.options ?? []).map((opt) => (
+                    (field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).map((opt) => (
                       <SelectItem key={opt} value={opt}>
                         {opt}
                       </SelectItem>

@@ -6,7 +6,13 @@ export type FormFieldType =
   | 'select'
   | 'checkbox' // multi
   | 'name' // profile-linked short text
-  | 'email'; // profile-linked email
+  | 'email' // profile-linked email
+  | 'date'
+  | 'time'
+  | 'number'
+  | 'phone'
+  | 'url'
+  | 'yesno';
 
 export interface FormConditionalRule {
   dependsOnFieldId: string;

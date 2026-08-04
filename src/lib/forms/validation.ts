@@ -65,6 +65,23 @@ export function validateFormResponse(
 
     if (field.type === 'email' && hasValue && !isValidEmail(stringValue)) {
       errorsByFieldId[field.id] = 'Enter a valid email address.';
+      continue;
+    }
+
+    if (field.type === 'url' && hasValue) {
+      try {
+        // Allow bare domains by prefixing https when missing.
+        const candidate = /^https?:\/\//i.test(stringValue) ? stringValue : `https://${stringValue}`;
+        // eslint-disable-next-line no-new
+        new URL(candidate);
+      } catch {
+        errorsByFieldId[field.id] = 'Enter a valid link (URL).';
+      }
+      continue;
+    }
+
+    if (field.type === 'number' && hasValue && Number.isNaN(Number(stringValue))) {
+      errorsByFieldId[field.id] = 'Enter a valid number.';
     }
   }
 
