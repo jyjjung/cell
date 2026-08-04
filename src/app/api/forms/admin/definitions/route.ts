@@ -2,51 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { createFormDefinition, getFormById, listAccessibleForms } from '@/lib/server-forms';
-import type { FormFieldDefinition } from '@/types/forms';
 import { sendFormPublishedNotifications } from '@/lib/forms/publish-notifications';
-import { isChoiceFieldType, isFormFieldType } from '@/lib/forms/field-types';
-
-function parseFieldsFromBody(rawFields: unknown): FormFieldDefinition[] {
-  if (!Array.isArray(rawFields)) return [];
-  const fields: FormFieldDefinition[] = [];
-  for (const f of rawFields as any[]) {
-    if (!f || typeof f !== 'object') continue;
-    if (typeof f.id !== 'string' || typeof f.label !== 'string' || typeof f.order !== 'number') continue;
-    if (!isFormFieldType(f.type)) continue;
-    if (typeof f.required !== 'boolean') continue;
-    fields.push({
-      id: f.id,
-      label: f.label,
-      type: f.type,
-      order: f.order,
-      required: f.required,
-      options: isChoiceFieldType(f.type)
-        ? Array.isArray(f.options)
-          ? f.options.filter((x: any) => typeof x === 'string')
-          : []
-        : undefined,
-      conditional:
-        f.conditional &&
-        typeof f.conditional === 'object' &&
-        typeof f.conditional.dependsOnFieldId === 'string' &&
-        typeof f.conditional.equals === 'string'
-          ? { dependsOnFieldId: f.conditional.dependsOnFieldId, equals: f.conditional.equals }
-          : undefined,
-      visibility:
-        f.visibility && typeof f.visibility === 'object'
-          ? {
-              allowedRoleIds: Array.isArray(f.visibility.allowedRoleIds)
-                ? f.visibility.allowedRoleIds.filter((x: any) => typeof x === 'string')
-                : undefined,
-              allowedUserIds: Array.isArray(f.visibility.allowedUserIds)
-                ? f.visibility.allowedUserIds.filter((x: any) => typeof x === 'string')
-                : undefined,
-            }
-          : undefined,
-    });
-  }
-  return fields;
-}
+import { parseFieldsFromBody } from '@/lib/forms/parse-fields';
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,6 +23,7 @@ export async function GET(request: NextRequest) {
     const forms = await listAccessibleForms(adminDb, caller.uid);
     return NextResponse.json({ forms });
   } catch (error: unknown) {
+    console.error('[forms/admin/definitions GET]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
@@ -108,19 +66,24 @@ export async function POST(request: NextRequest) {
     });
 
     if (status === 'published') {
-      const createdForm = await getFormById(adminDb, created.formId);
-      if (createdForm) {
-        await sendFormPublishedNotifications({
-          adminDb,
-          adminMessaging: getAdminMessaging(adminApp),
-          form: createdForm,
-        });
+      try {
+        const createdForm = await getFormById(adminDb, created.formId);
+        if (createdForm) {
+          await sendFormPublishedNotifications({
+            adminDb,
+            adminMessaging: getAdminMessaging(adminApp),
+            form: createdForm,
+          });
+        }
+      } catch (notifyError: unknown) {
+        console.error('[forms/admin/definitions POST] notify failed', notifyError);
       }
     }
 
     return NextResponse.json({ ...created });
   } catch (error: unknown) {
+    console.error('[forms/admin/definitions POST]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create form', details: message }, { status: 500 });
   }
 }

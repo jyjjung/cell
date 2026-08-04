@@ -14,6 +14,7 @@ import {
   defaultLabelForFieldType,
   FORM_FIELD_TYPE_LABELS,
   isChoiceFieldType,
+  serializeFieldForFirestore,
 } from '@/lib/forms/field-types';
 import { buildInitialAnswers, formatProfileName } from '@/lib/forms/prefill';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
@@ -78,23 +79,7 @@ function defaultField(order: number, type: FormFieldDefinition['type'] = 'text')
 }
 
 function sanitizeFieldForApi(f: FormFieldDefinition): Record<string, unknown> {
-  return {
-    id: f.id,
-    label: f.label,
-    type: f.type,
-    order: f.order,
-    required: f.required,
-    options: isChoiceFieldType(f.type) ? f.options ?? [] : undefined,
-    conditional: f.conditional
-      ? { dependsOnFieldId: f.conditional.dependsOnFieldId, equals: f.conditional.equals }
-      : undefined,
-    visibility: f.visibility
-      ? {
-          allowedRoleIds: f.visibility.allowedRoleIds ?? [],
-          allowedUserIds: f.visibility.allowedUserIds ?? [],
-        }
-      : undefined,
-  };
+  return serializeFieldForFirestore(f);
 }
 
 type Props = {
@@ -336,7 +321,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('Failed to update form');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.details || data.error || 'Failed to update form');
         const refreshed = await fetch(`/api/forms/admin/definitions/${encodeURIComponent(formId)}`, {
           headers,
         }).then((r) => r.json());
@@ -348,9 +334,9 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
           headers: { ...headers, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error('Failed to create form');
-        const created = await res.json();
-        const newId = typeof created.formId === 'string' ? created.formId : null;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.details || data.error || 'Failed to create form');
+        const newId = typeof data.formId === 'string' ? data.formId : null;
         if (!newId) throw new Error('Missing form id');
         toast({ title: 'Form created' });
         router.replace(`/admin/forms/${encodeURIComponent(newId)}`);
@@ -627,6 +613,12 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('email')}>
                   + Email
                 </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => addField('date')}>
+                  + Date
+                </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => addField('yesno')}>
+                  + Yes/No
+                </Button>
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('text')}>
                   <Plus className="h-4 w-4" />
                   Add question
@@ -637,7 +629,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
             {builderFields.length === 0 ? (
               <EmptyState
                 title="No questions yet"
-                description="Add Name or Email (filled from profile when signed in), or a custom question."
+                description="Add Name, Email, Date, Yes/No, or any question type below."
               />
             ) : (
               <div className="space-y-3">
@@ -875,6 +867,40 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                   })}
               </div>
             )}
+
+            <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 space-y-3">
+              <p className="text-sm font-medium">Add another question</p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    'text',
+                    'textarea',
+                    'select',
+                    'checkbox',
+                    'yesno',
+                    'name',
+                    'email',
+                    'phone',
+                    'number',
+                    'date',
+                    'time',
+                    'url',
+                  ] as const
+                ).map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => addField(type)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {FORM_FIELD_TYPE_LABELS[type]}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="preview" className="space-y-4">

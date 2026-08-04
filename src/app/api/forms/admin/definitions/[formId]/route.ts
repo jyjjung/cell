@@ -2,51 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { deleteFormDefinition, getFormById, updateFormDefinition } from '@/lib/server-forms';
-import type { FormFieldDefinition } from '@/types/forms';
 import { sendFormPublishedNotifications } from '@/lib/forms/publish-notifications';
-import { isChoiceFieldType, isFormFieldType } from '@/lib/forms/field-types';
-
-function parseFieldsFromBody(rawFields: unknown): FormFieldDefinition[] {
-  if (!Array.isArray(rawFields)) return [];
-  const fields: FormFieldDefinition[] = [];
-  for (const f of rawFields as any[]) {
-    if (!f || typeof f !== 'object') continue;
-    if (typeof f.id !== 'string' || typeof f.label !== 'string' || typeof f.order !== 'number') continue;
-    if (!isFormFieldType(f.type)) continue;
-    if (typeof f.required !== 'boolean') continue;
-    fields.push({
-      id: f.id,
-      label: f.label,
-      type: f.type,
-      order: f.order,
-      required: f.required,
-      options: isChoiceFieldType(f.type)
-        ? Array.isArray(f.options)
-          ? f.options.filter((x: any) => typeof x === 'string')
-          : []
-        : undefined,
-      conditional:
-        f.conditional &&
-        typeof f.conditional === 'object' &&
-        typeof f.conditional.dependsOnFieldId === 'string' &&
-        typeof f.conditional.equals === 'string'
-          ? { dependsOnFieldId: f.conditional.dependsOnFieldId, equals: f.conditional.equals }
-          : undefined,
-      visibility:
-        f.visibility && typeof f.visibility === 'object'
-          ? {
-              allowedRoleIds: Array.isArray(f.visibility.allowedRoleIds)
-                ? f.visibility.allowedRoleIds.filter((x: any) => typeof x === 'string')
-                : undefined,
-              allowedUserIds: Array.isArray(f.visibility.allowedUserIds)
-                ? f.visibility.allowedUserIds.filter((x: any) => typeof x === 'string')
-                : undefined,
-            }
-          : undefined,
-    });
-  }
-  return fields;
-}
+import { parseFieldsFromBody } from '@/lib/forms/parse-fields';
 
 export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
   try {
@@ -66,6 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
 
     return NextResponse.json({ form });
   } catch (error: unknown) {
+    console.error('[forms/admin/definitions/[formId] GET]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
@@ -107,22 +65,26 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
       updatedBy: decoded.uid,
     });
 
-    // Only fan out on draft → published (not every save of a live form).
     if (statusChangedToPublished) {
-      const updatedForm = await getFormById(adminDb, params.formId);
-      if (updatedForm) {
-        await sendFormPublishedNotifications({
-          adminDb,
-          adminMessaging: getAdminMessaging(adminApp),
-          form: updatedForm,
-        });
+      try {
+        const updatedForm = await getFormById(adminDb, params.formId);
+        if (updatedForm) {
+          await sendFormPublishedNotifications({
+            adminDb,
+            adminMessaging: getAdminMessaging(adminApp),
+            form: updatedForm,
+          });
+        }
+      } catch (notifyError: unknown) {
+        console.error('[forms/admin/definitions/[formId] PUT] notify failed', notifyError);
       }
     }
 
     return NextResponse.json({ success: true, notified: statusChangedToPublished });
   } catch (error: unknown) {
+    console.error('[forms/admin/definitions/[formId] PUT]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update form', details: message }, { status: 500 });
   }
 }
 
@@ -145,7 +107,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { formI
     await deleteFormDefinition(params.formId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
+    console.error('[forms/admin/definitions/[formId] DELETE]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete form', details: message }, { status: 500 });
   }
 }

@@ -3,7 +3,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
 import { hasCapability } from '@/lib/role-capabilities';
-import { isFormFieldType } from '@/lib/forms/field-types';
+import { isFormFieldType, serializeFieldsForFirestore } from '@/lib/forms/field-types';
 
 const USERS_COLLECTION = 'users';
 const FORMS_COLLECTION = 'formDefinitions';
@@ -251,7 +251,7 @@ export async function createFormDefinition(input: {
   await formDocRef.set({
     title: input.title,
     description: input.description ?? null,
-    fields: input.fields,
+    fields: serializeFieldsForFirestore(input.fields),
     status: input.status ?? 'draft',
     deadlineDate: input.deadlineDate ?? null,
     allowedRoleIds,
@@ -312,7 +312,7 @@ export async function updateFormDefinition(
     {
       title: input.title,
       description: input.description ?? null,
-      fields: input.fields,
+      fields: serializeFieldsForFirestore(input.fields),
       status: nextStatus,
       deadlineDate: input.deadlineDate ?? null,
       allowedRoleIds,
