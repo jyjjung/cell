@@ -354,6 +354,9 @@ export default function AdminFormsPage() {
 
             <div className="space-y-2">
               <Label>Who can open forms (signed-in users)</Label>
+              <p className="text-xs text-muted-foreground">
+                Leave roles and users empty to make the form available to everyone.
+              </p>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label className="text-xs text-muted-foreground">Allowed roles</Label>

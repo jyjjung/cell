@@ -45,6 +45,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'The main Admin hub now shows Forms as a visible section card for quicker access.',
       },
+      {
+        type: 'Improved',
+        text: 'Forms now default to being open to everyone unless an admin narrows access to specific roles or people.',
+      },
     ],
   },
   {
