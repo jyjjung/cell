@@ -16,6 +16,7 @@ import {
   ListTodo,
   ListChecks,
   ClipboardList,
+  FileText,
   BookOpen,
   Brain,
   MessageCircle,
@@ -135,6 +136,7 @@ export default function AdminHubPage() {
   const allSections = [
     { title: t.adminUsers, href: "/admin/users", icon: Users, badge: pendingApprovals },
     { title: t.adminRoles, href: "/admin/groups", icon: ShieldCheck },
+    { title: t.forms, href: "/admin/forms", icon: FileText },
     { title: t.adminBiblePlan, href: "/admin/bible-plan", icon: BookOpen },
     { title: t.adminMemorization, href: "/admin/memory-verses", icon: Brain },
     { title: t.adminInfoWidgets, href: "/admin/info-widgets", icon: Info },
