@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Info,
   Grid2x2,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +51,7 @@ export default function AdminHubTabs() {
       { value: "memory", label: "Memory", href: "/admin/memory-verses", icon: Brain },
       { value: "info", label: "Info", href: "/admin/info-widgets", icon: Info },
       { value: "chats", label: "Chats", href: "/admin/chats", icon: MessageCircle },
+      { value: "forms", label: "Forms", href: "/admin/forms", icon: FileText },
     ],
     []
   );
