@@ -176,13 +176,18 @@ export async function getFormByPublicToken(adminDb: Firestore, publicToken: stri
   return form;
 }
 
-export async function listAccessibleForms(adminDb: Firestore, userId: string): Promise<FormDefinition[]> {
+export async function listAccessibleForms(
+  adminDb: Firestore,
+  userId: string,
+  options?: { includeDrafts?: boolean },
+): Promise<FormDefinition[]> {
+  const includeDrafts = options?.includeDrafts === true;
   const isAdmin = await userIsAppAdmin(adminDb, userId);
   if (isAdmin) {
     const snap = await adminDb.collection(FORMS_COLLECTION).limit(FORM_LIST_LIMIT).get();
     return snap.docs
       .map((d) => toFormDefinition(d.data(), d.id))
-      .filter((x): x is FormDefinition => !!x)
+      .filter((x): x is FormDefinition => !!x && (includeDrafts || x.status !== 'draft'))
       .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0));
   }
 

@@ -111,9 +111,90 @@ function buildPrintHtml(title: string, bodyHtml: string): string {
   <head>
     <meta charset="utf-8" />
     <title>${escapeHtml(title)}</title>
+    <style>
+      @page { size: landscape; margin: 12mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: #111827;
+        font-family: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+        font-size: 11px;
+        line-height: 1.45;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .sheet { padding: 8px 4px 16px; }
+      .sheet-header { margin-bottom: 14px; }
+      .sheet-kicker {
+        margin: 0 0 4px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6b7280;
+      }
+      .sheet-title {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+      }
+      .sheet-meta {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 11px;
+      }
+      .table-wrap {
+        width: 100%;
+        overflow: visible;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+      table.data {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto;
+      }
+      table.data th,
+      table.data td {
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid #e5e7eb;
+        border-right: 1px solid #eef0f3;
+        word-break: break-word;
+        max-width: 220px;
+      }
+      table.data th:last-child,
+      table.data td:last-child { border-right: none; }
+      table.data thead th {
+        background: #0f172a;
+        color: #f8fafc;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        border-bottom: none;
+        border-right-color: rgba(255,255,255,0.12);
+      }
+      table.data tbody tr:nth-child(even) td { background: #f8fafc; }
+      table.data tbody tr:last-child td { border-bottom: none; }
+      table.data td.empty { color: #9ca3af; }
+      .sheet-footer {
+        margin-top: 12px;
+        color: #9ca3af;
+        font-size: 10px;
+      }
+      @media print {
+        .sheet { padding: 0; }
+        .table-wrap { border-radius: 0; }
+      }
+    </style>
   </head>
   <body>
-    <div style="padding:16px;font-family:system-ui,sans-serif;">
+    <div class="sheet">
       ${bodyHtml}
     </div>
     <script>
@@ -142,29 +223,67 @@ export function openResponsesPrintWindow(html: string): Window | null {
   return w;
 }
 
+function buildResponsesTableHtml(
+  form: FormDefinition,
+  responses: FormResponse[],
+  options?: FormExportOptions | null,
+): string {
+  const fields = resolveExportFields(form, options);
+  const showEmail = includeEmail(options);
+  const generatedAt = new Date().toLocaleString();
+
+  const headerCells = [
+    '<th>#</th>',
+    ...(showEmail ? ['<th>Submitter</th>'] : []),
+    ...fields.map((f) => `<th>${escapeHtml(f.label)}</th>`),
+  ].join('');
+
+  const bodyRows =
+    responses.length === 0
+      ? `<tr><td class="empty" colspan="${1 + (showEmail ? 1 : 0) + fields.length}">No responses.</td></tr>`
+      : responses
+          .map((response, index) => {
+            const email = (response.submitterEmail ?? '').trim();
+            const cells = [
+              `<td>${index + 1}</td>`,
+              ...(showEmail
+                ? [email ? `<td>${escapeHtml(email)}</td>` : `<td class="empty">—</td>`]
+                : []),
+              ...fields.map((field) => {
+                const value = stringifyAnswerValue(response.answers?.[field.id]);
+                return value ? `<td>${escapeHtml(value)}</td>` : `<td class="empty">—</td>`;
+              }),
+            ];
+            return `<tr>${cells.join('')}</tr>`;
+          })
+          .join('');
+
+  const countLabel = `${responses.length} response${responses.length === 1 ? '' : 's'}`;
+  const fieldLabel = `${fields.length} column${fields.length === 1 ? '' : 's'}`;
+
+  return `
+    <header class="sheet-header">
+      <p class="sheet-kicker">Forms export</p>
+      <h1 class="sheet-title">${escapeHtml(form.title)}</h1>
+      <p class="sheet-meta">${escapeHtml(countLabel)} · ${escapeHtml(fieldLabel)} · ${escapeHtml(generatedAt)}</p>
+    </header>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    <p class="sheet-footer">Generated from Forms (admin). Use your browser’s print dialog to save as PDF.</p>
+  `;
+}
+
 export function printSingleResponsePdf(
   form: FormDefinition,
   response: FormResponse,
   options?: FormExportOptions | null,
 ): boolean {
-  const fields = resolveExportFields(form, options);
-  const title = `Form report: ${form.title}`;
-  const rows = fields
-    .map((field) => {
-      const value = stringifyAnswerValue(response.answers?.[field.id]);
-      return `<tr><td style="padding:8px;border:1px solid #ddd;font-size:13px;vertical-align:top;width:38%;">${escapeHtml(field.label)}</td><td style="padding:8px;border:1px solid #ddd;font-size:13px;word-break:break-word;">${escapeHtml(value) || '—'}</td></tr>`;
-    })
-    .join('');
-  const emailLine = includeEmail(options)
-    ? `<p style="color:#555;font-size:12px;margin-bottom:16px;"><b>Submitter:</b> ${escapeHtml(response.submitterEmail)}</p>`
-    : '';
-  const body = `
-    <h2 style="margin-top:0;">${escapeHtml(title)}</h2>
-    ${emailLine}
-    <table style="border-collapse:collapse;width:100%;table-layout:fixed;">${rows || '<tr><td style="padding:8px;color:#888;">No fields selected.</td></tr>'}</table>
-    <p style="color:#888;font-size:11px;margin-top:16px;">Generated from Forms (admin).</p>
-  `;
-  return !!openResponsesPrintWindow(buildPrintHtml(title, body));
+  const title = `${form.title} — response`;
+  return !!openResponsesPrintWindow(buildPrintHtml(title, buildResponsesTableHtml(form, [response], options)));
 }
 
 export function printCollectiveResponsesPdf(
@@ -172,32 +291,6 @@ export function printCollectiveResponsesPdf(
   responses: FormResponse[],
   options?: FormExportOptions | null,
 ): boolean {
-  const fields = resolveExportFields(form, options);
-  const title = `All responses: ${form.title}`;
-  const sections = responses
-    .map((response, index) => {
-      const rows = fields
-        .map((field) => {
-          const value = stringifyAnswerValue(response.answers?.[field.id]);
-          return `<tr><td style="padding:6px;border:1px solid #ddd;font-size:12px;width:38%;">${escapeHtml(field.label)}</td><td style="padding:6px;border:1px solid #ddd;font-size:12px;word-break:break-word;">${escapeHtml(value) || '—'}</td></tr>`;
-        })
-        .join('');
-      const heading = includeEmail(options)
-        ? escapeHtml(response.submitterEmail || 'Unknown')
-        : `Response ${index + 1}`;
-      return `
-        <section style="margin-bottom:28px;page-break-inside:avoid;">
-          <h3 style="margin:0 0 8px;">${index + 1}. ${heading}</h3>
-          <table style="border-collapse:collapse;width:100%;table-layout:fixed;">${rows || '<tr><td style="padding:6px;color:#888;">No fields selected.</td></tr>'}</table>
-        </section>
-      `;
-    })
-    .join('');
-  const body = `
-    <h2 style="margin-top:0;">${escapeHtml(title)}</h2>
-    <p style="color:#555;font-size:12px;margin-bottom:20px;">${responses.length} response${responses.length === 1 ? '' : 's'}</p>
-    ${sections || '<p>No responses.</p>'}
-    <p style="color:#888;font-size:11px;margin-top:16px;">Generated from Forms (admin).</p>
-  `;
-  return !!openResponsesPrintWindow(buildPrintHtml(title, body));
+  const title = `${form.title} — responses`;
+  return !!openResponsesPrintWindow(buildPrintHtml(title, buildResponsesTableHtml(form, responses, options)));
 }
