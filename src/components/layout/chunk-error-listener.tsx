@@ -3,67 +3,56 @@
 
 import { useEffect } from 'react';
 import {
-  activateWaitingServiceWorkers,
-  clearAppCachesPreservingMedia,
-} from '@/lib/sw-cache-utils';
+  isChunkLoadError,
+  recoverStaleNextClient,
+  scheduleClearClientRecoveryFlag,
+} from '@/lib/next-client-recovery';
 
 /**
  * @fileOverview Global listener to handle ChunkLoadError in Next.js.
- * This commonly occurs when a new deployment replaces old assets and 
- * the browser/PWA attempts to load a stale chunk from the old SW cache.
+ * This commonly occurs when a new deployment replaces old assets and
+ * the browser/PWA attempts to load a stale chunk from the old SW cache,
+ * or when a chunk download times out on a flaky network.
  *
- * Strategy:
- * 1. Clear app/Workbox caches (preserve offline media caches).
- * 2. Activate any waiting service worker so the new build's SW is in control.
- * 3. Reload the page once — a sessionStorage flag prevents infinite loops.
+ * Strategy: shared recoverStaleNextClient (clear caches → activate SW → reload once).
+ * Error boundaries also call the same path when React catches the error first.
  */
 export function ChunkErrorListener() {
   useEffect(() => {
-    const RELOAD_FLAG = '__chunk_error_reload';
-
-    async function handleChunkError() {
-      // Prevent infinite reload loop: only auto-reload once per session.
-      if (sessionStorage.getItem(RELOAD_FLAG)) {
-        console.warn('[ChunkErrorListener] Already reloaded this session — skipping to prevent loop.');
-        return;
-      }
-      sessionStorage.setItem(RELOAD_FLAG, 'true');
-
-      console.warn('[ChunkErrorListener] ChunkLoadError detected — clearing caches and reloading...');
-
-      try {
-        await clearAppCachesPreservingMedia();
-        await activateWaitingServiceWorkers();
-      } catch (e) {
-        console.warn('[ChunkErrorListener] Cache/SW cleanup failed:', e);
-      }
-
-      // 3. Hard reload — bypasses browser HTTP cache
-      window.location.reload();
-    }
-
     const handleError = (e: ErrorEvent) => {
-      if (e.message?.includes('Loading chunk') || e.message?.includes('ChunkLoadError')) {
-        handleChunkError();
+      if (
+        isChunkLoadError({ name: 'Error', message: e.message }) ||
+        e.message?.includes('ChunkLoadError')
+      ) {
+        void recoverStaleNextClient('ChunkLoadError (window error)');
       }
     };
-    
+
     const handleRejection = (e: PromiseRejectionEvent) => {
-      if (e.reason?.name === 'ChunkLoadError' || e.reason?.message?.includes('Loading chunk')) {
-        handleChunkError();
+      if (isChunkLoadError(e.reason)) {
+        void recoverStaleNextClient('ChunkLoadError (unhandled rejection)');
         return;
       }
 
-      // Safari reports failed fetch() calls as an unhandled "TypeError: Load failed".
-      // Next.js App Router RSC navigation requests throw this when the network is
-      // unavailable, and the stack trace originates inside _next/static/chunks.
-      // Suppress only those — application-level fetch errors should still reach Sentry.
-      if (
-        e.reason instanceof TypeError &&
-        e.reason.message === 'Load failed' &&
-        typeof e.reason.stack === 'string' &&
-        e.reason.stack.includes('/_next/static/chunks/')
-      ) {
+      // Safari reports failed fetch() calls as an unhandled "TypeError: Load failed"
+      // (Chromium: "Failed to fetch"). Next.js App Router RSC navigation throws
+      // these when the network is unavailable; stacks often point at _next chunks
+      // but Safari sometimes omits a usable stack — treat bare "Load failed" as
+      // the same noise. Application fetch errors with other messages still reach Sentry.
+      const reason = e.reason;
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === 'string'
+            ? reason
+            : '';
+      const stack =
+        reason instanceof Error && typeof reason.stack === 'string' ? reason.stack : '';
+      const isSafariLoadFailed = message === 'Load failed';
+      const isNextFetchFailed =
+        message === 'Failed to fetch' &&
+        (stack.includes('/_next/') || stack.includes('webpack'));
+      if (isSafariLoadFailed || isNextFetchFailed) {
         e.preventDefault();
         console.warn('[ChunkErrorListener] Next.js RSC fetch failed (network unavailable) — suppressed.');
       }
@@ -76,7 +65,7 @@ export function ChunkErrorListener() {
         const src = (target as HTMLScriptElement).src || (target as HTMLLinkElement).href || '';
         if (src.includes('/_next/')) {
           console.warn('[ChunkErrorListener] Next.js resource failed to load:', src);
-          handleChunkError();
+          void recoverStaleNextClient('Next.js resource failed to load');
         }
       }
     };
@@ -84,17 +73,14 @@ export function ChunkErrorListener() {
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleRejection);
     window.addEventListener('error', handleResourceError, true); // capture phase for resource errors
-    
-    // Clear the reload flag after successful load (the page loaded fine this time)
-    const clearFlag = setTimeout(() => {
-      sessionStorage.removeItem(RELOAD_FLAG);
-    }, 5000); // If page survives 5 seconds, clear the flag
+
+    const clearFlag = scheduleClearClientRecoveryFlag(5000);
 
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
       window.removeEventListener('error', handleResourceError, true);
-      clearTimeout(clearFlag);
+      clearFlag();
     };
   }, []);
 

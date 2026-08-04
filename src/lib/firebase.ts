@@ -11,7 +11,10 @@ import {
 } from 'firebase/firestore';
 import { getMessaging, isSupported, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
-import { isIndexedDbPersistenceError } from '@/lib/firestore-idb-errors';
+import {
+  getFirestoreErrorMessage,
+  isIndexedDbPersistenceError,
+} from '@/lib/firestore-idb-errors';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
@@ -91,6 +94,16 @@ if (typeof window !== 'undefined') {
     if (isIndexedDbPersistenceError(event.reason)) {
       event.preventDefault();
       recoverFromIndexedDbCorruption();
+      return;
+    }
+    // Stale tabs on older bundles still call getMessaging() without isSupported().
+    // Suppress the known unsupported-browser rejection so it does not spam Sentry.
+    const msg = getFirestoreErrorMessage(event.reason);
+    if (
+      msg.includes('messaging/unsupported-browser') ||
+      msg.includes("doesn't support the API's required to use the Firebase SDK")
+    ) {
+      event.preventDefault();
     }
   });
   window.addEventListener('error', (event) => {
