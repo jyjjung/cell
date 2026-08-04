@@ -10,6 +10,7 @@ import FormRenderer from '@/components/forms/FormRenderer';
 import type { FormAnswerValue, FormDefinition } from '@/types/forms';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { auth } from '@/lib/firebase';
 
 export default function PublicFormPage({ params }: { params: { publicToken: string } }) {
   const { currentUser, loadingAuth } = useAuth();
@@ -78,9 +79,13 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
         return;
       }
 
+      const token = currentUser ? await auth.currentUser?.getIdToken() : null;
       const res = await fetch(`/api/forms/public/${encodeURIComponent(params.publicToken)}/responses`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ email, answers }),
       });
 

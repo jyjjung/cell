@@ -66,6 +66,8 @@ export default function AdminFormsPage() {
   // Builder state (new/edit)
   const [builderTitle, setBuilderTitle] = useState('');
   const [builderDescription, setBuilderDescription] = useState('');
+  const [builderStatus, setBuilderStatus] = useState<'draft' | 'published'>('draft');
+  const [builderDeadlineDate, setBuilderDeadlineDate] = useState('');
   const [builderAllowedRoleIds, setBuilderAllowedRoleIds] = useState<string[]>([]);
   const [builderAllowedUserIds, setBuilderAllowedUserIds] = useState<string[]>([]);
   const [builderFields, setBuilderFields] = useState<FormFieldDefinition[]>([]);
@@ -131,6 +133,8 @@ export default function AdminFormsPage() {
     if (!selectedForm) return;
     setBuilderTitle(selectedForm.title ?? '');
     setBuilderDescription(selectedForm.description ?? '');
+    setBuilderStatus(selectedForm.status === 'draft' ? 'draft' : 'published');
+    setBuilderDeadlineDate(selectedForm.deadlineDate ?? '');
     setBuilderAllowedRoleIds(selectedForm.allowedRoleIds ?? []);
     setBuilderAllowedUserIds(selectedForm.allowedUserIds ?? []);
     setBuilderFields([...selectedForm.fields].sort((a, b) => a.order - b.order));
@@ -178,6 +182,8 @@ export default function AdminFormsPage() {
       const payload = {
         title: builderTitle.trim(),
         description: builderDescription.trim() || undefined,
+        status: builderStatus,
+        deadlineDate: builderDeadlineDate || undefined,
         allowedRoleIds: builderAllowedRoleIds,
         allowedUserIds: builderAllowedUserIds,
         fields: [...builderFields].sort((a, b) => a.order - b.order).map(sanitizeFieldForApi),
@@ -264,6 +270,8 @@ export default function AdminFormsPage() {
                   setSelectedFormId(null);
                   setBuilderTitle('');
                   setBuilderDescription('');
+                  setBuilderStatus('draft');
+                  setBuilderDeadlineDate('');
                   setBuilderAllowedRoleIds([]);
                   setBuilderAllowedUserIds([]);
                   setBuilderFields([]);
@@ -276,6 +284,41 @@ export default function AdminFormsPage() {
               </Button>
             </div>
 
+            {forms.length > 0 ? (
+              <div className="space-y-2">
+                <Label>Open existing form</Label>
+                <Select
+                  value={selectedFormId ?? '__new__'}
+                  onValueChange={(v) => {
+                    if (v === '__new__') {
+                      setSelectedFormId(null);
+                      setBuilderTitle('');
+                      setBuilderDescription('');
+                      setBuilderStatus('draft');
+                      setBuilderDeadlineDate('');
+                      setBuilderAllowedRoleIds([]);
+                      setBuilderAllowedUserIds([]);
+                      setBuilderFields([]);
+                      return;
+                    }
+                    setSelectedFormId(v);
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__new__">New form</SelectItem>
+                    {forms.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <Label>Title</Label>
               <Input value={builderTitle} onChange={(e) => setBuilderTitle(e.target.value)} placeholder="Form title" />
@@ -284,6 +327,29 @@ export default function AdminFormsPage() {
             <div className="space-y-2">
               <Label>Description (optional)</Label>
               <Input value={builderDescription} onChange={(e) => setBuilderDescription(e.target.value)} placeholder="Short description" />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={builderStatus} onValueChange={(v) => setBuilderStatus(v as 'draft' | 'published')}>
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Deadline (optional)</Label>
+                <Input
+                  type="date"
+                  value={builderDeadlineDate}
+                  onChange={(e) => setBuilderDeadlineDate(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

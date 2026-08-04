@@ -389,6 +389,7 @@ export const translations = {
 
     submitPrayerRequest: "Submit a prayer request",
     docs: "Docs",
+    forms: "Forms",
     docsDesc: "Personal notes and shared documents with your cell group.",
     newDocument: "New document",
     newDocumentDesc: "Create a personal note or share a document with others.",
@@ -1266,6 +1267,7 @@ export const translations = {
 
     submitPrayerRequest: "기도 제목 제출",
     docs: "문서",
+    forms: "양식",
     docsDesc: "개인 메모와 셀 그룹과 공유하는 문서입니다.",
     newDocument: "새 문서",
     newDocumentDesc: "개인 메모를 만들거나 다른 사람과 문서를 공유하세요.",

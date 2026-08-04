@@ -41,6 +41,8 @@ export interface FormDefinition {
   title: string;
   description?: string;
   fields: FormFieldDefinition[];
+  status?: 'draft' | 'published';
+  deadlineDate?: string; // ISO yyyy-MM-dd
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   /**
@@ -48,6 +50,9 @@ export interface FormDefinition {
    * This is intentionally unguessable (UUID-like).
    */
   publicToken?: string;
+  publishedAt?: Timestamp;
+  publishedBy?: string;
+  publishVersion?: number;
   /**
    * Form listing visibility for signed-in users.
    * Guests are handled via publicToken (separate link access).

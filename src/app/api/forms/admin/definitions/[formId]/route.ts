@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { getFormById, updateFormDefinition } from '@/lib/server-forms';
 import type { FormFieldDefinition } from '@/types/forms';
+import type { UserProfileData } from '@/types';
+import { sendFormPublishedNotifications } from '@/lib/forms/publish-notifications';
 
 export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
   try {
@@ -45,6 +47,8 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 });
 
     const description = typeof body.description === 'string' ? body.description : undefined;
+    const status = body.status === 'draft' ? 'draft' : 'published';
+    const deadlineDate = typeof body.deadlineDate === 'string' && body.deadlineDate.trim() ? body.deadlineDate : undefined;
     const rawFields = Array.isArray(body.fields) ? (body.fields as any[]) : [];
     const fields: FormFieldDefinition[] = [];
     for (const f of rawFields) {
@@ -82,8 +86,22 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
       fields,
       allowedRoleIds,
       allowedUserIds,
+      status,
+      deadlineDate,
       updatedBy: decoded.uid,
     });
+
+    const updatedForm = await getFormById(adminDb, params.formId);
+    if (updatedForm && updatedForm.status === 'published') {
+      const usersSnap = await adminDb.collection('users').get();
+      const users = usersSnap.docs.map((d) => ({ uid: d.id, ...d.data() }) as UserProfileData);
+      await sendFormPublishedNotifications({
+        adminDb,
+        adminMessaging: getAdminMessaging(adminApp),
+        form: updatedForm,
+        users,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
