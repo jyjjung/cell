@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.11.2',
+    subtitle: 'Bible button clears footer',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'On the home page, the Bible reader button no longer covers the Terms link in the footer',
+      },
+    ],
+  },
+  {
     version: 'v1.11.1',
     subtitle: 'Home agenda & reading stats polish',
     date: 'August 4, 2026',
