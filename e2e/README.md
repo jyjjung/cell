@@ -15,6 +15,8 @@ TEST_USER_PASSWORD=your-test-password
 
 Use a dedicated non-admin account when possible. Do not put passwords in tracked files or CI logs.
 
+Forms admin coverage (`e2e/forms.spec.ts` admin test) needs an **admin** `TEST_USER_*` — otherwise that test is skipped.
+
 ## Run
 
 ```bash
