@@ -7,12 +7,15 @@ import {
     initializeFirestore,
     memoryLocalCache,
     persistentLocalCache,
-    persistentMultipleTabManager, type Firestore
+    persistentMultipleTabManager,
+    terminate,
+    type Firestore
 } from 'firebase/firestore';
 import { getMessaging, isSupported, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 import {
   getFirestoreErrorMessage,
+  isFirestorePersistenceClearOrderError,
   isIndexedDbPersistenceError,
 } from '@/lib/firestore-idb-errors';
 
@@ -34,6 +37,23 @@ if (!getApps().length) {
 }
 
 const IDB_RECOVERY_FLAG = 'idb_recovery_attempted';
+
+/**
+ * clearIndexedDbPersistence requires the instance to be terminated (or never
+ * started). Always terminate first, then clear, then reload.
+ */
+async function terminateAndClearPersistence(firestore: Firestore): Promise<void> {
+  try {
+    await terminate(firestore);
+  } catch {
+    // Already terminated or mid-failure — still attempt clear.
+  }
+  try {
+    await clearIndexedDbPersistence(firestore);
+  } catch {
+    // Ignore secondary clear failures; reload + memory fallback handles the rest.
+  }
+}
 
 function createDb(): Firestore {
   if (typeof window === 'undefined') {
@@ -57,15 +77,11 @@ function createDb(): Firestore {
     });
   } catch (err) {
     // If IndexedDB is broken (corruption or Safari/WebKit abort), trigger the
-    // same recovery flow used for async errors: clear persistence and reload.
-    // Use a session flag to avoid an infinite reload loop.
+    // same recovery flow used for async errors: terminate, clear, reload.
     if (isIndexedDbPersistenceError(err) && sessionStorage.getItem(IDB_RECOVERY_FLAG) !== '1') {
       sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
-      // Fall back to memory cache for this session while we schedule a reload.
       const fallbackDb = initializeFirestore(app, { localCache: memoryLocalCache() });
-      clearIndexedDbPersistence(fallbackDb)
-        .catch(() => { /* ignore secondary errors */ })
-        .finally(() => window.location.reload());
+      void terminateAndClearPersistence(fallbackDb).finally(() => window.location.reload());
       return fallbackDb;
     }
     return initializeFirestore(app, { localCache: memoryLocalCache() });
@@ -78,11 +94,7 @@ function recoverFromIndexedDbCorruption(): void {
     return;
   }
   sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
-  // clearIndexedDbPersistence must be called before any Firestore operations;
-  // since we're mid-session we reload immediately after clearing.
-  clearIndexedDbPersistence(db)
-    .catch(() => { /* ignore secondary errors */ })
-    .finally(() => window.location.reload());
+  void terminateAndClearPersistence(db).finally(() => window.location.reload());
 }
 
 const db = createDb();
@@ -91,9 +103,14 @@ if (typeof window !== 'undefined') {
   // Safari often surfaces IDB failures via window.onerror (sync throw), not
   // only as an unhandled promise rejection — listen for both.
   window.addEventListener('unhandledrejection', (event) => {
-    if (isIndexedDbPersistenceError(event.reason)) {
+    if (
+      isIndexedDbPersistenceError(event.reason) ||
+      isFirestorePersistenceClearOrderError(event.reason)
+    ) {
       event.preventDefault();
-      recoverFromIndexedDbCorruption();
+      if (isIndexedDbPersistenceError(event.reason)) {
+        recoverFromIndexedDbCorruption();
+      }
       return;
     }
     // Stale tabs on older bundles still call getMessaging() without isSupported().
@@ -107,9 +124,15 @@ if (typeof window !== 'undefined') {
     }
   });
   window.addEventListener('error', (event) => {
-    if (isIndexedDbPersistenceError(event.error ?? event.message)) {
+    const payload = event.error ?? event.message;
+    if (
+      isIndexedDbPersistenceError(payload) ||
+      isFirestorePersistenceClearOrderError(payload)
+    ) {
       event.preventDefault();
-      recoverFromIndexedDbCorruption();
+      if (isIndexedDbPersistenceError(payload)) {
+        recoverFromIndexedDbCorruption();
+      }
     }
   });
 }

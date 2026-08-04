@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.11.3',
+    subtitle: 'Offline cache recovery',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'When the offline database gets stuck, the app now clears it safely and reloads instead of freezing chat',
+      },
+      {
+        type: 'Improved',
+        text: 'Known offline-cache recovery errors no longer clutter error reports',
+      },
+    ],
+  },
+  {
     version: 'v1.11.2',
     subtitle: 'Bible button clears footer',
     date: 'August 4, 2026',

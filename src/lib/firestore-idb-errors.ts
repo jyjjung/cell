@@ -13,9 +13,11 @@ export function getFirestoreErrorMessage(reason: unknown): string {
 }
 
 /**
- * Detects Firestore IndexedDB failures that leave the client unusable until reload.
- * Covers classic corruption ("refusing to open IndexedDB") and Safari/WebKit aborts
- * that surface as UnknownError / INTERNAL ASSERTION FAILED (e.g. after backgrounding).
+ * Detects Firestore IndexedDB / AsyncQueue failures that leave the client unusable
+ * until reload. Covers:
+ * - Classic corruption ("refusing to open IndexedDB")
+ * - Safari/WebKit aborts after backgrounding
+ * - Known SDK assertion bricks: ca9 (target state) → b815 (dead AsyncQueue)
  */
 export function isIndexedDbPersistenceError(reason: unknown): boolean {
   const msg = getFirestoreErrorMessage(reason);
@@ -28,7 +30,21 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
     msg.includes('An internal error was encountered in the Indexed Database server') ||
     (msg.includes('IndexedDB transaction') &&
       (msg.includes('AbortError') || msg.includes('code=unavailable'))) ||
+    // Firestore SDK bricks the client after these assertions (see firebase-js-sdk#8856, #9267).
     (msg.includes('INTERNAL ASSERTION FAILED') &&
-      (msg.includes('Indexed') || msg.includes('transaction') || msg.includes('b815')))
+      (msg.includes('Indexed') ||
+        msg.includes('transaction') ||
+        msg.includes('b815') ||
+        msg.includes('ca9') ||
+        msg.includes('"Fe":-1') ||
+        msg.includes('"ve":-1') ||
+        msg.includes('pendingResponses":-1') ||
+        msg.includes('outstandingResponses')))
   );
+}
+
+/** Mis-ordered clearIndexedDbPersistence — secondary noise from a bad recovery path. */
+export function isFirestorePersistenceClearOrderError(reason: unknown): boolean {
+  const msg = getFirestoreErrorMessage(reason);
+  return msg.includes('Persistence can only be cleared before a Firestore instance');
 }

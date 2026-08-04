@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getFirestoreErrorMessage,
+  isFirestorePersistenceClearOrderError,
   isIndexedDbPersistenceError,
 } from '@/lib/firestore-idb-errors';
 
@@ -47,11 +48,39 @@ describe('isIndexedDbPersistenceError', () => {
     ).toBe(true);
   });
 
+  it('matches known Firestore AsyncQueue bricks (ca9 → b815)', () => {
+    expect(
+      isIndexedDbPersistenceError(
+        new Error('FIRESTORE (11.7.3) INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9) CONTEXT: {"Fe":-1}'),
+      ),
+    ).toBe(true);
+    expect(
+      isIndexedDbPersistenceError(
+        new Error(
+          'FIRESTORE (11.7.3) INTERNAL ASSERTION FAILED: Unexpected state (ID: b815) CONTEXT: {"ec":"Error: FIRESTORE (11.7.3) INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9) CONTEXT: {\\"Fe\\":-1}"}',
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it('ignores unrelated errors', () => {
     expect(isIndexedDbPersistenceError(new Error('Network request failed'))).toBe(false);
     expect(isIndexedDbPersistenceError(new Error('INTERNAL ASSERTION FAILED: Unexpected state'))).toBe(
       false,
     );
     expect(isIndexedDbPersistenceError(undefined)).toBe(false);
+  });
+});
+
+describe('isFirestorePersistenceClearOrderError', () => {
+  it('matches clear-before-terminate misuse', () => {
+    expect(
+      isFirestorePersistenceClearOrderError(
+        new Error(
+          'Persistence can only be cleared before a Firestore instance is initialized or after it is terminated.',
+        ),
+      ),
+    ).toBe(true);
+    expect(isFirestorePersistenceClearOrderError(new Error('Network request failed'))).toBe(false);
   });
 });
