@@ -27,7 +27,6 @@ import {
   Trophy,
   ListChecks,
   Brain,
-  Grid3X3,
   Megaphone,
   Search,
   ArrowRight,
@@ -268,7 +267,6 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
         requiresAuth: true,
       },
       { id: "feedback", href: "/feedback", label: t.feedback, icon: Lightbulb, keywords: ["changelog", "ideas", "bugs"] },
-      { id: "apps", href: "/apps", label: t.allApps, icon: Grid3X3, keywords: ["shortcuts", "launcher"] },
       {
         id: "announcements",
         href: "/announcements",

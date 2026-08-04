@@ -120,10 +120,13 @@ export default function AdminQTRosterPage() {
 
         await Promise.all(promises);
         setLocalChanges({});
-        toast({ title: "Saved", description: `${datesWithChanges.length} entries updated.` });
+        toast({
+          title: t.saved,
+          description: t.adminEntriesUpdated.replace('{count}', String(datesWithChanges.length)),
+        });
     } catch (error) {
         console.error("Failed to save roster entry", error);
-        toast({ variant: "destructive", title: "Save failed", description: "Could not save changes." });
+        toast({ variant: "destructive", title: t.adminSaveFailed, description: t.adminCouldNotSave });
     } finally {
         setIsSavingAll(false);
     }
@@ -133,10 +136,10 @@ export default function AdminQTRosterPage() {
     if (!rosterMap.has(date)) return;
     try {
         await deleteEntry(date);
-        toast({ title: "Entry removed", description: format(new Date(date), "MMM d") });
+        toast({ title: t.adminEntryRemoved, description: format(new Date(date), "MMM d") });
     } catch (error) {
         console.error("Failed to delete roster entry", error);
-        toast({ variant: "destructive", title: "Purge Failed", description: "Could not remove the entry." });
+        toast({ variant: "destructive", title: t.adminPurgeFailed, description: t.adminCouldNotRemove });
     }
   };
 

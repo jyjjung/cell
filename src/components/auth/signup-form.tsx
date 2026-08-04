@@ -50,7 +50,8 @@ export default function SignupForm() {
     form.clearErrors();
     try {
       await signUpUser(data.email, data.password, data.firstName, data.lastName, inviteCode);
-      router.push('/');
+      // Land on pending shell; it redirects home immediately if invite auto-approved.
+      router.push('/pending-approval');
     } catch (error: any) {
       setIsLoading(false);
       if (error.code === 'auth/email-already-in-use') {

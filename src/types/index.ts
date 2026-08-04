@@ -223,6 +223,8 @@ export interface AppUser extends FirebaseUser {
   typography?: TypographyPreferences;
   bibleTextVersion?: BibleTextVersion;
   prayerRequestsLastSeenAt?: Timestamp;
+  /** Last active signed-in client (throttled). Used for admin inactive filter. */
+  lastSeenAt?: Timestamp;
 }
 
 
@@ -251,6 +253,8 @@ export interface UserProfileData {
   typography?: TypographyPreferences;
   bibleTextVersion?: BibleTextVersion;
   prayerRequestsLastSeenAt?: Timestamp;
+  /** Last active signed-in client (throttled). Used for admin inactive filter. */
+  lastSeenAt?: Timestamp;
 }
 
 

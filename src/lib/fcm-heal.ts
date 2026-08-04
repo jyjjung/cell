@@ -14,12 +14,24 @@ const FCM_HEAL_VERSION = '2026-07-23-v1';
 const FCM_HEAL_STORAGE_KEY = 'fcm_heal_version';
 export const MAX_FCM_TOKENS = 5;
 
+export { FCM_HEAL_VERSION, FCM_HEAL_STORAGE_KEY };
+
+/** Pure decision helper — unit-tested; used by healFcmSubscription. */
+export function shouldHardHealFcm(input: {
+  force?: boolean;
+  needsResync: boolean;
+  versionStale: boolean;
+  swHealthy: boolean;
+}): boolean {
+  return Boolean(input.force || input.needsResync || input.versionStale || !input.swHealthy);
+}
+
 function isMessagingSw(reg: ServiceWorkerRegistration): boolean {
   const url = reg.active?.scriptURL || reg.waiting?.scriptURL || reg.installing?.scriptURL || '';
   return url.includes('firebase-messaging-sw.js');
 }
 
-async function hasHealthyMessagingSw(): Promise<boolean> {
+export async function hasHealthyMessagingSw(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
   const regs = await navigator.serviceWorker.getRegistrations();
   return regs.some(isMessagingSw);
@@ -49,7 +61,12 @@ export async function healFcmSubscription(uid: string, options?: { force?: boole
   const versionStale = localVersion !== FCM_HEAL_VERSION;
   const swHealthy = await hasHealthyMessagingSw();
 
-  const shouldHardHeal = options?.force || needsResync || versionStale || !swHealthy;
+  const shouldHardHeal = shouldHardHealFcm({
+    force: options?.force,
+    needsResync,
+    versionStale,
+    swHealthy,
+  });
   if (!shouldHardHeal && localVersion === FCM_HEAL_VERSION) {
     // Soft path already covered by useFCMToken; nothing to do.
     return null;

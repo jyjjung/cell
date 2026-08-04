@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AppRole } from '@/types';
 import { useRoles } from '@/hooks/use-roles';
 import { useForm } from 'react-hook-form';
@@ -22,12 +22,14 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { ROLE_CAPABILITIES, type RoleCapability } from '@/lib/role-capabilities';
 
-const roleSchema = z.object({
-  name: z.string().min(2, "Role name must be at least 2 characters."),
-  createChat: z.boolean().default(true).optional(),
-  capabilities: z.array(z.enum(ROLE_CAPABILITIES)).default([]),
-});
-type RoleFormValues = z.infer<typeof roleSchema>;
+function createRoleSchema(nameMinMessage: string) {
+  return z.object({
+    name: z.string().min(2, nameMinMessage),
+    createChat: z.boolean().default(true).optional(),
+    capabilities: z.array(z.enum(ROLE_CAPABILITIES)).default([]),
+  });
+}
+type RoleFormValues = z.infer<ReturnType<typeof createRoleSchema>>;
 
 export default function AdminRolesPage() {
   const { roles, loading, addRole, updateRole, deleteRole, syncRolesAndChats } = useRoles();
@@ -38,6 +40,11 @@ export default function AdminRolesPage() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const roleSchema = useMemo(
+    () => createRoleSchema(t.adminValidationRoleNameMin),
+    [t.adminValidationRoleNameMin],
+  );
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
@@ -65,14 +72,14 @@ export default function AdminRolesPage() {
     try {
       if (editingRole) {
         await updateRole(editingRole.id, data.name, data.capabilities);
-        toast({ title: "Role updated", description: `"${data.name}" saved.` });
+        toast({ title: t.adminRoleUpdated, description: t.adminRoleSavedDesc.replace('{name}', data.name) });
       } else {
         await addRole(data.name, data.createChat ?? false, data.capabilities);
-        toast({ title: "Role created", description: `"${data.name}" added.` });
+        toast({ title: t.adminRoleCreated, description: t.adminRoleAddedDesc.replace('{name}', data.name) });
       }
       setIsFormOpen(false);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: t.error, description: error.message });
     } finally {
       setIsSaving(false);
     }
@@ -81,9 +88,9 @@ export default function AdminRolesPage() {
   const handleDelete = async (role: AppRole) => {
     try {
       await deleteRole(role.id);
-      toast({ title: "Role deleted", description: `"${role.name}" removed.` });
+      toast({ title: t.adminRoleDeleted, description: t.adminRoleRemovedDesc.replace('{name}', role.name) });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Delete failed", description: error.message });
+      toast({ variant: "destructive", title: t.adminPurgeFailed, description: error.message });
     }
   };
 
@@ -91,9 +98,9 @@ export default function AdminRolesPage() {
     setIsSyncing(true);
     try {
       await syncRolesAndChats();
-      toast({ title: "Sync complete", description: "Members matched to role chats." });
+      toast({ title: t.adminSyncComplete, description: t.adminSyncCompleteDesc });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Sync failed", description: error.message });
+      toast({ variant: "destructive", title: t.adminSyncFailed, description: error.message });
     } finally {
       setIsSyncing(false);
     }

@@ -1,0 +1,17 @@
+---
+description: Appearance and halo cosmetics are maintenance-only
+alwaysApply: false
+globs:
+  - src/lib/halo-tier-definitions.ts
+  - src/lib/app-themes.ts
+  - src/lib/avatar-cosmetics.ts
+  - src/components/profile/appearance-settings.tsx
+  - src/components/profile/unlocked-halos-grid.tsx
+  - src/components/avatar/**
+---
+
+# Cosmetic freeze
+
+Do **not** add new appearance themes, halo tiers, or avatar cosmetic systems unless fixing a bug in existing ones.
+
+Product focus is reliability (push, reminders, ACL) and the home spine — not cosmetic expansion.

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAllUsers } from '@/hooks/use-all-users';
+import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const categoryRegex = /^\s*(SNACKS|BIRTHDAY|EVENT)\s*$/im;
 
@@ -37,45 +39,73 @@ const monthsMap: Record<string, number> = {
   december: 11, dec: 11
 };
 
-const batchImportSchema = z.object({
-  batchText: z.string().max(10000, { message: "Batch text input is too long (max 10000 characters)." }).optional(),
-  snackRotaStartDate: z.date().optional(),
-  snackRotaNames: z.string().optional(),
-  defaultCategory: z.nativeEnum(EventCategory).optional(),
-})
-.refine(data => {
-  const namesProvided = data.snackRotaNames && data.snackRotaNames.trim() !== '';
-  const dateProvided = !!data.snackRotaStartDate;
-  if ((namesProvided && !dateProvided) || (dateProvided && !namesProvided)) {
-    return false;
-  }
-  return true; 
-}, {
-  message: "Snack Rota Start Date and Names must be provided together.",
-  path: ["snackRotaStartDate"], 
-})
-.refine(data => {
-    if (data.batchText && data.batchText.trim() !== '') {
-        const hasCategoryHeaders = categoryRegex.test(data.batchText);
-        // Look for at least one line matching Name - Month DD or Name Month DD
-        const nameDateRegex = /[^-]+\s*(?:-?\s*)[A-Za-z]+\s+\d{1,2}/;
-        if (!hasCategoryHeaders && !data.defaultCategory && !nameDateRegex.test(data.batchText)) {
-            return false;
+function createBatchImportSchema(messages: {
+  batchTextMax: string;
+  snackRotaPair: string;
+  batchCategoryRequired: string;
+}) {
+  return z
+    .object({
+      batchText: z.string().max(10000, { message: messages.batchTextMax }).optional(),
+      snackRotaStartDate: z.date().optional(),
+      snackRotaNames: z.string().optional(),
+      defaultCategory: z.nativeEnum(EventCategory).optional(),
+    })
+    .refine(
+      (data) => {
+        const namesProvided = data.snackRotaNames && data.snackRotaNames.trim() !== '';
+        const dateProvided = !!data.snackRotaStartDate;
+        if ((namesProvided && !dateProvided) || (dateProvided && !namesProvided)) {
+          return false;
         }
-    }
-    return true;
-}, {
-    message: "A default category is required when no category headers or birthday strings are in the text.",
-    path: ["defaultCategory"],
-});
+        return true;
+      },
+      {
+        message: messages.snackRotaPair,
+        path: ['snackRotaStartDate'],
+      },
+    )
+    .refine(
+      (data) => {
+        if (data.batchText && data.batchText.trim() !== '') {
+          const hasCategoryHeaders = categoryRegex.test(data.batchText);
+          const nameDateRegex = /[^-]+\s*(?:-?\s*)[A-Za-z]+\s+\d{1,2}/;
+          if (!hasCategoryHeaders && !data.defaultCategory && !nameDateRegex.test(data.batchText)) {
+            return false;
+          }
+        }
+        return true;
+      },
+      {
+        message: messages.batchCategoryRequired,
+        path: ['defaultCategory'],
+      },
+    );
+}
 
-type BatchImportFormValues = z.infer<typeof batchImportSchema>;
+type BatchImportFormValues = z.infer<ReturnType<typeof createBatchImportSchema>>;
 
 export default function BatchEventImportForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { addEvent } = useEvents();
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { allUsers } = useAllUsers();
+
+  const batchImportSchema = useMemo(
+    () =>
+      createBatchImportSchema({
+        batchTextMax: t.adminValidationBatchTextMax,
+        snackRotaPair: t.adminValidationSnackRotaPair,
+        batchCategoryRequired: t.adminValidationBatchCategoryRequired,
+      }),
+    [
+      t.adminValidationBatchTextMax,
+      t.adminValidationSnackRotaPair,
+      t.adminValidationBatchCategoryRequired,
+    ],
+  );
 
   const form = useForm<BatchImportFormValues>({
     resolver: zodResolver(batchImportSchema),
@@ -255,13 +285,16 @@ export default function BatchEventImportForm() {
       if (allErrors.length > 0) {
         toast({
           variant: "destructive",
-          title: "Import Complete with Errors",
-          description: `Added ${totalAdded} of ${totalParsed} events. Errors: ${allErrors.join(', ')}`,
+          title: t.adminImportWithErrors,
+          description: t.adminImportWithErrorsDesc
+            .replace('{added}', String(totalAdded))
+            .replace('{parsed}', String(totalParsed))
+            .replace('{errors}', allErrors.join(', ')),
         });
       } else {
         toast({
-          title: "Import Successful",
-          description: `Successfully added ${totalAdded} events.`,
+          title: t.adminImportSuccessful,
+          description: t.adminImportSuccessfulDesc.replace('{count}', String(totalAdded)),
         });
       }
     }

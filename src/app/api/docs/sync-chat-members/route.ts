@@ -18,8 +18,11 @@ async function requireUid(request: NextRequest): Promise<string> {
 }
 
 /**
- * After chat membership changes, expand ACL for every doc previously shared
- * into this chat (tracked via sourceChatIds).
+ * Backup / heal path only.
+ *
+ * Canonical share happens on create/share API writes. Call this after chat
+ * membership changes to expand ACL for docs already tagged with this chat in
+ * sourceChatIds — not as the primary share write path.
  */
 export async function POST(request: NextRequest) {
   try {

@@ -22,7 +22,7 @@ import * as Sentry from '@sentry/nextjs';
 import {
     createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile as updateFirebaseProfile, type User as FirebaseUser
 } from 'firebase/auth';
-import { arrayUnion, doc, getDoc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -81,6 +81,10 @@ function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, 
     avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
     avatarChangesEnabled: profileData.avatarChangesEnabled,
     fcmTokens: profileData.fcmTokens || [],
+    fcmNeedsResync: profileData.fcmNeedsResync,
+    fcmLastHealedAt: profileData.fcmLastHealedAt,
+    fcmHealVersion: profileData.fcmHealVersion,
+    lastSeenAt: profileData.lastSeenAt,
   } as AppUser;
 }
 
@@ -236,6 +240,22 @@ export function AuthProvider({
       || hasCapability(capabilityKeys, 'worship.manage'),
     );
   }, [uid, capabilityKeys]);
+
+  // Throttled presence for admin "inactive" filter — at most once per 6 hours per device.
+  useEffect(() => {
+    if (!uid || typeof window === 'undefined') return;
+    const storageKey = `em_last_seen_write:${uid}`;
+    const minIntervalMs = 6 * 60 * 60 * 1000;
+    const now = Date.now();
+    const prev = Number(window.localStorage.getItem(storageKey) || '0');
+    if (now - prev < minIntervalMs) return;
+    window.localStorage.setItem(storageKey, String(now));
+    void updateDoc(doc(db, USERS_COLLECTION, uid), {
+      lastSeenAt: serverTimestamp(),
+    }).catch(() => {
+      // Rules or offline — non-critical.
+    });
+  }, [uid]);
 
   const adminPasswordLogin = async (password: string): Promise<boolean> => {
     if (!currentUser) {

@@ -13,6 +13,37 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.11.0',
+    subtitle: 'Reliability, quieter sessions & admin clarity',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Profile shows this device’s push health — permission, token, last repair — plus a clearer Fix action',
+      },
+      {
+        type: 'Added',
+        text: 'When a new app version is ready, you can reload from a small prompt instead of a stuck screen',
+      },
+      {
+        type: 'Added',
+        text: 'Admin Users can filter pending, no-push, and inactive (30 day) members; reminder health shows send counts',
+      },
+      {
+        type: 'Improved',
+        text: 'Background tabs pause live chat/notification updates; reminder catch-up skips full scans when morning already succeeded',
+      },
+      {
+        type: 'Improved',
+        text: 'Home schedule labels your duties clearly; pending-approval and offline Bible messages are clearer',
+      },
+      {
+        type: 'Improved',
+        text: 'More admin screens and validation messages work in Korean; unused All apps page removed',
+      },
+    ],
+  },
+  {
     version: 'v1.10.3',
     subtitle: 'Safari offline cache recovery',
     date: 'August 4, 2026',

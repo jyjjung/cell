@@ -61,7 +61,7 @@ service cloud.firestore {
         'firstName', 'lastName', 'avatar', 'showInCommunityProgress', 'preferredLanguage',
         'appTheme', 'typography',
         'bibleTextVersion', 'dashboard', 'fcmTokens', 'fcmNeedsResync', 'fcmLastHealedAt',
-        'fcmHealVersion', 'updatedAt', 'prayerRequestsLastSeenAt'
+        'fcmHealVersion', 'updatedAt', 'prayerRequestsLastSeenAt', 'lastSeenAt'
       ];
       return diff.hasOnly(allowed)
         && (!diff.hasAny(['avatar'])

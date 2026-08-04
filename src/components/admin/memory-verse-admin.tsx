@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,11 +18,13 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { EmptyState } from '@/components/ui/page-layout';
 
-const memoryVerseSchema = z.object({
-  reference: z.string().min(3, { message: "Verse reference must be at least 3 characters." }).max(100, {message: "Reference too long."}),
-});
+function createMemoryVerseSchema(messages: { min: string; max: string }) {
+  return z.object({
+    reference: z.string().min(3, { message: messages.min }).max(100, { message: messages.max }),
+  });
+}
 
-type MemoryVerseFormValues = z.infer<typeof memoryVerseSchema>;
+type MemoryVerseFormValues = z.infer<ReturnType<typeof createMemoryVerseSchema>>;
 
 export default function MemoryVerseAdmin() {
   const { memoryVerses, addMemoryVerse, addLordsPrayer, deleteMemoryVerse, loading } = useMemoryVerses();
@@ -30,6 +32,15 @@ export default function MemoryVerseAdmin() {
   const [isAddingLordsPrayer, setIsAddingLordsPrayer] = useState(false);
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const memoryVerseSchema = useMemo(
+    () =>
+      createMemoryVerseSchema({
+        min: t.adminValidationVerseRefMin,
+        max: t.adminValidationVerseRefMax,
+      }),
+    [t.adminValidationVerseRefMin, t.adminValidationVerseRefMax],
+  );
 
   const form = useForm<MemoryVerseFormValues>({
     resolver: zodResolver(memoryVerseSchema),

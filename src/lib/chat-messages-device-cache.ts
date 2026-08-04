@@ -26,6 +26,12 @@ const CHAT_MESSAGES_PAGE_SIZE = 30;
 /** Internal page size when reading the Firestore persistent cache. */
 const CHAT_MESSAGES_CACHE_PAGE = 100;
 
+/**
+ * Hard cap for device-cache walks (global photos/links albums, thread seed).
+ * Prevents unbounded local iteration on huge chats.
+ */
+export const CHAT_MESSAGES_CACHE_READ_MAX = 600;
+
 const CHATS_COLLECTION = 'chats';
 const MESSAGES_SUBCOLLECTION = 'messages';
 const THREAD_SUBCOLLECTION = 'thread';
@@ -52,22 +58,25 @@ function docToMessage(docSnap: QueryDocumentSnapshot<DocumentData>): ChatMessage
   return { id: docSnap.id, ...docSnap.data() } as ChatMessage;
 }
 
-/** Read every message already stored in Firestore's on-device persistent cache. */
+/** Read messages already stored in Firestore's on-device persistent cache. */
 export async function readAllMessagesFromDeviceCache(
   messagesCol: CollectionReference,
+  options?: { maxMessages?: number },
 ): Promise<ChatMessage[]> {
+  const maxMessages = options?.maxMessages ?? CHAT_MESSAGES_CACHE_READ_MAX;
   const all: ChatMessage[] = [];
   let lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
 
-  while (true) {
+  while (all.length < maxMessages) {
+    const pageSize = Math.min(CHAT_MESSAGES_CACHE_PAGE, maxMessages - all.length);
     const q: Query<DocumentData> = lastDoc
       ? query(
           messagesCol,
           orderBy('createdAt', 'desc'),
           startAfter(lastDoc),
-          limit(CHAT_MESSAGES_CACHE_PAGE),
+          limit(pageSize),
         )
-      : query(messagesCol, orderBy('createdAt', 'desc'), limit(CHAT_MESSAGES_CACHE_PAGE));
+      : query(messagesCol, orderBy('createdAt', 'desc'), limit(pageSize));
 
     let snap;
     try {
@@ -79,7 +88,7 @@ export async function readAllMessagesFromDeviceCache(
     if (snap.empty) break;
 
     all.push(...snap.docs.map(docToMessage));
-    if (snap.docs.length < CHAT_MESSAGES_CACHE_PAGE) break;
+    if (snap.docs.length < pageSize) break;
     lastDoc = snap.docs[snap.docs.length - 1];
   }
 

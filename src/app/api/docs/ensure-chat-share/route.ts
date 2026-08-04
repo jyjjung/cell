@@ -18,8 +18,12 @@ async function requireUid(request: NextRequest): Promise<string> {
 }
 
 /**
- * Expand ACL for docs already posted in a chat so every chat member sees them
- * under Docs. Only updates docs the caller already belongs to.
+ * Backup / heal path only.
+ *
+ * Canonical ACL writes happen on create (POST /api/docs) and share
+ * (PATCH /api/docs/[docId] with shareWithChatId). This endpoint repairs
+ * drift for docs already posted in a chat — do not treat it as the primary
+ * share write path.
  */
 export async function POST(request: NextRequest) {
   try {

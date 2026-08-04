@@ -22,29 +22,49 @@ import type { BibleReadingPlan, DailyReading } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { BookOpen, CalendarIcon, ListOrdered } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-const adminPlanFormSchema = z.object({
-  planType: z.enum(['canonical', 'custom', 'mcheyne'], { required_error: "Please select a plan type." }),
-  startBook: z.string().optional(),
-  startDate: z.date({ required_error: "A start date is required." }),
-  readingsPerDay: z.coerce.number().int().min(1, "Must have at least 1 reading per day.").max(10, "Cannot have more than 10 readings per day."),
-  readingDays: z.array(z.string()).refine(val => val.length > 0, {
-    message: "You must select at least one reading day.",
-  }),
-}).refine(data => {
-    if (data.planType === 'canonical' && !data.startBook) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Starting book is required for Canonical Order plan.",
-    path: ["startBook"],
-});
+function createAdminPlanFormSchema(messages: {
+  planTypeRequired: string;
+  startDateRequired: string;
+  readingsPerDayMin: string;
+  readingsPerDayMax: string;
+  readingDaysRequired: string;
+  startBookRequired: string;
+}) {
+  return z
+    .object({
+      planType: z.enum(['canonical', 'custom', 'mcheyne'], {
+        required_error: messages.planTypeRequired,
+      }),
+      startBook: z.string().optional(),
+      startDate: z.date({ required_error: messages.startDateRequired }),
+      readingsPerDay: z.coerce
+        .number()
+        .int()
+        .min(1, messages.readingsPerDayMin)
+        .max(10, messages.readingsPerDayMax),
+      readingDays: z.array(z.string()).refine((val) => val.length > 0, {
+        message: messages.readingDaysRequired,
+      }),
+    })
+    .refine(
+      (data) => {
+        if (data.planType === 'canonical' && !data.startBook) {
+          return false;
+        }
+        return true;
+      },
+      {
+        message: messages.startBookRequired,
+        path: ['startBook'],
+      },
+    );
+}
 
-type AdminPlanFormValues = z.infer<typeof adminPlanFormSchema>;
+type AdminPlanFormValues = z.infer<ReturnType<typeof createAdminPlanFormSchema>>;
 
 const daysOfWeek = [
   { label: "S", value: "0" },
@@ -61,6 +81,26 @@ export default function BiblePlanAdminForm() {
   const { saveBiblePlan, plan: currentPlan, loading: planLoading } = useBiblePlan();
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const adminPlanFormSchema = useMemo(
+    () =>
+      createAdminPlanFormSchema({
+        planTypeRequired: t.adminValidationPlanTypeRequired,
+        startDateRequired: t.adminValidationStartDateRequired,
+        readingsPerDayMin: t.adminValidationReadingsPerDayMin,
+        readingsPerDayMax: t.adminValidationReadingsPerDayMax,
+        readingDaysRequired: t.adminValidationReadingDaysRequired,
+        startBookRequired: t.adminValidationStartBookRequired,
+      }),
+    [
+      t.adminValidationPlanTypeRequired,
+      t.adminValidationStartDateRequired,
+      t.adminValidationReadingsPerDayMin,
+      t.adminValidationReadingsPerDayMax,
+      t.adminValidationReadingDaysRequired,
+      t.adminValidationStartBookRequired,
+    ],
+  );
 
   const form = useForm<AdminPlanFormValues>({
     resolver: zodResolver(adminPlanFormSchema),

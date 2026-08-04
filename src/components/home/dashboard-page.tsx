@@ -506,6 +506,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         </div>
       </PageSection>
 
+      <PageSection title={t.homeScheduleTitle} description={t.homeScheduleDesc}>
       <div className="stack-gap-sm">
         {agendaByMonth.length > 0 ? (
           agendaByMonth.map(([month, entries]) => (
@@ -528,6 +529,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
           <EmptyState icon={CalendarOff} title={t.clearSchedule} description={t.nothingComingUp} />
         )}
       </div>
+      </PageSection>
 
       <HomeInfoWidgets />
 

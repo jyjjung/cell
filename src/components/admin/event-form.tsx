@@ -34,6 +34,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { useRoles } from '@/hooks/use-roles';
 import { useAuth } from '@/contexts/auth-context';
+import { translations } from '@/lib/translations';
 
 const WEEKDAY_OPTS = [
   { value: 0, label: 'Sun' },
@@ -45,37 +46,64 @@ const WEEKDAY_OPTS = [
   { value: 6, label: 'Sat' },
 ] as const;
 
-const eventFormSchema = z.object({
-  title: z.string().min(2, { message: "Title must be at least 2 characters." }),
-  date: z.date({ required_error: "A date is required." }),
-  endDate: z.date().optional(),
-  allDay: z.boolean().default(true),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  category: z.nativeEnum(EventCategory),
-  details: z.string().optional(),
-  location: z.string().optional(),
-  allowedRoleIds: z.array(z.string()).default([]),
-  recurrence: z.enum(['none', 'daily', 'weekly']).default('none'),
-  recurrenceUntil: z.date().optional(),
-  weekdays: z.array(z.number().int().min(0).max(6)).default([]),
-}).superRefine((data, ctx) => {
-  if (data.endDate && data.date && startOfDay(data.endDate) < startOfDay(data.date)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "End date must be on or after start date", path: ['endDate'] });
-  }
-  if (data.recurrence !== 'none') {
-    if (!data.recurrenceUntil) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Repeat until date is required", path: ['recurrenceUntil'] });
-    } else if (startOfDay(data.recurrenceUntil) < startOfDay(data.date)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Must be on or after start date", path: ['recurrenceUntil'] });
-    }
-  }
-  if (data.recurrence === 'weekly' && (!data.weekdays || data.weekdays.length === 0)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pick at least one weekday", path: ['weekdays'] });
-  }
-});
+function createEventFormSchema(messages: {
+  titleMin: string;
+  dateRequired: string;
+  endDateAfterStart: string;
+  repeatUntilRequired: string;
+  repeatUntilAfterStart: string;
+  weekdayRequired: string;
+}) {
+  return z
+    .object({
+      title: z.string().min(2, { message: messages.titleMin }),
+      date: z.date({ required_error: messages.dateRequired }),
+      endDate: z.date().optional(),
+      allDay: z.boolean().default(true),
+      startTime: z.string().optional(),
+      endTime: z.string().optional(),
+      category: z.nativeEnum(EventCategory),
+      details: z.string().optional(),
+      location: z.string().optional(),
+      allowedRoleIds: z.array(z.string()).default([]),
+      recurrence: z.enum(['none', 'daily', 'weekly']).default('none'),
+      recurrenceUntil: z.date().optional(),
+      weekdays: z.array(z.number().int().min(0).max(6)).default([]),
+    })
+    .superRefine((data, ctx) => {
+      if (data.endDate && data.date && startOfDay(data.endDate) < startOfDay(data.date)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: messages.endDateAfterStart,
+          path: ['endDate'],
+        });
+      }
+      if (data.recurrence !== 'none') {
+        if (!data.recurrenceUntil) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: messages.repeatUntilRequired,
+            path: ['recurrenceUntil'],
+          });
+        } else if (startOfDay(data.recurrenceUntil) < startOfDay(data.date)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: messages.repeatUntilAfterStart,
+            path: ['recurrenceUntil'],
+          });
+        }
+      }
+      if (data.recurrence === 'weekly' && (!data.weekdays || data.weekdays.length === 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: messages.weekdayRequired,
+          path: ['weekdays'],
+        });
+      }
+    });
+}
 
-type EventFormValues = z.infer<typeof eventFormSchema>;
+type EventFormValues = z.infer<ReturnType<typeof createEventFormSchema>>;
 
 interface EventFormProps {
   event?: AppEvent | null;
@@ -94,6 +122,28 @@ function toggleWeekday(current: number[], value: number, checked: boolean): numb
 export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save Event" }: EventFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isMobile = useIsMobile();
+  const { currentUser, isAdmin } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+
+  const eventFormSchema = useMemo(
+    () =>
+      createEventFormSchema({
+        titleMin: t.adminValidationEventTitleMin,
+        dateRequired: t.adminValidationDateRequired,
+        endDateAfterStart: t.adminValidationEndDateAfterStart,
+        repeatUntilRequired: t.adminValidationRepeatUntilRequired,
+        repeatUntilAfterStart: t.adminValidationRepeatUntilAfterStart,
+        weekdayRequired: t.adminValidationWeekdayRequired,
+      }),
+    [
+      t.adminValidationEventTitleMin,
+      t.adminValidationDateRequired,
+      t.adminValidationEndDateAfterStart,
+      t.adminValidationRepeatUntilRequired,
+      t.adminValidationRepeatUntilAfterStart,
+      t.adminValidationWeekdayRequired,
+    ],
+  );
 
   const defaultRecurrenceUntil = useMemo(() => addMonths(new Date(), 3), []);
 
@@ -199,7 +249,6 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
   }
 
   const { roles } = useRoles();
-  const { isAdmin } = useAuth();
   const roleOptions = roles.map(r => ({ value: r.id, label: r.name }));
 
   return (

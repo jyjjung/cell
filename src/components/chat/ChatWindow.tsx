@@ -30,7 +30,7 @@ import GroupSettingsDialog from './GroupSettingsDialog';
 import { ChatImageGallery } from './ImageLightbox';
 import MessageInput from './MessageInput';
 import ThreadWindow from './ThreadWindow';
-import { ensureDocsSharedWithChat, syncChatDocMembers } from '@/hooks/use-docs';
+import { syncChatDocMembers } from '@/hooks/use-docs';
 
 const FullScreenViewer = dynamic(
   () => import('../worship/FullScreenViewer').then((m) => m.FullScreenViewer),
@@ -190,8 +190,12 @@ function ChatWindowBody({
       seenDebounceRef.current = window.setTimeout(markSeen, delay);
     }
 
+    // Only re-write on tab return when there is a newer message than last marked.
+    // Avoids a Firestore write on every focus flip while already caught up.
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') markSeen();
+      if (document.visibilityState !== 'visible') return;
+      if (lastSeenMessageIdRef.current === newestMessageId) return;
+      markSeen();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -206,29 +210,19 @@ function ChatWindowBody({
     lastSeenMessageIdRef.current = null;
   }, [chatId]);
 
-  const chatDocIdsKey = useMemo(() => {
-    const ids = Array.from(
-      new Set(messages.map((m) => m.docId).filter((id): id is string => Boolean(id))),
-    ).sort();
-    return ids.join(',');
-  }, [messages]);
-
+  // Membership sync once per chat per browser session (role/circle member drift).
+  // Doc ACL for newly posted docs is written on share/create (PATCH/POST) —
+  // avoid /api/docs/ensure-chat-share on every open (Vercel Fluid CPU).
   useEffect(() => {
-    if (!chatId || !currentUser) return;
-
-    // Heal ACL for docs posted in this chat + sync sourceChatIds-linked docs
-    // (worship/role circles often change members without a client add-member call).
+    if (!chatId || !currentUser || typeof window === 'undefined') return;
+    const key = `docs-chat-sync:${chatId}`;
+    if (sessionStorage.getItem(key) === '1') return;
+    sessionStorage.setItem(key, '1');
     const timer = window.setTimeout(() => {
-      if (chatDocIdsKey) {
-        const docIds = chatDocIdsKey.split(',');
-        void ensureDocsSharedWithChat({ chatId, docIds }).catch(() => {
-          // Best-effort; skips are expected for docs the viewer cannot prove.
-        });
-      }
       void syncChatDocMembers(chatId).catch(() => {});
-    }, 600);
+    }, 800);
     return () => window.clearTimeout(timer);
-  }, [chatId, currentUser, chatDocIdsKey]);
+  }, [chatId, currentUser]);
 
   useEffect(() => {
     if (chatTab !== 'photos') return;

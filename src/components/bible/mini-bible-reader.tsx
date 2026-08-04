@@ -142,12 +142,14 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       setHtml(nextHtml);
     } catch (e: any) {
       if (e.name !== 'AbortError') {
-        setError(e.message || 'Connection error');
+        const offline =
+          typeof navigator !== 'undefined' && navigator.onLine === false;
+        setError(offline ? t.bibleOfflineUnavailable : t.bibleConnectionError);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t.bibleOfflineUnavailable, t.bibleConnectionError]);
 
   useEffect(() => {
     const abortController = new AbortController();
