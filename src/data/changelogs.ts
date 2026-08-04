@@ -41,6 +41,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Changed',
         text: 'Expanded navigation with a Forms page in the main sidebar and a matching admin Forms section.',
       },
+      {
+        type: 'Improved',
+        text: 'The main Admin hub now shows Forms as a visible section card for quicker access.',
+      },
     ],
   },
   {
