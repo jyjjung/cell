@@ -53,6 +53,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'The admin form builder now adds new fields reliably across browsers and environments.',
       },
+      {
+        type: 'Fixed',
+        text: 'Forms pages now load without requiring extra Firestore composite indexes for the new queries.',
+      },
     ],
   },
   {
