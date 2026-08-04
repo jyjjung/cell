@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getMessaging, isSupported, type Messaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
+import { isIndexedDbPersistenceError } from '@/lib/firestore-idb-errors';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBjpGl-kwbFgnQ1hGA8dg23K2aGxT1f8jo",
@@ -52,10 +53,10 @@ function createDb(): Firestore {
       }),
     });
   } catch (err) {
-    // If IndexedDB is corrupted (e.g. "refusing to open IndexedDB"), trigger
-    // the same recovery flow used for async errors: clear persistence and reload.
+    // If IndexedDB is broken (corruption or Safari/WebKit abort), trigger the
+    // same recovery flow used for async errors: clear persistence and reload.
     // Use a session flag to avoid an infinite reload loop.
-    if (isIndexedDbCorruptionError(err) && sessionStorage.getItem(IDB_RECOVERY_FLAG) !== '1') {
+    if (isIndexedDbPersistenceError(err) && sessionStorage.getItem(IDB_RECOVERY_FLAG) !== '1') {
       sessionStorage.setItem(IDB_RECOVERY_FLAG, '1');
       // Fall back to memory cache for this session while we schedule a reload.
       const fallbackDb = initializeFirestore(app, { localCache: memoryLocalCache() });
@@ -66,28 +67,6 @@ function createDb(): Firestore {
     }
     return initializeFirestore(app, { localCache: memoryLocalCache() });
   }
-}
-
-function getErrorMessage(reason: unknown): string {
-  if (reason instanceof Error) return reason.message ?? '';
-  if (typeof reason === 'string') return reason;
-  if (reason && typeof reason === 'object' && 'message' in reason) {
-    return String((reason as { message: unknown }).message);
-  }
-  return '';
-}
-
-/**
- * Detects Firestore IndexedDB corruption (e.g. after the user clears site data)
- * and automatically recovers by wiping the stale IndexedDB and reloading once.
- */
-function isIndexedDbCorruptionError(reason: unknown): boolean {
-  const msg = getErrorMessage(reason);
-  return (
-    msg.includes('refusing to open IndexedDB') ||
-    (msg.includes('IndexedDB transaction') &&
-      (msg.includes('AbortError') || msg.includes('code=unavailable')))
-  );
 }
 
 function recoverFromIndexedDbCorruption(): void {
@@ -106,16 +85,16 @@ function recoverFromIndexedDbCorruption(): void {
 const db = createDb();
 
 if (typeof window !== 'undefined') {
-  // Safari often surfaces IDB corruption via window.onerror (sync throw), not
+  // Safari often surfaces IDB failures via window.onerror (sync throw), not
   // only as an unhandled promise rejection — listen for both.
   window.addEventListener('unhandledrejection', (event) => {
-    if (isIndexedDbCorruptionError(event.reason)) {
+    if (isIndexedDbPersistenceError(event.reason)) {
       event.preventDefault();
       recoverFromIndexedDbCorruption();
     }
   });
   window.addEventListener('error', (event) => {
-    if (isIndexedDbCorruptionError(event.error ?? event.message)) {
+    if (isIndexedDbPersistenceError(event.error ?? event.message)) {
       event.preventDefault();
       recoverFromIndexedDbCorruption();
     }

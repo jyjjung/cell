@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.10.1',
+    subtitle: 'Safari offline cache recovery',
+    date: 'August 4, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'On iPhone Safari, the app recovers automatically when the offline cache breaks after switching apps',
+      },
+    ],
+  },
+  {
     version: 'v1.10.0',
     subtitle: 'Other roster reminders',
     date: 'August 1, 2026',
