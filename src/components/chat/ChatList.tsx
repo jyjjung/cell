@@ -21,13 +21,11 @@ import type { Chat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
 import { formatDistanceToNow } from "date-fns";
-import { useOnlineStatus } from "@/hooks/use-online-status";
 
 export default function ChatList() {
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
   const { currentUser, isAdmin } = useAuth();
-  const online = useOnlineStatus();
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -89,10 +87,6 @@ export default function ChatList() {
           </Button>
         }
       />
-
-      {!online && chats.length > 0 && (
-        <p className="text-micro-label px-1">{t.chatOfflineBanner}</p>
-      )}
 
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">

@@ -6,9 +6,8 @@ import { WifiOff, Wifi } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 
 /**
- * A slim banner that slides down when the user goes offline and slides up
- * briefly when they reconnect. It sits at the very top of the viewport,
- * above all other content.
+ * Single offline signal for the app. Renders in document flow above the
+ * header so it never covers full-screen viewers or chrome controls.
  */
 export function OfflineBanner() {
   const online = useOnlineStatus();
@@ -35,35 +34,39 @@ export function OfflineBanner() {
   const show = showOffline || showReconnected;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence initial={false}>
       {show && (
         <motion.div
-          initial={{ y: -48, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -48, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed top-0 inset-x-0 z-[300] flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold pointer-events-none select-none"
-          style={{
-            background: showOffline
-              ? 'rgba(239,68,68,0.92)'
-              : 'rgba(34,197,94,0.92)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="shrink-0 overflow-hidden select-none"
+          role="status"
+          aria-live="polite"
         >
-          {showOffline ? (
-            <>
-              <WifiOff className="h-3.5 w-3.5 text-white shrink-0" />
-              <span className="text-white">
-                You&apos;re offline — showing cached content
-              </span>
-            </>
-          ) : (
-            <>
-              <Wifi className="h-3.5 w-3.5 text-white shrink-0" />
-              <span className="text-white">Back online</span>
-            </>
-          )}
+          <div
+            className="flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold"
+            style={{
+              background: showOffline
+                ? 'rgba(239,68,68,0.92)'
+                : 'rgba(34,197,94,0.92)',
+            }}
+          >
+            {showOffline ? (
+              <>
+                <WifiOff className="h-3.5 w-3.5 text-white shrink-0" />
+                <span className="text-white">
+                  You&apos;re offline — showing cached content
+                </span>
+              </>
+            ) : (
+              <>
+                <Wifi className="h-3.5 w-3.5 text-white shrink-0" />
+                <span className="text-white">Back online</span>
+              </>
+            )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

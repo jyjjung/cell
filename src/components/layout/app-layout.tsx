@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import Sidebar from './sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import Header from './header';
+import { OfflineBanner } from './offline-banner';
 import { useAuth } from '@/contexts/auth-context';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ function GuestShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col bg-background">
+      <OfflineBanner />
       <div className="relative z-10 flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden">
         <div className={cn('flex-grow flex flex-col', !isLanding && 'page-shell')}>{children}</div>
       </div>
@@ -177,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex flex-1 flex-col min-h-0">
+          <OfflineBanner />
           <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
           <CommandMenuLazy open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
           <InboxSheetLazy />
