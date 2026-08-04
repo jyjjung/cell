@@ -39,7 +39,15 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Improved',
-        text: 'Admin Forms splits into Forms maker and Responses — view, share, or download one submission or everyone’s answers (CSV/PDF).',
+        text: 'PDF downloads use a landscape spreadsheet table (same columns as CSV) with clear headers and alternating rows.',
+      },
+      {
+        type: 'Changed',
+        text: 'Removed the bottom “A new version is ready” update banner.',
+      },
+      {
+        type: 'Improved',
+        text: 'Admin Forms splits into Forms maker and Responses — view or download submissions; share a guest responses link so people can see answers without signing in.',
       },
       {
         type: 'Improved',
@@ -47,7 +55,7 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Fixed',
-        text: 'Form create/save no longer fails on empty optional settings; the Forms list no longer crashes after submit; PDF export and the update prompt behave reliably.',
+        text: 'Form create/save no longer fails on empty optional settings; the Forms list no longer crashes after submit; PDF export behaves reliably; drafts no longer stay visible on the member Forms page after you unpublish.',
       },
       {
         type: 'Changed',

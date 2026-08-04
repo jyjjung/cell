@@ -1,10 +1,67 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { getFormByPublicToken, createFormResponse, normalizeEmail, FormCapacityError } from '@/lib/server-forms';
+import {
+  getFormByPublicToken,
+  createFormResponse,
+  normalizeEmail,
+  FormCapacityError,
+  listFormResponsesForAdmin,
+  listFormResponsesForAdminFallback,
+} from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import { applyProfileReferenceAnswers, formatProfileName } from '@/lib/forms/prefill';
 import type { FormAnswerValue } from '@/types/forms';
+
+/** Guest-readable responses list (no auth). Bounded + paginated. */
+export async function GET(request: NextRequest, { params }: { params: { publicToken: string } }) {
+  try {
+    const adminApp = getAdminApp();
+    const adminDb = getAdminDb(adminApp);
+    const form = await getFormByPublicToken(adminDb, params.publicToken);
+    if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+
+    const url = new URL(request.url);
+    const cursor = url.searchParams.get('cursor');
+    const limitRaw = url.searchParams.get('limit');
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+
+    let page: { responses: unknown[]; nextCursor: string | null };
+    try {
+      page = await listFormResponsesForAdmin(adminDb, form.id, { limit, cursor });
+    } catch (indexError: unknown) {
+      const message = indexError instanceof Error ? indexError.message : '';
+      if (message.includes('index') || message.includes('FAILED_PRECONDITION')) {
+        page = await listFormResponsesForAdminFallback(adminDb, form.id, limit);
+      } else {
+        throw indexError;
+      }
+    }
+
+    return NextResponse.json(
+      {
+        form: {
+          id: form.id,
+          title: form.title,
+          description: form.description,
+          fields: form.fields,
+          responseCount: form.responseCount ?? 0,
+        },
+        responses: page.responses,
+        nextCursor: page.nextCursor,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+        },
+      },
+    );
+  } catch (error: unknown) {
+    console.error('[forms/public responses GET]', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest, { params }: { params: { publicToken: string } }) {
   try {

@@ -19,7 +19,6 @@ import {
   Check,
   Download,
   Link2,
-  Share2,
   X,
 } from 'lucide-react';
 
@@ -40,7 +39,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [guestLinkCopied, setGuestLinkCopied] = useState(false);
+  const [publicLinkCopied, setPublicLinkCopied] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFixed, setExportFixed] = useState<FormResponse | null>(null);
 
@@ -117,16 +116,23 @@ export default function AdminFormResponsesPage({ formId }: Props) {
     return all.slice(0, EXPORT_CAP);
   }, [formId]);
 
-  const copyGuestLink = async (response: FormResponse) => {
-    if (!form) return;
-    const absolute = `${window.location.origin}/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(response.id)}`;
+  const copyPublicGuestLink = async () => {
+    if (!form?.publicToken || form.status === 'draft') {
+      toast({
+        variant: 'destructive',
+        title: 'Not shareable yet',
+        description: 'Publish the form before sharing responses.',
+      });
+      return;
+    }
+    const absolute = `${window.location.origin}/forms/public/${form.publicToken}/responses`;
     try {
       await navigator.clipboard.writeText(absolute);
-      setGuestLinkCopied(true);
-      window.setTimeout(() => setGuestLinkCopied(false), 2000);
+      setPublicLinkCopied(true);
+      window.setTimeout(() => setPublicLinkCopied(false), 2000);
       toast({
-        title: 'Guest link copied',
-        description: 'Share this so they can open or update their response.',
+        title: 'Responses link copied',
+        description: 'Anyone with this link can view submissions — no sign-in required.',
       });
     } catch {
       toast({ variant: 'destructive', title: 'Copy failed', description: absolute });
@@ -191,6 +197,19 @@ export default function AdminFormResponsesPage({ formId }: Props) {
             <Link href={`/admin/forms/${encodeURIComponent(form.id)}`}>Edit form</Link>
           </Button>
           <Button
+            variant="outline"
+            className="rounded-xl"
+            disabled={form.status === 'draft' || !form.publicToken}
+            onClick={() => void copyPublicGuestLink()}
+          >
+            {publicLinkCopied ? (
+              <Check className="h-4 w-4 mr-1.5" />
+            ) : (
+              <Link2 className="h-4 w-4 mr-1.5" />
+            )}
+            {publicLinkCopied ? 'Copied' : 'Share responses'}
+          </Button>
+          <Button
             className="rounded-xl"
             disabled={responses.length === 0}
             onClick={openBulkExport}
@@ -204,7 +223,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
       {responses.length === 0 ? (
         <EmptyState
           title="No responses yet"
-          description="Share the published guest link. Submissions will show up here."
+          description="Share the responses link so guests can see submissions without signing in."
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
@@ -221,10 +240,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => {
-                    setSelectedId(r.id);
-                    setGuestLinkCopied(false);
-                  }}
+                  onClick={() => setSelectedId(r.id)}
                   className={`w-full text-left rounded-xl border px-3.5 py-3 transition-colors ${
                     isSelected
                       ? 'border-primary/50 bg-primary/10'
@@ -271,7 +287,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
             {!selected ? (
               <div className="flex h-full min-h-[200px] items-center justify-center">
                 <p className="text-sm text-muted-foreground text-center px-4">
-                  Select a response to view, share, or download it.
+                  Select a response to view or download it.
                 </p>
               </div>
             ) : (
@@ -283,38 +299,14 @@ export default function AdminFormResponsesPage({ formId }: Props) {
                     </p>
                     <h3 className="text-section-title truncate mt-0.5">{selected.submitterEmail}</h3>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={() => void copyGuestLink(selected)}
-                    >
-                      {guestLinkCopied ? (
-                        <Check className="h-3.5 w-3.5 mr-1.5" />
-                      ) : (
-                        <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                      )}
-                      {guestLinkCopied ? 'Copied' : 'Share'}
-                    </Button>
-                    <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                      <Link
-                        href={`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(selected.id)}`}
-                        target="_blank"
-                      >
-                        <Link2 className="h-3.5 w-3.5 mr-1.5" />
-                        Open
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={() => setSelectedId(null)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl shrink-0"
+                    onClick={() => setSelectedId(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
 
                 <ReportPanel

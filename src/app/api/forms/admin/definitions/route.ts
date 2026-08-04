@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     if (!caller) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const forms = await listAccessibleForms(adminDb, caller.uid);
+    const forms = await listAccessibleForms(adminDb, caller.uid, { includeDrafts: true });
     return NextResponse.json({ forms });
   } catch (error: unknown) {
     console.error('[forms/admin/definitions GET]', error);
