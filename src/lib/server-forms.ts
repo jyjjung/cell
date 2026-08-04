@@ -63,9 +63,14 @@ function toFormDefinition(raw: any, id: string): FormDefinition | null {
     title: raw.title,
     description: typeof raw.description === 'string' ? raw.description : undefined,
     fields,
+    status: raw.status === 'draft' ? 'draft' : 'published',
+    deadlineDate: typeof raw.deadlineDate === 'string' ? raw.deadlineDate : undefined,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     publicToken: typeof raw.publicToken === 'string' ? raw.publicToken : undefined,
+    publishedAt: raw.publishedAt,
+    publishedBy: typeof raw.publishedBy === 'string' ? raw.publishedBy : undefined,
+    publishVersion: typeof raw.publishVersion === 'number' ? raw.publishVersion : undefined,
     allowedRoleIds: Array.isArray(raw.allowedRoleIds) ? raw.allowedRoleIds.filter((x: any) => typeof x === 'string') : undefined,
     allowedUserIds: Array.isArray(raw.allowedUserIds) ? raw.allowedUserIds.filter((x: any) => typeof x === 'string') : undefined,
     createdBy: typeof raw.createdBy === 'string' ? raw.createdBy : undefined,
@@ -95,6 +100,7 @@ export async function userIsAppAdmin(adminDb: Firestore, userId: string): Promis
 
 export async function canUserViewForm(adminDb: Firestore, userId: string, form: FormDefinition): Promise<boolean> {
   if (await userIsAppAdmin(adminDb, userId)) return true;
+  if (form.status === 'draft') return false;
   const roleIds = await getUserRoleIds(adminDb, userId);
   const allowedUserIds = form.allowedUserIds ?? [];
   const allowedRoleIds = form.allowedRoleIds ?? [];
@@ -113,7 +119,9 @@ export async function getFormByPublicToken(adminDb: Firestore, publicToken: stri
   const link = linkSnap.data() as { formId?: string } | undefined;
   const formId = link?.formId;
   if (typeof formId !== 'string' || !formId) return null;
-  return getFormById(adminDb, formId);
+  const form = await getFormById(adminDb, formId);
+  if (!form || form.status === 'draft') return null;
+  return form;
 }
 
 export async function listAccessibleForms(adminDb: Firestore, userId: string): Promise<FormDefinition[]> {
@@ -147,12 +155,12 @@ export async function listAccessibleForms(adminDb: Firestore, userId: string): P
   const map = new Map<string, FormDefinition>();
   for (const d of byUsersSnap.docs) {
     const parsed = toFormDefinition(d.data(), d.id);
-    if (parsed) map.set(parsed.id, parsed);
+    if (parsed && parsed.status !== 'draft') map.set(parsed.id, parsed);
   }
   if (byRolesSnap) {
     for (const d of byRolesSnap.docs) {
       const parsed = toFormDefinition(d.data(), d.id);
-      if (parsed) map.set(parsed.id, parsed);
+      if (parsed && parsed.status !== 'draft') map.set(parsed.id, parsed);
     }
   }
   return [...map.values()].sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0));
@@ -169,6 +177,8 @@ export async function createFormDefinition(input: {
   fields: FormDefinition['fields'];
   allowedRoleIds?: string[];
   allowedUserIds?: string[];
+  status?: 'draft' | 'published';
+  deadlineDate?: string;
   createdBy: string;
 }): Promise<{ formId: string; publicToken: string }> {
   const adminApp = getAdminApp();
@@ -181,11 +191,16 @@ export async function createFormDefinition(input: {
     title: input.title,
     description: input.description ?? null,
     fields: input.fields,
+    status: input.status ?? 'draft',
+    deadlineDate: input.deadlineDate ?? null,
     allowedRoleIds: input.allowedRoleIds ?? [],
     allowedUserIds: input.allowedUserIds ?? [],
     publicToken,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
+    publishedAt: input.status === 'published' ? FieldValue.serverTimestamp() : null,
+    publishedBy: input.status === 'published' ? input.createdBy : null,
+    publishVersion: input.status === 'published' ? 1 : 0,
     createdBy: input.createdBy,
   });
 
@@ -204,19 +219,83 @@ export async function updateFormDefinition(formId: string, input: {
   fields: FormDefinition['fields'];
   allowedRoleIds?: string[];
   allowedUserIds?: string[];
+  status?: 'draft' | 'published';
+  deadlineDate?: string;
   updatedBy: string;
 }): Promise<void> {
   const adminApp = getAdminApp();
   const adminDb = getAdminDb(adminApp);
-  await adminDb.collection(FORMS_COLLECTION).doc(formId).set({
+  const ref = adminDb.collection(FORMS_COLLECTION).doc(formId);
+  const snap = await ref.get();
+  const current = snap.data() as Record<string, unknown> | undefined;
+  const currentStatus = current?.status === 'draft' ? 'draft' : 'published';
+  const nextStatus = input.status ?? currentStatus;
+  const statusChangedToPublished = currentStatus !== 'published' && nextStatus === 'published';
+  const publishVersion =
+    typeof current?.publishVersion === 'number'
+      ? current.publishVersion + (statusChangedToPublished ? 1 : 0)
+      : nextStatus === 'published'
+        ? 1
+        : 0;
+  await ref.set({
     title: input.title,
     description: input.description ?? null,
     fields: input.fields,
+    status: nextStatus,
+    deadlineDate: input.deadlineDate ?? null,
     allowedRoleIds: input.allowedRoleIds ?? [],
     allowedUserIds: input.allowedUserIds ?? [],
     updatedAt: FieldValue.serverTimestamp(),
     updatedBy: input.updatedBy,
+    ...(statusChangedToPublished
+      ? {
+          publishedAt: FieldValue.serverTimestamp(),
+          publishedBy: input.updatedBy,
+        }
+      : {}),
+    publishVersion,
   }, { merge: true });
+}
+
+export async function listAccessibleFormRecipientUserIds(
+  adminDb: Firestore,
+  form: Pick<FormDefinition, 'allowedRoleIds' | 'allowedUserIds' | 'status'>,
+): Promise<string[]> {
+  if (form.status === 'draft') return [];
+  const allowedUsers = new Set((form.allowedUserIds ?? []).filter(Boolean));
+  const allowedRoles = (form.allowedRoleIds ?? []).filter(Boolean);
+
+  if (allowedRoles.length > 0) {
+    const roleChunks: string[][] = [];
+    for (let i = 0; i < allowedRoles.length; i += 10) {
+      roleChunks.push(allowedRoles.slice(i, i + 10));
+    }
+    for (const chunk of roleChunks) {
+      const snap = await adminDb
+        .collection(USERS_COLLECTION)
+        .where('roleIds', 'array-contains-any', chunk)
+        .get();
+      for (const doc of snap.docs) {
+        if (doc.data()?.isApproved === false) continue;
+        allowedUsers.add(doc.id);
+      }
+    }
+  }
+
+  return [...allowedUsers];
+}
+
+export async function listSubmittedUserIdsForForm(adminDb: Firestore, formId: string): Promise<Set<string>> {
+  const snap = await adminDb
+    .collection(FORM_RESPONSES_COLLECTION)
+    .where('formId', '==', formId)
+    .get();
+  const submitted = new Set<string>();
+  for (const doc of snap.docs) {
+    const userId = doc.data()?.submitterUserId;
+    if (typeof userId === 'string' && userId) submitted.add(userId);
+  }
+  return submitted;
 }
 
 export async function listFormResponsesForAdmin(adminDb: Firestore, formId: string): Promise<FormResponse[]> {

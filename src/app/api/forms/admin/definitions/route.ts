@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminAuth, getAdminDb, getAdminMessaging } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
-import { createFormDefinition, listAccessibleForms } from '@/lib/server-forms';
+import { createFormDefinition, getFormById, listAccessibleForms } from '@/lib/server-forms';
 import type { FormFieldDefinition } from '@/types/forms';
+import type { UserProfileData } from '@/types';
+import { sendFormPublishedNotifications } from '@/lib/forms/publish-notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,6 +47,8 @@ export async function POST(request: NextRequest) {
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 });
 
     const description = typeof body.description === 'string' ? body.description : undefined;
+    const status = body.status === 'draft' ? 'draft' : 'published';
+    const deadlineDate = typeof body.deadlineDate === 'string' && body.deadlineDate.trim() ? body.deadlineDate : undefined;
 
     const rawFields = Array.isArray(body.fields) ? (body.fields as any[]) : [];
     const fields: FormFieldDefinition[] = [];
@@ -83,8 +87,24 @@ export async function POST(request: NextRequest) {
       fields,
       allowedRoleIds,
       allowedUserIds,
+      status,
+      deadlineDate,
       createdBy: decoded.uid,
     });
+
+    if (status === 'published') {
+      const createdForm = await getFormById(adminDb, created.formId);
+      if (createdForm) {
+        const usersSnap = await adminDb.collection('users').get();
+        const users = usersSnap.docs.map((d) => ({ uid: d.id, ...d.data() }) as UserProfileData);
+        await sendFormPublishedNotifications({
+          adminDb,
+          adminMessaging: getAdminMessaging(adminApp),
+          form: createdForm,
+          users,
+        });
+      }
+    }
 
     return NextResponse.json({ ...created });
   } catch (error: unknown) {

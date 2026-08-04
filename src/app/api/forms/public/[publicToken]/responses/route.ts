@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { getFormByPublicToken, createFormResponse, normalizeEmail } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import type { FormAnswerValue } from '@/types/forms';
@@ -22,8 +22,20 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
 
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
+    const adminAuth = getAdminAuth(adminApp);
     const form = await getFormByPublicToken(adminDb, params.publicToken);
     if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+
+    let submitterUserId: string | null = null;
+    const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+    if (token) {
+      try {
+        const decoded = await adminAuth.verifyIdToken(token);
+        submitterUserId = decoded.uid;
+      } catch {
+        submitterUserId = null;
+      }
+    }
 
     const { errorsByFieldId } = validateFormResponse(form, answers);
     const responseId = await createFormResponse({
@@ -32,7 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
       answers,
       formTitleSnapshot: form.title,
       lastValidationErrors: Object.keys(errorsByFieldId).length ? errorsByFieldId : null,
-      submitterUserId: null,
+      submitterUserId,
     });
 
     return NextResponse.json({

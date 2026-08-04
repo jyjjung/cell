@@ -86,6 +86,7 @@ export default function AppSidebar() {
     ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal, icon: Music }] : []),
     { href: '/media', label: t.links, icon: Library },
     { href: '/docs', label: t.docs, icon: FileText, requiresAuth: true },
+    { href: '/forms', label: t.forms, icon: FileText },
     { href: '/members', label: t.members, icon: Users },
     { href: '/prayer-requests', label: t.prayerRequests, icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
     { href: '/feedback', label: t.feedback, icon: Lightbulb },

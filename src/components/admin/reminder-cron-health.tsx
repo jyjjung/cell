@@ -24,6 +24,8 @@ interface CronHeartbeat {
   lastRunDutySent?: number;
   lastRunDutyCandidates?: number;
   lastRunEventsSent?: number;
+  lastRunFormsSent?: number;
+  lastRunFormsCandidates?: number;
   lastRunPushRetriesSent?: number;
   lastRunFullScanSkipped?: boolean;
 }
@@ -74,6 +76,12 @@ export function ReminderCronHealth() {
   }
   if (typeof data?.lastRunEventsSent === 'number') {
     metrics.push(`${t.adminReminderHealthEventsSent}: ${data.lastRunEventsSent}`);
+  }
+  if (typeof data?.lastRunFormsSent === 'number') {
+    metrics.push(`Forms sent: ${data.lastRunFormsSent}`);
+  }
+  if (typeof data?.lastRunFormsCandidates === 'number') {
+    metrics.push(`Forms candidates: ${data.lastRunFormsCandidates}`);
   }
   if (typeof data?.lastRunPushRetriesSent === 'number') {
     metrics.push(`${t.adminReminderHealthPushRetries}: ${data.lastRunPushRetriesSent}`);
