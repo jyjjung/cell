@@ -20,9 +20,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Plus, Save as SaveIcon } from 'lucide-react';
 
+function createFieldId(): string {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `field_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function defaultField(order: number): FormFieldDefinition {
   return {
-    id: crypto.randomUUID(),
+    id: createFieldId(),
     label: `Field ${order + 1}`,
     type: 'text',
     order,
