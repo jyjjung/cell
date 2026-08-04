@@ -19,19 +19,27 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Added',
-        text: 'Forms with guest share links, admin Build/Preview/Responses, deadlines, reminders, and many question types including Name, Email, Phone, and Birthday.',
+        text: 'Forms with guest share links, admin Forms maker, deadlines, optional response limits, reminders, and many question types including Name, Email, Phone, and Birthday.',
       },
       {
         type: 'Added',
-        text: 'Signed-in members get profile pre-fill for common fields, and submitting those answers updates their profile for next time.',
+        text: 'Signed-in members’ Name and Email from profile attach to responses for admin reports only (hidden on the form); add separate Name/Email questions when you need people to type them. Phone and Birthday still pre-fill and can update the profile.',
       },
       {
         type: 'Improved',
         text: 'After submit you see a thank-you screen; yes/no and single choice show every option as radios; Create form sits under the question list.',
       },
       {
+        type: 'Added',
+        text: 'Delete your own form submissions from Forms or the response page (signed-in owners only).',
+      },
+      {
+        type: 'Added',
+        text: 'When downloading responses, admins can choose which questions and which submitters to include in CSV or PDF.',
+      },
+      {
         type: 'Improved',
-        text: 'Admin Responses is a clearer list with a report-only view, CSV/PDF export, and a guest link you can share when someone needs to reopen their response.',
+        text: 'Admin Forms splits into Forms maker and Responses — view, share, or download one submission or everyone’s answers (CSV/PDF).',
       },
       {
         type: 'Improved',

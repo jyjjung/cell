@@ -1,4 +1,5 @@
 import type { FormAnswerValue, FormDefinition, FormFieldDefinition } from '@/types/forms';
+import { isProfileReferenceFieldType } from '@/lib/forms/field-types';
 
 export type FormProfilePrefill = {
   name?: string | null;
@@ -26,7 +27,7 @@ export function toDateInputValue(raw: string | null | undefined): string {
   return match?.[1] ?? '';
 }
 
-/** Build blank answers, optionally prefilling profile-linked name/email/phone/birthday fields. */
+/** Build blank answers, optionally prefilling profile-linked / reference fields. */
 export function buildInitialAnswers(
   form: Pick<FormDefinition, 'fields'>,
   profile?: FormProfilePrefill | null,
@@ -61,10 +62,43 @@ export function buildInitialAnswers(
   return initial;
 }
 
-export function findFirstEmailField(fields: FormFieldDefinition[]): FormFieldDefinition | undefined {
-  return [...fields].sort((a, b) => a.order - b.order).find((f) => f.type === 'email');
+/**
+ * Force profile Name/Email reference answers from the signed-in member.
+ * Clients cannot override these — they are for admin reports only.
+ */
+export function applyProfileReferenceAnswers(
+  form: Pick<FormDefinition, 'fields'>,
+  answers: Record<string, FormAnswerValue>,
+  profile?: FormProfilePrefill | null,
+): Record<string, FormAnswerValue> {
+  if (!profile) return answers;
+  const next = { ...answers };
+  for (const field of form.fields) {
+    if (!isProfileReferenceFieldType(field.type)) continue;
+    if (field.type === 'name' && profile.name) {
+      next[field.id] = profile.name;
+    }
+    if (field.type === 'email' && profile.email) {
+      next[field.id] = profile.email;
+    }
+  }
+  return next;
 }
 
+export function findFirstContactEmailField(fields: FormFieldDefinition[]): FormFieldDefinition | undefined {
+  return [...fields].sort((a, b) => a.order - b.order).find((f) => f.type === 'contactEmail');
+}
+
+/** @deprecated Prefer findFirstContactEmailField — profile email is not a fill-out field. */
+export function findFirstEmailField(fields: FormFieldDefinition[]): FormFieldDefinition | undefined {
+  return findFirstContactEmailField(fields);
+}
+
+export function formHasContactEmailField(form: Pick<FormDefinition, 'fields'>): boolean {
+  return form.fields.some((f) => f.type === 'contactEmail');
+}
+
+/** @deprecated Prefer formHasContactEmailField */
 export function formHasEmailField(form: Pick<FormDefinition, 'fields'>): boolean {
-  return form.fields.some((f) => f.type === 'email');
+  return formHasContactEmailField(form);
 }

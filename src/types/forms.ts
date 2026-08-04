@@ -5,8 +5,10 @@ export type FormFieldType =
   | 'textarea'
   | 'select'
   | 'checkbox' // multi
-  | 'name' // profile-linked short text
-  | 'email' // profile-linked email
+  | 'name' // profile reference — admin reports only, hidden on fill
+  | 'email' // profile reference — admin reports only, hidden on fill
+  | 'contactName' // visible name question (editable)
+  | 'contactEmail' // visible email question (editable)
   | 'birthday' // profile-linked date (yyyy-MM-dd)
   | 'date'
   | 'time'
@@ -52,6 +54,11 @@ export interface FormDefinition {
   fields: FormFieldDefinition[];
   status?: 'draft' | 'published';
   deadlineDate?: string; // ISO yyyy-MM-dd
+  /**
+   * Optional cap on total submissions. Omit / null = unlimited.
+   * Enforced when creating a new response.
+   */
+  maxResponses?: number | null;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   /**

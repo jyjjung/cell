@@ -1,4 +1,5 @@
 import type { FormDefinition, FormFieldDefinition, FormAnswerValue } from '@/types/forms';
+import { isProfileReferenceFieldType } from '@/lib/forms/field-types';
 
 export type VisibleFieldMap = Record<string, boolean>;
 
@@ -35,6 +36,10 @@ function isConditionalSatisfied(field: FormFieldDefinition, answers: Record<stri
 export function computeVisibleFields(form: FormDefinition, answers: Record<string, FormAnswerValue>): VisibleFieldMap {
   const visible: VisibleFieldMap = {};
   for (const field of [...form.fields].sort((a, b) => a.order - b.order)) {
+    if (isProfileReferenceFieldType(field.type)) {
+      visible[field.id] = false;
+      continue;
+    }
     visible[field.id] = isConditionalSatisfied(field, answers);
   }
   return visible;
@@ -48,6 +53,8 @@ export function validateFormResponse(
   const errorsByFieldId: Record<string, string> = {};
 
   for (const field of form.fields) {
+    if (isProfileReferenceFieldType(field.type)) continue;
+
     const isVisible = visibleFields[field.id] ?? true;
     if (!isVisible) continue;
 
@@ -63,7 +70,7 @@ export function validateFormResponse(
       continue;
     }
 
-    if (field.type === 'email' && hasValue && !isValidEmail(stringValue)) {
+    if (field.type === 'contactEmail' && hasValue && !isValidEmail(stringValue)) {
       errorsByFieldId[field.id] = 'Enter a valid email address.';
       continue;
     }
@@ -83,7 +90,6 @@ export function validateFormResponse(
 
     if (field.type === 'url' && hasValue) {
       try {
-        // Allow bare domains by prefixing https when missing.
         const candidate = /^https?:\/\//i.test(stringValue) ? stringValue : `https://${stringValue}`;
         // eslint-disable-next-line no-new
         new URL(candidate);

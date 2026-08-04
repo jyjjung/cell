@@ -1,9 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { getFormById, getFormResponseById, updateFormResponseAnswers } from '@/lib/server-forms';
+import { getFormById, getFormResponseById, updateFormResponseAnswers, deleteFormResponseForOwner } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import type { FormAnswerValue } from '@/types/forms';
+
+const USERS_COLLECTION = 'users';
 
 export async function GET(_request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
   try {
@@ -89,6 +91,49 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
     });
   } catch (error: unknown) {
     console.error('[forms/guest PUT]', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
+  try {
+    const adminApp = getAdminApp();
+    const adminDb = getAdminDb(adminApp);
+    const adminAuth = getAdminAuth(adminApp);
+
+    const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!token) return NextResponse.json({ error: 'Sign in to delete your response.' }, { status: 401 });
+
+    let uid: string;
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      uid = decoded.uid;
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userSnap = await adminDb.collection(USERS_COLLECTION).doc(uid).get();
+    const emailRaw = userSnap.data()?.email;
+    const userEmail = typeof emailRaw === 'string' ? emailRaw : null;
+
+    const result = await deleteFormResponseForOwner({
+      responseId: params.responseId,
+      formId: params.formId,
+      userId: uid,
+      userEmail,
+    });
+
+    if (result.reason === 'not_found') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (result.reason === 'forbidden') {
+      return NextResponse.json({ error: 'You can only delete your own responses.' }, { status: 403 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error('[forms/guest DELETE]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }

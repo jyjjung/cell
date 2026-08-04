@@ -11,11 +11,13 @@ import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import type { FormAnswerValue, FormDefinition } from '@/types/forms';
 import { isValidEmail, validateFormResponse } from '@/lib/forms/validation';
 import {
+  applyProfileReferenceAnswers,
   buildInitialAnswers,
-  findFirstEmailField,
-  formHasEmailField,
+  findFirstContactEmailField,
+  formHasContactEmailField,
   formatProfileName,
 } from '@/lib/forms/prefill';
+import { formHasResponseCapacity } from '@/lib/forms/capacity';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 
@@ -35,7 +37,7 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const hasEmailField = useMemo(() => (form ? formHasEmailField(form) : false), [form]);
+  const hasContactEmailField = useMemo(() => (form ? formHasContactEmailField(form) : false), [form]);
 
   useEffect(() => {
     if (!loadingAuth) {
@@ -79,14 +81,13 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   }, [form, currentUser, submitted]);
 
   const emailValid = useMemo(() => isValidEmail(email), [email]);
-  const askForEmail = !currentUser && !hasEmailField;
-  const canSubmit = !!form && !submitting;
+  const askForEmail = !currentUser && !hasContactEmailField;
 
   const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
     setAnswers(next);
     if (fieldErrors) setFieldErrors(null);
-    if (hasEmailField) {
-      const emailField = findFirstEmailField(form?.fields ?? []);
+    if (hasContactEmailField) {
+      const emailField = findFirstContactEmailField(form?.fields ?? []);
       if (emailField) {
         const fromField = next[emailField.id];
         if (typeof fromField === 'string') setEmail(fromField);
@@ -95,8 +96,8 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   };
 
   const resolveSubmitEmail = (): string => {
-    if (hasEmailField && form) {
-      const emailField = findFirstEmailField(form.fields);
+    if (hasContactEmailField && form) {
+      const emailField = findFirstContactEmailField(form.fields);
       if (emailField) {
         const fromField = answers[emailField.id];
         if (typeof fromField === 'string' && fromField.trim()) return fromField.trim();
@@ -111,8 +112,8 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
     const submitEmail = resolveSubmitEmail();
     if (!isValidEmail(submitEmail)) {
       setEmailTouched(true);
-      if (hasEmailField) {
-        const emailField = findFirstEmailField(form.fields);
+      if (hasContactEmailField) {
+        const emailField = findFirstContactEmailField(form.fields);
         if (emailField) {
           setFieldErrors({ [emailField.id]: 'Enter a valid email address.' });
         }
@@ -121,7 +122,17 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
       return;
     }
 
-    const { errorsByFieldId } = validateFormResponse(form, answers);
+    const profile = currentUser
+      ? {
+          name: formatProfileName(currentUser),
+          email: currentUser.email,
+          phone: currentUser.phone,
+          birthday: currentUser.birthday,
+        }
+      : null;
+    const answersToSubmit = applyProfileReferenceAnswers(form, answers, profile);
+
+    const { errorsByFieldId } = validateFormResponse(form, answersToSubmit);
     if (Object.keys(errorsByFieldId).length > 0) {
       setFieldErrors(errorsByFieldId);
       toast({
@@ -141,7 +152,7 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ email: submitEmail, answers }),
+        body: JSON.stringify({ email: submitEmail, answers: answersToSubmit }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -201,6 +212,9 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
     );
   }
 
+  const acceptingResponses = formHasResponseCapacity(form);
+  const canSubmit = !!form && !submitting && acceptingResponses;
+
   return (
     <div className="page-container">
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
@@ -210,8 +224,23 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
           {form.deadlineDate ? (
             <p className="text-xs text-muted-foreground">Deadline: {form.deadlineDate}</p>
           ) : null}
+          {typeof form.maxResponses === 'number' && form.maxResponses > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {form.responseCount ?? 0} / {form.maxResponses} responses
+            </p>
+          ) : null}
         </div>
 
+        {!acceptingResponses ? (
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm space-y-3">
+            <p className="font-medium">This form is no longer accepting responses.</p>
+            <p className="text-muted-foreground">The response limit has been reached.</p>
+            <Button asChild variant="outline" className="rounded-xl">
+              <a href="/forms">Back to forms</a>
+            </Button>
+          </div>
+        ) : (
+          <>
         {askForEmail ? (
           <div className="space-y-2">
             <Label htmlFor="guestEmail">Your email</Label>
@@ -236,7 +265,7 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
               </p>
             )}
           </div>
-        ) : currentUser && !hasEmailField ? (
+        ) : currentUser && !hasContactEmailField ? (
           <p className="text-sm text-muted-foreground">
             Submitting as <span className="font-medium text-foreground">{email}</span>
           </p>
@@ -256,6 +285,8 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
             {submitting ? <LoadingSpinner /> : 'Submit'}
           </Button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
     const description = typeof body.description === 'string' ? body.description : undefined;
     const status = body.status === 'draft' ? 'draft' : 'published';
     const deadlineDate = typeof body.deadlineDate === 'string' && body.deadlineDate.trim() ? body.deadlineDate : undefined;
+    const maxResponsesRaw = body.maxResponses;
+    const maxResponses =
+      maxResponsesRaw === null || maxResponsesRaw === undefined || maxResponsesRaw === ''
+        ? null
+        : (() => {
+            const n = typeof maxResponsesRaw === 'number' ? maxResponsesRaw : Number(maxResponsesRaw);
+            if (!Number.isFinite(n) || n <= 0) return null;
+            return Math.min(Math.floor(n), 100_000);
+          })();
     const fields = parseFieldsFromBody(body.fields);
 
     const allowedRoleIds = Array.isArray(body.allowedRoleIds) ? body.allowedRoleIds.filter((x: any) => typeof x === 'string') : undefined;
@@ -62,6 +71,7 @@ export async function POST(request: NextRequest) {
       allowedUserIds,
       status,
       deadlineDate,
+      maxResponses,
       createdBy: decoded.uid,
     });
 

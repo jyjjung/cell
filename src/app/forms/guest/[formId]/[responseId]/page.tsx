@@ -11,7 +11,17 @@ import { validateFormResponse } from '@/lib/forms/validation';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
-import { AlertTriangle, Save } from 'lucide-react';
+import { AlertTriangle, Save, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 /** Guest / member view of a single response — edit answers only (no CSV/PDF report). */
 export default function GuestResponsePage({ params }: { params: { formId: string; responseId: string } }) {
@@ -28,6 +38,8 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   const [clientErrors, setClientErrors] = useState<Record<string, string> | null>(null);
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,9 +78,42 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   const submittedOk = searchParams.get('submitted') === '1';
   const showThanks = (submittedOk || justSaved) && !hasErrors;
 
+  const canDeleteOwn = useMemo(() => {
+    if (!currentUser || !response) return false;
+    if (response.submitterUserId && response.submitterUserId === currentUser.uid) return true;
+    const userEmail = (currentUser.email ?? '').trim().toLowerCase();
+    const responseEmail = (response.submitterEmail ?? '').trim().toLowerCase();
+    return !!userEmail && !!responseEmail && userEmail === responseEmail;
+  }, [currentUser, response]);
+
   const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
     setDraftAnswers(next);
     if (clientErrors) setClientErrors(null);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Sign in to delete your response.');
+      const res = await fetch(
+        `/api/forms/guest/${encodeURIComponent(params.formId)}/${encodeURIComponent(params.responseId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not delete response');
+      toast({ title: 'Response deleted', description: 'Your submission was removed.' });
+      router.push('/forms');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Could not delete response';
+      toast({ variant: 'destructive', title: 'Forms', description: message });
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   };
 
   const handleSave = async () => {
@@ -174,10 +219,29 @@ export default function GuestResponsePage({ params }: { params: { formId: string
         />
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <Button variant="outline" className="rounded-xl" onClick={() => router.push('/forms')} disabled={saving}>
-            Back to forms
-          </Button>
-          <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving}>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => router.push('/forms')}
+              disabled={saving || deleting}
+            >
+              Back to forms
+            </Button>
+            {canDeleteOwn ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl text-destructive hover:text-destructive"
+                disabled={saving || deleting}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            ) : null}
+          </div>
+          <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving || deleting}>
             {saving ? (
               'Saving…'
             ) : (
@@ -189,6 +253,35 @@ export default function GuestResponsePage({ params }: { params: { formId: string
           </Button>
         </div>
       </div>
+
+      <AlertDialog
+        open={confirmDelete}
+        onOpenChange={(open) => {
+          if (!deleting) setConfirmDelete(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes your response. You can’t undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDelete();
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

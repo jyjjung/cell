@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { getFormByPublicToken, createFormResponse, normalizeEmail } from '@/lib/server-forms';
+import { getFormByPublicToken, createFormResponse, normalizeEmail, FormCapacityError } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
+import { applyProfileReferenceAnswers, formatProfileName } from '@/lib/forms/prefill';
 import type { FormAnswerValue } from '@/types/forms';
 
 export async function POST(request: NextRequest, { params }: { params: { publicToken: string } }) {
@@ -18,14 +19,24 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
       return NextResponse.json({ error: 'answers is required' }, { status: 400 });
     }
 
+    let answers = answersRaw as Record<string, FormAnswerValue>;
     const submitterEmail = normalizeEmail(emailRaw);
-    const answers = answersRaw as Record<string, FormAnswerValue>;
 
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
     const adminAuth = getAdminAuth(adminApp);
     const form = await getFormByPublicToken(adminDb, params.publicToken);
     if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+    if (
+      typeof form.maxResponses === 'number' &&
+      form.maxResponses > 0 &&
+      (form.responseCount ?? 0) >= form.maxResponses
+    ) {
+      return NextResponse.json(
+        { error: 'This form is no longer accepting responses.' },
+        { status: 409 },
+      );
+    }
 
     let submitterUserId: string | null = null;
     const token = request.headers.get('Authorization')?.split('Bearer ')[1];
@@ -35,6 +46,19 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
         submitterUserId = decoded.uid;
       } catch {
         submitterUserId = null;
+      }
+    }
+
+    if (submitterUserId) {
+      const userSnap = await adminDb.collection('users').doc(submitterUserId).get();
+      if (userSnap.exists) {
+        const data = userSnap.data() as Record<string, unknown>;
+        const firstName = typeof data.firstName === 'string' ? data.firstName : '';
+        const lastName = typeof data.lastName === 'string' ? data.lastName : '';
+        answers = applyProfileReferenceAnswers(form, answers, {
+          name: formatProfileName({ firstName, lastName }),
+          email: typeof data.email === 'string' ? data.email : submitterEmail,
+        });
       }
     }
 
@@ -69,6 +93,9 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
       profileSynced,
     });
   } catch (error: unknown) {
+    if (error instanceof FormCapacityError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     console.error('[forms/public POST]', error);
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
