@@ -57,6 +57,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Forms pages now load without requiring extra Firestore composite indexes for the new queries.',
       },
+      {
+        type: 'Fixed',
+        text: 'Adding a field in the admin form builder no longer crashes the admin screen.',
+      },
     ],
   },
   {
