@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import type { FormAnswerValue, FormDefinition, FormResponse } from '@/types/forms';
@@ -13,6 +14,7 @@ import { AlertTriangle, Save } from 'lucide-react';
 export default function GuestResponsePage({ params }: { params: { formId: string; responseId: string } }) {
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [form, setForm] = useState<FormDefinition | null>(null);
   const [response, setResponse] = useState<FormResponse | null>(null);
@@ -101,6 +103,7 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   if (!form || !response) return <div className="page-container">Response not found.</div>;
 
   const errorsList = response.lastValidationErrors ?? {};
+  const submittedOk = searchParams.get('submitted') === '1';
 
   return (
     <div className="page-container">
@@ -109,6 +112,12 @@ export default function GuestResponsePage({ params }: { params: { formId: string
           <h1 className="text-page-title">{form.title}</h1>
           <p className="text-sm text-muted-foreground">Submitter email: {response.submitterEmail}</p>
         </div>
+
+        {submittedOk && !hasErrors ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm">
+            Saved successfully. You can review answers and download a report below.
+          </div>
+        ) : null}
 
         {hasErrors ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">

@@ -93,7 +93,12 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
       const responseId: string = data.responseId;
       if (!responseId) throw new Error('Missing responseId');
 
-      router.push(`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}`);
+      const submittedOk = !data.errorsByFieldId || Object.keys(data.errorsByFieldId).length === 0;
+      router.push(
+        `/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}${
+          submittedOk ? '?submitted=1' : ''
+        }`,
+      );
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Could not submit form';
       toast({ variant: 'destructive', title: 'Submit failed', description: message });
