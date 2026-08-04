@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import FormRenderer from '@/components/forms/FormRenderer';
 import type { FormAnswerValue, FormDefinition } from '@/types/forms';
+import { isValidEmail, validateFormResponse } from '@/lib/forms/validation';
+import {
+  buildInitialAnswers,
+  findFirstEmailField,
+  formHasEmailField,
+  formatProfileName,
+} from '@/lib/forms/prefill';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
@@ -19,12 +26,16 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
 
   const [loadingForm, setLoadingForm] = useState(true);
   const [form, setForm] = useState<FormDefinition | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [email, setEmail] = useState<string>('');
   const [emailTouched, setEmailTouched] = useState(false);
 
   const [answers, setAnswers] = useState<Record<string, FormAnswerValue>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const hasEmailField = useMemo(() => (form ? formHasEmailField(form) : false), [form]);
 
   useEffect(() => {
     if (!loadingAuth) {
@@ -36,13 +47,15 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   useEffect(() => {
     const fetchForm = async () => {
       setLoadingForm(true);
+      setLoadError(null);
       try {
         const res = await fetch(`/api/forms/public/${encodeURIComponent(params.publicToken)}/config`);
-        if (!res.ok) throw new Error('Form not found');
+        if (!res.ok) throw new Error('Form not found or not published yet.');
         const data = await res.json();
         setForm(data.form as FormDefinition);
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Could not load form';
+        setLoadError(message);
         toast({ variant: 'destructive', title: 'Forms', description: message });
       } finally {
         setLoadingForm(false);
@@ -53,32 +66,73 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
 
   useEffect(() => {
     if (!form) return;
-    // Initialize answers for all fields so conditional evaluation has stable keys.
-    const initial: Record<string, FormAnswerValue> = {};
-    for (const field of form.fields) {
-      if (field.type === 'checkbox') initial[field.id] = [];
-      else initial[field.id] = '';
+    const profile = currentUser
+      ? {
+          name: formatProfileName(currentUser),
+          email: currentUser.email,
+        }
+      : null;
+    setAnswers(buildInitialAnswers(form, profile));
+    setFieldErrors(null);
+  }, [form, currentUser]);
+
+  const emailValid = useMemo(() => isValidEmail(email), [email]);
+  // Separate email step only when the form does not already include an email field.
+  const askForEmail = !currentUser && !hasEmailField;
+  const canSubmit = !!form && !submitting;
+
+  const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
+    setAnswers(next);
+    if (fieldErrors) setFieldErrors(null);
+    if (hasEmailField) {
+      const emailField = findFirstEmailField(form?.fields ?? []);
+      if (emailField) {
+        const fromField = next[emailField.id];
+        if (typeof fromField === 'string') setEmail(fromField);
+      }
     }
-    setAnswers(initial);
-  }, [form]);
+  };
 
-  const emailValid = useMemo(() => {
-    const e = email.trim();
-    return e.includes('@') && e.includes('.');
-  }, [email]);
-
-  const shouldAskForEmail = !currentUser && !email.trim();
-  const canSubmit = !!form && emailValid && !submitting;
+  const resolveSubmitEmail = (): string => {
+    if (hasEmailField && form) {
+      const emailField = findFirstEmailField(form.fields);
+      if (emailField) {
+        const fromField = answers[emailField.id];
+        if (typeof fromField === 'string' && fromField.trim()) return fromField.trim();
+      }
+    }
+    return email.trim();
+  };
 
   const handleSubmit = async () => {
     if (!form) return;
+
+    const submitEmail = resolveSubmitEmail();
+    if (!isValidEmail(submitEmail)) {
+      setEmailTouched(true);
+      if (hasEmailField) {
+        const emailField = findFirstEmailField(form.fields);
+        if (emailField) {
+          setFieldErrors({ [emailField.id]: 'Enter a valid email address.' });
+        }
+      }
+      toast({ variant: 'destructive', title: 'Email required', description: 'Enter a valid email to submit.' });
+      return;
+    }
+
+    const { errorsByFieldId } = validateFormResponse(form, answers);
+    if (Object.keys(errorsByFieldId).length > 0) {
+      setFieldErrors(errorsByFieldId);
+      toast({
+        variant: 'destructive',
+        title: 'Almost there',
+        description: 'Please fill in the required fields marked below.',
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      if (!emailValid) {
-        setEmailTouched(true);
-        return;
-      }
-
       const token = currentUser ? await auth.currentUser?.getIdToken() : null;
       const res = await fetch(`/api/forms/public/${encodeURIComponent(params.publicToken)}/responses`, {
         method: 'POST',
@@ -86,7 +140,7 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ email, answers }),
+        body: JSON.stringify({ email: submitEmail, answers }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -98,12 +152,23 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
       const responseId: string = data.responseId;
       if (!responseId) throw new Error('Missing responseId');
 
-      const submittedOk = !data.errorsByFieldId || Object.keys(data.errorsByFieldId).length === 0;
-      router.push(
-        `/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}${
-          submittedOk ? '?submitted=1' : ''
-        }`,
-      );
+      const serverErrors =
+        data.errorsByFieldId && typeof data.errorsByFieldId === 'object'
+          ? (data.errorsByFieldId as Record<string, string>)
+          : null;
+
+      if (serverErrors && Object.keys(serverErrors).length > 0) {
+        setFieldErrors(serverErrors);
+        toast({
+          variant: 'destructive',
+          title: 'Fix required fields',
+          description: 'Some answers still need attention.',
+        });
+        router.push(`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}`);
+        return;
+      }
+
+      router.push(`/forms/guest/${encodeURIComponent(form.id)}/${encodeURIComponent(responseId)}?submitted=1`);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Could not submit form';
       toast({ variant: 'destructive', title: 'Submit failed', description: message });
@@ -112,45 +177,73 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
     }
   };
 
-  if (loadingAuth && loadingForm) return <PageLoading />;
-  if (!form) return <div className="page-container">Form not found.</div>;
+  if (loadingAuth || loadingForm) return <PageLoading />;
+
+  if (!form) {
+    return (
+      <div className="page-container">
+        <div className="ui-card p-4 md:p-6 space-y-2">
+          <h1 className="text-page-title">Form unavailable</h1>
+          <p className="text-sm text-muted-foreground">
+            {loadError ?? 'This form could not be found. Ask an admin for a fresh link.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
-      <div className="ui-card p-4 md:p-6 space-y-5">
+      <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
           {form.description ? <p className="text-sm text-muted-foreground">{form.description}</p> : null}
+          {form.deadlineDate ? (
+            <p className="text-xs text-muted-foreground">Deadline: {form.deadlineDate}</p>
+          ) : null}
         </div>
 
-        {emailTouched && !emailValid ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            Please enter a valid email to continue.
-          </div>
-        ) : null}
-
-        {(!currentUser || shouldAskForEmail) && (
+        {askForEmail ? (
           <div className="space-y-2">
             <Label htmlFor="guestEmail">Your email</Label>
             <Input
               id="guestEmail"
+              type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setEmailTouched(true)}
               placeholder="you@example.com"
-              disabled={!!currentUser}
+              aria-invalid={emailTouched && !emailValid}
+              className={emailTouched && !emailValid ? 'border-destructive focus-visible:ring-destructive' : undefined}
             />
+            {emailTouched && !emailValid ? (
+              <p className="text-xs text-destructive" role="alert">
+                Enter a valid email address.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                We use this to save your response so you can come back later.
+              </p>
+            )}
           </div>
-        )}
+        ) : currentUser && !hasEmailField ? (
+          <p className="text-sm text-muted-foreground">
+            Submitting as <span className="font-medium text-foreground">{email}</span>
+          </p>
+        ) : null}
 
-        <FormRenderer form={form} value={answers} onChange={setAnswers} readOnly={submitting} />
+        <FormRenderer
+          form={form}
+          value={answers}
+          onChange={handleAnswersChange}
+          errorsByFieldId={fieldErrors}
+          readOnly={submitting}
+          profileLinkedHint={!!currentUser}
+        />
 
-        <div className="flex justify-end gap-3">
-          <Button
-            className="rounded-xl"
-            disabled={!canSubmit || !emailValid}
-            onClick={() => void handleSubmit()}
-          >
+        <div className="flex justify-end gap-3 pt-1">
+          <Button className="rounded-xl min-w-28" disabled={!canSubmit} onClick={() => void handleSubmit()}>
             {submitting ? <LoadingSpinner /> : 'Submit'}
           </Button>
         </div>
@@ -158,4 +251,3 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
     </div>
   );
 }
-

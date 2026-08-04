@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { FormDefinition, FormResponse } from '@/types/forms';
+import { extractPublicFormToken } from '@/lib/forms/validation';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ export default function FormsPage() {
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [loading, setLoading] = useState(false);
-  const [linkToken, setLinkToken] = useState('');
+  const [linkInput, setLinkInput] = useState('');
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -67,34 +68,32 @@ export default function FormsPage() {
     return map;
   }, [responses]);
 
+  const resolvedToken = extractPublicFormToken(linkInput);
+
   if (loadingAuth) return <PageLoading />;
 
   return (
     <div className="page-container">
-      <PageHeader title="Forms" description="Submit responses and view reports." />
+      <PageHeader title="Forms" description="Open a form, submit answers, and revisit your responses." />
 
       {!currentUser ? (
-        <div className="space-y-4 ui-surface">
+        <div className="space-y-4 ui-surface max-w-xl">
           <p className="text-sm text-muted-foreground">
-            You can submit as a guest using a form link. Paste the token you were given:
+            Paste the form link you were given (or just the token) to open it as a guest.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-end">
-            <div className="flex-1">
-              <Label htmlFor="publicToken">Form link token</Label>
+            <div className="flex-1 w-full">
+              <Label htmlFor="publicToken">Form link</Label>
               <Input
                 id="publicToken"
-                value={linkToken}
-                onChange={(e) => setLinkToken(e.target.value)}
-                placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                placeholder="Paste link or token"
                 className="mt-1"
               />
             </div>
-            <Button
-              asChild
-              disabled={!linkToken.trim()}
-              className="rounded-xl"
-            >
-              <Link href={`/forms/public/${encodeURIComponent(linkToken.trim())}`}>Open form</Link>
+            <Button asChild disabled={!resolvedToken} className="rounded-xl">
+              <Link href={`/forms/public/${encodeURIComponent(resolvedToken)}`}>Open form</Link>
             </Button>
           </div>
         </div>
@@ -102,7 +101,27 @@ export default function FormsPage() {
         <div className="space-y-6">
           <section className="ui-section">
             <div className="ui-card space-y-3">
-              <h2 className="text-section-title">Available forms</h2>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3 justify-between">
+                <h2 className="text-section-title">Available forms</h2>
+                <div className="flex flex-col sm:flex-row gap-2 items-end w-full sm:w-auto sm:max-w-md">
+                  <div className="flex-1 w-full">
+                    <Label htmlFor="openLink" className="text-xs text-muted-foreground">
+                      Or open a guest link
+                    </Label>
+                    <Input
+                      id="openLink"
+                      value={linkInput}
+                      onChange={(e) => setLinkInput(e.target.value)}
+                      placeholder="Paste link or token"
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button asChild variant="outline" disabled={!resolvedToken} className="rounded-xl shrink-0">
+                    <Link href={`/forms/public/${encodeURIComponent(resolvedToken)}`}>Open</Link>
+                  </Button>
+                </div>
+              </div>
+
               {loading && forms.length === 0 ? (
                 <div className="empty-inline">
                   <LoadingSpinner />
@@ -114,33 +133,40 @@ export default function FormsPage() {
                   {forms
                     .slice()
                     .sort((a, b) => (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0))
-                    .map((form) => (
-                      <div key={form.id} className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 p-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold">{form.title}</p>
-                          {form.description ? <p className="text-sm text-muted-foreground">{form.description}</p> : null}
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
+                    .map((form) => {
+                      const submissionCount = responsesByFormId.get(form.id)?.length ?? 0;
+                      return (
+                        <div
+                          key={form.id}
+                          className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 p-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-semibold">{form.title}</p>
+                            {form.description ? (
+                              <p className="text-sm text-muted-foreground">{form.description}</p>
+                            ) : null}
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                              {form.deadlineDate ? <span>Due {form.deadlineDate}</span> : null}
+                              <span>
+                                {submissionCount > 0
+                                  ? `${submissionCount} submission${submissionCount === 1 ? '' : 's'}`
+                                  : 'Not submitted yet'}
+                              </span>
+                            </div>
+                          </div>
                           <Button
                             asChild
                             variant="outline"
-                            className="rounded-xl"
+                            className="rounded-xl shrink-0"
                             disabled={!form.publicToken}
                           >
                             <Link href={form.publicToken ? `/forms/public/${form.publicToken}` : '#'}>
-                              Open
+                              {submissionCount > 0 ? 'Open again' : 'Fill out'}
                             </Link>
                           </Button>
-                          {responsesByFormId.get(form.id)?.length ? (
-                            <p className="text-xs text-muted-foreground">
-                              {responsesByFormId.get(form.id)!.length} submission(s)
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">No submissions yet</p>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               )}
             </div>
@@ -175,12 +201,13 @@ export default function FormsPage() {
                               ) : null}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Submitted: {r.createdAt ? new Date(r.createdAt.toMillis()).toLocaleString() : '—'}
+                              Submitted:{' '}
+                              {r.createdAt ? new Date(r.createdAt.toMillis()).toLocaleString() : '—'}
                             </p>
                           </div>
                           <Button asChild variant="secondary" className="rounded-xl">
                             <Link href={`/forms/guest/${encodeURIComponent(r.formId)}/${encodeURIComponent(r.id)}`}>
-                              View
+                              {hasErrors ? 'Fix' : 'View'}
                             </Link>
                           </Button>
                         </div>
@@ -195,4 +222,3 @@ export default function FormsPage() {
     </div>
   );
 }
-

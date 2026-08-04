@@ -9,10 +9,18 @@ export async function GET(_request: NextRequest, { params }: { params: { publicT
 
     const form = await getFormByPublicToken(adminDb, params.publicToken);
     if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
-    return NextResponse.json({ form });
+
+    // Guest opens are read-heavy; cache briefly at the edge.
+    return NextResponse.json(
+      { form },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      },
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
   }
 }
-

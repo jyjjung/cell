@@ -19,47 +19,35 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Added',
-        text: 'Introduced configurable forms that guests can open via link, gated by an email step before submitting.',
+        text: 'Configurable forms with guest links, email-gated submit, conditional questions, deadlines, and publish reminders.',
       },
       {
         type: 'Added',
-        text: 'Added conditional fields and required/optional behavior for form definitions created in the admin builder.',
-      },
-      {
-        type: 'Added',
-        text: 'Created an admin workflow to review submissions, edit responses, and export per-response reports as PDF (print) or CSV.',
-      },
-      {
-        type: 'Added',
-        text: 'Forms can now be published to specific roles or people, include an optional deadline, and send reminders when newly published, one week before due, the day before, and on the due date.',
+        text: 'Admin Forms area to build forms, review submissions, edit answers, and export CSV or PDF reports.',
       },
       {
         type: 'Improved',
-        text: 'Guest submissions now show a clear success confirmation on the response page before returning to the forms area.',
+        text: 'Admin Forms opens to a list where you can open, copy a link, or delete; each form has its own Build, Preview, and Submissions page.',
+      },
+      {
+        type: 'Added',
+        text: 'Forms can include Name and Email questions that pre-fill from a signed-in member’s profile (guests still type them in).',
+      },
+      {
+        type: 'Improved',
+        text: 'Forms are cheaper to run: publish notices only fire when a form goes live, recipient fan-out is capped, submissions are paginated, and guest form pages cache briefly.',
+      },
+      {
+        type: 'Improved',
+        text: 'Filling forms checks required fields before submit, shows clearer errors, and accepts a full guest link or token.',
       },
       {
         type: 'Changed',
-        text: 'Expanded navigation with a Forms page in the main sidebar and a matching admin Forms section.',
-      },
-      {
-        type: 'Improved',
-        text: 'The main Admin hub now shows Forms as a visible section card for quicker access.',
-      },
-      {
-        type: 'Improved',
-        text: 'Forms now default to being open to everyone unless an admin narrows access to specific roles or people.',
+        text: 'Forms appear in the main sidebar and as a card on the Admin hub.',
       },
       {
         type: 'Fixed',
-        text: 'The admin form builder now adds new fields reliably across browsers and environments.',
-      },
-      {
-        type: 'Fixed',
-        text: 'Forms pages now load without requiring extra Firestore composite indexes for the new queries.',
-      },
-      {
-        type: 'Fixed',
-        text: 'Adding a field in the admin form builder no longer crashes the admin screen.',
+        text: 'Adding fields in the admin builder no longer crashes, and forms load without extra Firestore indexes.',
       },
     ],
   },

@@ -183,7 +183,7 @@ export async function runDutyReminderSweep(params: {
       adminDb.collection('events').get(),
       adminDb.collection('users').get(),
       adminDb.collection('rosterDefinitions').get(),
-      adminDb.collection('formDefinitions').get(),
+      adminDb.collection('formDefinitions').where('status', '==', 'published').limit(50).get(),
     ]);
 
   const cleaningRoster = cleaningSnap.docs.map(
