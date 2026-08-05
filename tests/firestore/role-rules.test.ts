@@ -61,6 +61,22 @@ describe('role-derived authorization rules', () => {
     await assertSucceeds(setDoc(doc(db, 'worshipSongs/song'), { title: 'Song' }));
   });
 
+  it('allows any signed-in user to upload chord sheet metadata on songs', async () => {
+    const db = env.authenticatedContext('youth').firestore();
+    await assertSucceeds(setDoc(doc(db, 'worshipSongs/youth-song'), {
+      title: 'Youth Song',
+      chordSheets: [],
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'worshipSongs/youth-song'), {
+      chordSheets: [{ id: 'sheet-1', key: 'C', imageUrl: 'https://example.com/c.png', storagePath: 'worshipChordSheets/youth-song/sheet-1.png' }],
+    }));
+  });
+
+  it('still restricts setlist writes to worship managers', async () => {
+    const db = env.authenticatedContext('youth').firestore();
+    await assertFails(setDoc(doc(db, 'worshipSetlists/setlist'), { name: 'Blocked' }));
+  });
+
   it('prevents a youth user from creating a group chat', async () => {
     const db = env.authenticatedContext('youth').firestore();
     await assertFails(setDoc(doc(db, 'chats/group'), {
