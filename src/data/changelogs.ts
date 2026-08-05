@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.12.1',
+    subtitle: 'Open chord sheet uploads',
+    date: 'August 5, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Any signed-in member can upload chord sheets (sheet music) to the song library.',
+      },
+    ],
+  },
+  {
     version: 'v1.12.0',
     subtitle: 'Forms with admin submissions',
     date: 'August 4, 2026',
