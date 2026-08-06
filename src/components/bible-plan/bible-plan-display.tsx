@@ -11,6 +11,7 @@ import {
   makeManualPassageKey,
   makePassageKey,
 } from '@/lib/passage-keys';
+import { isPassageCompletedForPlan } from '@/lib/reading-utils';
 import type { AppUser } from '@/types';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
@@ -26,6 +27,7 @@ interface BiblePlanDisplayProps {
   togglePassageCompletion: (passageDisplayText: string, date?: string) => Promise<void>;
   markMultiplePassages?: (passageKeys: string[], markAsComplete: boolean) => Promise<void>;
   allPassageTextsForDay?: string[];
+  planDailyReadings?: DailyReading[] | null;
   loading?: boolean;
   planAvailable?: boolean;
   planDescription?: string;
@@ -45,6 +47,7 @@ export default function BiblePlanDisplay({
   togglePassageCompletion,
   markMultiplePassages,
   allPassageTextsForDay = [],
+  planDailyReadings = null,
   loading = false,
   planAvailable = false,
   planDescription,
@@ -74,11 +77,11 @@ export default function BiblePlanDisplay({
     const date = readingToDisplay?.date;
     return validTextsFromProp.every(text => {
       if (date) {
-        return completedPassages.includes(makePassageKey(date, text));
+        return isPassageCompletedForPlan(date, text, completedPassages, { dailyReadings: planDailyReadings });
       }
       return completedPassages.includes(makeManualPassageKey(text));
     });
-  }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date]);
+  }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date, planDailyReadings]);
 
   let parsedDayDate: Date | null = null;
   if (readingToDisplay?.date) {
@@ -210,7 +213,9 @@ export default function BiblePlanDisplay({
             const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
             const date = readingToDisplay.date;
             const isChecked = date
-              ? completedPassages.includes(makePassageKey(date, passage.displayText))
+              ? isPassageCompletedForPlan(date, passage.displayText, completedPassages, {
+                  dailyReadings: planDailyReadings,
+                })
               : completedPassages.includes(makeManualPassageKey(passage.displayText));
             const isPassageValid = !passage.displayText.startsWith('Error:');
 

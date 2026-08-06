@@ -60,8 +60,11 @@ export function findNextUnreadReading(
     if (validPassages.length === 0) { // If a day has no valid passages, it's effectively "read" or skipped.
         continue;
     }
-    const isFullyCompleted = validPassages.every(p => 
-      completedPassages.includes(makePassageKey(reading.date, p.displayText))
+    const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
+    const isFullyCompleted = validPassages.every((p) =>
+      isPassageCompletedForPlan(reading.date, p.displayText, completedPassages, {
+        firstOccurrenceByDisplayText,
+      }),
     );
     
     if (!isFullyCompleted) {
@@ -71,17 +74,57 @@ export function findNextUnreadReading(
   return null; // All readings are completed
 }
 
+type PassageCompletionOptions = {
+  /** When set, legacy bare keys only count toward the first plan occurrence. */
+  firstOccurrenceByDisplayText?: Map<string, string>;
+  dailyReadings?: DailyReading[] | null;
+};
+
+/** Earliest plan date for each passage displayText (M'Cheyne repeats). */
+export function buildFirstOccurrenceByDisplayText(
+  dailyReadings: DailyReading[] | undefined | null,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!dailyReadings?.length) return map;
+
+  for (const day of dailyReadings) {
+    for (const passage of day.passages ?? []) {
+      if (!passage.displayText || map.has(passage.displayText)) continue;
+      map.set(passage.displayText, day.date);
+    }
+  }
+
+  return map;
+}
+
+function resolveFirstOccurrenceMap(
+  options?: PassageCompletionOptions,
+): Map<string, string> | undefined {
+  if (options?.firstOccurrenceByDisplayText) return options.firstOccurrenceByDisplayText;
+  if (options?.dailyReadings) return buildFirstOccurrenceByDisplayText(options.dailyReadings);
+  return undefined;
+}
+
 /**
  * Whether a plan passage is marked complete.
- * Plan progress uses date-scoped keys so repeated passages stay independent.
+ * Recognizes date-scoped keys, manual marks, and legacy bare keys until migration runs.
  */
-function isPassageCompletedForPlan(
+export function isPassageCompletedForPlan(
   date: string,
   displayText: string,
   completedPassages: string[],
+  options?: PassageCompletionOptions,
 ): boolean {
   if (!displayText || displayText.startsWith('Error:')) return false;
-  return completedPassages.includes(makePassageKey(date, displayText));
+
+  const scopedKey = makePassageKey(date, displayText);
+  if (completedPassages.includes(scopedKey)) return true;
+  if (completedPassages.includes(makeManualPassageKey(displayText))) return true;
+
+  if (!completedPassages.includes(displayText)) return false;
+
+  const firstDate = resolveFirstOccurrenceMap(options)?.get(displayText);
+  return firstDate === undefined || firstDate === date;
 }
 
 function isCountablePlanPassage(
@@ -131,12 +174,17 @@ export function countPlanPassageProgress(
 
   let total = 0;
   let completed = 0;
+  const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
 
   dailyReadings.forEach((day) => {
     day.passages?.forEach((passage) => {
       if (!isCountablePlanPassage(passage)) return;
       total += 1;
-      if (isPassageCompletedForPlan(day.date, passage.displayText, completedPassages)) {
+      if (
+        isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, {
+          firstOccurrenceByDisplayText,
+        })
+      ) {
         completed += 1;
       }
     });
@@ -195,25 +243,6 @@ export function calculatePlanProgressToDatePercent(
   return parseFloat(((completed / due) * 100).toFixed(1));
 }
 
-/** Plan passage keys for every assignment of a given chapter. */
-function findPlanPassageKeysForChapter(
-  dailyReadings: DailyReading[] | undefined | null,
-  book: string,
-  chapter: number,
-): string[] {
-  if (!dailyReadings?.length) return [];
-
-  const keys: string[] = [];
-  dailyReadings.forEach((day) => {
-    day.passages?.forEach((passage) => {
-      const resolved = resolvePlanPassage(passage);
-      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) return;
-      keys.push(makePassageKey(day.date, resolved.displayText));
-    });
-  });
-  return keys;
-}
-
 type ChapterPlanMatch = {
   key: string;
   date: string;
@@ -252,6 +281,7 @@ export function getChapterPlanAssignmentStatus(
   }
 
   const assignments: ChapterPlanAssignment[] = [];
+  const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
 
   for (const day of dailyReadings) {
     for (const passage of day.passages ?? []) {
@@ -263,7 +293,9 @@ export function getChapterPlanAssignmentStatus(
         key,
         date: day.date,
         displayText: resolved.displayText,
-        completed: completedPassages.includes(key),
+        completed: isPassageCompletedForPlan(day.date, resolved.displayText, completedPassages, {
+          firstOccurrenceByDisplayText,
+        }),
       });
     }
   }
@@ -287,11 +319,45 @@ export function isChapterMarkedCompleteInPlan(
   chapter: number,
   completedPassages: string[],
 ): boolean {
-  const keys = findPlanPassageKeysForChapter(dailyReadings, book, chapter);
-  if (keys.length === 0) {
-    return completedPassages.includes(makeManualPassageKey(`${book} ${chapter}`));
+  const status = getChapterPlanAssignmentStatus(dailyReadings, book, chapter, completedPassages);
+  if (status.total === 0) {
+    const chapterRef = `${book} ${chapter}`;
+    return (
+      completedPassages.includes(makeManualPassageKey(chapterRef)) ||
+      completedPassages.includes(chapterRef)
+    );
   }
-  return keys.every((key) => completedPassages.includes(key));
+  return status.allComplete;
+}
+
+/** First incomplete plan slot for a chapter (popup marks one assignment at a time). */
+export function findEarliestIncompletePlanPassageKeyForChapter(
+  dailyReadings: DailyReading[] | undefined | null,
+  book: string,
+  chapter: number,
+  completedPassages: string[],
+): string | null {
+  if (!dailyReadings?.length) return null;
+
+  const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
+
+  for (const day of dailyReadings) {
+    for (const passage of day.passages ?? []) {
+      const resolved = resolvePlanPassage(passage);
+      if (!resolved || resolved.book !== book || resolved.chapter !== chapter) continue;
+
+      const key = makePassageKey(day.date, resolved.displayText);
+      if (
+        !isPassageCompletedForPlan(day.date, resolved.displayText, completedPassages, {
+          firstOccurrenceByDisplayText,
+        })
+      ) {
+        return key;
+      }
+    }
+  }
+
+  return null;
 }
 
 export type PlanPaceStats = {
@@ -326,6 +392,7 @@ export function calculatePlanPaceStats(
   const lastReadingDate = readingDays[readingDays.length - 1]?.date;
   if (!lastReadingDate) return EMPTY_PLAN_PACE_STATS;
 
+  const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
   const { passagesLeft } = countPlanPassageProgress(dailyReadings, completedPassages);
 
   let passagesToCatchUp = 0;
@@ -333,7 +400,9 @@ export function calculatePlanPaceStats(
     if (!isBefore(date, today)) return;
     day.passages?.forEach((passage) => {
       if (!isCountablePlanPassage(passage)) return;
-      const done = isPassageCompletedForPlan(day.date, passage.displayText, completedPassages);
+      const done = isPassageCompletedForPlan(day.date, passage.displayText, completedPassages, {
+        firstOccurrenceByDisplayText,
+      });
       if (!done) passagesToCatchUp += 1;
     });
   });

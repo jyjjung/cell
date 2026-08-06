@@ -19,8 +19,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { parseDay } from '@/lib/event-occurrences';
-import { makePassageKey } from '@/lib/passage-keys';
-import { calculatePlanPaceStats, calculatePlanProgressToDatePercent, countPlanPassageProgress, countPlanPassagesDueThrough } from '@/lib/reading-utils';
+import { calculatePlanPaceStats, calculatePlanProgressToDatePercent, countPlanPassageProgress, countPlanPassagesDueThrough, isPassageCompletedForPlan } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { DailyReading, WeeklyProgress } from '@/types';
@@ -156,7 +155,9 @@ export default function BibleChecklistPage() {
               }
             } else {
               completedCount += validPassages.filter((p) =>
-                completedPassages.includes(makePassageKey(reading.date, p.displayText))
+                isPassageCompletedForPlan(reading.date, p.displayText, completedPassages, {
+                  dailyReadings: plan?.dailyReadings,
+                }),
               ).length;
             }
         });
@@ -289,6 +290,7 @@ export default function BibleChecklistPage() {
                         togglePassageCompletion={togglePassageCompletion}
                         markMultiplePassages={isGuest ? undefined : markMultiplePassages}
                         allPassageTextsForDay={reading.passages.map(p => p.displayText).filter(Boolean).filter(text => typeof text === 'string' && !text.startsWith("Error:")) as string[]}
+                        planDailyReadings={plan?.dailyReadings}
                         loading={loadingChecklist}
                         planAvailable={true}
                         hidePlanMeta={true}

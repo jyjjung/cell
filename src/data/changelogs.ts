@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.2',
+    subtitle: 'Reading progress recovery',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Bible reading progress saved with older formats is recognized again and safely migrated, so completed passages should no longer appear missing after updates.',
+      },
+      {
+        type: 'Fixed',
+        text: 'The Bible popup mark-as-read button now clearly shows unread, partially read, and fully read states using your current theme colors.',
+      },
+    ],
+  },
+  {
     version: 'v1.13.1',
     subtitle: 'Bible popup reading progress',
     date: 'August 6, 2026',

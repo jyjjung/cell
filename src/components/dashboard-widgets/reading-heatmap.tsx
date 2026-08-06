@@ -21,7 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { makePassageKey } from '@/lib/passage-keys';
+import { isPassageCompletedForPlan } from '@/lib/reading-utils';
 import { themeHeat } from '@/lib/theme-status';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
@@ -96,7 +96,9 @@ export default function ReadingHeatmap({
         day.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:')) || [];
       const total = validPassages.length;
       const complete = validPassages.filter((p) =>
-        completedPassages.includes(makePassageKey(day.date, p.displayText)),
+        isPassageCompletedForPlan(day.date, p.displayText, completedPassages, {
+          dailyReadings,
+        }),
       ).length;
       planMap.set(key, { total, complete });
     });
