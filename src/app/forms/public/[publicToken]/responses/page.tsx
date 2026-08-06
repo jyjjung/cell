@@ -88,7 +88,7 @@ export default function PublicFormResponsesPage({ params }: { params: { publicTo
         />
       ) : (
         <div className="space-y-4">
-          <ResponsesTable form={form as FormDefinition} responses={responses} />
+          <ResponsesTable form={form as FormDefinition} responses={responses} responsive />
 
           {cursor ? (
             <div className="flex justify-center">

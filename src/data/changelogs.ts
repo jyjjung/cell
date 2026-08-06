@@ -31,7 +31,7 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Changed',
-        text: 'Admin form responses now use the same spreadsheet-style table as the PDF export.',
+        text: 'Admin form responses use the standard spreadsheet table (same layout as PDF export).',
       },
     ],
   },

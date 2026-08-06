@@ -1,6 +1,14 @@
 'use client';
 
 import type { FormDefinition, FormFieldDefinition, FormResponse } from '@/types/forms';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { resolveExportFields, stringifyAnswerValue, type FormExportOptions } from '@/lib/forms/export-responses';
 import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { cn } from '@/lib/utils';
@@ -11,6 +19,7 @@ type Props = {
   options?: FormExportOptions | null;
   showSubmitter?: boolean;
   startIndex?: number;
+  responsive?: boolean;
   getRowClassName?: (response: FormResponse) => string | undefined;
 };
 
@@ -20,6 +29,7 @@ export default function ResponsesTable({
   options,
   showSubmitter = true,
   startIndex = 0,
+  responsive = false,
   getRowClassName,
 }: Props) {
   const fields: FormFieldDefinition[] = resolveExportFields(form, options);
@@ -33,60 +43,41 @@ export default function ResponsesTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border/70 bg-card">
-      <table className="w-full min-w-[640px] border-collapse text-sm">
-        <thead>
-          <tr className="bg-slate-900 text-left text-slate-50">
-            <th className="whitespace-nowrap border-r border-white/10 px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide">
-              #
-            </th>
-            {showSubmitter ? (
-              <th className="whitespace-nowrap border-r border-white/10 px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide">
-                Submitter
-              </th>
-            ) : null}
+    <div className={cn('admin-table-wrap', responsive && 'page-responsive-table')}>
+      <Table className="admin-table min-w-[640px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">#</TableHead>
+            {showSubmitter ? <TableHead>Submitter</TableHead> : null}
             {fields.map((field) => (
-              <th
-                key={field.id}
-                className="whitespace-nowrap border-r border-white/10 px-2.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide last:border-r-0"
-              >
-                {field.label}
-              </th>
+              <TableHead key={field.id}>{field.label}</TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {responses.map((response, index) => (
-            <tr
-              key={response.id}
-              className={cn(
-                'border-b border-border/50 last:border-b-0 even:bg-muted/30',
-                getRowClassName?.(response),
-              )}
-            >
-              <td className="border-r border-border/40 px-2.5 py-2 align-top text-muted-foreground tabular-nums">
-                {startIndex + index + 1}
-              </td>
+            <TableRow key={response.id} className={getRowClassName?.(response)}>
+              <TableCell className="tabular-nums text-muted-foreground">{startIndex + index + 1}</TableCell>
               {showSubmitter ? (
-                <td className="max-w-[180px] border-r border-border/40 px-2.5 py-2 align-top font-medium break-words">
+                <TableCell className="max-w-[180px] font-medium whitespace-normal break-words">
                   {displaySubmitterLabel(response, form)}
-                </td>
+                </TableCell>
               ) : null}
               {fields.map((field) => {
                 const value = stringifyAnswerValue(response.answers?.[field.id]);
                 return (
-                  <td
+                  <TableCell
                     key={field.id}
-                    className="max-w-[220px] border-r border-border/40 px-2.5 py-2 align-top whitespace-pre-wrap break-words last:border-r-0"
+                    className="max-w-[220px] whitespace-pre-wrap break-words align-top"
                   >
                     {value || <span className="text-muted-foreground">—</span>}
-                  </td>
+                  </TableCell>
                 );
               })}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
