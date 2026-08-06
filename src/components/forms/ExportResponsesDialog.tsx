@@ -25,7 +25,7 @@ import {
   sortedFields,
   type FormExportOptions,
 } from '@/lib/forms/export-responses';
-import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
+import { toMillisSafe } from '@/lib/firestore-timestamp';
 import { Download, FileSpreadsheet } from 'lucide-react';
 
 type ResponseScope = 'all' | 'picked';
@@ -61,7 +61,6 @@ export default function ExportResponsesDialog({
   const isSingle = !!fixedResponse;
 
   const [fieldIds, setFieldIds] = useState<Set<string>>(() => new Set(fields.map((f) => f.id)));
-  const [includeName, setIncludeName] = useState(true);
   const [scope, setScope] = useState<ResponseScope>('all');
   const [pickedIds, setPickedIds] = useState<Set<string>>(() => new Set());
   const [format, setFormat] = useState<ExportFormat>('csv');
@@ -70,7 +69,6 @@ export default function ExportResponsesDialog({
   useEffect(() => {
     if (!open) return;
     setFieldIds(new Set(fields.map((f) => f.id)));
-    setIncludeName(true);
     setFormat('csv');
     setBusy(false);
     if (isSingle && fixedResponse) {
@@ -108,8 +106,15 @@ export default function ExportResponsesDialog({
 
   const exportOptions = (): FormExportOptions => ({
     fieldIds: fields.filter((f) => fieldIds.has(f.id)).map((f) => f.id),
-    includeSubmitterName: includeName,
   });
+
+  const responsePickerLabel = (response: FormResponse, index: number): string => {
+    const submittedMs = toMillisSafe(response.updatedAt || response.createdAt);
+    if (submittedMs > 0) {
+      return `Response ${index + 1} · ${new Date(submittedMs).toLocaleString()}`;
+    }
+    return `Response ${index + 1}`;
+  };
 
   const resolveResponses = async (): Promise<FormResponse[]> => {
     if (isSingle && fixedResponse) return [fixedResponse];
@@ -123,11 +128,11 @@ export default function ExportResponsesDialog({
 
   const runExport = async () => {
     const options = exportOptions();
-    if (options.fieldIds.length === 0 && !options.includeSubmitterName) {
+    if (options.fieldIds.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Nothing selected',
-        description: 'Pick at least one field or include submitter name.',
+        description: 'Pick at least one field to export.',
       });
       return;
     }
@@ -135,7 +140,7 @@ export default function ExportResponsesDialog({
       toast({
         variant: 'destructive',
         title: 'No responses selected',
-        description: 'Choose at least one submitter, or download all responses.',
+        description: 'Choose at least one response, or download all responses.',
       });
       return;
     }
@@ -204,7 +209,7 @@ export default function ExportResponsesDialog({
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle>Download responses</DialogTitle>
           <DialogDescription>
-            Choose which fields{isSingle ? '' : ' and submitters'} to include, then export as CSV or PDF.
+            Choose which fields{isSingle ? '' : ' and responses'} to include, then export as CSV or PDF.
           </DialogDescription>
         </DialogHeader>
 
@@ -221,13 +226,6 @@ export default function ExportResponsesDialog({
                 </Button>
               </div>
             </div>
-            <label className="flex items-center gap-2.5 rounded-xl border border-border/60 px-3 py-2 text-sm cursor-pointer">
-              <Checkbox
-                checked={includeName}
-                onCheckedChange={(v) => setIncludeName(v === true)}
-              />
-              Submitter name
-            </label>
             <ScrollArea className="h-[min(180px,28vh)] rounded-xl border border-border/60">
               <div className="p-2 space-y-0.5">
                 {fields.length === 0 ? (
@@ -271,7 +269,7 @@ export default function ExportResponsesDialog({
                   className="rounded-xl"
                   onClick={() => setScope('picked')}
                 >
-                  Choose submitters
+                  Choose responses
                 </Button>
               </div>
               {scope === 'all' ? (
@@ -307,7 +305,7 @@ export default function ExportResponsesDialog({
                   </div>
                   <ScrollArea className="h-[min(160px,24vh)] rounded-xl border border-border/60">
                     <div className="p-2 space-y-0.5">
-                      {responses.map((r) => (
+                      {responses.map((r, index) => (
                         <label
                           key={r.id}
                           className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/40"
@@ -318,7 +316,7 @@ export default function ExportResponsesDialog({
                             onCheckedChange={(v) => togglePicked(r.id, v === true)}
                           />
                           <span className="min-w-0 truncate leading-snug">
-                            {displaySubmitterLabel(r, form)}
+                            {responsePickerLabel(r, index)}
                           </span>
                         </label>
                       ))}

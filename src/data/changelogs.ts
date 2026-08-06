@@ -26,12 +26,12 @@ export const changelogs: ChangelogEntry[] = [
         text: 'Date and Multiple dates questions can limit which weekdays are selectable (e.g. Thursdays only).',
       },
       {
-        type: 'Fixed',
-        text: 'Form response lists, reports, and exports show the submitter’s name instead of their email.',
+        type: 'Improved',
+        text: 'Calendar-based date questions use a more compact input that fits the form layout better.',
       },
       {
         type: 'Changed',
-        text: 'Admin form responses use the standard spreadsheet table (same layout as PDF export).',
+        text: 'Built-in submitter identity is hidden in response views and exports unless a form includes its own name field.',
       },
     ],
   },

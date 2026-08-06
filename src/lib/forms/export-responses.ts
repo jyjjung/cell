@@ -1,10 +1,9 @@
 import type { FormAnswerValue, FormDefinition, FormFieldDefinition, FormResponse } from '@/types/forms';
-import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 
 export type FormExportOptions = {
   /** Field ids to include, in form order (subset of form.fields). */
   fieldIds: string[];
-  /** Include submitter name column / line. Default true. */
+  /** Include built-in submitter metadata column / line. Default false. */
   includeSubmitterName?: boolean;
 };
 
@@ -45,7 +44,7 @@ export function resolveExportFields(
 }
 
 function includeSubmitter(options?: FormExportOptions | null): boolean {
-  return options?.includeSubmitterName !== false;
+  return options?.includeSubmitterName === true;
 }
 
 export function buildSingleResponseCsv(
@@ -56,7 +55,7 @@ export function buildSingleResponseCsv(
   const fields = resolveExportFields(form, options);
   const lines = ['field,value'];
   if (includeSubmitter(options)) {
-    lines.push(`submitter_name,${escapeCsv(displaySubmitterLabel(response, form))}`);
+    lines.push(`submitter_name,${escapeCsv(response.submitterName ?? '')}`);
   }
   for (const field of fields) {
     lines.push(
@@ -66,7 +65,7 @@ export function buildSingleResponseCsv(
   return lines.join('\n');
 }
 
-/** One row per response; columns = optional email + selected questions. */
+/** One row per response; columns = optional submitter metadata + selected questions. */
 export function buildCollectiveResponsesCsv(
   form: FormDefinition,
   responses: FormResponse[],
@@ -79,7 +78,7 @@ export function buildCollectiveResponsesCsv(
   const header = headerCols.map(escapeCsv).join(',');
   const rows = responses.map((response) => {
     const cells: string[] = [response.id];
-    if (includeSubmitter(options)) cells.push(displaySubmitterLabel(response, form));
+    if (includeSubmitter(options)) cells.push(response.submitterName ?? '');
     for (const f of fields) {
       cells.push(stringifyAnswerValue(response.answers?.[f.id]));
     }
@@ -244,7 +243,7 @@ function buildResponsesTableHtml(
       ? `<tr><td class="empty" colspan="${1 + (showSubmitter ? 1 : 0) + fields.length}">No responses.</td></tr>`
       : responses
           .map((response, index) => {
-            const name = displaySubmitterLabel(response, form);
+            const name = response.submitterName ?? '';
             const cells = [
               `<td>${index + 1}</td>`,
               ...(showSubmitter
