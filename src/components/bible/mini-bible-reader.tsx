@@ -29,6 +29,7 @@ import {
 } from '@/lib/passage-keys';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import {
+  findEarliestIncompletePlanPassageKeyForChapter,
   getChapterPlanAssignmentStatus,
   isChapterMarkedCompleteInPlan,
   type ChapterPlanAssignment,
@@ -46,7 +47,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const { currentUser } = useAuth();
   const { version, setVersion } = useBibleTextVersion();
   const { plan } = useBiblePlan();
-  const { completedPassages, markMultiplePassages } = useUserBibleChecklist();
+  const { completedPassages, markMultiplePassages, markPassageCompleteWithLegacyCleanup } = useUserBibleChecklist();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   const [book, setBook] = useState(targetPassage?.book || 'Genesis');
@@ -81,14 +82,18 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       : isChapterComplete
         ? 100
         : 0;
-  const hasAnyPlanCompletion = chapterPlanStatus.hasMultipleAssignments
-    ? chapterPlanStatus.completedCount > 0
+  const isFullyRead = chapterPlanStatus.hasMultipleAssignments
+    ? chapterProgressPercent === 100
     : isChapterComplete;
+  const hasPartialRead =
+    chapterPlanStatus.hasMultipleAssignments &&
+    chapterProgressPercent > 0 &&
+    chapterProgressPercent < 100;
 
   const markButtonLabel = chapterPlanStatus.hasMultipleAssignments
-    ? chapterProgressPercent === 100
+    ? isFullyRead
       ? t.chapterMarkedComplete
-      : chapterProgressPercent > 0
+      : hasPartialRead
         ? t.chapterPlanAssignmentsStatus
             .replace('{completed}', String(chapterPlanStatus.completedCount))
             .replace('{total}', String(chapterPlanStatus.total))
@@ -97,21 +102,16 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       ? t.unmarkChapterAsRead
       : t.markChapterAsRead;
 
-  const markButtonVariant = chapterPlanStatus.hasMultipleAssignments
-    ? 'outline'
-    : hasAnyPlanCompletion
-      ? 'primary'
-      : 'default';
+  const markButtonVariant = 'outline' as const;
   const markButtonClassName = cn(
-    'relative h-9 w-full overflow-hidden rounded-full text-xs font-semibold transition-colors',
-    chapterPlanStatus.hasMultipleAssignments &&
-      'border-border bg-muted text-foreground hover:bg-accent',
-    chapterPlanStatus.hasMultipleAssignments &&
-      chapterProgressPercent === 100 &&
-      'border-success/60 text-success-foreground hover:bg-success/90',
+    'relative h-9 w-full overflow-hidden rounded-full border text-xs font-semibold transition-colors',
+    isFullyRead
+      ? 'border-success bg-success text-success-foreground hover:bg-success/90'
+      : hasPartialRead
+        ? 'border-border bg-muted text-foreground hover:bg-accent'
+        : 'border-border bg-muted/80 text-muted-foreground hover:bg-muted',
   );
-  const showMarkButtonProgress =
-    chapterPlanStatus.hasMultipleAssignments && chapterProgressPercent > 0;
+  const showMarkButtonProgress = hasPartialRead;
 
   const formatPlanAssignmentDate = (date: string) => {
     const parsed = parseISO(date);
@@ -206,9 +206,14 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
     setIsMarkingChapter(true);
     try {
-      const assignment = chapterPlanStatus.assignments[0];
-      if (assignment) {
-        await markMultiplePassages([assignment.key], true);
+      const earliestPlanKey = findEarliestIncompletePlanPassageKeyForChapter(
+        plan?.dailyReadings,
+        book,
+        chapter,
+        completedPassages,
+      );
+      if (earliestPlanKey) {
+        await markPassageCompleteWithLegacyCleanup(earliestPlanKey, chapterRef);
       } else {
         await markMultiplePassages([makeManualPassageKey(chapterRef)], true);
       }
@@ -224,11 +229,19 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
     setIsMarkingChapter(true);
     try {
-      const assignment = chapterPlanStatus.assignments[0];
-      if (assignment) {
-        await markMultiplePassages([assignment.key], false);
+      const keysToRemove = new Set<string>();
+      if (chapterPlanStatus.assignments.length > 0) {
+        chapterPlanStatus.assignments
+          .filter((assignment) => assignment.completed)
+          .forEach((assignment) => keysToRemove.add(assignment.key));
       } else {
-        await markMultiplePassages([makeManualPassageKey(chapterRef)], false);
+        keysToRemove.add(makeManualPassageKey(chapterRef));
+      }
+      if (completedPassages.includes(chapterRef)) {
+        keysToRemove.add(chapterRef);
+      }
+      if (keysToRemove.size > 0) {
+        await markMultiplePassages([...keysToRemove], false);
       }
     } catch (e) {
       console.error('Failed to unmark chapter as read:', e);

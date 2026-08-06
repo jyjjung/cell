@@ -6,7 +6,6 @@ import { translations } from '@/lib/translations';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import {
   makeManualPassageKey,
-  makePassageKey,
 } from '@/lib/passage-keys';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
@@ -20,7 +19,7 @@ import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useAllCustomRosterEntries } from '@/hooks/useAllCustomRosterEntries';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading } from '@/lib/reading-utils';
+import { calculatePlanProgressPercent, findTodaysReading, findNextUnreadReading, isPassageCompletedForPlan } from '@/lib/reading-utils';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { useMemo, useCallback, useState, type ReactNode } from 'react';
 import {
@@ -156,9 +155,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   const todayDoneCount = useMemo(() => todayPassages.filter(p => {
     const date = todaysReading?.date;
     return date
-      ? completedPassages.includes(makePassageKey(date, p.displayText))
+      ? isPassageCompletedForPlan(date, p.displayText, completedPassages, {
+          dailyReadings: plan?.dailyReadings,
+        })
       : completedPassages.includes(makeManualPassageKey(p.displayText));
-  }).length, [todayPassages, completedPassages, todaysReading?.date]);
+  }).length, [todayPassages, completedPassages, todaysReading?.date, plan?.dailyReadings]);
 
   const overallPct = useMemo(
     () => calculatePlanProgressPercent(plan?.dailyReadings, completedPassages),
@@ -427,9 +428,11 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
     const passages = nextUnread.passages?.filter(p => p.displayText && !p.displayText.startsWith('Error:')) || [];
     return passages.find(passage => {
       const date = nextUnread.date;
-      return !completedPassages.includes(makePassageKey(date, passage.displayText));
+      return !isPassageCompletedForPlan(date, passage.displayText, completedPassages, {
+        dailyReadings: plan?.dailyReadings,
+      });
     }) ?? null;
-  }, [nextUnread, completedPassages]);
+  }, [nextUnread, completedPassages, plan?.dailyReadings]);
 
   const displayName = `${formatUserDisplayName(currentUser, 'Guest')}${lang === 'ko' ? '님' : ''}`;
   const dateLabel = lang === 'ko'
@@ -476,7 +479,9 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
                 {todayPassages.map(p => {
                   const date = todaysReading?.date;
                   const done = date
-                    ? completedPassages.includes(makePassageKey(date, p.displayText))
+                    ? isPassageCompletedForPlan(date, p.displayText, completedPassages, {
+                        dailyReadings: plan?.dailyReadings,
+                      })
                     : completedPassages.includes(makeManualPassageKey(p.displayText));
                   return (
                     <ReadingCheckRow
