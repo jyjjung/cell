@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.3',
+    subtitle: 'Mark week as read',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'The reading plan week detail view now has a Mark week as read button to check off or clear every passage in that week at once.',
+      },
+    ],
+  },
+  {
     version: 'v1.13.2',
     subtitle: 'Reading progress recovery',
     date: 'August 6, 2026',

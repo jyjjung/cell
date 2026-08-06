@@ -163,6 +163,18 @@ export type PlanPassageProgress = {
   passagesLeft: number;
 };
 
+/** Date-scoped keys for every valid passage in a week detail view. */
+export function getWeekPassageKeys(readings: DailyReading[]): string[] {
+  const keys: string[] = [];
+  readings.forEach((day) => {
+    day.passages?.forEach((passage) => {
+      if (!isCountablePlanPassage(passage)) return;
+      keys.push(makePassageKey(day.date, passage.displayText));
+    });
+  });
+  return keys;
+}
+
 /** Count plan passage slots using the same completion rules as the checklist. */
 export function countPlanPassageProgress(
   dailyReadings: DailyReading[] | undefined | null,
