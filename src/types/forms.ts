@@ -11,6 +11,7 @@ export type FormFieldType =
   | 'contactEmail' // visible email question (editable)
   | 'birthday' // profile-linked date (yyyy-MM-dd)
   | 'date'
+  | 'dates' // multi-date selection (yyyy-MM-dd[])
   | 'time'
   | 'number'
   | 'phone'
@@ -36,6 +37,12 @@ export interface FormFieldVisibility {
   allowedUserIds?: string[];
 }
 
+/** Per-field date constraints (date / dates question types). */
+export interface FormDateConfig {
+  /** 0 = Sunday … 6 = Saturday. When set, only these weekdays are selectable. */
+  allowedWeekdays?: number[];
+}
+
 export interface FormFieldDefinition {
   id: string;
   label: string;
@@ -43,6 +50,7 @@ export interface FormFieldDefinition {
   order: number;
   required: boolean;
   options?: string[]; // for select and checkbox
+  dateConfig?: FormDateConfig;
   conditional?: FormConditionalRule;
   visibility?: FormFieldVisibility;
 }
