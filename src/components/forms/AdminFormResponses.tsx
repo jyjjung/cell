@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
@@ -8,18 +8,15 @@ import type { FormDefinition, FormResponse } from '@/types/forms';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import ReportPanel from '@/components/forms/ReportPanel';
+import ResponsesTable from '@/components/forms/ResponsesTable';
 import ExportResponsesDialog from '@/components/forms/ExportResponsesDialog';
+import { sortedFields } from '@/lib/forms/export-responses';
 import { useToast } from '@/hooks/use-toast';
-import { toMillisSafe } from '@/lib/firestore-timestamp';
 import {
-  AlertTriangle,
   ArrowLeft,
   Check,
   Download,
   Link2,
-  X,
 } from 'lucide-react';
 
 const FETCH_PAGE = 50;
@@ -38,15 +35,8 @@ export default function AdminFormResponsesPage({ formId }: Props) {
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [publicLinkCopied, setPublicLinkCopied] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportFixed, setExportFixed] = useState<FormResponse | null>(null);
-
-  const selected = useMemo(
-    () => (selectedId ? responses.find((r) => r.id === selectedId) ?? null : null),
-    [responses, selectedId],
-  );
 
   const loadForm = useCallback(async () => {
     const headers = await getClientAuthHeaders();
@@ -139,16 +129,6 @@ export default function AdminFormResponsesPage({ formId }: Props) {
     }
   };
 
-  const openBulkExport = () => {
-    setExportFixed(null);
-    setExportOpen(true);
-  };
-
-  const openSingleExport = (response: FormResponse) => {
-    setExportFixed(response);
-    setExportOpen(true);
-  };
-
   if (!loadingAuth && !isAdmin) {
     return (
       <div className="page-container">
@@ -168,10 +148,12 @@ export default function AdminFormResponsesPage({ formId }: Props) {
     );
   }
 
+  const fieldCount = sortedFields(form).length;
   const totalLabel =
     typeof form.responseCount === 'number'
-      ? `${form.responseCount} total`
+      ? `${form.responseCount} response${form.responseCount === 1 ? '' : 's'}`
       : `${responses.length} loaded`;
+  const generatedAt = new Date().toLocaleString();
 
   return (
     <div className="page-container space-y-5">
@@ -183,14 +165,19 @@ export default function AdminFormResponsesPage({ formId }: Props) {
               Forms
             </Link>
           </Button>
-          <PageHeader
-            title={form.title}
-            description={`Responses · ${totalLabel}${
-              typeof form.maxResponses === 'number' && form.maxResponses > 0
-                ? ` · limit ${form.maxResponses}`
-                : ''
-            }`}
-          />
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Forms export
+            </p>
+            <PageHeader
+              title={form.title}
+              description={`${totalLabel} · ${fieldCount} column${fieldCount === 1 ? '' : 's'} · ${generatedAt}${
+                typeof form.maxResponses === 'number' && form.maxResponses > 0
+                  ? ` · limit ${form.maxResponses}`
+                  : ''
+              }`}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" className="rounded-xl">
@@ -212,7 +199,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
           <Button
             className="rounded-xl"
             disabled={responses.length === 0}
-            onClick={openBulkExport}
+            onClick={() => setExportOpen(true)}
           >
             <Download className="h-4 w-4 mr-1.5" />
             Download…
@@ -226,98 +213,33 @@ export default function AdminFormResponsesPage({ formId }: Props) {
           description="Share the responses link so guests can see submissions without signing in."
         />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
-          <section className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              All responses
-            </p>
-            {responses.map((r) => {
-              const errs = r.lastValidationErrors ?? {};
-              const hasErrors = Object.keys(errs).length > 0;
-              const updatedMs = toMillisSafe(r.updatedAt);
-              const isSelected = selectedId === r.id;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setSelectedId(r.id)}
-                  className={`w-full text-left rounded-xl border px-3.5 py-3 transition-colors ${
-                    isSelected
-                      ? 'border-primary/50 bg-primary/10'
-                      : 'border-border/60 bg-card/40 hover:bg-muted/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{r.submitterEmail || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {updatedMs ? new Date(updatedMs).toLocaleString() : '—'}
-                      </p>
-                    </div>
-                    {hasErrors ? (
-                      <Badge variant="destructive" className="shrink-0 gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Needs attention
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="shrink-0">
-                        Complete
-                      </Badge>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+        <div className="space-y-4">
+          <ResponsesTable
+            form={form}
+            responses={responses}
+            getRowClassName={(response) =>
+              response.lastValidationErrors && Object.keys(response.lastValidationErrors).length > 0
+                ? 'bg-destructive/5'
+                : undefined
+            }
+          />
 
-            {cursor ? (
-              <div className="flex justify-center pt-1">
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  disabled={loadingMore}
-                  onClick={() => void loadResponses({ append: true, cursor })}
-                >
-                  {loadingMore ? 'Loading…' : 'Load more'}
-                </Button>
-              </div>
-            ) : null}
-          </section>
+          {cursor ? (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                disabled={loadingMore}
+                onClick={() => void loadResponses({ append: true, cursor })}
+              >
+                {loadingMore ? 'Loading…' : 'Load more'}
+              </Button>
+            </div>
+          ) : null}
 
-          <section className="rounded-xl border border-border/60 bg-background p-4 space-y-4 min-h-[240px]">
-            {!selected ? (
-              <div className="flex h-full min-h-[200px] items-center justify-center">
-                <p className="text-sm text-muted-foreground text-center px-4">
-                  Select a response to view or download it.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Single response
-                    </p>
-                    <h3 className="text-section-title truncate mt-0.5">{selected.submitterEmail}</h3>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-xl shrink-0"
-                    onClick={() => setSelectedId(null)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-
-                <ReportPanel
-                  form={form}
-                  response={selected}
-                  compactHeader
-                  onDownload={() => openSingleExport(selected)}
-                />
-              </>
-            )}
-          </section>
+          <p className="text-[10px] text-muted-foreground">
+            Same layout as PDF export. Rows highlighted in red need attention.
+          </p>
         </div>
       )}
 
@@ -326,8 +248,6 @@ export default function AdminFormResponsesPage({ formId }: Props) {
         onOpenChange={setExportOpen}
         form={form}
         responses={responses}
-        fixedResponse={exportFixed}
-        initialPickedIds={selectedId ? [selectedId] : undefined}
         fetchAllForExport={fetchAllForExport}
         exportCap={EXPORT_CAP}
       />

@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { FormDefinition, FormFieldDefinition, FormResponse } from '@/types/forms';
+import { useCallback, useEffect, useState } from 'react';
+import type { FormDefinition, FormResponse } from '@/types/forms';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { stringifyAnswerValue, sortedFields } from '@/lib/forms/export-responses';
+import ResponsesTable from '@/components/forms/ResponsesTable';
 import { Inbox } from 'lucide-react';
 
 const PAGE_SIZE = 50;
@@ -20,11 +20,6 @@ export default function PublicFormResponsesPage({ params }: { params: { publicTo
   const [form, setForm] = useState<PublicFormSlice | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
-
-  const fields = useMemo(
-    () => (form ? sortedFields(form as FormDefinition) : ([] as FormFieldDefinition[])),
-    [form],
-  );
 
   const loadPage = useCallback(
     async (options?: { append?: boolean; cursor?: string | null }) => {
@@ -93,54 +88,7 @@ export default function PublicFormResponsesPage({ params }: { params: { publicTo
         />
       ) : (
         <div className="space-y-4">
-          <div className="overflow-x-auto rounded-xl border border-border/60 bg-card">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border/60 bg-muted/40 text-left">
-                  <th className="whitespace-nowrap px-3.5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    #
-                  </th>
-                  <th className="whitespace-nowrap px-3.5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Submitter
-                  </th>
-                  {fields.map((field) => (
-                    <th
-                      key={field.id}
-                      className="whitespace-nowrap px-3.5 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                    >
-                      {field.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {responses.map((response, index) => (
-                  <tr
-                    key={response.id}
-                    className="border-b border-border/40 last:border-0 odd:bg-background even:bg-muted/15"
-                  >
-                    <td className="px-3.5 py-3 align-top text-muted-foreground tabular-nums">
-                      {index + 1}
-                    </td>
-                    <td className="px-3.5 py-3 align-top font-medium">
-                      {response.submitterEmail || '—'}
-                    </td>
-                    {fields.map((field) => {
-                      const value = stringifyAnswerValue(response.answers?.[field.id]);
-                      return (
-                        <td
-                          key={field.id}
-                          className="max-w-[240px] px-3.5 py-3 align-top whitespace-pre-wrap break-words"
-                        >
-                          {value || <span className="text-muted-foreground">—</span>}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ResponsesTable form={form as FormDefinition} responses={responses} responsive />
 
           {cursor ? (
             <div className="flex justify-center">

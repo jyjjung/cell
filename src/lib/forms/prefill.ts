@@ -34,7 +34,7 @@ export function buildInitialAnswers(
 ): Record<string, FormAnswerValue> {
   const initial: Record<string, FormAnswerValue> = {};
   for (const field of form.fields) {
-    if (field.type === 'checkbox') {
+    if (field.type === 'checkbox' || field.type === 'dates') {
       initial[field.id] = [];
       continue;
     }

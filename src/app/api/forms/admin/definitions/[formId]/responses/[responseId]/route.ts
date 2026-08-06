@@ -3,6 +3,7 @@ import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { getFormById, getFormResponseById, updateFormResponseAnswers } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
+import { resolveSubmitterName } from '@/lib/forms/submitter-display';
 import type { FormAnswerValue } from '@/types/forms';
 
 export async function GET(
@@ -57,6 +58,11 @@ export async function PUT(
 
     const answers = rawAnswers as Record<string, FormAnswerValue>;
 
+    const response = await getFormResponseById(adminDb, params.responseId);
+    if (!response || response.formId !== params.formId) {
+      return NextResponse.json({ error: 'Response not found' }, { status: 404 });
+    }
+
     const form = await getFormById(adminDb, params.formId);
     if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
 
@@ -68,6 +74,7 @@ export async function PUT(
       answers,
       updatedBy: 'admin',
       lastValidationErrors: hasErrors ? errorsByFieldId : null,
+      submitterName: resolveSubmitterName(form, answers) || response.submitterName,
     });
 
     return NextResponse.json({ success: true, errors: hasErrors ? errorsByFieldId : null });

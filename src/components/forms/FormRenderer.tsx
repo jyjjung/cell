@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { FormDefinition, FormAnswerValue, FormFieldDefinition } from '@/types/forms';
 import { computeVisibleFields } from '@/lib/forms/validation';
 import { isProfileLinkedFieldType, isProfileReferenceFieldType } from '@/lib/forms/field-types';
+import FormDateFieldInput from '@/components/forms/FormDateFieldInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -71,6 +72,10 @@ export default function FormRenderer({
           field.type === 'time' ||
           field.type === 'url';
 
+        const usesCalendarDateInput =
+          field.type === 'dates' ||
+          (field.type === 'date' && (field.dateConfig?.allowedWeekdays?.length ?? 0) > 0);
+
         const inputType =
           field.type === 'contactEmail'
             ? 'email'
@@ -100,7 +105,7 @@ export default function FormRenderer({
               ) : null}
             </div>
 
-            {textLike && (
+            {textLike && !usesCalendarDateInput && (
               <Input
                 id={`field-${field.id}`}
                 type={inputType}
@@ -134,6 +139,30 @@ export default function FormRenderer({
                           ? 'https://'
                           : undefined
                 }
+              />
+            )}
+
+            {usesCalendarDateInput && field.type === 'date' && (
+              <FormDateFieldInput
+                id={`field-${field.id}`}
+                mode="single"
+                value={selectValue}
+                onChange={(next) => setAnswer(field.id, next)}
+                allowedWeekdays={field.dateConfig?.allowedWeekdays}
+                readOnly={readOnly}
+                className={errorClass}
+              />
+            )}
+
+            {field.type === 'dates' && (
+              <FormDateFieldInput
+                id={`field-${field.id}`}
+                mode="multiple"
+                value={Array.isArray(value[field.id]) ? (value[field.id] as string[]) : []}
+                onChange={(next) => setAnswer(field.id, next)}
+                allowedWeekdays={field.dateConfig?.allowedWeekdays}
+                readOnly={readOnly}
+                className={errorClass}
               />
             )}
 

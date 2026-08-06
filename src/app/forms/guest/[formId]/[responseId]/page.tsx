@@ -190,7 +190,6 @@ export default function GuestResponsePage({ params }: { params: { formId: string
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
-          <p className="text-sm text-muted-foreground">Submitted as {response.submitterEmail}</p>
         </div>
 
         {hasErrors ? (

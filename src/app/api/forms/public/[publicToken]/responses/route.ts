@@ -11,6 +11,7 @@ import {
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import { applyProfileReferenceAnswers, formatProfileName } from '@/lib/forms/prefill';
+import { resolveSubmitterName } from '@/lib/forms/submitter-display';
 import type { FormAnswerValue } from '@/types/forms';
 
 /** Guest-readable responses list (no auth). Bounded + paginated. */
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
     }
 
     let submitterUserId: string | null = null;
+    let profileName = '';
     const token = request.headers.get('Authorization')?.split('Bearer ')[1];
     if (token) {
       try {
@@ -112,17 +114,21 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
         const data = userSnap.data() as Record<string, unknown>;
         const firstName = typeof data.firstName === 'string' ? data.firstName : '';
         const lastName = typeof data.lastName === 'string' ? data.lastName : '';
+        profileName = formatProfileName({ firstName, lastName });
         answers = applyProfileReferenceAnswers(form, answers, {
-          name: formatProfileName({ firstName, lastName }),
+          name: profileName,
           email: typeof data.email === 'string' ? data.email : submitterEmail,
         });
       }
     }
 
+    const submitterName = resolveSubmitterName(form, answers) || profileName;
+
     const { errorsByFieldId } = validateFormResponse(form, answers);
     const responseId = await createFormResponse({
       formId: form.id,
       submitterEmail,
+      submitterName,
       answers,
       formTitleSnapshot: form.title,
       lastValidationErrors: Object.keys(errorsByFieldId).length ? errorsByFieldId : null,

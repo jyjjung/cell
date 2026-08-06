@@ -1,4 +1,5 @@
 import type { FormFieldDefinition, FormFieldType } from '@/types/forms';
+import { normalizeAllowedWeekdays } from '@/lib/forms/date-field-utils';
 
 export const FORM_FIELD_TYPES: FormFieldType[] = [
   'text',
@@ -14,6 +15,7 @@ export const FORM_FIELD_TYPES: FormFieldType[] = [
   'birthday',
   'number',
   'date',
+  'dates',
   'time',
   'url',
 ];
@@ -36,8 +38,16 @@ export function isChoiceFieldType(type: FormFieldType): boolean {
   return type === 'select' || type === 'checkbox';
 }
 
+export function isArrayAnswerFieldType(type: FormFieldType): boolean {
+  return type === 'checkbox' || type === 'dates';
+}
+
+export function isDateFieldType(type: FormFieldType): boolean {
+  return type === 'date' || type === 'dates';
+}
+
 export function isStringAnswerFieldType(type: FormFieldType): boolean {
-  return type !== 'checkbox';
+  return !isArrayAnswerFieldType(type);
 }
 
 export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
@@ -54,6 +64,7 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   birthday: 'Birthday (from profile)',
   number: 'Number',
   date: 'Date',
+  dates: 'Multiple dates',
   time: 'Time',
   url: 'Link (URL)',
 };
@@ -66,6 +77,7 @@ export function defaultLabelForFieldType(type: FormFieldType, order: number): st
   if (type === 'phone') return 'Phone';
   if (type === 'birthday') return 'Birthday';
   if (type === 'date') return 'Date';
+  if (type === 'dates') return 'Dates';
   if (type === 'time') return 'Time';
   if (type === 'url') return 'Website';
   if (type === 'yesno') return 'Yes or no?';
@@ -96,6 +108,10 @@ export function serializeFieldForFirestore(f: FormFieldDefinition): Record<strin
       allowedRoleIds: f.visibility.allowedRoleIds ?? [],
       allowedUserIds: f.visibility.allowedUserIds ?? [],
     };
+  }
+  const allowedWeekdays = normalizeAllowedWeekdays(f.dateConfig?.allowedWeekdays);
+  if (allowedWeekdays?.length) {
+    out.dateConfig = { allowedWeekdays };
   }
   return out;
 }
