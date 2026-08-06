@@ -1,10 +1,11 @@
 import type { FormAnswerValue, FormDefinition, FormFieldDefinition, FormResponse } from '@/types/forms';
+import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 
 export type FormExportOptions = {
   /** Field ids to include, in form order (subset of form.fields). */
   fieldIds: string[];
-  /** Include submitter email column / line. Default true. */
-  includeSubmitterEmail?: boolean;
+  /** Include submitter name column / line. Default true. */
+  includeSubmitterName?: boolean;
 };
 
 export function stringifyAnswerValue(v: FormAnswerValue | undefined): string {
@@ -43,8 +44,8 @@ export function resolveExportFields(
   return all.filter((f) => allowed.has(f.id));
 }
 
-function includeEmail(options?: FormExportOptions | null): boolean {
-  return options?.includeSubmitterEmail !== false;
+function includeSubmitter(options?: FormExportOptions | null): boolean {
+  return options?.includeSubmitterName !== false;
 }
 
 export function buildSingleResponseCsv(
@@ -54,8 +55,8 @@ export function buildSingleResponseCsv(
 ): string {
   const fields = resolveExportFields(form, options);
   const lines = ['field,value'];
-  if (includeEmail(options)) {
-    lines.push(`submitter_email,${escapeCsv(response.submitterEmail)}`);
+  if (includeSubmitter(options)) {
+    lines.push(`submitter_name,${escapeCsv(displaySubmitterLabel(response, form))}`);
   }
   for (const field of fields) {
     lines.push(
@@ -73,12 +74,12 @@ export function buildCollectiveResponsesCsv(
 ): string {
   const fields = resolveExportFields(form, options);
   const headerCols = ['response_id'];
-  if (includeEmail(options)) headerCols.push('submitter_email');
+  if (includeSubmitter(options)) headerCols.push('submitter_name');
   headerCols.push(...fields.map((f) => f.label));
   const header = headerCols.map(escapeCsv).join(',');
   const rows = responses.map((response) => {
     const cells: string[] = [response.id];
-    if (includeEmail(options)) cells.push(response.submitterEmail);
+    if (includeSubmitter(options)) cells.push(displaySubmitterLabel(response, form));
     for (const f of fields) {
       cells.push(stringifyAnswerValue(response.answers?.[f.id]));
     }
@@ -229,25 +230,25 @@ function buildResponsesTableHtml(
   options?: FormExportOptions | null,
 ): string {
   const fields = resolveExportFields(form, options);
-  const showEmail = includeEmail(options);
+  const showSubmitter = includeSubmitter(options);
   const generatedAt = new Date().toLocaleString();
 
   const headerCells = [
     '<th>#</th>',
-    ...(showEmail ? ['<th>Submitter</th>'] : []),
+    ...(showSubmitter ? ['<th>Submitter</th>'] : []),
     ...fields.map((f) => `<th>${escapeHtml(f.label)}</th>`),
   ].join('');
 
   const bodyRows =
     responses.length === 0
-      ? `<tr><td class="empty" colspan="${1 + (showEmail ? 1 : 0) + fields.length}">No responses.</td></tr>`
+      ? `<tr><td class="empty" colspan="${1 + (showSubmitter ? 1 : 0) + fields.length}">No responses.</td></tr>`
       : responses
           .map((response, index) => {
-            const email = (response.submitterEmail ?? '').trim();
+            const name = displaySubmitterLabel(response, form);
             const cells = [
               `<td>${index + 1}</td>`,
-              ...(showEmail
-                ? [email ? `<td>${escapeHtml(email)}</td>` : `<td class="empty">—</td>`]
+              ...(showSubmitter
+                ? [name ? `<td>${escapeHtml(name)}</td>` : `<td class="empty">—</td>`]
                 : []),
               ...fields.map((field) => {
                 const value = stringifyAnswerValue(response.answers?.[field.id]);

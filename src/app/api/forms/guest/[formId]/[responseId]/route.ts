@@ -3,6 +3,7 @@ import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { getFormById, getFormResponseById, updateFormResponseAnswers, deleteFormResponseForOwner } from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
+import { resolveSubmitterName } from '@/lib/forms/submitter-display';
 import type { FormAnswerValue } from '@/types/forms';
 
 const USERS_COLLECTION = 'users';
@@ -56,6 +57,7 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
       answers,
       updatedBy: 'guest',
       lastValidationErrors: hasErrors ? errorsByFieldId : null,
+      submitterName: resolveSubmitterName(form, answers) || response.submitterName,
     });
 
     let profileSynced: string[] = [];

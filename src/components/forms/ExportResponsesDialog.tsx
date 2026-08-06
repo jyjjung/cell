@@ -25,6 +25,7 @@ import {
   sortedFields,
   type FormExportOptions,
 } from '@/lib/forms/export-responses';
+import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { Download, FileSpreadsheet } from 'lucide-react';
 
 type ResponseScope = 'all' | 'picked';
@@ -60,7 +61,7 @@ export default function ExportResponsesDialog({
   const isSingle = !!fixedResponse;
 
   const [fieldIds, setFieldIds] = useState<Set<string>>(() => new Set(fields.map((f) => f.id)));
-  const [includeEmail, setIncludeEmail] = useState(true);
+  const [includeName, setIncludeName] = useState(true);
   const [scope, setScope] = useState<ResponseScope>('all');
   const [pickedIds, setPickedIds] = useState<Set<string>>(() => new Set());
   const [format, setFormat] = useState<ExportFormat>('csv');
@@ -69,7 +70,7 @@ export default function ExportResponsesDialog({
   useEffect(() => {
     if (!open) return;
     setFieldIds(new Set(fields.map((f) => f.id)));
-    setIncludeEmail(true);
+    setIncludeName(true);
     setFormat('csv');
     setBusy(false);
     if (isSingle && fixedResponse) {
@@ -107,7 +108,7 @@ export default function ExportResponsesDialog({
 
   const exportOptions = (): FormExportOptions => ({
     fieldIds: fields.filter((f) => fieldIds.has(f.id)).map((f) => f.id),
-    includeSubmitterEmail: includeEmail,
+    includeSubmitterName: includeName,
   });
 
   const resolveResponses = async (): Promise<FormResponse[]> => {
@@ -122,11 +123,11 @@ export default function ExportResponsesDialog({
 
   const runExport = async () => {
     const options = exportOptions();
-    if (options.fieldIds.length === 0 && !options.includeSubmitterEmail) {
+    if (options.fieldIds.length === 0 && !options.includeSubmitterName) {
       toast({
         variant: 'destructive',
         title: 'Nothing selected',
-        description: 'Pick at least one field or include submitter email.',
+        description: 'Pick at least one field or include submitter name.',
       });
       return;
     }
@@ -222,10 +223,10 @@ export default function ExportResponsesDialog({
             </div>
             <label className="flex items-center gap-2.5 rounded-xl border border-border/60 px-3 py-2 text-sm cursor-pointer">
               <Checkbox
-                checked={includeEmail}
-                onCheckedChange={(v) => setIncludeEmail(v === true)}
+                checked={includeName}
+                onCheckedChange={(v) => setIncludeName(v === true)}
               />
-              Submitter email
+              Submitter name
             </label>
             <ScrollArea className="h-[min(180px,28vh)] rounded-xl border border-border/60">
               <div className="p-2 space-y-0.5">
@@ -317,7 +318,7 @@ export default function ExportResponsesDialog({
                             onCheckedChange={(v) => togglePicked(r.id, v === true)}
                           />
                           <span className="min-w-0 truncate leading-snug">
-                            {r.submitterEmail || 'Unknown'}
+                            {displaySubmitterLabel(r, form)}
                           </span>
                         </label>
                       ))}

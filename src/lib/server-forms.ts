@@ -123,6 +123,7 @@ function mapResponseDoc(id: string, data: any): FormResponse {
     formId: data.formId,
     formTitleSnapshot: typeof data.formTitleSnapshot === 'string' ? data.formTitleSnapshot : undefined,
     submitterEmail: typeof data.submitterEmail === 'string' ? data.submitterEmail : '',
+    submitterName: typeof data.submitterName === 'string' ? data.submitterName : undefined,
     submitterUserId: typeof data.submitterUserId === 'string' ? data.submitterUserId : null,
     answers,
     lastValidationErrors: errors && typeof errors === 'object' && Object.keys(errors).length ? errors : undefined,
@@ -507,6 +508,7 @@ export { formHasResponseCapacity };
 export async function createFormResponse(input: {
   formId: string;
   submitterEmail: string;
+  submitterName?: string;
   submitterUserId?: string | null;
   answers: Record<string, FormAnswerValue>;
   formTitleSnapshot?: string;
@@ -536,6 +538,7 @@ export async function createFormResponse(input: {
     tx.set(responseRef, {
       formId: input.formId,
       submitterEmail: input.submitterEmail,
+      submitterName: input.submitterName?.trim() || null,
       submitterUserId: input.submitterUserId ?? null,
       formTitleSnapshot: input.formTitleSnapshot ?? null,
       answers: input.answers,
@@ -563,6 +566,7 @@ export async function updateFormResponseAnswers(input: {
   answers: Record<string, FormAnswerValue>;
   updatedBy: 'guest' | 'admin';
   lastValidationErrors?: Record<string, string> | null;
+  submitterName?: string;
 }): Promise<void> {
   const adminApp = getAdminApp();
   const adminDb = getAdminDb(adminApp);
@@ -582,6 +586,9 @@ export async function updateFormResponseAnswers(input: {
       lastValidationErrors: input.lastValidationErrors ?? null,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: input.updatedBy,
+      ...(input.submitterName !== undefined
+        ? { submitterName: input.submitterName.trim() || null }
+        : {}),
     },
     { merge: true },
   );

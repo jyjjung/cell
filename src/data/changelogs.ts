@@ -25,6 +25,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Added',
         text: 'Date and Multiple dates questions can limit which weekdays are selectable (e.g. Thursdays only).',
       },
+      {
+        type: 'Fixed',
+        text: 'Form response lists, reports, and exports show the submitter’s name instead of their email.',
+      },
     ],
   },
   {
