@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculatePlanProgressToDatePercent,
   countPlanPassagesDueThrough,
+  getWeekPassageKeys,
 } from '@/lib/reading-utils';
 import { makePassageKey } from '@/lib/passage-keys';
 import type { DailyReading } from '@/types';
@@ -42,5 +43,34 @@ describe('plan progress to date', () => {
     expect(
       calculatePlanProgressToDatePercent(readings, completed, new Date(2026, 0, 10)),
     ).toBe(60);
+  });
+});
+
+describe('getWeekPassageKeys', () => {
+  it('collects date-scoped keys for valid passages only', () => {
+    const readings = [
+      day('2026-01-01', ['Genesis 1', 'Genesis 2']),
+      day('2026-01-02', ['Genesis 3']),
+    ];
+    expect(getWeekPassageKeys(readings)).toEqual([
+      makePassageKey('2026-01-01', 'Genesis 1'),
+      makePassageKey('2026-01-01', 'Genesis 2'),
+      makePassageKey('2026-01-02', 'Genesis 3'),
+    ]);
+  });
+
+  it('skips error passages', () => {
+    const readings: DailyReading[] = [
+      {
+        date: '2026-01-01',
+        passages: [
+          { displayText: 'Genesis 1', book: 'Genesis', chapter: 1 },
+          { displayText: 'Error: missing', book: '', chapter: 0 },
+        ],
+      },
+    ];
+    expect(getWeekPassageKeys(readings)).toEqual([
+      makePassageKey('2026-01-01', 'Genesis 1'),
+    ]);
   });
 });
