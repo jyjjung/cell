@@ -8,7 +8,6 @@ import type { FormAnswerValue, FormDefinition, FormResponse } from '@/types/form
 import FormRenderer from '@/components/forms/FormRenderer';
 import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import { validateFormResponse } from '@/lib/forms/validation';
-import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
@@ -191,9 +190,6 @@ export default function GuestResponsePage({ params }: { params: { formId: string
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
-          <p className="text-sm text-muted-foreground">
-            Submitted as {displaySubmitterLabel(response, form)}
-          </p>
         </div>
 
         {hasErrors ? (

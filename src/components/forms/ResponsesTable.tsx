@@ -10,7 +10,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { resolveExportFields, stringifyAnswerValue, type FormExportOptions } from '@/lib/forms/export-responses';
-import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -27,7 +26,7 @@ export default function ResponsesTable({
   form,
   responses,
   options,
-  showSubmitter = true,
+  showSubmitter = false,
   startIndex = 0,
   responsive = false,
   getRowClassName,
@@ -58,11 +57,7 @@ export default function ResponsesTable({
           {responses.map((response, index) => (
             <TableRow key={response.id} className={getRowClassName?.(response)}>
               <TableCell className="tabular-nums text-muted-foreground">{startIndex + index + 1}</TableCell>
-              {showSubmitter ? (
-                <TableCell className="max-w-[180px] font-medium whitespace-normal break-words">
-                  {displaySubmitterLabel(response, form)}
-                </TableCell>
-              ) : null}
+              {showSubmitter ? <TableCell className="max-w-[180px] font-medium whitespace-normal break-words">—</TableCell> : null}
               {fields.map((field) => {
                 const value = stringifyAnswerValue(response.answers?.[field.id]);
                 return (

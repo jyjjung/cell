@@ -4,7 +4,6 @@ import { useMemo } from 'react';
 import type { FormDefinition, FormResponse } from '@/types/forms';
 import { Button } from '@/components/ui/button';
 import { stringifyAnswerValue } from '@/lib/forms/export-responses';
-import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { Download } from 'lucide-react';
 import { isProfileReferenceFieldType } from '@/lib/forms/field-types';
 
@@ -26,9 +25,6 @@ export default function ReportPanel({ form, response, compactHeader = false, onD
         {!compactHeader ? (
           <div>
             <h3 className="text-section-title">{form.title}</h3>
-            <p className="text-sm text-muted-foreground">
-              Submitter: {displaySubmitterLabel(response, form)}
-            </p>
           </div>
         ) : (
           <p className="text-sm font-medium text-muted-foreground">Answers report</p>

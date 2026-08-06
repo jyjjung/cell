@@ -57,7 +57,7 @@ export default function FormDateFieldInput({
   const summaryLabel =
     mode === 'single'
       ? selectedSingle
-        ? format(selectedSingle, 'PPP')
+        ? format(selectedSingle, 'MMM d, yyyy')
         : 'Pick a date'
       : selectedMultiple.length > 0
         ? `${selectedMultiple.length} date${selectedMultiple.length === 1 ? '' : 's'} selected`
@@ -79,7 +79,7 @@ export default function FormDateFieldInput({
             variant="outline"
             disabled={readOnly}
             className={cn(
-              'w-full justify-start rounded-xl font-normal',
+              'h-10 w-full justify-start rounded-xl px-3 text-sm font-normal',
               !value || (Array.isArray(value) && value.length === 0) ? 'text-muted-foreground' : undefined,
             )}
           >
