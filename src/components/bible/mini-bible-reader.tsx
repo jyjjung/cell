@@ -106,7 +106,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   const markButtonClassName = cn(
     'relative h-9 w-full overflow-hidden rounded-full border text-xs font-semibold transition-colors',
     isFullyRead
-      ? 'border-success bg-success text-success-foreground hover:bg-success/90'
+      ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
       : hasPartialRead
         ? 'border-border bg-muted text-foreground hover:bg-accent'
         : 'border-border bg-muted/80 text-muted-foreground hover:bg-muted',
@@ -444,7 +444,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                             className={cn(
                               'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
                               assignment.completed
-                                ? 'border-success/30 bg-success/10 hover:bg-success/15'
+                                ? 'border-primary/30 bg-primary/10 hover:bg-primary/15'
                                 : 'border-border bg-background/80 hover:bg-accent/60',
                               isMarkingChapter && 'opacity-70',
                             )}
@@ -453,7 +453,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                               className={cn(
                                 'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
                                 assignment.completed
-                                  ? 'border-success bg-success text-success-foreground'
+                                  ? 'border-primary bg-primary text-primary-foreground'
                                   : 'border-muted-foreground/40 bg-background',
                               )}
                             >
@@ -468,7 +468,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                                 className={cn(
                                   'mt-1 text-[11px] font-semibold',
                                   assignment.completed
-                                    ? 'text-success'
+                                    ? 'text-primary'
                                     : 'text-muted-foreground',
                                 )}
                               >
@@ -534,7 +534,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
               {showMarkButtonProgress ? (
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 left-0 rounded-full bg-success transition-all duration-300"
+                  className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-300"
                   style={{ width: `${chapterProgressPercent}%` }}
                 />
               ) : null}

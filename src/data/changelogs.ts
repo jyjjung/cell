@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.5',
+    subtitle: 'Bible popup theme colors',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'The Bible popup mark-as-read button now uses your theme’s primary color for read and partial progress, instead of staying green in every theme.',
+      },
+    ],
+  },
+  {
     version: 'v1.13.4',
     subtitle: 'Checklist key migration',
     date: 'August 6, 2026',
