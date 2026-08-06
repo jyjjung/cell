@@ -20,12 +20,12 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { parseDay } from '@/lib/event-occurrences';
 import { makePassageKey } from '@/lib/passage-keys';
-import { calculatePlanPaceStats, calculatePlanProgressToDatePercent, countPlanPassageProgress, countPlanPassagesDueThrough } from '@/lib/reading-utils';
+import { calculatePlanPaceStats, calculatePlanProgressToDatePercent, countPlanPassageProgress, countPlanPassagesDueThrough, getWeekPassageKeys } from '@/lib/reading-utils';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { DailyReading, WeeklyProgress } from '@/types';
 import { endOfWeek, format, isBefore, isValid, isWithinInterval, startOfDay, startOfWeek } from 'date-fns';
-import { ArrowLeft, BookUp, CheckCircle, Info, MoreVertical } from 'lucide-react';
+import { ArrowLeft, BookUp, CheckCircle, Info, Loader2, MoreVertical } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type ViewState = 
@@ -80,6 +80,7 @@ export default function BibleChecklistPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
   const [isMarkRangeDialogOpen, setIsMarkRangeDialogOpen] = useState(false);
+  const [isMarkingWeek, setIsMarkingWeek] = useState(false);
   
   const isGuest = !currentUser;
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -246,6 +247,11 @@ export default function BibleChecklistPage() {
     return { completedWeeks: completed, upcomingWeeks: upcoming };
   }, [weeklyProgressData]);
 
+  const activeWeekDetails = useMemo(() => {
+    if (viewState.view !== 'single-week-details') return null;
+    return weeklyProgressData.find((week) => week.weekNumber === viewState.week.weekNumber) ?? viewState.week;
+  }, [viewState, weeklyProgressData]);
+
   // ... all useMemo and useCallback hooks are defined above this point ...
 
   if (!isMounted || planLoading) {
@@ -266,16 +272,41 @@ export default function BibleChecklistPage() {
   return (
     <>
     <div className="page-container">
-        {viewState.view === 'single-week-details' && (
+        {viewState.view === 'single-week-details' && activeWeekDetails && (
            <div className="stack-gap-sm">
             <PageHeader 
-                title={`${t.week} ${viewState.week.weekNumber}`}
+                title={`${t.week} ${activeWeekDetails.weekNumber}`}
                 action={
                     <Button variant="ghost" size="sm" onClick={() => setViewState({ view: 'all-weeks' })} className="rounded-xl font-bold text-xs text-primary">
                         <ArrowLeft className="mr-2 h-4 w-4"/> {t.backToAllWeeks}
                     </Button>
                 }
             />
+
+            {!isGuest && activeWeekDetails.totalCount > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl text-xs font-semibold"
+                  disabled={isMarkingWeek}
+                  onClick={async () => {
+                    const keys = getWeekPassageKeys(activeWeekDetails.readings);
+                    if (keys.length === 0) return;
+                    setIsMarkingWeek(true);
+                    try {
+                      await markMultiplePassages(keys, !activeWeekDetails.isCompleted);
+                    } finally {
+                      setIsMarkingWeek(false);
+                    }
+                  }}
+                >
+                  {isMarkingWeek ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                  {activeWeekDetails.isCompleted ? t.markWeekAsUnread : t.markWeekAsRead}
+                </Button>
+              </div>
+            )}
             
             <div className="space-y-4">
                 {viewState.week.readings

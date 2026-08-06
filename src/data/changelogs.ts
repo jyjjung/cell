@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.0',
+    subtitle: 'Bible reading week actions',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Mark or unmark an entire week as read from the Bible checklist week view.',
+      },
+    ],
+  },
+  {
     version: 'v1.12.1',
     subtitle: 'Open chord sheet uploads',
     date: 'August 5, 2026',
