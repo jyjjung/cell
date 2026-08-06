@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:rules": "PATH=\"/opt/homebrew/opt/openjdk@21/bin:$PATH\" RUN_FIRESTORE_RULES=1 npx -y firebase-tools@latest emulators:exec --only firestore \"vitest run\"",
     "data:inventory": "node scripts/data-cleanup/inventory.mjs",
+    "migrate:bible-checklist": "node scripts/migrate-bible-checklist-keys.mjs",
+    "migrate:bible-checklist:dry-run": "node scripts/migrate-bible-checklist-keys.mjs --dry-run",
     "storage:cache-headers": "node scripts/add-cache-control.mjs",
     "storage:cache-headers:dry-run": "node scripts/add-cache-control.mjs --dry-run",
     "test:e2e": "playwright test",

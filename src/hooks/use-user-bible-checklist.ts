@@ -13,7 +13,7 @@ import { makePassageKey } from '@/lib/passage-keys';
 import type { UserBibleChecklist } from '@/types';
 import {
     arrayRemove, arrayUnion, doc,
-    onSnapshot, runTransaction, serverTimestamp, setDoc, Timestamp
+    onSnapshot, serverTimestamp, setDoc, Timestamp
 } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBiblePlan } from './use-bible-plan';
@@ -126,88 +126,6 @@ export function useUserBibleChecklist() {
 
     return () => unsubscribe();
   }, [currentUser?.uid, scheduleCommunityProgressSync]);
-
-  // Migrate legacy bare keys (e.g. "Matthew 1") to date-scoped keys without dropping progress.
-  const migrationRunRef = useRef(false);
-
-  useEffect(() => {
-    if (migrationRunRef.current) return;
-    if (!currentUser?.uid || !currentGlobalPlan?.dailyReadings || loadingChecklist) return;
-
-    const bareKeys = completedPassages.filter((key) => !key.includes('::'));
-    if (bareKeys.length === 0) {
-      migrationRunRef.current = true;
-      return;
-    }
-
-    migrationRunRef.current = true;
-
-    const firstOccurrenceMap = new Map<string, string>();
-    for (const day of currentGlobalPlan.dailyReadings) {
-      for (const passage of day.passages) {
-        if (passage.displayText && !firstOccurrenceMap.has(passage.displayText)) {
-          firstOccurrenceMap.set(passage.displayText, day.date);
-        }
-      }
-    }
-
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, currentUser.uid);
-
-    runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(checklistDocRef);
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.data() as UserBibleChecklist & {
-        legacyCompletedPassagesBackupV2?: string[];
-      };
-      const currentPassages = data.completedPassages || [];
-      const existingKeys = new Set(currentPassages);
-      let convertedCount = 0;
-      let unmatchedCount = 0;
-
-      const migratedPassages = currentPassages.map((key) => {
-        if (key.includes('::')) return key;
-
-        const date = firstOccurrenceMap.get(key);
-        if (!date) {
-          unmatchedCount += 1;
-          return key;
-        }
-
-        const scopedKey = makePassageKey(date, key);
-        if (existingKeys.has(scopedKey)) {
-          unmatchedCount += 1;
-          return key;
-        }
-
-        existingKeys.add(scopedKey);
-        convertedCount += 1;
-        return scopedKey;
-      });
-
-      if (migratedPassages.length < currentPassages.length) {
-        throw new Error('Migration aborted because it would reduce reading progress.');
-      }
-
-      transaction.set(checklistDocRef, {
-        completedPassages: migratedPassages,
-        ...(!data.legacyCompletedPassagesBackupV2
-          ? { legacyCompletedPassagesBackupV2: currentPassages }
-          : {}),
-        legacyMigrationVersion: 2,
-        legacyMigratedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      console.log(
-        `[BibleChecklist] Safe migration complete — ${convertedCount} converted, ${unmatchedCount} preserved.`,
-      );
-    }).catch((e) => {
-      console.error('[BibleChecklist] Migration failed:', e);
-      migrationRunRef.current = false;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid, currentGlobalPlan?.dailyReadings, loadingChecklist]);
 
   const updateChecklistDocument = useCallback((updatePayload: Record<string, unknown>) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");
