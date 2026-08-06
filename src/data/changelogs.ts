@@ -23,7 +23,7 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Improved',
-        text: 'The Bible popup now uses distinct unread and read colors when marking repeated plan passages complete, making partial progress easier to see.',
+        text: 'The Bible popup now uses distinct unread and read colors from your current theme when marking repeated plan passages complete, making partial progress easier to see across different themes.',
       },
     ],
   },
