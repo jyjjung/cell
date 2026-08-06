@@ -106,6 +106,7 @@ export interface FormResponse {
   formId: string;
   formTitleSnapshot?: string;
   submitterEmail: string; // normalized lowercase
+  submitterName?: string;
   submitterUserId?: string | null; // when submitted by an authenticated user
   /**
    * Answers stored as either string or string[] depending on the field type.

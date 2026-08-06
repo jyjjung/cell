@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ReportPanel from '@/components/forms/ReportPanel';
 import ExportResponsesDialog from '@/components/forms/ExportResponsesDialog';
+import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { useToast } from '@/hooks/use-toast';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
 import {
@@ -249,7 +250,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-medium truncate">{r.submitterEmail || 'Unknown'}</p>
+                      <p className="font-medium truncate">{displaySubmitterLabel(r, form)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {updatedMs ? new Date(updatedMs).toLocaleString() : '—'}
                       </p>
@@ -297,7 +298,9 @@ export default function AdminFormResponsesPage({ formId }: Props) {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       Single response
                     </p>
-                    <h3 className="text-section-title truncate mt-0.5">{selected.submitterEmail}</h3>
+                    <h3 className="text-section-title truncate mt-0.5">
+                      {displaySubmitterLabel(selected, form)}
+                    </h3>
                   </div>
                   <Button
                     variant="ghost"

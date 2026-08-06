@@ -7,6 +7,7 @@ import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { stringifyAnswerValue, sortedFields } from '@/lib/forms/export-responses';
+import { displaySubmitterLabel } from '@/lib/forms/submitter-display';
 import { Inbox } from 'lucide-react';
 
 const PAGE_SIZE = 50;
@@ -123,7 +124,7 @@ export default function PublicFormResponsesPage({ params }: { params: { publicTo
                       {index + 1}
                     </td>
                     <td className="px-3.5 py-3 align-top font-medium">
-                      {response.submitterEmail || '—'}
+                      {displaySubmitterLabel(response, form as FormDefinition)}
                     </td>
                     {fields.map((field) => {
                       const value = stringifyAnswerValue(response.answers?.[field.id]);
