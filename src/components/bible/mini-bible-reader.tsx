@@ -98,15 +98,17 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
       : t.markChapterAsRead;
 
   const markButtonVariant = chapterPlanStatus.hasMultipleAssignments
-    ? 'default'
+    ? 'outline'
     : hasAnyPlanCompletion
       ? 'primary'
       : 'default';
   const markButtonClassName = cn(
-    'relative w-full h-9 overflow-hidden rounded-full text-xs font-semibold',
+    'relative h-9 w-full overflow-hidden rounded-full text-xs font-semibold transition-colors',
+    chapterPlanStatus.hasMultipleAssignments &&
+      'border-amber-300/70 bg-amber-50 text-amber-950 hover:bg-amber-100/90 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-950/55',
     chapterPlanStatus.hasMultipleAssignments &&
       chapterProgressPercent === 100 &&
-      'text-primary-foreground',
+      'border-emerald-600/70 text-white hover:bg-emerald-600/90 dark:border-emerald-500/60',
   );
   const showMarkButtonProgress =
     chapterPlanStatus.hasMultipleAssignments && chapterProgressPercent > 0;
@@ -519,7 +521,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
               {showMarkButtonProgress ? (
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all duration-300"
+                  className="absolute inset-y-0 left-0 rounded-full bg-emerald-600 transition-all duration-300 dark:bg-emerald-500"
                   style={{ width: `${chapterProgressPercent}%` }}
                 />
               ) : null}
