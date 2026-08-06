@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
 import { hasCapability } from '@/lib/role-capabilities';
 import { isFormFieldType, serializeFieldsForFirestore } from '@/lib/forms/field-types';
+import { normalizeAllowedWeekdays } from '@/lib/forms/date-field-utils';
 import { formHasResponseCapacity } from '@/lib/forms/capacity';
 
 const USERS_COLLECTION = 'users';
@@ -53,6 +54,8 @@ function toFormFieldDefinition(raw: any): FormFieldDefinition | null {
             : undefined,
         }
       : undefined;
+  const allowedWeekdays = normalizeAllowedWeekdays(raw.dateConfig?.allowedWeekdays);
+  const dateConfig = allowedWeekdays?.length ? { allowedWeekdays } : undefined;
 
   return {
     id: raw.id,
@@ -61,6 +64,7 @@ function toFormFieldDefinition(raw: any): FormFieldDefinition | null {
     order: raw.order,
     required: raw.required,
     options: Array.isArray(raw.options) ? raw.options.filter((x: any) => typeof x === 'string') : undefined,
+    dateConfig,
     conditional:
       conditional && typeof conditional.dependsOnFieldId === 'string' && typeof conditional.equals === 'string'
         ? conditional

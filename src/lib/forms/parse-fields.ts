@@ -1,4 +1,5 @@
 import type { FormFieldDefinition } from '@/types/forms';
+import { normalizeAllowedWeekdays } from '@/lib/forms/date-field-utils';
 import { isChoiceFieldType, isFormFieldType } from '@/lib/forms/field-types';
 
 /** Shared parser for admin create/update payloads — never emits undefined keys. */
@@ -44,6 +45,11 @@ export function parseFieldsFromBody(rawFields: unknown): FormFieldDefinition[] {
           ? f.visibility.allowedUserIds.filter((x: any) => typeof x === 'string')
           : undefined,
       };
+    }
+
+    const allowedWeekdays = normalizeAllowedWeekdays(f.dateConfig?.allowedWeekdays);
+    if (allowedWeekdays?.length) {
+      field.dateConfig = { allowedWeekdays };
     }
 
     fields.push(field);
