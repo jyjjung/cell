@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.4',
+    subtitle: 'Checklist key migration',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Legacy Bible reading progress is migrated with a one-time admin script instead of running automatically in the app on every load.',
+      },
+    ],
+  },
+  {
     version: 'v1.13.3',
     subtitle: 'Mark week as read',
     date: 'August 6, 2026',
