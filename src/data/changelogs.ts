@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.1',
+    subtitle: 'Bible popup reading progress',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'In the Bible popup, chapters that appear more than once in your reading plan now show a filled progress button based on how many assignments you have read.',
+      },
+      {
+        type: 'Improved',
+        text: 'The Bible popup now uses distinct unread and read colors when marking repeated plan passages complete, making partial progress easier to see.',
+      },
+    ],
+  },
+  {
     version: 'v1.13.0',
     subtitle: 'Forms date options',
     date: 'August 6, 2026',
