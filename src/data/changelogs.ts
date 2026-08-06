@@ -29,6 +29,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Form response lists, reports, and exports show the submitter’s name instead of their email.',
       },
+      {
+        type: 'Changed',
+        text: 'Admin form responses now use the same spreadsheet-style table as the PDF export.',
+      },
     ],
   },
   {
