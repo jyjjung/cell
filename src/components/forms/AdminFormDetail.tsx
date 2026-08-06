@@ -14,6 +14,7 @@ import {
   defaultLabelForFieldType,
   FORM_FIELD_TYPE_LABELS,
   isChoiceFieldType,
+  isDateFieldType,
   isProfileReferenceFieldType,
   serializeFieldForFirestore,
 } from '@/lib/forms/field-types';
@@ -31,6 +32,7 @@ import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FormRenderer from '@/components/forms/FormRenderer';
 import FieldOptionsEditor from '@/components/forms/FieldOptionsEditor';
+import WeekdaySelector from '@/components/forms/WeekdaySelector';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -614,6 +616,9 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('date')}>
                   + Date
                 </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => addField('dates')}>
+                  + Multiple dates
+                </Button>
                 <Button variant="outline" className="rounded-xl" onClick={() => addField('yesno')}>
                   + Yes/No
                 </Button>
@@ -728,6 +733,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                                       ? defaultLabelForFieldType(nextType, idx)
                                       : field.label,
                                   options: isChoiceFieldType(nextType) ? field.options ?? [] : undefined,
+                                  dateConfig: isDateFieldType(nextType) ? field.dateConfig : undefined,
                                   required:
                                     nextType === 'contactName' || nextType === 'contactEmail'
                                       ? true
@@ -785,6 +791,17 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                           <FieldOptionsEditor
                             options={field.options ?? []}
                             onChange={(options) => setField(field.id, { options })}
+                          />
+                        )}
+
+                        {isDateFieldType(field.type) && (
+                          <WeekdaySelector
+                            value={field.dateConfig?.allowedWeekdays ?? []}
+                            onChange={(allowedWeekdays) =>
+                              setField(field.id, {
+                                dateConfig: allowedWeekdays.length > 0 ? { allowedWeekdays } : undefined,
+                              })
+                            }
                           />
                         )}
 
@@ -902,6 +919,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                     'birthday',
                     'number',
                     'date',
+                    'dates',
                     'time',
                     'url',
                   ] as const

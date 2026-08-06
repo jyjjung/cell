@@ -13,6 +13,29 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.13.0',
+    subtitle: 'Forms date options',
+    date: 'August 6, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Forms can include a Multiple dates question so people can pick more than one day.',
+      },
+      {
+        type: 'Added',
+        text: 'Date and Multiple dates questions can limit which weekdays are selectable (e.g. Thursdays only).',
+      },
+      {
+        type: 'Improved',
+        text: 'Calendar-based date questions use a more compact input that fits the form layout better.',
+      },
+      {
+        type: 'Changed',
+        text: 'Built-in submitter identity is hidden in response views and exports unless a form includes its own name field.',
+      },
+    ],
+  },
+  {
     version: 'v1.12.1',
     subtitle: 'Open chord sheet uploads',
     date: 'August 5, 2026',

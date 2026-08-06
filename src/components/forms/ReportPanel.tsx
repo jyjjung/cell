@@ -25,7 +25,6 @@ export default function ReportPanel({ form, response, compactHeader = false, onD
         {!compactHeader ? (
           <div>
             <h3 className="text-section-title">{form.title}</h3>
-            <p className="text-sm text-muted-foreground">Submitter: {response.submitterEmail}</p>
           </div>
         ) : (
           <p className="text-sm font-medium text-muted-foreground">Answers report</p>

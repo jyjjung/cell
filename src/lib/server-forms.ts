@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
 import { hasCapability } from '@/lib/role-capabilities';
 import { isFormFieldType, serializeFieldsForFirestore } from '@/lib/forms/field-types';
+import { normalizeAllowedWeekdays } from '@/lib/forms/date-field-utils';
 import { formHasResponseCapacity } from '@/lib/forms/capacity';
 
 const USERS_COLLECTION = 'users';
@@ -53,6 +54,8 @@ function toFormFieldDefinition(raw: any): FormFieldDefinition | null {
             : undefined,
         }
       : undefined;
+  const allowedWeekdays = normalizeAllowedWeekdays(raw.dateConfig?.allowedWeekdays);
+  const dateConfig = allowedWeekdays?.length ? { allowedWeekdays } : undefined;
 
   return {
     id: raw.id,
@@ -61,6 +64,7 @@ function toFormFieldDefinition(raw: any): FormFieldDefinition | null {
     order: raw.order,
     required: raw.required,
     options: Array.isArray(raw.options) ? raw.options.filter((x: any) => typeof x === 'string') : undefined,
+    dateConfig,
     conditional:
       conditional && typeof conditional.dependsOnFieldId === 'string' && typeof conditional.equals === 'string'
         ? conditional
@@ -119,6 +123,7 @@ function mapResponseDoc(id: string, data: any): FormResponse {
     formId: data.formId,
     formTitleSnapshot: typeof data.formTitleSnapshot === 'string' ? data.formTitleSnapshot : undefined,
     submitterEmail: typeof data.submitterEmail === 'string' ? data.submitterEmail : '',
+    submitterName: typeof data.submitterName === 'string' ? data.submitterName : undefined,
     submitterUserId: typeof data.submitterUserId === 'string' ? data.submitterUserId : null,
     answers,
     lastValidationErrors: errors && typeof errors === 'object' && Object.keys(errors).length ? errors : undefined,
@@ -503,6 +508,7 @@ export { formHasResponseCapacity };
 export async function createFormResponse(input: {
   formId: string;
   submitterEmail: string;
+  submitterName?: string;
   submitterUserId?: string | null;
   answers: Record<string, FormAnswerValue>;
   formTitleSnapshot?: string;
@@ -532,6 +538,7 @@ export async function createFormResponse(input: {
     tx.set(responseRef, {
       formId: input.formId,
       submitterEmail: input.submitterEmail,
+      submitterName: input.submitterName?.trim() || null,
       submitterUserId: input.submitterUserId ?? null,
       formTitleSnapshot: input.formTitleSnapshot ?? null,
       answers: input.answers,
@@ -559,6 +566,7 @@ export async function updateFormResponseAnswers(input: {
   answers: Record<string, FormAnswerValue>;
   updatedBy: 'guest' | 'admin';
   lastValidationErrors?: Record<string, string> | null;
+  submitterName?: string;
 }): Promise<void> {
   const adminApp = getAdminApp();
   const adminDb = getAdminDb(adminApp);
@@ -578,6 +586,9 @@ export async function updateFormResponseAnswers(input: {
       lastValidationErrors: input.lastValidationErrors ?? null,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: input.updatedBy,
+      ...(input.submitterName !== undefined
+        ? { submitterName: input.submitterName.trim() || null }
+        : {}),
     },
     { merge: true },
   );

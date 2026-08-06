@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
           formId: data.formId,
           formTitleSnapshot: data.formTitleSnapshot ?? null,
           submitterEmail: data.submitterEmail,
+          submitterName: data.submitterName,
           submitterUserId: data.submitterUserId ?? null,
           answers,
           lastValidationErrors:

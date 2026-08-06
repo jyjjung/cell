@@ -1,4 +1,6 @@
 import type { FormDefinition, FormFieldDefinition, FormAnswerValue } from '@/types/forms';
+import { validateDateAnswer, validateDatesAnswer } from '@/lib/forms/date-field-utils';
+import { isArrayAnswerFieldType } from '@/lib/forms/field-types';
 import { isProfileReferenceFieldType } from '@/lib/forms/field-types';
 
 export type VisibleFieldMap = Record<string, boolean>;
@@ -60,10 +62,9 @@ export function validateFormResponse(
 
     const value = answers[field.id];
     const stringValue = typeof value === 'string' ? value.trim() : '';
-    const hasValue =
-      field.type === 'checkbox'
-        ? Array.isArray(value) && value.length > 0
-        : stringValue.length > 0;
+    const hasValue = isArrayAnswerFieldType(field.type)
+      ? Array.isArray(value) && value.length > 0
+      : stringValue.length > 0;
 
     if (field.required && !hasValue) {
       errorsByFieldId[field.id] = 'This field is required.';
@@ -76,14 +77,17 @@ export function validateFormResponse(
     }
 
     if ((field.type === 'date' || field.type === 'birthday') && hasValue) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(stringValue)) {
-        errorsByFieldId[field.id] = 'Enter a valid date.';
-        continue;
+      const dateError = validateDateAnswer(stringValue, field.dateConfig?.allowedWeekdays);
+      if (dateError) {
+        errorsByFieldId[field.id] = dateError;
       }
-      const [y, m, d] = stringValue.split('-').map(Number);
-      const dt = new Date(Date.UTC(y!, m! - 1, d!));
-      if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m! - 1 || dt.getUTCDate() !== d) {
-        errorsByFieldId[field.id] = 'Enter a valid date.';
+      continue;
+    }
+
+    if (field.type === 'dates' && hasValue && Array.isArray(value)) {
+      const datesError = validateDatesAnswer(value, field.dateConfig?.allowedWeekdays);
+      if (datesError) {
+        errorsByFieldId[field.id] = datesError;
       }
       continue;
     }
