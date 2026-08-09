@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.14.2',
+    subtitle: 'Remove edge auth gate',
+    date: 'August 9, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Removed the Edge middleware login redirect. Sign-in checks stay in the app and API routes.',
+      },
+    ],
+  },
+  {
     version: 'v1.14.1',
     subtitle: 'Compact form date picker',
     date: 'August 9, 2026',
