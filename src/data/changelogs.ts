@@ -14,12 +14,12 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 export const changelogs: ChangelogEntry[] = [
   {
     version: 'v1.14.3',
-    subtitle: 'Form date fields & descriptions',
+    subtitle: 'Form date field sizing',
     date: 'August 9, 2026',
     changes: [
       {
         type: 'Fixed',
-        text: 'Date questions always use the in-app calendar picker, so they match other fields on phones instead of the taller native date control.',
+        text: 'Native Date (and time) inputs match the same field height as other form questions on phones.',
       },
       {
         type: 'Fixed',

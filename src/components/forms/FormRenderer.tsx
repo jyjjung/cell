@@ -99,9 +99,15 @@ export default function FormRenderer({
           field.type === 'contactEmail' ||
           field.type === 'phone' ||
           field.type === 'number' ||
+          field.type === 'date' ||
           field.type === 'birthday' ||
           field.type === 'time' ||
           field.type === 'url';
+
+        // Native date for plain Date; calendar picker when weekdays are limited (or multi-date).
+        const usesCalendarDateInput =
+          field.type === 'dates' ||
+          (field.type === 'date' && (field.dateConfig?.allowedWeekdays?.length ?? 0) > 0);
 
         const inputType =
           field.type === 'contactEmail'
@@ -110,7 +116,7 @@ export default function FormRenderer({
               ? 'tel'
               : field.type === 'number'
                 ? 'number'
-                : field.type === 'birthday'
+                : field.type === 'date' || field.type === 'birthday'
                   ? 'date'
                   : field.type === 'time'
                     ? 'time'
@@ -132,7 +138,7 @@ export default function FormRenderer({
               ) : null}
             </div>
 
-            {textLike && (
+            {textLike && !usesCalendarDateInput && (
               <Input
                 id={`field-${field.id}`}
                 type={inputType}
@@ -169,7 +175,7 @@ export default function FormRenderer({
               />
             )}
 
-            {field.type === 'date' && (
+            {usesCalendarDateInput && field.type === 'date' && (
               <FormDateFieldInput
                 id={`field-${field.id}`}
                 mode="single"
