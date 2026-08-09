@@ -79,11 +79,11 @@ export default function FormDateFieldInput({
             variant="outline"
             disabled={readOnly}
             className={cn(
-              'h-10 w-full justify-start rounded-xl px-3 text-sm font-normal',
+              'h-9 w-full justify-start rounded-lg px-3 text-sm font-normal',
               !value || (Array.isArray(value) && value.length === 0) ? 'text-muted-foreground' : undefined,
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0 opacity-60" />
+            <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0 opacity-60" />
             <span className="truncate">{summaryLabel}</span>
           </Button>
         </PopoverTrigger>

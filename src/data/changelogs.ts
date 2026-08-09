@@ -19,7 +19,7 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Improved',
-        text: 'Date and Multiple dates questions use a smaller calendar popup that fits form layouts better.',
+        text: 'Date and Multiple dates questions use a smaller calendar popup and a shorter trigger that matches other form fields.',
       },
     ],
   },
