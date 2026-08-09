@@ -89,7 +89,7 @@ export function findFirstContactEmailField(fields: FormFieldDefinition[]): FormF
   return [...fields].sort((a, b) => a.order - b.order).find((f) => f.type === 'contactEmail');
 }
 
-/** @deprecated Prefer findFirstContactEmailField — profile email is not a fill-out field. */
+/** @deprecated Prefer findFirstContactEmailField — profile email is read-only on fill. */
 export function findFirstEmailField(fields: FormFieldDefinition[]): FormFieldDefinition | undefined {
   return findFirstContactEmailField(fields);
 }

@@ -5,8 +5,8 @@ export type FormFieldType =
   | 'textarea'
   | 'select'
   | 'checkbox' // multi
-  | 'name' // profile reference — admin reports only, hidden on fill
-  | 'email' // profile reference — admin reports only, hidden on fill
+  | 'name' // profile reference — shown read-only on fill; admin reports
+  | 'email' // profile reference — shown read-only on fill; admin reports
   | 'contactName' // visible name question (editable)
   | 'contactEmail' // visible email question (editable)
   | 'birthday' // profile-linked date (yyyy-MM-dd)

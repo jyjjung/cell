@@ -38,6 +38,10 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
   const [submitting, setSubmitting] = useState(false);
 
   const hasContactEmailField = useMemo(() => (form ? formHasContactEmailField(form) : false), [form]);
+  const hasProfileEmailField = useMemo(
+    () => !!form?.fields.some((f) => f.type === 'email'),
+    [form],
+  );
 
   useEffect(() => {
     if (!loadingAuth) {
@@ -265,7 +269,7 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
               </p>
             )}
           </div>
-        ) : currentUser && !hasContactEmailField ? (
+        ) : currentUser && !hasContactEmailField && !hasProfileEmailField ? (
           <p className="text-sm text-muted-foreground">
             Submitting as <span className="font-medium text-foreground">{email}</span>
           </p>

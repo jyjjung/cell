@@ -44,20 +44,52 @@ export default function FormRenderer({
   };
 
   const fillableFields = fields.filter((f) => !isProfileReferenceFieldType(f.type));
+  const profileReferenceFields = fields.filter((f) => {
+    if (!isProfileReferenceFieldType(f.type)) return false;
+    const answer = value[f.id];
+    return typeof answer === 'string' && answer.trim().length > 0;
+  });
 
-  if (fillableFields.length === 0) {
+  if (fillableFields.length === 0 && profileReferenceFields.length === 0) {
     return <p className="text-sm text-muted-foreground">This form has no questions to fill out yet.</p>;
   }
 
   return (
     <div className="space-y-5">
-      {fillableFields.map((field) => {
+      {fields.map((field) => {
+        const selectValue = typeof value[field.id] === 'string' ? (value[field.id] as string) : '';
+
+        // Profile name/email: show read-only so people can see what admins receive.
+        if (isProfileReferenceFieldType(field.type)) {
+          if (!selectValue.trim()) return null;
+          return (
+            <div key={field.id} className="space-y-2">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <Label className="text-sm font-medium" htmlFor={`field-${field.id}`}>
+                  {field.label}
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  From your profile — form admins can see this
+                </span>
+              </div>
+              <Input
+                id={`field-${field.id}`}
+                type={field.type === 'email' ? 'email' : 'text'}
+                autoComplete={field.type === 'email' ? 'email' : 'name'}
+                readOnly
+                disabled
+                value={selectValue}
+                className="bg-muted/30"
+              />
+            </div>
+          );
+        }
+
         const isVisible = visible[field.id] ?? true;
         if (!isVisible) return null;
 
         const fieldError = errorsByFieldId?.[field.id];
         const required = field.required;
-        const selectValue = typeof value[field.id] === 'string' ? (value[field.id] as string) : '';
         const errorClass = fieldError ? 'border-destructive focus-visible:ring-destructive' : undefined;
         const linked = isProfileLinkedFieldType(field.type);
 

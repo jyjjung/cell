@@ -662,7 +662,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                             <p className="text-xs text-muted-foreground">
                               Question {idx + 1}
                               {isProfileReferenceFieldType(field.type)
-                                ? ' · Profile · admin report only'
+                                ? ' · Profile · shown read-only'
                                 : field.type === 'phone' || field.type === 'birthday'
                                   ? ' · Linked to profile'
                                   : ''}
@@ -759,8 +759,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
 
                         {isProfileReferenceFieldType(field.type) ? (
                           <p className="text-xs text-muted-foreground">
-                            Not shown on the form people fill out. For signed-in members, their profile{' '}
-                            {field.type} is saved on the response for your report only (not editable).
+                            Shown read-only so people can see their profile {field.type} will be included.
+                            For signed-in members it is saved on the response for your report (not editable).
                           </p>
                         ) : null}
 
