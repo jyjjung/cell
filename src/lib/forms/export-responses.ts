@@ -206,21 +206,92 @@ function buildPrintHtml(title: string, bodyHtml: string): string {
 </html>`;
 }
 
-export function openResponsesPrintWindow(html: string): Window | null {
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, '_blank');
-  if (!w) {
-    URL.revokeObjectURL(url);
+function writeHtmlToWindow(target: Window, html: string): boolean {
+  try {
+    target.document.open();
+    target.document.write(html);
+    target.document.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Open the print/PDF HTML without relying on a late `window.open` (blocked on iOS
+ * after async work). Prefer a window opened during the click gesture; fall back to
+ * a hidden iframe, then an HTML file download.
+ */
+export function openResponsesPrintWindow(html: string, preexisting?: Window | null): boolean {
+  if (preexisting && !preexisting.closed) {
+    if (writeHtmlToWindow(preexisting, html)) return true;
+    try {
+      preexisting.close();
+    } catch {
+      // ignore
+    }
+  }
+
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('title', 'Print export');
+    iframe.setAttribute('aria-hidden', 'true');
+    Object.assign(iframe.style, {
+      position: 'fixed',
+      right: '0',
+      bottom: '0',
+      width: '0',
+      height: '0',
+      border: '0',
+      opacity: '0',
+      pointerEvents: 'none',
+    });
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      window.setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch {
+          // ignore
+        }
+      }, 60_000);
+      return true;
+    }
+    iframe.remove();
+  } catch {
+    // continue to download fallback
+  }
+
+  downloadTextFile(html, 'form-responses-print.html', 'text/html;charset=utf-8');
+  return true;
+}
+
+/** Open a blank print window during a user gesture (before any await). */
+export function openBlankPrintWindow(): Window | null {
+  try {
+    const w = window.open('about:blank', '_blank');
+    if (!w) return null;
+    try {
+      w.opener = null;
+    } catch {
+      // ignore
+    }
+    try {
+      w.document.write(
+        '<!doctype html><title>Preparing PDF…</title><body style="font-family:system-ui,sans-serif;padding:24px;color:#374151">Preparing PDF…</body>',
+      );
+      w.document.close();
+    } catch {
+      // ignore — content will be replaced after export builds
+    }
+    return w;
+  } catch {
     return null;
   }
-  try {
-    w.opener = null;
-  } catch {
-    // ignore
-  }
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  return w;
 }
 
 function buildResponsesTableHtml(
@@ -281,16 +352,24 @@ export function printSingleResponsePdf(
   form: FormDefinition,
   response: FormResponse,
   options?: FormExportOptions | null,
+  preexisting?: Window | null,
 ): boolean {
   const title = `${form.title} — response`;
-  return !!openResponsesPrintWindow(buildPrintHtml(title, buildResponsesTableHtml(form, [response], options)));
+  return openResponsesPrintWindow(
+    buildPrintHtml(title, buildResponsesTableHtml(form, [response], options)),
+    preexisting,
+  );
 }
 
 export function printCollectiveResponsesPdf(
   form: FormDefinition,
   responses: FormResponse[],
   options?: FormExportOptions | null,
+  preexisting?: Window | null,
 ): boolean {
   const title = `${form.title} — responses`;
-  return !!openResponsesPrintWindow(buildPrintHtml(title, buildResponsesTableHtml(form, responses, options)));
+  return openResponsesPrintWindow(
+    buildPrintHtml(title, buildResponsesTableHtml(form, responses, options)),
+    preexisting,
+  );
 }

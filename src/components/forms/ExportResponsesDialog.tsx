@@ -19,6 +19,7 @@ import {
   buildSingleResponseCsv,
   collectiveResponsesCsvFilename,
   downloadTextFile,
+  openBlankPrintWindow,
   printCollectiveResponsesPdf,
   printSingleResponsePdf,
   singleResponseCsvFilename,
@@ -145,10 +146,18 @@ export default function ExportResponsesDialog({
       return;
     }
 
+    // Open during the tap gesture — iOS Safari blocks window.open after awaits.
+    const printWindow = format === 'pdf' ? openBlankPrintWindow() : null;
+
     setBusy(true);
     try {
       const list = await resolveResponses();
       if (list.length === 0) {
+        try {
+          printWindow?.close();
+        } catch {
+          // ignore
+        }
         toast({
           variant: 'destructive',
           title: 'No responses',
@@ -179,23 +188,33 @@ export default function ExportResponsesDialog({
       } else {
         const ok =
           list.length === 1
-            ? printSingleResponsePdf(form, list[0], options)
-            : printCollectiveResponsesPdf(form, list, options);
+            ? printSingleResponsePdf(form, list[0], options, printWindow)
+            : printCollectiveResponsesPdf(form, list, options, printWindow);
         if (!ok) {
+          try {
+            printWindow?.close();
+          } catch {
+            // ignore
+          }
           toast({
             variant: 'destructive',
-            title: 'Popup blocked',
-            description: 'Allow popups, then try again. Choose “Save as PDF” in the print dialog.',
+            title: 'Could not open PDF',
+            description: 'Try again, or download as CSV instead.',
           });
           return;
         }
         toast({
           title: 'Print dialog',
-          description: 'Choose “Save as PDF” in the print dialog.',
+          description: 'Choose “Save as PDF” (or Print) to keep a copy.',
         });
       }
       onOpenChange(false);
     } catch (e: unknown) {
+      try {
+        printWindow?.close();
+      } catch {
+        // ignore
+      }
       const message = e instanceof Error ? e.message : 'Export failed';
       toast({ variant: 'destructive', title: 'Export', description: message });
     } finally {

@@ -33,6 +33,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'When a form includes Name or Email from your profile, you see those values read-only with a note that form admins can see them.',
       },
+      {
+        type: 'Fixed',
+        text: 'Downloading form responses as PDF on iPhone no longer fails with a “popup blocked” message.',
+      },
     ],
   },
   {
