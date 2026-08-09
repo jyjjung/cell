@@ -18,6 +18,8 @@ const PUBLIC_EXACT = new Set([
 const PUBLIC_PREFIXES = [
   '/_next',
   '/api/',
+  '/forms/public',
+  '/forms/guest',
   '/icon',
   '/favicon',
   '/apple-touch-icon',
@@ -73,6 +75,6 @@ export const config = {
      * - Common static asset extensions
      * This is the main lever for Vercel Edge/middleware CPU.
      */
-    '/((?!api(?:/|$)|_next/static|_next/image|_next/webpack-hmr|login(?:/|$)|signup(?:/|$)|forgot-password(?:/|$)|features(?:/|$)|privacy(?:/|$)|terms(?:/|$)|favicon|icon|apple-touch-icon|manifest|sw\\.js|workbox|swe-worker|$|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf|txt|xml|webmanifest|js|css|map|json)$).*)',
+    '/((?!api(?:/|$)|_next/static|_next/image|_next/webpack-hmr|login(?:/|$)|signup(?:/|$)|forgot-password(?:/|$)|features(?:/|$)|privacy(?:/|$)|terms(?:/|$)|forms/public(?:/|$)|forms/guest(?:/|$)|favicon|icon|apple-touch-icon|manifest|sw\\.js|workbox|swe-worker|$|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf|txt|xml|webmanifest|js|css|map|json)$).*)',
   ],
 };
