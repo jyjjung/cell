@@ -1,4 +1,4 @@
-/** HttpOnly cookie used by middleware for page-level auth gating. */
+/** HttpOnly cookie used for SSR session hints (home/layout first paint). */
 export const SESSION_COOKIE_NAME = '__session';
 
 /** Firebase session cookie lifetime (5 days). */

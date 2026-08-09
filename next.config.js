@@ -142,7 +142,7 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '6.1',
   },
   async headers() {
-    // Static headers at the CDN — avoids rebuilding CSP in middleware on every hit.
+    // Static headers at the CDN (CSP and related security headers).
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",

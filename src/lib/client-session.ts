@@ -1,4 +1,4 @@
-/** Mint or refresh the httpOnly session cookie used by middleware. */
+/** Mint or refresh the httpOnly session cookie used for SSR session hints. */
 export async function syncServerSession(idToken: string): Promise<void> {
   try {
     await fetch('/api/auth/session', {
