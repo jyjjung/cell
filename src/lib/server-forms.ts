@@ -6,6 +6,7 @@ import { hasCapability } from '@/lib/role-capabilities';
 import { isFormFieldType, serializeFieldsForFirestore } from '@/lib/forms/field-types';
 import { normalizeAllowedWeekdays } from '@/lib/forms/date-field-utils';
 import { formHasResponseCapacity } from '@/lib/forms/capacity';
+import { formResponsesAreLocked, parseFormStatus } from '@/lib/forms/lifecycle';
 
 const USERS_COLLECTION = 'users';
 const FORMS_COLLECTION = 'formDefinitions';
@@ -96,10 +97,11 @@ function toFormDefinition(raw: any, id: string): FormDefinition | null {
     title: raw.title,
     description: typeof raw.description === 'string' ? raw.description : undefined,
     fields,
-    status: raw.status === 'draft' ? 'draft' : 'published',
+    status: parseFormStatus(raw.status),
     deadlineDate: typeof raw.deadlineDate === 'string' ? raw.deadlineDate : undefined,
     maxResponses:
       typeof raw.maxResponses === 'number' && raw.maxResponses > 0 ? Math.floor(raw.maxResponses) : undefined,
+    lockResponsesAfterSubmit: raw.lockResponsesAfterSubmit === true,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     publicToken: typeof raw.publicToken === 'string' ? raw.publicToken : undefined,
@@ -248,9 +250,10 @@ export async function createFormDefinition(input: {
   fields: FormDefinition['fields'];
   allowedRoleIds?: string[];
   allowedUserIds?: string[];
-  status?: 'draft' | 'published';
+  status?: 'draft' | 'published' | 'closed';
   deadlineDate?: string;
   maxResponses?: number | null;
+  lockResponsesAfterSubmit?: boolean;
   createdBy: string;
 }): Promise<{ formId: string; publicToken: string }> {
   const adminApp = getAdminApp();
@@ -263,14 +266,16 @@ export async function createFormDefinition(input: {
   const isOpenToAll = computeIsOpenToAll(allowedRoleIds, allowedUserIds);
   const maxResponses =
     typeof input.maxResponses === 'number' && input.maxResponses > 0 ? Math.floor(input.maxResponses) : null;
+  const status = parseFormStatus(input.status ?? 'draft');
 
   await formDocRef.set({
     title: input.title,
     description: input.description ?? null,
     fields: serializeFieldsForFirestore(input.fields),
-    status: input.status ?? 'draft',
+    status,
     deadlineDate: input.deadlineDate ?? null,
     maxResponses,
+    lockResponsesAfterSubmit: input.lockResponsesAfterSubmit === true,
     allowedRoleIds,
     allowedUserIds,
     isOpenToAll,
@@ -279,9 +284,9 @@ export async function createFormDefinition(input: {
     publicToken,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-    publishedAt: input.status === 'published' ? FieldValue.serverTimestamp() : null,
-    publishedBy: input.status === 'published' ? input.createdBy : null,
-    publishVersion: input.status === 'published' ? 1 : 0,
+    publishedAt: status === 'published' || status === 'closed' ? FieldValue.serverTimestamp() : null,
+    publishedBy: status === 'published' || status === 'closed' ? input.createdBy : null,
+    publishVersion: status === 'published' || status === 'closed' ? 1 : 0,
     createdBy: input.createdBy,
   });
 
@@ -302,9 +307,10 @@ export async function updateFormDefinition(
     fields: FormDefinition['fields'];
     allowedRoleIds?: string[];
     allowedUserIds?: string[];
-    status?: 'draft' | 'published';
+    status?: 'draft' | 'published' | 'closed';
     deadlineDate?: string;
     maxResponses?: number | null;
+    lockResponsesAfterSubmit?: boolean;
     updatedBy: string;
   },
 ): Promise<{ statusChangedToPublished: boolean; publishVersion: number }> {
@@ -313,13 +319,15 @@ export async function updateFormDefinition(
   const ref = adminDb.collection(FORMS_COLLECTION).doc(formId);
   const snap = await ref.get();
   const current = snap.data() as Record<string, unknown> | undefined;
-  const currentStatus = current?.status === 'draft' ? 'draft' : 'published';
-  const nextStatus = input.status ?? currentStatus;
+  const currentStatus = parseFormStatus(current?.status);
+  const nextStatus = input.status !== undefined ? parseFormStatus(input.status) : currentStatus;
   const statusChangedToPublished = currentStatus !== 'published' && nextStatus === 'published';
+  const becomingShareable =
+    (currentStatus === 'draft') && (nextStatus === 'published' || nextStatus === 'closed');
   const publishVersion =
     typeof current?.publishVersion === 'number'
       ? current.publishVersion + (statusChangedToPublished ? 1 : 0)
-      : nextStatus === 'published'
+      : nextStatus === 'published' || nextStatus === 'closed'
         ? 1
         : 0;
   const allowedRoleIds = input.allowedRoleIds ?? [];
@@ -336,12 +344,13 @@ export async function updateFormDefinition(
       status: nextStatus,
       deadlineDate: input.deadlineDate ?? null,
       maxResponses,
+      lockResponsesAfterSubmit: input.lockResponsesAfterSubmit === true,
       allowedRoleIds,
       allowedUserIds,
       isOpenToAll,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: input.updatedBy,
-      ...(statusChangedToPublished
+      ...(statusChangedToPublished || (becomingShareable && !current?.publishedAt)
         ? {
             publishedAt: FieldValue.serverTimestamp(),
             publishedBy: input.updatedBy,
@@ -526,6 +535,14 @@ export async function createFormResponse(input: {
       throw new Error('Form not found');
     }
     const formData = formSnap.data() as Record<string, unknown>;
+    const status = parseFormStatus(formData.status);
+    if (status !== 'published') {
+      throw new FormCapacityError(
+        status === 'closed'
+          ? 'This form is closed and is no longer accepting responses.'
+          : 'This form is not accepting responses.',
+      );
+    }
     const maxResponses =
       typeof formData.maxResponses === 'number' && formData.maxResponses > 0
         ? Math.floor(formData.maxResponses)
@@ -623,7 +640,7 @@ export async function deleteFormResponseForOwner(input: {
   formId: string;
   userId: string;
   userEmail?: string | null;
-}): Promise<{ deleted: boolean; reason?: 'not_found' | 'forbidden' }> {
+}): Promise<{ deleted: boolean; reason?: 'not_found' | 'forbidden' | 'locked' }> {
   const adminApp = getAdminApp();
   const adminDb = getAdminDb(adminApp);
   const ref = adminDb.collection(FORM_RESPONSES_COLLECTION).doc(input.responseId);
@@ -634,6 +651,12 @@ export async function deleteFormResponseForOwner(input: {
   if (response.formId !== input.formId) return { deleted: false, reason: 'not_found' };
   if (!userOwnsFormResponse(response, { uid: input.userId, email: input.userEmail })) {
     return { deleted: false, reason: 'forbidden' };
+  }
+
+  const form = await getFormById(adminDb, input.formId);
+  if (!form) return { deleted: false, reason: 'not_found' };
+  if (formResponsesAreLocked(form, response)) {
+    return { deleted: false, reason: 'locked' };
   }
 
   const hadErrors = !!(

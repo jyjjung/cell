@@ -101,9 +101,10 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
 
   const [builderTitle, setBuilderTitle] = useState('');
   const [builderDescription, setBuilderDescription] = useState('');
-  const [builderStatus, setBuilderStatus] = useState<'draft' | 'published'>('draft');
+  const [builderStatus, setBuilderStatus] = useState<'draft' | 'published' | 'closed'>('draft');
   const [builderDeadlineDate, setBuilderDeadlineDate] = useState('');
   const [builderMaxResponses, setBuilderMaxResponses] = useState('');
+  const [builderLockResponses, setBuilderLockResponses] = useState(false);
   const [builderAllowedRoleIds, setBuilderAllowedRoleIds] = useState<string[]>([]);
   const [builderAllowedUserIds, setBuilderAllowedUserIds] = useState<string[]>([]);
   const [builderFields, setBuilderFields] = useState<FormFieldDefinition[]>([]);
@@ -143,6 +144,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
       status: builderStatus,
       deadlineDate: builderDeadlineDate || undefined,
       maxResponses: builderMaxResponses ? Number(builderMaxResponses) : undefined,
+      lockResponsesAfterSubmit: builderLockResponses,
       createdAt: formMeta?.createdAt as FormDefinition['createdAt'],
       publicToken: formMeta?.publicToken,
       allowedRoleIds: builderAllowedRoleIds,
@@ -157,6 +159,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     builderStatus,
     builderDeadlineDate,
     builderMaxResponses,
+    builderLockResponses,
     formMeta,
     builderAllowedRoleIds,
     builderAllowedUserIds,
@@ -192,11 +195,14 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
     setFormId(form.id);
     setBuilderTitle(form.title ?? '');
     setBuilderDescription(form.description ?? '');
-    setBuilderStatus(form.status === 'draft' ? 'draft' : 'published');
+    setBuilderStatus(
+      form.status === 'draft' ? 'draft' : form.status === 'closed' ? 'closed' : 'published',
+    );
     setBuilderDeadlineDate(form.deadlineDate ?? '');
     setBuilderMaxResponses(
       typeof form.maxResponses === 'number' && form.maxResponses > 0 ? String(form.maxResponses) : '',
     );
+    setBuilderLockResponses(form.lockResponsesAfterSubmit === true);
     setBuilderAllowedRoleIds(form.allowedRoleIds ?? []);
     setBuilderAllowedUserIds(form.allowedUserIds ?? []);
     setBuilderFields([...form.fields].sort((a, b) => a.order - b.order));
@@ -282,6 +288,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
         status: builderStatus,
         deadlineDate: builderDeadlineDate || undefined,
         maxResponses: builderMaxResponses.trim() ? Number(builderMaxResponses) : null,
+        lockResponsesAfterSubmit: builderLockResponses,
         allowedRoleIds: builderAllowedRoleIds,
         allowedUserIds: builderAllowedUserIds,
         fields: [...builderFields].sort((a, b) => a.order - b.order).map(sanitizeFieldForApi),
@@ -418,6 +425,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                 </Button>
                 {builderStatus === 'draft' ? (
                   <span className="text-xs text-muted-foreground">Publish to share this link.</span>
+                ) : builderStatus === 'closed' ? (
+                  <Badge variant="secondary">Closed</Badge>
                 ) : (
                   <Badge variant="success">Live</Badge>
                 )}
@@ -490,15 +499,24 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={builderStatus} onValueChange={(v) => setBuilderStatus(v as 'draft' | 'published')}>
+                <Select
+                  value={builderStatus}
+                  onValueChange={(v) => setBuilderStatus(v as 'draft' | 'published' | 'closed')}
+                >
                   <SelectTrigger className="h-10 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft (not shareable)</SelectItem>
                     <SelectItem value="published">Published (live link)</SelectItem>
+                    <SelectItem value="closed">Closed (no new responses)</SelectItem>
                   </SelectContent>
                 </Select>
+                {builderStatus === 'closed' ? (
+                  <p className="text-xs text-muted-foreground">
+                    The public link still opens, but people can’t submit, edit, or delete responses.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="form-deadline">Deadline (optional)</Label>
@@ -530,6 +548,22 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                 </p>
               </div>
             </div>
+
+            <label className="flex items-start gap-2.5 rounded-xl border border-border/60 px-3 py-2.5 text-sm cursor-pointer">
+              <Checkbox
+                className="mt-0.5"
+                checked={builderLockResponses || builderStatus === 'closed'}
+                disabled={builderStatus === 'closed'}
+                onCheckedChange={(checked) => setBuilderLockResponses(checked === true)}
+              />
+              <span className="min-w-0">
+                <span className="font-medium">Lock responses after submit</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  People can’t edit or delete their answers once submitted
+                  {builderStatus === 'closed' ? ' (always on while the form is closed)' : ''}.
+                </span>
+              </span>
+            </label>
 
             <div className="space-y-2 rounded-xl border border-border/60 p-3">
               <button
@@ -662,7 +696,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                             <p className="text-xs text-muted-foreground">
                               Question {idx + 1}
                               {isProfileReferenceFieldType(field.type)
-                                ? ' · Profile · admin report only'
+                                ? ' · Profile · shown read-only'
                                 : field.type === 'phone' || field.type === 'birthday'
                                   ? ' · Linked to profile'
                                   : ''}
@@ -759,8 +793,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
 
                         {isProfileReferenceFieldType(field.type) ? (
                           <p className="text-xs text-muted-foreground">
-                            Not shown on the form people fill out. For signed-in members, their profile{' '}
-                            {field.type} is saved on the response for your report only (not editable).
+                            Shown read-only so people can see their profile {field.type} will be included.
+                            For signed-in members it is saved on the response for your report (not editable).
                           </p>
                         ) : null}
 
