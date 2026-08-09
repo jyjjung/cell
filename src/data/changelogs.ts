@@ -13,6 +13,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.14.3',
+    subtitle: 'Form date fields & descriptions',
+    date: 'August 9, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Date questions always use the in-app calendar picker, so they match other fields on phones instead of the taller native date control.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Form descriptions keep line breaks from the builder, so multi-line instructions stay readable.',
+      },
+    ],
+  },
+  {
     version: 'v1.14.2',
     subtitle: 'Remove edge auth gate',
     date: 'August 9, 2026',

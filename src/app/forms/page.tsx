@@ -144,7 +144,9 @@ export default function FormsPage() {
                           <div className="min-w-0">
                             <p className="font-semibold">{form.title}</p>
                             {form.description ? (
-                              <p className="text-sm text-muted-foreground">{form.description}</p>
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                                {form.description}
+                              </p>
                             ) : null}
                             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                               {form.status === 'closed' ? <span>Closed</span> : null}
