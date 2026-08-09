@@ -60,13 +60,18 @@ export interface FormDefinition {
   title: string;
   description?: string;
   fields: FormFieldDefinition[];
-  status?: 'draft' | 'published';
+  status?: 'draft' | 'published' | 'closed';
   deadlineDate?: string; // ISO yyyy-MM-dd
   /**
    * Optional cap on total submissions. Omit / null = unlimited.
    * Enforced when creating a new response.
    */
   maxResponses?: number | null;
+  /**
+   * When true, submitters cannot edit or delete their responses after submitting.
+   * Closed forms always lock responses regardless of this flag.
+   */
+  lockResponsesAfterSubmit?: boolean;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   /**

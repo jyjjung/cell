@@ -8,6 +8,7 @@ import type { FormAnswerValue, FormDefinition, FormResponse } from '@/types/form
 import FormRenderer from '@/components/forms/FormRenderer';
 import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import { validateFormResponse } from '@/lib/forms/validation';
+import { formResponsesAreLocked, formResponsesLockedMessage } from '@/lib/forms/lifecycle';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
@@ -78,15 +79,22 @@ export default function GuestResponsePage({ params }: { params: { formId: string
   const submittedOk = searchParams.get('submitted') === '1';
   const showThanks = (submittedOk || justSaved) && !hasErrors;
 
+  const responsesLocked = useMemo(
+    () => (form ? formResponsesAreLocked(form, response) : false),
+    [form, response],
+  );
+
   const canDeleteOwn = useMemo(() => {
+    if (responsesLocked) return false;
     if (!currentUser || !response) return false;
     if (response.submitterUserId && response.submitterUserId === currentUser.uid) return true;
     const userEmail = (currentUser.email ?? '').trim().toLowerCase();
     const responseEmail = (response.submitterEmail ?? '').trim().toLowerCase();
     return !!userEmail && !!responseEmail && userEmail === responseEmail;
-  }, [currentUser, response]);
+  }, [currentUser, response, responsesLocked]);
 
   const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
+    if (responsesLocked) return;
     setDraftAnswers(next);
     if (clientErrors) setClientErrors(null);
   };
@@ -118,6 +126,14 @@ export default function GuestResponsePage({ params }: { params: { formId: string
 
   const handleSave = async () => {
     if (!form || !response) return;
+    if (formResponsesAreLocked(form, response)) {
+      toast({
+        variant: 'destructive',
+        title: 'Responses locked',
+        description: formResponsesLockedMessage(form),
+      });
+      return;
+    }
 
     const { errorsByFieldId } = validateFormResponse(form, draftAnswers);
     if (Object.keys(errorsByFieldId).length > 0) {
@@ -190,6 +206,9 @@ export default function GuestResponsePage({ params }: { params: { formId: string
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
+          {responsesLocked ? (
+            <p className="text-sm text-muted-foreground">{formResponsesLockedMessage(form)}</p>
+          ) : null}
         </div>
 
         {hasErrors ? (
@@ -213,7 +232,7 @@ export default function GuestResponsePage({ params }: { params: { formId: string
           value={draftAnswers}
           onChange={handleAnswersChange}
           errorsByFieldId={displayErrors}
-          readOnly={saving}
+          readOnly={saving || responsesLocked}
           profileLinkedHint={!!currentUser}
         />
 
@@ -222,10 +241,10 @@ export default function GuestResponsePage({ params }: { params: { formId: string
             <Button
               variant="outline"
               className="rounded-xl"
-              onClick={() => router.push('/forms')}
+              onClick={() => router.push(currentUser ? '/forms' : '/')}
               disabled={saving || deleting}
             >
-              Back to forms
+              {currentUser ? 'Back to forms' : 'Done'}
             </Button>
             {canDeleteOwn ? (
               <Button
@@ -240,16 +259,18 @@ export default function GuestResponsePage({ params }: { params: { formId: string
               </Button>
             ) : null}
           </div>
-          <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving || deleting}>
-            {saving ? (
-              'Saving…'
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save
-              </>
-            )}
-          </Button>
+          {!responsesLocked ? (
+            <Button className="rounded-xl" onClick={() => void handleSave()} disabled={saving || deleting}>
+              {saving ? (
+                'Saving…'
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save
+                </>
+              )}
+            </Button>
+          ) : null}
         </div>
       </div>
 

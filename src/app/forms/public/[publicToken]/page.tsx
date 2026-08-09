@@ -17,7 +17,7 @@ import {
   formHasContactEmailField,
   formatProfileName,
 } from '@/lib/forms/prefill';
-import { formHasResponseCapacity } from '@/lib/forms/capacity';
+import { formIsAcceptingResponses } from '@/lib/forms/lifecycle';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 
@@ -216,8 +216,9 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
     );
   }
 
-  const acceptingResponses = formHasResponseCapacity(form);
+  const acceptingResponses = formIsAcceptingResponses(form);
   const canSubmit = !!form && !submitting && acceptingResponses;
+  const closed = form.status === 'closed';
 
   return (
     <div className="page-container">
@@ -237,11 +238,19 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
 
         {!acceptingResponses ? (
           <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm space-y-3">
-            <p className="font-medium">This form is no longer accepting responses.</p>
-            <p className="text-muted-foreground">The response limit has been reached.</p>
-            <Button asChild variant="outline" className="rounded-xl">
-              <a href="/forms">Back to forms</a>
-            </Button>
+            <p className="font-medium">
+              {closed ? 'This form is closed.' : 'This form is no longer accepting responses.'}
+            </p>
+            <p className="text-muted-foreground">
+              {closed
+                ? 'New submissions are turned off, and existing responses can’t be edited or deleted.'
+                : 'The response limit has been reached.'}
+            </p>
+            {currentUser ? (
+              <Button asChild variant="outline" className="rounded-xl">
+                <a href="/forms">Back to forms</a>
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>

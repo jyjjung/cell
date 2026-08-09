@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
+import { formIsAcceptingResponses, formResponsesAreLocked } from '@/lib/forms/lifecycle';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,6 +135,7 @@ export default function FormsPage() {
                     .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt))
                     .map((form) => {
                       const submissionCount = responsesByFormId.get(form.id)?.length ?? 0;
+                      const accepting = formIsAcceptingResponses(form);
                       return (
                         <div
                           key={form.id}
@@ -145,6 +147,7 @@ export default function FormsPage() {
                               <p className="text-sm text-muted-foreground">{form.description}</p>
                             ) : null}
                             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                              {form.status === 'closed' ? <span>Closed</span> : null}
                               {form.deadlineDate ? <span>Due {form.deadlineDate}</span> : null}
                               <span>
                                 {submissionCount > 0
@@ -160,7 +163,11 @@ export default function FormsPage() {
                             disabled={!form.publicToken}
                           >
                             <Link href={form.publicToken ? `/forms/public/${form.publicToken}` : '#'}>
-                              {submissionCount > 0 ? 'Open again' : 'Fill out'}
+                              {!accepting
+                                ? 'View'
+                                : submissionCount > 0
+                                  ? 'Open again'
+                                  : 'Fill out'}
                             </Link>
                           </Button>
                         </div>
@@ -185,6 +192,10 @@ export default function FormsPage() {
                     .map((r) => {
                       const hasErrors = r.lastValidationErrors && Object.keys(r.lastValidationErrors).length > 0;
                       const submittedMs = toMillisSafe(r.createdAt);
+                      const formForResponse = forms.find((f) => f.id === r.formId);
+                      const locked = formForResponse
+                        ? formResponsesAreLocked(formForResponse, r)
+                        : false;
                       return (
                         <div
                           key={r.id}
@@ -193,7 +204,7 @@ export default function FormsPage() {
                           <div className="min-w-0">
                             <p className="font-semibold truncate">
                               {r.formTitleSnapshot ?? 'Form'}{' '}
-                              {hasErrors ? (
+                              {hasErrors && !locked ? (
                                 <span className="inline-flex items-center gap-1 text-xs text-destructive ml-2">
                                   <AlertTriangle className="h-3.5 w-3.5" />
                                   Needs attention
@@ -202,23 +213,26 @@ export default function FormsPage() {
                             </p>
                             <p className="text-xs text-muted-foreground">
                               Submitted: {submittedMs ? new Date(submittedMs).toLocaleString() : '—'}
+                              {locked ? ' · Locked' : ''}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <Button asChild variant="secondary" className="rounded-xl">
                               <Link href={`/forms/guest/${encodeURIComponent(r.formId)}/${encodeURIComponent(r.id)}`}>
-                                {hasErrors ? 'Fix' : 'View'}
+                                {hasErrors && !locked ? 'Fix' : 'View'}
                               </Link>
                             </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="rounded-xl text-destructive hover:text-destructive"
-                              aria-label="Delete submission"
-                              onClick={() => setDeleteTarget(r)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!locked ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="rounded-xl text-destructive hover:text-destructive"
+                                aria-label="Delete submission"
+                                onClick={() => setDeleteTarget(r)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : null}
                           </div>
                         </div>
                       );

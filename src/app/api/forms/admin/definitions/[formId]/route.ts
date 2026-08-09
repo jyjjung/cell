@@ -4,6 +4,7 @@ import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { deleteFormDefinition, getFormById, updateFormDefinition } from '@/lib/server-forms';
 import { sendFormPublishedNotifications } from '@/lib/forms/publish-notifications';
 import { parseFieldsFromBody } from '@/lib/forms/parse-fields';
+import { parseFormStatus } from '@/lib/forms/lifecycle';
 
 export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
   try {
@@ -47,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 });
 
     const description = typeof body.description === 'string' ? body.description : undefined;
-    const status = body.status === 'draft' ? 'draft' : 'published';
+    const status = parseFormStatus(body.status);
     const deadlineDate = typeof body.deadlineDate === 'string' && body.deadlineDate.trim() ? body.deadlineDate : undefined;
     const maxResponsesRaw = body.maxResponses;
     const maxResponses =
@@ -58,6 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
             if (!Number.isFinite(n) || n <= 0) return null;
             return Math.min(Math.floor(n), 100_000);
           })();
+    const lockResponsesAfterSubmit = body.lockResponsesAfterSubmit === true;
     const fields = parseFieldsFromBody(body.fields);
 
     const allowedRoleIds = Array.isArray(body.allowedRoleIds) ? body.allowedRoleIds.filter((x: any) => typeof x === 'string') : undefined;
@@ -72,6 +74,7 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
       status,
       deadlineDate,
       maxResponses,
+      lockResponsesAfterSubmit,
       updatedBy: decoded.uid,
     });
 

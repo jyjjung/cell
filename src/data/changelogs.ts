@@ -13,17 +13,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
-    version: 'v1.13.6',
-    subtitle: 'Form profile name visibility',
+    version: 'v1.14.0',
+    subtitle: 'Public forms, lock, and close',
     date: 'August 9, 2026',
     changes: [
       {
-        type: 'Improved',
-        text: 'When a form includes Name or Email from your profile, you now see those values on the form (read-only) with a note that form admins can see them.',
+        type: 'Fixed',
+        text: 'Guest form links and response pages open without signing in.',
+      },
+      {
+        type: 'Added',
+        text: 'Admins can lock responses after submit so people can’t edit or delete their answers.',
+      },
+      {
+        type: 'Added',
+        text: 'Admins can close a form: the public link still opens, but new responses are off and existing ones can’t be edited or deleted.',
       },
       {
         type: 'Improved',
-        text: 'In the Forms maker, Profile name and Profile email explain that people see the value read-only on the form.',
+        text: 'When a form includes Name or Email from your profile, you see those values read-only with a note that form admins can see them.',
       },
     ],
   },
