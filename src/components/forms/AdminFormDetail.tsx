@@ -1000,7 +1000,9 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
               <div className="space-y-1">
                 <h3 className="text-lg font-semibold">{previewForm.title}</h3>
                 {previewForm.description ? (
-                  <p className="text-sm text-muted-foreground">{previewForm.description}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                    {previewForm.description}
+                  </p>
                 ) : null}
                 {previewForm.deadlineDate ? (
                   <p className="text-xs text-muted-foreground">Deadline: {previewForm.deadlineDate}</p>

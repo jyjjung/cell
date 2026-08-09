@@ -225,7 +225,9 @@ export default function PublicFormPage({ params }: { params: { publicToken: stri
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
-          {form.description ? <p className="text-sm text-muted-foreground">{form.description}</p> : null}
+          {form.description ? (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{form.description}</p>
+          ) : null}
           {form.deadlineDate ? (
             <p className="text-xs text-muted-foreground">Deadline: {form.deadlineDate}</p>
           ) : null}

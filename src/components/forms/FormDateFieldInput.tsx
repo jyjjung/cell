@@ -70,7 +70,7 @@ export default function FormDateFieldInput({
   };
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className="space-y-2">
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -81,6 +81,7 @@ export default function FormDateFieldInput({
             className={cn(
               'h-9 w-full justify-start rounded-lg px-3 text-sm font-normal',
               !value || (Array.isArray(value) && value.length === 0) ? 'text-muted-foreground' : undefined,
+              className,
             )}
           >
             <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0 opacity-60" />

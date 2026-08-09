@@ -99,14 +99,9 @@ export default function FormRenderer({
           field.type === 'contactEmail' ||
           field.type === 'phone' ||
           field.type === 'number' ||
-          field.type === 'date' ||
           field.type === 'birthday' ||
           field.type === 'time' ||
           field.type === 'url';
-
-        const usesCalendarDateInput =
-          field.type === 'dates' ||
-          (field.type === 'date' && (field.dateConfig?.allowedWeekdays?.length ?? 0) > 0);
 
         const inputType =
           field.type === 'contactEmail'
@@ -115,7 +110,7 @@ export default function FormRenderer({
               ? 'tel'
               : field.type === 'number'
                 ? 'number'
-                : field.type === 'date' || field.type === 'birthday'
+                : field.type === 'birthday'
                   ? 'date'
                   : field.type === 'time'
                     ? 'time'
@@ -137,7 +132,7 @@ export default function FormRenderer({
               ) : null}
             </div>
 
-            {textLike && !usesCalendarDateInput && (
+            {textLike && (
               <Input
                 id={`field-${field.id}`}
                 type={inputType}
@@ -174,7 +169,7 @@ export default function FormRenderer({
               />
             )}
 
-            {usesCalendarDateInput && field.type === 'date' && (
+            {field.type === 'date' && (
               <FormDateFieldInput
                 id={`field-${field.id}`}
                 mode="single"
