@@ -4,6 +4,7 @@ import { getFormById, getFormResponseById, updateFormResponseAnswers, deleteForm
 import { validateFormResponse } from '@/lib/forms/validation';
 import { syncFormAnswersToUserProfile } from '@/lib/forms/profile-sync';
 import { resolveSubmitterName } from '@/lib/forms/submitter-display';
+import { formResponsesAreLocked, formResponsesLockedMessage } from '@/lib/forms/lifecycle';
 import type { FormAnswerValue } from '@/types/forms';
 
 const USERS_COLLECTION = 'users';
@@ -40,6 +41,9 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
     ]);
     if (!form || !response || response.formId !== params.formId) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (formResponsesAreLocked(form, response)) {
+      return NextResponse.json({ error: formResponsesLockedMessage(form) }, { status: 403 });
     }
 
     const body = await request.json();
@@ -131,6 +135,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { formI
     }
     if (result.reason === 'forbidden') {
       return NextResponse.json({ error: 'You can only delete your own responses.' }, { status: 403 });
+    }
+    if (result.reason === 'locked') {
+      const form = await getFormById(adminDb, params.formId);
+      return NextResponse.json(
+        { error: form ? formResponsesLockedMessage(form) : 'This response can no longer be deleted.' },
+        { status: 403 },
+      );
     }
 
     return NextResponse.json({ success: true });

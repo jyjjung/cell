@@ -5,8 +5,8 @@ export type FormFieldType =
   | 'textarea'
   | 'select'
   | 'checkbox' // multi
-  | 'name' // profile reference — admin reports only, hidden on fill
-  | 'email' // profile reference — admin reports only, hidden on fill
+  | 'name' // profile reference — shown read-only on fill; admin reports
+  | 'email' // profile reference — shown read-only on fill; admin reports
   | 'contactName' // visible name question (editable)
   | 'contactEmail' // visible email question (editable)
   | 'birthday' // profile-linked date (yyyy-MM-dd)
@@ -60,13 +60,18 @@ export interface FormDefinition {
   title: string;
   description?: string;
   fields: FormFieldDefinition[];
-  status?: 'draft' | 'published';
+  status?: 'draft' | 'published' | 'closed';
   deadlineDate?: string; // ISO yyyy-MM-dd
   /**
    * Optional cap on total submissions. Omit / null = unlimited.
    * Enforced when creating a new response.
    */
   maxResponses?: number | null;
+  /**
+   * When true, submitters cannot edit or delete their responses after submitting.
+   * Closed forms always lock responses regardless of this flag.
+   */
+  lockResponsesAfterSubmit?: boolean;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
   /**

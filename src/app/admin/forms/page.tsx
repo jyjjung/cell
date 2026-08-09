@@ -175,9 +175,24 @@ export default function AdminFormsListPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold truncate">{form.title}</p>
-                    <Badge variant={form.status === 'published' ? 'success' : 'secondary'}>
-                      {form.status === 'published' ? 'Live' : 'Draft'}
+                    <Badge
+                      variant={
+                        form.status === 'published'
+                          ? 'success'
+                          : form.status === 'closed'
+                            ? 'outline'
+                            : 'secondary'
+                      }
+                    >
+                      {form.status === 'published'
+                        ? 'Live'
+                        : form.status === 'closed'
+                          ? 'Closed'
+                          : 'Draft'}
                     </Badge>
+                    {form.lockResponsesAfterSubmit || form.status === 'closed' ? (
+                      <Badge variant="secondary">Responses locked</Badge>
+                    ) : null}
                   </div>
                   {form.description ? (
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{form.description}</p>

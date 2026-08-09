@@ -85,6 +85,12 @@ export async function POST(request: NextRequest, { params }: { params: { publicT
     const adminAuth = getAdminAuth(adminApp);
     const form = await getFormByPublicToken(adminDb, params.publicToken);
     if (!form) return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+    if (form.status === 'closed') {
+      return NextResponse.json(
+        { error: 'This form is closed and is no longer accepting responses.' },
+        { status: 409 },
+      );
+    }
     if (
       typeof form.maxResponses === 'number' &&
       form.maxResponses > 0 &&
