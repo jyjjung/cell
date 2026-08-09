@@ -24,7 +24,7 @@ export function isFormFieldType(value: unknown): value is FormFieldType {
   return typeof value === 'string' && (FORM_FIELD_TYPES as string[]).includes(value);
 }
 
-/** Hidden on the fill-out form; auto-filled from profile for admin reports. */
+/** Shown read-only on fill; auto-filled from profile for admin reports. */
 export function isProfileReferenceFieldType(type: FormFieldType): type is 'name' | 'email' {
   return type === 'name' || type === 'email';
 }
@@ -56,8 +56,8 @@ export const FORM_FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
   select: 'Single choice',
   checkbox: 'Multiple choice',
   yesno: 'Yes / No',
-  name: 'Name from profile (admin only)',
-  email: 'Email from profile (admin only)',
+  name: 'Name from profile',
+  email: 'Email from profile',
   contactName: 'Name question',
   contactEmail: 'Email question',
   phone: 'Phone (from profile)',
