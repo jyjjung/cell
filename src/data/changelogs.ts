@@ -13,6 +13,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.14.1',
+    subtitle: 'Compact form date picker',
+    date: 'August 9, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Date and Multiple dates questions use a smaller calendar popup that fits form layouts better.',
+      },
+    ],
+  },
+  {
     version: 'v1.14.0',
     subtitle: 'Public forms, lock, and close',
     date: 'August 9, 2026',

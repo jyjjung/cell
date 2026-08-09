@@ -90,6 +90,7 @@ export default function FormDateFieldInput({
         <PopoverContent className="w-auto p-0" align="start">
           {mode === 'single' ? (
             <Calendar
+              size="compact"
               mode="single"
               selected={selectedSingle}
               disabled={disabledMatcher}
@@ -98,6 +99,7 @@ export default function FormDateFieldInput({
             />
           ) : (
             <Calendar
+              size="compact"
               mode="multiple"
               selected={selectedMultiple}
               disabled={disabledMatcher}
