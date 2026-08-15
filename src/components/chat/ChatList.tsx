@@ -8,7 +8,7 @@ import { useAllUsers } from "@/hooks/use-all-users";
 import { useAuth } from "@/contexts/auth-context";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { cn } from "@/lib/utils";
-import { getMemberDisplayName, resolveChatAvatar } from "@/lib/chat-utils";
+import { getMemberDisplayName, resolveChatAvatar, chatBelongsToApp } from "@/lib/chat-utils";
 import { formatUserDisplayName } from "@/lib/formatting";
 import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,7 @@ export default function ChatList({
   };
 
   const filteredChats = chats
-    .filter((chat) =>
-      appScope === 'ndcpc' ? chat.appScope === 'ndcpc' : chat.appScope !== 'ndcpc',
-    )
+    .filter((chat) => chatBelongsToApp(chat, appScope))
     .filter((chat) => !!getChatDetails(chat));
 
   const handleLinkClick = (path: string) => {
@@ -152,11 +150,11 @@ export default function ChatList({
               {toolsVisible && isAdmin && (
                 <motion.div key="system-assistant" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
                   <Link
-                    href={`/chat/system`}
-                    onClick={() => handleLinkClick(`/chat/system`)}
+                    href={`${basePath}/system`}
+                    onClick={() => handleLinkClick(`${basePath}/system`)}
                     className={cn(
                       "flex h-16 w-full items-center gap-3 border-b border-border px-3 transition-colors hover:bg-muted/40",
-                      pathname === '/chat/system' && "bg-accent"
+                      pathname === `${basePath}/system` && "bg-accent"
                     )}
                   >
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">

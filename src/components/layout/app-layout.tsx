@@ -66,7 +66,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser, hasSession, loadingAuth, initialSessionCookie } = useAuth();
   const { setIsPageLoading } = usePageLoading();
-  const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
+  const chatSubpath = pathname.startsWith('/chat/')
+    ? pathname.split('/')[2]
+    : pathname.startsWith('/cell/chat/')
+      ? pathname.split('/')[3]
+      : null;
   const ndcpcChatSubpath = pathname.startsWith('/ndcpc/chat/') ? pathname.split('/')[3] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
   const isIndividualChat =

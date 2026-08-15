@@ -39,6 +39,7 @@ import { useChats } from '@/hooks/useChats';
 import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
 import { translations } from '@/lib/translations';
 import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
+import { chatBelongsToApp } from '@/lib/chat-utils';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger,
@@ -66,9 +67,9 @@ export default function AppSidebar() {
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
     return sumChatUnreadMessageCounts(
-      chats.filter((chat) => chat.appScope !== 'ndcpc'),
+      chats.filter((chat) => chatBelongsToApp(chat, 'cell')),
       currentUser.uid,
-      (chat) => pathname === `/chat/${chat.id}`,
+      (chat) => pathname === `/cell/chat/${chat.id}` || pathname === `/chat/${chat.id}`,
     );
   }, [chats, currentUser, pathname]);
 
@@ -113,7 +114,7 @@ export default function AppSidebar() {
       } else if (activeApp === 'ndcpc' && item.badgeKey === 'chat') {
         const roleUnread = currentUser
           ? sumChatUnreadMessageCounts(
-              chats.filter((chat) => chat.appScope === 'ndcpc'),
+              chats.filter((chat) => chatBelongsToApp(chat, 'ndcpc')),
               currentUser.uid,
               (chat) => pathname === `/ndcpc/chat/${chat.id}`,
             )

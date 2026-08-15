@@ -45,7 +45,8 @@ import { translations } from "@/lib/translations";
 import { GroupChatAvatar } from "@/components/chat/GroupChatAvatar";
 import { PixelAvatar } from "@/components/avatar/PixelAvatar";
 import { formatUserDisplayName } from "@/lib/formatting";
-import { getChatDisplayDetails } from "@/lib/chat-utils";
+import { getChatDisplayDetails, chatBelongsToApp, chatHrefForApp } from "@/lib/chat-utils";
+import { resolveActiveApp } from "@/lib/app-access";
 import {
   chatLastActivityMs,
   matchesSearchQuery,
@@ -322,7 +323,10 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
 
   const chatItems = useMemo(() => {
     if (!currentUser) return [];
+    const activeApp = resolveActiveApp(pathname);
+    const chatApp = activeApp === 'ndcpc' ? 'ndcpc' : 'cell';
     return [...chats]
+      .filter((chat) => chatBelongsToApp(chat, chatApp))
       .sort((a, b) => chatLastActivityMs(b) - chatLastActivityMs(a))
       .map((chat) => {
         const details = getChatDisplayDetails(chat, currentUser.uid, allUsers);
@@ -333,13 +337,14 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
           id: chat.id,
           name,
           preview,
+          href: chatHrefForApp(chat.id, chatApp),
           avatarData: details?.avatar ?? (peerId ? chat.memberInfo?.[peerId]?.avatar : null),
           photoURL: chat.photoURL || null,
           isGroup: chat.type === "group",
           searchValue: `${name} ${preview} ${chat.id}`.toLowerCase(),
         };
       });
-  }, [chats, currentUser, allUsers]);
+  }, [chats, currentUser, allUsers, pathname]);
 
   const normalizedQuery = normalizeSearchQuery(query);
   const showMemberResults = normalizedQuery.length >= 2;
@@ -423,8 +428,8 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
                   icon={chat.isGroup ? Users : User}
                   label={chat.name}
                   subtitle={chat.preview || undefined}
-                  isActive={pathname === `/chat/${chat.id}`}
-                  onSelect={() => handleNavigate(`/chat/${chat.id}`)}
+                  isActive={pathname === chat.href}
+                  onSelect={() => handleNavigate(chat.href)}
                   avatar={
                     <div className="h-9 w-9 overflow-hidden rounded-full border border-border/40">
                       <GroupChatAvatar

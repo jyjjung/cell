@@ -76,7 +76,7 @@ export default function CreateChatDialog({ isOpen, onOpenChange }: { isOpen: boo
   const goToChat = (chatId: string) => {
     setIsPageLoading(true);
     onOpenChange(false);
-    router.push(`/chat/${chatId}`);
+    router.push(`/cell/chat/${chatId}`);
   };
   
   const handleCreatePrivate = async (values: z.infer<typeof privateSchema>) => {

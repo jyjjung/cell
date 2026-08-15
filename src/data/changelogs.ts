@@ -12,6 +12,14 @@ export const changelogs: ChangelogEntry[] = [
     date: 'August 15, 2026',
     changes: [
       {
+        type: 'Fixed',
+        text: 'em. Chat opens again from the sidebar (real /cell/chat pages, not a missing path).',
+      },
+      {
+        type: 'Fixed',
+        text: 'em. and Preschool chats stay in their own apps — each list only shows that app’s rooms.',
+      },
+      {
         type: 'Added',
         text: 'One sign-in for em., NDC Preschool, Account, and Users.',
       },

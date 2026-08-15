@@ -16,6 +16,23 @@ export function chatAvatarApp(chat?: Pick<Chat, 'appScope'> | null): AvatarAppId
   return chat?.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
 }
 
+/** Whether a chat belongs in the em. or Preschool chat list / routes. */
+export function chatBelongsToApp(
+  chat: Pick<Chat, 'appScope'> | null | undefined,
+  app: 'cell' | 'ndcpc',
+): boolean {
+  if (!chat) return false;
+  return app === 'ndcpc' ? chat.appScope === 'ndcpc' : chat.appScope !== 'ndcpc';
+}
+
+export function chatHrefForApp(chatId: string, app: 'cell' | 'ndcpc'): string {
+  return app === 'ndcpc' ? `/ndcpc/chat/${chatId}` : `/cell/chat/${chatId}`;
+}
+
+export function chatListPathForApp(app: 'cell' | 'ndcpc'): string {
+  return app === 'ndcpc' ? '/ndcpc/chat' : '/cell/chat';
+}
+
 export const GROUP_PHOTO_CHANGED_PREVIEW = 'changed the group chat picture.';
 export const GROUP_PHOTO_REMOVED_PREVIEW = 'removed the group chat picture.';
 
