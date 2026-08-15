@@ -33,7 +33,9 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
     const unreadMessages = sumChatUnreadMessageCounts(
       chats,
       currentUser.uid,
-      (chat) => pathname === `/chat/${chat.id}`,
+      (chat) =>
+        pathname === `/chat/${chat.id}`
+        || pathname === `/ndcpc/chat/${chat.id}`,
     );
 
     return unreadNotifs + unreadMessages;
@@ -93,7 +95,7 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
               if (!registration) return;
               registration.showNotification(title, {
                 body,
-                icon: payload.data?.icon || '/icon-192x192-v4.png',
+                icon: payload.data?.icon || '/icon-192x192-v5.png',
                 tag,
                 data: { link },
               });

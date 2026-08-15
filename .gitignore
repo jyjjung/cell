@@ -40,6 +40,9 @@ ui-debug.log
 .env.test.local
 .env.production.local
 
+# NDCPC migration artifacts (local only)
+scripts/ndcpc-uid-remap.json
+
 # Playwright
 /test-results/
 /playwright-report/
@@ -61,3 +64,6 @@ next-env.d.ts
 public/sw.js
 public/workbox-*.js
 public/*.js.map
+.env*
+church.code-workspace
+public/sw 2.js

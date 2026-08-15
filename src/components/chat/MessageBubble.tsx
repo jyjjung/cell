@@ -46,6 +46,8 @@ interface MessageBubbleProps {
   onDelete?: (messageId: string) => void;
   showAvatar?: boolean;
   showName?: boolean;
+  /** Halos are Cell-only; NDCPC and other surfaces pass false. */
+  showHalo?: boolean;
 }
 
 function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubbleProps): boolean {
@@ -66,7 +68,8 @@ function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubblePr
     prev.threadParentMessage === next.threadParentMessage &&
     prev.onDelete === next.onDelete &&
     prev.showAvatar === next.showAvatar &&
-    prev.showName === next.showName
+    prev.showName === next.showName &&
+    prev.showHalo === next.showHalo
   );
 }
 
@@ -74,7 +77,7 @@ const MessageBubble = React.memo(function MessageBubble({
   message, chat, sender, usersById, toggleReaction, votePoll, setPollResultsLocked, lastSeenNames = [], 
   onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
   threadParentMessage, onDelete,
-  showAvatar = true, showName = true
+  showAvatar = true, showName = true, showHalo = true,
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
   const [youtubePlaying, setYoutubePlaying] = useState(false);
@@ -259,6 +262,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                  avatar={sender?.avatar}
                                  className="w-full h-full"
                                  nameHint={{ firstName: sender?.firstName, lastName: sender?.lastName }}
+                                 showHalo={showHalo}
                                />
                            </div>
                       ) : (
@@ -487,118 +491,123 @@ const MessageBubble = React.memo(function MessageBubble({
                       )}
                     </div>
                   )}
-
-                  {/* Reactions */}
-                  {reactionEntries.length > 0 && (
-                      <div className={cn("flex flex-wrap gap-1 mt-1.5", isSender ? "justify-end" : "justify-start")}>
-                          {reactionEntries.map(([emoji, uids]) => {
-                              const reactionNames = uids.map(uid =>
-                                resolveChatUserName(uid, chat, usersById),
-                              ).join(', ');
-                              const userReacted = uids.includes(currentUser?.uid || '');
-
-                              return (
-                                  <Popover key={emoji}>
-                                      <PopoverTrigger asChild>
-                                          <button
-                                              className={cn(
-                                                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border",
-                                                  isSender
-                                                    ? userReacted
-                                                      ? "bg-white/25 border-white/40 text-primary-foreground"
-                                                      : "bg-black/15 border-white/20 text-primary-foreground/90 hover:bg-black/25"
-                                                    : userReacted
-                                                      ? "bg-primary/15 border-primary/35 text-primary"
-                                                      : "bg-muted/80 border-border text-foreground hover:bg-muted",
-                                              )}
-                                          >
-                                              <span>{emoji}</span>
-                                              <span className="font-bold text-[10px]">{uids.length}</span>
-                                          </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent
-                                          side="top"
-                                          className="w-auto max-w-[220px] rounded-xl border border-border !bg-popover px-3 py-2.5 text-popover-foreground shadow-xl"
-                                      >
-                                          <div className="flex flex-col gap-2">
-                                              <div className="break-words text-xs leading-snug">
-                                                  <span className="mb-0.5 block text-micro-label">
-                                                    {t.reactedBy}
-                                                  </span>
-                                                  <span className="font-medium text-foreground">{reactionNames}</span>
-                                              </div>
-                                              <button
-                                                  type="button"
-                                                  onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      toggleReaction(message.id, emoji);
-                                                  }}
-                                                  className="w-full rounded-md bg-muted py-1.5 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted/80"
-                                              >
-                                                  {userReacted ? t.removeReaction : t.addReaction}
-                                              </button>
-                                          </div>
-                                      </PopoverContent>
-                                  </Popover>
-                              );
-                          })}
-                      </div>
-                  )}
-
-                  <div className={cn(
-                      "flex flex-row gap-2 mt-1.5 z-10",
-                      isSender ? "justify-end mr-1" : "justify-start ml-1"
-                  )}>
-                  <Popover>
-                      <PopoverTrigger asChild>
-                          <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
-                              <SmilePlus className="h-3 w-3 text-foreground/40" />
-                          </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
-                          {standardReactions.map(emoji => (
-                              <button
-                                  key={emoji}
-                                  onClick={() => toggleReaction(message.id, emoji)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
-                              >
-                                  <span className="text-lg">{emoji}</span>
-                              </button>
-                          ))}
-                      </PopoverContent>
-                  </Popover>
-
-                  <button 
-                      onClick={() => onOpenThread?.(message.id)}
-                      className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
-                  >
-                      <CornerUpLeft className="h-3 w-3 text-foreground/40" />
-                  </button>
-
-                  {(isSender || isAdmin) && onDelete && (
-                      <Popover>
-                          <PopoverTrigger asChild>
-                              <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
-                                  <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
-                              </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
-                              <p className="text-sm font-semibold text-foreground mb-3">{t.deleteMessageConfirm}</p>
-                              <div className="flex gap-2">
-                                  <Button 
-                                      variant="destructive" 
-                                      size="sm" 
-                                      className="flex-1 h-8 rounded-xl text-micro-label font-semibold"
-                                      onClick={() => onDelete(message.id)}
-                                  >
-                                      {t.deleteAction}
-                                  </Button>
-                              </div>
-                          </PopoverContent>
-                      </Popover>
-                  )}
-                  </div>
               </div>
+          </div>
+
+          {/* Reactions + actions sit under the bubble so the avatar stays on the message bottom */}
+          {reactionEntries.length > 0 && (
+              <div className={cn(
+                  "flex flex-wrap gap-1 mt-1.5",
+                  isSender ? "justify-end self-end" : "justify-start self-start",
+                  !isSender && isGroup && "pl-9",
+              )}>
+                  {reactionEntries.map(([emoji, uids]) => {
+                      const reactionNames = uids.map(uid =>
+                        resolveChatUserName(uid, chat, usersById),
+                      ).join(', ');
+                      const userReacted = uids.includes(currentUser?.uid || '');
+
+                      return (
+                          <Popover key={emoji}>
+                              <PopoverTrigger asChild>
+                                  <button
+                                      className={cn(
+                                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border",
+                                          isSender
+                                            ? userReacted
+                                              ? "bg-white/25 border-white/40 text-primary-foreground"
+                                              : "bg-black/15 border-white/20 text-primary-foreground/90 hover:bg-black/25"
+                                            : userReacted
+                                              ? "bg-primary/15 border-primary/35 text-primary"
+                                              : "bg-muted/80 border-border text-foreground hover:bg-muted",
+                                      )}
+                                  >
+                                      <span>{emoji}</span>
+                                      <span className="font-bold text-[10px]">{uids.length}</span>
+                                  </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                  side="top"
+                                  className="w-auto max-w-[220px] rounded-xl border border-border !bg-popover px-3 py-2.5 text-popover-foreground shadow-xl"
+                              >
+                                  <div className="flex flex-col gap-2">
+                                      <div className="break-words text-xs leading-snug">
+                                          <span className="mb-0.5 block text-micro-label">
+                                            {t.reactedBy}
+                                          </span>
+                                          <span className="font-medium text-foreground">{reactionNames}</span>
+                                      </div>
+                                      <button
+                                          type="button"
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleReaction(message.id, emoji);
+                                          }}
+                                          className="w-full rounded-md bg-muted py-1.5 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted/80"
+                                      >
+                                          {userReacted ? t.removeReaction : t.addReaction}
+                                      </button>
+                                  </div>
+                              </PopoverContent>
+                          </Popover>
+                      );
+                  })}
+              </div>
+          )}
+
+          <div className={cn(
+              "flex flex-row gap-2 mt-1.5 z-10",
+              isSender ? "justify-end mr-1 self-end" : "justify-start ml-1 self-start",
+              !isSender && isGroup && "pl-9",
+          )}>
+          <Popover>
+              <PopoverTrigger asChild>
+                  <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                      <SmilePlus className="h-3 w-3 text-foreground/40" />
+                  </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
+                  {standardReactions.map(emoji => (
+                      <button
+                          key={emoji}
+                          onClick={() => toggleReaction(message.id, emoji)}
+                          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
+                      >
+                          <span className="text-lg">{emoji}</span>
+                      </button>
+                  ))}
+              </PopoverContent>
+          </Popover>
+
+          <button 
+              onClick={() => onOpenThread?.(message.id)}
+              className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
+          >
+              <CornerUpLeft className="h-3 w-3 text-foreground/40" />
+          </button>
+
+          {(isSender || isAdmin) && onDelete && (
+              <Popover>
+                  <PopoverTrigger asChild>
+                      <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
+                          <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
+                      </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
+                      <p className="text-sm font-semibold text-foreground mb-3">{t.deleteMessageConfirm}</p>
+                      <div className="flex gap-2">
+                          <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="flex-1 h-8 rounded-xl text-micro-label font-semibold"
+                              onClick={() => onDelete(message.id)}
+                          >
+                              {t.deleteAction}
+                          </Button>
+                      </div>
+                  </PopoverContent>
+              </Popover>
+          )}
           </div>
 
           {seenByNamesString && (

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
-import { normalizeRoleCapabilities } from '@/lib/role-capabilities';
+import { normalizeRoleCapabilities, normalizeRoleScope } from '@/lib/role-capabilities';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,11 +23,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Role name must be at least 2 characters.' }, { status: 400 });
     }
 
+    const appScope = normalizeRoleScope(body.appScope);
+    const createChat = body.createChat !== false && (appScope === 'cell' || appScope === 'ndcpc');
+
     const roleRef = db.collection('roles').doc();
-    const chatRef = body.createChat ? db.collection('chats').doc() : null;
+    const chatRef = createChat ? db.collection('chats').doc() : null;
     const batch = db.batch();
     batch.set(roleRef, {
       name,
+      appScope,
       capabilities: normalizeRoleCapabilities(body.capabilities),
       status: 'active',
       chatId: chatRef?.id ?? null,
@@ -39,6 +43,8 @@ export async function POST(request: NextRequest) {
       batch.set(chatRef, {
         type: 'group',
         name,
+        appScope,
+        ...(appScope === 'ndcpc' ? { ndcpcKind: 'role' } : {}),
         members: [],
         memberInfo: {},
         admins: [],

@@ -3,6 +3,8 @@
 
 import { resolveIsAdmin } from '@/lib/admin-access';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { createDefaultNdcpcAvatar } from '@/lib/user-avatars';
+import { normalizeUserAvatars, resolveAvatarForApp } from '@/lib/user-avatars';
 import {
   clearCachedAuthProfile,
   readCachedAuthProfile,
@@ -67,20 +69,26 @@ function buildAppUser(firebaseUser: FirebaseUser, profileData: UserProfileData, 
     phone: profileData.phone ?? null,
     birthday: profileData.birthday ?? null,
     roleIds: profileData.roleIds || [],
+    ndcpcRoleIds: profileData.ndcpcRoleIds || [],
     capabilityKeys: profileData.capabilityKeys || [],
     showInCommunityProgress: profileData.showInCommunityProgress ?? true,
     preferredLanguage: profileData.preferredLanguage || 'en',
     appTheme: profileData.appTheme,
-    typography: profileData.typography,
     bibleTextVersion: profileData.bibleTextVersion,
     dashboard: {
       layouts: profileData.dashboard?.layouts || {},
       widgetVisibility: { ...defaultDashboardPreferences, ...(profileData.dashboard?.widgetVisibility || {}) },
     },
     isAdmin,
-    isApproved: profileData.isApproved || false,
+    isApproved: profileData.isApproved || isAdmin,
+    access: profileData.access,
+    ndcpcRole: profileData.ndcpcRole,
+    preferences: profileData.preferences,
+    legacyNdcpcUid: profileData.legacyNdcpcUid,
+    migratedFrom: profileData.migratedFrom,
     isYouth: hasCapability(profileData.capabilityKeys, 'member.youth'),
-    avatar: profileData.avatar || DEFAULT_AVATAR_DATA,
+    avatars: normalizeUserAvatars(profileData),
+    avatar: resolveAvatarForApp(profileData, 'cell'),
     avatarChangesEnabled: profileData.avatarChangesEnabled,
     fcmTokens: profileData.fcmTokens || [],
     fcmNeedsResync: profileData.fcmNeedsResync,
@@ -313,6 +321,10 @@ export function AuthProvider({
         },
         isApproved: false,
         avatar: DEFAULT_AVATAR_DATA,
+        avatars: {
+          cell: DEFAULT_AVATAR_DATA,
+          ndcpc: createDefaultNdcpcAvatar({ firstName, lastName, uid: firebaseUser.uid }),
+        },
         fcmTokens: [],
         roleIds: [],
         capabilityKeys: [],
@@ -408,7 +420,7 @@ export function AuthProvider({
 
     await setDoc(userDocRef, dataToWrite, { merge: true });
 
-    if (profileData.avatar || profileData.firstName || profileData.lastName) {
+    if (profileData.avatar || profileData.avatars || profileData.firstName || profileData.lastName) {
       void syncProfileToChats().catch((error) => {
         console.error('[updateUserProfile] Failed to sync profile to chats:', error);
       });

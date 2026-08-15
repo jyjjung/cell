@@ -9,14 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { AVATAR_BACKGROUNDS, AVATAR_BACKGROUND_GROUPS } from '@/lib/avatar-backgrounds';
 import { ACCESSORIES, FACIAL_HAIR_STYLES, HAIR_COLORS, HAIR_STYLES, MOUTHS, OUTFITS, OUTFIT_COLORS, SKIN_TONES } from '@/lib/avatar-options';
 import { deleteStorageObjectAtUrl } from '@/lib/avatar-storage';
-import getCroppedImg from '@/lib/cropImage';
+import getCroppedImg, { loadImageSrcForCrop } from '@/lib/cropImage';
 import { storage } from '@/lib/firebase';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { cn } from '@/lib/utils';
 import type { AvatarData, AvatarMode } from '@/types';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { Crop, Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -228,7 +228,9 @@ function ImageUploadControls({
     const { currentUser } = useAuth();
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const blobUrlRef = useRef<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoadingExisting, setIsLoadingExisting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
     // Cropping states
@@ -237,8 +239,37 @@ function ImageUploadControls({
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
+    const clearCropSrc = useCallback(() => {
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current);
+            blobUrlRef.current = null;
+        }
+        setImageSrc(null);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+    }, []);
+
+    useEffect(() => () => {
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    }, []);
+
     const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
         setCroppedAreaPixels(croppedAreaPixels);
+    }, []);
+
+    const openCropperWithSrc = useCallback((src: string, revokeBlob = false) => {
+        if (blobUrlRef.current && blobUrlRef.current !== src) {
+            URL.revokeObjectURL(blobUrlRef.current);
+            blobUrlRef.current = null;
+        }
+        if (revokeBlob && src.startsWith('blob:')) {
+            blobUrlRef.current = src;
+        }
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedAreaPixels(null);
+        setImageSrc(src);
     }, []);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,11 +287,28 @@ function ImageUploadControls({
             }
 
             const reader = new FileReader();
-            reader.addEventListener('load', () => setImageSrc(reader.result?.toString() || null));
+            reader.addEventListener('load', () => {
+                const result = reader.result?.toString();
+                if (result) openCropperWithSrc(result);
+            });
             reader.readAsDataURL(file);
             
             // Reset input so the same file can be selected again if needed
             e.target.value = '';
+        }
+    };
+
+    const handleAdjustExisting = async () => {
+        if (!currentData.imageUrl) return;
+        setIsLoadingExisting(true);
+        try {
+            const src = await loadImageSrcForCrop(currentData.imageUrl);
+            openCropperWithSrc(src, true);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Could not open this photo for editing.';
+            toast({ variant: 'destructive', title: 'Adjust failed', description: message });
+        } finally {
+            setIsLoadingExisting(false);
         }
     };
 
@@ -307,7 +355,7 @@ function ImageUploadControls({
                       await deleteStorageObjectAtUrl(previousImageUrl);
                     }
                     setIsUploading(false);
-                    setImageSrc(null); // Close the cropper UI
+                    clearCropSrc();
                 }
             );
         } catch (error: any) {
@@ -347,7 +395,7 @@ function ImageUploadControls({
                 <div className="flex gap-2">
                     <Button 
                         variant="outline" 
-                        onClick={() => setImageSrc(null)}
+                        onClick={clearCropSrc}
                         disabled={isUploading}
                         className="flex-1 rounded-xl"
                     >
@@ -376,11 +424,17 @@ function ImageUploadControls({
         );
     }
 
+    const hasPhoto = currentData.mode === 'image' && Boolean(currentData.imageUrl);
+
     return (
         <div className="flex flex-col items-center justify-center h-[250px] md:h-[300px] text-center gap-6">
             <div className="space-y-2">
                 <h3 className="text-section-title">Custom image</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">Upload a profile photo.</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                    {hasPhoto
+                        ? 'Adjust framing, or replace with a new photo.'
+                        : 'Upload a profile photo.'}
+                </p>
             </div>
             
             <input 
@@ -390,17 +444,35 @@ function ImageUploadControls({
                 accept="image/*" 
                 className="hidden" 
             />
+
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center justify-center">
+                {hasPhoto ? (
+                    <Button
+                        onClick={() => void handleAdjustExisting()}
+                        size="lg"
+                        disabled={isLoadingExisting}
+                        className="rounded-2xl h-14 px-8 font-semibold"
+                    >
+                        {isLoadingExisting ? (
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        ) : (
+                            <Crop className="mr-2 h-5 w-5" />
+                        )}
+                        Adjust photo
+                    </Button>
+                ) : null}
+                <Button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    size="lg"
+                    variant={hasPhoto ? 'outline' : 'default'}
+                    className="rounded-2xl h-14 px-8 font-semibold"
+                >
+                    <Upload className="mr-2 h-5 w-5" />
+                    {hasPhoto ? 'Replace photo' : 'Select image'}
+                </Button>
+            </div>
             
-            <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                size="lg" 
-                className="rounded-2xl h-14 px-8 font-semibold"
-            >
-                <Upload className="mr-2 h-5 w-5" />
-                Select image
-            </Button>
-            
-            {currentData.mode === 'image' && currentData.imageUrl && (
+            {hasPhoto ? (
                 <Button 
                     variant="ghost" 
                     size="sm" 
@@ -409,7 +481,7 @@ function ImageUploadControls({
                 >
                     Remove Image
                 </Button>
-            )}
+            ) : null}
         </div>
     )
 }

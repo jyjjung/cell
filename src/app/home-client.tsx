@@ -1,14 +1,9 @@
 "use client";
 
-import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import LandingPage from '@/components/home/landing-page';
-import { DashboardSkeleton } from '@/components/home/dashboard-skeleton';
-
-const DashboardPage = dynamic(() => import('@/components/home/dashboard-page'), {
-  loading: () => <DashboardSkeleton />,
-});
+import { CommunityLanding } from '@/components/shell/community-landing';
+import { ShellRouter } from '@/components/shell/shell-router';
 
 export default function HomeClient({
   initialHasSession,
@@ -18,10 +13,9 @@ export default function HomeClient({
   const { currentUser, hasSession, loadingAuth } = useAuth();
   const router = useRouter();
 
-  // Guest with no cookie: paint landing immediately (skip auth waterfall).
   if (!initialHasSession && !hasSession) {
     return (
-      <LandingPage
+      <CommunityLanding
         onSignIn={() => router.push('/login')}
         onSignUp={() => router.push('/signup')}
       />
@@ -29,12 +23,16 @@ export default function HomeClient({
   }
 
   if (loadingAuth) {
-    return <DashboardSkeleton />;
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+      </div>
+    );
   }
 
   if (!hasSession) {
     return (
-      <LandingPage
+      <CommunityLanding
         onSignIn={() => router.push('/login')}
         onSignUp={() => router.push('/signup')}
       />
@@ -42,8 +40,12 @@ export default function HomeClient({
   }
 
   if (!currentUser) {
-    return <DashboardSkeleton />;
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+      </div>
+    );
   }
 
-  return <DashboardPage currentUser={currentUser} />;
+  return <ShellRouter />;
 }

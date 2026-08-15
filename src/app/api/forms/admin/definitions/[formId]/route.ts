@@ -6,7 +6,8 @@ import { sendFormPublishedNotifications } from '@/lib/forms/publish-notification
 import { parseFieldsFromBody } from '@/lib/forms/parse-fields';
 import { parseFormStatus } from '@/lib/forms/lifecycle';
 
-export async function GET(request: NextRequest, { params }: { params: { formId: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ formId: string }> }) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest, { params }: { params: { formId: 
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { formId: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ formId: string }> }) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -101,7 +103,8 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { formId: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ formId: string }> }) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);

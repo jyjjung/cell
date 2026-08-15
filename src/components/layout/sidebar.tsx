@@ -3,14 +3,19 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { RemoteImage } from '@/components/ui/remote-image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home, Users, BookOpen, Shield, User,
-  LogIn, UserPlus, LogOut, MessageCircle, ChevronDown,
-  CalendarCheck, Music, Library, Lightbulb, HeartHandshake, FileText
+  Shield, User,
+  LogIn, UserPlus, ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  cellPath,
+  getAppHref,
+  resolveActiveApp,
+} from '@/lib/app-access';
+import { getSidebarNavForApp } from '@/lib/app-sidebar-nav';
+import { AppLogo } from '@/components/shell/app-logo';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -27,6 +32,7 @@ import {
 } from '@/components/ui/sidebar';
 import { LoadingSpinner } from '../ui/loading-spinner';
 import { usePageLoading } from '@/contexts/page-loading-context';
+import { useActiveAppAvatar } from '@/hooks/use-active-app-avatar';
 import { PixelAvatar } from '../avatar/PixelAvatar';
 
 import { useChats } from '@/hooks/useChats';
@@ -34,24 +40,15 @@ import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
 import { translations } from '@/lib/translations';
 import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '../ui/button';
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon?: React.ElementType;
-  badge?: number;
-  requiresAuth?: boolean;
-  requiresGuest?: boolean;
-};
-
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, isAdmin, isWorshipTeam, loadingAuth, signOutUser } = useAuth();
+  const { currentUser, isAdmin, isWorshipTeam, loadingAuth } = useAuth();
   const { setOpenMobile } = useSidebar();
   const [isMounted, setIsMounted] = useState(false);
   const { setIsPageLoading } = usePageLoading();
@@ -60,13 +57,19 @@ export default function AppSidebar() {
   const { unreadCount: unreadPrayerRequests, isShepherd } = usePrayerRequestBadge();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
+  const activeApp = resolveActiveApp(pathname) ?? 'cell';
+  const appHome = getAppHref(activeApp);
 
   useEffect(() => { setIsMounted(true); }, []);
 
 
   const unreadChats = useMemo(() => {
     if (!currentUser || !chats) return 0;
-    return sumChatUnreadMessageCounts(chats, currentUser.uid, (chat) => pathname === `/chat/${chat.id}`);
+    return sumChatUnreadMessageCounts(
+      chats.filter((chat) => chat.appScope !== 'ndcpc'),
+      currentUser.uid,
+      (chat) => pathname === `/chat/${chat.id}`,
+    );
   }, [chats, currentUser, pathname]);
 
   const navigate = (path: string) => {
@@ -75,34 +78,84 @@ export default function AppSidebar() {
     router.push(path);
   };
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+  const { avatar: sidebarAvatar, showHalo: sidebarShowHalo } = useActiveAppAvatar(
+    activeApp === 'ndcpc' ? 'ndcpc' : 'cell',
+  );
 
-  const navItems: NavItem[] = [
-    { href: '/', label: t.home, icon: Home },
-    { href: '/bible-checklist', label: t.readingPlan, icon: BookOpen },
-    { href: '/chat', label: t.chat, icon: MessageCircle, badge: unreadChats, requiresAuth: true },
-    { href: '/events', label: t.schedule, icon: CalendarCheck },
-    ...(isAdmin || isWorshipTeam ? [{ href: '/worship', label: t.worshipPortal, icon: Music }] : []),
-    { href: '/media', label: t.links, icon: Library },
-    { href: '/docs', label: t.docs, icon: FileText, requiresAuth: true },
-    { href: '/forms', label: t.forms, icon: FileText },
-    { href: '/members', label: t.members, icon: Users },
-    { href: '/prayer-requests', label: t.prayerRequests, icon: HeartHandshake, badge: isShepherd ? unreadPrayerRequests : undefined, requiresAuth: true },
-    { href: '/feedback', label: t.feedback, icon: Lightbulb },
-  ];
+  const navItems = useMemo(() => {
+    const items = getSidebarNavForApp(activeApp, {
+      isAdmin,
+      isWorshipTeam,
+      labels: {
+        home: t.home,
+        readingPlan: t.readingPlan,
+        chat: t.chat,
+        schedule: t.schedule,
+        worshipPortal: t.worshipPortal,
+        links: t.links,
+        docs: t.docs,
+        forms: t.forms,
+        members: t.members,
+        prayerRequests: t.prayerRequests,
+        feedback: t.feedback,
+        profile: t.profile,
+        appearance: t.appearance,
+        notifications: t.notifications,
+      },
+    });
 
-  const isVisible = (item: { requiresAuth?: boolean; requiresGuest?: boolean }) =>
-    (item.requiresAuth && currentUser) || (item.requiresGuest && !currentUser) || (!item.requiresAuth && !item.requiresGuest);
+    return items.map((item) => {
+      let badge: number | undefined;
+      if (activeApp === 'cell' && item.href === cellPath('/chat')) {
+        badge = unreadChats;
+      } else if (activeApp === 'cell' && item.href === cellPath('/prayer-requests')) {
+        badge = isShepherd ? unreadPrayerRequests : undefined;
+      } else if (activeApp === 'ndcpc' && item.badgeKey === 'chat') {
+        const roleUnread = currentUser
+          ? sumChatUnreadMessageCounts(
+              chats.filter((chat) => chat.appScope === 'ndcpc'),
+              currentUser.uid,
+              (chat) => pathname === `/ndcpc/chat/${chat.id}`,
+            )
+          : 0;
+        badge = roleUnread;
+      }
+      return { ...item, badge };
+    });
+  }, [
+    activeApp,
+    isAdmin,
+    isWorshipTeam,
+    t,
+    unreadChats,
+    isShepherd,
+    unreadPrayerRequests,
+    chats,
+    currentUser,
+    pathname,
+  ]);
+
+  const isNavActive = (href: string) => {
+    if (activeApp === 'accounts') {
+      const tab = href.split('tab=')[1]?.split('&')[0];
+      const currentTab =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('tab') ?? 'profile'
+          : 'profile';
+      return tab === currentTab;
+    }
+    if (href === appHome) return pathname === href;
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <Sidebar collapsible="icon" className="app-sidebar">
       {/* Logo */}
       <SidebarHeader className="app-sidebar-header">
-        <Link href="/" onClick={() => navigate('/')}
+        <Link href={appHome} onClick={() => navigate(appHome)}
           className="flex h-full items-center justify-start transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
-            <RemoteImage src="/icon-v4.svg" alt="em." width={32} height={32} className="h-full w-full" />
+            <AppLogo app={activeApp} size={32} className="rounded-lg" />
           </div>
         </Link>
       </SidebarHeader>
@@ -116,8 +169,8 @@ export default function AppSidebar() {
         ) : (
           <SidebarMenu className="gap-0.5 p-1">
             {navItems.map(item => {
-              if (!isVisible(item as any)) return null;
-              const active = isActive(item.href);
+              if (item.requiresAuth && !currentUser) return null;
+              const active = isNavActive(item.href);
 
               return (
                 <SidebarMenuItem key={item.href}>
@@ -148,7 +201,7 @@ export default function AppSidebar() {
             })}
 
             {/* Admin button */}
-            {isMounted && !loadingAuth && isAdmin && (
+            {isMounted && !loadingAuth && isAdmin && activeApp === 'cell' && (
               <>
                 <SidebarSeparator className="my-1.5 opacity-30" />
                 <SidebarMenuItem>
@@ -204,7 +257,7 @@ export default function AppSidebar() {
                   className="group flex h-full min-w-0 w-full items-center gap-3 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <div className="h-8 w-8 shrink-0">
-                    <PixelAvatar avatar={currentUser.avatar} className="h-8 w-8" />
+                    <PixelAvatar avatar={sidebarAvatar} showHalo={sidebarShowHalo} className="h-8 w-8" />
                   </div>
                   <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                     <p className="truncate text-sm font-medium leading-tight">
@@ -224,15 +277,8 @@ export default function AppSidebar() {
                 align="center"
                 className="mb-1 w-[calc(var(--radix-dropdown-menu-trigger-width)-12px)] rounded-xl p-2"
               >
-                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/profile')}>
+                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/accounts')}>
                   <User className="h-4 w-4 text-muted-foreground" /> {t.profile}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="opacity-30 my-1" />
-                <DropdownMenuItem
-                  className="rounded-lg h-9 text-sm gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
-                  onSelect={() => void signOutUser()}
-                >
-                  <LogOut className="h-4 w-4" /> {t.signOut}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

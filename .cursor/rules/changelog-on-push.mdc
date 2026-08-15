@@ -1,60 +1,82 @@
 ---
-description: Update the in-app changelog before every git push to GitHub
+description: Member-facing changelog style and update-before-push workflow
 alwaysApply: true
 ---
 
-# Changelog on Push
+# Changelog (Updates app)
 
-Before running `git push`, update the changelog in `src/data/changelogs.ts`.
+Source of truth: `src/data/changelogs.ts`. Shown in-app under Updates — write for members, not engineers.
 
 ## When to update
 
-Update the changelog whenever a push includes user-facing changes (features, fixes, UI, docs shown in-app). Skip only for purely internal or tooling-only commits with no user-visible effect.
+Before `git push`, update the changelog for any user-facing change (features, fixes, UI). Skip only pure tooling/internal work with no visible effect.
 
-## Style (product release notes, not a commit diary)
+Never push user-facing code without a matching changelog entry in the same push.
 
-- Prefer **one release entry per ship**, especially for same-day work.
-- Typically **3–8 bullets**. Bundle related fixes; omit reverts, refactors, and tiny polish users will not notice.
-- User-facing language only.
-- Do **not** recreate micro-patch history (`v1.3.xxx` spam). Historical notes were consolidated into era releases; keep the list short going forward.
+## Voice (product release notes)
+
+- **Benefit-first**: what the member can do now, or what feels better — not how it was built.
+- **Short**: typically **3–5 bullets** per ship; one idea per bullet.
+- **Plain language**: “You can now…”, “Fixed…”, “Home is…”.
+- **One entry per ship** (bundle same-day / related work). Prefer updating today’s top entry over adding micro-patches.
+
+### Do not write
+
+- Engineering: listeners, caches, service workers, sanitization, crash reporting, fan-out, indexes
+- Implementation: URL paths, switcher order lists, component names, “like the data layer”
+- Commit-diary: every fix, revert, or tiny polish
+- Superseded history: if a later ship replaced a behavior, don’t leave the obsolete bullet in older entries when rewriting; don’t announce an intermediate that was immediately undone
+
+### Trim history
+
+Keep recent ships sharp. Older eras stay few and short — do not recreate `v1.x.y` patch spam.
 
 ## SemVer
-
-Follow [Semantic Versioning](https://semver.org/):
 
 | Bump | Example | When |
 |------|---------|------|
 | **MAJOR** | `v2.0.0` | Breaking user-facing changes |
-| **MINOR** | `v1.5.0` | New features or a meaningful bundled improvement set |
-| **PATCH** | `v1.4.1` | Bug fixes and small polish |
+| **MINOR** | `v1.5.0` | New features or a meaningful bundled set |
+| **PATCH** | `v1.4.1` | Bug fixes and small polish only |
 
-After a MINOR (`v1.4.0`), patches are `v1.4.1`, `v1.4.2`, … until the next feature bundle → `v1.5.0`.
+After a MINOR, patches increment until the next feature bundle.
 
-## How to update
+## Format
 
-Add a **new object at the top** of the `changelogs` array in `src/data/changelogs.ts`:
+New object at the **top** of `changelogs`:
 
 ```typescript
 {
-  version: 'v1.4.1',
+  version: 'v1.14.0',
   subtitle: 'Short Title',
-  date: 'July 29, 2026',
+  date: 'August 15, 2026',
   changes: [
-    { type: 'Fixed', text: 'User-facing fix in plain language' },
-    { type: 'Improved', text: 'User-facing improvement in plain language' },
+    { type: 'Added', text: 'You can now…' },
+    { type: 'Fixed', text: 'Chat now…' },
   ],
 },
 ```
 
-Categories (Keep a Changelog style): `Added` | `Changed` | `Fixed` | `Improved` | `Security`.
+- Categories: `Added` | `Changed` | `Fixed` | `Improved` | `Security`
+- Exact calendar date (`August 15, 2026`), never “Early/Mid/Late-Month”
+- Subtitle: 2–4 words, product framing (“Forms”, “Community Apps”), not a commit subject
 
-Always use an exact date like `July 9, 2026`, never `Early/Mid/Late-Month Year`.
+## Good vs bad
+
+```text
+❌ Shared data providers cut duplicate listeners; chat shell loads faster
+✅ Chat and home open faster
+
+❌ First visit opens Account; switcher order is Account, em., Preschool, Users, Updates
+✅ New members land in Account first; after that, you return where you left off
+
+❌ Admin Forms splits into maker and Responses; download CSV/PDF with chosen questions…
+✅ Admins can review answers and download reports
+```
 
 ## Workflow
 
-1. Finish code changes and commit them.
-2. Add the changelog entry summarizing what shipped (correct SemVer bump).
-3. Commit the changelog update (same commit or a follow-up `chore: update changelog` commit).
-4. Push to GitHub.
-
-Never push code changes without a matching changelog entry in the same push.
+1. Finish and commit code.
+2. Add or extend the top changelog entry (correct SemVer).
+3. Commit changelog if separate (`chore: update changelog`).
+4. Push.

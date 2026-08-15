@@ -52,7 +52,13 @@ const AddChordSheetDialog = dynamic(
   () => import('../worship/WorshipDialogs').then((m) => m.AddChordSheetDialog),
   { ssr: false },
 );
-export default function ChatWindow({ chatId }: { chatId: string }) {
+export default function ChatWindow({
+  chatId,
+  backHref = '/chat',
+}: {
+  chatId: string;
+  backHref?: string;
+}) {
   const messageState = useMessages(chatId);
   const { messages } = messageState;
 
@@ -76,6 +82,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
     <WorshipDataProvider enabled={needsWorshipData}>
       <ChatWindowBody
         chatId={chatId}
+        backHref={backHref}
         messageState={messageState}
         worshipViewer={worshipViewer}
         setWorshipViewer={setWorshipViewer}
@@ -94,6 +101,7 @@ export default function ChatWindow({ chatId }: { chatId: string }) {
 
 function ChatWindowBody({
   chatId,
+  backHref,
   messageState,
   worshipViewer,
   setWorshipViewer,
@@ -107,6 +115,7 @@ function ChatWindowBody({
   setAddSheetSong,
 }: {
   chatId: string;
+  backHref: string;
   messageState: ReturnType<typeof useMessages>;
   worshipViewer: { setlistId?: string; songId?: string; imageUrl?: string } | null;
   setWorshipViewer: (v: { setlistId?: string; songId?: string; imageUrl?: string } | null) => void;
@@ -265,7 +274,7 @@ function ChatWindowBody({
 
       return {
         name: name,
-        avatar: resolveChatAvatar(peerProfile, peerInfoFromChat),
+        avatar: resolveChatAvatar(peerProfile, peerInfoFromChat, chat.appScope),
         photoURL: null,
       };
     }
@@ -316,7 +325,7 @@ function ChatWindowBody({
           ? {
               firstName: senderProfile.firstName,
               lastName: senderProfile.lastName,
-              avatar: resolveChatAvatar(senderProfile, senderInfoFromChat) as any,
+              avatar: resolveChatAvatar(senderProfile, senderInfoFromChat, chat.appScope) as any,
             }
           : senderInfoFromChat,
       );
@@ -333,7 +342,7 @@ function ChatWindowBody({
       <div className="w-full h-full flex flex-col items-center justify-center text-center">
         <h2 className="text-section-title mb-4">{t.circleCommand}</h2>
         <Button asChild variant="outline" className="h-14 px-12 rounded-2xl font-semibold text-micro-label">
-          <Link href="/chat">{t.returnToList}</Link>
+          <Link href={backHref}>{t.returnToList}</Link>
         </Button>
       </div>
     );
@@ -348,7 +357,7 @@ function ChatWindowBody({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push('/chat')}
+          onClick={() => router.push(backHref)}
           className="h-10 w-10 rounded-full bg-muted/20 hover:bg-muted/40"
           aria-label={t.back}
         >
@@ -357,7 +366,11 @@ function ChatWindowBody({
 
         <div className="flex flex-col items-center gap-1 min-w-0">
           <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
-            <GroupChatAvatar avatar={chatDetails.avatar} photoURL={chatDetails.photoURL} />
+            <GroupChatAvatar
+              avatar={chatDetails.avatar}
+              photoURL={chatDetails.photoURL}
+              showHalo={chat?.appScope !== 'ndcpc'}
+            />
           </div>
           <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
         </div>

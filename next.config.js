@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-const { withSentryConfig } = require('@sentry/nextjs');
-const pwa = require('@ducanh2912/next-pwa');
-const defaultRuntimeCaching = pwa.runtimeCaching;
+const path = require('path');
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 const MEDIA_CACHE_MAX_ENTRIES = 2500;
@@ -72,24 +70,49 @@ function patchCrossOriginCaching(entries) {
   });
 }
 
-const withPWA = pwa.default({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  // Production PWA stays enabled. Disable only in local `next dev` so the
-  // service worker does not cache stale chunks during development (no prod cost change).
-  disable: process.env.NODE_ENV === 'development',
-  workboxOptions: {
-    runtimeCaching: [
-      ...FIREBASE_MEDIA_CACHING,
-      ...patchCrossOriginCaching(defaultRuntimeCaching),
-    ],
-  },
-});
+/** Skip Workbox/PWA during local dev — its dependency tree can hang config load. */
+function createWithPWA() {
+  const skipPwa =
+    process.env.SKIP_PWA === '1' ||
+    process.env.NODE_ENV === 'development' ||
+    process.env.npm_lifecycle_event === 'dev';
+
+  if (skipPwa) {
+    return (config) => config;
+  }
+
+  const pwa = require('@ducanh2912/next-pwa');
+  const defaultRuntimeCaching = pwa.runtimeCaching;
+
+  return pwa.default({
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+    workboxOptions: {
+      runtimeCaching: [
+        ...FIREBASE_MEDIA_CACHING,
+        ...patchCrossOriginCaching(defaultRuntimeCaching),
+      ],
+    },
+  });
+}
+
+const withPWA = createWithPWA();
 
 const nextConfig = {
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns', 'framer-motion'],
+    // Keep lucide-react out: Turbopack HMR can break when icon imports are removed
+    // ("module factory is not available") under optimizePackageImports.
+    optimizePackageImports: ['date-fns', 'framer-motion'],
+  },
+  turbopack: {
+    resolveAlias: {
+      canvas: './empty-module.js',
+      [path.join(__dirname, 'src/lib/app-fonts-google')]: path.join(
+        __dirname,
+        'src/lib/app-fonts-google.stub.ts',
+      ),
+    },
   },
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -179,21 +202,48 @@ const nextConfig = {
   },
   webpack: (config) => {
     config.resolve.alias.canvas = false;
+
+    const skipGoogleFonts =
+      process.env.SKIP_GOOGLE_FONTS === '1' ||
+      process.env.NODE_ENV === 'development' ||
+      process.env.npm_lifecycle_event === 'dev';
+
+    if (skipGoogleFonts) {
+      config.resolve.alias[path.join(__dirname, 'src/lib/app-fonts-google')] = path.join(
+        __dirname,
+        'src/lib/app-fonts-google.stub.ts',
+      );
+    }
+
     return config;
   },
 };
 
-module.exports = withSentryConfig(withPWA(nextConfig), {
-  // Optional source-map upload — set these in CI/Vercel when you want readable stack traces.
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  webpack: {
-    treeshake: { removeDebugLogging: true },
-  },
-  sourcemaps: {
-    disable: !process.env.SENTRY_AUTH_TOKEN,
-  },
-});
+function createWithSentry(config) {
+  const skipSentry =
+    process.env.SKIP_SENTRY === '1' ||
+    process.env.NODE_ENV === 'development' ||
+    process.env.npm_lifecycle_event === 'dev';
+
+  if (skipSentry) {
+    return config;
+  }
+
+  const { withSentryConfig } = require('@sentry/nextjs');
+  return withSentryConfig(config, {
+    // Optional source-map upload — set these in CI/Vercel when you want readable stack traces.
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    silent: !process.env.CI,
+    widenClientFileUpload: true,
+    webpack: {
+      treeshake: { removeDebugLogging: true },
+    },
+    sourcemaps: {
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    },
+  });
+}
+
+module.exports = createWithSentry(withPWA(nextConfig));

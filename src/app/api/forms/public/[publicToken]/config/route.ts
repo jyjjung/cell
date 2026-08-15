@@ -2,7 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminDb } from '@/lib/firebase-admin';
 import { getFormByPublicToken } from '@/lib/server-forms';
 
-export async function GET(_request: NextRequest, { params }: { params: { publicToken: string } }) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ publicToken: string }> }) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
