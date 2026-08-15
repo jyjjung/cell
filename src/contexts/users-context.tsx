@@ -41,24 +41,28 @@ function useUsers() {
 
 export function useAllUsers() {
   const ctx = useUsers();
-  useAllUsersSubscription({ enabled: !ctx });
-  if (!ctx) {
-    throw new Error('useAllUsers must be used within UsersProvider');
+  // Guest / pre-session SSR (AppDataProviders not mounted yet): local subscription
+  // with listeners gated on auth — never throw and crash NavPageHeader.
+  const fallback = useAllUsersSubscription({ enabled: !ctx });
+  if (ctx) {
+    return {
+      allUsers: ctx.allUsers,
+      loading: ctx.loading,
+      error: ctx.error,
+      ensureUsers: ctx.ensureUsers,
+      refreshUsers: ctx.refreshUsers,
+      patchUsers: ctx.patchUsers,
+    };
   }
-  return {
-    allUsers: ctx.allUsers,
-    loading: ctx.loading,
-    error: ctx.error,
-    ensureUsers: ctx.ensureUsers,
-    refreshUsers: ctx.refreshUsers,
-    patchUsers: ctx.patchUsers,
-  };
+  return fallback;
 }
 
 export function useUsersById() {
   const ctx = useUsers();
-  if (!ctx) {
-    throw new Error('useUsersById must be used within UsersProvider');
-  }
-  return ctx.usersById;
+  const fallback = useAllUsersSubscription({ enabled: !ctx });
+  const fallbackById = useMemo(
+    () => new Map(fallback.allUsers.map((u) => [u.uid, u])),
+    [fallback.allUsers],
+  );
+  return ctx?.usersById ?? fallbackById;
 }

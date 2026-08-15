@@ -97,6 +97,31 @@ export function shouldDropSentryEvent(event: {
     return true;
   }
 
+  // Transient client network / auth offline noise
+  if (
+    message.includes('auth/network-request-failed') ||
+    message.includes('Firebase: Error (auth/network-request-failed)')
+  ) {
+    return true;
+  }
+
+  // Service worker register aborted / script load failed (nav away, legacy host, blocked SW)
+  if (
+    message.includes('Failed to register a ServiceWorker') ||
+    message.includes('sw.js load failed') ||
+    (message.includes('AbortError') && message.includes('ServiceWorker'))
+  ) {
+    return true;
+  }
+
+  // Firestore ACL denials during auth races / guest listeners — not actionable crashes
+  if (
+    message.includes('Missing or insufficient permissions') ||
+    message.includes('permission-denied')
+  ) {
+    return true;
+  }
+
   // Stale Next.js App Router after chunk timeout — recovered via hard reload
   if (message.includes('parallelRoutes.get') || message.includes('parallelRoutes')) {
     return true;

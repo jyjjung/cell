@@ -80,12 +80,23 @@ export default function FeedbackPage() {
   /* ── Firestore listener ───────────────────────────────── */
 
   useEffect(() => {
+    if (!currentUser?.uid) {
+      setSuggestionsList([]);
+      return;
+    }
+
     const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setSuggestionsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setSuggestionsList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      },
+      (error) => {
+        console.error('[feedback] suggestions listener:', error);
+      },
+    );
     return () => unsubscribe();
-  }, []);
+  }, [currentUser?.uid]);
 
   /* ── Handlers ─────────────────────────────────────────── */
 

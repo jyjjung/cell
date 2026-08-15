@@ -7,6 +7,26 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.1',
+    subtitle: 'Stability',
+    date: 'August 16, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Updates and Bible reading open reliably while you’re signing in — they no longer crash on the way in.',
+      },
+      {
+        type: 'Fixed',
+        text: 'First load is smoother: theme and offline banner no longer flash the wrong state.',
+      },
+      {
+        type: 'Improved',
+        text: 'On Safari, the app recovers more cleanly after storage glitches instead of getting stuck.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.15.0',
     subtitle: 'Community Apps',
     date: 'August 15, 2026',
