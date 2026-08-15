@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { getVideoEmbedUrl, getYouTubeVideoId } from '@/lib/ndcpc/video';
 import { formatChapterTime } from '@/lib/ndcpc/youtube-chapters';
 
@@ -23,21 +22,6 @@ function toFiniteSeconds(value?: number | string | null) {
   return Math.floor(parsed);
 }
 
-/**
- * YouTube often ignores embed ?start= when the viewer is signed in with watch history.
- * nocookie + enablejsapi lets us force-seek to the chapter start after the player is ready.
- */
-function seekYouTubeIframe(iframe: HTMLIFrameElement, startSeconds: number) {
-  iframe.contentWindow?.postMessage(
-    JSON.stringify({
-      event: 'command',
-      func: 'seekTo',
-      args: [startSeconds, true],
-    }),
-    '*'
-  );
-}
-
 export function VideoEmbed({
   url,
   title,
@@ -45,47 +29,21 @@ export function VideoEmbed({
   startSeconds,
   endSeconds,
 }: VideoEmbedProps) {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const start = toFiniteSeconds(startSeconds);
   const end = toFiniteSeconds(endSeconds);
+  // YouTube rejects / blanks clips when end is not after start.
+  const clipEnd =
+    end !== undefined && (start === undefined || end > start) ? end : undefined;
   const youtubeId = getYouTubeVideoId(url);
   const embedUrl = getVideoEmbedUrl(url, {
     startSeconds: start,
-    endSeconds: end,
-    enableJsApi: Boolean(youtubeId && start !== undefined),
+    endSeconds: clipEnd,
   });
-
-  useEffect(() => {
-    if (!youtubeId || start === undefined) {
-      return;
-    }
-
-    const iframe = iframeRef.current;
-    if (!iframe) {
-      return;
-    }
-
-    const timers: number[] = [];
-
-    const seek = () => {
-      for (const delay of [300, 800, 1600]) {
-        timers.push(window.setTimeout(() => seekYouTubeIframe(iframe, start), delay));
-      }
-    };
-
-    seek();
-    iframe.addEventListener('load', seek);
-
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-      iframe.removeEventListener('load', seek);
-    };
-  }, [youtubeId, start, end, embedUrl]);
 
   const clipLabel =
     start !== undefined
-      ? end !== undefined
-        ? `${formatChapterTime(start)} – ${formatChapterTime(end)}`
+      ? clipEnd !== undefined
+        ? `${formatChapterTime(start)} – ${formatChapterTime(clipEnd)}`
         : formatChapterTime(start)
       : null;
 
@@ -94,8 +52,7 @@ export function VideoEmbed({
       <div className={className ?? 'aspect-video w-full overflow-hidden rounded-md bg-muted/30'}>
         {embedUrl ? (
           <iframe
-            key={`${youtubeId ?? url}-${start ?? 'full'}-${end ?? 'x'}`}
-            ref={iframeRef}
+            key={`${youtubeId ?? url}-${start ?? 'full'}-${clipEnd ?? 'x'}`}
             width="100%"
             height="100%"
             src={embedUrl}

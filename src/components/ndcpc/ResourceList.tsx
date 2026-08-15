@@ -119,7 +119,11 @@ export function ResourceList({
                 variant="ghost"
                 size="sm"
                 className="px-0"
-                onClick={() => setEditingResource(resource)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setEditingResource(resource);
+                }}
               >
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
                 {t('resources.editChapter')}
