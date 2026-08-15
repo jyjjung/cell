@@ -16,6 +16,7 @@ import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
+import { EmbeddedTextChart } from '@/components/worship/text-chord-chart-viewer';
 import {
   useViewerTheme,
   viewerControlBtn,
@@ -160,8 +161,9 @@ export function ContinuousSetlistViewer({
   const isDark = viewerTheme === 'dark';
 
   const activeSlide = slides[activeSection] ?? slides[0];
-  const isZoomed = scale > 1.05;
+  const isZoomed = Math.abs(scale - 1) > 0.05;
   const zoomPct = Math.round(scale * 100);
+  const minScale = 0.35;
 
   const contentWidth = 'min(100vw - 1.5rem, 48rem)';
 
@@ -293,7 +295,7 @@ export function ContinuousSetlistViewer({
           <button
             type="button"
             onClick={() => controlsRef.current?.zoomOut(0.35)}
-            disabled={scale <= 1.01}
+            disabled={scale <= minScale + 0.01}
             className={controlBtn}
             aria-label="Zoom out"
           >
@@ -325,11 +327,11 @@ export function ContinuousSetlistViewer({
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
-          minScale={1}
+          minScale={minScale}
           maxScale={5}
           centerOnInit={false}
           limitToBounds
-          centerZoomedOut={false}
+          centerZoomedOut
           alignmentAnimation={{ sizeX: 0, sizeY: 0 }}
           // Trackpad scroll on macOS often comes through as wheel events; without `wheelDisabled`,
           // the library interprets that as zoom. We keep pinch/ctrl+wheel zoom behavior,
@@ -386,6 +388,18 @@ export function ContinuousSetlistViewer({
                           isDark={isDark}
                           onListen={() => openListenForSection(sectionIdx)}
                         />
+                        {(section.textSheets ?? []).length > 0 && (
+                          (section.textSheets ?? []).map((sheet) => (
+                            <EmbeddedTextChart
+                              key={sheet.id}
+                              sheet={sheet}
+                              songId={section.songId}
+                              songTitle={section.songTitle}
+                              displayKey={section.key}
+                              annotationId={section.annotationId}
+                            />
+                          ))
+                        )}
                         {(section.imageUrls ?? []).length > 0 ? (
                           (section.imageUrls ?? []).map((url, pageIdx) => (
                             <ChordPage
@@ -396,7 +410,7 @@ export function ContinuousSetlistViewer({
                               isDark={isDark}
                             />
                           ))
-                        ) : (
+                        ) : (section.textSheets ?? []).length === 0 ? (
                           <div className={viewerEmptyState(isDark)}>
                             <FileText className={cn('h-8 w-8', isDark ? 'text-white/25' : 'text-muted-foreground/50')} />
                             <p className={cn('text-sm', isDark ? 'text-white/50' : 'text-muted-foreground')}>No chord sheets for this song</p>
@@ -414,7 +428,7 @@ export function ContinuousSetlistViewer({
                               </button>
                             )}
                           </div>
-                        )}
+                        ) : null}
                       </section>
                     );
                   })}

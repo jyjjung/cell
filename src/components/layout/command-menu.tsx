@@ -254,7 +254,7 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
         href: "/worship",
         label: t.worshipPortal,
         icon: Music,
-        keywords: ["songs", "setlist", "roster"],
+        keywords: ["songs", "setlist", "roster", "chords"],
         requiresWorship: true,
       },
       { id: "media", href: "/media", label: t.links, icon: Library, keywords: ["links", "resources", "media"] },

@@ -19,6 +19,7 @@ import { downloadChatImage } from '@/lib/chat-image-download';
 import { translations } from '@/lib/translations';
 import { primeChatPreviewMedia } from '@/lib/media-cache';
 import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
+import { splitSheetsForViewer } from '@/lib/chord-chart';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
 import type { ViewerSlide } from '../worship/viewer-types';
@@ -487,9 +488,11 @@ function ChatWindowBody({
             const tracks = getReferenceTracks(ps);
             if (sheets.length > 0 || tracks.length > 0) {
               slides.push({
-                imageUrls: sheets.map(s => s.imageUrl),
+                ...splitSheetsForViewer(sheets),
                 songTitle: ps.title,
                 key: ps.key,
+                songId: libSong?.id,
+                annotationId: ps.annotationId,
                 referenceTracks: tracks.length > 0 ? tracks : undefined,
               });
             }
@@ -521,16 +524,17 @@ function ChatWindowBody({
           const libSong = songs.find(s => s.id === worshipViewer.songId);
           if (!libSong) return null;
           
-          const keyMap = new Map<string, string[]>();
+          const byKey = new Map<string, typeof libSong.chordSheets>();
           libSong.chordSheets.forEach((sheet) => {
-            if (!keyMap.has(sheet.key)) keyMap.set(sheet.key, []);
-            keyMap.get(sheet.key)!.push(sheet.imageUrl);
+            if (!byKey.has(sheet.key)) byKey.set(sheet.key, []);
+            byKey.get(sheet.key)!.push(sheet);
           });
-          Array.from(keyMap.entries()).forEach(([key, urls]) => {
+          Array.from(byKey.entries()).forEach(([key, grouped]) => {
             slides.push({
-              imageUrls: urls,
+              ...splitSheetsForViewer(grouped),
               songTitle: libSong.title,
-              key: key as any,
+              key: key as typeof libSong.chordSheets[number]['key'],
+              songId: libSong.id,
             });
           });
         }

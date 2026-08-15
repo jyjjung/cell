@@ -129,7 +129,7 @@ export function useWorshipSetlists(enabled = true) {
     songId: string,
     songTitle: string,
     key: ChordKey,
-    options?: { referenceTracks?: ReferenceTrack[]; chordSheetIds?: string[] },
+    options?: { referenceTracks?: ReferenceTrack[]; chordSheetIds?: string[]; annotationId?: string },
   ) => {
     const newSong: SetlistSong = {
       songId,
@@ -142,6 +142,7 @@ export function useWorshipSetlists(enabled = true) {
       ...(options?.chordSheetIds && options.chordSheetIds.length > 0
         ? { chordSheetIds: options.chordSheetIds }
         : {}),
+      ...(options?.annotationId ? { annotationId: options.annotationId } : {}),
     };
     const updated = [...setlist.songs, newSong];
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
@@ -155,7 +156,7 @@ export function useWorshipSetlists(enabled = true) {
   const updateSetlistSong = useCallback(async (
     setlist: WorshipSetlist,
     songId: string,
-    patch: Partial<Pick<SetlistSong, 'key' | 'referenceTracks' | 'chordSheetIds'>>,
+    patch: Partial<Pick<SetlistSong, 'key' | 'referenceTracks' | 'chordSheetIds' | 'annotationId'>>,
   ) => {
     const existing = setlist.songs.find((s) => s.songId === songId);
     const updated = setlist.songs.map((s) => {
@@ -175,6 +176,10 @@ export function useWorshipSetlists(enabled = true) {
         } else {
           delete next.chordSheetIds;
         }
+      }
+      if ('annotationId' in patch) {
+        if (patch.annotationId) next.annotationId = patch.annotationId;
+        else delete next.annotationId;
       }
       return next;
     });

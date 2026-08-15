@@ -15,9 +15,12 @@ import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import type { ChordKey, WorshipSong } from '@/types';
+import { detectKeyFromText, isTextChordSheet, prepareChordChartPaste } from '@/lib/chord-chart';
+import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
+import { useAuth } from '@/contexts/auth-context';
+import { emptyChordAnnotation } from '@/components/worship/text-chord-chart-viewer';
 import { format, parseISO } from 'date-fns';
-import { Check, Loader2, Plus, Trash2, Upload, Youtube } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Trash2, Youtube } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 const WORSHIP_ALL_KEYS: ChordKey[] = [
@@ -229,9 +232,12 @@ export function SetlistSongConfigPanel({
   onKeyChange,
   selectedSheetIds,
   onSheetIdsChange,
+  selectedAnnotationId,
+  onAnnotationIdChange,
   referenceTracks,
   onReferenceTracksChange,
   onRequestUpload,
+  onOpenNotesEditor,
   idPrefix = 'ssc',
 }: {
   song: WorshipSong;
@@ -239,19 +245,57 @@ export function SetlistSongConfigPanel({
   onKeyChange: (key: ChordKey) => void;
   selectedSheetIds: string[];
   onSheetIdsChange: (ids: string[]) => void;
+  selectedAnnotationId: string | 'none';
+  onAnnotationIdChange: (id: string | 'none') => void;
   referenceTracks: ReferenceTrackDraft[];
   onReferenceTracksChange: (tracks: ReferenceTrackDraft[]) => void;
   onRequestUpload: () => void;
+  /** Open the notes editor outside the parent dialog (avoids focus-trap / inert blocking). */
+  onOpenNotesEditor?: (sheet: SongChordSheet, annotationId: string) => void;
   idPrefix?: string;
 }) {
+  const { currentUser } = useAuth();
+  const { updateChordSheet } = useWorshipSongs();
+  const [newNoteName, setNewNoteName] = useState('');
+  const [namingNote, setNamingNote] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
   const availableKeys = useMemo(
     () => Array.from(new Set(song.chordSheets.map((s) => s.key))),
+    [song.chordSheets],
+  );
+  const hasTextChart = useMemo(
+    () => song.chordSheets.some(isTextChordSheet),
     [song.chordSheets],
   );
   const sheetsForKey = useMemo(
     () => chordSheetsForKey(song, selectedKey),
     [song, selectedKey],
   );
+  const textSheets = useMemo(
+    () => sheetsForKey.filter(isTextChordSheet),
+    [sheetsForKey],
+  );
+  const noteTarget = textSheets.find((s) => selectedSheetIds.includes(s.id)) ?? textSheets[0] ?? null;
+  const annotations = noteTarget?.annotations ?? [];
+
+  const createNote = async () => {
+    if (!currentUser || !noteTarget) return;
+    const name = newNoteName.trim() || `Notes ${annotations.length + 1}`;
+    setSavingNote(true);
+    try {
+      const created = emptyChordAnnotation(currentUser.uid, name);
+      const nextSheet = { ...noteTarget, annotations: [...annotations, created] };
+      await updateChordSheet(song.id, noteTarget.id, {
+        annotations: nextSheet.annotations,
+      });
+      onAnnotationIdChange(created.id);
+      setNewNoteName('');
+      setNamingNote(false);
+      onOpenNotesEditor?.(nextSheet, created.id);
+    } finally {
+      setSavingNote(false);
+    }
+  };
 
   const updateTrack = (index: number, patch: Partial<ReferenceTrackDraft>) => {
     onReferenceTracksChange(
@@ -281,14 +325,16 @@ export function SetlistSongConfigPanel({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Select Key</Label>
-        {availableKeys.length > 0 && (
+        {(hasTextChart || availableKeys.length > 0) && (
           <p className="text-[11px] text-muted-foreground/60 font-medium">
-            Chord sheets available for highlighted keys
+            {hasTextChart
+              ? 'Pasted charts transpose to any key'
+              : 'Chord sheets available for highlighted keys'}
           </p>
         )}
         <div className="flex flex-wrap gap-1.5">
           {WORSHIP_ALL_KEYS.map((k) => {
-            const hasSheet = availableKeys.includes(k);
+            const hasSheet = hasTextChart || availableKeys.includes(k);
             return (
               <button
                 key={k}
@@ -315,12 +361,12 @@ export function SetlistSongConfigPanel({
           <Label>Chord Sheets</Label>
           <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg text-xs gap-1"
             onClick={onRequestUpload}>
-            <Upload className="h-3 w-3" /> Upload
+            <Plus className="h-3 w-3" /> Paste chart
           </Button>
         </div>
         {sheetsForKey.length === 0 ? (
           <p className="text-xs text-muted-foreground/60 font-medium">
-            No chart for this key — upload one or pick a different key.
+            No chart for this key — paste one or pick a different key.
           </p>
         ) : sheetsForKey.length === 1 ? (
           <p className="text-xs text-success font-semibold flex items-center gap-1">
@@ -340,7 +386,13 @@ export function SetlistSongConfigPanel({
                     selected ? 'border-primary ring-2 ring-primary/30' : 'border-border/40 opacity-50',
                   )}
                 >
-                  <RemoteImage src={sheet.imageUrl} alt={`Page ${i + 1}`} fill className="object-cover" sizes="64px" />
+                  {isTextChordSheet(sheet) ? (
+                    <div className="flex h-full w-full items-center justify-center bg-[#2b2b2b] text-[9px] font-bold text-white">
+                      Text
+                    </div>
+                  ) : (
+                    <RemoteImage src={sheet.imageUrl} alt={`Page ${i + 1}`} fill className="object-cover" sizes="64px" />
+                  )}
                   <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white font-bold text-center py-0.5">
                     Pg {i + 1}
                   </span>
@@ -355,6 +407,61 @@ export function SetlistSongConfigPanel({
           </div>
         )}
       </div>
+
+      {textSheets.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <Label>Notes</Label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 rounded-lg text-xs gap-1"
+              onClick={() => setNamingNote(true)}
+            >
+              <Plus className="h-3 w-3" /> New
+            </Button>
+          </div>
+          <select
+            value={selectedAnnotationId}
+            onChange={(e) => onAnnotationIdChange(e.target.value as string | 'none')}
+            className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm"
+          >
+            <option value="none">None</option>
+            {annotations.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+          {namingNote && (
+            <div className="flex gap-1.5">
+              <Input
+                value={newNoteName}
+                onChange={(e) => setNewNoteName(e.target.value)}
+                placeholder="Note name"
+                className="h-9 rounded-xl"
+                autoFocus
+              />
+              <Button type="button" size="sm" className="h-9 rounded-xl" disabled={savingNote} onClick={() => void createNote()}>
+                {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Add'}
+              </Button>
+            </div>
+          )}
+          {selectedAnnotationId !== 'none' && noteTarget && onOpenNotesEditor && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl text-xs gap-1"
+              onClick={() => {
+                const sheet = song.chordSheets.find((s) => s.id === noteTarget.id) ?? noteTarget;
+                onOpenNotesEditor(sheet, selectedAnnotationId);
+              }}
+            >
+              <Pencil className="h-3 w-3" /> Draw on chart
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
@@ -421,15 +528,25 @@ export function AddChordSheetDialog({
   lockKey?: boolean;
   onUploaded?: (sheetIds: string[]) => void;
 }) {
-  const { addChordSheet } = useWorshipSongs();
+  const { addChordSheet, addTextChordSheet } = useWorshipSongs();
   const { toast } = useToast();
+  const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [file, setFile] = useState<File | null>(null);
-  const [key, setKey] = useState<ChordKey>(defaultKey ?? 'numbers');
+  const [pasteText, setPasteText] = useState('');
+  const [key, setKey] = useState<ChordKey>(defaultKey ?? 'E');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open && defaultKey) setKey(defaultKey);
   }, [open, defaultKey]);
+
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setPasteText('');
+      setMode('paste');
+    }
+  }, [open]);
 
   const handleUpload = async () => {
     if (!song || !file) return;
@@ -455,7 +572,7 @@ export function AddChordSheetDialog({
       }
 
       setFile(null);
-      if (!defaultKey) setKey('numbers');
+      if (!defaultKey) setKey('E');
       onUploaded?.(uploadedIds);
       onClose();
     } catch (e: any) {
@@ -463,26 +580,92 @@ export function AddChordSheetDialog({
     } finally { setSaving(false); }
   };
 
+  const handlePaste = async () => {
+    if (!song || !pasteText.trim()) return;
+    setSaving(true);
+    try {
+      const sheet = await addTextChordSheet(song.id, prepareChordChartPaste(pasteText.trim()), key);
+      toast({ title: 'Chart saved', description: `Pasted ${sheet.key === 'numbers' ? '#' : sheet.key} chart for ${song.title}.` });
+      setPasteText('');
+      onUploaded?.([sheet.id]);
+      onClose();
+    } catch (e: any) {
+      toast({ title: 'Could not save chart', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  const detected = pasteText ? detectKeyFromText(pasteText) : null;
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className={cn('max-h-[90vh] overflow-y-auto', mode === 'paste' ? 'max-w-2xl' : 'max-w-sm')}>
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-section-title">Upload chart</DialogTitle>
+          <DialogTitle className="text-section-title">Add chart</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Add a chord sheet image or PDF for {song?.title}.
+            Paste from SongSelect for {song?.title}. Upload an image only if you don’t have the text.
           </DialogDescription>
         </DialogHeader>
+        <div className="mt-3 flex gap-1 rounded-xl bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => setMode('paste')}
+            className={cn('flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'paste' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+          >
+            Paste
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('upload')}
+            className={cn('flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'upload' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+          >
+            Image / PDF
+          </button>
+        </div>
         <div className="space-y-4 mt-4">
+          {mode === 'upload' ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-destructive">*</span></Label>
+              <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-paste">Paste chart text <span className="text-destructive">*</span></Label>
+              <textarea
+                id="cs-paste"
+                value={pasteText}
+                onPaste={(e) => {
+                  const html = e.clipboardData.getData('text/html');
+                  const plain = e.clipboardData.getData('text/plain');
+                  const next = prepareChordChartPaste(plain, html);
+                  e.preventDefault();
+                  const el = e.currentTarget;
+                  const start = el.selectionStart;
+                  const end = el.selectionEnd;
+                  const merged = `${pasteText.slice(0, start)}${next}${pasteText.slice(end)}`;
+                  setPasteText(merged);
+                  const found = detectKeyFromText(merged);
+                  if (found) setKey(found);
+                }}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPasteText(next);
+                  const found = detectKeyFromText(next);
+                  if (found) setKey(found);
+                }}
+                placeholder="Paste from SongSelect or ChordPro…"
+                className="min-h-[180px] w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+              />
+              {detected && (
+                <p className="text-xs text-muted-foreground">Detected original key: {detected}</p>
+              )}
+            </div>
+          )}
           <div className="space-y-1.5">
-            <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-destructive">*</span></Label>
-            <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cs-key">Musical Key</Label>
+            <Label htmlFor="cs-key">{mode === 'paste' ? 'Original key' : 'Musical Key'}</Label>
             <select
               id="cs-key"
               value={key}
-              disabled={lockKey}
+              disabled={lockKey && mode === 'upload'}
               onChange={e => setKey(e.target.value as ChordKey)}
               className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
             >
@@ -493,10 +676,17 @@ export function AddChordSheetDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
-              disabled={!file || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
-            </Button>
+            {mode === 'upload' ? (
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
+                disabled={!file || saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
+              </Button>
+            ) : (
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handlePaste}
+                disabled={!pasteText.trim() || saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save chart
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

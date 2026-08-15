@@ -1,3 +1,4 @@
+import { isTextChordSheet } from '@/lib/chord-chart';
 import type { WorshipSong, SetlistSong, SongChordSheet, ReferenceTrack } from '@/types';
 
 const YOUTUBE_ID_REGEX =
@@ -84,18 +85,23 @@ export function referenceTrackDraftsInvalid(drafts: ReferenceTrackDraft[]): bool
   return drafts.some((d) => d.url.trim().length > 0 && !parseYoutubeVideoId(d.url));
 }
 
+/** Image scans must match the key; pasted text charts transpose to any key. */
+export function sheetUsableInKey(sheet: SongChordSheet, key: SetlistSong['key']): boolean {
+  return sheet.key === key || isTextChordSheet(sheet);
+}
+
 /** Resolve which chord sheets to use for a setlist song entry. */
 export function resolveChordSheetsForSetlistSong(
   libSong: WorshipSong | undefined,
   setlistSong: Pick<SetlistSong, 'key' | 'chordSheetIds'>,
 ): SongChordSheet[] {
-  if (!libSong) return [];
-  const forKey = libSong.chordSheets.filter((s) => s.key === setlistSong.key);
+  const forKey = chordSheetsForKey(libSong, setlistSong.key);
   if (!setlistSong.chordSheetIds || setlistSong.chordSheetIds.length === 0) {
     return forKey;
   }
   const idSet = new Set(setlistSong.chordSheetIds);
-  return forKey.filter((s) => idSet.has(s.id));
+  const selected = forKey.filter((s) => idSet.has(s.id));
+  return selected.length > 0 ? selected : forKey;
 }
 
 /** Sheets available for a key on a library song (no setlist selection applied). */
@@ -104,5 +110,5 @@ export function chordSheetsForKey(
   key: SetlistSong['key'],
 ): SongChordSheet[] {
   if (!libSong) return [];
-  return libSong.chordSheets.filter((s) => s.key === key);
+  return libSong.chordSheets.filter((s) => sheetUsableInKey(s, key));
 }

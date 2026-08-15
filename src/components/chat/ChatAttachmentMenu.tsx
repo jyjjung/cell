@@ -319,7 +319,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
               Array.from(
                 selectedSong.chordSheets.reduce((map, sheet) => {
                   if (!map.has(sheet.key)) map.set(sheet.key, []);
-                  map.get(sheet.key)!.push(sheet.imageUrl);
+                  if (sheet.imageUrl) map.get(sheet.key)!.push(sheet.imageUrl);
                   return map;
                 }, new Map<string, string[]>()).entries(),
               ).map(([key, urls]) => (

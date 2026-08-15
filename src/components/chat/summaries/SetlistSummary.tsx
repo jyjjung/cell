@@ -109,7 +109,9 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
     const urls: string[] = [];
     for (const ps of setlist.songs) {
       const libSong = worshipSongs.find((s) => s.id === ps.songId);
-      resolveChordSheetsForSetlistSong(libSong, ps).forEach((sheet) => urls.push(sheet.imageUrl));
+      resolveChordSheetsForSetlistSong(libSong, ps).forEach((sheet) => {
+        if (sheet.imageUrl) urls.push(sheet.imageUrl);
+      });
     }
     return urls;
   }, [setlist, worshipSongs]);

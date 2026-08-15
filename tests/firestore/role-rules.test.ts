@@ -5,7 +5,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { afterAll, beforeAll, describe, it } from 'vitest';
 
 let env: RulesTestEnvironment;
@@ -72,9 +72,13 @@ describe('role-derived authorization rules', () => {
     }));
   });
 
-  it('still restricts setlist writes to worship managers', async () => {
+  it('still restricts setlist writes and song deletes to worship managers', async () => {
     const db = env.authenticatedContext('youth').firestore();
     await assertFails(setDoc(doc(db, 'worshipSetlists/setlist'), { name: 'Blocked' }));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'worshipSongs/protected-song'), { title: 'Keep' });
+    });
+    await assertFails(deleteDoc(doc(db, 'worshipSongs/protected-song')));
   });
 
   it('prevents a youth user from creating a group chat', async () => {

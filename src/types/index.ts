@@ -570,6 +570,27 @@ export type ChordKey =
   | 'C' | 'C#' | 'Db' | 'D' | 'D#' | 'Eb' | 'E' | 'F'
   | 'F#' | 'Gb' | 'G' | 'G#' | 'Ab' | 'A' | 'A#' | 'Bb' | 'B';
 
+export interface ChordChartPoint {
+  x: number;
+  y: number;
+}
+
+export interface ChordChartStroke {
+  id: string;
+  color: string;
+  width: number;
+  points: ChordChartPoint[];
+}
+
+export interface ChordChartAnnotation {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  strokes: ChordChartStroke[];
+}
+
 export interface SongChordSheet {
   /** Unique id within the song's chordSheets array */
   id: string;
@@ -577,6 +598,11 @@ export interface SongChordSheet {
   imageUrl: string;
   storagePath: string;
   uploadedAt: Timestamp;
+  /** Image/PDF upload (default) or pasted text chart */
+  kind?: 'image' | 'text';
+  /** Original pasted chart (SongSelect / ChordPro). Stored in `key`. */
+  sourceText?: string;
+  annotations?: ChordChartAnnotation[];
 }
 
 export interface WorshipSong {
@@ -604,6 +630,8 @@ export interface SetlistSong {
   referenceTracks?: ReferenceTrack[];
   /** Explicit chord sheet IDs from the song library for this key; omit = all sheets for key */
   chordSheetIds?: string[];
+  /** Annotation set to show on pasted charts for this setlist entry */
+  annotationId?: string;
 }
 
 export interface WorshipSetlist {
