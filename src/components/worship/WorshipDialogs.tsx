@@ -537,16 +537,15 @@ export function AddChordSheetDialog({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open && defaultKey) setKey(defaultKey);
-  }, [open, defaultKey]);
+    if (!open) return;
+    setMode('paste');
+    setFile(null);
+    setPasteText('');
+  }, [open]);
 
   useEffect(() => {
-    if (!open) {
-      setFile(null);
-      setPasteText('');
-      setMode('paste');
-    }
-  }, [open]);
+    if (open && defaultKey) setKey(defaultKey);
+  }, [open, defaultKey]);
 
   const handleUpload = async () => {
     if (!song || !file) return;
@@ -622,17 +621,13 @@ export function AddChordSheetDialog({
           </button>
         </div>
         <div className="space-y-4 mt-4">
-          {mode === 'upload' ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-destructive">*</span></Label>
-              <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
-            </div>
-          ) : (
+          {mode === 'paste' ? (
             <div className="space-y-1.5">
               <Label htmlFor="cs-paste">Paste chart text <span className="text-destructive">*</span></Label>
               <textarea
                 id="cs-paste"
                 value={pasteText}
+                autoFocus
                 onPaste={(e) => {
                   const html = e.clipboardData.getData('text/html');
                   const plain = e.clipboardData.getData('text/plain');
@@ -659,6 +654,11 @@ export function AddChordSheetDialog({
                 <p className="text-xs text-muted-foreground">Detected original key: {detected}</p>
               )}
             </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-file">Chart File (Image or PDF) <span className="text-destructive">*</span></Label>
+              <Input id="cs-file" type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
+            </div>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="cs-key">{mode === 'paste' ? 'Original key' : 'Musical Key'}</Label>
@@ -676,15 +676,15 @@ export function AddChordSheetDialog({
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
-            {mode === 'upload' ? (
-              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
-                disabled={!file || saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
-              </Button>
-            ) : (
+            {mode === 'paste' ? (
               <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handlePaste}
                 disabled={!pasteText.trim() || saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save chart
+              </Button>
+            ) : (
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
+                disabled={!file || saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
               </Button>
             )}
           </div>
