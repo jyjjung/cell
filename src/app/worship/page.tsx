@@ -1725,8 +1725,9 @@ export default function WorshipPortalPage() {
 
   if (loadingAuth) return null;
 
-  // Access check: Admin or Worship role
-  if (!isAdmin && !isWorshipTeam) {
+  // Signed-in members can open Worship (songs library / chord uploads).
+  // Creating or editing setlists and rosters still requires worship managers.
+  if (!currentUser) {
     return (
       <div className="empty-inline min-h-[calc(100vh-16rem)] px-6">
         <div className="w-14 h-14 rounded-xl bg-muted border border-border flex items-center justify-center mb-2">
@@ -1745,12 +1746,16 @@ export default function WorshipPortalPage() {
     );
   }
 
+  const canManageWorship = isAdmin || isWorshipTeam;
+  const showNewAction = tab === 'songs' || canManageWorship;
+
   return (
     <WorshipDataProvider enabled>
     <div className="page-container">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <NavPageHeader
           action={
+            showNewAction ? (
             <Button
               size="sm"
               className="h-8 rounded-lg gap-1.5 px-3 text-sm"
@@ -1763,6 +1768,7 @@ export default function WorshipPortalPage() {
               <Plus className="h-4 w-4" />
               {tab === 'rosters' ? t.newRoster : tab === 'playlists' ? t.newSetlist : t.newSong}
             </Button>
+            ) : undefined
           }
         />
       </motion.div>
