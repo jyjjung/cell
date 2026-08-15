@@ -13,7 +13,7 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Fixed',
-        text: 'em. Chat opens again from the sidebar (real /cell/chat pages, not a missing path).',
+        text: 'Opening an em. chat shows the conversation again — it was blank after the community apps move.',
       },
       {
         type: 'Fixed',
