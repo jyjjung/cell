@@ -13,6 +13,7 @@ import { cn, isPdfUrl } from '@/lib/utils';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
+import { EmbeddedTextChart } from '@/components/worship/text-chord-chart-viewer';
 import type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
 import {
   useViewerTheme,
@@ -158,6 +159,7 @@ function SlidesFullScreenViewer({
   // We use pixel width (not CSS transform) so the scroll container always
   // matches the content size exactly — no blank overflow areas.
   const [imgPxWidth, setImgPxWidth] = useState<number | null>(null);
+  const [fitWidth, setFitWidth] = useState(0);
   const containerRef  = useRef<HTMLDivElement>(null);
   const scrollRef     = useRef<HTMLDivElement>(null);
   const fitWidthRef   = useRef<number>(0); // the "fit-to-page" pixel width
@@ -177,8 +179,21 @@ function SlidesFullScreenViewer({
   useEffect(() => {
     setImgPxWidth(null);
     fitWidthRef.current = 0;
+    setFitWidth(0);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [idx]);
+
+  useEffect(() => {
+    const current = slides[idx];
+    if (!current) return;
+    if ((current.imageUrls?.length ?? 0) > 0) return;
+    if ((current.textSheets?.length ?? 0) === 0) return;
+    const w = containerRef.current?.clientWidth ?? 0;
+    if (w <= 0) return;
+    fitWidthRef.current = w;
+    setFitWidth(w);
+    setImgPxWidth(w);
+  }, [idx, slides]);
 
   // Calculate the "fit the whole page" pixel width from the first image's natural dims
   const handleFirstImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -196,6 +211,7 @@ function SlidesFullScreenViewer({
     const fitW = Math.min(fitByWidth, fitByHeight);
 
     fitWidthRef.current = fitW;
+    setFitWidth(fitW);
     setImgPxWidth(fitW);
   }, []);
 
@@ -419,6 +435,17 @@ function SlidesFullScreenViewer({
             style={{ touchAction: 'pan-x pan-y' }}
           >
             <div className="flex flex-col items-center gap-3 py-2 px-0 min-h-full justify-center">
+              {(slide.textSheets ?? []).map((sheet) => (
+                <EmbeddedTextChart
+                  key={sheet.id}
+                  sheet={sheet}
+                  songId={slide.songId}
+                  songTitle={slide.songTitle}
+                  displayKey={slide.key}
+                  zoom={fitWidth > 0 && imgPxWidth ? imgPxWidth / fitWidth : 1}
+                  annotationId={slide.annotationId}
+                />
+              ))}
               {(slide.imageUrls ?? []).map((url, i) => renderChordPage(
                 url,
                 i,

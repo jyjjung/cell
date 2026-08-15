@@ -459,7 +459,8 @@ service cloud.firestore {
     match /worshipSongs/{songId} {
       allow read: if request.auth != null;
       // Any signed-in user may create songs and upload chord sheet metadata.
-      allow write: if request.auth != null;
+      allow create, update: if request.auth != null;
+      allow delete: if canManageWorship(request.auth.uid);
     }
 
     match /worshipSetlists/{setlistId} {

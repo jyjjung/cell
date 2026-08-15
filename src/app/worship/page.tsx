@@ -10,6 +10,7 @@ import { NavPageHeader } from '@/components/ui/page-layout';
 import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
+import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
 import { AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog, SetlistSongConfigPanel } from '@/components/worship/WorshipDialogs';
 import { ReferenceTracksListen } from '@/components/worship/YoutubeReferenceEmbed';
 import { useAuth } from '@/contexts/auth-context';
@@ -21,6 +22,7 @@ import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { formatNameString } from '@/lib/formatting';
+import { isTextChordSheet, splitSheetsForViewer } from '@/lib/chord-chart';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import {
@@ -42,6 +44,11 @@ const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] } }),
 };
+
+function useCanManageWorship() {
+  const { isAdmin, isWorshipTeam } = useAuth();
+  return isAdmin || isWorshipTeam;
+}
 
 async function downloadImage(url: string, filename: string) {
   try {
@@ -206,7 +213,7 @@ function SongDetailView({
         <div className="flex flex-col items-center justify-center py-16 rounded-xl border-2 border-dashed border-border/40 text-center">
           <ImageIcon className="h-10 w-10 text-muted-foreground/30 mb-3" />
           <p className="font-semibold text-muted-foreground">No chord sheets yet</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Add sheet images for different keys above.</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Upload an image or paste a chart from SongSelect.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -214,12 +221,22 @@ function SongDetailView({
             <div key={key} className="space-y-3">
               <div className="flex items-center gap-2">
                 <KeyBadge keyName={key} accent />
-                <span className="text-xs text-muted-foreground font-semibold">{sheets.length} image{sheets.length > 1 ? 's' : ''}</span>
+                <span className="text-xs text-muted-foreground font-semibold">{sheets.length} chart{sheets.length > 1 ? 's' : ''}</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {sheets.map((sheet, idx) => (
                   <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted aspect-[3/4]">
-                    {sheet.imageUrl.toLowerCase().includes('.pdf') ? (
+                    {isTextChordSheet(sheet) ? (
+                      <button
+                        type="button"
+                        onClick={() => setViewSheet(sheet)}
+                        className="flex h-full w-full flex-col items-start justify-end bg-[#2b2b2b] p-3 text-left"
+                      >
+                        <BookOpen className="mb-auto h-8 w-8 text-white/70" />
+                        <span className="text-[11px] font-semibold text-white">Text chart</span>
+                        <span className="text-[10px] text-white/60">{sheet.annotations?.length || 0} note set{(sheet.annotations?.length || 0) === 1 ? '' : 's'}</span>
+                      </button>
+                    ) : sheet.imageUrl.toLowerCase().includes('.pdf') ? (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-muted group-hover:bg-muted transition-colors">
                         <BookOpen className="h-10 w-10 text-primary" />
                         <span className="text-[10px] font-semibold text-primary mt-2">PDF DOCUMENT</span>
@@ -236,16 +253,18 @@ function SongDetailView({
                         className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
                         <Eye className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        title="Download sheet"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadImage(sheet.imageUrl, `${song.title} - Key ${key} (Pg ${idx + 1}).png`);
-                        }}
-                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-                        <Download className="h-3.5 w-3.5" />
-                      </button>
-                      {sheet.imageUrl.toLowerCase().includes('.pdf') && (
+                      {!isTextChordSheet(sheet) && (
+                        <button
+                          title="Download sheet"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadImage(sheet.imageUrl, `${song.title} - Key ${key} (Pg ${idx + 1}).png`);
+                          }}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!isTextChordSheet(sheet) && sheet.imageUrl.toLowerCase().includes('.pdf') && (
                         <button
                           title="Convert PDF to Images"
                           onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
@@ -274,9 +293,18 @@ function SongDetailView({
 
       <AddChordSheetDialog open={addSheetOpen} song={song} onClose={() => setAddSheetOpen(false)} />
 
+      {viewSheet && isTextChordSheet(viewSheet) && (
+        <TextChordChartViewer
+          songId={song.id}
+          songTitle={song.title}
+          sheet={song.chordSheets.find((s) => s.id === viewSheet.id) ?? viewSheet}
+          onClose={() => setViewSheet(null)}
+        />
+      )}
+
       {/* Full-screen image viewer — slides through all sheets for this song */}
-      {viewSheet && (() => {
-        const allSheets = song.chordSheets;
+      {viewSheet && !isTextChordSheet(viewSheet) && (() => {
+        const allSheets = song.chordSheets.filter((s) => !isTextChordSheet(s));
         const slides: ViewerSlide[] = Array.from(
           allSheets.reduce((map, s) => {
             if (!map.has(s.key)) map.set(s.key, []);
@@ -284,9 +312,10 @@ function SongDetailView({
             return map;
           }, new Map<ChordKey, SongChordSheet[]>())
         ).map(([key, sheets]) => ({
-            imageUrls: sheets.map(s => s.imageUrl),
+            ...splitSheetsForViewer(sheets),
             songTitle: song.title,
             key,
+            songId: song.id,
           } as ViewerSlide)
         );
         const start = slides.findIndex(sl => sl.imageUrls.includes(viewSheet.imageUrl));
@@ -299,6 +328,7 @@ function SongDetailView({
 // ── SongsLibraryTab ───────────────────────────────────────────────────────────
 function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
   const { songs, loading, deleteSong } = useWorshipSongs();
+  const canManageWorship = useCanManageWorship();
   const [newSongOpen, setNewSongOpen] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
   const [detailSong, setDetailSong] = useState<WorshipSong | null>(null);
@@ -358,16 +388,17 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
             <div className="ui-card !p-0">
               <div className="ui-list px-2">
               {filtered.map((song, i) => (
-                <motion.button
-                  type="button"
+                <motion.div
                   key={song.id}
                   custom={i}
                   variants={fadeUp}
                   initial="hidden"
                   animate="visible"
-                  className="event-row group"
-                  onClick={() => setDetailSong(song)}
                 >
+                  <div
+                    className="event-row group cursor-pointer"
+                    onClick={() => setDetailSong(song)}
+                  >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
                     <Music2 className="h-4 w-4 text-primary" />
                   </div>
@@ -392,13 +423,16 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
                       onClick={() => { setAddSheetSong(song); }}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteConfirm(song)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {canManageWorship && (
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteConfirm(song)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                </motion.button>
+                  </div>
+                </motion.div>
               ))}
               </div>
             </div>
@@ -489,9 +523,12 @@ function AddSongToSetlistDialog({
   const [search, setSearch] = useState('');
   const [selectedSong, setSelectedSong] = useState<WorshipSong | null>(null);
   const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | 'none'>('none');
   const [referenceTracks, setReferenceTracks] = useState<ReferenceTrackDraft[]>([{ url: '', note: '' }]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [notesEditor, setNotesEditor] = useState<{ sheet: SongChordSheet; annotationId: string } | null>(null);
+  const openingNotesRef = useRef(false);
 
   const liveSong = selectedSong ? (songs.find((s) => s.id === selectedSong.id) ?? selectedSong) : null;
   const { selectedSheetIds, setSelectedSheetIds } = useSetlistSongSheetSelection(liveSong, selectedKey);
@@ -520,6 +557,7 @@ function AddSongToSetlistDialog({
       await addSongToSetlist(playlist, liveSong.id, liveSong.title, selectedKey, {
         referenceTracks: normalizedTracks,
         chordSheetIds,
+        annotationId: selectedAnnotationId === 'none' ? undefined : selectedAnnotationId,
       });
       toast({ title: 'Song added', description: `${liveSong.title} (${selectedKey === 'numbers' ? '#' : selectedKey}) added to setlist.` });
       reset();
@@ -532,6 +570,7 @@ function AddSongToSetlistDialog({
   const reset = () => {
     setSelectedSong(null);
     setSelectedKey('numbers');
+    setSelectedAnnotationId('none');
     setReferenceTracks([{ url: '', note: '' }]);
     setSearch('');
   };
@@ -540,12 +579,25 @@ function AddSongToSetlistDialog({
     setSelectedSong(song);
     const keys = Array.from(new Set(song.chordSheets.map(s => s.key)));
     setSelectedKey(keys.length > 0 ? keys[0] : 'numbers');
+    setSelectedAnnotationId('none');
     setReferenceTracks([{ url: '', note: '' }]);
   };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
+      <Dialog
+        open={open && !notesEditor}
+        onOpenChange={(v) => {
+          if (!v) {
+            if (openingNotesRef.current || notesEditor) {
+              openingNotesRef.current = false;
+              return;
+            }
+            reset();
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="rounded-xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl font-semibold normal-case not-italic tracking-tight">Add Song</DialogTitle>
@@ -593,7 +645,7 @@ function AddSongToSetlistDialog({
                     <p className="font-bold text-sm">{liveSong.title}</p>
                     {liveSong.artist && <p className="text-xs text-muted-foreground/60">{liveSong.artist}</p>}
                   </div>
-                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setReferenceTracks([{ url: '', note: '' }]); }}
+                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setSelectedAnnotationId('none'); setReferenceTracks([{ url: '', note: '' }]); }}
                     className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -605,9 +657,15 @@ function AddSongToSetlistDialog({
                   onKeyChange={handleKeyChange}
                   selectedSheetIds={selectedSheetIds}
                   onSheetIdsChange={setSelectedSheetIds}
+                  selectedAnnotationId={selectedAnnotationId}
+                  onAnnotationIdChange={setSelectedAnnotationId}
                   referenceTracks={referenceTracks}
                   onReferenceTracksChange={setReferenceTracks}
                   onRequestUpload={() => setUploadOpen(true)}
+                  onOpenNotesEditor={(sheet, annotationId) => {
+                    openingNotesRef.current = true;
+                    setNotesEditor({ sheet, annotationId });
+                  }}
                   idPrefix="add-song"
                 />
               </>
@@ -623,6 +681,20 @@ function AddSongToSetlistDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {notesEditor && liveSong && (
+        <TextChordChartViewer
+          songId={liveSong.id}
+          songTitle={liveSong.title}
+          sheet={
+            (songs.find((s) => s.id === liveSong.id) ?? liveSong).chordSheets.find((s) => s.id === notesEditor.sheet.id)
+            ?? notesEditor.sheet
+          }
+          initialAnnotationId={notesEditor.annotationId}
+          startDrawing
+          onClose={() => setNotesEditor(null)}
+        />
+      )}
 
       <AddChordSheetDialog
         open={uploadOpen}
@@ -650,9 +722,12 @@ function EditSetlistSongDialog({
   const { toast } = useToast();
   const [selectedKey, setSelectedKey] = useState<ChordKey>('numbers');
   const [selectedSheetIds, setSelectedSheetIds] = useState<string[]>([]);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | 'none'>('none');
   const [referenceTracks, setReferenceTracks] = useState<ReferenceTrackDraft[]>([{ url: '', note: '' }]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [notesEditor, setNotesEditor] = useState<{ sheet: SongChordSheet; annotationId: string } | null>(null);
+  const openingNotesRef = useRef(false);
   const prevKeyRef = useRef<ChordKey | null>(null);
   const initRef = useRef<string | null>(null);
 
@@ -668,6 +743,7 @@ function EditSetlistSongDialog({
     if (initRef.current === token) return;
     initRef.current = token;
     setSelectedKey(setlistSong.key);
+    setSelectedAnnotationId(setlistSong.annotationId ?? 'none');
     setReferenceTracks(referenceTracksToDrafts(setlistSong));
     prevKeyRef.current = setlistSong.key;
     const sheets = chordSheetsForKey(libSong, setlistSong.key);
@@ -702,6 +778,7 @@ function EditSetlistSongDialog({
         key: selectedKey,
         referenceTracks: normalizedTracks ?? [],
         chordSheetIds: chordSheetIds ?? [],
+        annotationId: selectedAnnotationId === 'none' ? undefined : selectedAnnotationId,
       });
       toast({ title: 'Song updated' });
       onClose();
@@ -714,7 +791,18 @@ function EditSetlistSongDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <Dialog
+        open={open && !notesEditor}
+        onOpenChange={(v) => {
+          if (!v) {
+            if (openingNotesRef.current || notesEditor) {
+              openingNotesRef.current = false;
+              return;
+            }
+            onClose();
+          }
+        }}
+      >
         <DialogContent className="rounded-xl p-5 sm:p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl font-semibold normal-case not-italic tracking-tight">Edit Song</DialogTitle>
@@ -728,9 +816,15 @@ function EditSetlistSongDialog({
               onKeyChange={handleKeyChange}
               selectedSheetIds={selectedSheetIds}
               onSheetIdsChange={setSelectedSheetIds}
+              selectedAnnotationId={selectedAnnotationId}
+              onAnnotationIdChange={setSelectedAnnotationId}
               referenceTracks={referenceTracks}
               onReferenceTracksChange={setReferenceTracks}
               onRequestUpload={() => setUploadOpen(true)}
+              onOpenNotesEditor={(sheet, annotationId) => {
+                openingNotesRef.current = true;
+                setNotesEditor({ sheet, annotationId });
+              }}
               idPrefix="edit-song"
             />
 
@@ -743,6 +837,20 @@ function EditSetlistSongDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {notesEditor && (
+        <TextChordChartViewer
+          songId={libSong.id}
+          songTitle={libSong.title}
+          sheet={
+            (songs.find((s) => s.id === libSong.id) ?? libSong).chordSheets.find((s) => s.id === notesEditor.sheet.id)
+            ?? notesEditor.sheet
+          }
+          initialAnnotationId={notesEditor.annotationId}
+          startDrawing
+          onClose={() => setNotesEditor(null)}
+        />
+      )}
 
       <AddChordSheetDialog
         open={uploadOpen}
@@ -762,6 +870,7 @@ function SetlistDetailView({
 }: { playlist: WorshipSetlist; onBack: () => void; initialSongId?: string | null }) {
   const { removeSongFromSetlist, reorderSetlistSongs } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
+  const canManageWorship = useCanManageWorship();
   const { toast } = useToast();
   const [addSongOpen, setAddSongOpen] = useState(false);
   const [editSong, setEditSong] = useState<SetlistSong | null>(null);
@@ -851,7 +960,9 @@ function SetlistDetailView({
         slides.push({
           songTitle: ps.title,
           key: ps.key,
-          imageUrls: sheets.map(s => s.imageUrl),
+          ...splitSheetsForViewer(sheets),
+          songId: libSong?.id,
+          annotationId: ps.annotationId,
           referenceTracks: tracks.length > 0 ? tracks : undefined,
         });
       }
@@ -901,7 +1012,7 @@ function SetlistDetailView({
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {orderedSongs.length > 1 && (
+          {canManageWorship && orderedSongs.length > 1 && (
             <Button size="sm" variant="outline"
               className={cn('rounded-xl h-9 gap-1.5 transition-all', reorderMode && 'border-chart-4/50 text-chart-4 bg-chart-4/10')}
               onClick={() => reorderMode ? handleCancelReorder() : setReorderMode(true)}>
@@ -909,12 +1020,12 @@ function SetlistDetailView({
               {reorderMode ? 'Cancel' : 'Reorder'}
             </Button>
           )}
-          {reorderMode && reorderDirty && (
+          {canManageWorship && reorderMode && reorderDirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSaveOrder} disabled={savingOrder}>
               {savingOrder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
           )}
-          {!reorderMode && (
+          {canManageWorship && !reorderMode && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5"
               onClick={() => setAddSongOpen(true)}>
               <Plus className="h-3.5 w-3.5" /> Add Song
@@ -1000,14 +1111,15 @@ function SetlistDetailView({
                       {hasReferenceTracks(ps) && (
                         <ReferenceTracksListen tracks={ps} theme="light" compact />
                       )}
-                      {sheetsForKey.length > 0 && (
+                      {sheetsForKey.some((sheet) => sheet.imageUrl && !isTextChordSheet(sheet)) && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                           title="Download sheet(s)"
                           onClick={(e) => {
                             e.stopPropagation();
-                            sheetsForKey.forEach((sheet, idx) => {
+                            const images = sheetsForKey.filter((sheet) => sheet.imageUrl && !isTextChordSheet(sheet));
+                            images.forEach((sheet, idx) => {
                               setTimeout(() => {
-                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${sheetsForKey.length > 1 ? ` (Pg ${idx + 1})` : ''}.png`);
+                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${images.length > 1 ? ` (Pg ${idx + 1})` : ''}.png`);
                               }, idx * 300);
                             });
                           }}>
@@ -1016,14 +1128,16 @@ function SetlistDetailView({
                       )}
                       {libSong && (
                         <>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                            title="Edit song settings"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditSong(ps);
-                            }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          {canManageWorship && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                              title="Edit song settings"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditSong(ps);
+                              }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
                             title="Add chord sheet"
                             onClick={(e) => {
@@ -1110,6 +1224,7 @@ function SetlistDetailView({
 // ── SetlistsTab ──────────────────────────────────────────────────────────────
 function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: string | null; openNewSignal?: number }) {
   const { setlists: playlists, loading, deleteSetlist: deletePlaylist } = useWorshipSetlists();
+  const canManageWorship = useCanManageWorship();
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<WorshipSetlist | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipSetlist | null>(null);
@@ -1166,16 +1281,17 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
             <div className="ui-card !p-0">
               <div className="ui-list px-2">
               {playlists.map((pl, i) => (
-                <motion.button
-                  type="button"
+                <motion.div
                   key={pl.id}
                   custom={i}
                   variants={fadeUp}
                   initial="hidden"
                   animate="visible"
-                  className="event-row group"
-                  onClick={() => setDetail(pl)}
                 >
+                  <div
+                    className="event-row group cursor-pointer"
+                    onClick={() => setDetail(pl)}
+                  >
                   <ScheduleRowDate date={parseISO(pl.date)} />
                   <div className="event-row-body">
                     <p className="event-row-title">{pl.name}</p>
@@ -1184,13 +1300,16 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                     </p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteConfirm(pl)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {canManageWorship && (
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteConfirm(pl)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                </motion.button>
+                  </div>
+                </motion.div>
               ))}
               </div>
             </div>
@@ -1248,6 +1367,7 @@ function RosterDetailView({
 }) {
   const { updateRosterSlots, updateRosterMeta } = useWorshipRosters();
   const { allUsers } = useAllUsers();
+  const canManageWorship = useCanManageWorship();
   const { toast } = useToast();
 
   // Local editable slots state
@@ -1364,18 +1484,20 @@ function RosterDetailView({
                 <Link2 className="h-3.5 w-3.5" />
                 {linkedPlaylist.name}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
-                onClick={() => setLinkSetlistOpen(true)}
-                title="Change linked setlist"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Change
-              </Button>
+              {canManageWorship && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
+                  onClick={() => setLinkSetlistOpen(true)}
+                  title="Change linked setlist"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Change
+                </Button>
+              )}
             </>
-          ) : (
+          ) : canManageWorship ? (
             <Button
               size="sm"
               variant="outline"
@@ -1386,8 +1508,8 @@ function RosterDetailView({
               <Plus className="h-3.5 w-3.5" />
               Link Setlist
             </Button>
-          )}
-          {dirty && (
+          ) : null}
+          {canManageWorship && dirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
@@ -1421,20 +1543,24 @@ function RosterDetailView({
                     )}>
                       {m.userId ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
                       {formatNameString(m.displayName, 'Guest')}
-                      <button onClick={() => removeMember(slotIdx, mi)}
-                        className="ml-0.5 hover:text-destructive transition-colors">
-                        <X className="h-2.5 w-2.5" />
-                      </button>
+                      {canManageWorship && (
+                        <button onClick={() => removeMember(slotIdx, mi)}
+                          className="ml-0.5 hover:text-destructive transition-colors">
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
                     </span>
                   ))
                 )}
               </div>
-              <button
-                onClick={() => { setPickerSlotIdx(slotIdx); setMemberSearch(''); setGuestName(''); }}
-                className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-primary transition-colors"
-                title="Add member">
-                <UserPlus className="h-4 w-4" />
-              </button>
+              {canManageWorship && (
+                <button
+                  onClick={() => { setPickerSlotIdx(slotIdx); setMemberSearch(''); setGuestName(''); }}
+                  className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-primary transition-colors"
+                  title="Add member">
+                  <UserPlus className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -1560,6 +1686,7 @@ function RosterDetailView({
 // ── RostersTab ────────────────────────────────────────────────────────────────
 function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpenPlaylist: (setlistId: string) => void; initialRosterId?: string | null; openNewSignal?: number }) {
   const { rosters, loading, deleteRoster } = useWorshipRosters();
+  const canManageWorship = useCanManageWorship();
   const { setlists: playlists } = useWorshipSetlists();
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<WorshipRoster | null>(null);
@@ -1621,16 +1748,17 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                 const linked = playlists.find(p => p.id === r.setlistId);
                 const filled = r.slots.filter(s => s.members.length > 0).length;
                 return (
-                  <motion.button
-                    type="button"
+                  <motion.div
                     key={r.id}
                     custom={i}
                     variants={fadeUp}
                     initial="hidden"
                     animate="visible"
-                    className="event-row group"
-                    onClick={() => setDetail(r)}
                   >
+                    <div
+                      className="event-row group cursor-pointer"
+                      onClick={() => setDetail(r)}
+                    >
                     <ScheduleRowDate date={parseISO(r.date)} />
                     <div className="event-row-body">
                       <p className="event-row-title">{r.name}</p>
@@ -1646,13 +1774,16 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteConfirm(r)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {canManageWorship && (
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteConfirm(r)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                  </motion.button>
+                    </div>
+                  </motion.div>
                 );
               })}
               </div>
@@ -1685,6 +1816,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WorshipPortalPage() {
   const { isAdmin, isWorshipTeam, loadingAuth, currentUser } = useAuth();
+  const canManageWorship = isAdmin || isWorshipTeam;
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const router = useRouter();
   const searchParams = useClientSearchParams();
@@ -1723,9 +1855,10 @@ export default function WorshipPortalPage() {
     selectTab('playlists', setlistId);
   };
 
+  const showNewAction = tab === 'songs' || canManageWorship;
+
   if (loadingAuth) return null;
 
-  // Access check: Admin or Worship role
   if (!isAdmin && !isWorshipTeam) {
     return (
       <div className="empty-inline min-h-[calc(100vh-16rem)] px-6">
@@ -1751,6 +1884,7 @@ export default function WorshipPortalPage() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <NavPageHeader
           action={
+            showNewAction ? (
             <Button
               size="sm"
               className="h-8 rounded-lg gap-1.5 px-3 text-sm"
@@ -1763,6 +1897,7 @@ export default function WorshipPortalPage() {
               <Plus className="h-4 w-4" />
               {tab === 'rosters' ? t.newRoster : tab === 'playlists' ? t.newSetlist : t.newSong}
             </Button>
+            ) : undefined
           }
         />
       </motion.div>

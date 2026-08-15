@@ -36,8 +36,28 @@ export const changelogs: ChangelogEntry[] = [
         text: 'Preschool Worship now has Rosters, Setlists, Resources, and Order in one place.',
       },
       {
+        type: 'Changed',
+        text: 'Old preschool links (ndcpc.vercel.app) now open Preschool inside Community Apps.',
+      },
+      {
+        type: 'Added',
+        text: 'You can paste a chord chart (SongSelect or similar). Paste is the usual way; charts show larger type in two columns, transpose in any setlist key, and you can pick or add notes while adding the song.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Pasted charts keep bar lines and titles intact, don’t turn words like “But” or “(To Ch. 1a)” into chords, and lyrics no longer run off the edge.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Drawing notes on a chart while adding or editing a setlist song works again — you can scroll, draw, and pick tools.',
+      },
+      {
         type: 'Improved',
         text: 'You can adjust an existing profile photo (move and zoom), and photos no longer look removed when the installed app fails to load them briefly.',
+      },
+      {
+        type: 'Improved',
+        text: 'In setlist chord sheets, you can zoom out past the default size to see more of the page.',
       },
       {
         type: 'Fixed',

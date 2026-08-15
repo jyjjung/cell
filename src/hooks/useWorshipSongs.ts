@@ -5,7 +5,7 @@ import type { WorshipSong, SongChordSheet, ChordKey } from '@/types';
 import { db, storage } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
-  serverTimestamp, arrayUnion, arrayRemove, orderBy, Timestamp,
+  serverTimestamp, arrayUnion, orderBy, Timestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
@@ -69,14 +69,14 @@ export function useWorshipSongs(enabled = true) {
     key: ChordKey,
   ): Promise<SongChordSheet> => {
     if (!currentUser) throw new Error('Not authenticated');
-    const sheetId = (typeof window !== 'undefined' && window.crypto?.randomUUID) 
-      ? window.crypto.randomUUID() 
+    const sheetId = (typeof window !== 'undefined' && window.crypto?.randomUUID)
+      ? window.crypto.randomUUID()
       : crypto.randomUUID();
     const lastDotIndex = file.name.lastIndexOf('.');
     const extension = lastDotIndex !== -1 ? file.name.slice(lastDotIndex).toLowerCase() : '';
     const storagePath = `worshipChordSheets/${songId}/${sheetId}${extension}`;
     const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, file, { 
+    await uploadBytes(storageRef, file, {
       contentType: file.type || 'application/octet-stream',
       cacheControl: STORAGE_CACHE_CONTROL
     });
@@ -87,6 +87,7 @@ export function useWorshipSongs(enabled = true) {
       imageUrl,
       storagePath,
       uploadedAt: Timestamp.now(),
+      kind: 'image',
     };
     await updateDoc(doc(db, SONGS_COLLECTION, songId), {
       chordSheets: arrayUnion(sheet),
@@ -95,18 +96,64 @@ export function useWorshipSongs(enabled = true) {
     return sheet;
   }, [currentUser]);
 
-  /** Remove a specific chord sheet image */
-  const removeChordSheet = useCallback(async (songId: string, sheet: SongChordSheet) => {
-    try { await deleteObject(ref(storage, sheet.storagePath)); } catch { /* already deleted */ }
+  const addTextChordSheet = useCallback(async (
+    songId: string,
+    sourceText: string,
+    key: ChordKey,
+  ): Promise<SongChordSheet> => {
+    if (!currentUser) throw new Error('Not authenticated');
+    const sheet: SongChordSheet = {
+      id: crypto.randomUUID(),
+      key,
+      imageUrl: '',
+      storagePath: '',
+      uploadedAt: Timestamp.now(),
+      kind: 'text',
+      sourceText,
+      annotations: [],
+    };
     await updateDoc(doc(db, SONGS_COLLECTION, songId), {
-      chordSheets: arrayRemove(sheet),
+      chordSheets: arrayUnion(sheet),
       updatedAt: serverTimestamp(),
     });
-  }, []);
+    return sheet;
+  }, [currentUser]);
+
+  const updateChordSheet = useCallback(async (
+    songId: string,
+    sheetId: string,
+    patch: Partial<Pick<SongChordSheet, 'annotations' | 'sourceText' | 'key'>>,
+  ) => {
+    const list = useShared ? worshipData!.songs : songs;
+    const song = list.find((s) => s.id === songId);
+    if (!song) throw new Error('Song not found');
+    const chordSheets = song.chordSheets.map((sheet) => (
+      sheet.id === sheetId ? { ...sheet, ...patch } : sheet
+    ));
+    await updateDoc(doc(db, SONGS_COLLECTION, songId), {
+      chordSheets,
+      updatedAt: serverTimestamp(),
+    });
+  }, [useShared, worshipData, songs]);
+
+  /** Remove a specific chord sheet image */
+  const removeChordSheet = useCallback(async (songId: string, sheet: SongChordSheet) => {
+    if (sheet.storagePath) {
+      try { await deleteObject(ref(storage, sheet.storagePath)); } catch { /* already deleted */ }
+    }
+    const list = useShared ? worshipData!.songs : songs;
+    const song = list.find((s) => s.id === songId);
+    const chordSheets = (song?.chordSheets ?? []).filter((s) => s.id !== sheet.id);
+    await updateDoc(doc(db, SONGS_COLLECTION, songId), {
+      chordSheets,
+      updatedAt: serverTimestamp(),
+    });
+  }, [useShared, worshipData, songs]);
 
   /** Delete an entire song and all its chord sheets */
   const deleteSong = useCallback(async (song: WorshipSong) => {
     for (const sheet of song.chordSheets) {
+      if (!sheet.storagePath) continue;
       try { await deleteObject(ref(storage, sheet.storagePath)); } catch { /* ok */ }
     }
     await deleteDoc(doc(db, SONGS_COLLECTION, song.id));
@@ -115,6 +162,6 @@ export function useWorshipSongs(enabled = true) {
   return {
     songs: useShared ? worshipData.songs : songs,
     loading: useShared ? worshipData.songsLoading : loading,
-    addSong, updateSong, addChordSheet, removeChordSheet, deleteSong,
+    addSong, updateSong, addChordSheet, addTextChordSheet, updateChordSheet, removeChordSheet, deleteSong,
   };
 }

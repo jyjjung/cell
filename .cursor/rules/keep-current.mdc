@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Shared identity (NDC Community Apps)
 
-- Canonical host: **`https://ndccommunity.vercel.app`** (legacy `ndcem.vercel.app` → redirect)
+- Canonical host: **`https://ndccommunity.vercel.app`** (legacy `ndcem.vercel.app` → redirect; legacy `ndcpc.vercel.app` → `/ndcpc`)
 - Firebase project: **`cell-abca4`** (single Auth + Firestore)
 - Apps: `/cell` (em.), `/ndcpc` (preschool), `/accounts` (profile & settings), `/users` (admin user ops), `/feedback` (**Updates** — changelog & feedback, all signed-in members)
 - Approval: `isApproved`; per-app: `access.cell`, `access.ndcpc`; NDCPC role: `ndcpcRole`
@@ -36,9 +36,7 @@ Credentials: `FIREBASE_PROJECT_ID` + `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE
 
 Optional password preservation: `NDCPC_AUTH_EXPORT_JSON` + `NDCPC_HASH_CONFIG_JSON` (from Identity Toolkit hashConfig).
 
-**Status (Aug 15, 2026):** Auth/users, Firestore `ndcpc*`, and Storage photos have been applied into `cell-abca4`. Legacy project is read-only archive. Standalone `ndcpc.vercel.app` uses the same Firebase; chat push via `/api/send-chat-push` (set Admin env on Vercel).
-
-Legacy standalone NDCPC site (`NDCPC-main`) points at **cell-abca4**; chat push via API route (Cloud Function optional).
+**Status (Aug 15, 2026):** Auth/users, Firestore `ndcpc*`, and Storage photos have been applied into `cell-abca4`. Legacy project is read-only archive. Standalone `ndcpc.vercel.app` permanently redirects to `ndccommunity.vercel.app/ndcpc` (configured in `NDCPC-main` `vercel.json`). Chat push via hub `/api/send-chat-push`.
 
 ## Dependency versions
 
