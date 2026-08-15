@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import dynamic from 'next/dynamic';
 import { cookies } from 'next/headers';
 import { appFontVariableClasses } from '@/lib/app-fonts';
 import { SESSION_COOKIE_NAME } from '@/lib/auth-session';
@@ -7,53 +6,46 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ColorPaletteProvider } from '@/contexts/color-palette-context';
-import { TypographyProvider } from '@/contexts/typography-context';
 import AppLayout from '@/components/layout/app-layout';
 import { AppDataProviders } from '@/components/layout/app-data-providers';
 import { Toaster } from '@/components/ui/toaster';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
-import { GlobalBibleReaderProvider } from '@/contexts/global-bible-reader-context';
 import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
 import { DocumentLang } from '@/components/layout/document-lang';
-
-const GlobalPageLoader = dynamic(() => import('@/components/layout/global-page-loader'), { ssr: false });
-const GlobalBibleReader = dynamic(
-  () => import('@/components/bible/global-bible-reader').then((m) => m.GlobalBibleReader),
-  { ssr: false }
-);
+import { ClientDynamicOverlays } from '@/components/layout/client-dynamic-overlays';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   manifest: '/manifest.webmanifest',
-  title: "em.",
-  description: "A simple app for community and faith.",
+  title: 'NDC Community Apps',
+  description: 'Church member apps — cell group, preschool volunteers, and more.',
   openGraph: {
-    title: 'em.',
-    description: 'A simple app for community and faith.',
-    siteName: 'em.',
+    title: 'NDC Community Apps',
+    description: 'Church member apps — cell group, preschool volunteers, and more.',
+    siteName: 'NDC Community Apps',
     type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: 'em.',
-    description: 'A simple app for community and faith.',
+    title: 'NDC Community Apps',
+    description: 'Church member apps — cell group, preschool volunteers, and more.',
   },
   icons: {
     icon: [
-      { url: '/icon-v4.svg', type: 'image/svg+xml' },
-      { url: '/favicon-16x16-v4.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32-v4.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon-192x192-v4.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-v5.svg', type: 'image/svg+xml' },
+      { url: '/favicon-16x16-v5.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32-v5.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192x192-v5.png', sizes: '192x192', type: 'image/png' },
     ],
-    shortcut: '/favicon-v4.ico',
+    shortcut: '/favicon-v5.ico',
     apple: [
-      { url: '/apple-touch-icon-v4.png', sizes: '180x180', type: 'image/png' },
-      { url: '/icon-192x192-v4.png', sizes: '192x192', type: 'image/png' },
+      { url: '/apple-touch-icon-v5.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon-192x192-v5.png', sizes: '192x192', type: 'image/png' },
     ],
   },
 };
@@ -89,9 +81,7 @@ export default async function RootLayout({
                 <DocumentLang />
                 <AppDataProviders>
                 <ColorPaletteProvider>
-                <TypographyProvider>
                 <AppearanceFirebaseBootstrap />
-                <GlobalBibleReaderProvider>
                   <SetlistPlaylistProvider>
                   <AppLayout>
                     {children}
@@ -99,10 +89,7 @@ export default async function RootLayout({
                   </SetlistPlaylistProvider>
                   <DeferredVercelMetrics />
                   <Toaster />
-                  <GlobalPageLoader />
-                  <GlobalBibleReader />
-                </GlobalBibleReaderProvider>
-                </TypographyProvider>
+                  <ClientDynamicOverlays />
                 </ColorPaletteProvider>
                 </AppDataProviders>
               </AuthProvider>

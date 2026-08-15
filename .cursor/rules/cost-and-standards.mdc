@@ -23,10 +23,4 @@ When implementing features, fixes, or refactors:
 
 ## Changelog entries
 
-Follow [Keep a Changelog](https://keepachangelog.com/) + [SemVer](https://semver.org/) in `src/data/changelogs.ts`:
-
-- Product release notes: **one entry per ship**, typically **3–8 bullets** — not a commit diary.
-- Categories: **Added**, **Changed**, **Fixed**, **Improved**, **Security**.
-- Bump **MINOR** for features / meaningful bundles (`v1.4.0`), **PATCH** for fixes (`v1.4.1`), **MAJOR** for breaking changes (`v2.0.0`).
-- User-facing language; exact calendar dates (`July 29, 2026`).
-- New entry at the top of `changelogs` before push (see changelog-on-push rule).
+Follow the **changelog-on-push** rule: member-facing release notes in `src/data/changelogs.ts` (benefit-first, short bullets, no engineering diary). SemVer + Keep a Changelog categories; update before push.

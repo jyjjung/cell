@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useChat } from '@/hooks/useChat';
 import { storage } from '@/lib/firebase';
 import { formatUserDisplayName } from '@/lib/formatting';
+import { resolveChatAvatar } from '@/lib/chat-utils';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import type { Chat } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,7 +33,10 @@ const renameSchema = z.object({
 
 export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { isOpen: boolean; onOpenChange: (open: boolean) => void; chat: Chat }) {
   const { currentUser, isAdmin } = useAuth();
-  const { renameGroup, leaveGroup, deleteChat, addMembers, removeMember, updateGroupPhoto, removeGroupPhoto } = useChat(chat.id);
+  const { renameGroup, leaveGroup, deleteChat, addMembers, removeMember, updateGroupPhoto, removeGroupPhoto } = useChat(
+    chat.id,
+    { backHref: chat.appScope === 'ndcpc' ? '/ndcpc/chat' : '/chat' },
+  );
   const { toast } = useToast();
   const { allUsers, loading: loadingUsers } = useAllUsers();
   
@@ -42,6 +46,9 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
   const [usersToAdd, setUsersToAdd] = useState<string[]>([]);
 
   const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser!.uid);
+  const membershipLocked =
+    chat.appScope === 'ndcpc' && (chat.ndcpcKind === 'role' || chat.ndcpcKind === 'team');
+  const canManageMembers = isGroupAdmin && !membershipLocked;
 
   const form = useForm({
     resolver: zodResolver(renameSchema),
@@ -76,7 +83,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
     if (usersToAdd.length === 0) return;
     setIsAdding(true);
     const membersData = allUsers.filter(u => usersToAdd.includes(u.uid));
-    await addMembers(membersData);
+    await addMembers(membersData, chat.appScope === 'ndcpc' ? 'ndcpc' : 'cell');
     setUsersToAdd([]);
     setIsAdding(false);
   };
@@ -216,16 +223,26 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
 
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Members ({currentMembers.length})</h4>
+              {membershipLocked ? (
+                <p className="text-xs text-muted-foreground">
+                  {chat.ndcpcKind === 'team'
+                    ? 'Membership follows preschool manage access.'
+                    : 'Membership follows the linked preschool role.'}
+                </p>
+              ) : null}
               <ScrollArea className="h-[150px] pr-4 border rounded-md p-2">
                  {currentMembers.map(member => (
                    <div key={member.uid} className="flex items-center justify-between p-1 rounded-md hover:bg-muted">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-muted">
-                           <PixelAvatar avatar={member.avatar} />
+                           <PixelAvatar
+                             avatar={resolveChatAvatar(member, chat.memberInfo[member.uid], chat.appScope)}
+                             showHalo={chat.appScope !== 'ndcpc'}
+                           />
                         </div>
                         <span>{member.firstName} {member.lastName}</span>
                       </div>
-                      {isGroupAdmin && member.uid !== currentUser!.uid && (
+                      {canManageMembers && member.uid !== currentUser!.uid && (
                          <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -251,7 +268,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
               </ScrollArea>
             </div>
 
-            {isGroupAdmin && (
+            {canManageMembers && (
               <>
                 <Separator />
                 <div className="space-y-2">
@@ -273,6 +290,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
 
             <Separator />
 
+            {!membershipLocked ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full">
@@ -292,6 +310,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            ) : null}
 
             {isAdmin && (
               <AlertDialog>

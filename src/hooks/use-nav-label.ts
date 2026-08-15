@@ -14,6 +14,7 @@ import { isProfileTabId } from '@/components/profile/profile-hub-tabs';
 
 const CHAT_SUBPAGES = new Set(['photos', 'links']);
 const WORSHIP_TABS = new Set(['playlists', 'songs', 'rosters']);
+const NDCPC_WORSHIP_TABS = new Set(['roster', 'setlist', 'resources', 'order']);
 
 function getProfileTabLabel(tab: string | null, lang: 'en' | 'ko'): string | null {
   const t = translations[lang];
@@ -28,6 +29,14 @@ function getWorshipTabLabel(tab: string | null, lang: 'en' | 'ko'): string | nul
   if (tab === 'playlists') return t.setlistsTab as string;
   if (tab === 'songs') return t.songsTab as string;
   if (tab === 'rosters') return t.rostersTab as string;
+  return null;
+}
+
+function getNdcpcWorshipTabLabel(tab: string | null): string | null {
+  if (tab === 'roster') return 'Rosters';
+  if (tab === 'setlist') return 'Setlists';
+  if (tab === 'resources') return 'Resources';
+  if (tab === 'order') return 'Worship order';
   return null;
 }
 
@@ -85,6 +94,14 @@ export function useNavLabel(pathnameOverride?: string) {
       return getWorshipTabLabel(tab, lang) ?? getNavLabelForPath(resolved, lang);
     }
     return getWorshipTabLabel('rosters', lang) ?? getNavLabelForPath(resolved, lang);
+  }
+
+  if (resolved === '/ndcpc/worship') {
+    const tab = searchParams.get('tab');
+    if (tab && NDCPC_WORSHIP_TABS.has(tab)) {
+      return getNdcpcWorshipTabLabel(tab) ?? 'Worship';
+    }
+    return 'Worship';
   }
 
   return getNavLabelForPath(resolved, lang);

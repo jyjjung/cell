@@ -28,12 +28,12 @@ async function requireUid(request: NextRequest): Promise<string> {
   }
 }
 
-type RouteContext = { params: { docId: string } };
+type RouteContext = { params: Promise<{ docId: string }> };
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId } = context.params;
+    const { docId } = (await context.params);
     const adminDb = getAdminDb(getAdminApp());
     const snap = await adminDb.collection('docs').doc(docId).get();
     if (!snap.exists) {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId } = context.params;
+    const { docId } = (await context.params);
     const body = await request.json();
     const adminDb = getAdminDb(getAdminApp());
     const ref = adminDb.collection('docs').doc(docId);
@@ -151,7 +151,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId } = context.params;
+    const { docId } = (await context.params);
     const adminDb = getAdminDb(getAdminApp());
     const ref = adminDb.collection('docs').doc(docId);
     const snap = await ref.get();

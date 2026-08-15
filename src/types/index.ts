@@ -3,9 +3,14 @@ import type { Timestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import type { AppThemeId } from '@/lib/app-themes';
-import type { TypographyPreferences } from '@/lib/typography-preferences';
+import type { UserAvatars } from '@/lib/user-avatars';
+
+export type { UserAvatars };
 import type { BibleTextVersion } from '@/lib/bible-versions';
-import type { RoleCapability, RoleStatus } from '@/lib/role-capabilities';
+import type { RoleCapability, RoleStatus, RoleAppScope } from '@/lib/role-capabilities';
+import type { AppAccessFlags, CommunityAppId, CommunityAppPrefs, CommunityPreferences, NdcpcRole, NotificationAppPrefs } from '@/lib/app-access';
+
+export type { AppAccessFlags, CommunityAppId, CommunityAppPrefs, CommunityPreferences, NdcpcRole, NotificationAppPrefs };
 
 // Layout types removed: react-grid-layout is no longer used
 type Layouts = Record<string, any>;
@@ -13,6 +18,7 @@ type Layouts = Record<string, any>;
 export interface AppRole {
   id: string;
   name: string;
+  appScope?: RoleAppScope;
   capabilities?: RoleCapability[];
   status?: RoleStatus;
   chatId?: string | null;
@@ -208,13 +214,21 @@ export interface AppUser extends FirebaseUser {
   /** ISO date yyyy-MM-dd when known (e.g. from forms). */
   birthday?: string | null;
   roleIds?: string[];
+  ndcpcRoleIds?: string[];
   capabilityKeys?: RoleCapability[];
   showInCommunityProgress?: boolean;
   dashboard?: DashboardPreferences;
   isAdmin?: boolean;
   isApproved?: boolean;
+  access?: AppAccessFlags;
+  ndcpcRole?: NdcpcRole;
+  preferences?: CommunityPreferences;
+  legacyNdcpcUid?: string;
+  migratedFrom?: 'ndcpc';
   isYouth?: boolean;
   avatar?: AvatarData;
+  /** Per-app profile photos — Cell includes halos; NDCPC does not. */
+  avatars?: UserAvatars;
   avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
   /** Client should hard-rebind FCM SW + token on next open. */
@@ -223,7 +237,6 @@ export interface AppUser extends FirebaseUser {
   fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
   appTheme?: AppThemeId;
-  typography?: TypographyPreferences;
   bibleTextVersion?: BibleTextVersion;
   prayerRequestsLastSeenAt?: Timestamp;
   /** Last active signed-in client (throttled). Used for admin inactive filter. */
@@ -234,6 +247,8 @@ export interface AppUser extends FirebaseUser {
 export interface UserProfileData {
   uid: string;
   email: string | null;
+  /** Additional contact emails (not Firebase Auth login). */
+  contactEmails?: string[];
   firstName: string;
   lastName: string;
   /** Optional contact phone collected from forms / profile. */
@@ -241,6 +256,7 @@ export interface UserProfileData {
   /** ISO date yyyy-MM-dd collected from forms / profile. */
   birthday?: string | null;
   roleIds?: string[];
+  ndcpcRoleIds?: string[];
   capabilityKeys?: RoleCapability[];
   photoURL?: string | null;
   createdAt?: Timestamp;
@@ -248,7 +264,14 @@ export interface UserProfileData {
   showInCommunityProgress?: boolean;
   dashboard?: DashboardPreferences;
   isApproved?: boolean;
+  access?: AppAccessFlags;
+  ndcpcRole?: NdcpcRole;
+  preferences?: CommunityPreferences;
+  legacyNdcpcUid?: string;
+  migratedFrom?: 'ndcpc';
   avatar?: AvatarData;
+  /** Per-app profile photos — Cell includes halos; NDCPC does not. */
+  avatars?: UserAvatars;
   avatarChangesEnabled?: boolean;
   fcmTokens?: string[];
   /** Client should hard-rebind FCM SW + token on next open. */
@@ -257,13 +280,112 @@ export interface UserProfileData {
   fcmHealVersion?: string;
   preferredLanguage?: 'en' | 'ko';
   appTheme?: AppThemeId;
-  typography?: TypographyPreferences;
   bibleTextVersion?: BibleTextVersion;
   prayerRequestsLastSeenAt?: Timestamp;
   /** Last active signed-in client (throttled). Used for admin inactive filter. */
   lastSeenAt?: Timestamp;
 }
 
+export interface NdcpcVolunteer {
+  id: string;
+  name: string;
+  userId?: string | null;
+  email?: string | null;
+  createdAt?: Timestamp;
+}
+
+/** Legacy roster doc — five named roles per Sunday. */
+export interface NdcpcSchedule {
+  id: string;
+  date: Timestamp | { seconds: number };
+  worship: string;
+  offering: string;
+  sermon: string;
+  chant: string;
+  activity: string;
+}
+
+export interface NdcpcAnnouncement {
+  id: string;
+  title: string;
+  /** Migrated legacy field */
+  content?: string;
+  body?: string;
+  date?: Timestamp | { seconds: number };
+  createdAt?: Timestamp;
+}
+
+export type NdcpcChatReplyTo = {
+  messageId: string;
+  authorName: string;
+  text: string;
+};
+
+export interface NdcpcChatMessage {
+  id: string;
+  text: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL?: string | null;
+  authorAvatar?: AvatarData;
+  createdAt: Timestamp | { seconds: number; toDate?: () => Date };
+  deleted?: boolean;
+  replyTo?: NdcpcChatReplyTo | string | null;
+  reactions?: Record<string, string[]>;
+  seenBy?: Record<string, { name?: string; at?: unknown }>;
+}
+
+export type NdcpcResourceCategory = 'chants' | 'songs' | 'schedules' | 'announcements';
+
+export interface NdcpcResource {
+  id: string;
+  title: string;
+  url: string;
+  category: NdcpcResourceCategory;
+  createdAt?: Timestamp;
+  description?: string;
+  startSeconds?: number;
+  endSeconds?: number;
+}
+
+export interface NdcpcSetlist {
+  id: string;
+  date: Timestamp | { seconds: number };
+  songIds?: string[];
+  chantIds?: string[];
+  resourceIds?: string[];
+  createdAt?: Timestamp;
+}
+
+export interface NdcpcPhoto {
+  id: string;
+  storagePath: string;
+  downloadUrl: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  createdAt?: Timestamp;
+  caption?: string;
+}
+
+export interface NdcpcPrayerTopic {
+  id: string;
+  topic: string;
+  date?: Timestamp | { seconds: number };
+}
+
+export type NdcpcWorshipFormatItem = {
+  id?: string;
+  label?: string;
+  timeFrom?: string;
+  timeTo?: string;
+  roles?: ('worship' | 'offering' | 'sermon' | 'chant' | 'activity')[];
+};
+
+export interface NdcpcWorshipFormat {
+  id: string;
+  items: NdcpcWorshipFormatItem[] | string[];
+  updatedAt?: Timestamp;
+}
 
 export interface UserBibleChecklist {
   userId: string;
@@ -339,6 +461,10 @@ export interface Chat {
   memberInfo: { [uid: string]: ChatMemberInfo };
   admins?: string[];
   name?: string;
+  /** Which app owns this chat — role chats for preschool use `ndcpc`. */
+  appScope?: 'cell' | 'ndcpc';
+  /** Preschool team room (managers only) vs role circle. */
+  ndcpcKind?: 'team' | 'role';
   photoURL?: string;
   lastMessageText?: string;
   lastMessageSentAt?: Timestamp;

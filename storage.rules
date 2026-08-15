@@ -34,6 +34,22 @@ service firebase.storage {
       allow write: if canManageWorship();
     }
 
+    function hasNdcpcAccess() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && userDoc().data.isApproved == true
+        && userDoc().data.get('access', {}).get('ndcpc', false) == true;
+    }
+
+    match /photos/{userId}/{fileName} {
+      allow read: if hasNdcpcAccess();
+      allow create: if hasNdcpcAccess()
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if hasNdcpcAccess() && request.auth.uid == userId;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

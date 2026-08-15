@@ -1,10 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME } from '@/lib/auth-session';
 
-/**
- * Routes anyone can open without a session cookie.
- * Kept as defense-in-depth — the matcher already skips most of these.
- */
 const PUBLIC_EXACT = new Set([
   '/',
   '/login',
@@ -39,13 +35,23 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/**
- * Cookie presence gate only — no Firebase Admin / Firestore on the Edge.
- * Security headers (incl. CSP) live in next.config.js so they apply without
- * invoking this middleware on static assets or public pages.
- */
+/** Rewrite /cell/* to legacy internal routes until all links use /cell prefix. */
+function maybeRewriteCellPath(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  if (pathname === '/cell') return null;
+  if (!pathname.startsWith('/cell/')) return null;
+
+  const internalPath = pathname.slice('/cell'.length) || '/';
+  const url = request.nextUrl.clone();
+  url.pathname = internalPath;
+  return NextResponse.rewrite(url);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const cellRewrite = maybeRewriteCellPath(request);
+  if (cellRewrite) return cellRewrite;
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();
@@ -65,14 +71,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Auth gate only. Skip:
-     * - API routes (own auth)
-     * - Next static / image optimizer
-     * - Public marketing + auth pages (no cookie required)
-     * - Common static asset extensions
-     * This is the main lever for Vercel Edge/middleware CPU.
-     */
     '/((?!api(?:/|$)|_next/static|_next/image|_next/webpack-hmr|login(?:/|$)|signup(?:/|$)|forgot-password(?:/|$)|features(?:/|$)|privacy(?:/|$)|terms(?:/|$)|favicon|icon|apple-touch-icon|manifest|sw\\.js|workbox|swe-worker|$|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|woff2?|ttf|otf|txt|xml|webmanifest|js|css|map|json)$).*)',
   ],
 };

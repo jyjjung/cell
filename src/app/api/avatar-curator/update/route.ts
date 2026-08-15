@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { AVATAR_CURATOR_EMAIL } from '@/lib/avatar-curator';
-import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { buildAvatarsPatch, resolveAvatarForApp } from '@/lib/user-avatars';
 import type { AvatarData, ChatMemberInfo, UserProfileData } from '@/types';
 
 const USERS_COLLECTION = 'users';
@@ -18,7 +18,7 @@ async function assertAvatarCurator(uid: string): Promise<UserProfileData | null>
   return profile;
 }
 
-async function syncMemberInfoToChats(userId: string, memberInfo: ChatMemberInfo) {
+async function syncMemberInfoToChats(userId: string, profile: UserProfileData) {
   const adminDb = getAdminDb(getAdminApp());
   const chatsSnap = await adminDb
     .collection(CHATS_COLLECTION)
@@ -32,6 +32,12 @@ async function syncMemberInfoToChats(userId: string, memberInfo: ChatMemberInfo)
   let batchCount = 0;
 
   for (const chatDoc of chatsSnap.docs) {
+    const avatarApp = chatDoc.data()?.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+    const memberInfo: ChatMemberInfo = {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      avatar: resolveAvatarForApp(profile, avatarApp),
+    };
     batch.update(chatDoc.ref, { [`memberInfo.${userId}`]: memberInfo });
     batchCount++;
     updated++;
@@ -97,19 +103,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (hasAvatar) {
-      updateData.avatar = body.avatar as AvatarData;
+      const patch = buildAvatarsPatch(existing, 'cell', body.avatar as AvatarData);
+      updateData.avatars = patch.avatars;
+      updateData.avatar = patch.avatar;
     }
 
     await targetRef.update(updateData);
 
     if (hasAvatar) {
       const merged = { ...existing, ...updateData } as UserProfileData;
-      const memberInfo: ChatMemberInfo = {
-        firstName: merged.firstName,
-        lastName: merged.lastName,
-        avatar: (merged.avatar || DEFAULT_AVATAR_DATA) as AvatarData,
-      };
-      await syncMemberInfoToChats(targetUserId, memberInfo);
+      await syncMemberInfoToChats(targetUserId, merged);
     }
 
     return NextResponse.json({ success: true });

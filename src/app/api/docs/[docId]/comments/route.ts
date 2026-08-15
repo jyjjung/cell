@@ -15,7 +15,7 @@ async function requireUid(request: NextRequest): Promise<string> {
   }
 }
 
-type RouteContext = { params: { docId: string } };
+type RouteContext = { params: Promise<{ docId: string }> };
 
 async function assertMember(docId: string, uid: string) {
   const adminDb = getAdminDb(getAdminApp());
@@ -29,7 +29,7 @@ async function assertMember(docId: string, uid: string) {
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId } = context.params;
+    const { docId } = (await context.params);
     const { adminDb } = await assertMember(docId, uid);
     const snap = await adminDb
       .collection('docs')
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId } = context.params;
+    const { docId } = (await context.params);
     const { adminDb } = await assertMember(docId, uid);
     const body = await request.json();
     const text = String(body.text ?? '').trim().slice(0, DOC_COMMENT_MAX);

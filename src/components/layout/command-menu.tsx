@@ -329,12 +329,11 @@ function CommandMenuBody({ onClose }: { onClose: () => void }) {
         const name = details?.name ?? (chat.type === "group" ? chat.name || "Group Chat" : "Private Chat");
         const preview = chat.lastMessageText || "";
         const peerId = chat.type === "private" ? chat.members.find((id) => id !== currentUser.uid) : null;
-        const peer = peerId ? allUsers.find((u) => u.uid === peerId) : null;
         return {
           id: chat.id,
           name,
           preview,
-          avatarData: peer?.avatar ?? (peerId ? chat.memberInfo?.[peerId]?.avatar : null),
+          avatarData: details?.avatar ?? (peerId ? chat.memberInfo?.[peerId]?.avatar : null),
           photoURL: chat.photoURL || null,
           isGroup: chat.type === "group",
           searchValue: `${name} ${preview} ${chat.id}`.toLowerCase(),

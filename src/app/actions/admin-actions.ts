@@ -4,6 +4,7 @@ import { getAdminApp, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { UserProfileData } from '@/types';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { resolveAvatarForApp } from '@/lib/user-avatars';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
 import { reconcileUserRoleState } from '@/lib/server-role-state';
 
@@ -86,11 +87,14 @@ export async function adminUpdateUserProfileAction(
     const oldProfileData = userDocSnap.data() as UserProfileData;
     
     const hasRoleUpdate = 'roleIds' in profileData;
+    const hasNdcpcRoleUpdate = 'ndcpcRoleIds' in profileData;
     const {
       roleIds,
+      ndcpcRoleIds,
       capabilityKeys: _ignoredCapabilities,
       isAdmin: _ignoredAdmin,
       isYouth: _ignoredYouth,
+      ndcpcRole: _ignoredNdcpcRole,
       ...safeProfileData
     } = profileData as Partial<UserProfileData> & {
       isAdmin?: unknown;
@@ -107,16 +111,12 @@ export async function adminUpdateUserProfileAction(
 
     const shouldSyncMemberInfo =
       profileData.avatar !== undefined
+      || profileData.avatars !== undefined
       || profileData.firstName !== undefined
       || profileData.lastName !== undefined;
 
     if (shouldSyncMemberInfo) {
       const mergedProfile = { ...oldProfileData, ...safeProfileData } as UserProfileData;
-      const memberInfo = {
-        firstName: mergedProfile.firstName,
-        lastName: mergedProfile.lastName,
-        avatar: mergedProfile.avatar || DEFAULT_AVATAR_DATA,
-      };
 
       const chatsSnap = await db
         .collection(CHATS_COLLECTION)
@@ -124,6 +124,12 @@ export async function adminUpdateUserProfileAction(
         .get();
 
       for (const chatDoc of chatsSnap.docs) {
+        const avatarApp = chatDoc.data()?.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+        const memberInfo = {
+          firstName: mergedProfile.firstName,
+          lastName: mergedProfile.lastName,
+          avatar: resolveAvatarForApp(mergedProfile, avatarApp) || DEFAULT_AVATAR_DATA,
+        };
         batchUpdates.push({
           ref: chatDoc.ref,
           data: { [`memberInfo.${userId}`]: memberInfo },
@@ -132,8 +138,13 @@ export async function adminUpdateUserProfileAction(
     }
     
     await commitUpdatesInChunks(db, batchUpdates);
-    if (hasRoleUpdate) {
-      await reconcileUserRoleState(db, userId, roleIds || []);
+    if (hasRoleUpdate || hasNdcpcRoleUpdate) {
+      await reconcileUserRoleState(
+        db,
+        userId,
+        hasRoleUpdate ? roleIds || [] : undefined,
+        hasNdcpcRoleUpdate ? ndcpcRoleIds || [] : undefined,
+      );
     }
 
     // 3. Update Firebase Auth displayName if names changed

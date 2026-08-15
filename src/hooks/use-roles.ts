@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
-import type { RoleCapability } from '@/lib/role-capabilities';
+import type { RoleAppScope, RoleCapability } from '@/lib/role-capabilities';
 
 const ROLES_COLLECTION = 'roles';
 
@@ -70,8 +70,9 @@ export function useRoles() {
     name: string,
     createChat: boolean,
     capabilities: RoleCapability[] = [],
+    appScope: RoleAppScope = 'cell',
   ): Promise<string> => {
-    const data = await request('/api/admin/roles', 'POST', { name, createChat, capabilities });
+    const data = await request('/api/admin/roles', 'POST', { name, createChat, capabilities, appScope });
     return data.roleId;
   }, [request]);
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { ArrowDown, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
+import { ChatTimeSeparator, formatChatMessageDate } from './ChatTimeSeparator';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { resolveChatUserName, isMutedChatEvent } from '@/lib/chat-utils';
 import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
@@ -12,13 +12,6 @@ import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData } from '@/types
 
 const EMPTY_SEEN_NAMES: string[] = [];
 const NEAR_BOTTOM_PX = 80;
-
-function formatMessageDate(date: Date) {
-  if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
-  if (isYesterday(date)) return `Yesterday ${format(date, 'HH:mm')}`;
-  if (differenceInDays(new Date(), date) < 7) return format(date, 'EEEE HH:mm');
-  return format(date, 'MMM d, HH:mm');
-}
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -164,6 +157,7 @@ export default function ChatMessageList({
             threadParentMessage={msg.threadParentId ? messagesById.get(msg.threadParentId) : undefined}
             showAvatar={showAvatar}
             showName={showName}
+            showHalo={chat.appScope !== 'ndcpc'}
           />
         </div>,
       );
@@ -173,11 +167,10 @@ export default function ChatMessageList({
         const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
         if (diff > 3600000) {
           content.push(
-            <div key={`time-${msg.id}`} className="chat-message-row py-3 flex justify-center w-full">
-              <span className="text-xs font-medium text-muted-foreground">
-                {formatMessageDate(msg.createdAt.toDate())}
-              </span>
-            </div>,
+            <ChatTimeSeparator
+              key={`time-${msg.id}`}
+              label={formatChatMessageDate(msg.createdAt.toDate())}
+            />,
           );
         }
       }
