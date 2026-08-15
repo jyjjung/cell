@@ -11,6 +11,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -33,6 +34,9 @@ import { DATA_CACHE_KEYS } from '@/lib/ndcpc/data-cache';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/context/LocaleProvider';
 
+/** Bound album size so Safari does not OOM decoding every photo at once. */
+const PHOTOS_PAGE_SIZE = 24;
+
 export function PhotoGallery() {
   const { user, profile } = useAuth();
   const firestore = useFirestore();
@@ -41,6 +45,7 @@ export function PhotoGallery() {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [pageSize, setPageSize] = useState(PHOTOS_PAGE_SIZE);
   const [captionDialog, setCaptionDialog] = useState<{ photoId: string; caption: string } | null>(
     null
   );
@@ -49,12 +54,17 @@ export function PhotoGallery() {
 
   const photosQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, NDCPc_COLLECTIONS.photos), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+    return query(
+      collection(firestore, NDCPc_COLLECTIONS.photos),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize),
+    );
+  }, [firestore, pageSize]);
 
   const { data: photos, isLoading } = useCollection<Photo>(photosQuery, {
     cacheKey: DATA_CACHE_KEYS.photos,
   });
+  const canLoadMore = (photos?.length ?? 0) >= pageSize;
 
   const handleUpload = async (files: File[]) => {
     if (!firestore || !storage || !user || !profile || files.length === 0) return;
@@ -170,19 +180,31 @@ export function PhotoGallery() {
         {!photos || photos.length === 0 ? (
           <EmptyState message={t('photos.empty')} />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2">
-            {photos.map((photo) => (
-              <CachedPhoto
-                key={photo.id}
-                url={photo.downloadUrl}
-                alt={photo.caption || photo.uploadedByName}
-                filename={`${photo.caption || photo.id}.jpg`}
-                canDelete={photo.uploadedBy === user?.uid}
-                onDelete={() => void handleDelete(photo)}
-                isDeleting={deletingPhotoId === photo.id}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2">
+              {photos.map((photo) => (
+                <CachedPhoto
+                  key={photo.id}
+                  url={photo.downloadUrl}
+                  alt={photo.caption || photo.uploadedByName}
+                  filename={`${photo.caption || photo.id}.jpg`}
+                  canDelete={photo.uploadedBy === user?.uid}
+                  onDelete={() => void handleDelete(photo)}
+                  isDeleting={deletingPhotoId === photo.id}
+                />
+              ))}
+            </div>
+            {canLoadMore ? (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPageSize((n) => n + PHOTOS_PAGE_SIZE)}
+                >
+                  {t('photos.loadMore')}
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

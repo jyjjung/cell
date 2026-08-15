@@ -20,6 +20,10 @@ export const changelogs: ChangelogEntry[] = [
         text: 'First load is smoother: theme and offline banner no longer flash the wrong state.',
       },
       {
+        type: 'Fixed',
+        text: 'Preschool Photos no longer crashes Safari when the album is large — photos load as you scroll, a page at a time.',
+      },
+      {
         type: 'Improved',
         text: 'On Safari, the app recovers more cleanly after storage glitches instead of getting stuck.',
       },
