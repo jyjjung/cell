@@ -117,15 +117,20 @@ const nextConfig = {
   /**
    * Cell home is `/cell`. Feature pages still live at root (`/chat`, `/events`, …).
    * Rewrite `/cell/<feature>` → `/<feature>` so sidebar and bookmarks under `/cell/…` work.
+   * Use `fallback` (not afterFiles) so real `/cell/*` routes — including dynamic
+   * `/cell/chat/[chatId]` — win before rewrite. Array/afterFiles rewrites run before
+   * dynamic routes and would send chat detail to legacy `/chat/[id]` (blank redirect loop).
    * `:path+` requires at least one segment, so exact `/cell` keeps `app/cell/page.tsx`.
    */
   async rewrites() {
-    return [
-      {
-        source: '/cell/:path+',
-        destination: '/:path+',
-      },
-    ];
+    return {
+      fallback: [
+        {
+          source: '/cell/:path+',
+          destination: '/:path+',
+        },
+      ],
+    };
   },
   images: {
     formats: ['image/avif', 'image/webp'],
