@@ -202,7 +202,7 @@ function SongDetailView({
               </Button>
               <Button size="sm" className="rounded-xl h-9 gap-1.5"
                 onClick={() => setAddSheetOpen(true)}>
-                <Plus className="h-3.5 w-3.5" /> Add Sheet
+                <Plus className="h-3.5 w-3.5" /> Paste chart
               </Button>
             </>
           )}
@@ -213,7 +213,7 @@ function SongDetailView({
         <div className="flex flex-col items-center justify-center py-16 rounded-xl border-2 border-dashed border-border/40 text-center">
           <ImageIcon className="h-10 w-10 text-muted-foreground/30 mb-3" />
           <p className="font-semibold text-muted-foreground">No chord sheets yet</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Upload an image or paste a chart from SongSelect.</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Paste a chart from SongSelect, or upload an image if you only have a scan.</p>
         </div>
       ) : (
         <div className="space-y-5">

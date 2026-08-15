@@ -598,7 +598,7 @@ export interface SongChordSheet {
   imageUrl: string;
   storagePath: string;
   uploadedAt: Timestamp;
-  /** Image/PDF upload (default) or pasted text chart */
+  /** Pasted text chart (preferred) or image/PDF upload */
   kind?: 'image' | 'text';
   /** Original pasted chart (SongSelect / ChordPro). Stored in `key`. */
   sourceText?: string;
