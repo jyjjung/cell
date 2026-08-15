@@ -46,6 +46,11 @@ describe('isIndexedDbPersistenceError', () => {
         new Error('Connection to Indexed Database server lost. Refresh the page to try again'),
       ),
     ).toBe(true);
+    expect(
+      isIndexedDbPersistenceError(
+        new Error('UnknownError: Error looking up record in object store by key range'),
+      ),
+    ).toBe(true);
   });
 
   it('matches known Firestore AsyncQueue bricks (ca9 → b815)', () => {

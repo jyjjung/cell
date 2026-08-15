@@ -27,17 +27,13 @@ type ColorPaletteContextValue = {
 
 const ColorPaletteContext = createContext<ColorPaletteContextValue | undefined>(undefined);
 
-function readStoredTheme(): AppThemeId {
-  if (typeof window === 'undefined') return DEFAULT_APP_THEME_ID;
-  const storedTheme = localStorage.getItem(APP_THEME_STORAGE_KEY);
-  return normalizeAppThemeId(storedTheme);
-}
-
 export function ColorPaletteProvider({ children }: { children: ReactNode }) {
   const { resolvedTheme } = useTheme();
   const { currentUser, updateUserProfile } = useAuth();
-  const [themeId, setThemeIdState] = useState<AppThemeId>(() => readStoredTheme());
-  const [isReady, setIsReady] = useState(() => typeof window !== 'undefined');
+  // Always start with the default on SSR + first client paint to avoid hydration
+  // mismatches from reading localStorage in the useState initializer.
+  const [themeId, setThemeIdState] = useState<AppThemeId>(DEFAULT_APP_THEME_ID);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const nextTheme = normalizeAppThemeId(

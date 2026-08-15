@@ -28,6 +28,7 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
     msg.includes('without an in-progress transaction') ||
     msg.includes('Connection to Indexed Database server lost') ||
     msg.includes('An internal error was encountered in the Indexed Database server') ||
+    msg.includes('looking up record in object store') ||
     (msg.includes('IndexedDB transaction') &&
       (msg.includes('AbortError') || msg.includes('code=unavailable'))) ||
     // Firestore SDK bricks the client after these assertions (see firebase-js-sdk#8856, #9267).

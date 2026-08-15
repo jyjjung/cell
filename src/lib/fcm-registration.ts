@@ -26,7 +26,7 @@ function waitForWorker(worker: ServiceWorker | null): Promise<void> {
 export async function getFCMRegistration(): Promise<ServiceWorkerRegistration | null> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
 
-  let registration: ServiceWorkerRegistration;
+  let registration: ServiceWorkerRegistration | null | undefined;
   try {
     registration = await navigator.serviceWorker.register(FCM_SW_URL, {
       scope: FCM_SW_SCOPE,
@@ -37,6 +37,12 @@ export async function getFCMRegistration(): Promise<ServiceWorkerRegistration | 
     // generic "Rejected" error when the SW script fails to install (e.g. CDN fetch
     // failure for importScripts). Treat this as a non-fatal degradation.
     console.warn('[FCMRegistration] Service worker registration failed — push notifications unavailable:', err);
+    return null;
+  }
+
+  // Playwright / locked-down browsers may resolve register() with undefined instead of throwing.
+  if (!registration) {
+    console.warn('[FCMRegistration] Service worker registration returned no registration — push unavailable');
     return null;
   }
 

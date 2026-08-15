@@ -62,6 +62,76 @@ describe('shouldDropSentryEvent', () => {
     ).toBe(true);
   });
 
+  it('drops Safari object-store lookup IDB noise', () => {
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'Error',
+              value: 'UnknownError: Error looking up record in object store by key range',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('drops auth network failures and SW abort/load noise', () => {
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'FirebaseError',
+              value: 'Firebase: Error (auth/network-request-failed).',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'Error',
+              value:
+                "AbortError: Failed to register a ServiceWorker for scope ('https://example.com/') with script ('https://example.com/sw.js'): Operation has been aborted",
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'TypeError',
+              value: 'Script https://example.com/sw.js load failed',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('drops Firestore permission-denied noise', () => {
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'FirebaseError',
+              value: 'Missing or insufficient permissions.',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it('drops Firestore ca9/b815 bricks and mis-ordered persistence clears', () => {
     expect(
       shouldDropSentryEvent({
