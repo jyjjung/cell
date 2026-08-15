@@ -1,0 +1,45 @@
+---
+description: Keep architecture docs and dependency pins current
+alwaysApply: true
+---
+
+# Keep current
+
+## Shared identity (NDC Community Apps)
+
+- Canonical host: **`https://ndccommunity.vercel.app`** (legacy `ndcem.vercel.app` → redirect)
+- Firebase project: **`cell-abca4`** (single Auth + Firestore)
+- Apps: `/cell` (em.), `/ndcpc` (preschool), `/accounts` (profile & settings), `/users` (admin user ops), `/feedback` (**Updates** — changelog & feedback, all signed-in members)
+- Approval: `isApproved`; per-app: `access.cell`, `access.ndcpc`; NDCPC role: `ndcpcRole`
+- NDCPC Firestore collections are namespaced: `ndcpcVolunteers`, `ndcpcSchedules`, etc.
+- NDCPC roster assignments use **account display names** (`firstName lastName`), not volunteer roster links
+- NDCPC chats use the shared em. `chats` / `ChatList` / `ChatWindow` system under `/ndcpc/chat` — `memberInfo.avatar` is scoped by `chat.appScope` (`avatars.cell` vs `avatars.ndcpc`)
+- NDCPC worship hub: `/ndcpc/worship` (tabs: rosters / setlists / resources / worship order); list→detail create/edit like em.
+- NDCPC **team chat** (`ndcpc-team`): managers only (`ndcpc.manage` / `ndcpc.admin` / legacy `ndcpcRole: admin`)
+- NDCPC role chats: `appScope: 'ndcpc'`, membership from `ndcpcRoleIds`
+
+## When auth, admin, deploy, or portal paths change
+
+Update this rule and changelog in the same change set.
+
+## Migration scripts
+
+Run in order from **cell-master** (dry-run by default; add `--apply --confirm-project=cell-abca4`):
+
+1. `scripts/migrate-ndcpc-users-to-em.cjs` — Auth + profiles + FCM tokens → writes `scripts/ndcpc-uid-remap.json`
+2. `scripts/migrate-ndcpc-firestore-to-em.cjs` — namespaced Firestore copy (uses UID remap)
+3. `scripts/migrate-ndcpc-storage-to-em.cjs` — photo blobs + `downloadUrl` rewrite
+4. `scripts/migrate-ndcpc-schedules-to-account-names.cjs` — rewrite schedule role names from linked volunteer names → account display names
+5. `scripts/migrate-ndcpc-team-chat-to-em.cjs` — create managers team chat + migrate `ndcpcChatMessages` → `chats/ndcpc-team/messages`
+
+Credentials: `FIREBASE_PROJECT_ID` + `FIREBASE_CLIENT_EMAIL` + `FIREBASE_PRIVATE_KEY` (or `FIREBASE_SERVICE_ACCOUNT_KEY`) for **cell-abca4**, plus `NDCPC_SERVICE_ACCOUNT_JSON` for legacy **studio-7483951484-e5df7** (needs Auth + Firestore + Storage read).
+
+Optional password preservation: `NDCPC_AUTH_EXPORT_JSON` + `NDCPC_HASH_CONFIG_JSON` (from Identity Toolkit hashConfig).
+
+**Status (Aug 15, 2026):** Auth/users, Firestore `ndcpc*`, and Storage photos have been applied into `cell-abca4`. Legacy project is read-only archive. Standalone `ndcpc.vercel.app` uses the same Firebase; chat push via `/api/send-chat-push` (set Admin env on Vercel).
+
+Legacy standalone NDCPC site (`NDCPC-main`) points at **cell-abca4**; chat push via API route (Cloud Function optional).
+
+## Dependency versions
+
+Before dependency work, check pins vs latest stable for `next`, `firebase`, `firebase-admin`, React, Node.

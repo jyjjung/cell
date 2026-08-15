@@ -7,7 +7,11 @@ import type { FormAnswerValue } from '@/types/forms';
 
 const USERS_COLLECTION = 'users';
 
-export async function GET(_request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
+export async function GET(
+  _request: NextRequest,
+  props: { params: Promise<{ formId: string; responseId: string }> }
+) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -27,7 +31,11 @@ export async function GET(_request: NextRequest, { params }: { params: { formId:
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
+export async function PUT(
+  request: NextRequest,
+  props: { params: Promise<{ formId: string; responseId: string }> }
+) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -96,7 +104,11 @@ export async function PUT(request: NextRequest, { params }: { params: { formId: 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { formId: string; responseId: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  props: { params: Promise<{ formId: string; responseId: string }> }
+) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);

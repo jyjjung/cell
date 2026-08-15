@@ -14,7 +14,8 @@ import { applyProfileReferenceAnswers, formatProfileName } from '@/lib/forms/pre
 import type { FormAnswerValue } from '@/types/forms';
 
 /** Guest-readable responses list (no auth). Bounded + paginated. */
-export async function GET(request: NextRequest, { params }: { params: { publicToken: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ publicToken: string }> }) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest, { params }: { params: { publicTo
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { publicToken: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ publicToken: string }> }) {
+  const params = await props.params;
   try {
     const body = await request.json();
     const emailRaw = body.email;

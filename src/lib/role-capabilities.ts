@@ -2,10 +2,32 @@ export const ROLE_CAPABILITIES = [
   'app.admin',
   'member.youth',
   'worship.manage',
+  'ndcpc.admin',
+  'ndcpc.manage',
 ] as const;
 
 export type RoleCapability = (typeof ROLE_CAPABILITIES)[number];
+export type RoleAppScope = 'cell' | 'ndcpc';
 export type RoleStatus = 'active' | 'archived';
+
+export const CELL_ROLE_CAPABILITIES = ['app.admin', 'member.youth', 'worship.manage'] as const satisfies readonly RoleCapability[];
+export const NDCPC_ROLE_CAPABILITIES = ['ndcpc.admin', 'ndcpc.manage'] as const satisfies readonly RoleCapability[];
+
+export const ROLE_CAPABILITY_LABELS: Record<RoleCapability, string> = {
+  'app.admin': 'EM admin',
+  'member.youth': 'Youth restrictions',
+  'worship.manage': 'Manage worship',
+  'ndcpc.admin': 'Preschool admin',
+  'ndcpc.manage': 'Manage preschool content',
+};
+
+export function roleCapabilitiesForScope(scope: RoleAppScope): readonly RoleCapability[] {
+  return scope === 'ndcpc' ? NDCPC_ROLE_CAPABILITIES : CELL_ROLE_CAPABILITIES;
+}
+
+export function normalizeRoleScope(value: unknown): RoleAppScope {
+  return value === 'ndcpc' ? 'ndcpc' : 'cell';
+}
 
 export type RoleStateInput = {
   id: string;

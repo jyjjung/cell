@@ -24,7 +24,7 @@ export default function Footer() {
     <footer className="app-main-footer w-full relative z-10">
       <div className="flex w-full flex-col items-center justify-between gap-3 sm:flex-row">
         <p className="text-xs text-muted-foreground">
-          em. © 2026
+          NDC Community Apps © 2026
         </p>
         
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">

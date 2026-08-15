@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NDC">
+  <rect width="512" height="512" fill="#161616"/>
+  <text
+    x="256"
+    y="298"
+    text-anchor="middle"
+    font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif"
+    font-size="152"
+    font-weight="900"
+    fill="#f3f0e8"
+    letter-spacing="-6"
+  >NDC</text>
+</svg>

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { Chat, ChatMemberInfo } from '@/types';
+import type { Chat } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { UsersContext } from '@/contexts/users-context';
 import { useContext } from 'react';
-import { mergeAvatarData } from '@/lib/avatar-utils';
 import { primeMediaUrls } from '@/lib/media-cache';
 
 const CHATS_COLLECTION = 'chats';
@@ -77,10 +76,12 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
           chatsData.filter((c) => c.type === 'group').map((c) => c.photoURL),
         );
 
+        // Names only — never copy chat memberInfo.avatar into the users directory.
+        // That field is app-scoped (cell vs ndcpc) and would bleed em. photos into preschool.
         if (patchUsers) {
           const byUid = new Map<
             string,
-            { uid: string; firstName?: string; lastName?: string; avatar?: ChatMemberInfo['avatar'] }
+            { uid: string; firstName?: string; lastName?: string }
           >();
           for (const chat of chatsData) {
             for (const [uid, info] of Object.entries(chat.memberInfo || {})) {
@@ -89,7 +90,6 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
                 uid,
                 firstName: info.firstName ?? prev?.firstName,
                 lastName: info.lastName ?? prev?.lastName,
-                avatar: prev?.avatar ? mergeAvatarData(prev.avatar, info.avatar) : info.avatar,
               });
             }
           }

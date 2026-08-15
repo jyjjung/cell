@@ -14,15 +14,18 @@ export type CachedAuthProfile = Pick<
   | 'firstName'
   | 'lastName'
   | 'roleIds'
+  | 'ndcpcRoleIds'
   | 'capabilityKeys'
   | 'showInCommunityProgress'
   | 'preferredLanguage'
   | 'appTheme'
-  | 'typography'
   | 'bibleTextVersion'
   | 'dashboard'
   | 'isApproved'
+  | 'access'
+  | 'preferences'
   | 'avatar'
+  | 'avatars'
   | 'avatarChangesEnabled'
   | 'fcmTokens'
 >;
@@ -43,15 +46,18 @@ export function writeCachedAuthProfile(profile: UserProfileData): void {
     firstName: profile.firstName,
     lastName: profile.lastName,
     roleIds: profile.roleIds,
+    ndcpcRoleIds: profile.ndcpcRoleIds,
     capabilityKeys: profile.capabilityKeys,
     showInCommunityProgress: profile.showInCommunityProgress,
     preferredLanguage: profile.preferredLanguage,
     appTheme: profile.appTheme,
-    typography: profile.typography,
     bibleTextVersion: profile.bibleTextVersion,
     dashboard: profile.dashboard,
     isApproved: profile.isApproved,
+    access: profile.access,
+    preferences: profile.preferences,
     avatar: profile.avatar,
+    avatars: profile.avatars,
     avatarChangesEnabled: profile.avatarChangesEnabled,
     fcmTokens: profile.fcmTokens,
   };

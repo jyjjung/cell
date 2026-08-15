@@ -23,15 +23,17 @@ import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { syncChatDocMembers } from '@/hooks/use-docs';
+import { resolveAvatarForApp, type AvatarAppId } from '@/lib/user-avatars';
 import type { UserProfileData } from '@/types';
 
 const CHATS_COLLECTION = 'chats';
 
-export function useChat(chatId: string) {
+export function useChat(chatId: string, options?: { backHref?: string }) {
     const { currentUser } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const { setIsPageLoading } = usePageLoading();
+    const backHref = options?.backHref ?? '/chat';
 
     const renameGroup = useCallback((newName: string) => {
         if (!currentUser) return;
@@ -57,8 +59,8 @@ export function useChat(chatId: string) {
         
         toast({ title: "You have left the group." });
         setIsPageLoading(true);
-        router.push('/chat');
-    }, [chatId, currentUser, router, toast, setIsPageLoading]);
+        router.push(backHref);
+    }, [chatId, currentUser, router, toast, setIsPageLoading, backHref]);
 
     const deleteChat = useCallback(async () => {
       try {
@@ -72,14 +74,14 @@ export function useChat(chatId: string) {
         if (!response.ok) throw new Error(data.error || 'Could not delete chat.');
         toast({ title: "Chat deleted." });
         setIsPageLoading(true);
-        router.push('/chat');
+        router.push(backHref);
       } catch (error) {
         console.error("Error deleting chat:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not delete chat." });
       }
-    }, [chatId, router, toast, setIsPageLoading]);
+    }, [chatId, router, toast, setIsPageLoading, backHref]);
 
-    const addMembers = useCallback((membersToAdd: UserProfileData[]) => {
+    const addMembers = useCallback((membersToAdd: UserProfileData[], avatarApp: AvatarAppId = 'cell') => {
       if (!currentUser || membersToAdd.length === 0) return;
       const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
 
@@ -89,7 +91,7 @@ export function useChat(chatId: string) {
         memberInfoUpdates[`memberInfo.${member.uid}`] = {
           firstName: member.firstName,
           lastName: member.lastName,
-          avatar: member.avatar || DEFAULT_AVATAR_DATA,
+          avatar: resolveAvatarForApp(member, avatarApp) || DEFAULT_AVATAR_DATA,
         };
       });
 

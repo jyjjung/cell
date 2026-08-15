@@ -4,19 +4,17 @@ import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
-  Users,
-  Layers,
-  Megaphone,
   Calendar,
-  ListChecks,
+  Megaphone,
   ListTodo,
+  ListChecks,
   ClipboardList,
+  FileText,
   BookOpen,
   Brain,
   MessageCircle,
   Info,
   Grid2x2,
-  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -40,8 +38,6 @@ export default function AdminHubTabs() {
   const tabs = useMemo<AdminTab[]>(
     () => [
       { value: "hub", label: "Hub", href: "/admin", icon: Shield },
-      { value: "users", label: "Users", href: "/admin/users", icon: Users },
-      { value: "roles", label: "Roles", href: "/admin/groups", icon: Layers },
       { value: "notifs", label: "Announcements", href: "/admin/notifications", icon: Megaphone },
       { value: "events", label: "Events", href: "/admin/events", icon: Calendar },
       { value: "qt", label: "QT", href: "/admin/qt-roster", icon: ListChecks },

@@ -8,21 +8,24 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import Header from './header';
 import { OfflineBanner } from './offline-banner';
 import { useAuth } from '@/contexts/auth-context';
+import {
+  isAccountsAppPath,
+  isCellAppPath,
+  isShellPath,
+} from '@/lib/app-access';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
 import Footer from './footer';
 import { Bell } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
+import { NdcpcUnreadProvider } from '@/contexts/ndcpc-unread-context';
+import { CellBibleReaderShell } from '@/components/bible/cell-bible-reader-shell';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const CommandMenuLazy = dynamic(
-  () => import('./command-menu').then((m) => m.CommandMenu),
-  { ssr: false },
-);
 const InboxSheetLazy = dynamic(
-  () => import('@/components/inbox/InboxSheet').then((m) => m.InboxSheet),
+  () => import('@/components/inbox/AppInboxSheet').then((m) => m.AppInboxSheet),
   { ssr: false },
 );
 const SetlistPlaylistBarLazy = dynamic(
@@ -64,11 +67,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, hasSession, loadingAuth, initialSessionCookie } = useAuth();
   const { setIsPageLoading } = usePageLoading();
   const chatSubpath = pathname.startsWith('/chat/') ? pathname.split('/')[2] : null;
+  const ndcpcChatSubpath = pathname.startsWith('/ndcpc/chat/') ? pathname.split('/')[3] : null;
   const isChatListSubpage = chatSubpath === 'photos' || chatSubpath === 'links';
-  const isIndividualChat = !!chatSubpath && !isChatListSubpage;
+  const isIndividualChat =
+    (!!chatSubpath && !isChatListSubpage) || Boolean(ndcpcChatSubpath);
   const isMobile = useIsMobile();
   // iOS keyboard shell lock is mobile-only — desktop must keep the normal sidebar layout.
-  const lockChatShell = isIndividualChat && isMobile;
+  const lockChatShell =
+    isIndividualChat
+    && isMobile
+    && (isCellAppPath(pathname) || pathname.startsWith('/ndcpc/chat/'));
 
   useEffect(() => {
     const root = document.documentElement;
@@ -85,7 +93,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useChatVisualViewportVars(lockChatShell);
 
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
-  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const showReadingsTabs =
     pathname.startsWith('/bible-checklist') ||
     pathname.startsWith('/full-plan') ||
@@ -97,6 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/cleaning-roster') ||
     pathname.startsWith('/rosters');
   const showAdminTabs = pathname.startsWith('/admin');
+  const isShellRoute = isShellPath(pathname);
 
   useEffect(() => {
     setIsPageLoading(false);
@@ -123,9 +131,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!loadingAuth && currentUser) {
       const isApproved = currentUser.isApproved || currentUser.isAdmin;
       const isQuarantineRoute = pathname === '/pending-approval';
+      const isAccountsRoute = isAccountsAppPath(pathname);
       const isProfileRoute = pathname === '/profile';
 
-      if (!isApproved && !isQuarantineRoute && !isProfileRoute) {
+      if (!isApproved && !isQuarantineRoute && !isProfileRoute && !isAccountsRoute) {
         router.push('/pending-approval');
       } else if (isApproved && isQuarantineRoute) {
         router.push('/');
@@ -151,6 +160,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <GuestShell>{children}</GuestShell>;
   }
 
+  if (isShellRoute) {
+    return <>{children}</>;
+  }
+
   if (!currentUser) {
     // Session exists but profile still hydrating (cold cache) — light chrome stub.
     return (
@@ -166,6 +179,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <CellBibleReaderShell>
+    <NdcpcUnreadProvider>
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
@@ -180,8 +195,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex flex-1 flex-col min-h-0">
           <OfflineBanner />
-          <Header onOpenCommandMenu={() => setCommandMenuOpen(true)} pinStatic={lockChatShell} />
-          <CommandMenuLazy open={commandMenuOpen} onOpenChange={setCommandMenuOpen} />
+          <Header pinStatic={lockChatShell} />
           <InboxSheetLazy />
 
           <div
@@ -242,7 +256,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={() => {
                     setShowPermissionBanner(false);
-                    router.push('/profile');
+                    router.push('/accounts?tab=notifications');
                   }}
                   className="bg-primary px-4 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground active:scale-95 transition-all"
                 >
@@ -254,5 +268,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </SidebarInset>
     </SidebarProvider>
+    </NdcpcUnreadProvider>
+    </CellBibleReaderShell>
   );
 }

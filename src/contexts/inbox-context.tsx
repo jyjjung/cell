@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export type InboxTab = 'announcements' | 'notifications';
+export type InboxTab = 'announcements' | 'notifications' | 'prayer';
 
 type InboxContextValue = {
   isOpen: boolean;

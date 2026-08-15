@@ -2,9 +2,19 @@
 import type { Chat, ChatMemberInfo, ChatMessage, UserProfileData, AvatarData } from '@/types';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { mergeAvatarData } from '@/lib/avatar-utils';
+import {
+  createDefaultNdcpcAvatar,
+  resolveAvatarForApp,
+  sanitizeNdcpcAvatar,
+  type AvatarAppId,
+} from '@/lib/user-avatars';
 
 import { getDeletedContentPreview } from '@/lib/deleted-content';
 import type { DeletedMessageContentType } from '@/types';
+
+export function chatAvatarApp(chat?: Pick<Chat, 'appScope'> | null): AvatarAppId {
+  return chat?.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+}
 
 export const GROUP_PHOTO_CHANGED_PREVIEW = 'changed the group chat picture.';
 export const GROUP_PHOTO_REMOVED_PREVIEW = 'removed the group chat picture.';
@@ -144,13 +154,26 @@ export function getMemberDisplayName(memberInfo: ChatMemberInfo | null | undefin
     return formatUserDisplayName(memberInfo, fallback);
 }
 
-/** Prefer the freshest avatar between the users directory and chat memberInfo. */
+/** Prefer the live per-app profile avatar; fall back to denormalized memberInfo. */
 export function resolveChatAvatar(
   peerProfile?: UserProfileData | null,
   memberInfo?: ChatMemberInfo | null,
+  appScope?: AvatarAppId | Chat['appScope'] | null,
 ): AvatarData | undefined {
-  const merged = mergeAvatarData(peerProfile?.avatar, memberInfo?.avatar);
-  return merged;
+  const app: AvatarAppId = appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+  if (peerProfile) {
+    return resolveAvatarForApp(peerProfile, app);
+  }
+  if (app === 'ndcpc') {
+    const hint = {
+      firstName: memberInfo?.firstName,
+      lastName: memberInfo?.lastName,
+    };
+    if (!memberInfo?.avatar) return createDefaultNdcpcAvatar(hint);
+    // Never paint a Cell/em. denormalized avatar into preschool chat.
+    return sanitizeNdcpcAvatar(memberInfo.avatar, hint);
+  }
+  return mergeAvatarData(undefined, memberInfo?.avatar);
 }
 
 export function getChatDisplayDetails(
@@ -174,7 +197,7 @@ export function getChatDisplayDetails(
 
     return {
       name,
-      avatar: resolveChatAvatar(peerFullProfile, peerInfoFromChat) || null,
+      avatar: resolveChatAvatar(peerFullProfile, peerInfoFromChat, chatAvatarApp(chat)) || null,
     };
   }
 

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/page-layout';
 import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Inbox, Trash2 } from 'lucide-react';
 import { toMillisSafe } from '@/lib/firestore-timestamp';
 import {
   AlertDialog,
@@ -23,9 +23,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
 export default function FormsPage() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, loadingAuth, isAdmin } = useAuth();
   const { toast } = useToast();
 
   const [forms, setForms] = useState<FormDefinition[]>([]);
@@ -33,6 +34,15 @@ export default function FormsPage() {
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FormResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const formsWithResponses = useMemo(
+    () =>
+      forms
+        .filter((f) => (typeof f.responseCount === 'number' ? f.responseCount > 0 : false))
+        .slice()
+        .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt)),
+    [forms],
+  );
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -103,7 +113,14 @@ export default function FormsPage() {
 
   return (
     <div className="page-container">
-      <PageHeader title="Forms" description="Open a form, submit answers, and revisit your responses." />
+      <PageHeader
+        title="Forms"
+        description={
+          isAdmin
+            ? 'Open a form, submit answers, and review everyone’s responses.'
+            : 'Open a form, submit answers, and revisit your responses.'
+        }
+      />
 
       {!currentUser ? (
         <div className="ui-surface max-w-xl space-y-3">
@@ -134,13 +151,22 @@ export default function FormsPage() {
                     .sort((a, b) => toMillisSafe(b.updatedAt) - toMillisSafe(a.updatedAt))
                     .map((form) => {
                       const submissionCount = responsesByFormId.get(form.id)?.length ?? 0;
+                      const totalResponses = form.responseCount ?? 0;
+                      const needsAttention = form.needsAttentionCount ?? 0;
                       return (
                         <div
                           key={form.id}
-                          className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 p-3"
+                          className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 p-3 sm:flex-row sm:items-start sm:justify-between"
                         >
-                          <div className="min-w-0">
-                            <p className="font-semibold">{form.title}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold">{form.title}</p>
+                              {isAdmin && needsAttention > 0 ? (
+                                <Badge variant="destructive">
+                                  {needsAttention} need attention
+                                </Badge>
+                              ) : null}
+                            </div>
                             {form.description ? (
                               <p className="text-sm text-muted-foreground">{form.description}</p>
                             ) : null}
@@ -148,15 +174,21 @@ export default function FormsPage() {
                               {form.deadlineDate ? <span>Due {form.deadlineDate}</span> : null}
                               <span>
                                 {submissionCount > 0
-                                  ? `${submissionCount} submission${submissionCount === 1 ? '' : 's'}`
-                                  : 'Not submitted yet'}
+                                  ? `Your submissions: ${submissionCount}`
+                                  : 'You haven’t submitted'}
                               </span>
+                              {isAdmin ? (
+                                <span>
+                                  {totalResponses} total response{totalResponses === 1 ? '' : 's'}
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                           <Button
                             asChild
                             variant="outline"
-                            className="rounded-xl shrink-0"
+                            className="rounded-xl shrink-0 self-start"
+                            size="sm"
                             disabled={!form.publicToken}
                           >
                             <Link href={form.publicToken ? `/forms/public/${form.publicToken}` : '#'}>
@@ -170,6 +202,63 @@ export default function FormsPage() {
               )}
             </div>
           </section>
+
+          {isAdmin ? (
+            <section className="ui-section">
+              <div className="ui-card space-y-3">
+                <div>
+                  <h2 className="text-section-title">All responses</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Review one submission or download everyone’s answers for a form.
+                  </p>
+                </div>
+                {loading && formsWithResponses.length === 0 ? (
+                  <div className="empty-inline">
+                    <LoadingSpinner />
+                  </div>
+                ) : formsWithResponses.length === 0 ? (
+                  <EmptyState
+                    title="No responses yet"
+                    description="When people submit a published form, you’ll review them here."
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {formsWithResponses.map((form) => {
+                      const count = form.responseCount ?? 0;
+                      const needs = form.needsAttentionCount ?? 0;
+                      return (
+                        <div
+                          key={form.id}
+                          className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 p-3 sm:flex-row sm:items-center"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-semibold truncate">{form.title}</p>
+                              {needs > 0 ? (
+                                <Badge variant="destructive">{needs} need attention</Badge>
+                              ) : null}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {count} response{count === 1 ? '' : 's'}
+                              {typeof form.maxResponses === 'number' && form.maxResponses > 0
+                                ? ` · limit ${form.maxResponses}`
+                                : ''}
+                            </p>
+                          </div>
+                          <Button asChild className="rounded-xl shrink-0" size="sm">
+                            <Link href={`/admin/forms/${encodeURIComponent(form.id)}/responses`}>
+                              <Inbox className="h-3.5 w-3.5" />
+                              View responses
+                            </Link>
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : null}
 
           <section className="ui-section">
             <div className="ui-card space-y-3">
