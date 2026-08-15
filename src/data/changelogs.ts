@@ -1,17 +1,43 @@
 /**
  * In-app product changelog (Keep a Changelog + SemVer).
- *
- * Write like a product release note — not a commit diary:
- * - One entry per ship (bundle same-day / related work)
- * - Typically 3–8 user-facing bullets
- * - Skip internal refactors, reverts, and tiny polish unless users feel them
- *
- * SemVer: MAJOR breaking · MINOR features/bundles · PATCH fixes
+ * Style: `.cursor/rules/changelog-on-push.mdc` — member-facing, benefit-first, short.
  * New releases: add an object at the top of `changelogs`.
  */
 import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
+  {
+    version: 'v1.15.0',
+    subtitle: 'Community Apps',
+    date: 'August 15, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'One sign-in for em., NDC Preschool, Account, and Users.',
+      },
+      {
+        type: 'Added',
+        text: 'Switch apps anytime from the header.',
+      },
+      {
+        type: 'Added',
+        text: 'Updates — what’s new and feedback, available to everyone.',
+      },
+      {
+        type: 'Changed',
+        text: 'Preschool Worship now has Rosters, Setlists, Resources, and Order in one place.',
+      },
+      {
+        type: 'Improved',
+        text: 'You can adjust an existing profile photo (move and zoom), and photos no longer look removed when the installed app fails to load them briefly.',
+      },
+      {
+        type: 'Fixed',
+        text: '“Set up” notifications opens the Notifications settings tab, not your profile.',
+      },
+    ],
+  },
+
   {
     version: 'v1.14.3',
     subtitle: 'Form date field sizing',

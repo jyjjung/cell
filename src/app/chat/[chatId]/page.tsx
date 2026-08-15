@@ -5,9 +5,10 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import SystemChat from "@/components/admin/system-chat";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, use } from "react";
 
-export default function ChatDetailsPage({ params }: { params: { chatId: string } }) {
+export default function ChatDetailsPage(props: { params: Promise<{ chatId: string }> }) {
+  const params = use(props.params);
   const { isAdmin, loadingAuth } = useAuth();
   const router = useRouter();
 

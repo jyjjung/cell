@@ -28,7 +28,7 @@ export function useAllUsersSubscription(options: UseAllUsersOptions = {}) {
   const { enabled = true } = options;
   const { currentUser, loadingAuth } = useAuth();
   const pathname = usePathname();
-  const realtime = enabled && (options.realtime ?? pathname.startsWith('/admin/users'));
+  const realtime = enabled && (options.realtime ?? (pathname.startsWith('/users') || pathname.startsWith('/admin/users')));
   const [allUsers, setAllUsers] = useState<UserProfileData[]>(() => getCachedUsersDirectory());
   const [loading, setLoading] = useState(allUsers.length === 0);
   const [error, setError] = useState<Error | null>(null);

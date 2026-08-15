@@ -27,6 +27,9 @@ const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
   '/feedback': 'feedback',
   '/features': 'features',
   '/rosters': 'schedule',
+  '/ndcpc': 'home',
+  '/ndcpc/announcements': 'announcements',
+  '/ndcpc/chat': 'chat',
 };
 
 export function getNavLabelForPath(
@@ -42,6 +45,12 @@ export function getNavLabelForPath(
   if (pathname.startsWith('/admin/')) return t.admin as string;
   if (pathname.startsWith('/members/')) return t.members as string;
   if (pathname.startsWith('/rosters/')) return t.customRosters as string;
+  if (pathname.startsWith('/ndcpc/')) {
+    const segment = pathname.split('/').filter(Boolean).pop();
+    if (segment === 'ndcpc') return t.home as string;
+    if (!segment) return t.home as string;
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  }
 
   const segment = pathname.split('/').filter(Boolean).pop();
   if (!segment) return t.home as string;

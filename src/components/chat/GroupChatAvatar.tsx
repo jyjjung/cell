@@ -14,6 +14,7 @@ type GroupChatAvatarProps = {
   className?: string;
   iconClassName?: string;
   active?: boolean;
+  showHalo?: boolean;
 };
 
 /** Group list/header avatar: custom photo, else default Users icon. Pass avatar for DMs. */
@@ -23,13 +24,14 @@ export function GroupChatAvatar({
   className,
   iconClassName,
   active,
+  showHalo = true,
 }: GroupChatAvatarProps) {
   useEffect(() => {
     primeMediaUrl(photoURL);
   }, [photoURL]);
 
   if (avatar) {
-    return <PixelAvatar avatar={avatar} className={className} />;
+    return <PixelAvatar avatar={avatar} className={className} showHalo={showHalo} />;
   }
 
   if (photoURL) {

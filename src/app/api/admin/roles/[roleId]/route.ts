@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
-import { normalizeRoleCapabilities } from '@/lib/role-capabilities';
+import { normalizeRoleCapabilities, normalizeRoleScope } from '@/lib/role-capabilities';
 import { reconcileRoleMembers, reconcileUserRoleState } from '@/lib/server-role-state';
 
 async function getAuthorizedContext(request: NextRequest) {
@@ -16,10 +16,8 @@ async function getAuthorizedContext(request: NextRequest) {
   return { db, uid };
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { roleId: string } },
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ roleId: string }> }) {
+  const params = await props.params;
   try {
     const context = await getAuthorizedContext(request);
     if (!context) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -43,13 +41,19 @@ export async function PATCH(
     if (body.capabilities !== undefined) {
       updates.capabilities = normalizeRoleCapabilities(body.capabilities);
     }
+    if (body.appScope !== undefined) {
+      updates.appScope = normalizeRoleScope(body.appScope);
+    }
     await roleRef.update(updates);
 
-    const assignedUsers = await context.db
-      .collection('users')
-      .where('roleIds', 'array-contains', params.roleId)
-      .get();
-    for (const userDoc of assignedUsers.docs) {
+    const assignedUsers = await context.db.collection('users').get();
+    const affectedUsers = assignedUsers.docs.filter((userDoc) => {
+      const data = userDoc.data();
+      const cellIds = Array.isArray(data.roleIds) ? data.roleIds : [];
+      const ndcpcIds = Array.isArray(data.ndcpcRoleIds) ? data.ndcpcRoleIds : [];
+      return cellIds.includes(params.roleId) || ndcpcIds.includes(params.roleId);
+    });
+    for (const userDoc of affectedUsers) {
       await reconcileUserRoleState(context.db, userDoc.id);
     }
 
@@ -57,17 +61,15 @@ export async function PATCH(
     if (typeof roleData.chatId === 'string') {
       await reconcileRoleMembers(context.db, params.roleId);
     }
-    return NextResponse.json({ success: true, reconciledUsers: assignedUsers.size });
+    return NextResponse.json({ success: true, reconciledUsers: affectedUsers.length });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Could not update role.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { roleId: string } },
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ roleId: string }> }) {
+  const params = await props.params;
   try {
     const context = await getAuthorizedContext(request);
     if (!context) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -77,10 +79,13 @@ export async function DELETE(
     if (!roleSnap.exists) return NextResponse.json({ error: 'Role not found.' }, { status: 404 });
     const role = roleSnap.data()!;
 
-    const assignedUsers = await context.db
-      .collection('users')
-      .where('roleIds', 'array-contains', params.roleId)
-      .get();
+    const assignedUsers = await context.db.collection('users').get();
+    const affectedUsers = assignedUsers.docs.filter((userDoc) => {
+      const data = userDoc.data();
+      const cellIds = Array.isArray(data.roleIds) ? data.roleIds : [];
+      const ndcpcIds = Array.isArray(data.ndcpcRoleIds) ? data.ndcpcRoleIds : [];
+      return cellIds.includes(params.roleId) || ndcpcIds.includes(params.roleId);
+    });
     await roleRef.update({
       status: 'archived',
       capabilities: [],
@@ -90,11 +95,26 @@ export async function DELETE(
       archivedBy: context.uid,
       updatedAt: FieldValue.serverTimestamp(),
     });
-    for (const userDoc of assignedUsers.docs) {
+    for (const userDoc of affectedUsers) {
       await reconcileUserRoleState(context.db, userDoc.id);
     }
 
-    return NextResponse.json({ success: true, reconciledUsers: assignedUsers.size });
+    // Role archive must not leave an orphan circle with stale members.
+    if (typeof role.chatId === 'string') {
+      const chatRef = context.db.collection('chats').doc(role.chatId);
+      const chatSnap = await chatRef.get();
+      if (chatSnap.exists) {
+        await chatRef.update({
+          members: [],
+          memberInfo: {},
+          admins: [],
+          lastMessageText: 'Role archived — circle closed.',
+          lastMessageSentAt: FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, reconciledUsers: affectedUsers.length });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Could not archive role.';
     return NextResponse.json({ error: message }, { status: 500 });

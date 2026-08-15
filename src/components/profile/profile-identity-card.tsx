@@ -13,10 +13,15 @@ import {
 } from "@/components/ui/dialog";
 import { PixelAvatar } from "@/components/avatar/PixelAvatar";
 import { AvatarEditor } from "@/components/avatar/AvatarEditor";
+import { NdcpcPhotoAvatarEditor } from "@/components/avatar/NdcpcPhotoAvatarEditor";
 import type { AvatarData, AppUser } from "@/types";
 
 type ProfileIdentityCardProps = {
   user: AppUser;
+  avatar: AvatarData;
+  appLabel?: string;
+  showHalo?: boolean;
+  showIdentity?: boolean;
   avatarInEditor: AvatarData;
   isAvatarEditorOpen: boolean;
   isSaving: boolean;
@@ -33,10 +38,15 @@ type ProfileIdentityCardProps = {
     avatarEditingLocked?: string;
   };
   avatarEditingDisabled?: boolean;
+  editorVariant?: 'cell' | 'ndcpc-photo';
 };
 
 export function ProfileIdentityCard({
   user,
+  avatar,
+  appLabel,
+  showHalo = true,
+  showIdentity = true,
   avatarInEditor,
   isAvatarEditorOpen,
   isSaving,
@@ -45,6 +55,7 @@ export function ProfileIdentityCard({
   onAvatarSave,
   labels,
   avatarEditingDisabled = false,
+  editorVariant = 'cell',
 }: ProfileIdentityCardProps) {
   return (
     <motion.section
@@ -53,15 +64,21 @@ export function ProfileIdentityCard({
       transition={{ delay: 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col items-center text-center gap-4 py-2"
     >
+      {appLabel ? (
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{appLabel}</p>
+      ) : null}
+
       <div className="h-24 w-24 shrink-0">
-        <PixelAvatar avatar={user.avatar} className="h-24 w-24" />
+        <PixelAvatar avatar={avatar} showHalo={showHalo} className="h-24 w-24" />
       </div>
 
-      <div className="min-w-0 space-y-1">
-        <p className="text-xl font-semibold tracking-tight">{user.displayName}</p>
-        <p className="text-sm text-muted-foreground">{user.email}</p>
-        <p className="text-xs text-muted-foreground/70">{labels.profileNameChangeAdminOnly}</p>
-      </div>
+      {showIdentity ? (
+        <div className="min-w-0 space-y-1">
+          <p className="text-xl font-semibold tracking-tight">{user.displayName}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <p className="text-xs text-muted-foreground/70">{labels.profileNameChangeAdminOnly}</p>
+        </div>
+      ) : null}
 
       <Dialog open={isAvatarEditorOpen} onOpenChange={onAvatarEditorOpenChange}>
         {avatarEditingDisabled ? (
@@ -86,7 +103,11 @@ export function ProfileIdentityCard({
             <DialogDescription>{labels.customizeAvatarDesc}</DialogDescription>
           </DialogHeader>
           <div className="py-2">
-            <AvatarEditor value={avatarInEditor} onChange={onAvatarInEditorChange} />
+            {editorVariant === 'ndcpc-photo' ? (
+              <NdcpcPhotoAvatarEditor value={avatarInEditor} onChange={onAvatarInEditorChange} />
+            ) : (
+              <AvatarEditor value={avatarInEditor} onChange={onAvatarInEditorChange} />
+            )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => onAvatarEditorOpenChange(false)}>

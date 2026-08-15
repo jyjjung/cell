@@ -2,37 +2,38 @@ import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'em.',
-    short_name: 'em.',
-    description: 'A simple app for community and faith.',
+    name: 'NDC Community Apps',
+    short_name: 'NDC Community',
+    description: 'Church member apps — cell group, preschool volunteers, and more.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a0a0a',
-    theme_color: '#0a0a0a',
+    background_color: '#161616',
+    theme_color: '#161616',
     orientation: 'portrait-primary',
     icons: [
       // Raster icons — required by iOS Safari and Android for home screen
+      // v5 cache-bust: installed PWAs only refresh icons when the URL changes
       {
-        src: '/icon-192x192-v4.png',
+        src: '/icon-192x192-v5.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512-v4.png',
+        src: '/icon-512x512-v5.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512-v4.png',
+        src: '/icon-512x512-v5.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
       },
       // SVG fallback for modern browsers
       {
-        src: '/icon-v4.svg',
+        src: '/icon-v5.svg',
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'any',

@@ -6,21 +6,15 @@ import { useUsersById } from '@/hooks/use-all-users';
 import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
 import { useThreadMessages } from '@/hooks/useThreadMessages';
 import { downloadChatImage } from '@/lib/chat-image-download';
+import { resolveChatAvatar } from '@/lib/chat-utils';
 import { translations } from '@/lib/translations';
 import { Chat, ChatMemberInfo } from '@/types';
-import { differenceInDays, format, isToday, isYesterday } from 'date-fns';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ChatImageGallery } from './ImageLightbox';
+import { ChatTimeSeparator, formatChatMessageDate } from './ChatTimeSeparator';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
-
-function formatMessageDate(date: Date) {
-  if (isToday(date)) return `Today ${format(date, 'HH:mm')}`;
-  if (isYesterday(date)) return `Yesterday ${format(date, 'HH:mm')}`;
-  if (differenceInDays(new Date(), date) < 7) return format(date, 'EEEE HH:mm');
-  return format(date, 'MMM d, HH:mm');
-}
 
 export default function ThreadWindow({ 
   chatId, 
@@ -41,6 +35,7 @@ export default function ThreadWindow({
   const scrollRef = useChatScrollLoadOlder({ onLoadOlder: loadOlderMessages, hasMoreOlder, loadingOlder });
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
   const t = translations[currentUser?.preferredLanguage || 'en'];
+  const showHalo = chat.appScope !== 'ndcpc';
 
   const threadImages = useMemo(() => {
     const items = [...messages]
@@ -66,7 +61,11 @@ export default function ThreadWindow({
       const senderProfile = usersById.get(msg.senderId);
       const senderInfoFromChat = chat?.memberInfo[msg.senderId] ?? null;
       const senderForBubble: ChatMemberInfo | null = senderProfile 
-          ? { firstName: senderProfile.firstName, lastName: senderProfile.lastName, avatar: senderProfile.avatar as any }
+          ? {
+              firstName: senderProfile.firstName,
+              lastName: senderProfile.lastName,
+              avatar: resolveChatAvatar(senderProfile, senderInfoFromChat, chat.appScope) as any,
+            }
           : senderInfoFromChat;
 
       content.push(
@@ -79,6 +78,7 @@ export default function ThreadWindow({
           toggleReaction={toggleReaction} 
           onDelete={deleteMessage}
           onOpenImage={setOpenImageUrl}
+          showHalo={showHalo}
         />
       );
 
@@ -86,22 +86,25 @@ export default function ThreadWindow({
         const diff = msg.createdAt.toMillis() - olderMsg.createdAt.toMillis();
         if (diff > 3600000) {
           content.push(
-            <div key={`time-${msg.id}`} className="py-3 flex justify-center w-full">
-              <span className="text-xs font-medium text-muted-foreground">
-                {formatMessageDate(msg.createdAt.toDate())}
-              </span>
-            </div>
+            <ChatTimeSeparator
+              key={`time-${msg.id}`}
+              label={formatChatMessageDate(msg.createdAt.toDate())}
+            />
           );
         }
       }
     }
     return content;
-  }, [messages, chat, usersById, toggleReaction, parentMessage, deleteMessage]);
+  }, [messages, chat, usersById, toggleReaction, parentMessage, deleteMessage, showHalo]);
 
   const parentSenderProfile = parentMessage ? usersById.get(parentMessage.senderId) : undefined;
   const parentSenderInfo = parentMessage && chat ? chat.memberInfo[parentMessage.senderId] : null;
   const parentSenderForBubble = parentSenderProfile
-      ? { firstName: parentSenderProfile.firstName, lastName: parentSenderProfile.lastName, avatar: parentSenderProfile.avatar as any }
+      ? {
+          firstName: parentSenderProfile.firstName,
+          lastName: parentSenderProfile.lastName,
+          avatar: resolveChatAvatar(parentSenderProfile, parentSenderInfo, chat.appScope) as any,
+        }
       : parentSenderInfo;
 
   return (
@@ -146,6 +149,7 @@ export default function ThreadWindow({
                           usersById={usersById}
                           toggleReaction={toggleReaction}
                           onOpenImage={setOpenImageUrl}
+                          showHalo={showHalo}
                           onDelete={(id) => {
                              onDeleteParentMessage?.(id);
                              onClose();

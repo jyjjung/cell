@@ -160,7 +160,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <Button asChild variant="ghost" className="rounded-xl -ml-2 w-fit">
-            <Link href="/admin/forms">
+            <Link href="/forms">
               <ArrowLeft className="h-4 w-4" />
               Forms
             </Link>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { LoadingSpinner, PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,8 @@ import { formIsAcceptingResponses } from '@/lib/forms/lifecycle';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 
-export default function PublicFormPage({ params }: { params: { publicToken: string } }) {
+export default function PublicFormPage(props: { params: Promise<{ publicToken: string }> }) {
+  const params = use(props.params);
   const { currentUser, loadingAuth } = useAuth();
   const { toast } = useToast();
 

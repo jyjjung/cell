@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
@@ -25,7 +25,8 @@ import {
 } from '@/components/ui/alert-dialog';
 
 /** Guest / member view of a single response — edit answers only (no CSV/PDF report). */
-export default function GuestResponsePage({ params }: { params: { formId: string; responseId: string } }) {
+export default function GuestResponsePage(props: { params: Promise<{ formId: string; responseId: string }> }) {
+  const params = use(props.params);
   const router = useRouter();
   const { toast } = useToast();
   const searchParams = useSearchParams();

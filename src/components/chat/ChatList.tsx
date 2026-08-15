@@ -22,7 +22,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
 import { formatDistanceToNow } from "date-fns";
 
-export default function ChatList() {
+export type ChatListAppScope = 'cell' | 'ndcpc';
+
+type ChatListProps = {
+  /** Which app's chats to show. Default: cell (excludes preschool). */
+  appScope?: ChatListAppScope;
+  /** Base path for chat links. Default `/chat`. */
+  basePath?: string;
+  /** Show new-chat / photos / links controls. Default true for cell. */
+  showTools?: boolean;
+};
+
+export default function ChatList({
+  appScope = 'cell',
+  basePath = '/chat',
+  showTools,
+}: ChatListProps) {
+  const toolsVisible = showTools ?? appScope === 'cell';
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
   const { currentUser, isAdmin } = useAuth();
@@ -51,7 +67,8 @@ export default function ChatList() {
 
       return {
         name: fullName,
-        avatarData: resolveChatAvatar(peerFullProfile, peerInfoFromChat),
+        avatarData: resolveChatAvatar(peerFullProfile, peerInfoFromChat, appScope),
+        showHalo: appScope !== 'ndcpc',
       };
     }
 
@@ -60,13 +77,18 @@ export default function ChatList() {
         name: chat.name || t.unnamedCircle,
         avatarData: null,
         photoURL: chat.photoURL || null,
+        showHalo: appScope !== 'ndcpc',
       };
     }
 
     return null;
   };
 
-  const filteredChats = chats.filter((chat) => !!getChatDetails(chat));
+  const filteredChats = chats
+    .filter((chat) =>
+      appScope === 'ndcpc' ? chat.appScope === 'ndcpc' : chat.appScope !== 'ndcpc',
+    )
+    .filter((chat) => !!getChatDetails(chat));
 
   const handleLinkClick = (path: string) => {
     if (pathname !== path) {
@@ -74,34 +96,40 @@ export default function ChatList() {
     }
   };
 
+  const chatHref = (chatId: string) => `${basePath}/${chatId}`;
+
   return (
     <div className="page-container stack-gap-sm pb-20">
       <NavPageHeader
         action={
-          <Button
-            onClick={() => setCreateDialogOpen(true)}
-            className="h-8 rounded-lg px-3 text-sm"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t.newChat}
-          </Button>
+          toolsVisible ? (
+            <Button
+              onClick={() => setCreateDialogOpen(true)}
+              className="h-8 rounded-lg px-3 text-sm"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t.newChat}
+            </Button>
+          ) : undefined
         }
       />
 
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
-          <Link href="/chat/photos" onClick={() => handleLinkClick('/chat/photos')}>
-            <Images className="mr-2 h-4 w-4" />
-            {t.allPhotos}
-          </Link>
-        </Button>
-        <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
-          <Link href="/chat/links" onClick={() => handleLinkClick('/chat/links')}>
-            <Link2 className="mr-2 h-4 w-4" />
-            {t.allLinks}
-          </Link>
-        </Button>
-      </div>
+      {toolsVisible ? (
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
+            <Link href="/chat/photos" onClick={() => handleLinkClick('/chat/photos')}>
+              <Images className="mr-2 h-4 w-4" />
+              {t.allPhotos}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
+            <Link href="/chat/links" onClick={() => handleLinkClick('/chat/links')}>
+              <Link2 className="mr-2 h-4 w-4" />
+              {t.allLinks}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
       <div className="relative">
         {loading ? (
@@ -112,12 +140,16 @@ export default function ChatList() {
           <EmptyState
             icon={MessageCircle}
             title={t.silenceInTheAir}
-            description={t.startConversation}
+            description={
+              appScope === 'ndcpc'
+                ? 'Role chats appear here when you are assigned a preschool role.'
+                : t.startConversation
+            }
           />
         ) : (
           <div className="overflow-hidden border-y border-border bg-background">
             <AnimatePresence mode="popLayout">
-              {isAdmin && (
+              {toolsVisible && isAdmin && (
                 <motion.div key="system-assistant" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
                   <Link
                     href={`/chat/system`}
@@ -145,7 +177,8 @@ export default function ChatList() {
                 const details = getChatDetails(chat);
                 if (!details) return null;
 
-                const isActive = pathname === `/chat/${chat.id}`;
+                const href = chatHref(chat.id);
+                const isActive = pathname === href;
                 const isUnread = Boolean(
                   currentUser && !isActive && isChatUnread(chat, currentUser.uid),
                 );
@@ -164,8 +197,8 @@ export default function ChatList() {
                     className="w-full"
                   >
                     <Link
-                      href={`/chat/${chat.id}`}
-                      onClick={() => handleLinkClick(`/chat/${chat.id}`)}
+                      href={href}
+                      onClick={() => handleLinkClick(href)}
                       className={cn(
                         "flex h-16 w-full items-center gap-3 px-3 transition-colors hover:bg-muted/40",
                         !isLast && "border-b border-border",
@@ -175,7 +208,12 @@ export default function ChatList() {
                       <div className="relative h-10 w-10 shrink-0">
                         <div className="h-full w-full overflow-hidden rounded-full bg-muted">
                           {details.avatarData || details.photoURL ? (
-                            <GroupChatAvatar avatar={details.avatarData} photoURL={details.photoURL} active={isActive} />
+                            <GroupChatAvatar
+                              avatar={details.avatarData}
+                              photoURL={details.photoURL}
+                              active={isActive}
+                              showHalo={details.showHalo !== false}
+                            />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
                               <MessageCircle className="h-5 w-5 text-muted-foreground" />
@@ -219,7 +257,7 @@ export default function ChatList() {
           </div>
         )}
       </div>
-      {isCreateDialogOpen && (
+      {toolsVisible && isCreateDialogOpen && (
         <CreateChatDialog isOpen={isCreateDialogOpen} onOpenChange={setCreateDialogOpen} />
       )}
     </div>

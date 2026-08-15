@@ -18,6 +18,7 @@ import { useChatsSubscription } from '@/hooks/use-chats-subscription';
 import { getPrivateChatId } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
+import { resolveAvatarForApp } from '@/lib/user-avatars';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -44,13 +45,13 @@ export function useChats() {
     const currentUserInfo: ChatMemberInfo = {
       firstName: currentUser.firstName!,
       lastName: currentUser.lastName!,
-      avatar: currentUser.avatar || DEFAULT_AVATAR_DATA,
+      avatar: resolveAvatarForApp(currentUser, 'cell') || DEFAULT_AVATAR_DATA,
     };
 
     const peerUserInfo: ChatMemberInfo = {
       firstName: peerUser.firstName,
       lastName: peerUser.lastName,
-      avatar: peerUser.avatar || DEFAULT_AVATAR_DATA,
+      avatar: resolveAvatarForApp(peerUser, 'cell') || DEFAULT_AVATAR_DATA,
     };
 
     const newChat = {
@@ -95,7 +96,7 @@ export function useChats() {
       memberInfo[member.uid] = {
         firstName: member.firstName!,
         lastName: member.lastName!,
-        avatar: member.avatar || DEFAULT_AVATAR_DATA,
+        avatar: resolveAvatarForApp(member, 'cell') || DEFAULT_AVATAR_DATA,
       };
     });
 

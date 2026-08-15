@@ -13,12 +13,12 @@ async function requireUid(request: NextRequest): Promise<string> {
   }
 }
 
-type RouteContext = { params: { docId: string; commentId: string } };
+type RouteContext = { params: Promise<{ docId: string; commentId: string }> };
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const uid = await requireUid(request);
-    const { docId, commentId } = context.params;
+    const { docId, commentId } = (await context.params);
     const adminDb = getAdminDb(getAdminApp());
     const docSnap = await adminDb.collection('docs').doc(docId).get();
     if (!docSnap.exists) {

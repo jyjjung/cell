@@ -11,6 +11,25 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
     image.src = url
   })
 
+/**
+ * Load a remote photo into a blob URL for the cropper.
+ * Uses `cache: 'reload'` so a poisoned PWA/service-worker media cache cannot block edit.
+ * Caller should revoke the returned blob URL when done (cancel / unmount / after save).
+ */
+export async function loadImageSrcForCrop(url: string): Promise<string> {
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url
+
+  const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'reload' })
+  if (!res.ok) {
+    throw new Error(`Failed to load photo (${res.status})`)
+  }
+  const blob = await res.blob()
+  if (!blob.type.startsWith('image/')) {
+    throw new Error('That file is not an image.')
+  }
+  return URL.createObjectURL(blob)
+}
+
 function getRadianAngle(degreeValue: number) {
   return (degreeValue * Math.PI) / 180
 }

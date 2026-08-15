@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       userId: notifyUserId,
       title: 'New signup pending approval',
       message: `${displayName} (${email}) signed up and is waiting for approval.`,
-      relatedUrl: '/admin/users',
+      relatedUrl: '/users',
       type: 'reminder',
       dedupeId: `signup-pending-${userId}-${notifyUserId}`,
     });

@@ -21,7 +21,11 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (isMounted && !loadingAuth && currentUser) {
-      router.push('/'); 
+      if (currentUser.isApproved || currentUser.isAdmin) {
+        router.push('/');
+      } else {
+        router.push('/pending-approval');
+      }
     }
   }, [currentUser, loadingAuth, router, isMounted]);
 

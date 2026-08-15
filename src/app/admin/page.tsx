@@ -9,10 +9,8 @@ import { Label } from "@/components/ui/label";
 import {
   Lock,
   Shield,
-  Users,
   Calendar,
   Megaphone,
-  ShieldCheck,
   ListTodo,
   ListChecks,
   ClipboardList,
@@ -25,12 +23,10 @@ import {
 } from "lucide-react";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { PageHeader } from "@/components/ui/page-layout";
-import { useAllUsers } from "@/hooks/use-all-users";
 import { useQTRoster } from "@/hooks/useQTRoster";
 import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
 import { translations } from "@/lib/translations";
-import { hasCapability } from "@/lib/role-capabilities";
 import { ReminderCronHealth } from "@/components/admin/reminder-cron-health";
 
 export default function AdminHubPage() {
@@ -42,17 +38,12 @@ export default function AdminHubPage() {
   const [isMounted, setIsMounted] = useState(false);
   const t = translations[currentUser?.preferredLanguage || "en"];
 
-  const { allUsers } = useAllUsers();
   const { roster } = useQTRoster();
   const { notifications } = useNotifications();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const pendingApprovals = allUsers.filter(
-    (user) => !user.isApproved && !hasCapability(user.capabilityKeys, "app.admin"),
-  ).length;
 
   const currentMonth = new Date();
   const unassignedRosterDays = roster.filter((r) => {
@@ -134,8 +125,6 @@ export default function AdminHubPage() {
   ];
 
   const allSections = [
-    { title: t.adminUsers, href: "/admin/users", icon: Users, badge: pendingApprovals },
-    { title: t.adminRoles, href: "/admin/groups", icon: ShieldCheck },
     { title: t.forms, href: "/admin/forms", icon: FileText },
     { title: t.adminBiblePlan, href: "/admin/bible-plan", icon: BookOpen },
     { title: t.adminMemorization, href: "/admin/memory-verses", icon: Brain },

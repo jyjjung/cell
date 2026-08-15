@@ -83,6 +83,7 @@
     --app-control-height-sm: 2.25rem;
     --app-control-height-md: 2.75rem;
     --app-control-height-lg: 3rem;
+    --font-literata: ui-serif, Georgia, "Times New Roman", serif;
     --bible-font-family: var(--font-literata), ui-serif, Georgia, "Times New Roman", serif;
     --bible-font-size: 1.06rem;
     --bible-line-height: 1.85;
@@ -446,7 +447,7 @@
   }
 
   .app-header-bar {
-    @apply app-chrome-header justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-5;
+    @apply grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-5;
   }
 
   .app-sidebar-header {

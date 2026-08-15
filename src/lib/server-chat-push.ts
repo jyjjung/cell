@@ -203,6 +203,8 @@ export async function deliverChatPush(
     const title = chat.type === 'group' ? chat.name || 'Group Chat' : senderName;
     const bodyText = chat.type === 'group' ? `${senderName}: ${messageText}` : messageText;
     const notificationTag = String(messageId);
+    const chatDeepLink =
+      chat.appScope === 'ndcpc' ? `/ndcpc/chat/${chat.id}` : `/chat/${chat.id}`;
 
     let recipientsWithTokens = 0;
 
@@ -223,10 +225,10 @@ export async function deliverChatPush(
         const dataPayload: Record<string, unknown> = {
           title,
           body: bodyText,
-          icon: '/icon-192x192-v4.png',
+          icon: '/icon-192x192-v5.png',
           tag: notificationTag,
           messageId: notificationTag,
-          link: `/chat/${chat.id}`,
+          link: chatDeepLink,
         };
         if (dataBadge != null) {
           dataPayload.badge = dataBadge;
@@ -250,7 +252,7 @@ export async function deliverChatPush(
             payload: { aps },
           },
           webpush: {
-            fcm_options: { link: `/chat/${chat.id}` },
+            fcm_options: { link: chatDeepLink },
           },
         };
 

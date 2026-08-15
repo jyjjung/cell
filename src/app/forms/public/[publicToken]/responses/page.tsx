@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import type { FormDefinition, FormResponse } from '@/types/forms';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
@@ -13,7 +13,8 @@ const PAGE_SIZE = 50;
 
 type PublicFormSlice = Pick<FormDefinition, 'id' | 'title' | 'description' | 'fields' | 'responseCount'>;
 
-export default function PublicFormResponsesPage({ params }: { params: { publicToken: string } }) {
+export default function PublicFormResponsesPage(props: { params: Promise<{ publicToken: string }> }) {
+  const params = use(props.params);
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

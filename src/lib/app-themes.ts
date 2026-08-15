@@ -43,13 +43,8 @@ export type AppThemeId =
   | 'classic'
   | 'ocean'
   | 'forest'
-  | 'mint'
   | 'sunset'
-  | 'rose'
-  | 'lavender'
-  | 'slate'
-  | 'monochrome'
-  | 'parchment';
+  | 'monochrome';
 
 /** Locked brand accent — hue + saturation define theme identity. */
 type AppThemeAccent = {
@@ -102,13 +97,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     dark: { h: 200, s: 28, bg: 9, card: 12 },
   },
   {
-    id: 'mint',
-    label: 'Mint',
-    accent: { h: 173, s: 80, lightL: 36, darkL: 55 },
-    light: { h: 168, s: 32, bg: 96, card: 100 },
-    dark: { h: 170, s: 24, bg: 9, card: 12 },
-  },
-  {
     id: 'forest',
     label: 'Forest',
     accent: { h: 142, s: 72, lightL: 34, darkL: 52 },
@@ -123,27 +111,6 @@ const THEME_LIST: AppThemeDefinition[] = [
     dark: { h: 22, s: 26, bg: 9, card: 12 },
   },
   {
-    id: 'rose',
-    label: 'Rose',
-    accent: { h: 346, s: 77, lightL: 46, darkL: 62 },
-    light: { h: 350, s: 34, bg: 97, card: 100 },
-    dark: { h: 345, s: 24, bg: 9, card: 12 },
-  },
-  {
-    id: 'lavender',
-    label: 'Lavender',
-    accent: { h: 262, s: 83, lightL: 52, darkL: 68 },
-    light: { h: 265, s: 30, bg: 97, card: 100 },
-    dark: { h: 265, s: 26, bg: 9, card: 12 },
-  },
-  {
-    id: 'slate',
-    label: 'Slate',
-    accent: { h: 215, s: 25, lightL: 40, darkL: 72 },
-    light: { h: 215, s: 14, bg: 94, card: 99 },
-    dark: { h: 215, s: 12, bg: 10, card: 13 },
-  },
-  {
     id: 'monochrome',
     label: 'Monochrome',
     accent: { h: 240, s: 6, lightL: 12, darkL: 96 },
@@ -151,14 +118,16 @@ const THEME_LIST: AppThemeDefinition[] = [
     dark: { h: 240, s: 5, bg: 6, card: 9 },
     nearAchromatic: true,
   },
-  {
-    id: 'parchment',
-    label: 'Parchment',
-    accent: { h: 30, s: 45, lightL: 36, darkL: 58 },
-    light: { h: 38, s: 48, bg: 95, card: 99 },
-    dark: { h: 32, s: 18, bg: 9, card: 12 },
-  },
 ];
+
+/** Retired theme ids → nearest kept palette. */
+const LEGACY_THEME_ALIASES: Record<string, AppThemeId> = {
+  mint: 'forest',
+  rose: 'sunset',
+  lavender: 'classic',
+  slate: 'monochrome',
+  parchment: 'classic',
+};
 
 const APP_THEMES: Record<AppThemeId, AppThemeDefinition> = Object.fromEntries(
   THEME_LIST.map((t) => [t.id, t]),
@@ -339,6 +308,8 @@ function isAppThemeId(value: string | undefined | null): value is AppThemeId {
 export function normalizeAppThemeId(
   value: string | undefined | null,
 ): AppThemeId {
-  return isAppThemeId(value) ? value : DEFAULT_APP_THEME_ID;
+  if (isAppThemeId(value)) return value;
+  if (value && LEGACY_THEME_ALIASES[value]) return LEGACY_THEME_ALIASES[value]!;
+  return DEFAULT_APP_THEME_ID;
 }
 

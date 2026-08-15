@@ -8,8 +8,9 @@ import type { FormAnswerValue } from '@/types/forms';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { formId: string; responseId: string } },
+  props: { params: Promise<{ formId: string; responseId: string }> }
 ) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -36,8 +37,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { formId: string; responseId: string } },
+  props: { params: Promise<{ formId: string; responseId: string }> }
 ) {
+  const params = await props.params;
   try {
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
