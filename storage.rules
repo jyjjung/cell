@@ -6,6 +6,10 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
     match /avatars/{fileName} {
       allow read: if isSignedIn();
       allow write: if isSignedIn()
@@ -21,7 +25,7 @@ service firebase.storage {
 
     match /worshipChordSheets/{songId}/{fileName} {
       // Any signed-in user may upload/read chord sheets (sheet music).
-      // Capability checks via Firestore were blocking uploads for eligible members.
+      // Do not gate on worship.manage — capability checks block eligible members.
       allow read, write: if isSignedIn();
     }
 

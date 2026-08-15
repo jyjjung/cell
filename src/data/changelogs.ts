@@ -7,6 +7,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.1',
+    subtitle: 'Open chord uploads',
+    date: 'August 15, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Any signed-in member can open Worship and upload chord sheets to the song library.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Chord sheet uploads no longer need the worship team role.',
+      },
+    ],
+  },
+  {
     version: 'v1.15.0',
     subtitle: 'Community Apps',
     date: 'August 15, 2026',

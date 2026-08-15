@@ -41,7 +41,7 @@ export function getSidebarNavForApp(
     labels: Record<string, string>;
   },
 ): AppNavItem[] {
-  const { isAdmin, isWorshipTeam, labels } = opts;
+  const { labels } = opts;
 
   switch (app) {
     case 'cell':
@@ -50,9 +50,7 @@ export function getSidebarNavForApp(
         { href: '/bible-checklist', label: labels.readingPlan, icon: BookOpen },
         { href: cellPath('/chat'), label: labels.chat, icon: MessageCircle, requiresAuth: true, badgeKey: 'chat' },
         { href: '/events', label: labels.schedule, icon: CalendarCheck },
-        ...(isAdmin || isWorshipTeam
-          ? [{ href: '/worship', label: labels.worshipPortal, icon: Music }]
-          : []),
+        { href: '/worship', label: labels.worshipPortal, icon: Music, requiresAuth: true },
         { href: '/media', label: labels.links, icon: Library },
         { href: '/docs', label: labels.docs, icon: FileText, requiresAuth: true },
         { href: '/forms', label: labels.forms, icon: FileText },
