@@ -475,10 +475,6 @@ function bufferHasLyrics(buffer: string): boolean {
 export function coalescePickupChords(blocks: ChartBlock[]): ChartBlock[] {
   const out: ChartBlock[] = [];
   let pickups: ChartLyricPart[] = [];
-  const isPickup = (block: ChartBlock) =>
-    block.type === 'lyric'
-    && block.parts.length > 0
-    && block.parts.every((part) => Boolean(part.chord) && !part.text.trim());
 
   const flushPickups = () => {
     if (pickups.length === 0) return;
@@ -487,7 +483,11 @@ export function coalescePickupChords(blocks: ChartBlock[]): ChartBlock[] {
   };
 
   for (const block of blocks) {
-    if (isPickup(block)) {
+    if (
+      block.type === 'lyric'
+      && block.parts.length > 0
+      && block.parts.every((part) => Boolean(part.chord) && !part.text.trim())
+    ) {
       pickups.push(...block.parts.map((part) => ({ chord: part.chord, text: '' })));
       continue;
     }
