@@ -10,12 +10,13 @@ function song(sheets: Partial<SongChordSheet>[]): WorshipSong {
       id: sheet.id ?? `sheet-${i}`,
       key: sheet.key ?? 'E',
       imageUrl: sheet.imageUrl ?? '',
+      storagePath: sheet.storagePath ?? '',
       uploadedBy: 'u1',
       uploadedAt: {} as SongChordSheet['uploadedAt'],
       kind: sheet.kind,
       sourceText: sheet.sourceText,
     })),
-  } as WorshipSong;
+  } as unknown as WorshipSong;
 }
 
 describe('chordSheetsForKey', () => {

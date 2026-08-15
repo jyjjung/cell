@@ -7,6 +7,7 @@ import {
   splitChartBodyColumns,
   transposeBlocks,
   transposeChord,
+  type ChartBlock,
 } from './chord-chart';
 
 const SAMPLE = `Thank God I'm Free
@@ -309,7 +310,7 @@ I'm free
     const [left, right] = splitChartBodyColumns(body);
     const leftHasVerse = left.some((b) => b.type === 'section' && b.text === 'VERSE 1');
     const rightHasVerse = right.some((b) => b.type === 'section' && b.text === 'VERSE 1');
-    const verseText = (col: typeof body) => col
+    const verseText = (col: ChartBlock[]) => col
       .filter((b) => b.type === 'lyric')
       .map((b) => b.type === 'lyric' ? b.parts.map((p) => p.text).join('') : '')
       .join(' ');
