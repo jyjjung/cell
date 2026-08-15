@@ -114,6 +114,19 @@ const nextConfig = {
       ),
     },
   },
+  /**
+   * Cell home is `/cell`. Feature pages still live at root (`/chat`, `/events`, …).
+   * Rewrite `/cell/<feature>` → `/<feature>` so sidebar and bookmarks under `/cell/…` work.
+   * `:path+` requires at least one segment, so exact `/cell` keeps `app/cell/page.tsx`.
+   */
+  async rewrites() {
+    return [
+      {
+        source: '/cell/:path+',
+        destination: '/:path+',
+      },
+    ];
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

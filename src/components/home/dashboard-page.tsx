@@ -11,6 +11,7 @@ import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import { useEvents } from '@/hooks/use-events';
 import { useChats } from '@/hooks/useChats';
 import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
+import { chatBelongsToApp } from '@/lib/chat-utils';
 import { useCleaningRoster } from '@/hooks/useCleaningRoster';
 import { useQTRoster } from '@/hooks/useQTRoster';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -173,7 +174,10 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   }, [plan]);
 
   const unreadChatCount = useMemo(
-    () => sumChatUnreadMessageCounts(chats, currentUser.uid),
+    () => sumChatUnreadMessageCounts(
+      chats.filter((chat) => chatBelongsToApp(chat, 'cell')),
+      currentUser.uid,
+    ),
     [chats, currentUser.uid],
   );
 
@@ -446,7 +450,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
         title={`${getGreeting(lang)}, ${displayName}`}
         description={dateLabel}
         action={unreadChatCount > 0 ? (
-          <Button variant="outline" size="sm" onClick={() => go('/chat')}>
+          <Button variant="outline" size="sm" onClick={() => go('/cell/chat')}>
             <MessageCircle className="mr-2 h-4 w-4" />
             {t.unreadMessagesLine.replace('{count}', String(unreadChatCount))}
           </Button>

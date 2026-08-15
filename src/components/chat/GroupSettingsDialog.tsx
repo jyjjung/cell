@@ -35,7 +35,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
   const { currentUser, isAdmin } = useAuth();
   const { renameGroup, leaveGroup, deleteChat, addMembers, removeMember, updateGroupPhoto, removeGroupPhoto } = useChat(
     chat.id,
-    { backHref: chat.appScope === 'ndcpc' ? '/ndcpc/chat' : '/chat' },
+    { backHref: chat.appScope === 'ndcpc' ? '/ndcpc/chat' : '/cell/chat' },
   );
   const { toast } = useToast();
   const { allUsers, loading: loadingUsers } = useAllUsers();

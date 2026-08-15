@@ -6,12 +6,12 @@ import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMessages } from '@/hooks/useMessages';
 import { useChatPhotoMessages } from '@/hooks/use-chat-photo-messages';
-import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar } from '@/lib/chat-utils';
+import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar, chatBelongsToApp, chatHrefForApp } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useWorshipData, WorshipDataProvider } from '@/contexts/worship-data-context';
@@ -54,7 +54,7 @@ const AddChordSheetDialog = dynamic(
 );
 export default function ChatWindow({
   chatId,
-  backHref = '/chat',
+  backHref = '/cell/chat',
 }: {
   chatId: string;
   backHref?: string;
@@ -145,6 +145,7 @@ function ChatWindowBody({
   } = messageState;
   const worshipData = useWorshipData();
   const router = useRouter();
+  const pathname = usePathname();
   const setlists = worshipData?.setlists ?? [];
   const songs = worshipData?.songs ?? [];
   const { currentUser } = useAuth();
@@ -159,6 +160,16 @@ function ChatWindowBody({
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [chatTab, setChatTab] = useState<'messages' | 'photos' | 'links'>('messages');
   const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
+
+  const routeApp: 'cell' | 'ndcpc' = pathname.startsWith('/ndcpc/') ? 'ndcpc' : 'cell';
+
+  // Keep em. and Preschool chats on their own URL trees.
+  useEffect(() => {
+    if (!chat) return;
+    if (chatBelongsToApp(chat, routeApp)) return;
+    const correctApp = chat.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+    router.replace(chatHrefForApp(chatId, correctApp));
+  }, [chat, chatId, routeApp, router]);
 
   const photosEnabled = chatTab === 'photos';
   const { photoMessages, loadingMore: loadingMorePhotos } = useChatPhotoMessages(

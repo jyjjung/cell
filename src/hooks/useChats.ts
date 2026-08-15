@@ -56,6 +56,7 @@ export function useChats() {
 
     const newChat = {
       type: 'private' as const,
+      appScope: 'cell' as const,
       members: [currentUser.uid, peerUser.uid],
       memberInfo: {
         [currentUser.uid]: currentUserInfo,
@@ -109,6 +110,7 @@ export function useChats() {
 
     const newChat = {
       type: 'group' as const,
+      appScope: 'cell' as const,
       name,
       members: memberIds,
       memberInfo,

@@ -34,7 +34,8 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
       chats,
       currentUser.uid,
       (chat) =>
-        pathname === `/chat/${chat.id}`
+        pathname === `/cell/chat/${chat.id}`
+        || pathname === `/chat/${chat.id}`
         || pathname === `/ndcpc/chat/${chat.id}`,
     );
 

@@ -29,6 +29,10 @@ export type AppNavItem = {
   badgeKey?: 'chat';
 };
 
+/**
+ * em. home + chat live under `/cell`. Other features still use root paths
+ * until those routes are migrated (soft-nav rewrites 404 in the App Router).
+ */
 export function getSidebarNavForApp(
   app: CommunityAppId,
   opts: {
@@ -43,17 +47,17 @@ export function getSidebarNavForApp(
     case 'cell':
       return [
         { href: cellPath('/'), label: labels.home, icon: Home },
-        { href: cellPath('/bible-checklist'), label: labels.readingPlan, icon: BookOpen },
+        { href: '/bible-checklist', label: labels.readingPlan, icon: BookOpen },
         { href: cellPath('/chat'), label: labels.chat, icon: MessageCircle, requiresAuth: true, badgeKey: 'chat' },
-        { href: cellPath('/events'), label: labels.schedule, icon: CalendarCheck },
+        { href: '/events', label: labels.schedule, icon: CalendarCheck },
         ...(isAdmin || isWorshipTeam
-          ? [{ href: cellPath('/worship'), label: labels.worshipPortal, icon: Music }]
+          ? [{ href: '/worship', label: labels.worshipPortal, icon: Music }]
           : []),
-        { href: cellPath('/media'), label: labels.links, icon: Library },
-        { href: cellPath('/docs'), label: labels.docs, icon: FileText, requiresAuth: true },
-        { href: cellPath('/forms'), label: labels.forms, icon: FileText },
+        { href: '/media', label: labels.links, icon: Library },
+        { href: '/docs', label: labels.docs, icon: FileText, requiresAuth: true },
+        { href: '/forms', label: labels.forms, icon: FileText },
         {
-          href: cellPath('/prayer-requests'),
+          href: '/prayer-requests',
           label: labels.prayerRequests,
           icon: HeartHandshake,
           requiresAuth: true,
