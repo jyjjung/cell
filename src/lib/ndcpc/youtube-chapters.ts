@@ -52,25 +52,133 @@ function dedupeChapters(chapters: YouTubeChapter[]): YouTubeChapter[] {
   return unique;
 }
 
+function chapterTitleFromRenderer(title: unknown): string | null {
+  if (!title || typeof title !== 'object') {
+    return null;
+  }
+
+  const record = title as { simpleText?: unknown; runs?: Array<{ text?: unknown }> };
+  if (typeof record.simpleText === 'string' && record.simpleText.trim()) {
+    return record.simpleText.trim();
+  }
+
+  const fromRuns = (record.runs ?? [])
+    .map((run) => (typeof run?.text === 'string' ? run.text : ''))
+    .join('')
+    .trim();
+
+  return fromRuns || null;
+}
+
+function collectChaptersFromJson(value: unknown, chapters: YouTubeChapter[]) {
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectChaptersFromJson(item, chapters);
+    }
+    return;
+  }
+
+  const record = value as Record<string, unknown>;
+  const renderer =
+    (record.chapterRenderer as Record<string, unknown> | undefined) ??
+    (record.macroMarkersListItemRenderer as Record<string, unknown> | undefined);
+
+  if (renderer && typeof renderer.timeRangeStartMillis === 'number') {
+    const title = chapterTitleFromRenderer(renderer.title);
+    if (title) {
+      chapters.push({
+        title,
+        startSeconds: Math.floor(renderer.timeRangeStartMillis / 1000),
+      });
+    }
+  }
+
+  for (const nested of Object.values(record)) {
+    collectChaptersFromJson(nested, chapters);
+  }
+}
+
+function extractYtInitialData(html: string): unknown | null {
+  const marker = 'var ytInitialData = ';
+  const start = html.indexOf(marker);
+  if (start < 0) {
+    return null;
+  }
+
+  let index = start + marker.length;
+  while (index < html.length && html[index] !== '{') {
+    index += 1;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let cursor = index; cursor < html.length; cursor += 1) {
+    const char = html[cursor];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(html.slice(index, cursor + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function parseYouTubeChaptersFromHtml(html: string): YouTubeChapter[] {
   const chapters: YouTubeChapter[] = [];
+
+  // Prefer structured ytInitialData when present (title may use runs or simpleText).
+  const initialData = extractYtInitialData(html);
+  if (initialData) {
+    collectChaptersFromJson(initialData, chapters);
+    if (chapters.length > 0) {
+      return dedupeChapters(chapters);
+    }
+  }
+
   const chapterPattern =
-    /"chapterRenderer":\{"title":\{"simpleText":"((?:\\.|[^"\\])*)"\},"timeRangeStartMillis":(\d+)/g;
+    /"chapterRenderer":\{"title":\{(?:"simpleText":"((?:\\.|[^"\\])*)"|"runs":\[\{"text":"((?:\\.|[^"\\])*)"\}\])\},"timeRangeStartMillis":(\d+)/g;
 
   for (const match of html.matchAll(chapterPattern)) {
     chapters.push({
-      title: unescapeYoutubeText(match[1]),
-      startSeconds: Math.floor(Number.parseInt(match[2], 10) / 1000),
+      title: unescapeYoutubeText(match[1] || match[2] || ''),
+      startSeconds: Math.floor(Number.parseInt(match[3], 10) / 1000),
     });
   }
 
   if (chapters.length === 0) {
     const macroPattern =
-      /"macroMarkersListItemRenderer":\{"title":\{"simpleText":"((?:\\.|[^"\\])*)"\}[^}]*?"timeRangeStartMillis":(\d+)/g;
+      /"macroMarkersListItemRenderer":\{"title":\{(?:"simpleText":"((?:\\.|[^"\\])*)"|"runs":\[\{"text":"((?:\\.|[^"\\])*)"\}\])\}[^}]*?"timeRangeStartMillis":(\d+)/g;
     for (const match of html.matchAll(macroPattern)) {
       chapters.push({
-        title: unescapeYoutubeText(match[1]),
-        startSeconds: Math.floor(Number.parseInt(match[2], 10) / 1000),
+        title: unescapeYoutubeText(match[1] || match[2] || ''),
+        startSeconds: Math.floor(Number.parseInt(match[3], 10) / 1000),
       });
     }
   }

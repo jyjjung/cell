@@ -41,7 +41,7 @@ export function YouTubeChapterSelect({
         <SelectTrigger>
           <SelectValue placeholder={t('resources.selectChapter')} />
         </SelectTrigger>
-        <SelectContent className="z-[100] max-h-72">
+        <SelectContent position="popper" className="z-[200] max-h-72">
           <SelectItem value={YOUTUBE_FULL_VIDEO_VALUE}>{t('resources.fullVideo')}</SelectItem>
           {chapters.map((chapter, index) => (
             <SelectItem key={`${chapter.startSeconds}-${chapter.title}`} value={String(index)}>

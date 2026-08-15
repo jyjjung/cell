@@ -13,6 +13,10 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Fixed',
+        text: 'Preschool YouTube chapter clips show a normal play button again — they start at the chapter and stop at the next, only after you press play.',
+      },
+      {
+        type: 'Fixed',
         text: 'Updates and Bible reading open reliably while you’re signing in — they no longer crash on the way in.',
       },
       {
