@@ -7,6 +7,18 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.2',
+    subtitle: 'Worship rosters',
+    date: 'August 17, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'em. Worship rosters show the current Sundays after a refresh — a phone no longer keeps a deleted roster that was already replaced.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.15.1',
     subtitle: 'Stability',
     date: 'August 16, 2026',

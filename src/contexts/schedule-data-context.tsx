@@ -11,7 +11,7 @@ import {
 import { usePathname } from 'next/navigation';
 import type { CleaningDay, CleaningRosterEntry, QTRosterEntry, WorshipRoster } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, getDocsFromServer, orderBy, query } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import {
   COLLECTION_CACHE_TTL_MS,
@@ -19,8 +19,11 @@ import {
   readLocalCollectionCacheStale,
   writeLocalCollectionCache,
 } from '@/lib/collection-cache';
+import { subscribeQueryPreferServer } from '@/lib/firestore-server-snapshot';
+import { needsLiveSchedule } from '@/lib/schedule-live-paths';
 
 type ScheduleDataContextValue = {
+  live: boolean;
   cleaningRoster: CleaningRosterEntry[];
   cleaningRosterLoading: boolean;
   qtRoster: QTRosterEntry[];
@@ -37,19 +40,8 @@ const CACHE_KEYS = {
   cleaningRoster: 'schedule_cleaning_rosters_v1',
   qtRoster: 'schedule_qt_rosters_v1',
   cleaningDays: 'schedule_cleaning_days_v1',
-  worshipRosters: 'schedule_worship_rosters_v1',
+  worshipRosters: 'schedule_worship_rosters_v3',
 } as const;
-
-function needsLiveSchedule(pathname: string): boolean {
-  return (
-    pathname === '/' ||
-    pathname.startsWith('/qt') ||
-    pathname.startsWith('/cleaning-roster') ||
-    pathname.startsWith('/rosters') ||
-    pathname.startsWith('/events') ||
-    pathname.startsWith('/admin')
-  );
-}
 
 function readCached<T>(key: string): T[] {
   return readLocalCollectionCacheStale<T[]>(key) ?? [];
@@ -92,42 +84,42 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
 
     if (live) {
       const unsubs = [
-        onSnapshot(
+        subscribeQueryPreferServer(
           query(collection(db, 'cleaningRosters')),
-          (snapshot) => {
-            const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningRosterEntry));
+          (id, data) => ({ id, ...data } as CleaningRosterEntry),
+          (data, fromServer) => {
             setCleaningRoster(data);
-            writeLocalCollectionCache(CACHE_KEYS.cleaningRoster, data);
+            if (fromServer) writeLocalCollectionCache(CACHE_KEYS.cleaningRoster, data);
             setCleaningRosterLoading(false);
           },
           () => setCleaningRosterLoading(false),
         ),
-        onSnapshot(
+        subscribeQueryPreferServer(
           query(collection(db, 'qtRosters'), orderBy('date', 'asc')),
-          (snapshot) => {
-            const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as QTRosterEntry));
+          (id, data) => ({ id, ...data } as QTRosterEntry),
+          (data, fromServer) => {
             setQtRoster(data);
-            writeLocalCollectionCache(CACHE_KEYS.qtRoster, data);
+            if (fromServer) writeLocalCollectionCache(CACHE_KEYS.qtRoster, data);
             setQtRosterLoading(false);
           },
           () => setQtRosterLoading(false),
         ),
-        onSnapshot(
+        subscribeQueryPreferServer(
           query(collection(db, 'cleaningDays'), orderBy('order', 'asc')),
-          (snapshot) => {
-            const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningDay));
+          (id, data) => ({ id, ...data } as CleaningDay),
+          (data, fromServer) => {
             setCleaningDays(data);
-            writeLocalCollectionCache(CACHE_KEYS.cleaningDays, data);
+            if (fromServer) writeLocalCollectionCache(CACHE_KEYS.cleaningDays, data);
             setCleaningDaysLoading(false);
           },
           () => setCleaningDaysLoading(false),
         ),
-        onSnapshot(
+        subscribeQueryPreferServer(
           query(collection(db, 'worshipRosters'), orderBy('date', 'desc')),
-          (snapshot) => {
-            const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
+          (id, data) => ({ id, ...data } as WorshipRoster),
+          (data, fromServer) => {
             setWorshipRosters(data);
-            writeLocalCollectionCache(CACHE_KEYS.worshipRosters, data);
+            if (fromServer) writeLocalCollectionCache(CACHE_KEYS.worshipRosters, data);
             setWorshipRostersLoading(false);
           },
           () => setWorshipRostersLoading(false),
@@ -171,7 +163,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
         load(
           CACHE_KEYS.cleaningRoster,
           async () => {
-            const snap = await getDocs(query(collection(db, 'cleaningRosters')));
+            const snap = await getDocsFromServer(query(collection(db, 'cleaningRosters')));
             return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningRosterEntry));
           },
           setCleaningRoster,
@@ -180,7 +172,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
         load(
           CACHE_KEYS.qtRoster,
           async () => {
-            const snap = await getDocs(query(collection(db, 'qtRosters'), orderBy('date', 'asc')));
+            const snap = await getDocsFromServer(query(collection(db, 'qtRosters'), orderBy('date', 'asc')));
             return snap.docs.map((d) => ({ id: d.id, ...d.data() } as QTRosterEntry));
           },
           setQtRoster,
@@ -189,7 +181,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
         load(
           CACHE_KEYS.cleaningDays,
           async () => {
-            const snap = await getDocs(query(collection(db, 'cleaningDays'), orderBy('order', 'asc')));
+            const snap = await getDocsFromServer(query(collection(db, 'cleaningDays'), orderBy('order', 'asc')));
             return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningDay));
           },
           setCleaningDays,
@@ -198,7 +190,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
         load(
           CACHE_KEYS.worshipRosters,
           async () => {
-            const snap = await getDocs(
+            const snap = await getDocsFromServer(
               query(collection(db, 'worshipRosters'), orderBy('date', 'desc')),
             );
             return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
@@ -230,6 +222,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      live,
       cleaningRoster,
       cleaningRosterLoading,
       qtRoster,
@@ -240,6 +233,7 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
       worshipRostersLoading,
     }),
     [
+      live,
       cleaningRoster,
       cleaningRosterLoading,
       qtRoster,
@@ -256,4 +250,10 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
 
 export function useScheduleData() {
   return useContext(ScheduleDataContext);
+}
+
+/** Shared roster cache only when this route has a live Firestore listener. */
+export function useLiveScheduleData() {
+  const schedule = useScheduleData();
+  return schedule?.live ? schedule : null;
 }

@@ -6,14 +6,14 @@ import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { QTRosterEntry } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
-import { useScheduleData } from '@/contexts/schedule-data-context';
+import { useLiveScheduleData } from '@/contexts/schedule-data-context';
 import { useNotifications } from '@/hooks/use-notifications';
 
 const QT_ROSTERS_COLLECTION = 'qtRosters';
 
 export function useQTRoster(enabled = true) {
   const { currentUser, loadingAuth } = useAuth();
-  const schedule = useScheduleData();
+  const schedule = useLiveScheduleData();
   const [localRoster, setLocalRoster] = useState<QTRosterEntry[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
   const { createNotification } = useNotifications();
