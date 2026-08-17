@@ -17,13 +17,13 @@ import {
   where,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
-import { useScheduleData } from '@/contexts/schedule-data-context';
+import { useLiveScheduleData } from '@/contexts/schedule-data-context';
 
 const CLEANING_DAYS_COLLECTION = 'cleaningDays';
 
 export function useCleaningDays(enabled = true) {
   const { currentUser, loadingAuth, isAdmin } = useAuth();
-  const schedule = useScheduleData();
+  const schedule = useLiveScheduleData();
   const [localCleaningDays, setLocalCleaningDays] = useState<CleaningDay[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
 

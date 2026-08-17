@@ -16,13 +16,13 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useScheduleData } from '@/contexts/schedule-data-context';
+import { useLiveScheduleData } from '@/contexts/schedule-data-context';
 
 const CLEANING_ROSTERS_COLLECTION = 'cleaningRosters';
 
 export function useCleaningRoster(enabled = true) {
   const { currentUser, loadingAuth } = useAuth();
-  const schedule = useScheduleData();
+  const schedule = useLiveScheduleData();
   const [localRoster, setLocalRoster] = useState<CleaningRosterEntry[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
 

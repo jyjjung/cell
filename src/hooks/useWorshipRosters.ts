@@ -5,11 +5,12 @@ import type { WorshipRoster, WorshipRosterSlot, WorshipRole } from '@/types';
 import { WORSHIP_ROLES } from '@/types';
 import { db } from '@/lib/firebase';
 import {
-  collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
+  collection, query, doc, addDoc, updateDoc, deleteDoc,
   serverTimestamp, orderBy,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
-import { useScheduleData } from '@/contexts/schedule-data-context';
+import { useLiveScheduleData } from '@/contexts/schedule-data-context';
+import { subscribeQueryPreferServer } from '@/lib/firestore-server-snapshot';
 import { useNotifications } from '@/hooks/use-notifications';
 
 const ROSTERS_COLLECTION = 'worshipRosters';
@@ -29,25 +30,29 @@ function getUserRoleAssignments(slots: WorshipRosterSlot[]): Map<string, string[
 
 export function useWorshipRosters(enabled = true) {
   const { currentUser } = useAuth();
-  const schedule = useScheduleData();
+  const schedule = useLiveScheduleData();
   const { createNotification } = useNotifications();
   const [localRosters, setLocalRosters] = useState<WorshipRoster[]>([]);
   const [localLoading, setLocalLoading] = useState(true);
 
   useEffect(() => {
     if (schedule || !enabled || !currentUser) {
-      if (!schedule && !currentUser) {
+      if (!currentUser) {
         setLocalRosters([]);
         setLocalLoading(false);
       }
       return;
     }
     const q = query(collection(db, ROSTERS_COLLECTION), orderBy('date', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      setLocalRosters(snap.docs.map(d => ({ id: d.id, ...d.data() } as WorshipRoster)));
-      setLocalLoading(false);
-    }, () => setLocalLoading(false));
-    return unsub;
+    return subscribeQueryPreferServer(
+      q,
+      (id, data) => ({ id, ...data } as WorshipRoster),
+      (data) => {
+        setLocalRosters(data);
+        setLocalLoading(false);
+      },
+      () => setLocalLoading(false),
+    );
   }, [schedule, enabled, currentUser]);
 
   const rosters = schedule?.worshipRosters ?? localRosters;
