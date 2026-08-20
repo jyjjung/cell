@@ -27,7 +27,8 @@ import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, getReferenceTracks, hasReferenceTracks, normalizeReferenceTrackDrafts,
-    referenceTrackDraftsInvalid, referenceTracksToDrafts, resolveChordSheetsForSetlistSong, type ReferenceTrackDraft
+    referenceTrackDraftsInvalid, referenceTracksToDrafts, resolveChordSheetsForSetlistSong,
+    setlistSongEntryKey, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
 import type { ChordKey, SetlistSong, SongChordSheet, WorshipRole, WorshipRoster, WorshipRosterMember, WorshipRosterSlot, WorshipSetlist, WorshipSong } from '@/types';
 import { mergeWorshipRosterSlots } from '@/types';
@@ -534,12 +535,10 @@ function AddSongToSetlistDialog({
   const { selectedSheetIds, setSelectedSheetIds } = useSetlistSongSheetSelection(liveSong, selectedKey);
 
   const filtered = useMemo(() => {
-    const alreadyAdded = new Set(playlist.songs.map(s => s.songId));
     return songs.filter(s =>
-      !alreadyAdded.has(s.id) &&
-      (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist?.toLowerCase().includes(search.toLowerCase()))
+      s.title.toLowerCase().includes(search.toLowerCase()) || s.artist?.toLowerCase().includes(search.toLowerCase())
     );
-  }, [songs, search, playlist.songs]);
+  }, [songs, search]);
 
   const tracksInvalid = referenceTrackDraftsInvalid(referenceTracks);
 
@@ -739,7 +738,7 @@ function EditSetlistSongDialog({
       return;
     }
     if (!setlistSong || !libSong) return;
-    const token = setlistSong.songId;
+    const token = setlistSong.entryId || setlistSong.songId;
     if (initRef.current === token) return;
     initRef.current = token;
     setSelectedKey(setlistSong.key);
@@ -774,7 +773,7 @@ function EditSetlistSongDialog({
       const normalizedTracks = normalizeReferenceTrackDrafts(referenceTracks);
       const chordSheetIds = buildChordSheetIdsOption(libSong, selectedKey, selectedSheetIds);
 
-      await updateSetlistSong(playlist, setlistSong.songId, {
+      await updateSetlistSong(playlist, setlistSong, {
         key: selectedKey,
         referenceTracks: normalizedTracks ?? [],
         chordSheetIds: chordSheetIds ?? [],
@@ -939,10 +938,11 @@ function SetlistDetailView({
     setReorderDirty(true);
   };
 
-  const handleRemove = async (songId: string) => {
-    setRemoving(songId);
+  const handleRemove = async (song: SetlistSong, index: number) => {
+    const removingKey = setlistSongEntryKey(song, index);
+    setRemoving(removingKey);
     try {
-      await removeSongFromSetlist(playlist, songId);
+      await removeSongFromSetlist(playlist, song);
       toast({ title: 'Song removed from setlist' });
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
@@ -1058,7 +1058,7 @@ function SetlistDetailView({
             const canOpenViewer = sheetsForKey.length > 0 || refTracks.length > 0;
             return (
               <div
-                key={ps.songId}
+                key={setlistSongEntryKey(ps, i)}
                 draggable={reorderMode}
                 onDragStart={reorderMode ? () => handleDragStart(i) : undefined}
                 onDragEnter={reorderMode ? () => handleDragEnter(i) : undefined}
@@ -1177,10 +1177,10 @@ function SetlistDetailView({
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          handleRemove(ps.songId);
+                          handleRemove(ps, i);
                         }} 
-                        disabled={removing === ps.songId}>
-                        {removing === ps.songId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                        disabled={removing === setlistSongEntryKey(ps, i)}>
+                        {removing === setlistSongEntryKey(ps, i) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   )}

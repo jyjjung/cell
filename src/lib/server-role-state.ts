@@ -15,6 +15,7 @@ import {
   NDCPC_TEAM_CHAT_ID,
   NDCPC_TEAM_CHAT_NAME,
 } from '@/lib/ndcpc/team-chat';
+import { inferCellAccessFlag } from '@/lib/app-access';
 import type { UserProfileData } from '@/types';
 
 const USERS_COLLECTION = 'users';
@@ -143,7 +144,7 @@ export async function reconcileUserRoleState(
 
   const currentAccess = profile.access ?? {};
   const nextAccess = {
-    cell: cellState.roleIds.length > 0 ? true : currentAccess.cell === true,
+    cell: inferCellAccessFlag(currentAccess, cellState.roleIds),
     ndcpc: ndcpcState.roleIds.length > 0 ? true : currentAccess.ndcpc === true,
   };
 

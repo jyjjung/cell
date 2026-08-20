@@ -16,6 +16,7 @@ import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-fire
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
 import { DocumentLang } from '@/components/layout/document-lang';
 import { ClientDynamicOverlays } from '@/components/layout/client-dynamic-overlays';
+import { getAppThemeInlineScript } from '@/lib/app-theme-inline-script';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
 
@@ -73,6 +74,11 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning data-glass="off" className={appFontVariableClasses}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: getAppThemeInlineScript() }}
+        />
+      </head>
       <body className="antialiased">
         <ChunkErrorListener />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">

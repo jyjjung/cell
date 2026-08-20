@@ -96,12 +96,15 @@ service cloud.firestore {
       let access = userData(userId).get('access', {});
       let roleIds = userData(userId).get('roleIds', []);
       let caps = userData(userId).get('capabilityKeys', []);
+      // Preschool-only is ndcpc true without cell. Missing access, empty
+      // access, or both flags false is legacy em. (role sync used to write
+      // {cell:false, ndcpc:false} for members with no roleIds).
       return isMembershipActive(userId)
         && (
           roleIds.size() > 0
           || caps.hasAny(['app.admin'])
           || access.get('cell', false) == true
-          || access.keys().size() == 0
+          || access.get('ndcpc', false) != true
         );
     }
 

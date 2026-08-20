@@ -10,19 +10,19 @@ const GlobalBibleReader = dynamic(
   { ssr: false },
 );
 
-/** Bible reader overlay — Cell app only (needs BiblePlanProvider from AppDataProviders). */
+/**
+ * Always keep the reader context mounted so switching from em. to Account
+ * does not unmount the provider while overlays/hub tabs still render.
+ * The FAB overlay itself stays Cell-only.
+ */
 export function CellBibleReaderShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const showBibleReader = isCellAppPath(pathname);
 
-  if (!showBibleReader) {
-    return <>{children}</>;
-  }
-
   return (
     <GlobalBibleReaderProvider>
       {children}
-      <GlobalBibleReader />
+      {showBibleReader ? <GlobalBibleReader /> : null}
     </GlobalBibleReaderProvider>
   );
 }

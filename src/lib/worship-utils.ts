@@ -112,3 +112,29 @@ export function chordSheetsForKey(
   if (!libSong) return [];
   return libSong.chordSheets.filter((s) => sheetUsableInKey(s, key));
 }
+
+export function newSetlistEntryId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `s-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function setlistSongEntryKey(song: Pick<SetlistSong, 'entryId' | 'songId'>, index: number): string {
+  return song.entryId || `${song.songId}:${index}`;
+}
+
+export function findSetlistSongIndex(
+  songs: SetlistSong[],
+  match: Pick<SetlistSong, 'songId' | 'entryId'>,
+): number {
+  if (match.entryId) {
+    const byEntry = songs.findIndex((s) => s.entryId === match.entryId);
+    if (byEntry >= 0) return byEntry;
+  }
+  return songs.findIndex((s) => s.songId === match.songId);
+}
+
+export function ensureSetlistEntryIds(songs: SetlistSong[]): SetlistSong[] {
+  return songs.map((song) => (song.entryId ? song : { ...song, entryId: newSetlistEntryId() }));
+}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BibleReaderOverlay } from "@/components/bible/bible-reader-overlay";
 import { useGlobalBibleReader } from "@/contexts/global-bible-reader-context";
 import { usePathname } from "next/navigation";
+import { isCellHomePath } from "@/lib/app-access";
 import { cn } from "@/lib/utils";
 
 export function GlobalBibleReader() {
@@ -16,9 +17,9 @@ export function GlobalBibleReader() {
     pathname.startsWith('/full-plan') ||
     pathname.startsWith('/memorize') ||
     pathname.startsWith('/leaderboard');
-  const isAllowedPage = pathname === '/';
-  // Home shows the main footer under the FAB — lift clear of the Terms link.
-  const clearFooter = isAllowedPage;
+  const isAllowedPage = isCellHomePath(pathname);
+  // Public landing only — Terms footer sits under the FAB.
+  const clearFooter = pathname === '/';
 
   if (hasReadingsHubPopup) {
     return null;

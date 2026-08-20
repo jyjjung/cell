@@ -17,6 +17,11 @@ if (!skipSentry) {
     integrations: [Sentry.replayIntegration()],
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    ignoreErrors: [
+      'Hydration Error',
+      /Minified React error #(418|419|422|423|425)/,
+      'The client has already been terminated',
+    ],
     beforeSend(event) {
       if (shouldDropSentryEvent(event)) return null;
       return event;

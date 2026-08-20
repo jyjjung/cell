@@ -11,7 +11,7 @@ import { cacheMediaUrlsForOffline, countCachedMediaUrls } from '@/lib/media-cach
 import { buildSetlistPlaylistQueue } from '@/lib/setlist-playlist-queue';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
-import { getReferenceTracks, hasReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
+import { getReferenceTracks, hasReferenceTracks, resolveChordSheetsForSetlistSong, setlistSongEntryKey } from '@/lib/worship-utils';
 import type { WorshipSetlist } from '@/types';
 import { format } from 'date-fns';
 import {
@@ -317,7 +317,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
         <div className="flex flex-col gap-1.5">
           {setlistSongs.map((song, i) => (
             <div
-              key={song.songId}
+              key={setlistSongEntryKey(song, i)}
               onClick={(e) => {
                 e.stopPropagation();
                 if (onOpenViewer) {

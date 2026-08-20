@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getFirestoreErrorMessage,
   isFirestorePersistenceClearOrderError,
+  isFirestoreTerminatedError,
   isIndexedDbPersistenceError,
 } from '@/lib/firestore-idb-errors';
 
@@ -51,6 +52,11 @@ describe('isIndexedDbPersistenceError', () => {
         new Error('UnknownError: Error looking up record in object store by key range'),
       ),
     ).toBe(true);
+    expect(
+      isIndexedDbPersistenceError(
+        new Error('InvalidStateError: Object store cannot be found in the database'),
+      ),
+    ).toBe(true);
   });
 
   it('matches known Firestore AsyncQueue bricks (ca9 → b815)', () => {
@@ -74,6 +80,15 @@ describe('isIndexedDbPersistenceError', () => {
       false,
     );
     expect(isIndexedDbPersistenceError(undefined)).toBe(false);
+  });
+});
+
+describe('isFirestoreTerminatedError', () => {
+  it('matches terminated-client noise from recovery', () => {
+    expect(
+      isFirestoreTerminatedError(new Error('FirebaseError: The client has already been terminated.')),
+    ).toBe(true);
+    expect(isFirestoreTerminatedError(new Error('Network request failed'))).toBe(false);
   });
 });
 

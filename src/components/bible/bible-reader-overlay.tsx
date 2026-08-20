@@ -18,8 +18,8 @@ export function BibleReaderOverlay({ placement }: BibleReaderOverlayProps) {
   const { isOpen, isExpanded, setIsOpen, setIsExpanded } = useGlobalBibleReader();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-  // Match GlobalBibleReader FAB offset above the home footer.
-  const fabBottom = pathname === "/" ? "10rem" : "6rem";
+  // Public landing only — match FAB lift above the Terms footer.
+  const fabBottom = pathname === '/' ? "10rem" : "6rem";
 
   useEffect(() => {
     setMounted(true);

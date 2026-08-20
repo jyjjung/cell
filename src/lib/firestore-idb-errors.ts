@@ -29,6 +29,7 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
     msg.includes('Connection to Indexed Database server lost') ||
     msg.includes('An internal error was encountered in the Indexed Database server') ||
     msg.includes('looking up record in object store') ||
+    msg.includes('Object store cannot be found') ||
     (msg.includes('IndexedDB transaction') &&
       (msg.includes('AbortError') || msg.includes('code=unavailable'))) ||
     // Firestore SDK bricks the client after these assertions (see firebase-js-sdk#8856, #9267).
@@ -48,4 +49,10 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
 export function isFirestorePersistenceClearOrderError(reason: unknown): boolean {
   const msg = getFirestoreErrorMessage(reason);
   return msg.includes('Persistence can only be cleared before a Firestore instance');
+}
+
+/** Listeners firing after terminate() during IDB recovery — swallow, do not recover again. */
+export function isFirestoreTerminatedError(reason: unknown): boolean {
+  const msg = getFirestoreErrorMessage(reason);
+  return msg.includes('The client has already been terminated') || msg.includes('client is already terminated');
 }

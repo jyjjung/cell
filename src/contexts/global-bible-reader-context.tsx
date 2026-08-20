@@ -11,7 +11,19 @@ interface GlobalBibleReaderContextType {
   targetPassage: { book: string; chapter: number; timestamp: number } | null;
 }
 
-const GlobalBibleReaderContext = createContext<GlobalBibleReaderContextType | undefined>(undefined);
+const GlobalBibleReaderContext = createContext<GlobalBibleReaderContextType | null>(null);
+
+const noop = () => {};
+
+/** Safe outside the provider (app switch / guest chrome) — reader stays closed. */
+const emptyGlobalBibleReader: GlobalBibleReaderContextType = {
+  isOpen: false,
+  setIsOpen: noop,
+  isExpanded: false,
+  setIsExpanded: noop,
+  openBibleReader: noop,
+  targetPassage: null,
+};
 
 export function GlobalBibleReaderProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpenState] = useState(false);
@@ -36,9 +48,5 @@ export function GlobalBibleReaderProvider({ children }: { children: React.ReactN
 }
 
 export function useGlobalBibleReader() {
-  const context = useContext(GlobalBibleReaderContext);
-  if (context === undefined) {
-    throw new Error('useGlobalBibleReader must be used within a GlobalBibleReaderProvider');
-  }
-  return context;
+  return useContext(GlobalBibleReaderContext) ?? emptyGlobalBibleReader;
 }
