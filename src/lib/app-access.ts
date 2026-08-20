@@ -55,15 +55,27 @@ export function getAccessFlags(profile: Pick<AccessProfile, 'access'> | null | u
   return profile?.access ?? {};
 }
 
+/**
+ * Whether this profile should have em. (cell) access.
+ * Missing/empty access is legacy em. Preschool-only is `ndcpc: true` without cell.
+ * `{ cell: false, ndcpc: false }` is treated as em. — role sync used to write that
+ * for members with no roleIds, which locked them out of chats and schedules.
+ */
+export function inferCellAccessFlag(
+  access: AppAccessFlags | null | undefined,
+  roleIds?: readonly string[] | null,
+): boolean {
+  if ((roleIds?.length ?? 0) > 0) return true;
+  if (access?.cell === true) return true;
+  if (access?.ndcpc === true) return false;
+  return true;
+}
+
 /** Whether the user is assigned Cell app access (Users admin segmentation — not login routing). */
 export function hasAssignedCellAccess(
   profile: Pick<AccessProfile, 'access' | 'roleIds'> | null | undefined,
 ): boolean {
-  if ((profile?.roleIds?.length ?? 0) > 0) return true;
-  if (profile?.access?.cell === true) return true;
-  const access = profile?.access;
-  if (!access || Object.keys(access).length === 0) return true;
-  return false;
+  return inferCellAccessFlag(profile?.access, profile?.roleIds);
 }
 
 /** Whether the user is assigned NDCPC app access (Users admin segmentation). */
@@ -78,13 +90,8 @@ export function hasCellAccess(
   profile: Pick<AccessProfile, 'access' | 'isApproved' | 'roleIds' | 'capabilityKeys'> | null | undefined,
 ): boolean {
   if (!isMembershipActive(profile)) return false;
-  if ((profile?.roleIds?.length ?? 0) > 0) return true;
   if (hasCapability(profile?.capabilityKeys, 'app.admin')) return true;
-  if (profile?.access?.cell === true) return true;
-  // Legacy Cell users before per-app access flags existed
-  const access = profile?.access;
-  if (!access || Object.keys(access).length === 0) return true;
-  return false;
+  return inferCellAccessFlag(profile?.access, profile?.roleIds);
 }
 
 export function hasNdcpcAccess(
@@ -234,6 +241,11 @@ export function isShellPath(pathname: string): boolean {
 
 export function isCellPath(pathname: string): boolean {
   return pathname === '/cell' || pathname.startsWith('/cell/');
+}
+
+/** em. home — `/cell` today; `/` still used in some overlays and tests. */
+export function isCellHomePath(pathname: string): boolean {
+  return pathname === '/' || pathname === '/cell';
 }
 
 /** Cell app routes (prefixed or legacy internal paths) — excludes shell, ndcpc, auth, accounts. */

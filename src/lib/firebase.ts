@@ -16,6 +16,7 @@ import { getStorage } from 'firebase/storage';
 import {
   getFirestoreErrorMessage,
   isFirestorePersistenceClearOrderError,
+  isFirestoreTerminatedError,
   isIndexedDbPersistenceError,
 } from '@/lib/firestore-idb-errors';
 
@@ -105,7 +106,8 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     if (
       isIndexedDbPersistenceError(event.reason) ||
-      isFirestorePersistenceClearOrderError(event.reason)
+      isFirestorePersistenceClearOrderError(event.reason) ||
+      isFirestoreTerminatedError(event.reason)
     ) {
       event.preventDefault();
       if (isIndexedDbPersistenceError(event.reason)) {
@@ -127,7 +129,8 @@ if (typeof window !== 'undefined') {
     const payload = event.error ?? event.message;
     if (
       isIndexedDbPersistenceError(payload) ||
-      isFirestorePersistenceClearOrderError(payload)
+      isFirestorePersistenceClearOrderError(payload) ||
+      isFirestoreTerminatedError(payload)
     ) {
       event.preventDefault();
       if (isIndexedDbPersistenceError(payload)) {

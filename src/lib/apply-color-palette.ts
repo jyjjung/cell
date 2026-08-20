@@ -1,6 +1,6 @@
 import type { ColorPaletteTokens } from './app-themes';
 
-const TOKEN_CSS_MAP: Record<keyof ColorPaletteTokens, string> = {
+export const TOKEN_CSS_MAP: Record<keyof ColorPaletteTokens, string> = {
   background: '--background',
   foreground: '--foreground',
   card: '--card',

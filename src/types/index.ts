@@ -623,6 +623,8 @@ export interface ReferenceTrack {
 
 export interface SetlistSong {
   songId: string;
+  /** Stable row id so the same library song can appear more than once. */
+  entryId?: string;
   title: string;
   key: ChordKey;
   order: number;

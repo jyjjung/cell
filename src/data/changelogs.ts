@@ -7,6 +7,34 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.3',
+    subtitle: 'Stability',
+    date: 'August 20, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Some members can see their chats and schedules again after signing in.',
+      },
+      {
+        type: 'Fixed',
+        text: 'You can add the same song more than once to a setlist.',
+      },
+      {
+        type: 'Fixed',
+        text: 'The Bible reader button is back on Home.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Switching from em. to Account no longer crashes when the Bible reader was open.',
+      },
+      {
+        type: 'Fixed',
+        text: 'The first screen loads without a theme flash, and Safari recovers more cleanly after a storage glitch.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.15.2',
     subtitle: 'Worship rosters',
     date: 'August 17, 2026',

@@ -213,8 +213,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Pause live listeners while the tab is backgrounded (Firebase reads; no Vercel).
-    if (!tabVisible && !adminMode) {
+    const hasLocalNotifications =
+      notificationsRef.current.length > 0
+      || Boolean(readLocalCollectionCacheStale<AppNotification[]>(cacheKey(currentUser.uid, mode)));
+
+    // Pause live listeners while backgrounded after we already have data.
+    // Hidden first loads (KakaoTalk / iOS webview) still subscribe.
+    if (!tabVisible && !adminMode && hasLocalNotifications) {
       return;
     }
 

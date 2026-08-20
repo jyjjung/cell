@@ -11,7 +11,7 @@ const emptyBiblePlan: {
   plan: null,
   loading: false,
   saveBiblePlan: async () => {
-    throw new Error('useBiblePlan must be used within BiblePlanProvider');
+    console.warn('[useBiblePlan] save ignored until BiblePlanProvider mounts');
   },
 };
 

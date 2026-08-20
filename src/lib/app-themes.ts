@@ -121,7 +121,7 @@ const THEME_LIST: AppThemeDefinition[] = [
 ];
 
 /** Retired theme ids → nearest kept palette. */
-const LEGACY_THEME_ALIASES: Record<string, AppThemeId> = {
+export const LEGACY_THEME_ALIASES: Record<string, AppThemeId> = {
   mint: 'forest',
   rose: 'sunset',
   lavender: 'classic',

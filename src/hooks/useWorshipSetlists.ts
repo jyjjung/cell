@@ -10,6 +10,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
 import { useNotifications } from '@/hooks/use-notifications';
+import { ensureSetlistEntryIds, findSetlistSongIndex, newSetlistEntryId } from '@/lib/worship-utils';
 
 const SETLISTS_COLLECTION = 'worshipSetlists';
 const ROSTERS_COLLECTION = 'worshipRosters';
@@ -132,6 +133,7 @@ export function useWorshipSetlists(enabled = true) {
     options?: { referenceTracks?: ReferenceTrack[]; chordSheetIds?: string[]; annotationId?: string },
   ) => {
     const newSong: SetlistSong = {
+      entryId: newSetlistEntryId(),
       songId,
       title: songTitle,
       key,
@@ -144,7 +146,7 @@ export function useWorshipSetlists(enabled = true) {
         : {}),
       ...(options?.annotationId ? { annotationId: options.annotationId } : {}),
     };
-    const updated = [...setlist.songs, newSong];
+    const updated = ensureSetlistEntryIds([...setlist.songs, newSong]);
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
       songs: updated,
       updatedAt: serverTimestamp(),
@@ -155,12 +157,13 @@ export function useWorshipSetlists(enabled = true) {
 
   const updateSetlistSong = useCallback(async (
     setlist: WorshipSetlist,
-    songId: string,
+    target: Pick<SetlistSong, 'songId' | 'entryId'>,
     patch: Partial<Pick<SetlistSong, 'key' | 'referenceTracks' | 'chordSheetIds' | 'annotationId'>>,
   ) => {
-    const existing = setlist.songs.find((s) => s.songId === songId);
-    const updated = setlist.songs.map((s) => {
-      if (s.songId !== songId) return s;
+    const idx = findSetlistSongIndex(setlist.songs, target);
+    const existing = idx >= 0 ? setlist.songs[idx] : undefined;
+    const updated = ensureSetlistEntryIds(setlist.songs.map((s, i) => {
+      if (i !== idx) return s;
       const next: SetlistSong = { ...s };
       if (patch.key !== undefined) next.key = patch.key;
       if ('referenceTracks' in patch) {
@@ -182,7 +185,7 @@ export function useWorshipSetlists(enabled = true) {
         else delete next.annotationId;
       }
       return next;
-    });
+    }));
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
       songs: updated,
       updatedAt: serverTimestamp(),
@@ -197,12 +200,15 @@ export function useWorshipSetlists(enabled = true) {
 
   const removeSongFromSetlist = useCallback(async (
     setlist: WorshipSetlist,
-    songId: string,
+    target: Pick<SetlistSong, 'songId' | 'entryId'>,
   ) => {
-    const removed = setlist.songs.find((s) => s.songId === songId);
-    const updated = setlist.songs
-      .filter(s => s.songId !== songId)
-      .map((s, i) => ({ ...s, order: i }));
+    const idx = findSetlistSongIndex(setlist.songs, target);
+    const removed = idx >= 0 ? setlist.songs[idx] : undefined;
+    const updated = ensureSetlistEntryIds(
+      setlist.songs
+        .filter((_, i) => i !== idx)
+        .map((s, i) => ({ ...s, order: i })),
+    );
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlist.id), {
       songs: updated,
       updatedAt: serverTimestamp(),
@@ -217,7 +223,7 @@ export function useWorshipSetlists(enabled = true) {
     songs: SetlistSong[],
   ) => {
     await updateDoc(doc(db, SETLISTS_COLLECTION, setlistId), {
-      songs,
+      songs: ensureSetlistEntryIds(songs),
       updatedAt: serverTimestamp(),
     });
   }, []);

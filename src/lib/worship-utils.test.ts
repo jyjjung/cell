@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { chordSheetsForKey, resolveChordSheetsForSetlistSong } from './worship-utils';
+import {
+  chordSheetsForKey,
+  ensureSetlistEntryIds,
+  findSetlistSongIndex,
+  resolveChordSheetsForSetlistSong,
+  setlistSongEntryKey,
+} from './worship-utils';
 import type { SongChordSheet, WorshipSong } from '@/types';
 
 function song(sheets: Partial<SongChordSheet>[]): WorshipSong {
@@ -33,6 +39,37 @@ describe('chordSheetsForKey', () => {
     ]);
     expect(chordSheetsForKey(lib, 'C').map((s) => s.id)).toEqual(['img-c', 'text-e']);
     expect(chordSheetsForKey(lib, 'G').map((s) => s.id)).toEqual(['text-e']);
+  });
+});
+
+describe('setlist song entry ids', () => {
+  it('matches a duplicate row by entryId instead of the first songId', () => {
+    const songs = [
+      { songId: 'a', entryId: 'e1', title: 'Same', key: 'C' as const, order: 0 },
+      { songId: 'a', entryId: 'e2', title: 'Same', key: 'G' as const, order: 1 },
+    ];
+    expect(findSetlistSongIndex(songs, { songId: 'a', entryId: 'e2' })).toBe(1);
+    expect(setlistSongEntryKey(songs[1]!, 1)).toBe('e2');
+  });
+
+  it('falls back to the first songId for legacy rows without entryId', () => {
+    const songs = [
+      { songId: 'a', title: 'Same', key: 'C' as const, order: 0 },
+      { songId: 'b', title: 'Other', key: 'G' as const, order: 1 },
+    ];
+    expect(findSetlistSongIndex(songs, { songId: 'a' })).toBe(0);
+    expect(setlistSongEntryKey(songs[0]!, 0)).toBe('a:0');
+  });
+
+  it('fills missing entry ids without rewriting existing ones', () => {
+    const songs = [
+      { songId: 'a', entryId: 'keep', title: 'Same', key: 'C' as const, order: 0 },
+      { songId: 'a', title: 'Same', key: 'G' as const, order: 1 },
+    ];
+    const next = ensureSetlistEntryIds(songs);
+    expect(next[0]?.entryId).toBe('keep');
+    expect(next[1]?.entryId).toBeTruthy();
+    expect(next[1]?.entryId).not.toBe('keep');
   });
 });
 

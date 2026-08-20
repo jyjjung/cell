@@ -5,6 +5,7 @@
 
 import {
   isFirestorePersistenceClearOrderError,
+  isFirestoreTerminatedError,
   isIndexedDbPersistenceError,
 } from '@/lib/firestore-idb-errors';
 
@@ -24,12 +25,15 @@ function eventExceptionValues(event: {
 function combinedMessage(event: {
   message?: string;
   exception?: { values?: Array<{ type?: string; value?: string }> };
+  extra?: Record<string, unknown>;
 }): string {
   const parts = [event.message ?? ''];
   for (const v of event.exception?.values ?? []) {
     if (v.type) parts.push(v.type);
     if (v.value) parts.push(v.value);
   }
+  const extraTitle = event.extra?.title;
+  if (typeof extraTitle === 'string') parts.push(extraTitle);
   return parts.join(' ');
 }
 
@@ -37,6 +41,7 @@ function combinedMessage(event: {
 export function shouldDropSentryEvent(event: {
   message?: string;
   environment?: string;
+  extra?: Record<string, unknown>;
   exception?: {
     values?: Array<{
       type?: string;
@@ -92,8 +97,23 @@ export function shouldDropSentryEvent(event: {
     return true;
   }
 
+  // Replay hydration: next-themes + palette apply mutate <html> (suppressHydrationWarning).
+  // Also covers React minified hydration codes and in-app browser DOM injection.
+  if (
+    /hydration error/i.test(message) ||
+    /hydrat(e|ion) failed/i.test(message) ||
+    /did not match\.? Server:/i.test(message) ||
+    /Minified React error #(418|419|422|423|425)/.test(message)
+  ) {
+    return true;
+  }
+
   // Firestore IndexedDB / AsyncQueue bricks — recovered via terminate+clear+reload
-  if (isIndexedDbPersistenceError(message) || isFirestorePersistenceClearOrderError(message)) {
+  if (
+    isIndexedDbPersistenceError(message) ||
+    isFirestorePersistenceClearOrderError(message) ||
+    isFirestoreTerminatedError(message)
+  ) {
     return true;
   }
 

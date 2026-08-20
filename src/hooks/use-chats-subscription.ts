@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Chat } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -22,6 +22,7 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
   const patchUsers = usersContext?.patchUsers;
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedUidRef = useRef<string | null>(null);
   const [tabVisible, setTabVisible] = useState(
     () => typeof document === 'undefined' || document.visibilityState !== 'hidden',
   );
@@ -34,15 +35,20 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
   }, []);
 
   useEffect(() => {
-    if (!enabled || !currentUser?.uid || !tabVisible) {
-      if (!enabled || !currentUser?.uid) {
-        setChats([]);
-        setLoading(false);
-      }
+    if (!enabled || !currentUser?.uid) {
+      loadedUidRef.current = null;
+      setChats([]);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
+    // Pause after a successful load while backgrounded. Always subscribe until
+    // the first snapshot so hidden webviews (KakaoTalk, iOS) still get chats.
+    if (!tabVisible && loadedUidRef.current === currentUser.uid) {
+      return;
+    }
+
+    setLoading(loadedUidRef.current !== currentUser.uid);
     const chatsQuery = query(
       collection(db, CHATS_COLLECTION),
       where('members', 'array-contains', currentUser.uid),
@@ -71,6 +77,7 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
 
         setChats(chatsData);
         setLoading(false);
+        loadedUidRef.current = currentUser.uid;
 
         primeMediaUrls(
           chatsData.filter((c) => c.type === 'group').map((c) => c.photoURL),

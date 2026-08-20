@@ -161,6 +161,41 @@ describe('shouldDropSentryEvent', () => {
     ).toBe(true);
   });
 
+  it('drops Replay hydration noise and Firestore terminated clients', () => {
+    expect(shouldDropSentryEvent({ message: 'Hydration Error' })).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        extra: { title: 'Hydration Error' },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [{ type: 'Error', value: 'Minified React error #418; visit https://react.dev' }],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [{ type: 'FirebaseError', value: 'The client has already been terminated.' }],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'Error',
+              value: 'InvalidStateError: Object store cannot be found in the database',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it('keeps real application errors', () => {
     expect(
       shouldDropSentryEvent({
