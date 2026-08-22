@@ -7,6 +7,18 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.4',
+    subtitle: 'Stability',
+    date: 'August 23, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'On iPhone, the app recovers more cleanly after a storage glitch instead of getting stuck.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.15.3',
     subtitle: 'Stability',
     date: 'August 20, 2026',

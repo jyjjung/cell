@@ -522,10 +522,28 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
 }
 
+const emptyNotifications: NotificationsContextValue = {
+  notifications: [],
+  loading: false,
+  createNotification: async () => {
+    console.warn('[useNotifications] write ignored until NotificationsProvider mounts');
+    return { notificationId: '' };
+  },
+  deleteNotification: () => {
+    console.warn('[useNotifications] write ignored until NotificationsProvider mounts');
+  },
+  markAsRead: () => {
+    console.warn('[useNotifications] write ignored until NotificationsProvider mounts');
+  },
+  markAllAsRead: () => {
+    console.warn('[useNotifications] write ignored until NotificationsProvider mounts');
+  },
+  toggleReaction: () => {
+    console.warn('[useNotifications] write ignored until NotificationsProvider mounts');
+  },
+};
+
+/** Safe outside NotificationsProvider (guest / pre-session SSR) — empty inbox until session mounts. */
 export function useNotifications() {
-  const ctx = useContext(NotificationsContext);
-  if (!ctx) {
-    throw new Error('useNotifications must be used within NotificationsProvider');
-  }
-  return ctx;
+  return useContext(NotificationsContext) ?? emptyNotifications;
 }

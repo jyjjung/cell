@@ -7,6 +7,7 @@ import {
   recoverStaleNextClient,
   scheduleClearClientRecoveryFlag,
 } from '@/lib/next-client-recovery';
+import { isNonActionableBrowserNoise } from '@/lib/sentry-noise';
 
 /**
  * @fileOverview Global listener to handle ChunkLoadError in Next.js.
@@ -52,9 +53,9 @@ export function ChunkErrorListener() {
       const isNextFetchFailed =
         message === 'Failed to fetch' &&
         (stack.includes('/_next/') || stack.includes('webpack'));
-      if (isSafariLoadFailed || isNextFetchFailed) {
+      if (isSafariLoadFailed || isNextFetchFailed || isNonActionableBrowserNoise(message)) {
         e.preventDefault();
-        console.warn('[ChunkErrorListener] Next.js RSC fetch failed (network unavailable) — suppressed.');
+        console.warn('[ChunkErrorListener] Non-actionable browser/network noise — suppressed.');
       }
     };
 

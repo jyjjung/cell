@@ -86,7 +86,7 @@ function createWithPWA() {
 
   return pwa.default({
     dest: 'public',
-    register: true,
+    register: false,
     skipWaiting: true,
     workboxOptions: {
       runtimeCaching: [
