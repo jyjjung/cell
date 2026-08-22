@@ -30,6 +30,8 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
     msg.includes('An internal error was encountered in the Indexed Database server') ||
     msg.includes('looking up record in object store') ||
     msg.includes('Object store cannot be found') ||
+    msg.includes('iterate a cursor that doesn\'t exist') ||
+    msg.includes('iterate a cursor that does not exist') ||
     (msg.includes('IndexedDB transaction') &&
       (msg.includes('AbortError') || msg.includes('code=unavailable'))) ||
     // Firestore SDK bricks the client after these assertions (see firebase-js-sdk#8856, #9267).

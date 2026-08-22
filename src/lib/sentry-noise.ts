@@ -37,6 +37,34 @@ function combinedMessage(event: {
   return parts.join(' ');
 }
 
+/** Workbox crashes when `serviceWorker.register()` resolves undefined (Playwright / locked-down browsers). */
+export function isServiceWorkerWaitingAccessError(message: string): boolean {
+  return (
+    /Cannot read propert(?:y|ies) of undefined \(reading ['"]waiting['"]\)/.test(message) ||
+    /undefined is not an object \(evaluating '.*\.waiting'\)/.test(message)
+  );
+}
+
+/** Chromium Cache Storage race while a service worker updates (`cache.put` after delete). */
+export function isCachePutRaceError(message: string): boolean {
+  return (
+    message.includes("Failed to execute 'put' on 'Cache'") ||
+    (message.includes('NotFoundError') && message.includes('Cache') && message.includes('Entry was not found'))
+  );
+}
+
+/** Unhandled-rejection messages that should be swallowed in the page, not reported. */
+export function isNonActionableBrowserNoise(message: string): boolean {
+  if (!message) return false;
+  return (
+    isServiceWorkerWaitingAccessError(message) ||
+    isCachePutRaceError(message) ||
+    message.includes('sw.js load failed') ||
+    message.includes('Failed to register a ServiceWorker') ||
+    (message.includes('AbortError') && message.includes('ServiceWorker'))
+  );
+}
+
 /** True when this event is known noise and should be dropped. */
 export function shouldDropSentryEvent(event: {
   message?: string;
@@ -129,7 +157,9 @@ export function shouldDropSentryEvent(event: {
   if (
     message.includes('Failed to register a ServiceWorker') ||
     message.includes('sw.js load failed') ||
-    (message.includes('AbortError') && message.includes('ServiceWorker'))
+    (message.includes('AbortError') && message.includes('ServiceWorker')) ||
+    isServiceWorkerWaitingAccessError(message) ||
+    isCachePutRaceError(message)
   ) {
     return true;
   }

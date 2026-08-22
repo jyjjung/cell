@@ -21,6 +21,9 @@ if (!skipSentry) {
       'Hydration Error',
       /Minified React error #(418|419|422|423|425)/,
       'The client has already been terminated',
+      "Failed to execute 'put' on 'Cache'",
+      /reading ['"]waiting['"]/,
+      "Attempt to iterate a cursor that doesn't exist",
     ],
     beforeSend(event) {
       if (shouldDropSentryEvent(event)) return null;

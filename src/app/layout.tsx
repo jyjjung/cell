@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { PageLoadingProvider } from '@/contexts/page-loading-context';
 import { SetlistPlaylistProvider } from '@/contexts/setlist-playlist-context';
 import { ChunkErrorListener } from '@/components/layout/chunk-error-listener';
+import { PwaRegister } from '@/components/layout/pwa-register';
 import { AppearanceFirebaseBootstrap } from '@/components/layout/appearance-firebase-bootstrap';
 import { DeferredVercelMetrics } from '@/components/layout/deferred-vercel-metrics';
 import { DocumentLang } from '@/components/layout/document-lang';
@@ -81,6 +82,7 @@ export default async function RootLayout({
       </head>
       <body className="antialiased">
         <ChunkErrorListener />
+        <PwaRegister />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
             <PageLoadingProvider>
               <AuthProvider initialSessionCookie={initialSessionCookie}>

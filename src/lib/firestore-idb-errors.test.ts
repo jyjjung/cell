@@ -57,6 +57,11 @@ describe('isIndexedDbPersistenceError', () => {
         new Error('InvalidStateError: Object store cannot be found in the database'),
       ),
     ).toBe(true);
+    expect(
+      isIndexedDbPersistenceError(
+        new Error('UnknownError: Attempt to iterate a cursor that doesn\'t exist'),
+      ),
+    ).toBe(true);
   });
 
   it('matches known Firestore AsyncQueue bricks (ca9 → b815)', () => {

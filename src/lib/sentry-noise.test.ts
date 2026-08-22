@@ -75,6 +75,18 @@ describe('shouldDropSentryEvent', () => {
         },
       }),
     ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'UnknownError',
+              value: "Attempt to iterate a cursor that doesn't exist",
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
   });
 
   it('drops auth network failures and SW abort/load noise', () => {
@@ -189,6 +201,33 @@ describe('shouldDropSentryEvent', () => {
             {
               type: 'Error',
               value: 'InvalidStateError: Object store cannot be found in the database',
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('drops Workbox waiting access and Cache.put races', () => {
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'TypeError',
+              value: "Cannot read properties of undefined (reading 'waiting')",
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDropSentryEvent({
+        exception: {
+          values: [
+            {
+              type: 'NotFoundError',
+              value: "Failed to execute 'put' on 'Cache': Entry was not found.",
             },
           ],
         },

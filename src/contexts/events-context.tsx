@@ -234,11 +234,25 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   return <EventsContext.Provider value={value}>{children}</EventsContext.Provider>;
 }
 
+const emptyEvents: EventsContextValue = {
+  events: [],
+  loading: false,
+  refreshEvents: async () => [],
+  addEvent: async () => {
+    console.warn('[useEvents] write ignored until EventsProvider mounts');
+    return '';
+  },
+  updateEvent: async () => {
+    console.warn('[useEvents] write ignored until EventsProvider mounts');
+  },
+  deleteEvent: async () => {
+    console.warn('[useEvents] write ignored until EventsProvider mounts');
+  },
+};
+
+/** Safe outside EventsProvider (guest / pre-session SSR) — empty directory until session mounts. */
 export function useEvents(enabled = true) {
-  const ctx = useContext(EventsContext);
-  if (!ctx) {
-    throw new Error('useEvents must be used within EventsProvider');
-  }
+  const ctx = useContext(EventsContext) ?? emptyEvents;
   if (!enabled) {
     return {
       events: [] as AppEvent[],
