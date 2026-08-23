@@ -23,6 +23,14 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'Bible popup: pick a book and chapter from one list — full names, Korean when you’re on KRV.',
       },
+      {
+        type: 'Fixed',
+        text: 'Preschool rosters only list people with preschool access — you can still add guests the same way as em. Worship.',
+      },
+      {
+        type: 'Changed',
+        text: 'The community app icon and home-screen shortcut now use the NDC logo.',
+      },
     ],
   },
 

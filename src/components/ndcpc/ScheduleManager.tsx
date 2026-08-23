@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { ArrowLeft, ChevronRight, Loader2, Plus, Trash2, Users } from 'lucide-react';
+import { RosterRoleSlotRow } from '@/components/worship/roster-people-picker';
 import { ScheduleForm } from '@/components/ndcpc/ScheduleForm';
 import { LoadingState } from '@/components/ndcpc/LoadingState';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { useAdmin } from '@/context/AuthProvider';
 import { useTranslation } from '@/context/LocaleProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAllUsers } from '@/hooks/use-all-users';
 import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
 import { formatAppDate } from '@/lib/ndcpc/format-date';
 import {
@@ -34,7 +36,15 @@ import {
   isPastCalendarDate,
   timestampToDateInputValue,
 } from '@/lib/ndcpc/dates';
-import { getScheduleRoleValue, SCHEDULE_ROLE_KEYS } from '@/lib/ndcpc/schedule-roles';
+import {
+  getScheduleRoleValue,
+  ndcpcScheduleRoleBadgeClass,
+  SCHEDULE_ROLE_KEYS,
+} from '@/lib/ndcpc/schedule-roles';
+import {
+  ndcpcRosterDirectoryEntries,
+  ndcpcRosterMemberUidForName,
+} from '@/lib/ndcpc/roster-people';
 import { cn } from '@/lib/utils';
 import type { Schedule } from '@/types/ndcpc-ported';
 import { Input } from '@/components/ui/input';
@@ -68,6 +78,8 @@ export function ScheduleManager({
   const firestore = useFirestore();
   const { toast } = useToast();
   const { t, locale } = useTranslation();
+  const { allUsers } = useAllUsers();
+  const directory = useMemo(() => ndcpcRosterDirectoryEntries(allUsers), [allUsers]);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [listFilter, setListFilter] = useState<ListFilter>('upcoming');
   const [newOpen, setNewOpen] = useState(false);
@@ -198,14 +210,28 @@ export function ScheduleManager({
               }}
             />
           ) : (
-            <div className="space-y-3 rounded-xl border border-border/60 p-4">
+            <div className="space-y-2">
               {SCHEDULE_ROLE_KEYS.map((key) => {
                 const name = getScheduleRoleValue(detail, key);
+                const memberUid = name
+                  ? ndcpcRosterMemberUidForName(directory, name)
+                  : undefined;
                 return (
-                  <div key={key} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">{t(`schedules.role.${key}`)}</span>
-                    <span className="font-medium">{name || '—'}</span>
-                  </div>
+                  <RosterRoleSlotRow
+                    key={key}
+                    roleLabel={t(`schedules.role.${key}`)}
+                    roleClassName={ndcpcScheduleRoleBadgeClass(key)}
+                    people={
+                      name
+                        ? [{
+                            id: memberUid ?? `guest-${key}`,
+                            displayName: name,
+                            isMember: Boolean(memberUid),
+                          }]
+                        : []
+                    }
+                    canManage={false}
+                  />
                 );
               })}
             </div>

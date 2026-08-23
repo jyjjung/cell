@@ -70,7 +70,7 @@ async function deliverDataPush(
     data: toSafeStringMap({
       title,
       body,
-      icon: '/icon-192x192-v5.png',
+      icon: '/icon-192x192-v6.png',
       tag: payload.tag,
       link,
       badge: String(badgeCount),

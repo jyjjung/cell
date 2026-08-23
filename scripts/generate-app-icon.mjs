@@ -1,10 +1,11 @@
 /**
  * Single source of truth for the NDC Community Apps icon.
  *
- * Usage (from repo root, after npm i -D @resvg/resvg-js):
+ * Usage (from repo root):
  *   node scripts/generate-app-icon.mjs
  *
- * Writes SVG + all PNG/ICO sizes into public/ from the SVG below.
+ * Renders scripts/assets/ndc-logo-source.svg into public/ favicon + PWA sizes.
+ * App-specific icons under public/apps/ are unchanged.
  */
 import { Resvg } from '@resvg/resvg-js';
 import fs from 'fs';
@@ -13,25 +14,19 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, '..', 'public');
-const VERSION = 'v5';
+const SOURCE = path.join(__dirname, 'assets', 'ndc-logo-source.svg');
+const VERSION = 'v6';
 
-const SVG = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NDC">
-  <rect width="512" height="512" fill="#161616"/>
-  <text
-    x="256"
-    y="298"
-    text-anchor="middle"
-    font-family="Arial Black, Helvetica Neue, Helvetica, Arial, sans-serif"
-    font-size="152"
-    font-weight="900"
-    fill="#f3f0e8"
-    letter-spacing="-6"
-  >NDC</text>
-</svg>`;
+function withBlackBackground(svg) {
+  if (svg.includes('id="ndc-icon-bg"')) return svg;
+  return svg.replace(
+    /<svg([^>]*)>/,
+    '<svg$1><rect id="ndc-icon-bg" width="2000" height="2000" fill="#000"/>',
+  );
+}
 
-function renderPng(size) {
-  const resvg = new Resvg(SVG, {
+function renderPng(svg, size) {
+  const resvg = new Resvg(svg, {
     fitTo: { mode: 'width', value: size },
     font: { loadSystemFonts: true },
   });
@@ -63,9 +58,6 @@ function pngToIco(pngBuffers, sizes) {
   return Buffer.concat([header, ...entries.map((e) => e.entry), ...entries.map((e) => e.png)]);
 }
 
-fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, `icon-${VERSION}.svg`), SVG);
-
 const targets = [
   [`icon-512x512-${VERSION}.png`, 512],
   [`icon-192x192-${VERSION}.png`, 192],
@@ -74,16 +66,35 @@ const targets = [
   [`favicon-16x16-${VERSION}.png`, 16],
 ];
 
+if (!fs.existsSync(SOURCE)) {
+  console.error('Missing source logo:', SOURCE);
+  process.exit(1);
+}
+
+fs.mkdirSync(OUT, { recursive: true });
+
+const rawSvg = fs.readFileSync(SOURCE, 'utf8');
+const svg = withBlackBackground(rawSvg);
+
+fs.writeFileSync(path.join(OUT, `icon-${VERSION}.svg`), svg);
+console.log('wrote', `icon-${VERSION}.svg`);
+
+const rendered = new Map();
 for (const [name, size] of targets) {
-  const buf = renderPng(size);
+  const buf = renderPng(svg, size);
+  rendered.set(size, buf);
   fs.writeFileSync(path.join(OUT, name), buf);
   console.log('wrote', name);
 }
 
 const icoSizes = [16, 32, 48];
 const ico = pngToIco(
-  icoSizes.map((s) => renderPng(s)),
+  icoSizes.map((s) => rendered.get(s) ?? renderPng(svg, s)),
   icoSizes,
 );
 fs.writeFileSync(path.join(OUT, `favicon-${VERSION}.ico`), ico);
 console.log('wrote', `favicon-${VERSION}.ico`);
+
+const appFavicon = path.join(__dirname, '..', 'src', 'app', 'favicon.ico');
+fs.copyFileSync(path.join(OUT, `favicon-${VERSION}.ico`), appFavicon);
+console.log('wrote', 'src/app/favicon.ico');
