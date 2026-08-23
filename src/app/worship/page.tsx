@@ -228,45 +228,50 @@ function SongDetailView({
                 {sheets.map((sheet, idx) => (
                   <div key={sheet.id} className="relative group rounded-2xl overflow-hidden border border-border/40 bg-muted aspect-[3/4]">
                     {isTextChordSheet(sheet) ? (
-                      <button
-                        type="button"
-                        onClick={() => setViewSheet(sheet)}
-                        className="flex h-full w-full flex-col items-start justify-end bg-[#2b2b2b] p-3 text-left"
-                      >
+                      <div className="pointer-events-none flex h-full w-full flex-col items-start justify-end bg-[#2b2b2b] p-3 text-left">
                         <BookOpen className="mb-auto h-8 w-8 text-white/70" />
                         <span className="text-[11px] font-semibold text-white">Text chart</span>
                         <span className="text-[10px] text-white/60">{sheet.annotations?.length || 0} note set{(sheet.annotations?.length || 0) === 1 ? '' : 's'}</span>
-                      </button>
+                      </div>
                     ) : sheet.imageUrl.toLowerCase().includes('.pdf') ? (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-muted group-hover:bg-muted transition-colors">
+                      <div className="pointer-events-none w-full h-full flex flex-col items-center justify-center bg-muted">
                         <BookOpen className="h-10 w-10 text-primary" />
                         <span className="text-[10px] font-semibold text-primary mt-2">PDF DOCUMENT</span>
                       </div>
                     ) : (
                       <RemoteImage src={sheet.imageUrl} alt={`${key} pg ${idx + 1}`}
                         fill
-                        className="object-cover transition-transform group-hover:scale-105"
+                        className="pointer-events-none object-cover transition-transform group-hover:scale-105"
                         sizes="200px" />
                     )}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center gap-2 p-2">
-                      <button onClick={() => setViewSheet(sheet)}
+                    <button
+                      type="button"
+                      onClick={() => setViewSheet(sheet)}
+                      className="absolute inset-0 z-[1] cursor-pointer"
+                      aria-label={`View ${song.title} chart`}
+                    />
+                    <div className="pointer-events-none absolute inset-0 z-[2] bg-black/50 opacity-0 transition-opacity [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100" />
+                    <div className="hover-reveal absolute inset-x-0 bottom-0 z-[3] flex items-end justify-center gap-2 p-2 transition-opacity">
+                      <button type="button" onClick={() => setViewSheet(sheet)}
                         title="View sheet"
-                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                        className="p-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors">
                         <Eye className="h-3.5 w-3.5" />
                       </button>
                       {!isTextChordSheet(sheet) && (
                         <button
+                          type="button"
                           title="Download sheet"
                           onClick={(e) => {
                             e.stopPropagation();
                             downloadImage(sheet.imageUrl, `${song.title} - Key ${key} (Pg ${idx + 1}).png`);
                           }}
-                          className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                          className="p-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors">
                           <Download className="h-3.5 w-3.5" />
                         </button>
                       )}
                       {!isTextChordSheet(sheet) && sheet.imageUrl.toLowerCase().includes('.pdf') && (
                         <button
+                          type="button"
                           title="Convert PDF to Images"
                           onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
                           disabled={convertingId === sheet.id}
@@ -274,14 +279,14 @@ function SongDetailView({
                           {convertingId === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         </button>
                       )}
-                      <button onClick={() => handleDelete(sheet)}
+                      <button type="button" onClick={() => handleDelete(sheet)}
                         title="Delete sheet"
                         disabled={deleting === sheet.id}
                         className="p-1.5 rounded-lg bg-destructive hover:bg-destructive text-destructive-foreground transition-colors">
                         {deleting === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </button>
                     </div>
-                    <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold bg-black/40 text-white px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+                    <span className="pointer-events-none absolute top-1.5 left-1.5 z-[4] text-[10px] font-semibold bg-black/40 text-white px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                       Pg {idx + 1}
                     </span>
                   </div>
@@ -396,8 +401,10 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
                   initial="hidden"
                   animate="visible"
                 >
-                  <div
-                    className="event-row group cursor-pointer"
+                  <div className="event-row group">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     onClick={() => setDetailSong(song)}
                   >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
@@ -419,7 +426,8 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
+                  </button>
+                  <div className="hover-reveal flex items-center gap-1 transition-opacity">
                     <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-primary hover:bg-muted"
                       onClick={() => { setAddSheetSong(song); }}>
                       <Plus className="h-3.5 w-3.5" />
@@ -1074,16 +1082,18 @@ function SetlistDetailView({
                 ) : (
                   <div className="w-4 shrink-0 hidden sm:block" />
                 )}
-                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                  <span className="text-xs font-semibold text-primary">{i + 1}</span>
-                </div>
-                <div
+                <button
+                  type="button"
                   className={cn(
-                    'event-row-body',
+                    'flex min-w-0 flex-1 items-center gap-3 text-left',
                     !reorderMode && canOpenViewer && 'cursor-pointer'
                   )}
                   onClick={!reorderMode && canOpenViewer ? () => openSheets(ps) : undefined}
                 >
+                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xs font-semibold text-primary">{i + 1}</span>
+                </div>
+                <div className="event-row-body">
                   <p className={cn(
                     'event-row-title',
                     !reorderMode && canOpenViewer && 'group-hover:text-primary'
@@ -1105,6 +1115,7 @@ function SetlistDetailView({
                     )}
                   </div>
                 </div>
+                </button>
                 <div className="flex items-center gap-1">
                   {!reorderMode && (
                     <>
@@ -1288,8 +1299,10 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                   initial="hidden"
                   animate="visible"
                 >
-                  <div
-                    className="event-row group cursor-pointer"
+                  <div className="event-row group">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     onClick={() => setDetail(pl)}
                   >
                   <ScheduleRowDate date={parseISO(pl.date)} />
@@ -1299,7 +1312,8 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                       {pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
+                  </button>
+                  <div className="hover-reveal flex items-center gap-1 transition-opacity">
                     {canManageWorship && (
                       <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
                         onClick={() => setDeleteConfirm(pl)}>
@@ -1755,8 +1769,10 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                     initial="hidden"
                     animate="visible"
                   >
-                    <div
-                      className="event-row group cursor-pointer"
+                    <div className="event-row group">
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       onClick={() => setDetail(r)}
                     >
                     <ScheduleRowDate date={parseISO(r.date)} />
@@ -1773,7 +1789,8 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
+                    </button>
+                    <div className="hover-reveal flex items-center gap-1 transition-opacity">
                       {canManageWorship && (
                         <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
                           onClick={() => setDeleteConfirm(r)}>
@@ -1843,7 +1860,9 @@ export default function WorshipPortalPage() {
 
   const selectTab = (next: 'playlists' | 'songs' | 'rosters', id?: string | null) => {
     setTab(next);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
+    );
     params.set('tab', next);
     if (id) params.set('id', id);
     else params.delete('id');
