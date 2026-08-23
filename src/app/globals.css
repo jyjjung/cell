@@ -424,6 +424,29 @@
     @apply truncate text-xs text-muted-foreground;
   }
 
+  /*
+   * Hover-only action clusters (delete, extra icons).
+   * On touch, :hover is sticky and the first tap only “hovers” — so keep
+   * actions visible there. On fine pointers, hide until hover and disable
+   * hit-testing so an invisible control never swallows the first click.
+   */
+  .hover-reveal {
+    @apply opacity-100;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hover-reveal {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .group:hover .hover-reveal,
+    .group:focus-within .hover-reveal {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
   .surface-row {
     @apply flex items-center gap-3 py-2;
   }

@@ -343,6 +343,7 @@ export function ContinuousSetlistViewer({
             excluded: ['setlist-control'],
             wheelPanning: true,
           }}
+          doubleClick={{ disabled: true }}
           onInit={(ref) => {
             transformRef.current = ref;
             window.requestAnimationFrame(() => {

@@ -15,6 +15,14 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'On iPhone, the app recovers more cleanly after a storage glitch instead of getting stuck.',
       },
+      {
+        type: 'Fixed',
+        text: 'em. Worship opens a roster, setlist, song, or chord chart on the first tap.',
+      },
+      {
+        type: 'Improved',
+        text: 'Bible popup: pick a book and chapter from one list — full names, Korean when you’re on KRV.',
+      },
     ],
   },
 

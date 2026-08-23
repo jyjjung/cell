@@ -343,11 +343,11 @@ function ReferenceTracksPopover({
   if (!activeTrack) return null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           className={cn(
             'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors',
             isDark
