@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Check, Search, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -15,26 +14,28 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  MemberGuestPickerDialog,
+  RosterRoleSlotRow,
+} from '@/components/worship/roster-people-picker';
 import { useToast } from '@/hooks/use-toast';
+import { useAllUsers } from '@/hooks/use-all-users';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, doc, setDoc, Timestamp } from 'firebase/firestore';
 import type { Schedule } from '@/types/ndcpc-ported';
 import { dateInputValueToDate, timestampToDateInputValue } from '@/lib/ndcpc/dates';
 import { useTranslation } from '@/context/LocaleProvider';
-import { SCHEDULE_ROLE_KEYS, type ScheduleRoleKey } from '@/lib/ndcpc/schedule-roles';
+import {
+  ndcpcScheduleRoleBadgeClass,
+  SCHEDULE_ROLE_KEYS,
+  type ScheduleRoleKey,
+} from '@/lib/ndcpc/schedule-roles';
 import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
-import { useAllUsers } from '@/hooks/use-all-users';
-import { ndcpcAccountDisplayName } from '@/lib/ndcpc/account-name';
-import { cn } from '@/lib/utils';
+import {
+  ndcpcRosterDirectoryEntries,
+  ndcpcRosterMemberUidForName,
+} from '@/lib/ndcpc/roster-people';
 
 interface ScheduleFormProps {
   onSuccess: () => void;
@@ -47,8 +48,6 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
   const { t } = useTranslation();
   const { allUsers, loading: usersLoading } = useAllUsers();
   const [pickerRole, setPickerRole] = useState<ScheduleRoleKey | null>(null);
-  const [memberSearch, setMemberSearch] = useState('');
-  const [guestName, setGuestName] = useState('');
 
   const formSchema = z.object({
     date: z.string().min(1, t('schedules.dateRequired')),
@@ -61,18 +60,11 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
 
   type ScheduleFormValues = z.infer<typeof formSchema>;
 
-  // Same pool as em. worship rosters: anyone with a first name in the directory.
-  const siteUserOptions = useMemo(
-    () =>
-      allUsers
-        .filter((user) => Boolean(user.firstName?.trim()))
-        .map((user) => ({
-          uid: user.uid,
-          name: ndcpcAccountDisplayName(user) || `${user.firstName} ${user.lastName ?? ''}`.trim(),
-        }))
-        .filter((entry) => entry.name)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [allUsers],
+  const siteUserOptions = useMemo(() => ndcpcRosterDirectoryEntries(allUsers), [allUsers]);
+
+  const pickerMembers = useMemo(
+    () => siteUserOptions.map((user) => ({ uid: user.uid, displayName: user.name })),
+    [siteUserOptions],
   );
 
   const form = useForm<ScheduleFormValues>({
@@ -96,17 +88,9 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
         },
   });
 
-  const filteredUsers = useMemo(() => {
-    const q = memberSearch.trim().toLowerCase();
-    if (!q) return siteUserOptions;
-    return siteUserOptions.filter((user) => user.name.toLowerCase().includes(q));
-  }, [siteUserOptions, memberSearch]);
-
   const assignPerson = (role: ScheduleRoleKey, name: string) => {
     form.setValue(role, name, { shouldDirty: true, shouldTouch: true });
     setPickerRole(null);
-    setMemberSearch('');
-    setGuestName('');
   };
 
   const clearPerson = (role: ScheduleRoleKey) => {
@@ -144,7 +128,10 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
     }
   };
 
-  const pickerTitle = pickerRole ? t(`schedules.role.${pickerRole}`) : '';
+  const pickerValue = pickerRole ? form.watch(pickerRole) : '';
+  const pickerAssignedUid = pickerRole
+    ? ndcpcRosterMemberUidForName(siteUserOptions, pickerValue)
+    : undefined;
 
   return (
     <>
@@ -166,55 +153,42 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
                 )}
               />
 
-              {SCHEDULE_ROLE_KEYS.map((key) => {
-                const value = form.watch(key);
-                return (
-                  <FormField
-                    key={key}
-                    control={form.control}
-                    name={key}
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>{t(`schedules.role.${key}`)}</FormLabel>
-                        <div className="flex items-center gap-2">
-                          {value ? (
-                            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
-                              <span className="min-w-0 truncate font-medium">{value}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                onClick={() => clearPerson(key)}
-                                aria-label={t('common.remove')}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <p className="flex-1 text-sm text-muted-foreground">None</p>
-                          )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-9 shrink-0 gap-1.5 rounded-lg"
-                            onClick={() => {
-                              setPickerRole(key);
-                              setMemberSearch('');
-                              setGuestName('');
-                            }}
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            {value ? 'Change' : 'Add'}
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                );
-              })}
+              <div className="space-y-2">
+                {SCHEDULE_ROLE_KEYS.map((key) => {
+                  const value = form.watch(key);
+                  const memberUid = value
+                    ? ndcpcRosterMemberUidForName(siteUserOptions, value)
+                    : undefined;
+                  return (
+                    <FormField
+                      key={key}
+                      control={form.control}
+                      name={key}
+                      render={() => (
+                        <FormItem>
+                          <RosterRoleSlotRow
+                            roleLabel={t(`schedules.role.${key}`)}
+                            roleClassName={ndcpcScheduleRoleBadgeClass(key)}
+                            people={
+                              value
+                                ? [{
+                                    id: memberUid ?? `guest-${key}`,
+                                    displayName: value,
+                                    isMember: Boolean(memberUid),
+                                  }]
+                                : []
+                            }
+                            canManage
+                            onAdd={() => setPickerRole(key)}
+                            onRemove={() => clearPerson(key)}
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })}
+              </div>
 
               <Button type="submit" className="w-full">
                 {form.formState.isSubmitting ? t('common.saving') : t('schedules.saveSchedule')}
@@ -224,104 +198,18 @@ export function ScheduleForm({ onSuccess, schedule }: ScheduleFormProps) {
         </div>
       </ScrollArea>
 
-      <Dialog
+      <MemberGuestPickerDialog
         open={pickerRole != null}
         onOpenChange={(open) => {
-          if (!open) {
-            setPickerRole(null);
-            setMemberSearch('');
-            setGuestName('');
-          }
+          if (!open) setPickerRole(null);
         }}
-      >
-        <DialogContent className="max-w-sm rounded-xl">
-          <DialogHeader className="space-y-1">
-            <DialogTitle className="text-base font-semibold">{pickerTitle}</DialogTitle>
-            <DialogDescription>Pick a person from the directory, or add a guest name.</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 pt-1">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Search people…"
-                className="h-9 rounded-xl pl-9"
-              />
-            </div>
-
-            <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-              {usersLoading ? (
-                <p className="px-2 py-6 text-center text-sm text-muted-foreground">Loading people…</p>
-              ) : filteredUsers.length === 0 ? (
-                <p className="px-2 py-6 text-center text-sm text-muted-foreground">No matches</p>
-              ) : (
-                filteredUsers.map((user) => {
-                  const selected = pickerRole ? form.getValues(pickerRole) === user.name : false;
-                  return (
-                    <button
-                      key={user.uid}
-                      type="button"
-                      onClick={() => pickerRole && assignPerson(pickerRole, user.name)}
-                      className={cn(
-                        'flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-left text-sm transition-colors',
-                        selected
-                          ? 'border-border bg-muted text-primary'
-                          : 'hover:border-border hover:bg-muted',
-                      )}
-                    >
-                      <span className="min-w-0 flex-1 truncate font-medium">{user.name}</span>
-                      {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="space-y-2 border-t border-border/40 pt-3">
-              <Label className="text-xs text-muted-foreground">Guest</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Guest name…"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  className="h-9 flex-1 rounded-xl text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && guestName.trim() && pickerRole) {
-                      e.preventDefault();
-                      assignPerson(pickerRole, guestName.trim());
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-9 shrink-0 rounded-xl"
-                  disabled={!guestName.trim() || !pickerRole}
-                  onClick={() => pickerRole && guestName.trim() && assignPerson(pickerRole, guestName.trim())}
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-
-            {pickerRole && form.getValues(pickerRole) ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full rounded-xl text-muted-foreground"
-                onClick={() => {
-                  clearPerson(pickerRole);
-                  setPickerRole(null);
-                }}
-              >
-                Clear assignment
-              </Button>
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
+        roleLabel={pickerRole ? t(`schedules.role.${pickerRole}`) : ''}
+        members={pickerMembers}
+        assignedUserIds={pickerAssignedUid ? [pickerAssignedUid] : []}
+        loading={usersLoading}
+        onSelectMember={(member) => pickerRole && assignPerson(pickerRole, member.displayName)}
+        onAddGuest={(name) => pickerRole && assignPerson(pickerRole, name)}
+      />
     </>
   );
 }

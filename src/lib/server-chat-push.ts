@@ -225,7 +225,7 @@ export async function deliverChatPush(
         const dataPayload: Record<string, unknown> = {
           title,
           body: bodyText,
-          icon: '/icon-192x192-v5.png',
+          icon: '/icon-192x192-v6.png',
           tag: notificationTag,
           messageId: notificationTag,
           link: chatDeepLink,

@@ -12,28 +12,28 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait-primary',
     icons: [
       // Raster icons — required by iOS Safari and Android for home screen
-      // v5 cache-bust: installed PWAs only refresh icons when the URL changes
+      // v6 cache-bust: installed PWAs only refresh icons when the URL changes
       {
-        src: '/icon-192x192-v5.png',
+        src: '/icon-192x192-v6.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512-v5.png',
+        src: '/icon-512x512-v6.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512-v5.png',
+        src: '/icon-512x512-v6.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
       },
       // SVG fallback for modern browsers
       {
-        src: '/icon-v5.svg',
+        src: '/icon-v6.svg',
         sizes: 'any',
         type: 'image/svg+xml',
         purpose: 'any',

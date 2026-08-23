@@ -96,7 +96,7 @@ export function AuthenticatedAppChrome({ currentUser }: { currentUser: AppUser }
               if (!registration) return;
               registration.showNotification(title, {
                 body,
-                icon: payload.data?.icon || '/icon-192x192-v5.png',
+                icon: payload.data?.icon || '/icon-192x192-v6.png',
                 tag,
                 data: { link },
               });

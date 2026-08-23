@@ -5,12 +5,12 @@ import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { NavPageHeader } from '@/components/ui/page-layout';
 import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
+import { MemberGuestPickerDialog, RosterRoleSlotRow } from '@/components/worship/roster-people-picker';
 import { AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog, SetlistSongConfigPanel } from '@/components/worship/WorshipDialogs';
 import { ReferenceTracksListen } from '@/components/worship/YoutubeReferenceEmbed';
 import { useAuth } from '@/contexts/auth-context';
@@ -21,7 +21,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { formatNameString } from '@/lib/formatting';
 import { isTextChordSheet, splitSheetsForViewer } from '@/lib/chord-chart';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
@@ -34,7 +33,7 @@ import type { ChordKey, SetlistSong, SongChordSheet, WorshipRole, WorshipRoster,
 import { mergeWorshipRosterSlots } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronRight, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Loader2, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, UserCheck, UserPlus, Users, UserX, X, Youtube } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronRight, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Loader2, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, Users, X, Youtube } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -1393,8 +1392,6 @@ function RosterDetailView({
 
   // Member picker state
   const [pickerSlotIdx, setPickerSlotIdx] = useState<number | null>(null);
-  const [guestName, setGuestName] = useState('');
-  const [memberSearch, setMemberSearch] = useState('');
   const [linkSetlistOpen, setLinkSetlistOpen] = useState(false);
 
   // Keep in sync when roster refreshes from Firestore (only if not dirty)
@@ -1412,11 +1409,12 @@ function RosterDetailView({
     [allUsers]
   );
 
-  const filteredUsers = useMemo(() =>
-    siteUserOptions.filter(u =>
-      `${u.firstName} ${u.lastName}`.toLowerCase().includes(memberSearch.toLowerCase())
-    ),
-    [siteUserOptions, memberSearch]
+  const pickerMembers = useMemo(
+    () => siteUserOptions.map((user) => ({
+      uid: user.uid,
+      displayName: `${user.firstName} ${user.lastName}`.trim(),
+    })),
+    [siteUserOptions],
   );
 
   const handleSave = async () => {
@@ -1451,8 +1449,6 @@ function RosterDetailView({
     });
     setDirty(true);
     setPickerSlotIdx(null);
-    setGuestName('');
-    setMemberSearch('');
   };
 
   const handleLinkSetlist = async (setlistId: string | null) => {
@@ -1535,117 +1531,41 @@ function RosterDetailView({
       {/* Slots */}
       <div className="space-y-2">
         {slots.map((slot, slotIdx) => (
-          <div
+          <RosterRoleSlotRow
             key={slot.role}
-            className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-border"
-          >
-            <div className="flex items-center gap-3 px-4 py-3">
-              <span className={cn(
-                'text-[11px] font-semibold px-2.5 py-1 rounded-lg border shrink-0',
-                roleBadgeClass(slot.role)
-              )}>
-                {slot.role}
-              </span>
-              <div className="flex-1 flex flex-wrap items-center gap-2 min-w-0">
-                {slot.members.length === 0 ? (
-                  <span className="text-xs text-muted-foreground/40 font-medium italic">Unassigned</span>
-                ) : (
-                  slot.members.map((m, mi) => (
-                    <span key={mi} className={cn(
-                      'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border',
-                      m.userId ? 'bg-success/10 border-success/30 text-success' : 'bg-muted border-border/50 text-muted-foreground'
-                    )}>
-                      {m.userId ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
-                      {formatNameString(m.displayName, 'Guest')}
-                      {canManageWorship && (
-                        <button onClick={() => removeMember(slotIdx, mi)}
-                          className="ml-0.5 hover:text-destructive transition-colors">
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      )}
-                    </span>
-                  ))
-                )}
-              </div>
-              {canManageWorship && (
-                <button
-                  onClick={() => { setPickerSlotIdx(slotIdx); setMemberSearch(''); setGuestName(''); }}
-                  className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-primary transition-colors"
-                  title="Add member">
-                  <UserPlus className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
+            roleLabel={slot.role}
+            roleClassName={roleBadgeClass(slot.role)}
+            people={slot.members.map((member, memberIdx) => ({
+              id: member.userId ?? `guest-${slotIdx}-${memberIdx}`,
+              displayName: member.displayName,
+              isMember: Boolean(member.userId),
+            }))}
+            canManage={canManageWorship}
+            onAdd={() => setPickerSlotIdx(slotIdx)}
+            onRemove={(memberIdx) => removeMember(slotIdx, memberIdx)}
+          />
         ))}
       </div>
 
-      {/* Member picker dialog */}
-      <Dialog open={pickerSlotIdx !== null} onOpenChange={v => !v && setPickerSlotIdx(null)}>
-        <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-xl font-semibold normal-case not-italic tracking-tight">
-              Add to {pickerSlotIdx !== null ? slots[pickerSlotIdx]?.role : ''}
-            </DialogTitle>
-            <DialogDescription>Pick a site member or enter a guest name.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            {/* Site user search */}
-            <div className="space-y-2">
-              <Label className="text-micro-label text-muted-foreground">Members</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
-                <Input placeholder="Search members…" value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                  className="pl-8 rounded-xl h-9 text-sm" />
-              </div>
-              <div className="space-y-1 max-h-44 overflow-y-auto">
-                {filteredUsers.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground py-4">No matching members</p>
-                ) : filteredUsers.map(u => {
-                  const already = pickerSlotIdx !== null &&
-                    slots[pickerSlotIdx].members.some(m => m.userId === u.uid);
-                  return (
-                    <button key={u.uid} disabled={already}
-                      onClick={() => pickerSlotIdx !== null && addMemberToSlot(pickerSlotIdx, { userId: u.uid, displayName: `${u.firstName} ${u.lastName}` })}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-sm transition-all',
-                        already
-                          ? 'opacity-40 cursor-not-allowed bg-muted'
-                          : 'hover:bg-muted hover:border-border border border-transparent'
-                      )}>
-                      <UserCheck className="h-3.5 w-3.5 text-success shrink-0" />
-                      <span className="font-semibold">{u.firstName} {u.lastName}</span>
-                      {already && <span className="ml-auto text-[10px] text-muted-foreground/40">added</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Guest */}
-            <div className="space-y-2 border-t border-border/30 pt-3">
-              <Label className="text-micro-label text-muted-foreground">Guests</Label>
-              <div className="flex gap-2">
-                <Input placeholder="Guest name…" value={guestName} onChange={e => setGuestName(e.target.value)}
-                  className="flex-1 rounded-xl h-9 text-sm"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && guestName.trim() && pickerSlotIdx !== null) {
-                      addMemberToSlot(pickerSlotIdx, { userId: null, displayName: guestName.trim() });
-                    }
-                  }} />
-                <Button size="sm" className="rounded-xl h-9 shrink-0"
-                  disabled={!guestName.trim() || pickerSlotIdx === null}
-                  onClick={() => pickerSlotIdx !== null && guestName.trim() &&
-                    addMemberToSlot(pickerSlotIdx, { userId: null, displayName: guestName.trim() })
-                  }>
-                  <UserPlus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MemberGuestPickerDialog
+        open={pickerSlotIdx !== null}
+        onOpenChange={(open) => { if (!open) setPickerSlotIdx(null); }}
+        roleLabel={pickerSlotIdx !== null ? slots[pickerSlotIdx]?.role ?? '' : ''}
+        members={pickerMembers}
+        assignedUserIds={
+          pickerSlotIdx !== null
+            ? slots[pickerSlotIdx].members.map((member) => member.userId).filter((id): id is string => Boolean(id))
+            : []
+        }
+        onSelectMember={(member) => pickerSlotIdx !== null && addMemberToSlot(pickerSlotIdx, {
+          userId: member.uid,
+          displayName: member.displayName,
+        })}
+        onAddGuest={(name) => pickerSlotIdx !== null && addMemberToSlot(pickerSlotIdx, {
+          userId: null,
+          displayName: name,
+        })}
+      />
 
       {/* Link Setlist Dialog */}
       <Dialog open={linkSetlistOpen} onOpenChange={setLinkSetlistOpen}>

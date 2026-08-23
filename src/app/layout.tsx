@@ -39,15 +39,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icon-v5.svg', type: 'image/svg+xml' },
-      { url: '/favicon-16x16-v5.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32-v5.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon-192x192-v5.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-v6.svg', type: 'image/svg+xml' },
+      { url: '/favicon-16x16-v6.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192x192-v6.png', sizes: '192x192', type: 'image/png' },
     ],
-    shortcut: '/favicon-v5.ico',
+    shortcut: '/favicon-v6.ico',
     apple: [
-      { url: '/apple-touch-icon-v5.png', sizes: '180x180', type: 'image/png' },
-      { url: '/icon-192x192-v5.png', sizes: '192x192', type: 'image/png' },
+      { url: '/apple-touch-icon-v6.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icon-192x192-v6.png', sizes: '192x192', type: 'image/png' },
     ],
   },
 };
