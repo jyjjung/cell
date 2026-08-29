@@ -78,31 +78,15 @@ export function detectKeyFromText(text: string): ChordKey | null {
   return LETTER_KEYS.includes(normalized as Exclude<ChordKey, 'numbers'>) ? normalized : null;
 }
 
-/** English words that start with A–G so we don't steal their first letter as a chord. */
-const WORD_NOT_CHORD = new Set([
-  'a', 'am', 'an', 'and', 'as', 'at', 'all', 'also', 'away', 'again', 'anyone', 'ashamed',
-  'be', 'by', 'but', 'been', 'being', 'because', 'before', 'between', 'both', 'broke', 'blood', 'body', 'back', 'based',
-  'can', 'cant', "can't", 'cannot', 'come', 'cross', 'care', 'cause', 'clean', 'call', 'could', 'couldnt', "couldn't",
-  'chains', 'chorus', 'caution',
-  'do', 'did', 'dont', "don't", 'debt', 'dance', 'dancing',
-  'each', 'even', 'ever', 'every', 'everyone',
-  'for', 'from', 'free', 'friend', 'found', 'forget', 'foolishness',
-  'go', 'god', 'gone', 'good', 'going', 'great',
-  'he', 'his', 'her', 'has', 'have', 'held', 'how', 'hope', 'heart', 'hearts',
-  'if', 'in', 'is', 'it', 'its', "it's", 'ill', "i'll", 'im', "i'm",
-  'life', 'light', 'love', 'lungs', 'lord',
-  'me', 'my', 'mine',
-  'no', 'not', 'never', 'now',
-  'of', 'oh', 'on', 'or', 'out', 'off', 'once', 'other', 'over',
-  'so', 'say', 'some', 'sin', 'sing', 'shed', 'shame', 'store', 'restore', 'pour', 'breath', 'earth',
-  'the', 'to', 'too', 'this', 'that', 'those', 'thank', 'threw', 'throwing', 'took',
-  'up', 'us',
-  'we', 'was', 'what', 'where', 'worth', 'wind', 'with',
-  "ev'ry", 'every',
-]);
-
-const INLINE_CHORD_RE = new RegExp(`(\\(?${CHORD_BODY}\\)?)`, 'g');
+const INLINE_CHORD_RE = new RegExp(`(?<=\\s|^)(\\(?${CHORD_BODY}\\)?)(?=\\s|$)`, 'g');
 const DIRECTION_CUE_RE = /\((?:To\b|\d+(?:st|nd|rd|th)\s+x\b)[^)]*\)/gi;
+
+function hasSpaceOnEachSide(line: string, index: number, token: string): boolean {
+  const leftOk = index === 0 || /\s/.test(line[index - 1]);
+  const end = index + token.length;
+  const rightOk = end >= line.length || /\s/.test(line[end]);
+  return leftOk && rightOk;
+}
 
 function stripSongSelectChrome(text: string): string {
   return text
@@ -138,12 +122,9 @@ function isChordLine(trimmed: string): boolean {
   return true;
 }
 
-function normalizeWordKey(word: string): string {
-  return word.toLowerCase().replace(/[’']/g, '');
-}
-
 function shouldSplitInlineChord(line: string, index: number, token: string): boolean {
   if (!isStandaloneChordToken(token)) return false;
+  if (!hasSpaceOnEachSide(line, index, token)) return false;
 
   // Never pull letters out of jump cues: (To Ch. 1a), (2nd x To Tag 2)
   const before = line.slice(0, index);
@@ -155,22 +136,6 @@ function shouldSplitInlineChord(line: string, index: number, token: string): boo
     if (/to\b|\d+(?:st|nd|rd|th)\s+x\b/i.test(inside)) return false;
   }
 
-  // Slash chords, accidentals, parenthetical passings, N.C., Em, C#m, etc.
-  if (/[\/#]|^\(|N\.?C/i.test(token) || token.length > 1) return true;
-
-  const rest = line.slice(index + token.length);
-  if (!rest || /^[\s,;:!?]/.test(rest)) return true;
-  if (/^\./.test(rest)) return false;
-
-  const letters = rest.match(/^[A-Za-z']+/)?.[0] ?? '';
-  if (!letters) return true;
-  // Ev'ry, 'tis, etc. — the note letter belongs to the lyric, not a chord.
-  if (letters.includes("'")) return false;
-  // Ch. Br. Vs. — section abbreviations, not chords.
-  if (rest[letters.length] === '.') return false;
-
-  const glued = normalizeWordKey(`${token}${letters}`);
-  if (WORD_NOT_CHORD.has(glued)) return false;
   return true;
 }
 
@@ -807,10 +772,23 @@ function toNashville(chord: string, originalKey: Exclude<ChordKey, 'numbers'>): 
 }
 
 function mapChordsInText(text: string, map: (chord: string) => string): string {
-  return text.replace(CHORD_GLOBAL, (token) => {
-    if (!isChordToken(token)) return token;
-    return map(unwrapChord(token));
-  });
+  const re = new RegExp(CHORD_GLOBAL.source, CHORD_GLOBAL.flags);
+  let result = '';
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const token = match[0];
+    const index = match.index;
+    result += text.slice(last, index);
+    if (isChordToken(token) && hasSpaceOnEachSide(text, index, token)) {
+      result += map(unwrapChord(token));
+    } else {
+      result += token;
+    }
+    last = index + token.length;
+  }
+  result += text.slice(last);
+  return result;
 }
 
 export function transposeBlocks(

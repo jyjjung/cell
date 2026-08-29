@@ -169,20 +169,33 @@ y
     }
   });
 
-  it('unglues mashed SongSelect plain text into chords above lyrics', () => {
-    const expanded = expandInlineChords(`Verse 1
-I’m E/G#shaking off the heaviness A 
-I’m Edancing out of my regrets 
-AI am not ashamed to praise like this 
-E/G#  Where are those Achains that once E/G#held me 
-And You broke Your E/G#bod - B/D#y 
+  it('splits spaced inline chord tokens but not glued lyric words', () => {
+    const glued = expandInlineChords(`EBut I say it's worth the risk 
+I'll Anever be ashamed (To Ch. 1a) 
+Great Are You Lord
 `);
-    expect(expanded).toMatch(/E\/G#\nshaking/i);
-    expect(expanded).toMatch(/E\ndancing/);
-    expect(expanded).toMatch(/^A\nI am not ashamed/m);
-    expect(expanded).toMatch(/A\nchains/);
+    expect(glued).toContain("EBut I say");
+    expect(glued).toContain('Anever');
+    expect(glued).toContain('Great Are You Lord');
+    expect(glued).not.toMatch(/^E\nBut/m);
+  });
+
+  it('unglues spaced SongSelect plain text into chords above lyrics', () => {
+    const expanded = expandInlineChords(`VERSE 1
+I'm E/G# shaking off the heaviness 
+A 
+
+I'm E dancing out of my regrets 
+A I am not ashamed to praise like this 
+E/G#  Where are those A chains that once E/G# held me 
+And You broke Your E/G# bod - B/D# y 
+`);
+    expect(expanded).toMatch(/E\/G#\n\s*shaking/i);
+    expect(expanded).toMatch(/E\n\s*dancing/);
+    expect(expanded).toMatch(/^A\n\s*I am not ashamed/m);
+    expect(expanded).toMatch(/A\n\s*chains/);
     expect(expanded).toMatch(/And You broke Your/);
-    expect(expanded).toMatch(/E\/G#\nbod/);
+    expect(expanded).toMatch(/E\/G#\n\s*bod/);
 
     const blocks = parseChordChart(expanded);
     const shaking = blocks.find((b) => b.type === 'lyric' && b.parts.some((p) => p.text.includes('shaking')));
@@ -224,16 +237,17 @@ E
   });
 
   it('does not turn English words or jump cues into chords', () => {
-    const expanded = expandInlineChords(`EBut I say it's worth the risk 
-I'll Anever be ashamed to praise like this (To Ch. 1a) 
-how Acan E/G#it be 
+    const expanded = expandInlineChords(`VERSE 1
+E But I say it's worth the risk 
+I'll A never be ashamed to praise like this (To Ch. 1a) 
+how A can E/G# it be 
 `);
-    expect(expanded).toMatch(/^E\nBut I say/m);
+    expect(expanded).toMatch(/^E\n\s*But I say/m);
     expect(expanded).not.toMatch(/^B\nut/m);
     expect(expanded).toContain('(To Ch. 1a)');
     expect(expanded).not.toMatch(/\nC\n/);
-    expect(expanded).toMatch(/A\nnever/);
-    expect(expanded).toMatch(/A\ncan/);
+    expect(expanded).toMatch(/A\n\s*never/);
+    expect(expanded).toMatch(/A\n\s*can/);
 
     const blocks = parseChordChart(expanded);
     const texts = blocks.flatMap((b) => {
@@ -322,12 +336,19 @@ light to the darkness `;
     const prepared = prepareChordChartPaste(mashed);
     expect(prepared).toContain('Great Are You Lord');
     expect(prepared).not.toMatch(/^G\nreat/m);
-    expect(prepared).toMatch(/D\nlife/);
-    expect(prepared).toMatch(/F#m7\nlove/);
-    expect(prepared).toMatch(/Esus\nlight/);
+    expect(prepared).toContain('Dlife');
+    expect(prepared).toContain('F#m7love');
+
+    const fromStructured = parseChordChart(structuredHtml);
+    const verse = fromStructured.find((b) => b.type === 'lyric' && b.parts.some((p) => p.text.includes('life')));
+    expect(verse?.type).toBe('lyric');
+    if (verse?.type === 'lyric') {
+      expect(verse.parts.some((p) => p.chord === 'D' && p.text.includes('life'))).toBe(true);
+      expect(verse.parts.some((p) => p.chord === 'F#m7' && p.text.includes('love'))).toBe(true);
+    }
   });
 
-  it('does not misread Dbreath, Ev\'ry, or Great as chords when ungluing mashed plain text', () => {
+  it('does not treat glued lyric text as chords without spaces on each side', () => {
     const mashed = `Great Are You Lord
 Key - A | Tempo - 144 | Time - 6/8
 
@@ -340,23 +361,19 @@ So we Esuspour out our praise to You only
 BRIDGE
 D2Great are You ALord 
 `;
-    const prepared = prepareChordChartPaste(mashed);
-    const blocks = parseChordChart(prepared);
+    const blocks = parseChordChart(prepareChordChartPaste(mashed));
     const lyricText = blocks
       .filter((b) => b.type === 'lyric')
       .map((b) => (b.type === 'lyric' ? b.parts.map((p) => p.text).join('') : ''))
       .join('\n');
-    expect(prepared).toContain('Great Are You Lord');
+    const chords = blocks.flatMap((b) => (
+      b.type === 'lyric' ? b.parts.map((p) => p.chord).filter(Boolean) : []
+    ));
     expect(lyricText).toMatch(/Ev'ry/);
-    expect(lyricText).toMatch(/breath/);
-    expect(lyricText).toMatch(/Great are You Lord/);
-    expect(lyricText).not.toMatch(/^reat /m);
-
-    const breath = blocks.find((b) => b.type === 'lyric' && b.parts.some((p) => p.text.includes('breath')));
-    if (breath?.type === 'lyric') {
-      expect(breath.parts.some((p) => p.chord === 'Db')).toBe(false);
-      expect(breath.parts.some((p) => p.chord === 'D' && p.text.includes('breath'))).toBe(true);
-    }
+    expect(lyricText).toMatch(/Dbreath/);
+    expect(lyricText).toMatch(/D2Great are You ALord/);
+    expect(chords).not.toContain('Db');
+    expect(chords).not.toContain('G');
   });
 
   it('does not turn title words into chords when ungluing mashed plain text', () => {
@@ -365,11 +382,11 @@ David Leonard | Jason Ingram
 Key - A | Tempo - 144 | Time - 4/4
 
 VERSE
-You give Dlife You are F#m7love 
+You give D life You are F#m7 love 
 `);
     expect(expanded).toContain('Great Are You Lord');
     expect(expanded).not.toMatch(/^G\nreat/m);
-    expect(expanded).toMatch(/D\nlife/);
+    expect(expanded).toMatch(/D\n\s*life/);
   });
 
   it('does not split a verse across columns', () => {
