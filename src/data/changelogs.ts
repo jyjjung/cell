@@ -15,6 +15,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Pasted charts no longer treat lyric words like “breath”, “Ev’ry”, or “Great” as chord symbols.',
       },
+      {
+        type: 'Fixed',
+        text: 'Chord detection only kicks in when a symbol has a space on each side, so lyrics are not misread.',
+      },
     ],
   },
   {
