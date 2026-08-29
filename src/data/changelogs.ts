@@ -7,6 +7,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.6',
+    subtitle: 'Worship Charts',
+    date: 'August 29, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted charts no longer treat lyric words like “breath”, “Ev’ry”, or “Great” as chord symbols.',
+      },
+    ],
+  },
+  {
     version: 'v1.15.5',
     subtitle: 'Worship Charts',
     date: 'August 29, 2026',

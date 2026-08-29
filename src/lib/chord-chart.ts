@@ -25,8 +25,11 @@ const NOTE_INDEX: Record<string, number> = {
 
 const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb']);
 
+/** Flat/sharp only when not the start of a glued lyric syllable (Dbreath → D + breath, not Db + reath). */
+const NOTE_ACCIDENTAL = String.raw`(?:#|b(?![a-z]))?`;
+
 const CHORD_BODY =
-  String.raw`(?:N\.?C\.?|NC|N/C|[A-G](?:#|b)?(?:maj7|maj9|maj13|maj|min7|min9|min|m7b5|m7|m9|m11|m13|madd9|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\(\d+\))*(?:/[A-G](?:#|b)?)?)`;
+  String.raw`(?:N\.?C\.?|NC|N/C|[A-G]${NOTE_ACCIDENTAL}(?:maj7|maj9|maj13|maj|min7|min9|min|m7b5|m7|m9|m11|m13|madd9|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\(\d+\))*(?:/[A-G]${NOTE_ACCIDENTAL})?)`;
 
 const CHORD_TOKEN = new RegExp(`^\\(?${CHORD_BODY}\\)?$`, 'i');
 const CHORD_GLOBAL = new RegExp(`(\\(?${CHORD_BODY}\\)?)`, 'gi');
@@ -84,16 +87,18 @@ const WORD_NOT_CHORD = new Set([
   'do', 'did', 'dont', "don't", 'debt', 'dance', 'dancing',
   'each', 'even', 'ever', 'every', 'everyone',
   'for', 'from', 'free', 'friend', 'found', 'forget', 'foolishness',
-  'go', 'god', 'gone', 'good', 'going',
-  'he', 'his', 'her', 'has', 'have', 'held', 'how',
+  'go', 'god', 'gone', 'good', 'going', 'great',
+  'he', 'his', 'her', 'has', 'have', 'held', 'how', 'hope', 'heart', 'hearts',
   'if', 'in', 'is', 'it', 'its', "it's", 'ill', "i'll", 'im', "i'm",
+  'life', 'light', 'love', 'lungs', 'lord',
   'me', 'my', 'mine',
   'no', 'not', 'never', 'now',
   'of', 'oh', 'on', 'or', 'out', 'off', 'once', 'other', 'over',
-  'so', 'say', 'some', 'sin', 'sing', 'shed', 'shame',
+  'so', 'say', 'some', 'sin', 'sing', 'shed', 'shame', 'store', 'restore', 'pour', 'breath', 'earth',
   'the', 'to', 'too', 'this', 'that', 'those', 'thank', 'threw', 'throwing', 'took',
   'up', 'us',
   'we', 'was', 'what', 'where', 'worth', 'wind', 'with',
+  "ev'ry", 'every',
 ]);
 
 const INLINE_CHORD_RE = new RegExp(`(\\(?${CHORD_BODY}\\)?)`, 'g');
@@ -126,6 +131,13 @@ function isStandaloneChordToken(token: string): boolean {
   return CHORD_TOKEN.test(token.trim());
 }
 
+/** Chord row in SongSelect paste — not a lowercase lyric syllable on its own line. */
+function isChordLine(trimmed: string): boolean {
+  if (!isStandaloneChordToken(trimmed)) return false;
+  if (/^[a-g]$/.test(trimmed)) return false;
+  return true;
+}
+
 function normalizeWordKey(word: string): string {
   return word.toLowerCase().replace(/[’']/g, '');
 }
@@ -152,6 +164,8 @@ function shouldSplitInlineChord(line: string, index: number, token: string): boo
 
   const letters = rest.match(/^[A-Za-z']+/)?.[0] ?? '';
   if (!letters) return true;
+  // Ev'ry, 'tis, etc. — the note letter belongs to the lyric, not a chord.
+  if (letters.includes("'")) return false;
   // Ch. Br. Vs. — section abbreviations, not chords.
   if (rest[letters.length] === '.') return false;
 
@@ -169,7 +183,7 @@ function expandOneLine(line: string): string {
     || isMetaLine(trimmed)
     || isSkipLine(trimmed)
     || isDirectionNote(trimmed)
-    || isStandaloneChordToken(trimmed)
+    || isChordLine(trimmed)
     || /\[[A-G]/.test(line)
     || trimmed.includes('|')
   ) {
@@ -314,7 +328,7 @@ function chartTextFromHtml(html: string): string {
       return `${childText} `;
     }
     if (tag === 'tr') return `${childText.trim()}\n`;
-    if (own && isStandaloneChordToken(own) && !el.querySelector('div,p,br,tr,td')) {
+    if (own && isChordLine(own) && !el.querySelector('div,p,br,tr,td')) {
       return ` ${own} `;
     }
     if (/^(p|div|h[1-6]|li|section)$/.test(tag)) return `${childText}\n`;
@@ -369,7 +383,9 @@ export function prepareChordChartPaste(plain: string, html?: string | null): str
 }
 
 function normalizePaste(text: string): string {
-  return repairBrokenMeasureLines(expandInlineChords(stripSongSelectChrome(text)));
+  const stripped = stripSongSelectChrome(text);
+  const raw = plainTextHasMashedChords(stripped) ? expandInlineChords(stripped) : stripped;
+  return repairBrokenMeasureLines(raw);
 }
 
 function isChordToken(token: string): boolean {
@@ -700,7 +716,7 @@ function parseSongSelect(text: string): ChartBlock[] {
       continue;
     }
 
-    if (isChordToken(trimmed)) {
+    if (isChordLine(trimmed)) {
       buffer += `[${unwrapChord(trimmed)}]`;
       continue;
     }
