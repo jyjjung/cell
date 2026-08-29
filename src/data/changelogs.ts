@@ -7,6 +7,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.15.5',
+    subtitle: 'Worship Charts',
+    date: 'August 29, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasting a chart from SongSelect keeps chords above lyrics instead of gluing them into words like “Dlife”.',
+      },
+    ],
+  },
+  {
     version: 'v1.15.4',
     subtitle: 'Stability',
     date: 'August 23, 2026',
