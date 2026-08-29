@@ -3,6 +3,8 @@ import {
   detectKeyFromText,
   expandInlineChords,
   parseChordChart,
+  prepareChordChartPaste,
+  preferChordChartPasteSource,
   repairBrokenMeasureLines,
   splitChartBodyColumns,
   transposeBlocks,
@@ -288,6 +290,54 @@ Thank God
       expect(chorus.cue).toMatch(/To Br\. 1b/i);
     }
     expect(blocks.some((b) => b.type === 'note')).toBe(false);
+  });
+
+  it('prefers SongSelect HTML when plain text mashes chords into lyrics', () => {
+    const mashed = `Great Are You Lord
+David Leonard | Jason Ingram | Leslie Jordan
+Key - A | Tempo - 144 | Time - 6/8
+
+INTRO
+||: D  | F#m7  | Esus  | Esus  :|| 
+
+VERSE
+You give Dlife You are F#m7love 
+You bring Esuslight to the darkness 
+`;
+    const structuredHtml = `Great Are You Lord
+David Leonard | Jason Ingram | Leslie Jordan
+Key - A | Tempo - 144 | Time - 6/8
+VERSE
+You give 
+D
+life
+ You are 
+F#m7
+love
+You bring 
+Esus
+light to the darkness `;
+    expect(preferChordChartPasteSource(mashed, structuredHtml)).toBe('html');
+
+    const prepared = prepareChordChartPaste(mashed);
+    expect(prepared).toContain('Great Are You Lord');
+    expect(prepared).not.toMatch(/^G\nreat/m);
+    expect(prepared).toMatch(/D\nlife/);
+    expect(prepared).toMatch(/F#m7\nlove/);
+    expect(prepared).toMatch(/Esus\nlight/);
+  });
+
+  it('does not turn title words into chords when ungluing mashed plain text', () => {
+    const expanded = expandInlineChords(`Great Are You Lord
+David Leonard | Jason Ingram
+Key - A | Tempo - 144 | Time - 4/4
+
+VERSE
+You give Dlife You are F#m7love 
+`);
+    expect(expanded).toContain('Great Are You Lord');
+    expect(expanded).not.toMatch(/^G\nreat/m);
+    expect(expanded).toMatch(/D\nlife/);
   });
 
   it('does not split a verse across columns', () => {

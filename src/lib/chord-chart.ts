@@ -210,12 +210,24 @@ function expandOneLine(line: string): string {
   return pieces.join('\n');
 }
 
+function firstSectionLineIndex(lines: string[]): number {
+  return lines.findIndex((line) => isSectionHeader(line.trim()));
+}
+
 /** Turn mashed SongSelect plain text (`I'm E/G#shaking`) into chord-on-own-line format. */
 export function expandInlineChords(text: string): string {
+  const lines = text.split('\n');
+  const sectionAt = firstSectionLineIndex(lines);
   const out: string[] = [];
-  for (const line of text.split('\n')) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (!line.trim()) {
       out.push('');
+      continue;
+    }
+    // Title/credits above the first section — don't split "Great" / "Are" into chords.
+    if (sectionAt !== -1 && i < sectionAt) {
+      out.push(line);
       continue;
     }
     const expanded = expandOneLine(line);
@@ -317,17 +329,43 @@ function looksLikeStructuredChart(text: string): boolean {
   return hasBars && hasSection;
 }
 
-/** Prefer structured plain text; HTML often splits bar lines into one token per line. */
-export function prepareChordChartPaste(plain: string, html?: string | null): string {
-  const plainNorm = stripSongSelectChrome(plain);
-  if (looksLikeStructuredChart(plainNorm) || !html) {
-    return repairBrokenMeasureLines(expandInlineChords(plainNorm));
+function plainTextHasMashedChords(text: string): boolean {
+  const lines = text.split('\n');
+  const sectionAt = firstSectionLineIndex(lines);
+  if (sectionAt === -1) return false;
+  for (let i = sectionAt; i < lines.length; i++) {
+    if (expandOneLine(lines[i]) !== lines[i]) return true;
   }
-  const htmlText = stripSongSelectChrome(decodeHtmlEntities(chartTextFromHtml(html)));
+  return false;
+}
+
+function finalizePlainPaste(plainNorm: string): string {
+  const raw = plainTextHasMashedChords(plainNorm) ? expandInlineChords(plainNorm) : plainNorm;
+  return repairBrokenMeasureLines(raw);
+}
+
+/** @internal Exported for unit tests — picks rich paste when plain glues chords to lyrics. */
+export function preferChordChartPasteSource(plainNorm: string, htmlText: string): 'html' | 'plain' {
+  const mashed = plainTextHasMashedChords(plainNorm);
+  const structured = looksLikeStructuredChart(plainNorm);
   const htmlLines = htmlText.split('\n').filter((l) => l.trim()).length;
   const plainLines = plainNorm.split('\n').filter((l) => l.trim()).length;
-  const raw = htmlLines > plainLines + 2 && !looksLikeStructuredChart(plainNorm) ? htmlText : plainNorm;
-  return repairBrokenMeasureLines(expandInlineChords(raw));
+  const preferHtml = mashed || (htmlLines > plainLines + 2 && !structured);
+  return preferHtml ? 'html' : 'plain';
+}
+
+/** Prefer rich paste when plain text glues chords to lyrics; keep bar lines from plain when needed. */
+export function prepareChordChartPaste(plain: string, html?: string | null): string {
+  const plainNorm = stripSongSelectChrome(plain);
+  if (!html?.trim()) {
+    return finalizePlainPaste(plainNorm);
+  }
+
+  const htmlText = stripSongSelectChrome(decodeHtmlEntities(chartTextFromHtml(html)));
+  const raw = preferChordChartPasteSource(plainNorm, htmlText) === 'html'
+    ? htmlText
+    : (plainTextHasMashedChords(plainNorm) ? expandInlineChords(plainNorm) : plainNorm);
+  return repairBrokenMeasureLines(raw);
 }
 
 function normalizePaste(text: string): string {
