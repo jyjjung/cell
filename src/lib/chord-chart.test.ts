@@ -327,6 +327,38 @@ light to the darkness `;
     expect(prepared).toMatch(/Esus\nlight/);
   });
 
+  it('does not misread Dbreath, Ev\'ry, or Great as chords when ungluing mashed plain text', () => {
+    const mashed = `Great Are You Lord
+Key - A | Tempo - 144 | Time - 6/8
+
+VERSE
+You give Dlife You are F#m7love 
+Ev'ry Esusheart that is broken 
+It's Your Dbreath in our F#m7lungs 
+So we Esuspour out our praise to You only 
+
+BRIDGE
+D2Great are You ALord 
+`;
+    const prepared = prepareChordChartPaste(mashed);
+    const blocks = parseChordChart(prepared);
+    const lyricText = blocks
+      .filter((b) => b.type === 'lyric')
+      .map((b) => (b.type === 'lyric' ? b.parts.map((p) => p.text).join('') : ''))
+      .join('\n');
+    expect(prepared).toContain('Great Are You Lord');
+    expect(lyricText).toMatch(/Ev'ry/);
+    expect(lyricText).toMatch(/breath/);
+    expect(lyricText).toMatch(/Great are You Lord/);
+    expect(lyricText).not.toMatch(/^reat /m);
+
+    const breath = blocks.find((b) => b.type === 'lyric' && b.parts.some((p) => p.text.includes('breath')));
+    if (breath?.type === 'lyric') {
+      expect(breath.parts.some((p) => p.chord === 'Db')).toBe(false);
+      expect(breath.parts.some((p) => p.chord === 'D' && p.text.includes('breath'))).toBe(true);
+    }
+  });
+
   it('does not turn title words into chords when ungluing mashed plain text', () => {
     const expanded = expandInlineChords(`Great Are You Lord
 David Leonard | Jason Ingram
