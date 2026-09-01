@@ -1,6 +1,6 @@
 'use client';
 
-import { TextChordChartCanvas } from '@/components/worship/text-chord-chart';
+import { TextChordChartCanvas, TEXT_CHART_SURFACE } from '@/components/worship/text-chord-chart';
 import type { ChordKey, SongChordSheet } from '@/types';
 import { toBlob } from 'html-to-image';
 import { createRoot, type Root } from 'react-dom/client';
@@ -49,6 +49,7 @@ export async function exportTextChordSheetToPng({
         displayKey={resolvedKey}
         strokes={strokes}
         exportMode
+        theme={TEXT_CHART_SURFACE}
       />,
     );
     await waitForLayout();

@@ -7,7 +7,10 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 
 type ChartSurface = 'dark' | 'light';
 
-const ChartSurfaceContext = createContext<ChartSurface>('dark');
+/** Text charts always render on a dark surface so ink annotations stay visible. */
+export const TEXT_CHART_SURFACE: ChartSurface = 'dark';
+
+const ChartSurfaceContext = createContext<ChartSurface>(TEXT_CHART_SURFACE);
 
 function useChartSurface() {
   return useContext(ChartSurfaceContext);
@@ -186,7 +189,8 @@ export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
   const [left, right] = splitChartBodyColumns(body);
 
   return (
-    <div className="max-w-full space-y-2">
+    <ChartSurfaceContext.Provider value={TEXT_CHART_SURFACE}>
+      <div className="max-w-full space-y-2">
       {header.length > 0 && (
         <div className="max-w-full space-y-0.5 pb-2">
           {header.map((block, i) => (
@@ -201,7 +205,8 @@ export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
           <ChartColumn blocks={right} />
         </div>
       )}
-    </div>
+      </div>
+    </ChartSurfaceContext.Provider>
   );
 }
 
@@ -220,7 +225,7 @@ export function TextChordChartCanvas({
   onStrokesChange,
   zoom = 1,
   exportMode = false,
-  theme = 'dark',
+  theme: _theme = TEXT_CHART_SURFACE,
 }: {
   sheet: SongChordSheet;
   originalKey: ChordKey;
@@ -235,6 +240,7 @@ export function TextChordChartCanvas({
   exportMode?: boolean;
   theme?: ChartSurface;
 }) {
+  const surface = TEXT_CHART_SURFACE;
   const source = sheet.sourceText || '';
   const blocks = useMemo(
     () => transposeBlocks(parseChordChart(source), originalKey, displayKey),
@@ -300,13 +306,13 @@ export function TextChordChartCanvas({
       className="relative px-8 py-7"
       style={{
         width: CHART_LOGICAL_WIDTH,
-        background: SURFACE_BG[theme],
+        background: SURFACE_BG[surface],
         transform: exportMode ? undefined : `scale(${scale})`,
         transformOrigin: exportMode ? undefined : 'top left',
         fontFamily: 'var(--font-geist-sans), var(--app-font-family), system-ui, sans-serif',
       }}
     >
-      <ChartSurfaceContext.Provider value={theme}>
+      <ChartSurfaceContext.Provider value={surface}>
         <ChartBlocks blocks={blocks} />
       </ChartSurfaceContext.Provider>
       <svg
