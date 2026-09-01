@@ -54,12 +54,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f5f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#12151c" },
   ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: 'cover',
   // Android Chrome: resize layout with keyboard. iOS WebKit ignores this.
   interactiveWidget: 'resizes-content',
@@ -83,7 +82,7 @@ export default async function RootLayout({
       <body className="antialiased">
         <ChunkErrorListener />
         <PwaRegister />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="theme">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="theme">
             <PageLoadingProvider>
               <AuthProvider initialSessionCookie={initialSessionCookie}>
                 <DocumentLang />

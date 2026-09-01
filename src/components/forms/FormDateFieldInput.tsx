@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -127,14 +128,13 @@ export default function FormDateFieldInput({
               >
                 {parsed ? format(parsed, 'MMM d, yyyy') : dateStr}
                 {!readOnly ? (
-                  <button
-                    type="button"
-                    className="rounded-sm text-muted-foreground hover:text-foreground"
-                    onClick={() => removeDate(dateStr)}
+                  <IconButton
+                    size="compact"
                     aria-label={`Remove ${dateStr}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                    icon={X}
+                    onClick={() => removeDate(dateStr)}
+                    className="text-muted-foreground"
+                  />
                 ) : null}
               </span>
             );

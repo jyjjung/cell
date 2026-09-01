@@ -1,7 +1,8 @@
 "use client";
 
 import { Building2, GraduationCap, Layers, UserX, Users } from "lucide-react";
-import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
+import { BottomHubBar } from "@/components/layout/bottom-hub-bar";
+import { HubTab } from "@/components/layout/hub-tab";
 import type { UsersSegmentTab } from "@/lib/user-segments";
 
 type UsersHubTabsProps = {
@@ -22,26 +23,22 @@ export function UsersHubTabs({ activeTab, onTabChange, counts }: UsersHubTabsPro
   return (
     <BottomHubBar maxWidth="wide">
       <div className="grid grid-cols-5 gap-0.5">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = tab.value === activeTab;
-          const count = tab.value !== "roles" ? counts[tab.value] : undefined;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => onTabChange(tab.value)}
-              className={bottomHubTabClass(active)}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon className={bottomHubIconClass(active)} />
-              <span className="truncate">
+        {TABS.map((tab) => (
+          <HubTab
+            key={tab.value}
+            active={tab.value === activeTab}
+            label={
+              <>
                 {tab.label}
-                {typeof count === "number" ? ` (${count})` : ""}
-              </span>
-            </button>
-          );
-        })}
+                {tab.value !== "roles" && typeof counts[tab.value] === "number"
+                  ? ` (${counts[tab.value]})`
+                  : ""}
+              </>
+            }
+            icon={tab.icon}
+            onClick={() => onTabChange(tab.value)}
+          />
+        ))}
       </div>
     </BottomHubBar>
   );

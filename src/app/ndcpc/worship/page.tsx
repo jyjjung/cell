@@ -10,6 +10,8 @@ import { WorshipFormatManager } from '@/components/ndcpc/WorshipFormatManager';
 import { ResourceList } from '@/components/ndcpc/ResourceList';
 import { AddResourceForm } from '@/components/ndcpc/AddResourceForm';
 import { Button } from '@/components/ui/button';
+import { BottomHubBar } from '@/components/layout/bottom-hub-bar';
+import { HubTab } from '@/components/layout/hub-tab';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,6 @@ import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
-import { cn } from '@/lib/utils';
 import { doc, writeBatch } from 'firebase/firestore';
 
 type WorshipTab = 'roster' | 'setlist' | 'resources' | 'order';
@@ -245,64 +246,14 @@ export default function NdcpcWorshipPage() {
       </motion.div>
 
       <div className="h-16 md:h-0" />
-      <div className="fixed bottom-3 left-1/2 z-40 w-[min(720px,calc(100vw-16px))] -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)] md:w-[min(760px,calc(100vw-16rem-32px))]">
-        <div className="glass-elevated rounded-xl border-transparent px-2 py-1.5">
-          <div className="grid grid-cols-4 gap-1">
-            <button
-              type="button"
-              onClick={() => selectTab('roster')}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs transition-colors',
-                tab === 'roster'
-                  ? 'bg-background/40 font-medium text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Users className={cn('h-4 w-4', tab === 'roster' ? 'text-primary' : 'text-muted-foreground')} />
-              <span>Rosters</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => selectTab('setlist')}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs transition-colors',
-                tab === 'setlist'
-                  ? 'bg-background/40 font-medium text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <ListMusic className={cn('h-4 w-4', tab === 'setlist' ? 'text-primary' : 'text-muted-foreground')} />
-              <span>Setlists</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => selectTab('resources')}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs transition-colors',
-                tab === 'resources'
-                  ? 'bg-background/40 font-medium text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Library className={cn('h-4 w-4', tab === 'resources' ? 'text-primary' : 'text-muted-foreground')} />
-              <span>Resources</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => selectTab('order')}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs transition-colors',
-                tab === 'order'
-                  ? 'bg-background/40 font-medium text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Calendar className={cn('h-4 w-4', tab === 'order' ? 'text-primary' : 'text-muted-foreground')} />
-              <span>Order</span>
-            </button>
-          </div>
+      <BottomHubBar maxWidth="wide">
+        <div className="grid grid-cols-4 gap-1">
+          <HubTab active={tab === 'roster'} label="Rosters" icon={Users} onClick={() => selectTab('roster')} />
+          <HubTab active={tab === 'setlist'} label="Setlists" icon={ListMusic} onClick={() => selectTab('setlist')} />
+          <HubTab active={tab === 'resources'} label="Resources" icon={Library} onClick={() => selectTab('resources')} />
+          <HubTab active={tab === 'order'} label="Order" icon={Calendar} onClick={() => selectTab('order')} />
         </div>
-      </div>
+      </BottomHubBar>
     </div>
   );
 }

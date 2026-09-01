@@ -1,12 +1,14 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { NavPageHeader } from '@/components/ui/page-layout';
-import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
+import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { PageLoading, ButtonSpinner } from '@/components/ui/loading-spinner';;
+import { ScheduleRowDate, DrillDownListRow, ScheduleListCard, drillDownRowButtonClass } from '@/components/schedule/schedule-occurrence-row';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
@@ -22,6 +24,15 @@ import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
 import { isTextChordSheet, splitSheetsForViewer } from '@/lib/chord-chart';
+import {
+  filesFromSetlistSlides,
+  hasDownloadableSheets,
+  sheetDownloadFilename,
+  sheetDownloadSourceFromSetlistSong,
+  sheetDownloadSourceFromSongSheets,
+  sheetExtension,
+} from '@/lib/setlist-download';
+import { downloadNamedFiles } from '@/lib/setlist-download-client';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import {
@@ -33,8 +44,7 @@ import type { ChordKey, SetlistSong, SongChordSheet, WorshipRole, WorshipRoster,
 import { mergeWorshipRosterSlots } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronRight, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Loader2, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, Users, X, Youtube } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, Users, X, Youtube } from 'lucide-react';import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -51,20 +61,7 @@ function useCanManageWorship() {
 }
 
 async function downloadImage(url: string, filename: string) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
-  } catch (e) {
-    window.open(url, '_blank');
-  }
+  await downloadNamedFiles([{ url, filename }]);
 }
 
 // ── KeyBadge ─────────────────────────────────────────────────────────────────
@@ -167,9 +164,7 @@ function SongDetailView({
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
       className="space-y-6">
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl h-9 w-9 mt-0.5">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <IconButton variant="ghost" onClick={onBack} className="rounded-xl mt-0.5" aria-label="Back" icon={ArrowLeft} />
         <div className="flex-1 min-w-0">
           {editing ? (
             <div className="space-y-2">
@@ -191,7 +186,7 @@ function SongDetailView({
               <Button size="sm" variant="ghost" className="rounded-xl h-9" onClick={() => setEditing(false)}>Cancel</Button>
               <Button size="sm" className="rounded-xl h-9 gap-1.5"
                 onClick={handleSaveEdit} disabled={!editTitle.trim() || saving}>
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+                {saving ? <ButtonSpinner size="sm" /> : <Save className="h-3.5 w-3.5" />} Save
               </Button>
             </>
           ) : (
@@ -243,47 +238,74 @@ function SongDetailView({
                         className="pointer-events-none object-cover transition-transform group-hover:scale-105"
                         sizes="200px" />
                     )}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
                       onClick={() => setViewSheet(sheet)}
-                      className="absolute inset-0 z-[1] cursor-pointer"
+                      className="absolute inset-0 z-[1] h-auto w-full cursor-pointer rounded-none p-0"
                       aria-label={`View ${song.title} chart`}
                     />
                     <div className="pointer-events-none absolute inset-0 z-[2] bg-black/50 opacity-0 transition-opacity [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100" />
                     <div className="hover-reveal absolute inset-x-0 bottom-0 z-[3] flex items-end justify-center gap-2 p-2 transition-opacity">
-                      <button type="button" onClick={() => setViewSheet(sheet)}
-                        title="View sheet"
-                        className="p-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors">
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                      {!isTextChordSheet(sheet) && (
-                        <button
+                      <IconButton type="button" onClick={() => setViewSheet(sheet)}
+                        aria-label="View sheet"
+                        className="rounded-lg bg-black/50 text-white hover:bg-black/70"
+                        icon={Eye}
+                        iconClassName="h-3.5 w-3.5"
+                      />
+                      {!isTextChordSheet(sheet) ? (
+                        <IconButton
                           type="button"
-                          title="Download sheet"
+                          aria-label="Download sheet"
                           onClick={(e) => {
                             e.stopPropagation();
-                            downloadImage(sheet.imageUrl, `${song.title} - Key ${key} (Pg ${idx + 1}).png`);
+                            downloadImage(
+                              sheet.imageUrl,
+                              sheetDownloadFilename({
+                                songTitle: song.title,
+                                pageIndex: idx + 1,
+                                pageCount: sheets.filter((s) => !isTextChordSheet(s)).length,
+                                ext: sheetExtension(sheet.imageUrl),
+                              }),
+                            );
                           }}
-                          className="p-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white transition-colors">
-                          <Download className="h-3.5 w-3.5" />
-                        </button>
+                          className="rounded-lg bg-black/50 text-white hover:bg-black/70"
+                          icon={Download}
+                          iconClassName="h-3.5 w-3.5"
+                        />
+                      ) : (
+                        <IconButton
+                          type="button"
+                          aria-label="Download chart"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void downloadNamedFiles(
+                              filesFromSetlistSlides([
+                                sheetDownloadSourceFromSongSheets(song.title, [sheet], key),
+                              ]),
+                            );
+                          }}
+                          className="rounded-lg bg-black/50 text-white hover:bg-black/70"
+                          icon={Download}
+                          iconClassName="h-3.5 w-3.5"
+                        />
                       )}
                       {!isTextChordSheet(sheet) && sheet.imageUrl.toLowerCase().includes('.pdf') && (
-                        <button
+                        <IconButton
                           type="button"
-                          title="Convert PDF to Images"
+                          aria-label="Convert PDF to Images"
                           onClick={(e) => { e.stopPropagation(); handleConvertPdf(sheet); }}
                           disabled={convertingId === sheet.id}
-                          className="p-1.5 rounded-lg bg-success/15 hover:bg-success/20 text-success-foreground transition-colors">
-                          {convertingId === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                        </button>
+                          className="rounded-lg bg-success/15 text-success-foreground hover:bg-success/20"
+                          icon={convertingId === sheet.id ? ButtonSpinner : RefreshCw}
+                        />
                       )}
-                      <button type="button" onClick={() => handleDelete(sheet)}
-                        title="Delete sheet"
+                      <IconButton type="button" onClick={() => handleDelete(sheet)}
+                        aria-label="Delete sheet"
                         disabled={deleting === sheet.id}
-                        className="p-1.5 rounded-lg bg-destructive hover:bg-destructive text-destructive-foreground transition-colors">
-                        {deleting === sheet.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      </button>
+                        className="rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive"
+                        icon={deleting === sheet.id ? ButtonSpinner : Trash2}
+                      />
                     </div>
                     <span className="pointer-events-none absolute top-1.5 left-1.5 z-[4] text-[10px] font-semibold bg-black/40 text-white px-1.5 py-0.5 rounded-md backdrop-blur-sm">
                       Pg {idx + 1}
@@ -364,7 +386,7 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  if (loading) return <PageLoading />;
 
   return (
     <AnimatePresence mode="wait">
@@ -390,8 +412,7 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
               </p>
             </div>
           ) : (
-            <div className="ui-card !p-0">
-              <div className="ui-list px-2">
+            <ScheduleListCard>
               {filtered.map((song, i) => (
                 <motion.div
                   key={song.id}
@@ -400,50 +421,55 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
                   initial="hidden"
                   animate="visible"
                 >
-                  <div className="event-row group">
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  <DrillDownListRow
+                    leading={
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+                        <Music2 className="h-4 w-4 text-primary" />
+                      </div>
+                    }
+                    title={song.title}
+                    subtitle={
+                      <>
+                        {song.artist ? <span className="event-row-meta">{song.artist}</span> : null}
+                        {song.chordSheets.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {Array.from(new Set(song.chordSheets.map(s => s.key))).slice(0, 4).map(k => (
+                              <KeyBadge key={k} keyName={k} />
+                            ))}
+                            {new Set(song.chordSheets.map(s => s.key)).size > 4 && (
+                              <span className="text-[10px] text-muted-foreground">+{new Set(song.chordSheets.map(s => s.key)).size - 4}</span>
+                            )}
+                          </div>
+                        ) : null}
+                      </>
+                    }
                     onClick={() => setDetailSong(song)}
-                  >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-                    <Music2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="event-row-body">
-                    <p className="event-row-title">{song.title}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                      {song.artist && <span className="event-row-meta">{song.artist}</span>}
-                      {song.chordSheets.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1">
-                          {Array.from(new Set(song.chordSheets.map(s => s.key))).slice(0, 4).map(k => (
-                            <KeyBadge key={k} keyName={k} />
-                          ))}
-                          {new Set(song.chordSheets.map(s => s.key)).size > 4 && (
-                            <span className="text-[10px] text-muted-foreground">+{new Set(song.chordSheets.map(s => s.key)).size - 4}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  </button>
-                  <div className="hover-reveal flex items-center gap-1 transition-opacity">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-primary hover:bg-muted"
-                      onClick={() => { setAddSheetSong(song); }}>
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                    {canManageWorship && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteConfirm(song)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                  </div>
+                    trailing={
+                      <>
+                        <IconButton
+                          variant="ghost"
+                          className="rounded-lg hover:text-primary hover:bg-muted"
+                          aria-label="Add chord sheet"
+                          onClick={() => { setAddSheetSong(song); }}
+                          icon={Plus}
+                          iconClassName="h-3.5 w-3.5"
+                        />
+                        {canManageWorship ? (
+                          <IconButton
+                            variant="ghost"
+                            className="rounded-lg hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Delete song"
+                            onClick={() => setDeleteConfirm(song)}
+                            icon={Trash2}
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                        ) : null}
+                      </>
+                    }
+                  />
                 </motion.div>
               ))}
-              </div>
-            </div>
+            </ScheduleListCard>
           )}
 
           <NewSongDialog open={newSongOpen} onClose={() => setNewSongOpen(false)}
@@ -460,7 +486,7 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
                 <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4" />} Delete
+                  {deleting ? <ButtonSpinner className="mr-2" /> : <Trash2 className="h-4 w-4" />} Delete
                 </Button>
               </div>
             </DialogContent>
@@ -623,8 +649,8 @@ function AddSongToSetlistDialog({
                       {songs.length === 0 ? 'No songs in library yet.' : 'No matching songs.'}
                     </p>
                   ) : filtered.map(song => (
-                    <button key={song.id} onClick={() => selectSong(song)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted hover:border-border border border-transparent transition-all text-left">
+                    <Button key={song.id} type="button" variant="ghost" onClick={() => selectSong(song)}
+                      className="h-auto w-full items-center gap-3 p-3 rounded-xl justify-start text-left hover:bg-muted hover:border-border border border-transparent">
                       <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                         <Music2 className="h-4 w-4 text-primary" />
                       </div>
@@ -637,7 +663,7 @@ function AddSongToSetlistDialog({
                           <KeyBadge key={k} keyName={k} />
                         ))}
                       </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </>
@@ -651,10 +677,12 @@ function AddSongToSetlistDialog({
                     <p className="font-bold text-sm">{liveSong.title}</p>
                     {liveSong.artist && <p className="text-xs text-muted-foreground/60">{liveSong.artist}</p>}
                   </div>
-                  <button type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setSelectedAnnotationId('none'); setReferenceTracks([{ url: '', note: '' }]); }}
-                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <IconButton type="button" onClick={() => { setSelectedSong(null); setSelectedKey('numbers'); setSelectedAnnotationId('none'); setReferenceTracks([{ url: '', note: '' }]); }}
+                    className="rounded-lg text-muted-foreground hover:bg-muted hover:text-primary"
+                    aria-label="Clear selected song"
+                    icon={X}
+                    iconClassName="h-3.5 w-3.5"
+                  />
                 </div>
 
                 <SetlistSongConfigPanel
@@ -681,7 +709,7 @@ function AddSongToSetlistDialog({
               <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { reset(); onClose(); }}>Cancel</Button>
               <Button className="flex-1 rounded-xl"
                 onClick={handleAdd} disabled={!liveSong || adding || tracksInvalid}>
-                {adding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Add to Setlist
+                {adding ? <ButtonSpinner className="mr-2" /> : null} Add to Setlist
               </Button>
             </div>
           </div>
@@ -837,7 +865,7 @@ function EditSetlistSongDialog({
             <div className="flex gap-2 pt-1">
               <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
               <Button className="flex-1 rounded-xl" onClick={handleSave} disabled={saving || tracksInvalid}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save
+                {saving ? <ButtonSpinner className="mr-2" /> : null} Save
               </Button>
             </div>
           </div>
@@ -1008,9 +1036,7 @@ function SetlistDetailView({
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
       className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl h-9 w-9">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <IconButton variant="ghost" onClick={onBack} className="rounded-xl" aria-label="Back" icon={ArrowLeft} />
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-lg normal-case not-italic leading-tight truncate">{playlist.name}</h2>
           <p className="text-xs text-muted-foreground/60 font-medium flex items-center gap-1">
@@ -1029,7 +1055,7 @@ function SetlistDetailView({
           )}
           {canManageWorship && reorderMode && reorderDirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSaveOrder} disabled={savingOrder}>
-              {savingOrder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+              {savingOrder ? <ButtonSpinner size="sm" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
           )}
           {canManageWorship && !reorderMode && (
@@ -1081,10 +1107,11 @@ function SetlistDetailView({
                 ) : (
                   <div className="w-4 shrink-0 hidden sm:block" />
                 )}
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   className={cn(
-                    'flex min-w-0 flex-1 items-center gap-3 text-left',
+                    drillDownRowButtonClass,
                     !reorderMode && canOpenViewer && 'cursor-pointer'
                   )}
                   onClick={!reorderMode && canOpenViewer ? () => openSheets(ps) : undefined}
@@ -1114,48 +1141,48 @@ function SetlistDetailView({
                     )}
                   </div>
                 </div>
-                </button>
+                </Button>
                 <div className="flex items-center gap-1">
                   {!reorderMode && (
                     <>
                       {hasReferenceTracks(ps) && (
                         <ReferenceTracksListen tracks={ps} theme="light" compact />
                       )}
-                      {sheetsForKey.some((sheet) => sheet.imageUrl && !isTextChordSheet(sheet)) && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                          title="Download sheet(s)"
+                      {hasDownloadableSheets(sheetsForKey) && (
+                        <IconButton variant="ghost" className="rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                          aria-label="Download sheet(s)"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const images = sheetsForKey.filter((sheet) => sheet.imageUrl && !isTextChordSheet(sheet));
-                            images.forEach((sheet, idx) => {
-                              setTimeout(() => {
-                                downloadImage(sheet.imageUrl, `${ps.title} - Key ${ps.key}${images.length > 1 ? ` (Pg ${idx + 1})` : ''}.png`);
-                              }, idx * 300);
-                            });
-                          }}>
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
+                            void downloadNamedFiles(filesFromSetlistSlides([
+                              sheetDownloadSourceFromSetlistSong(ps, sheetsForKey, i + 1),
+                            ]));
+                          }}
+                          icon={Download}
+                          iconClassName="h-3.5 w-3.5"
+                        />
                       )}
                       {libSong && (
                         <>
                           {canManageWorship && (
-                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                              title="Edit song settings"
+                            <IconButton variant="ghost" className="rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                              aria-label="Edit song settings"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditSong(ps);
-                              }}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
+                              }}
+                              icon={Pencil}
+                              iconClassName="h-3.5 w-3.5"
+                            />
                           )}
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                            title="Add chord sheet"
+                          <IconButton variant="ghost" className="rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
+                            aria-label="Add chord sheet"
                             onClick={(e) => {
                               e.stopPropagation();
                               setAddSheetFor({ song: libSong, key: ps.key });
-                            }}>
-                            <Upload className="h-3.5 w-3.5" />
-                          </Button>
+                            }}
+                            icon={Upload}
+                            iconClassName="h-3.5 w-3.5"
+                          />
                         </>
                       )}
                     </>
@@ -1163,35 +1190,35 @@ function SetlistDetailView({
                   {reorderMode && (
                     <div className="flex items-center gap-1">
                       <div className="flex flex-col gap-1 mr-2">
-                        <Button
-                          size="icon"
+                        <IconButton
                           variant="ghost"
-                          className="h-7 w-7 rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
+                          className="rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
                           onClick={() => handleMove(i, 'up')}
                           disabled={i === 0}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
+                          aria-label="Move song up"
+                          icon={ChevronUp}
+                        />
+                        <IconButton
                           variant="ghost"
-                          className="h-7 w-7 rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
+                          className="rounded-lg hover:bg-muted hover:text-primary disabled:opacity-20"
                           onClick={() => handleMove(i, 'down')}
                           disabled={i === orderedSongs.length - 1}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
+                          aria-label="Move song down"
+                          icon={ChevronDown}
+                        />
                       </div>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive pointer-events-auto"
+                      <IconButton variant="ghost" className="rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive pointer-events-auto"
                         onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
                           handleRemove(ps, i);
-                        }} 
-                        disabled={removing === setlistSongEntryKey(ps, i)}>
-                        {removing === setlistSongEntryKey(ps, i) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                      </Button>
+                        }}
+                        disabled={removing === setlistSongEntryKey(ps, i)}
+                        aria-label="Remove song"
+                        icon={removing === setlistSongEntryKey(ps, i) ? ButtonSpinner : X}
+                        iconClassName="h-3.5 w-3.5"
+                      />
                     </div>
                   )}
                 </div>
@@ -1268,7 +1295,7 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  if (loading) return <PageLoading />;
 
   return (
     <AnimatePresence mode="wait">
@@ -1288,8 +1315,7 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
               <p className="text-xs text-muted-foreground/60 mt-1">Create a setlist for an upcoming worship service.</p>
             </div>
           ) : (
-            <div className="ui-card !p-0">
-              <div className="ui-list px-2">
+            <ScheduleListCard>
               {playlists.map((pl, i) => (
                 <motion.div
                   key={pl.id}
@@ -1298,34 +1324,27 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                   initial="hidden"
                   animate="visible"
                 >
-                  <div className="event-row group">
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  <DrillDownListRow
+                    leading={<ScheduleRowDate date={parseISO(pl.date)} />}
+                    title={pl.name}
+                    subtitle={`${pl.songs.length} song${pl.songs.length !== 1 ? 's' : ''}`}
                     onClick={() => setDetail(pl)}
-                  >
-                  <ScheduleRowDate date={parseISO(pl.date)} />
-                  <div className="event-row-body">
-                    <p className="event-row-title">{pl.name}</p>
-                    <p className="event-row-meta">
-                      {pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  </button>
-                  <div className="hover-reveal flex items-center gap-1 transition-opacity">
-                    {canManageWorship && (
-                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteConfirm(pl)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                  </div>
+                    trailing={
+                      canManageWorship ? (
+                        <IconButton
+                          variant="ghost"
+                          className="rounded-lg hover:text-destructive hover:bg-destructive/10"
+                          aria-label="Delete setlist"
+                          onClick={() => setDeleteConfirm(pl)}
+                          icon={Trash2}
+                          iconClassName="h-3.5 w-3.5"
+                        />
+                      ) : undefined
+                    }
+                  />
                 </motion.div>
               ))}
-              </div>
-            </div>
+            </ScheduleListCard>
           )}
 
           <NewSetlistDialog open={newOpen} onClose={() => setNewOpen(false)} onCreated={id => {
@@ -1342,7 +1361,7 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
                 <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Delete
+                  {deleting ? <ButtonSpinner className="mr-2" /> : null} Delete
                 </Button>
               </div>
             </DialogContent>
@@ -1469,9 +1488,7 @@ function RosterDetailView({
       className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl h-9 w-9 mt-0.5">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        <IconButton variant="ghost" onClick={onBack} className="rounded-xl mt-0.5" aria-label="Back" icon={ArrowLeft} />
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-lg normal-case not-italic leading-tight truncate">{roster.name}</h2>
           <div className="flex items-center gap-2 mt-0.5">
@@ -1521,7 +1538,7 @@ function RosterDetailView({
           ) : null}
           {canManageWorship && dirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save
+              {saving ? <ButtonSpinner size="sm" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
           )}
         </div>
@@ -1576,23 +1593,27 @@ function RosterDetailView({
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-              <button
+              <Button
+                type="button"
+                variant="ghost"
                 onClick={() => handleLinkSetlist(null)}
                 className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-xl border border-transparent transition-all text-sm font-bold",
+                  "h-auto w-full items-center justify-between p-3 rounded-xl border border-transparent text-sm font-bold",
                   !roster.setlistId ? "bg-muted border-border text-primary" : "hover:bg-muted text-muted-foreground"
                 )}>
                 None / Unlink
                 {!roster.setlistId && <Check className="h-4 w-4" />}
-              </button>
+              </Button>
               {playlists
                 .sort((a,b) => b.date.localeCompare(a.date))
                 .map(sl => (
-                <button
+                <Button
                   key={sl.id}
+                  type="button"
+                  variant="ghost"
                   onClick={() => handleLinkSetlist(sl.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-xl border border-transparent transition-all text-left group",
+                    "h-auto w-full items-center gap-3 p-3 rounded-xl border border-transparent text-left",
                     roster.setlistId === sl.id ? "bg-muted border-border" : "hover:bg-muted hover:border-border"
                   )}>
                   <div className={cn(
@@ -1606,7 +1627,7 @@ function RosterDetailView({
                     <p className="text-[10px] text-muted-foreground font-semibold">{format(parseISO(sl.date), 'MMM d, yyyy')}</p>
                   </div>
                   {roster.setlistId === sl.id && <Check className="h-4 w-4 text-primary" />}
-                </button>
+                </Button>
               ))}
             </div>
             <Button variant="outline" className="w-full rounded-xl" onClick={() => setLinkSetlistOpen(false)}>Cancel</Button>
@@ -1655,7 +1676,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
     } finally { setDeleting(false); }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  if (loading) return <PageLoading />;
 
   return (
     <AnimatePresence mode="wait">
@@ -1676,8 +1697,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
               <p className="text-xs text-muted-foreground/60 mt-1">Create a team roster for an upcoming service.</p>
             </div>
           ) : (
-            <div className="ui-card !p-0">
-              <div className="ui-list px-2">
+            <ScheduleListCard>
               {rosters.map((r, i) => {
                 const linked = playlists.find(p => p.id === r.setlistId);
                 const filled = r.slots.filter(s => s.members.length > 0).length;
@@ -1689,42 +1709,39 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
                     initial="hidden"
                     animate="visible"
                   >
-                    <div className="event-row group">
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                      onClick={() => setDetail(r)}
-                    >
-                    <ScheduleRowDate date={parseISO(r.date)} />
-                    <div className="event-row-body">
-                      <p className="event-row-title">{r.name}</p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                        <span className="event-row-meta">
-                          {filled}/{r.slots.length} roles filled
-                        </span>
-                        {linked && (
-                          <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                            <Link2 className="h-2 w-2" /> {linked.name}
+                    <DrillDownListRow
+                      leading={<ScheduleRowDate date={parseISO(r.date)} />}
+                      title={r.name}
+                      subtitle={
+                        <>
+                          <span className="event-row-meta">
+                            {filled}/{r.slots.length} roles filled
                           </span>
-                        )}
-                      </div>
-                    </div>
-                    </button>
-                    <div className="hover-reveal flex items-center gap-1 transition-opacity">
-                      {canManageWorship && (
-                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setDeleteConfirm(r)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
-                    </div>
+                          {linked ? (
+                            <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                              <Link2 className="h-2 w-2" /> {linked.name}
+                            </span>
+                          ) : null}
+                        </>
+                      }
+                      onClick={() => setDetail(r)}
+                      trailing={
+                        canManageWorship ? (
+                          <IconButton
+                            variant="ghost"
+                            className="rounded-lg hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Delete roster"
+                            onClick={() => setDeleteConfirm(r)}
+                            icon={Trash2}
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                        ) : undefined
+                      }
+                    />
                   </motion.div>
                 );
               })}
-              </div>
-            </div>
+            </ScheduleListCard>
           )}
 
           <NewRosterDialog open={newOpen} onClose={() => setNewOpen(false)}
@@ -1739,7 +1756,7 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
                 <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Delete
+                  {deleting ? <ButtonSpinner className="mr-2" /> : null} Delete
                 </Button>
               </div>
             </DialogContent>
@@ -1796,21 +1813,13 @@ export default function WorshipPortalPage() {
 
   const showNewAction = tab === 'songs' || canManageWorship;
 
-  if (loadingAuth) return null;
+  if (loadingAuth) return <PageLoading />;
 
   if (!isAdmin && !isWorshipTeam) {
     return (
-      <div className="empty-inline min-h-[calc(100vh-16rem)] px-6">
-        <div className="w-14 h-14 rounded-xl bg-muted border border-border flex items-center justify-center mb-2">
-          <Shield className="h-7 w-7 text-primary" />
-        </div>
-        <div className="stack-gap-sm max-w-sm">
-          <h1 className="text-page-title">{t.accessRestricted}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t.worshipAccessDesc}
-          </p>
-        </div>
-        <Button asChild className="rounded-lg mt-2">
+      <div className="flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-6">
+        <EmptyState icon={Shield} title={t.accessRestricted} description={t.worshipAccessDesc} />
+        <Button asChild className="mt-2 rounded-lg">
           <Link href="/">{t.returnHome}</Link>
         </Button>
       </div>
@@ -1866,39 +1875,42 @@ export default function WorshipPortalPage() {
       <div className="fixed bottom-3 left-1/2 z-40 w-[min(680px,calc(100vw-16px))] -translate-x-1/2 md:bottom-4 md:left-[calc(50%+8rem)] md:w-[min(720px,calc(100vw-16rem-32px))]">
         <div className="glass-elevated rounded-xl border-transparent px-2 py-1.5">
           <div className="grid grid-cols-3 gap-1">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => selectTab('rosters')}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors text-xs",
+                "flex h-auto flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs",
                 tab === 'rosters' ? "bg-background/40 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Users className={cn("h-4 w-4", tab === 'rosters' ? "text-primary" : "text-muted-foreground")} />
               <span>{t.rostersTab}</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => selectTab('playlists')}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors text-xs",
+                "flex h-auto flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs",
                 tab === 'playlists' ? "bg-background/40 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <ListMusic className={cn("h-4 w-4", tab === 'playlists' ? "text-primary" : "text-muted-foreground")} />
               <span>{t.setlistsTab}</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => selectTab('songs')}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors text-xs",
+                "flex h-auto flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1.5 text-xs",
                 tab === 'songs' ? "bg-background/40 text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Music2 className={cn("h-4 w-4", tab === 'songs' ? "text-primary" : "text-muted-foreground")} />
               <span>{t.songsTab}</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>

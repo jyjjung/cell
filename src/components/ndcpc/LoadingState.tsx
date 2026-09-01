@@ -1,14 +1,8 @@
 'use client';
 
-import { LoaderCircle } from 'lucide-react';
-import { useTranslation } from '@/context/LocaleProvider';
+import { LoadingState as UiLoadingState } from '@/components/ui/loading-state';
 
+/** @deprecated Prefer `import { LoadingState } from '@/components/ui/loading-state'` with `isLoading`. */
 export function LoadingState() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex items-center justify-center py-16">
-      <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-label={t('common.loading')} />
-    </div>
-  );
+  return <UiLoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
 }

@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
 import { EmptyState } from '@/components/ndcpc/EmptyState';
 import { CachedPhoto } from '@/components/ndcpc/CachedPhoto';
 import { DATA_CACHE_KEYS } from '@/lib/ndcpc/data-cache';
@@ -148,7 +148,7 @@ export function PhotoGallery() {
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
   }
 
   return (

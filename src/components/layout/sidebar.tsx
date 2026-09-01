@@ -5,8 +5,8 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Shield, User,
-  LogIn, UserPlus, ChevronDown,
+  Shield,
+  LogIn, UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -16,7 +16,6 @@ import {
 } from '@/lib/app-access';
 import { getSidebarNavForApp } from '@/lib/app-sidebar-nav';
 import { AppLogo } from '@/components/shell/app-logo';
-import { formatUserDisplayName } from '@/lib/formatting';
 import { useAuth } from '@/contexts/auth-context';
 import {
   Sidebar,
@@ -25,25 +24,19 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter,
   SidebarSeparator,
   useSidebar,
   SidebarMenuBadge,
 } from '@/components/ui/sidebar';
-import { LoadingSpinner } from '../ui/loading-spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePageLoading } from '@/contexts/page-loading-context';
-import { useActiveAppAvatar } from '@/hooks/use-active-app-avatar';
-import { PixelAvatar } from '../avatar/PixelAvatar';
 
 import { useChats } from '@/hooks/useChats';
 import { usePrayerRequestBadge } from '@/hooks/use-prayer-request-badge';
+import { useNdcpcUnread } from '@/contexts/ndcpc-unread-context';
 import { translations } from '@/lib/translations';
 import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import { chatBelongsToApp } from '@/lib/chat-utils';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from '../ui/button';
 
 export default function AppSidebar() {
@@ -56,6 +49,7 @@ export default function AppSidebar() {
 
   const { chats } = useChats();
   const { unreadCount: unreadPrayerRequests, isShepherd } = usePrayerRequestBadge();
+  const { prayerUnread: ndcpcPrayerUnread } = useNdcpcUnread();
 
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const activeApp = resolveActiveApp(pathname) ?? 'cell';
@@ -74,14 +68,11 @@ export default function AppSidebar() {
   }, [chats, currentUser, pathname]);
 
   const navigate = (path: string) => {
-    if (pathname !== path) setIsPageLoading(true);
+    const nextPathname = path.split(/[?#]/)[0];
+    if (pathname !== nextPathname) setIsPageLoading(true);
     setOpenMobile(false);
     router.push(path);
   };
-
-  const { avatar: sidebarAvatar, showHalo: sidebarShowHalo } = useActiveAppAvatar(
-    activeApp === 'ndcpc' ? 'ndcpc' : 'cell',
-  );
 
   const navItems = useMemo(() => {
     const items = getSidebarNavForApp(activeApp, {
@@ -120,6 +111,8 @@ export default function AppSidebar() {
             )
           : 0;
         badge = roleUnread;
+      } else if (activeApp === 'ndcpc' && item.badgeKey === 'prayer') {
+        badge = ndcpcPrayerUnread;
       }
       return { ...item, badge };
     });
@@ -133,7 +126,7 @@ export default function AppSidebar() {
     unreadPrayerRequests,
     chats,
     currentUser,
-    pathname,
+    ndcpcPrayerUnread,
   ]);
 
   const isNavActive = (href: string) => {
@@ -156,7 +149,7 @@ export default function AppSidebar() {
         <Link href={appHome} onClick={() => navigate(appHome)}
           className="flex h-full items-center justify-start transition-all active:scale-95">
           <div className="h-8 w-8 shrink-0">
-            <AppLogo app={activeApp} size={32} className="rounded-lg" />
+            <AppLogo app={activeApp} size={32} fit="contain" />
           </div>
         </Link>
       </SidebarHeader>
@@ -164,8 +157,10 @@ export default function AppSidebar() {
       {/* Navigation */}
       <SidebarContent className="px-1.5 py-1.5 gap-1">
         {!isMounted || loadingAuth ? (
-            <div className="flex items-center justify-center py-8">
-              <LoadingSpinner />
+            <div className="space-y-1 p-1" aria-busy="true" aria-live="polite" aria-label="Loading navigation">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded-lg" />
+              ))}
             </div>
         ) : (
           <SidebarMenu className="gap-0.5 p-1">
@@ -242,76 +237,6 @@ export default function AppSidebar() {
           </SidebarMenu>
         )}
       </SidebarContent>
-
-      {/* Footer */}
-      <SidebarFooter className="app-sidebar-footer gap-0 p-0">
-        <div className="flex h-full w-full items-center px-1.5">
-          {!isMounted || loadingAuth ? (
-            <div className="flex flex-1 items-center justify-center px-1 py-2">
-              <LoadingSpinner size="sm" />
-            </div>
-          ) : currentUser ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="group flex h-full min-w-0 w-full items-center gap-3 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                >
-                  <div className="h-8 w-8 shrink-0">
-                    <PixelAvatar avatar={sidebarAvatar} showHalo={sidebarShowHalo} className="h-8 w-8" />
-                  </div>
-                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                    <p className="truncate text-sm font-medium leading-tight">
-                      {formatUserDisplayName(currentUser)}
-                    </p>
-                    {currentUser.email ? (
-                      <p className="truncate text-[11px] text-muted-foreground leading-tight">
-                        {currentUser.email}
-                      </p>
-                    ) : null}
-                  </div>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-data-[collapsible=icon]:hidden" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="center"
-                className="mb-1 w-[calc(var(--radix-dropdown-menu-trigger-width)-12px)] rounded-xl p-2"
-              >
-                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/accounts')}>
-                  <User className="h-4 w-4 text-muted-foreground" /> {t.profile}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="group flex h-full min-w-0 w-full items-center gap-3 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                    <p className="truncate text-sm font-medium leading-tight">Guest</p>
-                  </div>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 group-data-[collapsible=icon]:hidden" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="center"
-                className="mb-1 w-[calc(var(--radix-dropdown-menu-trigger-width)-12px)] rounded-xl p-2"
-              >
-                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/login')}>
-                  <LogIn className="h-4 w-4 text-muted-foreground" /> {t.signIn}
-                </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-lg h-9 text-sm gap-2" onSelect={() => navigate('/signup')}>
-                  <UserPlus className="h-4 w-4 text-muted-foreground" /> {t.register}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

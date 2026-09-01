@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Share } from 'lucide-react';
 import { APP_VERSION } from '@/lib/app-version';
+import { IconButton } from '@/components/ui/icon-button';
 
 /**
  * @fileOverview Detects iOS Safari users and prompts them to install the PWA.
@@ -40,12 +41,12 @@ export function PWAInstallPrompt() {
           className="fixed bottom-6 left-4 right-4 z-[150] md:left-auto md:right-8 md:w-[400px]"
         >
           <div className="relative p-6 rounded-2xl widget-surface overflow-hidden">
-            <button 
+            <IconButton
+              aria-label="Dismiss"
+              icon={X}
               onClick={handleDismiss}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors"
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+              className="absolute top-4 right-4"
+            />
 
             <div className="flex items-start gap-5">
               <div className="p-3 rounded-2xl bg-primary/10 text-primary shrink-0">

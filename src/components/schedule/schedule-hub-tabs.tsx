@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { CalendarCheck, ListChecks, Sparkles, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
-import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
+import { BottomHubBar } from "@/components/layout/bottom-hub-bar";
+import { HubTab } from "@/components/layout/hub-tab";
 
 type ScheduleTab = {
   value: string;
@@ -35,21 +36,15 @@ export default function ScheduleHubTabs() {
   return (
     <BottomHubBar>
       <div className="grid grid-cols-4 gap-1">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = tab.value === activeTab;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => router.push(tab.href)}
-              className={bottomHubTabClass(active)}
-            >
-              <Icon className={bottomHubIconClass(active)} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+        {tabs.map((tab) => (
+          <HubTab
+            key={tab.value}
+            active={tab.value === activeTab}
+            label={tab.label}
+            icon={tab.icon}
+            onClick={() => router.push(tab.href)}
+          />
+        ))}
       </div>
     </BottomHubBar>
   );

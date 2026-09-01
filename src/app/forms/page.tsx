@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { FormDefinition, FormResponse } from '@/types/forms';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Inbox, Trash2 } from 'lucide-react';
@@ -114,14 +114,7 @@ export default function FormsPage() {
 
   return (
     <div className="page-container">
-      <PageHeader
-        title="Forms"
-        description={
-          isAdmin
-            ? 'Open a form, submit answers, and review everyone’s responses.'
-            : 'Open a form, submit answers, and revisit your responses.'
-        }
-      />
+      <PageHeader title="Forms" />
 
       {!currentUser ? (
         <div className="ui-surface max-w-xl space-y-3">
@@ -140,9 +133,7 @@ export default function FormsPage() {
               <h2 className="text-section-title">Available forms</h2>
 
               {loading && forms.length === 0 ? (
-                <div className="empty-inline">
-                  <LoadingSpinner />
-                </div>
+                <ListLoadingSkeleton />
               ) : forms.length === 0 ? (
                 <EmptyState title="No forms available" description="An admin will add forms you can access." />
               ) : (
@@ -222,9 +213,7 @@ export default function FormsPage() {
                   </p>
                 </div>
                 {loading && formsWithResponses.length === 0 ? (
-                  <div className="empty-inline">
-                    <LoadingSpinner />
-                  </div>
+                  <ListLoadingSkeleton />
                 ) : formsWithResponses.length === 0 ? (
                   <EmptyState
                     title="No responses yet"
@@ -272,7 +261,9 @@ export default function FormsPage() {
           <section className="ui-section">
             <div className="ui-card space-y-3">
               <h2 className="text-section-title">Your submissions</h2>
-              {responses.length === 0 ? (
+              {loading ? (
+                <ListLoadingSkeleton />
+              ) : responses.length === 0 ? (
                 <EmptyState title="No submissions yet" description="When you submit a form, it will appear here." />
               ) : (
                 <div className="space-y-2">

@@ -2,12 +2,13 @@
 "use client";
 
 import * as React from "react";
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import type { UserProfileData } from '@/types';
-import { Loader2, Search, UserX } from 'lucide-react';
+import { Search, UserX } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from '@/lib/utils';
 
@@ -67,7 +68,7 @@ export default function UserSelector({
   if (loading) {
     return (
       <div className={`flex items-center justify-center ${height} border rounded-md`}>
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LoadingSpinner size="md" className="text-muted-foreground" />
       </div>
     );
   }

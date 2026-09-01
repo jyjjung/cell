@@ -100,6 +100,7 @@ export function useWorshipSongs(enabled = true) {
     songId: string,
     sourceText: string,
     key: ChordKey,
+    sourceHtml?: string,
   ): Promise<SongChordSheet> => {
     if (!currentUser) throw new Error('Not authenticated');
     const sheet: SongChordSheet = {
@@ -110,6 +111,7 @@ export function useWorshipSongs(enabled = true) {
       uploadedAt: Timestamp.now(),
       kind: 'text',
       sourceText,
+      ...(sourceHtml ? { sourceHtml } : {}),
       annotations: [],
     };
     await updateDoc(doc(db, SONGS_COLLECTION, songId), {
@@ -122,7 +124,7 @@ export function useWorshipSongs(enabled = true) {
   const updateChordSheet = useCallback(async (
     songId: string,
     sheetId: string,
-    patch: Partial<Pick<SongChordSheet, 'annotations' | 'sourceText' | 'key'>>,
+    patch: Partial<Pick<SongChordSheet, 'annotations' | 'sourceText' | 'sourceHtml' | 'key'>>,
   ) => {
     const list = useShared ? worshipData!.songs : songs;
     const song = list.find((s) => s.id === songId);

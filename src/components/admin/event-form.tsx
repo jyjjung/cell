@@ -1,6 +1,7 @@
 "use client";
 
 import type { AppEvent } from '@/types';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { EventCategory } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -16,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { addMonths, format, startOfDay } from 'date-fns';
 import { 
   CalendarIcon, 
-  Loader2, 
   Clock, 
   Type, 
   Tag, 
@@ -623,7 +623,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
             type="submit" 
             disabled={isLoading}
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            {isLoading ? <ButtonSpinner /> : (
               <span className="flex items-center gap-2">
                 <Check className="w-4 h-4" /> {submitButtonText}
               </span>

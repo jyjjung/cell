@@ -12,7 +12,7 @@ import { getMemberDisplayName, resolveChatAvatar, chatBelongsToApp } from "@/lib
 import { formatUserDisplayName } from "@/lib/formatting";
 import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Plus, Sparkles, Images, Link2 } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import CreateChatDialog from "./CreateChatDialog";
@@ -29,7 +29,7 @@ type ChatListProps = {
   appScope?: ChatListAppScope;
   /** Base path for chat links. Default `/chat`. */
   basePath?: string;
-  /** Show new-chat / photos / links controls. Default true for cell. */
+  /** Show new-chat control. Default true for cell. */
   showTools?: boolean;
 };
 
@@ -41,7 +41,7 @@ export default function ChatList({
   const toolsVisible = showTools ?? appScope === 'cell';
   const { chats, loading: loadingChats } = useChats();
   const { allUsers } = useAllUsers();
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser } = useAuth();
   const pathname = usePathname();
   const { setIsPageLoading } = usePageLoading();
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
@@ -99,11 +99,12 @@ export default function ChatList({
   return (
     <div className="page-container stack-gap-sm pb-20">
       <NavPageHeader
+        className="flex-row items-center justify-between gap-3"
         action={
           toolsVisible ? (
             <Button
               onClick={() => setCreateDialogOpen(true)}
-              className="h-8 rounded-lg px-3 text-sm"
+              className="h-8 shrink-0 rounded-lg px-3 text-sm"
             >
               <Plus className="mr-2 h-4 w-4" />
               {t.newChat}
@@ -111,23 +112,6 @@ export default function ChatList({
           ) : undefined
         }
       />
-
-      {toolsVisible ? (
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
-            <Link href="/chat/photos" onClick={() => handleLinkClick('/chat/photos')}>
-              <Images className="mr-2 h-4 w-4" />
-              {t.allPhotos}
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
-            <Link href="/chat/links" onClick={() => handleLinkClick('/chat/links')}>
-              <Link2 className="mr-2 h-4 w-4" />
-              {t.allLinks}
-            </Link>
-          </Button>
-        </div>
-      ) : null}
 
       <div className="relative">
         {loading ? (
@@ -147,30 +131,6 @@ export default function ChatList({
         ) : (
           <div className="overflow-hidden border-y border-border bg-background">
             <AnimatePresence mode="popLayout">
-              {toolsVisible && isAdmin && (
-                <motion.div key="system-assistant" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
-                  <Link
-                    href={`${basePath}/system`}
-                    onClick={() => handleLinkClick(`${basePath}/system`)}
-                    className={cn(
-                      "flex h-16 w-full items-center gap-3 border-b border-border px-3 transition-colors hover:bg-muted/40",
-                      pathname === `${basePath}/system` && "bg-accent"
-                    )}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <div className="mb-0.5 flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-medium text-foreground">{t.systemAssistant}</p>
-                        <span className="shrink-0 text-xs text-primary">{t.adminTool}</span>
-                      </div>
-                      <p className="truncate text-xs text-muted-foreground">{t.launchWizard}</p>
-                    </div>
-                  </Link>
-                </motion.div>
-              )}
-
               {filteredChats.map((chat, i) => {
                 const details = getChatDetails(chat);
                 if (!details) return null;

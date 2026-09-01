@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, type FormEvent, useEffect } from 'react';
+import { ButtonSpinner, PageLoading } from '@/components/ui/loading-spinner';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Send, CheckCircle, KeyRound } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Send, CheckCircle, KeyRound } from 'lucide-react';import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
 export default function ForgotPasswordPage() {
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
   };
 
   if (!isMounted || loadingAuth || (isMounted && !loadingAuth && currentUser)) {
-    return null;
+    return <PageLoading />;
   }
 
   return (
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full text-base py-6" disabled={isLoading}>
               {isLoading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+                <><ButtonSpinner className="mr-2" /> Sending...</>
               ) : (
                 <><Send className="mr-2 h-4 w-4" /> Send Reset Link</>
               )}

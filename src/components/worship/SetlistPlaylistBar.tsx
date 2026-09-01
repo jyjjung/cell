@@ -5,6 +5,8 @@ import {
 } from '@/contexts/setlist-playlist-context';
 import type { PlaylistQueueItem } from '@/lib/setlist-playlist-queue';
 import { playlistItemLabel } from '@/lib/setlist-playlist-queue';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -46,12 +48,13 @@ const TrackList = memo(function TrackList({
         {queue.map((item, i) => {
           const active = i === currentIndex;
           return (
-            <button
+            <Button
               key={item.id}
               type="button"
+              variant="ghost"
               onClick={() => playIndex(i)}
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors',
+                'h-auto w-full items-center gap-3 rounded-xl px-3 py-2 text-left justify-start',
                 active ? 'bg-primary/15' : 'hover:bg-muted/60',
               )}
             >
@@ -67,7 +70,7 @@ const TrackList = memo(function TrackList({
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate">{item.songTitle}</p>
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -169,54 +172,49 @@ export function SetlistPlaylistBar() {
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15">
               <Headphones className="h-4 w-4 text-primary" />
             </div>
-            <button
+            <Button
               type="button"
-              className="min-w-0 flex-1 text-left"
+              variant="ghost"
+              className="h-auto min-w-0 flex-1 justify-start text-left"
               onClick={() => setExpanded(!expanded)}
             >
               <p className="text-xs font-semibold truncate">{displayTitle || 'Reference track'}</p>
               <p className="text-[10px] text-muted-foreground truncate">
                 {failed ? "Couldn't load YouTube — tap retry" : (subtitle || setlistName)}
               </p>
-            </button>
+            </Button>
             <div className="flex items-center gap-0.5 shrink-0">
-              <button type="button" onClick={previous} className="p-2 rounded-lg hover:bg-muted" aria-label="Previous">
-                <SkipBack className="h-4 w-4" />
-              </button>
+              <IconButton type="button" onClick={previous} className="rounded-lg hover:bg-muted" aria-label="Previous" icon={SkipBack} />
               {failed ? (
-                <button
+                <IconButton
                   type="button"
                   onClick={retry}
-                  className="p-2 rounded-lg bg-primary text-primary-foreground"
+                  variant="default"
+                  className="rounded-lg"
                   aria-label="Retry loading player"
-                >
-                  <RotateCw className="h-4 w-4" />
-                </button>
+                  icon={RotateCw}
+                />
               ) : (
-                <button
+                <IconButton
                   type="button"
                   onClick={togglePlay}
                   disabled={!ready}
-                  className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                  variant="default"
+                  className="rounded-lg disabled:opacity-40"
                   aria-label={playing ? 'Pause' : 'Play'}
-                >
-                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-                </button>
+                  icon={playing ? Pause : Play}
+                  iconClassName={playing ? undefined : 'fill-current'}
+                />
               )}
-              <button type="button" onClick={next} className="p-2 rounded-lg hover:bg-muted" aria-label="Next">
-                <SkipForward className="h-4 w-4" />
-              </button>
-              <button
+              <IconButton type="button" onClick={next} className="rounded-lg hover:bg-muted" aria-label="Next" icon={SkipForward} />
+              <IconButton
                 type="button"
                 onClick={() => setExpanded(!expanded)}
-                className="p-2 rounded-lg hover:bg-muted"
+                className="rounded-lg hover:bg-muted"
                 aria-label={expanded ? 'Collapse playlist' : 'Expand playlist'}
-              >
-                {expanded ? <ChevronDown className="h-4 w-4" /> : <ListMusic className="h-4 w-4" />}
-              </button>
-              <button type="button" onClick={stopPlaylist} className="p-2 rounded-lg hover:bg-muted" aria-label="Close">
-                <X className="h-4 w-4" />
-              </button>
+                icon={expanded ? ChevronDown : ListMusic}
+              />
+              <IconButton type="button" onClick={stopPlaylist} className="rounded-lg hover:bg-muted" aria-label="Close" icon={X} />
             </div>
           </div>
 

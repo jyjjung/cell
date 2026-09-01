@@ -1,0 +1,52 @@
+---
+description: Minimise Firestore read/write and Storage upload/download costs in every change
+alwaysApply: true
+---
+
+# Minimise Firebase costs
+
+Every feature, fix, and refactor must minimise **Firestore reads/writes** and **Storage upload/download**. Cheaper at the same UX wins. Do not add paid services to “fix” cost.
+
+Billable units: document reads, document writes, Storage GB stored, and GB transferred (upload + download). Listeners re-read on every change.
+
+## Firestore reads
+
+- Prefer one shared listener/provider over per-component `onSnapshot` / `useCollection` / `useDoc`.
+- Gate realtime by route: unsubscribe when the user leaves. No standing listeners for off-screen data.
+- Bound every query (`limit`). No unbounded collection scans. Paginate or load-on-open.
+- Cache first (`getDocsFromCache` / persistence) for data that can be stale; hit the server only when freshness is required.
+- Denormalise or index what lists need. Do not N+1 `getDoc` inside a list render.
+- On-demand / pull-to-refresh beats polling. Growth must stay sub-linear (caps, indexes, shared listeners).
+
+```ts
+// ❌ BAD — extra listener + unbounded scan
+onSnapshot(collection(db, 'messages'), setAll);
+
+// ✅ GOOD — shared, capped, route-gated
+onSnapshot(query(collection(db, 'chats', id, 'messages'), orderBy('createdAt', 'desc'), limit(50)), setPage);
+```
+
+## Firestore writes
+
+- Debounce / coalesce bursty updates (typing, drafts, toggles, presence).
+- Batch related writes (`writeBatch`). Never write the same field from many clients in a loop.
+- Do not fan out one event into N user docs without a hard cap. Prefer a single source doc + targeted recipients.
+- Skip no-op writes: compare before `updateDoc`; do not increment counters the UI does not need.
+
+## Storage (upload + download)
+
+- Compress and resize **before** upload. Chat grids use thumbnails (`createChatImageThumbnail`); originals download on open only.
+- Unique object keys + `STORAGE_CACHE_CONTROL` (`immutable`) so browsers/SW do not re-download.
+- Prime/cache thumbnails only (`primeChatPreviewMedia`). Do not prefetch full images, PDFs, or sheets.
+- Delete unused blobs when the referring doc is deleted. Do not store duplicates of the same bytes.
+- Prefer a URL already on the document over `getDownloadURL` on every render.
+
+```ts
+// ❌ BAD — full original in the album; re-fetch URL every mount
+<img src={await getDownloadURL(ref(storage, path))} />
+
+// ✅ GOOD — small JPEG thumb in lists; cache-control on upload; original on tap
+await uploadBytesResumable(thumbRef, thumbBlob, { cacheControl: STORAGE_CACHE_CONTROL });
+```
+
+If a change adds listeners, scans, fan-out, or larger media, choose the cheaper design or say why it is required.

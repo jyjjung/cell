@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   FileText,
   HeartHandshake,
+  Heart,
   Home,
   ImageIcon,
   LayoutDashboard,
@@ -26,7 +27,7 @@ export type AppNavItem = {
   label: string;
   icon: LucideIcon;
   requiresAuth?: boolean;
-  badgeKey?: 'chat';
+  badgeKey?: 'chat' | 'prayer';
 };
 
 /**
@@ -69,6 +70,7 @@ export function getSidebarNavForApp(
         { href: '/ndcpc/chat', label: 'Chat', icon: MessageCircle, badgeKey: 'chat' },
         { href: '/ndcpc/photos', label: 'Photos', icon: ImageIcon },
         { href: '/ndcpc/worship', label: 'Worship', icon: Calendar },
+        { href: '/ndcpc/prayer', label: 'Prayer', icon: Heart, badgeKey: 'prayer' },
       ];
     case 'users':
       return [{ href: '/users', label: 'Users', icon: Users }];

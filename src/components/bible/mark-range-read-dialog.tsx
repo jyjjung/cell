@@ -1,21 +1,36 @@
+'use client';
 
-"use client";
-
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { BookUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Loader2, BookUp } from 'lucide-react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
-import { Autocomplete, type AutocompleteOption } from '@/components/ui/autocomplete';
 import { CANONICAL_BIBLE_ORDER } from '@/lib/bible-data';
+import { translations } from '@/lib/translations';
 
 const markRangeSchema = z.object({
-  startBook: z.string().min(1, { message: "Please select a starting book." }),
+  startBook: z.string().min(1),
   startChapterVerse: z.string().optional(),
   endBook: z.string().optional(),
   endChapterVerse: z.string().optional(),
@@ -26,25 +41,22 @@ type MarkRangeFormValues = z.infer<typeof markRangeSchema>;
 interface MarkRangeReadDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  lang: string;
 }
 
-const bibleBookOptions: AutocompleteOption[] = CANONICAL_BIBLE_ORDER.map(book => ({
-  value: book,
-  label: book,
-}));
-
-// Simple parser for "Chapter:Verse" or "Chapter"
-const parseChapterVerse = (cv: string) => {
-  if (!cv || cv.trim() === '') return { chapter: 1, verse: undefined }; // Default to chapter 1 if empty
+function parseChapterVerse(cv: string, invalidMessage: string) {
+  if (!cv || cv.trim() === '') return { chapter: 1, verse: undefined as number | undefined };
   const match = cv.trim().match(/^(\d+)(?::(\d+))?$/);
-  if (!match) return null;
+  if (!match) return { error: invalidMessage };
   return {
     chapter: parseInt(match[1], 10),
-    verse: match[2] ? parseInt(match[2], 10) : undefined
+    verse: match[2] ? parseInt(match[2], 10) : undefined,
   };
-};
+}
 
-export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeReadDialogProps) {
+export default function MarkRangeReadDialog({ isOpen, onOpenChange, lang }: MarkRangeReadDialogProps) {
+  const t = translations[lang === 'ko' ? 'ko' : 'en'];
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const { markReadRange } = useUserBibleChecklist();
 
@@ -61,50 +73,55 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
   const startBookValue = form.watch('startBook');
 
   useEffect(() => {
-    // When the dialog is closed, reset the form
     if (!isOpen) {
       form.reset({
-          startBook: '',
-          startChapterVerse: '',
-          endBook: '',
-          endChapterVerse: '',
+        startBook: '',
+        startChapterVerse: '',
+        endBook: '',
+        endChapterVerse: '',
       });
     }
   }, [isOpen, form]);
 
-
   async function onSubmit(data: MarkRangeFormValues) {
     setIsLoading(true);
     try {
-      const startCV = parseChapterVerse(data.startChapterVerse || '1');
-      if (!startCV) {
-        console.error("Invalid start chapter/verse format");
-        setIsLoading(false);
+      const startCV = parseChapterVerse(data.startChapterVerse || '1', t.markRangeInvalidChapter);
+      if ('error' in startCV) {
+        form.setError('startChapterVerse', { message: startCV.error });
         return;
       }
-      
-      let endCV = null;
-      if (data.endChapterVerse) {
-        endCV = parseChapterVerse(data.endChapterVerse);
-        if (!endCV) {
-            console.error("Invalid end chapter/verse format");
-            setIsLoading(false);
-            return;
+
+      let endCV: { chapter: number; verse?: number } | null = null;
+      if (data.endChapterVerse?.trim()) {
+        const parsed = parseChapterVerse(data.endChapterVerse, t.markRangeInvalidChapter);
+        if ('error' in parsed) {
+          form.setError('endChapterVerse', { message: parsed.error });
+          return;
         }
+        endCV = parsed;
       }
 
-      await markReadRange(
-          data.startBook,
-          startCV.chapter,
-          startCV.verse,
-          data.endBook || undefined,
-          endCV?.chapter,
-          endCV?.verse
+      const result = await markReadRange(
+        data.startBook,
+        startCV.chapter,
+        startCV.verse,
+        data.endBook || undefined,
+        endCV?.chapter,
+        endCV?.verse,
       );
 
+      if (!result?.markedCount) {
+        toast({ title: t.markRangeNoPassages });
+        return;
+      }
+
+      toast({
+        title: t.markRangeMarkedCount.replace('{count}', String(result.markedCount)),
+      });
       onOpenChange(false);
-    } catch (error: any) {
-      console.error("Error marking range as read:", error);
+    } catch (error) {
+      console.error('Error marking range as read:', error);
     } finally {
       setIsLoading(false);
     }
@@ -112,98 +129,97 @@ export default function MarkRangeReadDialog({ isOpen, onOpenChange }: MarkRangeR
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle className="flex items-center"><BookUp className="mr-2 h-5 w-5"/> Mark Range as Read</DialogTitle>
-          <DialogDescription>
-            Quickly mark a range of scripture as complete. Any passages from your plan within this range will be checked off.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <BookUp className="h-5 w-5" aria-hidden />
+            {t.markRangeTitle}
+          </DialogTitle>
+          <DialogDescription>{t.markRangeDescription}</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-            
-            <div className="space-y-2">
-                <FormField
-                control={form.control}
-                name="startBook"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Starting Book</FormLabel>
-                    <FormControl>
-                        <Autocomplete
-                            options={bibleBookOptions}
-                            value={field.value}
-                            onChange={(value) => field.onChange(value)}
-                            placeholder="Select a book"
-                            disabled={isLoading}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="startChapterVerse"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Starting Chapter:Verse (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., 1 or 1:15" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
 
-            <div className="space-y-2">
-                <FormField
-                control={form.control}
-                name="endBook"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Ending Book (Optional)</FormLabel>
-                    <FormControl>
-                        <Autocomplete
-                            options={bibleBookOptions}
-                            value={field.value || ''}
-                            onChange={(value) => field.onChange(value || startBookValue)} 
-                            placeholder="Select a book (or leave for same book)"
-                            disabled={isLoading}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="endChapterVerse"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Ending Chapter:Verse (Optional)</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., 5 or 5:10" {...field} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+          <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/30 p-3">
+            <p className="text-micro-label font-medium text-foreground">{t.markRangeStart}</p>
+            <FormField id="mark-range-start-book" label={t.markRangeBook} required>
+              <Select
+                value={startBookValue || undefined}
+                onValueChange={(value) => form.setValue('startBook', value, { shouldValidate: true })}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="mark-range-start-book" aria-label={t.markRangeSelectBook}>
+                  <SelectValue placeholder={t.markRangeSelectBook} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {CANONICAL_BIBLE_ORDER.map((book) => (
+                    <SelectItem key={book} value={book}>
+                      {book}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField
+              id="mark-range-start-chapter"
+              label={t.markRangeChapter}
+              description={t.markRangeChapterHint}
+              error={form.formState.errors.startChapterVerse?.message}
+            >
+              <Input
+                placeholder="1"
+                disabled={isLoading}
+                aria-invalid={!!form.formState.errors.startChapterVerse}
+                {...form.register('startChapterVerse')}
+              />
+            </FormField>
+          </div>
 
+          <div className="space-y-3 rounded-2xl border border-border/60 p-3">
+            <p className="text-micro-label font-medium text-foreground">{t.markRangeEnd}</p>
+            <p className="text-sm text-muted-foreground">{t.markRangeEndOptional}</p>
+            <FormField id="mark-range-end-book" label={t.markRangeBook}>
+              <Select
+                value={form.watch('endBook') || undefined}
+                onValueChange={(value) => form.setValue('endBook', value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="mark-range-end-book" aria-label={t.markRangeSelectBook}>
+                  <SelectValue placeholder={t.markRangeSelectBook} />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {CANONICAL_BIBLE_ORDER.map((book) => (
+                    <SelectItem key={book} value={book}>
+                      {book}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField
+              id="mark-range-end-chapter"
+              label={t.markRangeChapter}
+              description={t.markRangeChapterHint}
+              error={form.formState.errors.endChapterVerse?.message}
+            >
+              <Input
+                placeholder="1"
+                disabled={isLoading}
+                aria-invalid={!!form.formState.errors.endChapterVerse}
+                {...form.register('endChapterVerse')}
+              />
+            </FormField>
+          </div>
 
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Mark as Read
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+              {t.cancel}
+            </Button>
+            <Button type="submit" disabled={isLoading || !startBookValue}>
+              {isLoading ? <ButtonSpinner className="mr-2" /> : null}
+              {t.markAsRead}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

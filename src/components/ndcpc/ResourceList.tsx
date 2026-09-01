@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/context/LocaleProvider';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
 import { EmptyState } from '@/components/ndcpc/EmptyState';
 import { DATA_CACHE_KEYS } from '@/lib/ndcpc/data-cache';
 import { VideoEmbed } from '@/components/ndcpc/VideoEmbed';
@@ -51,7 +51,7 @@ export function ResourceList({
   }, [allResources, category]);
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
   }
 
   if (!resources || resources.length === 0) {

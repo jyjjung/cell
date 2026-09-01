@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X } from 'lucide-react';
@@ -37,14 +38,13 @@ export default function FieldOptionsEditor({ options, onChange, label = 'Options
               className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1 text-sm"
             >
               <span>{opt}</span>
-              <button
-                type="button"
-                className="rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              <IconButton
+                size="compact"
                 aria-label={`Remove ${opt}`}
+                icon={X}
                 onClick={() => onChange(options.filter((x) => x !== opt))}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+                className="text-muted-foreground"
+              />
             </li>
           ))}
         </ul>

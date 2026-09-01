@@ -9,21 +9,29 @@ export function AppLogo({
   app,
   size = 20,
   className,
+  fit = 'cover',
 }: {
   app: CommunityAppId;
   size?: number;
   className?: string;
+  /** contain shows the full logo without cropping (header switcher). */
+  fit?: 'cover' | 'contain';
 }) {
   const { src, alt } = getAppLogo(app);
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={size}
-      height={size}
-      className={cn('shrink-0 rounded-md object-cover', className)}
-      unoptimized={src.endsWith('.svg')}
-    />
+    <div
+      className={cn('relative shrink-0 overflow-hidden rounded-lg', className)}
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={`${size}px`}
+        className={fit === 'contain' ? 'object-contain' : 'object-cover'}
+        unoptimized={src.endsWith('.svg')}
+      />
+    </div>
   );
 }

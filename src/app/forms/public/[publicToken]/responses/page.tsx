@@ -67,19 +67,9 @@ export default function PublicFormResponsesPage(props: { params: Promise<{ publi
     );
   }
 
-  const totalLabel =
-    typeof form.responseCount === 'number' ? `${form.responseCount} total` : `${responses.length} shown`;
-
   return (
     <div className="page-container space-y-5">
-      <PageHeader
-        title={form.title}
-        description={
-          form.description
-            ? `${form.description} · Responses · ${totalLabel}`
-            : `Responses · ${totalLabel}`
-        }
-      />
+      <PageHeader title={form.title} />
 
       {responses.length === 0 ? (
         <EmptyState

@@ -3,6 +3,7 @@
 import { AnnouncementReactions } from '@/components/announcements/announcement-reactions';
 import { EmptyState } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import {
   Sheet,
@@ -12,7 +13,14 @@ import {
 } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/auth-context';
 import { useInbox, type InboxTab } from '@/contexts/inbox-context';
+import { useNdcpcUnread } from '@/contexts/ndcpc-unread-context';
 import { useNotifications } from '@/hooks/use-notifications';
+import { hasNdcpcAccess, resolveActiveApp } from '@/lib/app-access';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { formatAppDate } from '@/lib/ndcpc/format-date';
+import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
+import { getFirestoreMillis } from '@/lib/ndcpc/unread-counts';
+import { useTranslation } from '@/context/LocaleProvider';
 import { db } from '@/lib/firebase';
 import { reviveTimestamp, toDateSafe, toMillisSafe } from '@/lib/firestore-timestamp';
 import {
@@ -25,15 +33,11 @@ import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
-import { Bell, BellOff, Check, CheckCheck, Loader2, Megaphone, X } from 'lucide-react';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import type { Announcement } from '@/types/ndcpc-ported';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
+import { useDeferredLoading } from '@/hooks/use-deferred-loading';
+import { Bell, BellOff, Check, CheckCheck, Megaphone, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -162,19 +166,18 @@ function InboxItemCard({
             {created ? formatDistanceToNow(created, { addSuffix: true }) : justNowLabel}
           </p>
           {!isRead && onMarkRead && (
-            <Button
+            <IconButton
               type="button"
+              size="compact"
               variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-lg"
+              className="rounded-lg"
               onClick={(e) => {
                 e.stopPropagation();
                 onMarkRead();
               }}
               aria-label="Mark as read"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
+              icon={X}
+            />
           )}
         </div>
       </div>
@@ -195,14 +198,78 @@ function InboxItemCard({
   );
 }
 
+
+function NdcpcAnnouncementCard({
+  item,
+  isUnread,
+  dateLabel,
+}: {
+  item: Announcement;
+  isUnread: boolean;
+  dateLabel: string;
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 16 }}
+      transition={{ duration: 0.2 }}
+      className={cn(
+        'flex flex-col gap-2 rounded-lg border border-border bg-transparent p-4 transition-colors',
+        !isUnread && 'opacity-60',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span
+            className={cn(
+              'mt-1.5 h-2 w-2 shrink-0 rounded-full',
+              isUnread ? 'bg-chart-4' : 'bg-muted-foreground/30',
+            )}
+          />
+          <div className="min-w-0">
+            <p
+              className={cn(
+                'min-w-0 text-base font-semibold leading-snug',
+                isUnread ? 'text-foreground' : 'text-muted-foreground',
+              )}
+            >
+              {item.title}
+            </p>
+          </div>
+        </div>
+        {dateLabel ? (
+          <p className="shrink-0 text-xs text-muted-foreground">{dateLabel}</p>
+        ) : null}
+      </div>
+      {item.content ?? item.body ? (
+        <p className="whitespace-pre-wrap pl-[18px] text-sm leading-relaxed text-muted-foreground">
+          {item.content ?? item.body}
+        </p>
+      ) : null}
+    </motion.div>
+  );
+}
+
 export function InboxSheet() {
   const { currentUser } = useAuth();
   const { isOpen, tab, setTab, closeInbox } = useInbox();
   const { notifications, markAsRead, markAllAsRead, toggleReaction } = useNotifications();
+  const {
+    announcementsLastReadAt,
+    markAnnouncementsRead,
+  } = useNdcpcUnread();
+  const firestore = useFirestore();
+  const { locale } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const uid = currentUser?.uid || '';
+  const canShowNdcpc = hasNdcpcAccess(currentUser);
+  const activeApp = resolveActiveApp(pathname);
+  const hasAnnouncementsTab = activeApp === 'cell' || activeApp === 'ndcpc';
+  const isNdcpcAnnouncements = activeApp === 'ndcpc' && canShowNdcpc;
 
   const [viewFilter, setViewFilter] = useState<ViewFilter>('unread');
   const [history, setHistory] = useState<AppNotification[] | null>(null);
@@ -210,11 +277,39 @@ export function InboxSheet() {
   /** Local optimistic reactions so pills update immediately inside the sheet. */
   const [reactionOverrides, setReactionOverrides] = useState<Record<string, ReactionMap>>({});
 
+  const ndcpcAnnouncementsQuery = useMemoFirebase(() => {
+    if (!firestore || !isNdcpcAnnouncements) return null;
+    return query(collection(firestore, NDCPc_COLLECTIONS.announcements), orderBy('date', 'desc'));
+  }, [firestore, isNdcpcAnnouncements]);
+
+  const { data: ndcpcAnnouncements, isLoading: ndcpcAnnouncementsLoading } =
+    useCollection<Announcement>(ndcpcAnnouncementsQuery);
+
+  useEffect(() => {
+    if (tab === 'prayer') setTab('notifications');
+  }, [tab, setTab]);
+
+  useEffect(() => {
+    if (!hasAnnouncementsTab && tab === 'announcements') setTab('notifications');
+  }, [hasAnnouncementsTab, tab, setTab]);
+
   // Prefer All when opening with nothing unread, so older items are visible immediately.
   useEffect(() => {
     if (!isOpen || !uid) return;
-    const hasUnread = notifications.some((n) => !(n.readBy || []).includes(uid));
-    setViewFilter(hasUnread ? 'unread' : 'all');
+    const hasUnreadNotifications = notifications.some(
+      (n) => n.type !== 'announcement' && !(n.readBy || []).includes(uid),
+    );
+    const hasUnreadCellAnnouncements =
+      activeApp === 'cell' &&
+      notifications.some((n) => n.type === 'announcement' && !(n.readBy || []).includes(uid));
+    const hasNdcpcUnread =
+      isNdcpcAnnouncements &&
+      (ndcpcAnnouncements ?? []).some(
+        (item) => getFirestoreMillis(item.date) > announcementsLastReadAt,
+      );
+    setViewFilter(
+      hasUnreadNotifications || hasUnreadCellAnnouncements || hasNdcpcUnread ? 'unread' : 'all',
+    );
     // Intentionally only when the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -263,6 +358,12 @@ export function InboxSheet() {
     () => liveAnnouncements.filter((n) => !(n.readBy || []).includes(uid)),
     [liveAnnouncements, uid],
   );
+  const unreadNdcpcAnnouncements = useMemo(() => {
+    if (!isNdcpcAnnouncements) return [];
+    return (ndcpcAnnouncements ?? []).filter(
+      (item) => getFirestoreMillis(item.date) > announcementsLastReadAt,
+    );
+  }, [isNdcpcAnnouncements, ndcpcAnnouncements, announcementsLastReadAt]);
   const unreadGeneral = useMemo(
     () => liveGeneral.filter((n) => !(n.readBy || []).includes(uid)),
     [liveGeneral, uid],
@@ -298,8 +399,35 @@ export function InboxSheet() {
 
   const shownAnnouncements =
     (viewFilter === 'unread' ? unreadAnnouncements : historyAnnouncements).map(applyReactionOverride);
+
+  const shownNdcpcAnnouncements = useMemo(() => {
+    const items = ndcpcAnnouncements ?? [];
+    if (viewFilter === 'unread') return unreadNdcpcAnnouncements;
+    return items;
+  }, [ndcpcAnnouncements, unreadNdcpcAnnouncements, viewFilter]);
+
+  const announcementUnreadCount = isNdcpcAnnouncements
+    ? unreadNdcpcAnnouncements.length
+    : unreadAnnouncements.length;
+
+  const showActiveAnnouncementContent = isNdcpcAnnouncements
+    ? shownNdcpcAnnouncements.length > 0
+    : shownAnnouncements.length > 0;
+
+  const formatNdcpcDate = (dateMs: number) => {
+    if (!dateMs) return t.justNow;
+    return formatAppDate(new Date(dateMs), 'MMMM d, yyyy', locale);
+  };
+
   const shownGeneral =
     viewFilter === 'unread' ? unreadGeneral : historyGeneral;
+
+  const showHistoryLoading = useDeferredLoading(
+    viewFilter === 'all' && historyLoading && !history,
+  );
+  const showNdcpcLoading = useDeferredLoading(
+    isNdcpcAnnouncements && ndcpcAnnouncementsLoading && !ndcpcAnnouncements,
+  );
 
   // Drop local overrides once live/history data has caught up.
   useEffect(() => {
@@ -320,13 +448,22 @@ export function InboxSheet() {
     });
   }, [notifications, history]);
 
-  const activeUnread = tab === 'announcements' ? unreadAnnouncements : unreadGeneral;
+  const showDismissAll =
+    tab === 'announcements'
+      ? announcementUnreadCount > 0
+      : unreadGeneral.length > 0;
 
   const handleOpenChange = (open: boolean) => {
     if (open) return;
+    if (tab === 'announcements' && isNdcpcAnnouncements) markAnnouncementsRead();
     closeInbox();
-    if (pathname === '/announcements' || pathname === '/notifications') {
-      router.replace('/');
+    if (
+      pathname === '/announcements' ||
+      pathname === '/notifications' ||
+      pathname === '/ndcpc/announcements'
+    ) {
+      if (pathname.startsWith('/ndcpc')) router.replace('/ndcpc');
+      else router.replace('/');
     }
   };
 
@@ -345,11 +482,12 @@ export function InboxSheet() {
   };
 
   const tabButton = (id: InboxTab, label: string, count: number, Icon: typeof Megaphone) => (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => setTab(id)}
       className={cn(
-        'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition-colors',
+        'flex h-auto flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium',
         tab === id
           ? 'bg-background text-foreground shadow-sm'
           : 'text-muted-foreground hover:text-foreground',
@@ -371,22 +509,23 @@ export function InboxSheet() {
           {count}
         </span>
       )}
-    </button>
+    </Button>
   );
 
   const filterButton = (id: ViewFilter, label: string) => (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => setViewFilter(id)}
       className={cn(
-        'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+        'h-auto rounded-md px-3 py-1.5 text-xs font-medium',
         viewFilter === id
           ? 'bg-background text-foreground shadow-sm'
           : 'text-muted-foreground hover:text-foreground',
       )}
     >
       {label}
-    </button>
+    </Button>
   );
 
   return (
@@ -399,38 +538,48 @@ export function InboxSheet() {
           <div className="flex items-center justify-between gap-3">
             <SheetTitle className="text-base font-semibold">Inbox</SheetTitle>
             <div className="flex items-center gap-1">
-              {activeUnread.length > 0 && (
+              {showDismissAll && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="h-8 gap-1.5 rounded-lg text-xs"
-                  onClick={() => markAllAsRead(activeUnread.map((n) => n.id))}
+                  onClick={() => {
+                    if (tab === 'announcements') {
+                      if (isNdcpcAnnouncements) {
+                        markAnnouncementsRead();
+                      } else {
+                        for (const n of unreadAnnouncements) markAsRead(n.id);
+                      }
+                    } else {
+                      markAllAsRead(unreadGeneral.map((n) => n.id));
+                    }
+                  }}
                 >
                   <CheckCheck className="h-3.5 w-3.5" />
                   {t.dismissAll}
                 </Button>
               )}
-              <Button
+              <IconButton
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg"
+                className="rounded-lg"
                 onClick={() => handleOpenChange(false)}
                 aria-label="Close inbox"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+                icon={X}
+              />
             </div>
           </div>
         </SheetHeader>
 
-        <div className="shrink-0 border-b border-border bg-muted/40 p-1.5">
-          <div className="flex gap-1">
-            {tabButton('announcements', t.announcements, unreadAnnouncements.length, Megaphone)}
-            {tabButton('notifications', t.notifications, unreadGeneral.length, Bell)}
+        {hasAnnouncementsTab ? (
+          <div className="shrink-0 border-b border-border bg-muted/40 p-1.5">
+            <div className="flex gap-1">
+              {tabButton('announcements', t.announcements, announcementUnreadCount, Megaphone)}
+              {tabButton('notifications', t.notifications, unreadGeneral.length, Bell)}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="shrink-0 border-b border-border px-4 py-2">
           <div className="inline-flex rounded-lg bg-muted/50 p-0.5">
@@ -440,12 +589,12 @@ export function InboxSheet() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-          {viewFilter === 'all' && historyLoading && !history ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : tab === 'announcements' ? (
-            shownAnnouncements.length === 0 ? (
+          {showHistoryLoading ? (
+            <ListLoadingSkeleton rows={4} />
+          ) : tab === 'announcements' && hasAnnouncementsTab ? (
+            showNdcpcLoading ? (
+              <ListLoadingSkeleton rows={4} />
+            ) : !showActiveAnnouncementContent ? (
               <EmptyState
                 icon={viewFilter === 'unread' ? Check : Megaphone}
                 title={viewFilter === 'unread' ? t.allCaughtUp : t.noAnnouncementsYet}
@@ -456,20 +605,29 @@ export function InboxSheet() {
             ) : (
               <AnimatePresence mode="popLayout">
                 <div className="space-y-2">
-                  {shownAnnouncements.map((n) => (
-                    <InboxItemCard
-                      key={n.id}
-                      notification={n}
-                      isRead={(n.readBy || []).includes(uid)}
-                      uid={uid}
-                      justNowLabel={t.justNow}
-                      showReactions
-                      accentClass="bg-chart-4"
-                      onMarkRead={() => markAsRead(n.id)}
-                      onToggleReaction={(emoji) => handleToggleReaction(n, emoji)}
-                      onOpen={n.relatedUrl ? () => openItem(n) : undefined}
-                    />
-                  ))}
+                  {isNdcpcAnnouncements
+                    ? shownNdcpcAnnouncements.map((item) => (
+                        <NdcpcAnnouncementCard
+                          key={item.id}
+                          item={item}
+                          isUnread={getFirestoreMillis(item.date) > announcementsLastReadAt}
+                          dateLabel={formatNdcpcDate(getFirestoreMillis(item.date))}
+                        />
+                      ))
+                    : shownAnnouncements.map((n) => (
+                        <InboxItemCard
+                          key={n.id}
+                          notification={n}
+                          isRead={(n.readBy || []).includes(uid)}
+                          uid={uid}
+                          justNowLabel={t.justNow}
+                          showReactions
+                          accentClass="bg-chart-4"
+                          onMarkRead={() => markAsRead(n.id)}
+                          onToggleReaction={(emoji) => handleToggleReaction(n, emoji)}
+                          onOpen={n.relatedUrl ? () => openItem(n) : undefined}
+                        />
+                      ))}
                 </div>
               </AnimatePresence>
             )

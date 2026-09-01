@@ -9,6 +9,7 @@ import { parseDay } from '@/lib/event-occurrences';
 import { CalendarOff } from 'lucide-react';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     ScheduleListSkeleton,
@@ -83,7 +84,7 @@ export default function QTRosterPage() {
 
     }, [roster]);
 
-    if(!isMounted) return null;
+    if (!isMounted) return <PageLoading />;
 
     let globalIdx = 0;
 

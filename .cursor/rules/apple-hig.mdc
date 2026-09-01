@@ -1,0 +1,212 @@
+---
+description: Cross-platform HIG rules (web, iOS, Android, Windows) — use shared components only
+alwaysApply: true
+---
+
+# Human Interface Guidelines (cross-platform web)
+
+Source: [Apple HIG](https://developer.apple.com/design/human-interface-guidelines/) — **cross-platform rules only** (no watchOS/tvOS/visionOS/CarPlay-specific guidance).
+
+This is a **web app**. Apply HIG *intent* with CSS/HTML on all platforms. Do not ship Apple-only fonts, SF Symbols as a font, or APIs that fail off Safari.
+
+**Always use shared primitives** — never one-off buttons, spinners, or settings rows per page.
+
+## Shared components (required)
+
+| Need | Use | Never |
+|------|-----|-------|
+| Button | `Button` | raw `<button>` without `hit-min` / `hit-expand` |
+| Icon-only control | `IconButton` (requires `aria-label`) | unlabeled icon `<button>` |
+| Dense inline icon | `IconButton size="compact"` | `IconButton` default (44×44 **drawn**) in chips/chat |
+| Hub navigation | `HubTab`, `HubTabIconButton`, `BottomHubBar` | per-page tab markup |
+| Loading (page/section) | `LoadingState`, `PageLoading`, `ListLoadingSkeleton` | `Loader2` / blank screens |
+| Auth layout gate | `LayoutGate` | `return null` while loading |
+| Settings toggle | `SwitchRow` | bare `Switch` without row label |
+| Form field | `FormField` + `formFieldControlProps` | placeholder-only inputs |
+| RHF forms | `Form`, `FormLabel`, `FormControl` | ad-hoc labels |
+| Selection list row | `SelectionRow` | tiny checkbox/switch rows |
+| Empty content | `EmptyState` (`page-layout`) | custom empty divs |
+| Page structure | `PageShell`, `NavPageHeader`, `PageSection` | ad-hoc `page-container` wrappers; nested `home-flow` / `stack-gap-*` for header-to-body; `PageHeader` / `NavPageHeader` `description` |
+| Destructive confirm | `AlertDialog` (Cancel + destructive) | `window.confirm`, popover with only Delete |
+
+## Hit target ≠ visual size (critical)
+
+The 44×44px rule is the **tappable region**, not the drawn control. Apple: if a control looks smaller, **expand the hit area around the visual** — do not enlarge the glyph, chip, or chrome.
+
+| Context | Drawn size | Hit | Primitive |
+|---------|------------|-----|-----------|
+| Toolbar, hub, back, composer send/attach, form submit, list-row edit | 44×44 | same | `IconButton` / `Button` default |
+| Chat react / reply / delete, reaction pills, chip remove | ~20–32px | visual size; keep on **one row** | `IconButton size="compact"`, `Button size="chip"` — **no** `.hit-expand` |
+
+- `.hit-min` — the **box** is ≥44px (toolbars, list rows). Never on chips or per-message actions.
+- `.hit-expand` — visual stays as styled; `::before` expands tap area to 44px. **Only where controls are spaced apart** (toolbars, form rows). Never on stacked chat reactions/actions — the overlays overlap the row above/below.
+- Crowding a message with three 44px **drawn** buttons, or overflowing 44px hit overlays onto reaction chips, violates **simplicity** and **don’t crowd**. Compact visual **without** vertical overflow is the correct HIG reading in dense threads.
+
+```tsx
+// ✅ Toolbar / composer
+<IconButton aria-label="Send" icon={ArrowUp} />
+
+// ✅ Dense inline (chat, chips)
+<IconButton size="compact" aria-label="Reply in thread" icon={CornerUpLeft} />
+<Button size="chip" variant="ghost">👍 2</Button>
+
+// ❌ Never — inflates layout
+<IconButton aria-label="Reply" icon={CornerUpLeft} /> // default 44×44 under every message
+<Button className="hit-min">👍</Button>
+```
+
+## Design principles
+
+Full guidance: **human-centered-design** (structure, flow, continuity, IA, progressive disclosure, and each principle in detail). Here: component-level defaults only.
+
+## Layout
+
+- Group related content with space, surfaces, or separators.
+- Essential info first; align; **don’t crowd**.
+- Content may bleed to edges; **controls stay inset**.
+- Respect `env(safe-area-inset-*)`.
+- Phone: primary actions in thumb reach. Desktop: denser OK; hit still ≥44px (may overlap).
+- Adapt to resize; don’t lock `maximum-scale`.
+
+### Page rhythm (required)
+
+Every route shares one vertical rhythm — **never** nest extra wrappers to “fix” spacing between the page title and body.
+
+| Layer | Use | Gap |
+|-------|-----|-----|
+| Route shell | `PageShell` (or `page-container`) | `gap-5` between **direct children** |
+| Page title | `NavPageHeader`, `PageHeader`, or `home-greeting` | `.page-header` inset only — no extra margin below |
+| Body (multiple grouped sections) | `page-flow` on the body block | `gap-5` between sections |
+| Grouped section | `HomeGroupedSection` | `gap-1.5` eyebrow → card (internal) |
+
+```tsx
+// ✅ Hub / grouped page — header and body are siblings in PageShell
+<PageShell>
+  <NavPageHeader action={…} />
+  <ReadingPlanOverview … />
+</PageShell>
+
+// ✅ Home — same shell, greeting is the page title
+<PageShell>
+  <HomeGreeting … />
+  <HomeBibleSection … />
+</PageShell>
+
+// ❌ Nested rhythm wrapper (causes inconsistent header-to-body gap)
+<PageShell>
+  <div className="home-flow">
+    <NavPageHeader />
+    <Body />
+  </div>
+</PageShell>
+
+// ❌ Ad-hoc spacing on the shell
+<div className="page-container space-y-8">…</div>
+```
+
+## Typography
+
+- System font stack only (never embed SF/NY).
+- Body ≥ 16px; avoid Ultralight/Thin.
+- Scale with `rem` / `--app-font-size-scale`.
+- Inputs on touch: **16px minimum** (prevents iOS zoom).
+- Caption/meta can be smaller but keep contrast (7:1 if small).
+
+## Color and appearance
+
+- Semantic colors; same color = same meaning.
+- Never color-only — pair with text or icon.
+- Destructive = red (`variant="destructive"`), never primary/accent.
+- Light **and** dark; default follows **OS** (`system`).
+- Contrast ≥ 4.5:1 (7:1 small text). Honor `prefers-contrast: more` and `prefers-reduced-transparency`.
+- Translucency needs opaque fallback (`.ui-scrim` / solid background).
+
+## Controls
+
+- Hit region **≥ 44×44 px** — see table above. Press/`active` + `:focus-visible` ring.
+- One prominent **filled** button per view (the most likely action). Secondary = ghost/outline.
+- Destructive is never the default/Return/focused action.
+- Icon-only: `aria-label` required (`IconButton` enforces).
+- Give visible press feedback; don’t rely on hover alone (hover-reveal stays visible on coarse pointers).
+
+## Alerts and destructive actions
+
+- Use `AlertDialog` for irreversible work (delete message, leave group).
+- Title + short message explaining the consequence.
+- Two actions: **Cancel** (focused, outline) and the destructive action (red, not default).
+- Never a popover whose only button is Delete.
+- Don’t use alerts for inline validation — show the error next to the field.
+
+## Motion and input
+
+- Honor `prefers-reduced-motion` (no scale/hover zoom: use `motion-safe:`).
+- Hover-reveal stays visible on coarse pointers (`.hover-reveal`).
+- `touch-action: manipulation` on interactive elements (already on `Button`).
+
+## Loading
+
+- **Skeletons over blank screens** — `LoadingState variant="skeleton"`, `ListLoadingSkeleton`, `PageLoading`.
+- **Defer spinners** — `useDeferredLoading` / `LoadingState` (~400ms).
+- **Announce state** — `role="status"`, `aria-live="polite"`, `aria-busy`.
+- **Don’t block unnecessarily** — shell first; inline/section loading for partial content.
+- **Determinate progress** — `Progress` when duration known.
+- **Empty ≠ loading** — never show empty states while `isLoading`.
+
+## No header subtitles
+
+`NavPageHeader` and `PageHeader` are **title only** — do not pass `description` or add a subtitle paragraph directly under the page title.
+
+- Section headings farther down the page (`PageSection`, `h2` / `h3`, tabs, cards) are fine.
+- **OK:** dialog titles, empty-state copy, list row titles, tab labels, form field labels.
+
+## Selection and input
+
+- **Visible labels** — `FormField`, `FormLabel`; never placeholder-only forms.
+- **Touch targets** — `SwitchRow`, `SelectionRow` for toggles/checkboxes.
+- **Keyboard** — `focus-visible` rings; logical tab order; Enter submits single-purpose forms.
+- **Mobile keyboards** — `type`, `inputMode`, `autoComplete` on `Input`.
+- **Validation** — `aria-invalid`, `aria-describedby`; destructive + message text.
+- **Pickers** — `SelectItem` rows ≥ 44px; checkmark for selected.
+
+## Patterns (cross-platform)
+
+- **Feedback** — Accessible status; alerts for critical info only; confirm irreversible loss.
+- **Entering data** — Prefer choices over typing; validate inline; secure fields for secrets.
+- **Loading** — Show something immediately; let people use the app while content loads.
+- **Modality** — Modal only with clear benefit; obvious dismiss; confirm before data loss.
+- **Onboarding** — Teach through interaction; keep brief; optional tutorials.
+- **Searching** — Primary position when important; show scope; respect privacy.
+- **Settings** — Sensible defaults; minimal options; respect system settings.
+- **Undo/redo** — Predictable, visible results; support multiple undo when feasible.
+- **Notifications** — Accurate urgency; don’t over-notify.
+- **Accounts** — Delay sign-in; explain benefits; minimal data collection.
+- **Menus** — Related secondary actions can share a menu instead of a row of large always-visible buttons.
+
+## Accessibility (cross-platform)
+
+- Perceivable, operable, understandable — not color-only, sufficient contrast.
+- Support larger text / zoom.
+- Labels for all controls; errors in text.
+- Keyboard and screen-reader paths for core tasks.
+
+```tsx
+// ✅ Always
+<PageShell>
+  <NavPageHeader />
+  {children}
+</PageShell>
+<HubTab active={active} label="Events" icon={Calendar} onClick={…} />
+<SwitchRow id="anon" label="Post anonymously" checked={v} onCheckedChange={setV} />
+<LayoutGate loading={loadingAuth} ready={!!user}>{children}</LayoutGate>
+<LoadingState isLoading={loading} variant="skeleton">{content}</LoadingState>
+<FormField id="email" label="Email" error={err}>
+  <Input {...formFieldControlProps('email', err)} />
+</FormField>
+<IconButton size="compact" aria-label="Add reaction" icon={SmilePlus} />
+
+// ❌ Never
+<button className="h-8 w-8">…</button>
+<IconButton aria-label="Reply" icon={CornerUpLeft} /> // default size under a chat bubble
+if (loading) return null;
+<Switch id="x" /> without visible label row
+```

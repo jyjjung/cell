@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { IconButton } from '@/components/ui/icon-button';
+import { ArrowDown } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { ChatTimeSeparator, formatChatMessageDate } from './ChatTimeSeparator';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -206,7 +208,7 @@ export default function ChatMessageList({
             {(loadingOlder || hasMoreOlder) && (
               <div className="flex justify-center py-3" aria-live="polite">
                 {loadingOlder ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" />
+                  <LoadingSpinner size="sm" className="text-muted-foreground/60" />
                 ) : (
                   <span className="h-5 w-5" />
                 )}
@@ -216,19 +218,18 @@ export default function ChatMessageList({
         </TooltipProvider>
       </div>
 
-      <button
+      <IconButton
         type="button"
         onClick={jumpToLatest}
         aria-label="Jump to latest messages"
+        icon={ArrowDown}
         className={cn(
-          'absolute bottom-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-all',
+          'absolute bottom-3 right-3 z-10 rounded-full border border-border bg-card text-foreground shadow-md transition-all',
           showJumpToLatest
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-2 pointer-events-none',
         )}
-      >
-        <ArrowDown className="h-4 w-4" />
-      </button>
+      />
     </div>
   );
 }

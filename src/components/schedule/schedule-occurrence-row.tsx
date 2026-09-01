@@ -3,9 +3,10 @@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Clock } from "lucide-react";
+import { ChevronRight, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 /** Month card shell matching the Events page layout. */
 export function ScheduleMonthGroup({
@@ -36,6 +37,91 @@ export function ScheduleRowDate({ date }: { date: Date }) {
       <span className="text-[10px] font-medium text-muted-foreground">{format(date, "MMM")}</span>
       <span className="text-sm font-semibold tabular-nums text-foreground">{format(date, "d")}</span>
       <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">{format(date, "EEE")}</span>
+    </div>
+  );
+}
+
+/** Inset card shell for worship / roster / setlist drill-down lists. */
+export function ScheduleListCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="ui-card !p-0">
+      <div className="ui-list px-2">{children}</div>
+    </div>
+  );
+}
+
+export const drillDownRowButtonClass =
+  "flex h-auto min-h-11 min-w-0 flex-1 items-center justify-start gap-3 text-left";
+
+interface DrillDownListRowProps {
+  title: ReactNode;
+  /** Second line — string or badges/chips. */
+  subtitle?: ReactNode;
+  leading?: ReactNode;
+  onClick?: () => void;
+  /** Icon actions before the chevron (delete, add, etc.). */
+  trailing?: ReactNode;
+  showChevron?: boolean;
+  className?: string;
+}
+
+/**
+ * Tappable list row for worship setlists, rosters, and similar drill-down lists.
+ * Rounded ghost-button hover — do not override with `rounded-none`.
+ */
+export function DrillDownListRow({
+  title,
+  subtitle,
+  leading,
+  onClick,
+  trailing,
+  showChevron = true,
+  className,
+}: DrillDownListRowProps) {
+  const body = (
+    <>
+      {leading}
+      <div className="event-row-body">
+        <p className="event-row-title">{title}</p>
+        {subtitle ? (
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {typeof subtitle === "string" ? (
+              <span className="event-row-meta">{subtitle}</span>
+            ) : (
+              subtitle
+            )}
+          </div>
+        ) : null}
+      </div>
+    </>
+  );
+
+  return (
+    <div className={cn("event-row group", className)}>
+      {onClick ? (
+        <Button type="button" variant="ghost" onClick={onClick} className={drillDownRowButtonClass}>
+          {body}
+          {showChevron ? (
+            <ChevronRight
+              className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground"
+              aria-hidden
+            />
+          ) : null}
+        </Button>
+      ) : (
+        <div className={drillDownRowButtonClass}>
+          {body}
+          {showChevron ? (
+            <ChevronRight
+              className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50"
+              aria-hidden
+            />
+          ) : null}
+        </div>
+      )}
+      {trailing ? (
+        <div className="flex shrink-0 items-center gap-1">{trailing}</div>
+      ) : null}
     </div>
   );
 }
@@ -99,9 +185,9 @@ export function ScheduleOccurrenceRow({
       className="scroll-mt-20"
     >
       {onClick ? (
-        <button type="button" onClick={onClick} className={rowClass}>
+        <Button type="button" variant="ghost" onClick={onClick} className={cn(rowClass, "h-auto w-full")}>
           {body}
-        </button>
+        </Button>
       ) : (
         <div className={rowClass}>{body}</div>
       )}

@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,8 +17,7 @@ import { useEvents } from '@/hooks/use-events';
 import { AppEvent, EventCategory } from '@/types';
 import { addDays, format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { CalendarIcon } from 'lucide-react';import { useToast } from '@/hooks/use-toast';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
@@ -418,7 +418,7 @@ Community BBQ
         )}
         
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLoading && <ButtonSpinner className="mr-2" />}
           {isLoading ? 'Importing Events...' : 'Import Events'}
         </Button>
       </form>

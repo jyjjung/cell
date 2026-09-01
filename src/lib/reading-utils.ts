@@ -4,8 +4,68 @@ import {
     makePassageKey
 } from '@/lib/passage-keys';
 import type { DailyReading, StructuredPassage } from '@/types';
-import { differenceInCalendarDays, isBefore, isSameDay, isValid, startOfDay } from 'date-fns';
+import {
+  differenceInCalendarDays,
+  differenceInCalendarWeeks,
+  endOfWeek,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isValid,
+  startOfDay,
+  startOfWeek,
+  subWeeks,
+} from 'date-fns';
 import { parseDay } from './event-occurrences';
+
+const DEFAULT_HEATMAP_WEEKS = 53;
+
+export function parsePlanDateBounds(
+  dailyReadings: DailyReading[] | undefined | null,
+): { start: Date; end: Date } | null {
+  if (!dailyReadings?.length) return null;
+
+  let start: Date | null = null;
+  let end: Date | null = null;
+
+  for (const day of dailyReadings) {
+    const date = parseDay(day.date);
+    if (!isValid(date)) continue;
+    const dayStart = startOfDay(date);
+    if (!start || isBefore(dayStart, start)) start = dayStart;
+    if (!end || isAfter(dayStart, end)) end = dayStart;
+  }
+
+  if (!start || !end) return null;
+  return { start, end };
+}
+
+/**
+ * Week-aligned heatmap window covering the plan (not a fixed 53-week GitHub year),
+ * capped at `maxWeeks` ending at the later of today and plan start, within plan end.
+ */
+export function getPlanHeatmapRange(
+  dailyReadings: DailyReading[] | undefined | null,
+  today: Date = startOfDay(new Date()),
+  maxWeeks = DEFAULT_HEATMAP_WEEKS,
+): { start: Date; end: Date } | null {
+  const bounds = parsePlanDateBounds(dailyReadings);
+  if (!bounds) return null;
+
+  let rangeStart = startOfWeek(bounds.start, { weekStartsOn: 0 });
+  let rangeEnd = endOfWeek(bounds.end, { weekStartsOn: 0 });
+  const weeks = differenceInCalendarWeeks(rangeEnd, rangeStart, { weekStartsOn: 0 }) + 1;
+  if (weeks <= maxWeeks) return { start: rangeStart, end: rangeEnd };
+
+  const cursor = isBefore(today, bounds.start)
+    ? bounds.start
+    : isAfter(today, bounds.end)
+      ? bounds.end
+      : today;
+  rangeEnd = endOfWeek(cursor, { weekStartsOn: 0 });
+  rangeStart = startOfWeek(subWeeks(rangeEnd, maxWeeks - 1), { weekStartsOn: 0 });
+  return { start: rangeStart, end: rangeEnd };
+}
 
 export function findTodaysReading(dailyReadings: DailyReading[]): DailyReading | null {
   if (!dailyReadings || dailyReadings.length === 0) return null;
@@ -172,6 +232,37 @@ export function getWeekPassageKeys(readings: DailyReading[]): string[] {
       keys.push(makePassageKey(day.date, passage.displayText));
     });
   });
+  return keys;
+}
+
+/** Plan days in chronological order (day 1 = first entry in the plan). */
+export function getSortedPlanDays(dailyReadings: DailyReading[] | null | undefined): DailyReading[] {
+  if (!dailyReadings?.length) return [];
+  return [...dailyReadings].sort((a, b) => parseDay(a.date).getTime() - parseDay(b.date).getTime());
+}
+
+/** Passage keys for an inclusive plan-day range (1-based day numbers). */
+export function getPlanDayPassageKeys(
+  dailyReadings: DailyReading[] | null | undefined,
+  startDay: number,
+  endDay: number,
+): string[] {
+  const sorted = getSortedPlanDays(dailyReadings);
+  if (sorted.length === 0) return [];
+
+  const from = Math.max(1, Math.min(startDay, endDay));
+  const to = Math.min(sorted.length, Math.max(startDay, endDay));
+  const keys: string[] = [];
+
+  for (let dayIndex = from; dayIndex <= to; dayIndex += 1) {
+    const day = sorted[dayIndex - 1];
+    if (!day) continue;
+    day.passages?.forEach((passage) => {
+      if (!isCountablePlanPassage(passage)) return;
+      keys.push(makePassageKey(day.date, passage.displayText));
+    });
+  }
+
   return keys;
 }
 

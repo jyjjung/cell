@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, CalendarOff, PlusCircle, Trash2, Save, Users, Pencil } from "lucide-react";
-import { format, isBefore, startOfToday, compareAsc } from "date-fns";
+import { CalendarOff, PlusCircle, Trash2, Save, Users, Pencil } from 'lucide-react';import { format, isBefore, startOfToday, compareAsc } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
@@ -374,7 +374,7 @@ export default function CustomRosterDetailPage() {
               </Button>
             )}
             <Button type="button" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {saving ? <ButtonSpinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
               {t.rosterSaveEntry}
             </Button>
           </DialogFooter>

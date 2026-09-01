@@ -1,13 +1,11 @@
-
 "use client";
 
 import * as React from "react";
 import { X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
-import { Command as CommandPrimitive } from "cmdk";
 
 export type MultiSelectItem = {
   value: string;
@@ -20,6 +18,12 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void;
   className?: string;
   placeholder?: string;
+}
+
+function matchesFilter(label: string, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return label.toLowerCase().includes(normalized);
 }
 
 export function MultiSelect({
@@ -37,29 +41,34 @@ export function MultiSelect({
     onChange(selected.filter((s) => s !== itemValue));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const input = inputRef.current;
-    if (input) {
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (input.value === "") {
-          onChange(selected.slice(0, selected.length - 1));
-        }
+  const selectables = React.useMemo(
+    () =>
+      options.filter(
+        (option) =>
+          !selected.includes(option.value) && matchesFilter(option.label, inputValue),
+      ),
+    [options, selected, inputValue],
+  );
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Delete" || e.key === "Backspace") {
+      if (inputValue === "" && selected.length > 0) {
+        onChange(selected.slice(0, selected.length - 1));
       }
-      if (e.key === "Escape") {
-        input.blur();
-      }
+    }
+    if (e.key === "Escape") {
+      inputRef.current?.blur();
     }
   };
 
-  const selectables = options.filter(
-    (option) => !selected.includes(option.value)
-  );
+  const addOption = (itemValue: string) => {
+    setInputValue("");
+    onChange([...selected, itemValue]);
+    inputRef.current?.focus();
+  };
 
   return (
-    <Command
-      onKeyDown={handleKeyDown}
-      className={cn("overflow-visible bg-transparent", className)}
-    >
+    <div className={cn("relative", className)}>
       <div className="group rounded-md border border-input px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <div className="flex flex-wrap gap-1">
           {selected.map((itemValue) => {
@@ -67,8 +76,10 @@ export function MultiSelect({
             return (
               <Badge key={itemValue} variant="secondary">
                 {item?.label}
-                <button
-                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                <IconButton
+                  size="compact"
+                  aria-label={`Remove ${item?.label ?? itemValue}`}
+                  icon={X}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleUnselect(itemValue);
@@ -79,51 +90,48 @@ export function MultiSelect({
                     e.stopPropagation();
                   }}
                   onClick={() => handleUnselect(itemValue)}
-                >
-                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                </button>
+                />
               </Badge>
             );
           })}
-          <CommandPrimitive.Input
+          <input
             ref={inputRef}
+            type="text"
             value={inputValue}
-            onValueChange={setInputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
             onBlur={() => setOpen(false)}
             onFocus={() => setOpen(true)}
             placeholder={placeholder}
-            className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            className="ml-2 min-w-[8ch] flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
           />
         </div>
       </div>
-      <div className="relative mt-2">
-        {open && selectables.length > 0 ? (
-          <div className="absolute top-0 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
-            <CommandList>
-              <CommandGroup className="h-full overflow-auto">
-                {selectables.map((option) => {
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onSelect={() => {
-                        setInputValue("");
-                        onChange([...selected, option.value]);
-                      }}
-                      className={"cursor-pointer"}
-                    >
-                      {option.label}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </div>
-        ) : null}
-      </div>
-    </Command>
+      {open && selectables.length > 0 ? (
+        <ul
+          role="listbox"
+          className="absolute top-full z-10 mt-2 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none animate-in"
+        >
+          {selectables.map((option) => (
+            <li key={option.value} role="presentation">
+              <button
+                type="button"
+                role="option"
+                className="flex w-full cursor-pointer select-none items-center rounded-xl px-2 py-2 text-left text-sm outline-none transition-all duration-200 ease-out hover:bg-accent/50 hover:text-accent-foreground focus-visible:bg-accent/50 focus-visible:text-accent-foreground active:scale-[0.98]"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={() => addOption(option.value)}
+              >
+                {option.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2, Clock, Check, MessageSquare, XCircle } from 'lucide-react';
@@ -202,7 +203,7 @@ export default function FeedbackPage() {
                     />
                     <div className="flex justify-end">
                       <Button type="submit" variant="primary" disabled={!suggestion.trim() || isSubmitting} className="h-9 rounded-xl">
-                        {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                        {isSubmitting ? <ButtonSpinner className="mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                         Submit Suggestion
                       </Button>
                     </div>
@@ -229,9 +230,9 @@ export default function FeedbackPage() {
                                 {isAdmin ? (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <button className="transition-opacity hover:opacity-80">
+                                      <Button type="button" variant="ghost" className="h-auto min-h-11 p-0" aria-label="Change status">
                                         <StatusBadge status={item.status} locale={locale} />
-                                      </button>
+                                      </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-44 rounded-xl p-1">
                                       <DropdownMenuItem
@@ -245,7 +246,7 @@ export default function FeedbackPage() {
                                         <Clock className="w-3.5 h-3.5 mr-2" /> Mark Pending
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'in-progress')} className="text-xs font-bold rounded-lg cursor-pointer text-foreground focus:text-foreground focus:bg-muted">
-                                        <Loader2 className="w-3.5 h-3.5 mr-2" /> Mark In Progress
+                                        <ButtonSpinner size="sm" className="mr-2" /> Mark In Progress
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleUpdateStatus(item, 'completed')} className="text-xs font-bold rounded-lg cursor-pointer text-success focus:text-success focus:bg-success/10">
                                         <Check className="w-3.5 h-3.5 mr-2" /> Mark Completed

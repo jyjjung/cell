@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/contexts/auth-context';
 import { useUsersById } from '@/hooks/use-all-users';
 import { useChatScrollLoadOlder } from '@/hooks/use-chat-scroll-load-older';
@@ -9,7 +10,7 @@ import { downloadChatImage } from '@/lib/chat-image-download';
 import { resolveChatAvatar } from '@/lib/chat-utils';
 import { translations } from '@/lib/translations';
 import { Chat, ChatMemberInfo } from '@/types';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { ChatImageGallery } from './ImageLightbox';
 import { ChatTimeSeparator, formatChatMessageDate } from './ChatTimeSeparator';
@@ -133,7 +134,7 @@ export default function ThreadWindow({
             <div className="flex flex-col-reverse gap-1 max-w-4xl mx-auto w-full min-w-0">
                 {loadingOlder && (
                   <div className="flex justify-center py-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+                    <LoadingSpinner size="sm" className="text-muted-foreground/50" />
                   </div>
                 )}
                 {renderContent()}
@@ -167,7 +168,7 @@ export default function ThreadWindow({
 
             {loading && messages.length === 0 && (
                 <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/40" />
+                    <LoadingSpinner size="lg" className="text-muted-foreground/40" />
                 </div>
             )}
         </div>

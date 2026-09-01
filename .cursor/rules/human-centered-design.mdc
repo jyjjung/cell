@@ -1,0 +1,140 @@
+---
+description: Human-centered design — Apple HIG principles, structure, flow, continuity, and information hierarchy
+alwaysApply: true
+---
+
+# Human-centered design
+
+Source: [Apple HIG — Design principles](https://developer.apple.com/design/human-interface-guidelines/design-principles) and [Design foundations (WWDC25)](https://developer.apple.com/videos/play/wwdc2025/359/). Complements **apple-hig** (components, tokens, hit targets).
+
+Design is **intentional structure + navigation + content + visual hierarchy** working together — not decoration added last.
+
+## Orientation (every screen)
+
+Before shipping a view, it must answer three questions **without scrolling or guessing**:
+
+| Question | Requirement |
+|----------|-------------|
+| **Where am I?** | Page title (`NavPageHeader` / `PageHeader`) names the screen — not branding, not a vague menu first. Drill-down titles name the item (e.g. “Week 12”), not only the parent feature. |
+| **What can I do?** | One obvious primary action; secondary actions grouped in toolbar/header or a menu — not scattered equal-weight buttons on every row. |
+| **Where next?** | Next step is visible or one tap away; back returns to the **previous context** (`router.back()`), not a fixed hub unless there is no history. |
+
+If people must piece together context from scattered widgets, the structure is wrong — simplify before adding polish.
+
+## Information architecture
+
+- **Purpose first** — What is this screen *for*? Cut anything that does not serve that job on this screen.
+- **Inventory → prioritize → group** — List features/data, remove non-essential, rename unclear labels, group what belongs together.
+- **One focal job per view** — Overview summarizes; detail screens expand. Do not show overview + full detail + analytics + history at once above the fold.
+- **Progressive disclosure** — Show what is needed to start; reveal depth on tap, expand, or navigate deeper. Drill-down should **feel like expansion** (same row/card patterns, consistent headers, predictable back).
+- **No duplicate metrics** — If two numbers mean nearly the same thing (e.g. overall % and “progress so far %”), keep one hero stat and move the other behind detail or drop it.
+- **Plain language** — No cryptic abbreviations (`CH`, `avg`, internal codes) in member-facing UI; use full words or universally understood labels.
+- **Concise copy** — Shortest clear label wins; one idea per line in lists.
+
+## Continuity and flow
+
+- **Consistent patterns** — Same content type uses the same component and layout everywhere (week row on overview = week row in completed list = week header in detail).
+- **Preserve context** — Back restores prior scroll/selection where reasonable; do not strand users on a hub they did not come from.
+- **Predictable hierarchy** — `text-page-title` → `text-section-title` → body → `text-micro-label` / caption. Never skip levels or use ad-hoc font sizes per page.
+- **Page rhythm** — `PageShell` + direct children (`NavPageHeader` / greeting → body). `gap-5` header-to-body on every route; no nested `home-flow` / `stack-gap-*` shells. See **apple-hig** Page rhythm.
+- **Section order** — Status / what matters now → primary action → supporting detail → history/archive. Put analytics and heatmaps **below** the task, not beside competing hero stats.
+- **Navigation vs action** — Tabs and hub bars navigate sections; primary “do” actions live in the screen’s logical context (not an extra top-level nav slot).
+- **Transitions** — Sub-views (week detail, completed list) get the same header/back pattern; avoid one-off ghost back buttons with different styling per sub-view.
+
+## Content grouping
+
+Group large lists so people are not faced with one undifferentiated wall:
+
+| Group by | Use when |
+|----------|----------|
+| **Progress** | Completed vs current vs upcoming (reading weeks, drafts, in-progress) |
+| **Time** | Recent, this week, older — surface “continue where you left off” |
+| **Relevance** | Current/overdue before future; collapse completed into a summary row |
+| **Pattern** | Related items that belong together (same book range, same event series) |
+
+- **Summarize completed work** — One tappable “Weeks 1–8 completed” row beats eight identical cards on the landing view.
+- **Scan-friendly lists** — Prefer list rows over grids for structured text; one primary line + one secondary line max per row on overview screens.
+- **Limit simultaneous status colors** — At most one strong semantic emphasis per row (current *or* overdue *or* complete); do not stack competing ring colors, badges, and percentages.
+
+## Design principles (detailed)
+
+Apply these as **decision tools** when principles conflict — not a checklist to satisfy literally every line.
+
+### Purpose — create value, stay focused
+
+- Align every screen with how members actually use the product; make the most important capability excellent.
+- Avoid re-creating flows that already exist elsewhere in the app; extend shared patterns instead.
+- If a feature does not help the screen’s core job, defer it (another route, collapsed section, or admin-only).
+
+### Agency — stay out of the way
+
+- Get people to content and tasks directly; reduce steps and modal friction.
+- Support exploration: escapable guided flows, skip where safe, undo for reversible actions.
+- For destructive work, confirm with clear consequence — never trap or hide the exit.
+
+### Responsibility — transparent and safe
+
+- State what the screen does and why permission/data is needed **at the moment of need**, not at launch.
+- Collect only what is required; destructive and irreversible actions use `AlertDialog` with plain-language outcomes.
+
+### Familiarity — build on what people know
+
+- Reuse hub tabs, list rows, cards, and settings patterns already in the app.
+- **Consistency** — Once a row layout or status color means something, use it the same way everywhere.
+- **Feedback** — Loading, empty, success, and error states use shared primitives (`LoadingState`, `EmptyState`, toasts); controls show pressed/focus/disabled state.
+
+### Flexibility — design for everyone
+
+- **Accessibility from the start** — Dynamic type (`rem` / `--app-font-size-scale`), contrast, not color-only status, keyboard path, `aria-*` on custom controls.
+- **Preserve context across resize** — Content order and control positions stay predictable; animations ease transitions without blocking tasks.
+- **Multiple inputs** — Pointer, touch, keyboard; respect `prefers-reduced-motion` and `prefers-contrast`.
+
+### Simplicity — necessary, not empty
+
+- Simplicity ≠ minimalism: include what helps the task, remove what does not.
+- **Hierarchy** — Form and function obvious; people know what to tap and what happens next.
+- **Density** — Dense is OK for power users *inside* a detail view; overview screens stay scannable.
+
+### Craft — quality sets the tone
+
+- Deliberate spacing, alignment, truncation, and loading skeletons that match final layout.
+- Iterate: if a screen feels “messy,” fix IA and hierarchy before adding widgets.
+- Ship is not done — keep patterns aligned with shared components and tokens.
+
+### Delight — earned, not decorative
+
+- Know the intended feeling (calm checklist, confident admin, energetic event) and support it with hierarchy and motion — not extra chrome.
+- Defining moments (completion, empty state, success) can have character; never at the cost of the core task.
+- Delight is the sum of purpose, agency, familiarity, flexibility, simplicity, and craft — not stickers on a confusing layout.
+
+## Visual hierarchy (web)
+
+- **One visual anchor** above the fold per screen (e.g. today’s reading *or* plan progress — not both fighting for attention).
+- Use semantic tokens (`text-foreground`, `text-muted-foreground`, `text-primary`, `text-destructive`, `text-success`) — same meaning app-wide.
+- Decorative imagery and charts support the task; they are not the first thing the eye hits unless that is the screen’s purpose.
+- Text on busy backgrounds needs a solid/scrim fallback (`.ui-scrim` / opaque surface).
+
+## Anti-patterns (fix structure first)
+
+```text
+❌ Landing page: progress bar + 4 pace stats + heatmap + 20 week cards
+✅ Landing: hero progress + current week action + collapsed completed summary + heatmap below fold
+
+❌ Week row: label color + ring + % + fraction + long passage list in subtitle
+✅ Week row: week + dates + one status + tap for passages
+
+❌ Sub-view back links to fixed /admin or /forms
+✅ Sub-view back uses router.back() with sensible parent fallback
+
+❌ Three different back button styles on related drill-downs
+✅ One back pattern (ghost sm + chevron) on all child views
+```
+
+## Workflow for messy screens
+
+1. Write the screen’s **one-sentence purpose**.
+2. List every block on the page; mark **essential / supporting / cut**.
+3. Reorder: now → action → detail → history.
+4. Collapse or link out duplicate stats and long text.
+5. Unify row/card components and header/back behavior.
+6. Only then tune color, motion, and spacing.

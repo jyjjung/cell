@@ -14,8 +14,6 @@ export function GlobalBibleReader() {
 
   const hasReadingsHubPopup =
     pathname.startsWith('/bible-checklist') ||
-    pathname.startsWith('/full-plan') ||
-    pathname.startsWith('/memorize') ||
     pathname.startsWith('/leaderboard');
   const isAllowedPage = isCellHomePath(pathname);
   // Public landing only — Terms footer sits under the FAB.

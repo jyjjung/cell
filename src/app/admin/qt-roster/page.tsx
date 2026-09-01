@@ -2,10 +2,13 @@
 "use client";
 
 import UserSelector from '@/components/chat/UserSelector';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -16,7 +19,7 @@ import { cn } from '@/lib/utils';
 import type { QTRosterEntry } from '@/types';
 import { addMonths, eachDayOfInterval, endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronsLeft, ChevronsRight, Loader2, Save, Trash2, UserCheck, Users } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Save, Trash2, UserCheck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 export default function AdminQTRosterPage() {
@@ -163,7 +166,7 @@ export default function AdminQTRosterPage() {
             <div className="flex items-center gap-2">
                 {Object.keys(localChanges).length > 0 && (
                     <Button onClick={handleBulkSave} disabled={isSavingAll} size="sm">
-                        {isSavingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSavingAll ? <ButtonSpinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
                         {t.adminSaveDrafts.replace('{count}', String(Object.keys(localChanges).length))}
                     </Button>
                 )}
@@ -175,10 +178,7 @@ export default function AdminQTRosterPage() {
       </header>
 
       {loading ? (
-        <div className="empty-inline gap-3">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-micro-label">{t.adminLoadingRoster}</p>
-        </div>
+        <ListLoadingSkeleton />
       ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {monthDates.map(dateObj => {
@@ -205,15 +205,14 @@ export default function AdminQTRosterPage() {
                                  <span className="text-[11px] font-medium text-muted-foreground">{format(dateObj, 'EEE')}</span>
                                  <span className="text-lg font-semibold text-foreground">{format(dateObj, 'MMM d')}</span>
                              </div>
-                             <Button 
-                                size="icon" 
-                                variant="secondary" 
-                                onClick={() => handleDelete(dateStr)} 
+                             <IconButton
+                                aria-label="Delete entry"
+                                icon={Trash2}
+                                variant="secondary"
+                                onClick={() => handleDelete(dateStr)}
                                 disabled={!entry}
-                                className="h-7 w-7 rounded-lg text-destructive opacity-40 hover:opacity-100 transition-opacity"
-                             >
-                                <Trash2 className="h-3.5 w-3.5" />
-                             </Button>
+                                className="rounded-lg text-destructive opacity-40 hover:opacity-100"
+                             />
                          </div>
                          <div className="space-y-3">
                              <div className="space-y-1">
@@ -228,17 +227,16 @@ export default function AdminQTRosterPage() {
                                        isLinked && "border-success/30 focus-visible:ring-success/30"
                                    )}
                                  />
-                                 <Button
+                                 <IconButton
+                                    aria-label="Select person"
+                                    icon={Users}
                                     variant="secondary"
-                                    size="icon"
-                                    className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 rounded-lg"
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg"
                                     onClick={() => {
                                       setEditingDate(dateStr);
                                       setIsSelectorOpen(true);
                                     }}
-                                  >
-                                    <Users className="h-3.5 w-3.5" />
-                                  </Button>
+                                  />
                                </div>
                              </div>
                              <div className="space-y-1">
@@ -319,17 +317,16 @@ export default function AdminQTRosterPage() {
                             )}
                           </AnimatePresence>
                         </div>
-                        <Button
+                        <IconButton
+                          aria-label="Select person"
+                          icon={Users}
                           variant="secondary"
-                          size="icon"
-                          className="h-9 w-9 shrink-0 rounded-lg"
+                          className="shrink-0 rounded-lg"
                           onClick={() => {
                             setEditingDate(dateStr);
                             setIsSelectorOpen(true);
                           }}
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
+                        />
                       </div>
                     </TableCell>
                     <TableCell>
@@ -350,15 +347,14 @@ export default function AdminQTRosterPage() {
                     </TableCell>
                     <TableCell className="text-right">
                        <div className="flex justify-end gap-2">
-                        <Button 
-                            size="icon" 
-                            variant="destructive" 
-                            onClick={() => handleDelete(dateStr)} 
+                        <IconButton
+                            aria-label="Delete entry"
+                            icon={Trash2}
+                            variant="destructive"
+                            onClick={() => handleDelete(dateStr)}
                             disabled={!entry}
-                            className="h-9 w-9 rounded-lg opacity-30 group-hover:opacity-100 transition-opacity"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                            className="rounded-lg opacity-30 group-hover:opacity-100"
+                        />
                        </div>
                     </TableCell>
                   </TableRow>

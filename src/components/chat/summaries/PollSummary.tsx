@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { resolveChatUserName } from "@/lib/chat-utils";
 import { BarChart3, Check, Lock } from "lucide-react";
@@ -113,16 +114,17 @@ export default function PollSummary({
           const voterNames = voterIds.map((uid) => resolveChatUserName(uid, chat, usersById));
 
           return (
-            <button
+            <Button
               key={`${message.id}-poll-${index}`}
               type="button"
+              variant="ghost"
               disabled={votingLocked}
               onClick={() => {
                 if (votingLocked) return;
                 onVote(index);
               }}
               className={cn(
-                "relative w-full overflow-hidden rounded-lg border px-2.5 py-2 text-left transition-colors",
+                "relative h-auto w-full overflow-hidden rounded-lg border px-2.5 py-2 text-left justify-start",
                 votingLocked && "cursor-default",
                 onPrimary
                   ? isSelected
@@ -179,7 +181,7 @@ export default function PollSummary({
                   </span>
                 )}
               </span>
-            </button>
+            </Button>
           );
         })}
       </div>

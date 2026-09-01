@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,8 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useNotifications } from '@/hooks/use-notifications';
-import { Loader2, Send } from 'lucide-react';
-import type { AppNotification } from '@/types';
+import { Send } from 'lucide-react';import type { AppNotification } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
@@ -174,7 +174,7 @@ export default function NotificationAdminForm({ onSuccess, onCancel, submitButto
                 <Button type="button" variant="ghost" onClick={onCancel}>{t.adminCancel}</Button>
             )}
             <Button type="submit" className="flex-1" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {isLoading ? <ButtonSpinner className="mr-2" /> : <Send className="mr-2 h-4 w-4" />}
                 {buttonText}
             </Button>
         </div>

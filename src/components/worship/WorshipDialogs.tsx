@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
@@ -15,13 +17,13 @@ import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import { detectKeyFromText, isTextChordSheet, prepareChordChartPaste } from '@/lib/chord-chart';
+import { detectKeyFromText, isTextChordSheet, parseChordChart, prepareChordChartClipboard, savePastedChartText } from '@/lib/chord-chart';
 import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { emptyChordAnnotation } from '@/components/worship/text-chord-chart-viewer';
+import { ChordChartBody } from '@/components/worship/text-chord-chart';
 import { format, parseISO } from 'date-fns';
-import { Check, Loader2, Pencil, Plus, Trash2, Youtube } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Check, Pencil, Plus, Trash2, Youtube } from 'lucide-react';import { useEffect, useMemo, useRef, useState } from 'react';
 
 const WORSHIP_ALL_KEYS: ChordKey[] = [
   'numbers',
@@ -75,7 +77,7 @@ export function NewSongDialog({
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
             <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!title.trim() || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
+              {saving ? <ButtonSpinner className="mr-2" /> : null} Create
             </Button>
           </div>
         </div>
@@ -129,7 +131,7 @@ export function NewSetlistDialog({ open, onClose, onCreated }: { open: boolean; 
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
             <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!name.trim() || !date || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
+              {saving ? <ButtonSpinner className="mr-2" /> : null} Create
             </Button>
           </div>
         </div>
@@ -216,7 +218,7 @@ export function NewRosterDialog({
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
             <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleSubmit}
               disabled={!name.trim() || !date || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Create
+              {saving ? <ButtonSpinner className="mr-2" /> : null} Create
             </Button>
           </div>
         </div>
@@ -336,12 +338,13 @@ export function SetlistSongConfigPanel({
           {WORSHIP_ALL_KEYS.map((k) => {
             const hasSheet = hasTextChart || availableKeys.includes(k);
             return (
-              <button
+              <Button
                 key={k}
                 type="button"
+                variant="ghost"
                 onClick={() => onKeyChange(k)}
                 className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all relative',
+                  'hit-min h-auto px-2.5 py-1 rounded-lg text-xs font-bold border relative',
                   selectedKey === k
                     ? 'bg-muted border-border text-white shadow-md shadow-primary/20'
                     : hasSheet
@@ -350,7 +353,7 @@ export function SetlistSongConfigPanel({
                 )}
               >
                 {k === 'numbers' ? '#' : k}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -377,12 +380,13 @@ export function SetlistSongConfigPanel({
             {sheetsForKey.map((sheet, i) => {
               const selected = selectedSheetIds.includes(sheet.id);
               return (
-                <button
+                <Button
                   key={sheet.id}
                   type="button"
+                  variant="ghost"
                   onClick={() => toggleSheet(sheet.id)}
                   className={cn(
-                    'relative w-16 h-20 rounded-lg border-2 overflow-hidden transition-all',
+                    'relative h-20 w-16 overflow-hidden rounded-lg border-2 p-0',
                     selected ? 'border-primary ring-2 ring-primary/30' : 'border-border/40 opacity-50',
                   )}
                 >
@@ -401,7 +405,7 @@ export function SetlistSongConfigPanel({
                       <Check className="h-2.5 w-2.5 text-white" />
                     </span>
                   )}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -442,7 +446,7 @@ export function SetlistSongConfigPanel({
                 autoFocus
               />
               <Button type="button" size="sm" className="h-9 rounded-xl" disabled={savingNote} onClick={() => void createNote()}>
-                {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Add'}
+                {savingNote ? <ButtonSpinner size="sm" /> : 'Add'}
               </Button>
             </div>
           )}
@@ -495,14 +499,14 @@ export function SetlistSongConfigPanel({
                     />
                   </div>
                   {referenceTracks.length > 1 && (
-                    <button
+                    <IconButton
                       type="button"
                       onClick={() => removeTrack(index)}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      className="shrink-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       aria-label="Remove link"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      icon={Trash2}
+                      iconClassName="h-3.5 w-3.5"
+                    />
                   )}
                 </div>
                 {urlInvalid && (
@@ -533,6 +537,8 @@ export function AddChordSheetDialog({
   const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [file, setFile] = useState<File | null>(null);
   const [pasteText, setPasteText] = useState('');
+  const [pasteHtml, setPasteHtml] = useState<string | null>(null);
+  const keepPasteHtmlRef = useRef(false);
   const [key, setKey] = useState<ChordKey>(defaultKey ?? 'E');
   const [saving, setSaving] = useState(false);
 
@@ -541,6 +547,7 @@ export function AddChordSheetDialog({
     setMode('paste');
     setFile(null);
     setPasteText('');
+    setPasteHtml(null);
   }, [open]);
 
   useEffect(() => {
@@ -583,9 +590,15 @@ export function AddChordSheetDialog({
     if (!song || !pasteText.trim()) return;
     setSaving(true);
     try {
-      const sheet = await addTextChordSheet(song.id, prepareChordChartPaste(pasteText.trim()), key);
+      const sheet = await addTextChordSheet(
+        song.id,
+        savePastedChartText(pasteText.trim()),
+        key,
+        pasteHtml || undefined,
+      );
       toast({ title: 'Chart saved', description: `Pasted ${sheet.key === 'numbers' ? '#' : sheet.key} chart for ${song.title}.` });
       setPasteText('');
+      setPasteHtml(null);
       onUploaded?.([sheet.id]);
       onClose();
     } catch (e: any) {
@@ -605,20 +618,22 @@ export function AddChordSheetDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="mt-3 flex gap-1 rounded-xl bg-muted p-1">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setMode('paste')}
-            className={cn('flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'paste' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+            className={cn('h-auto flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'paste' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
           >
             Paste
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => setMode('upload')}
-            className={cn('flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'upload' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+            className={cn('h-auto flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'upload' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
           >
             Image / PDF
-          </button>
+          </Button>
         </div>
         <div className="space-y-4 mt-4">
           {mode === 'paste' ? (
@@ -631,25 +646,45 @@ export function AddChordSheetDialog({
                 onPaste={(e) => {
                   const html = e.clipboardData.getData('text/html');
                   const plain = e.clipboardData.getData('text/plain');
-                  const next = prepareChordChartPaste(plain, html);
+                  const next = prepareChordChartClipboard(plain, html);
                   e.preventDefault();
                   const el = e.currentTarget;
-                  const start = el.selectionStart;
-                  const end = el.selectionEnd;
-                  const merged = `${pasteText.slice(0, start)}${next}${pasteText.slice(end)}`;
-                  setPasteText(merged);
-                  const found = detectKeyFromText(merged);
-                  if (found) setKey(found);
+                  const start = el.selectionStart ?? 0;
+                  const end = el.selectionEnd ?? 0;
+                  keepPasteHtmlRef.current = Boolean(next.html);
+                  setPasteHtml(next.html);
+                  setPasteText((prev) => {
+                    const merged = `${prev.slice(0, start)}${next.text}${prev.slice(end)}`;
+                    const found = detectKeyFromText(merged);
+                    if (found) setKey(found);
+                    return merged;
+                  });
+                  requestAnimationFrame(() => {
+                    keepPasteHtmlRef.current = false;
+                  });
                 }}
                 onChange={(e) => {
                   const next = e.target.value;
                   setPasteText(next);
+                  if (keepPasteHtmlRef.current) {
+                    keepPasteHtmlRef.current = false;
+                  } else {
+                    setPasteHtml(null);
+                  }
                   const found = detectKeyFromText(next);
                   if (found) setKey(found);
                 }}
                 placeholder="Paste from SongSelect or ChordPro…"
                 className="min-h-[180px] w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
               />
+              {pasteText.trim() && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground">Preview — chords sit above the matching words.</p>
+                  <div className="max-h-56 overflow-auto rounded-xl bg-[#1f1f1f] px-4 py-3">
+                    <ChordChartBody blocks={parseChordChart(pasteText)} />
+                  </div>
+                </div>
+              )}
               {detected && (
                 <p className="text-xs text-muted-foreground">Detected original key: {detected}</p>
               )}
@@ -679,12 +714,12 @@ export function AddChordSheetDialog({
             {mode === 'paste' ? (
               <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handlePaste}
                 disabled={!pasteText.trim() || saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Save chart
+                {saving ? <ButtonSpinner className="mr-2" /> : null} Save chart
               </Button>
             ) : (
               <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
                 disabled={!file || saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Upload
+                {saving ? <ButtonSpinner className="mr-2" /> : null} Upload
               </Button>
             )}
           </div>

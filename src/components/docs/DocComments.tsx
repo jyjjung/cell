@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Send, Trash2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
+import { Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/auth-context';
@@ -49,7 +51,7 @@ export function DocComments({ docId, ownerId }: DocCommentsProps) {
       <div className="max-h-[360px] overflow-y-auto px-4 py-3 stack-gap-sm">
         {loading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <LoadingSpinner size="sm" className="text-muted-foreground" />
           </div>
         ) : comments.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">{t.noCommentsYet}</p>
@@ -111,7 +113,7 @@ export function DocComments({ docId, ownerId }: DocCommentsProps) {
             disabled={!text.trim() || sending}
           >
             {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <ButtonSpinner className="mr-2" />
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}

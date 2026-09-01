@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +36,7 @@ import { useRoles } from '@/hooks/use-roles';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { translations } from '@/lib/translations';
-import { Copy, Download, Loader2, Link2, QrCode, Trash2 } from 'lucide-react';
+import { Copy, Download, Link2, QrCode, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RemoteImage } from '@/components/ui/remote-image';
@@ -144,7 +146,7 @@ function InviteLinkShare({
       {showQr && (
         <div className="rounded-xl border border-border/50 bg-background p-4 flex flex-col items-center gap-3">
           {qrLoading ? (
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <LoadingSpinner size="lg" className="text-muted-foreground" />
           ) : qrDataUrl ? (
             <>
               <RemoteImage
@@ -372,7 +374,7 @@ export function AdminInviteDialog({
 
             <DialogFooter className="pt-1">
               <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                {isSaving ? <ButtonSpinner /> : <Link2 className="mr-2 h-4 w-4" />}
                 {t.adminInviteCreateButton}
               </Button>
             </DialogFooter>
@@ -383,7 +385,7 @@ export function AdminInviteDialog({
           <p className="text-micro-label">{t.adminInviteExisting}</p>
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <ButtonSpinner />
               {t.loading}
             </div>
           ) : invites.length === 0 ? (
@@ -460,7 +462,7 @@ export function AdminInviteDialog({
                             aria-label={t.adminInviteDelete}
                           >
                             {deletingId === invite.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <ButtonSpinner size="sm" />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
                             )}

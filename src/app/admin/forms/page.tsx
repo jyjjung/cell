@@ -130,23 +130,22 @@ export default function AdminFormsListPage() {
     <div className="page-container space-y-8">
       <PageHeader
         title="Admin • Forms"
-        description="Build forms in Forms maker. View, share, and download submissions in Responses."
-      />
-
-      <section className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <h2 className="text-section-title">Forms maker</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Create and edit forms, then publish a guest link for people to fill out.
-            </p>
-          </div>
+        action={
           <Button asChild className="rounded-xl shrink-0">
             <Link href="/admin/forms/new">
               <Plus className="h-4 w-4" />
               New form
             </Link>
           </Button>
+        }
+      />
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-section-title">Forms maker</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Create and edit forms, then publish a guest link for people to fill out.
+          </p>
         </div>
 
         {sortedForms.length === 0 ? (
@@ -168,9 +167,10 @@ export default function AdminFormsListPage() {
           <div className="ui-card divide-y divide-border/60">
             {sortedForms.map((form) => (
               <div key={form.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
-                <button
+                <Button
                   type="button"
-                  className="min-w-0 flex-1 text-left"
+                  variant="ghost"
+                  className="h-auto min-h-11 min-w-0 flex-1 justify-start text-left"
                   onClick={() => router.push(`/admin/forms/${encodeURIComponent(form.id)}`)}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -204,7 +204,7 @@ export default function AdminFormsListPage() {
                       ? ` · Limit ${form.maxResponses}`
                       : ''}
                   </p>
-                </button>
+                </Button>
 
                 <div className="flex flex-wrap gap-2 shrink-0">
                   <Button

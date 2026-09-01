@@ -92,8 +92,6 @@ function needsLiveBiblePlan(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname.startsWith('/bible-checklist') ||
-    pathname.startsWith('/full-plan') ||
-    pathname.startsWith('/memorize') ||
     pathname.startsWith('/leaderboard') ||
     pathname.startsWith('/profile') ||
     pathname.startsWith('/members') ||

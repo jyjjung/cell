@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { translations } from '@/lib/translations';
+import { PageLoading } from '@/components/ui/loading-spinner';
 
 function safeNextPath(next: string | null): string {
   if (!next || !next.startsWith('/') || next.startsWith('//')) return '/';
@@ -51,19 +52,24 @@ function LoginPageInner() {
   }, [currentUser, loadingAuth, router, isMounted, nextPath, redirecting]);
 
   if (!isMounted || loadingAuth || redirecting || (isMounted && !loadingAuth && currentUser)) {
-    return null;
+    return <PageLoading />;
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-8rem)] px-4"
+      style={{
+        paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md space-y-8"
       >
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tighter text-foreground">{t.welcomeBack}</h1>
+          <h1 className="text-page-title">{t.welcomeBack}</h1>
         </div>
 
         <LoginForm redirectTo={nextPath} />
@@ -81,7 +87,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoading />}>
       <LoginPageInner />
     </Suspense>
   );

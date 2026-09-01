@@ -11,9 +11,8 @@ When implementing features, fixes, or refactors:
 
 - **Zero additional paid services** unless the user explicitly approves a new vendor/SKU.
 - Prefer solutions that use existing Firebase/Next/Vercel capacity.
-- Avoid new standing listeners, unbounded collection scans, or per-user fan-out that grows linearly without a hard cap.
-- Bound batch jobs (e.g. `limit(100)`), debounce writes, cache static reads, and gate realtime work by route.
-- Growth should increase cost sub-linearly: indexes, caps, and on-demand sync beats continuous polling.
+- Follow **firebase-cost**: minimise Firestore reads/writes and Storage upload/download (shared/capped listeners, debounce writes, compress/cache media).
+- Follow **fast-loading**: skeleton-first routes, code-split heavy blocks, defer below-fold listeners and UI.
 
 ## Quality
 

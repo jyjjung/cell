@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
 import { EmptyState } from '@/components/ndcpc/EmptyState';
 import { DATA_CACHE_KEYS } from '@/lib/ndcpc/data-cache';
 import { ContentFlow, FlowItem } from '@/components/ndcpc/ContentFlow';
@@ -106,7 +106,7 @@ export function PrayerTopicList() {
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
   }
 
   if (!topics || topics.length === 0) {

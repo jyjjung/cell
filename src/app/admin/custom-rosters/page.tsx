@@ -1,19 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useRouter } from "next/navigation";
 import {
-  Loader2,
   PlusCircle,
   Trash2,
   ExternalLink,
   GripVertical,
   ClipboardList,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-layout";
+import { EmptyState, PageHeader } from "@/components/ui/page-layout";
+import { ListLoadingSkeleton } from "@/components/ui/loading-state";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
 import { useRosterDefinitions } from "@/hooks/useRosterDefinitions";
@@ -176,35 +180,24 @@ function RosterSettingsPanel({
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                  <IconButton
+                    aria-label="Move up"
+                    icon={ChevronUp}
                     disabled={index === 0}
                     onClick={() => moveField(index, -1)}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                  />
+                  <IconButton
+                    aria-label="Move down"
+                    icon={ChevronDown}
                     disabled={index === fields.length - 1}
                     onClick={() => moveField(index, 1)}
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
+                  />
+                  <IconButton
+                    aria-label="Remove field"
+                    icon={Trash2}
+                    className="text-destructive"
                     onClick={() => removeField(field.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  />
                 </div>
               </div>
             ))}
@@ -287,7 +280,7 @@ function RosterSettingsPanel({
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleSave} disabled={saving || !name.trim()}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {saving ? <ButtonSpinner className="mr-2" /> : null}
           {t.adminSaveChanges}
         </Button>
         <Button variant="outline" onClick={() => router.push(`/rosters/${roster.id}`)}>
@@ -368,10 +361,7 @@ export default function AdminCustomRostersPage() {
       <PageHeader title={t.adminCustomRosters} />
 
       {loading ? (
-        <div className="empty-inline gap-3">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-micro-label">{t.adminLoadingRoster}</p>
-        </div>
+        <ListLoadingSkeleton />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="widget-surface space-y-3">
@@ -382,22 +372,28 @@ export default function AdminCustomRostersPage() {
                 placeholder={t.adminRosterName}
                 className="h-10 rounded-xl"
               />
-              <Button onClick={handleCreate} disabled={creating || !newName.trim()} size="icon" className="h-10 w-10 shrink-0">
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
-              </Button>
+              <IconButton
+                aria-label="Create roster"
+                icon={creating ? ButtonSpinner : PlusCircle}
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+                className="shrink-0"
+                variant="default"
+              />
             </div>
 
             {definitions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t.adminNoCustomRosters}</p>
+              <EmptyState icon={ClipboardList} title={t.adminNoCustomRosters} />
             ) : (
               <div className="space-y-1">
                 {definitions.map((def) => (
-                  <button
+                  <Button
                     key={def.id}
                     type="button"
+                    variant="ghost"
                     onClick={() => setSelectedId(def.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors",
+                      "h-auto min-h-11 w-full justify-start gap-2 rounded-xl px-3 py-2 text-left text-sm",
                       selectedId === def.id
                         ? "bg-primary/10 text-primary"
                         : "hover:bg-muted/50",
@@ -405,7 +401,7 @@ export default function AdminCustomRostersPage() {
                   >
                     <ClipboardList className="h-4 w-4 shrink-0" />
                     <span className="truncate font-medium">{def.name}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -421,9 +417,7 @@ export default function AdminCustomRostersPage() {
                 t={t}
               />
             ) : (
-              <div className="widget-surface py-12 text-center text-sm text-muted-foreground">
-                {t.adminSelectRoster}
-              </div>
+              <EmptyState icon={ClipboardList} title={t.adminSelectRoster} />
             )}
           </div>
         </div>

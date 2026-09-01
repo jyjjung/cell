@@ -2,6 +2,8 @@
 "use client";
 
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +21,7 @@ import { auth } from '@/lib/firebase';
 import type { UserProfileData } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-    AlertCircle, AlertTriangle, BadgeCheck, CheckSquare, Clock, Edit, Loader2, Mail, Search,
+    AlertCircle, AlertTriangle, BadgeCheck, CheckSquare, Clock, Edit, Mail, Search,
     ShieldAlert, ShieldCheck, Trash2, UserPlus, Users
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -29,9 +31,11 @@ import { z } from 'zod';
 import { AdminInviteDialog } from '@/components/admin/admin-invite-dialog';
 import { UserAccountToolsDialog } from '@/components/users/user-account-tools-dialog';
 import { RolesManagementPanel } from '@/components/users/roles-management-panel';
+import { ChatCreationPermissionsPanel } from '@/components/users/chat-creation-permissions-panel';
 import { UsersHubTabs } from '@/components/users/users-hub-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PageHeader } from '@/components/ui/page-layout';
+import { EmptyState, PageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { hasAssignedCellAccess, hasAssignedNdcpcAccess } from '@/lib/app-access';
 import { hasCapability } from '@/lib/role-capabilities';
 import { resolveAvatarForApp, type AvatarAppId } from '@/lib/user-avatars';
@@ -419,7 +423,7 @@ export function UsersManagementPage() {
             onClick={() => handleApprove(user)}
             disabled={isApproving === user.uid}
         >
-            {isApproving === user.uid ? <Loader2 className="h-3 w-3 animate-spin" /> : t.adminApprove}
+            {isApproving === user.uid ? <LoadingSpinner size="sm" /> : t.adminApprove}
         </Button>
       )}
       <Button variant="outline" size={size} className={cn("h-8 rounded-lg hover:bg-primary hover:text-white transition-all", size === "icon" ? "w-8 p-0" : "px-3 text-xs")} onClick={() => openEditDialog(user)}>
@@ -567,7 +571,7 @@ export function UsersManagementPage() {
 
           {selectedUserIds.size > 0 && (
               <Button onClick={handleBulkApprove} disabled={isBulkApproving} size="sm" className="whitespace-nowrap shrink-0">
-                  {isBulkApproving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckSquare className="mr-2 h-4 w-4" />}
+                  {isBulkApproving ? <ButtonSpinner className="mr-2" /> : <CheckSquare className="mr-2 h-4 w-4" />}
                   {t.adminApproveSelected.replace('{count}', String(selectedUserIds.size))}
               </Button>
           )}
@@ -576,7 +580,10 @@ export function UsersManagementPage() {
       </header>
 
       {activeTab === 'roles' ? (
-        <RolesManagementPanel />
+        <div className="space-y-6">
+          <ChatCreationPermissionsPanel />
+          <RolesManagementPanel />
+        </div>
       ) : (
       <>
       {duplicateNameSet.size > 0 && (
@@ -593,15 +600,9 @@ export function UsersManagementPage() {
       
       <section>
         {loading ? (
-            <div className="empty-inline gap-3">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-micro-label">{t.loading}</p>
-            </div>
+            <ListLoadingSkeleton />
         ) : filteredUsers.length === 0 ? (
-            <div className="empty-inline border border-dashed border-border/50 rounded-2xl">
-                <Users className="h-8 w-8 mb-2 opacity-40" />
-                <p className="text-micro-label">{t.adminNoUsersFound}</p>
-            </div>
+            <EmptyState icon={Users} title={t.adminNoUsersFound} />
         ) : (
           <>
             {/* Desktop Table View */}
@@ -795,7 +796,7 @@ export function UsersManagementPage() {
               <DialogFooter className="pt-2 flex gap-2">
                 <Button type="button" variant="outline" className="flex-grow" onClick={() => setIsEditUserOpen(false)}>{t.adminCancel}</Button>
                 <Button type="submit" disabled={isSaving} className="flex-grow">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t.adminSaveChanges}
+                  {isSaving ? <ButtonSpinner /> : t.adminSaveChanges}
                 </Button>
               </DialogFooter>
             </form>

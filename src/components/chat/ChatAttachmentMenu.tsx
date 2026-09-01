@@ -22,6 +22,7 @@ import { useWorshipSongs } from "@/hooks/useWorshipSongs";
 import { useDocs } from "@/hooks/use-docs";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { displayDocTitle, stripHtmlPreview } from "@/lib/docs-utils";
@@ -198,7 +199,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
     >
       {view !== "grid" && (
         <div className="flex items-center gap-1 border-b border-border px-2 py-2">
-          <button
+          <IconButton
             type="button"
             onClick={() => {
               if (view === "song-keys") {
@@ -209,11 +210,10 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                 setSelectedSongId(null);
               }
             }}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+            icon={ChevronLeft}
+          />
           <p className="flex-1 text-base font-medium text-foreground">{title}</p>
         </div>
       )}
@@ -223,17 +223,18 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
           {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
-              <button
+              <Button
                 key={item.id}
                 type="button"
+                variant="ghost"
                 onClick={() => handleGridPick(item.id)}
-                className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 active:bg-muted"
+                className="h-auto w-full justify-start gap-3 rounded-none px-3 py-2.5 text-left hover:bg-muted/60 active:bg-muted"
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
                   <Icon className="h-4 w-4" strokeWidth={2} />
                 </div>
                 <span className="text-base text-foreground">{item.label}</span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -261,13 +262,14 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                   className={MENU_INPUT_CLASS}
                 />
                 {pollOptions.length > 2 && (
-                  <button
+                  <IconButton
                     type="button"
+                    size="compact"
                     onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== index))}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    className="shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Remove option"
+                    icon={Trash2}
+                  />
                 )}
               </div>
             ))}
@@ -323,9 +325,10 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                   return map;
                 }, new Map<string, string[]>()).entries(),
               ).map(([key, urls]) => (
-                <button
+                <Button
                   key={key}
                   type="button"
+                  variant="ghost"
                   onClick={() => {
                     onPick({
                       type: "song",
@@ -341,10 +344,10 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                     });
                     onClose();
                   }}
-                  className="flex h-11 items-center justify-center rounded-lg border border-border bg-muted/40 text-base font-medium transition-colors hover:bg-muted"
+                  className="flex h-11 items-center justify-center rounded-lg border border-border bg-muted/40 text-base font-medium hover:bg-muted"
                 >
                   {key}
-                </button>
+                </Button>
               ))
             ) : (
               <p className="col-span-4 py-6 text-center text-base text-muted-foreground">No chord sheets uploaded</p>
@@ -356,13 +359,14 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
       {(view === "setlist" || view === "roster" || view === "song" || view === "doc") && (
         <div className="flex flex-col">
           {view === "doc" && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => {
                 onPick({ type: "new-doc" });
                 onClose();
               }}
-              className="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors hover:bg-muted/60"
+              className="h-auto w-full justify-start gap-3 rounded-none border-b border-border px-3 py-2.5 text-left hover:bg-muted/60"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Plus className="h-4 w-4" />
@@ -371,7 +375,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                 <p className="truncate text-base font-medium">{t.newDocument}</p>
                 <p className="truncate text-sm text-muted-foreground">{t.newDocumentInChatHint}</p>
               </div>
-            </button>
+            </Button>
           )}
           <div className="border-b border-border px-3 py-2">
             <div className="relative">
@@ -391,9 +395,10 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
               <p className="py-8 text-center text-base text-muted-foreground">No results</p>
             ) : (
               listItems.map((item) => (
-                <button
+                <Button
                   key={item.id}
                   type="button"
+                  variant="ghost"
                   onClick={() => {
                     if (view === "song") {
                       setSelectedSongId(item.id);
@@ -412,7 +417,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                     });
                     onClose();
                   }}
-                  className="flex w-full items-center gap-3 border-b border-border/50 px-3 py-2.5 text-left last:border-b-0 transition-colors hover:bg-muted/60"
+                  className="h-auto w-full justify-start gap-3 rounded-none border-b border-border/50 px-3 py-2.5 text-left last:border-b-0 hover:bg-muted/60"
                 >
                   {item.date ? (
                     <div className="flex w-10 shrink-0 flex-col items-center leading-none">
@@ -430,7 +435,7 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
                     <p className="truncate text-base font-medium">{item.title}</p>
                     <p className="truncate text-sm text-muted-foreground">{item.meta}</p>
                   </div>
-                </button>
+                </Button>
               ))
             )}
           </div>

@@ -8,6 +8,8 @@ import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/types';
 import { SmilePlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 
 const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -38,10 +40,12 @@ export function AnnouncementReactions({
           // modal + elevated z-index: Radix Sheet (Dialog) otherwise traps/hides portaled popovers
           <Popover key={emoji} modal>
             <PopoverTrigger asChild>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="chip"
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                  'border',
                   mine
                     ? 'border-primary/40 bg-primary/10 text-foreground'
                     : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted',
@@ -49,7 +53,7 @@ export function AnnouncementReactions({
               >
                 <span>{emoji}</span>
                 <span className="tabular-nums">{uids.length}</span>
-              </button>
+              </Button>
             </PopoverTrigger>
             <PopoverContent
               side="top"
@@ -63,16 +67,17 @@ export function AnnouncementReactions({
                   </span>
                   <span className="font-medium text-foreground">{reactionNames}</span>
                 </div>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggle(emoji);
                   }}
-                  className="w-full rounded-md bg-muted py-1.5 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted/80"
+                  className="h-auto min-h-11 w-full py-1.5 text-[10px] font-semibold"
                 >
                   {mine ? t.removeReaction : t.addReaction}
-                </button>
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -80,13 +85,12 @@ export function AnnouncementReactions({
       })}
       <Popover modal>
         <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/60 text-muted-foreground hover:bg-muted"
+          <IconButton
+            size="compact"
             aria-label={t.addReaction}
-          >
-            <SmilePlus className="h-3.5 w-3.5" />
-          </button>
+            icon={SmilePlus}
+            className="rounded-full border border-border/60 text-muted-foreground"
+          />
         </PopoverTrigger>
         <PopoverContent
           className="z-[100] w-auto p-2"
@@ -95,14 +99,17 @@ export function AnnouncementReactions({
         >
           <div className="flex gap-1">
             {STANDARD_REACTIONS.map((emoji) => (
-              <button
+              <Button
                 key={emoji}
                 type="button"
+                variant="ghost"
+                aria-label={emoji}
                 onClick={() => onToggle(emoji)}
-                className="rounded-lg px-2 py-1 text-base hover:bg-muted"
+                size="iconCompact"
+                className="h-8 w-8 min-h-0 min-w-0 px-0 text-base"
               >
                 {emoji}
-              </button>
+              </Button>
             ))}
           </div>
         </PopoverContent>

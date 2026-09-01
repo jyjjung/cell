@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Loader2,
   Share2,
   Trash2,
   Check,
@@ -288,7 +289,7 @@ export default function DocDetailPage() {
   if (loadingAuth || !currentUser || loading) {
     return (
       <div className="page-container flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
+        <LoadingSpinner size="lg" className="text-primary/30" />
       </div>
     );
   }
@@ -340,7 +341,7 @@ export default function DocDetailPage() {
         <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5 mr-1">
           {saving || manualSaving ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <ButtonSpinner size="sm" />
               {t.saving}
             </>
           ) : dirty ? (
@@ -360,7 +361,7 @@ export default function DocDetailPage() {
           disabled={manualSaving || saving || !dirty}
         >
           {manualSaving ? (
-            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            <ButtonSpinner className="mr-1.5" />
           ) : (
             <Save className="h-4 w-4 mr-1.5" />
           )}
@@ -460,7 +461,7 @@ export default function DocDetailPage() {
           />
         ) : (
           <div className="rounded-xl border border-border/50 bg-card min-h-[320px] flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-primary/30" />
+            <LoadingSpinner size="md" className="text-primary/30" />
           </div>
         )}
         {note.visibility === 'shared' ? (

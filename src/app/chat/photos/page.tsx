@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, ImageIcon } from 'lucide-react';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useAllChatMessages } from '@/hooks/use-all-chat-messages';
@@ -10,7 +10,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatPhotos, type ChatPhoto } from '@/lib/chat-media-extract';
-import { NavPageHeader } from '@/components/ui/page-layout';
+import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import { ChatImageGallery } from '@/components/chat/ImageLightbox';
 import { RemoteImage } from '@/components/ui/remote-image';
@@ -75,23 +76,18 @@ export default function AllChatPhotosPage() {
       />
 
       {loading ? (
-        <div className="empty-inline py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <ListLoadingSkeleton />
       ) : photos.length === 0 ? (
-        <div className="empty-inline">
-          <ImageIcon className="mb-2 h-8 w-8 text-muted-foreground/40" />
-          <p className="font-semibold text-foreground">{t.noPhotosYet}</p>
-          <p className="text-micro-label mt-1">{t.photosSharedHint}</p>
-        </div>
+        <EmptyState icon={ImageIcon} title={t.noPhotosYet} description={t.photosSharedHint} />
       ) : (
         <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
           {photos.map((photo) => (
-            <button
+            <Button
               key={`${photo.chatId}-${photo.id}`}
               type="button"
+              variant="ghost"
               onClick={() => setOpenImageUrl(photo.imageUrl)}
-              className="group relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-muted/30 [content-visibility:auto] [contain-intrinsic-size:120px]"
+              className="group relative aspect-square h-auto w-full overflow-hidden rounded-xl border border-border/30 bg-muted/30 p-0 [content-visibility:auto] [contain-intrinsic-size:120px]"
             >
               <RemoteImage
                 src={photo.thumbUrl || photo.imageUrl}
@@ -104,7 +100,7 @@ export default function AllChatPhotosPage() {
                 <p className="truncate text-[9px] font-bold text-white">{photo.chatName}</p>
                 <p className="truncate text-[8px] text-white/70">{photo.senderLabel}</p>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
       )}

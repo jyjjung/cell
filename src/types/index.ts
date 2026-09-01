@@ -393,16 +393,6 @@ export interface UserBibleChecklist {
   updatedAt?: Timestamp;
 }
 
-export interface MemoryVerse {
-  id: string;
-  reference: string;
-  textOverride?: string;
-  order?: number;
-  addedAt: Timestamp;
-  isLordsPrayerChunk?: boolean;
-}
-
-
 export interface WeeklyProgress {
   weekNumber: number;
   startDate: Date;
@@ -488,18 +478,6 @@ export interface ChatTypeCreationPermission {
 export interface ChatCreationPermissions {
   privateChat: ChatTypeCreationPermission;
   groupChat: ChatTypeCreationPermission;
-}
-
-/** Serializable chat row returned by the admin list-chats API. */
-export interface AdminChatSummary {
-  id: string;
-  type: 'private' | 'group';
-  name?: string;
-  members: string[];
-  memberInfo: { [uid: string]: ChatMemberInfo };
-  lastMessageText?: string;
-  lastMessageSentAtMs: number | null;
-  createdAtMs: number | null;
 }
 
 export type DeletedMessageContentType =
@@ -602,6 +580,8 @@ export interface SongChordSheet {
   kind?: 'image' | 'text';
   /** Original pasted chart (SongSelect / ChordPro). Stored in `key`. */
   sourceText?: string;
+  /** Sanitized SongSelect HTML. Preferred over `sourceText` when present. */
+  sourceHtml?: string;
   annotations?: ChordChartAnnotation[];
 }
 

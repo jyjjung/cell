@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Loader2,
   ChevronLeft,
   ChevronRight,
   X,
@@ -315,20 +317,21 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
         const chapterTotal = BIBLE_BOOKS_DATA[b]?.chapters ?? 1;
         return (
           <div key={b}>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               title={b}
               aria-expanded={open}
               onClick={() => toggleBookAccordion(b)}
               className={cn(
-                'flex h-11 w-full items-center justify-start rounded-xl px-3 text-sm font-semibold transition-colors active:scale-[0.98]',
+                'flex h-11 w-full items-center justify-start rounded-xl px-3 text-sm font-semibold',
                 open || isCurrent
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-muted/70 text-foreground hover:bg-muted',
               )}
             >
               {bibleBookLabel(b, isKoreanLabels)}
-            </button>
+            </Button>
             <AnimatePresence initial={false}>
               {open ? (
                 <motion.div
@@ -343,19 +346,20 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                     {Array.from({ length: chapterTotal }, (_, i) => i + 1).map((c) => {
                       const selected = isCurrent && chapter === c;
                       return (
-                        <button
+                        <Button
                           key={c}
                           type="button"
+                          variant="ghost"
                           onClick={() => selectChapter(b, c)}
                           className={cn(
-                            'flex h-11 items-center justify-center rounded-xl text-sm font-semibold tabular-nums transition-colors active:scale-[0.98]',
+                            'flex h-11 items-center justify-center rounded-xl text-sm font-semibold tabular-nums',
                             selected
                               ? 'bg-primary text-primary-foreground shadow-sm'
                               : 'border border-border/70 bg-background text-foreground hover:bg-muted',
                           )}
                         >
                           {c}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -372,10 +376,11 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
     <div className="flex h-full min-h-0 flex-col bg-card overflow-hidden">
       <div className="z-20 flex items-center justify-between gap-2 border-b border-border/70 bg-muted/10 p-3 backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={cn(
-              'inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold shadow-sm transition-all active:scale-95',
+              'inline-flex h-auto min-h-11 shrink-0 items-center rounded-full border px-3 text-sm font-semibold shadow-sm',
               isBrowsing
                 ? 'border-primary/40 bg-primary text-primary-foreground'
                 : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80',
@@ -388,7 +393,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
             aria-label="Choose book and chapter"
           >
             {bookLabel} {chapter}
-          </button>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -400,27 +405,23 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
           </Button>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button
+          <IconButton
             variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground"
+            className="rounded-full text-muted-foreground"
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
             aria-label={isExpanded ? t.shrinkBible : t.expandBible}
-          >
-            {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
-          <Button
+            icon={isExpanded ? Minimize2 : Maximize2}
+          />
+          <IconButton
             variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             onClick={onClose}
             aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+            icon={X}
+          />
         </div>
       </div>
 
@@ -449,7 +450,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
           <>
             {isLoading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <LoadingSpinner size="md" className="text-primary" />
               </div>
             )}
             <ScrollArea ref={scrollRef} className="h-full px-6 py-8 md:px-10">
@@ -490,13 +491,14 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                       </p>
                       <div className="space-y-2">
                         {chapterPlanStatus.assignments.map((assignment) => (
-                          <button
+                          <Button
                             key={assignment.key}
                             type="button"
+                            variant="ghost"
                             disabled={isMarkingChapter}
                             onClick={() => void handleToggleAssignment(assignment)}
                             className={cn(
-                              'flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors',
+                              'flex h-auto w-full items-start gap-3 rounded-xl border p-3 text-left',
                               assignment.completed
                                 ? 'border-primary/30 bg-primary/10 hover:bg-primary/15'
                                 : 'border-border bg-background/80 hover:bg-accent/60',
@@ -531,7 +533,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                                   : t.chapterPlanAssignmentTapToMark}
                               </div>
                             </div>
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -579,7 +581,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
               ) : null}
               <span className="relative z-10 inline-flex items-center">
                 {isMarkingChapter ? (
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <ButtonSpinner size="sm" className="mr-2" />
                 ) : (
                   <CheckSquare className="mr-2 h-3.5 w-3.5" />
                 )}

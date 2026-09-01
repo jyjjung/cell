@@ -11,7 +11,7 @@ export default function Footer() {
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
   // Only show footer on public-facing pages
-  const publicRoutes = ['/', '/login', '/signup', '/features', '/privacy', '/terms', '/forgot-password', '/pending-approval'];
+  const publicRoutes = ['/', '/login', '/signup', '/privacy', '/terms', '/forgot-password', '/pending-approval'];
   const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith(r + '/'));
 
   // Always hide on individual chat routes
@@ -28,13 +28,6 @@ export default function Footer() {
         </p>
         
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <Link 
-            href="/features" 
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t.howItWorks}
-          </Link>
-
           <Link 
             href="/privacy" 
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

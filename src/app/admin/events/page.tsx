@@ -2,12 +2,14 @@
 "use client";
 
 import BatchEventImportForm from '@/components/admin/batch-event-import-form';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { EventForm } from '@/components/admin/event-form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EmptyState, PageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
@@ -16,7 +18,7 @@ import { eventIsFullyBefore, parseDay } from '@/lib/event-occurrences';
 import { translations } from '@/lib/translations';
 import type { AppEvent } from '@/types';
 import { format, startOfDay } from 'date-fns';
-import { Edit, ListOrdered, Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Edit, ListOrdered, PlusCircle, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 export default function AdminEventsPage() {
@@ -183,9 +185,7 @@ export default function AdminEventsPage() {
       <section className="space-y-3">
         <h2 className="text-section-title">{t.adminUpcomingEvents}</h2>
         {eventsLoading ? (
-            <div className="empty-inline">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
+            <ListLoadingSkeleton />
         ) : upcomingEvents.length === 0 ? (
             <EmptyState icon={ListOrdered} title={t.adminNoUpcomingEvents} description={t.adminNoEventsHint} />
         ) : (
@@ -211,7 +211,7 @@ export default function AdminEventsPage() {
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" disabled={isDeletingPast || eventsLoading}>
                     {isDeletingPast ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <ButtonSpinner className="mr-2" />
                     ) : (
                         <Trash2 className="mr-2 h-4 w-4" />
                     )}

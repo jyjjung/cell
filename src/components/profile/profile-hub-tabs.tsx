@@ -1,7 +1,8 @@
 "use client";
 
 import { User, Palette, Settings } from "lucide-react";
-import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
+import { BottomHubBar } from "@/components/layout/bottom-hub-bar";
+import { HubTab } from "@/components/layout/hub-tab";
 
 export type ProfileTabId = "profile" | "appearance" | "settings";
 
@@ -25,22 +26,15 @@ export function ProfileHubTabs({ activeTab, onTabChange, labels }: ProfileHubTab
   return (
     <BottomHubBar>
       <div className="grid grid-cols-3 gap-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = tab.value === activeTab;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => onTabChange(tab.value)}
-              className={bottomHubTabClass(active)}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon className={bottomHubIconClass(active)} />
-              <span>{labels[tab.labelKey]}</span>
-            </button>
-          );
-        })}
+        {TABS.map((tab) => (
+          <HubTab
+            key={tab.value}
+            active={tab.value === activeTab}
+            label={labels[tab.labelKey]}
+            icon={tab.icon}
+            onClick={() => onTabChange(tab.value)}
+          />
+        ))}
       </div>
     </BottomHubBar>
   );

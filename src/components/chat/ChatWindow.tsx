@@ -2,13 +2,14 @@
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMessages } from '@/hooks/useMessages';
 import { useChatPhotoMessages } from '@/hooks/use-chat-photo-messages';
 import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar, chatBelongsToApp, chatHrefForApp } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
-import { ChevronLeft, Images, Info, Link2, Loader2, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Images, Info, Link2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
@@ -22,6 +23,7 @@ import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/wors
 import { splitSheetsForViewer } from '@/lib/chord-chart';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
+import { IconButton } from '../ui/icon-button';
 import type { ViewerSlide } from '../worship/viewer-types';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatMessageList from './ChatMessageList';
@@ -346,7 +348,7 @@ function ChatWindowBody({
   }, [messages, usersById, chat]);
 
   if (blockingLoad) {
-    return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground opacity-20" /></div>;
+    return <PageLoading variant="spinner" className="h-full min-h-[12rem]" label="Loading chat" />;
   }
 
   if (!chat) {
@@ -363,18 +365,16 @@ function ChatWindowBody({
   return (
     <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden">
       <header
-        className="flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 py-4 px-6 border-b border-border/50 bg-background z-20"
+        className="z-40 flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 border-b border-border/50 bg-background pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pl-[max(1.5rem,env(safe-area-inset-left,0px))] pr-[max(1.5rem,env(safe-area-inset-right,0px))]"
         style={{ touchAction: 'none' }}
       >
-        <Button
+        <IconButton
           variant="ghost"
-          size="icon"
           onClick={() => router.push(backHref)}
-          className="h-10 w-10 rounded-full bg-muted/20 hover:bg-muted/40"
+          className="rounded-full bg-muted/20 hover:bg-muted/40"
           aria-label={t.back}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
+          icon={ChevronLeft}
+        />
 
         <div className="flex flex-col items-center gap-1 min-w-0">
           <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
@@ -387,14 +387,13 @@ function ChatWindowBody({
           <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
         </div>
 
-        <Button
+        <IconButton
           variant="ghost"
-          size="icon"
           onClick={() => setSettingsOpen(true)}
-          className="h-10 w-10 rounded-full bg-muted/20 hover:bg-muted/40"
-        >
-          <Info className="h-5 w-5" />
-        </Button>
+          className="rounded-full bg-muted/20 hover:bg-muted/40"
+          aria-label="Chat info"
+          icon={Info}
+        />
       </header>
 
       <div
@@ -402,42 +401,45 @@ function ChatWindowBody({
         className="flex-shrink-0 flex gap-1 px-4 py-2 border-b border-border/30 bg-background"
         style={{ touchAction: 'none' }}
       >
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => setChatTab('messages')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
+          className={`h-auto flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold ${
             chatTab === 'messages'
-              ? 'bg-primary text-primary-foreground shadow-sm'
+              ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <MessageSquare className="h-3.5 w-3.5" />
           {t.messagesTab}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => setChatTab('photos')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
+          className={`h-auto flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold ${
             chatTab === 'photos'
-              ? 'bg-primary text-primary-foreground shadow-sm'
+              ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <Images className="h-3.5 w-3.5" />
           {t.photosTab}{photoCount > 0 ? ` (${photoCount})` : ''}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => setChatTab('links')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold transition-all ${
+          className={`h-auto flex-1 items-center justify-center gap-1.5 py-2 rounded-xl text-micro-label font-semibold ${
             chatTab === 'links'
-              ? 'bg-primary text-primary-foreground shadow-sm'
+              ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground'
               : 'text-muted-foreground hover:bg-muted/30'
           }`}
         >
           <Link2 className="h-3.5 w-3.5" />
           {t.linksTab}{linkCount > 0 ? ` (${linkCount})` : ''}
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 min-h-0 relative overflow-hidden">

@@ -4,7 +4,7 @@ import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Volunteer } from '@/types/ndcpc-ported';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Trash2 } from 'lucide-react';
 import { VolunteerForm } from '@/components/ndcpc/VolunteerForm';
 import {
@@ -18,7 +18,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
+import { EmptyState } from '@/components/ui/page-layout';
 import { ContentFlow, FlowItem } from '@/components/ndcpc/ContentFlow';
 import { useTranslation } from '@/context/LocaleProvider';
 
@@ -42,7 +43,7 @@ export function VolunteerManager() {
     <div className="space-y-6">
       <VolunteerForm />
       {isLoading ? (
-        <LoadingState />
+        <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />
       ) : (
         <ScrollArea className="h-64">
           {volunteers && volunteers.length > 0 ? (
@@ -53,13 +54,11 @@ export function VolunteerManager() {
                     <span className="text-sm">{v.name}</span>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <IconButton
+                          aria-label={t('common.remove')}
+                          icon={Trash2}
+                          className="text-muted-foreground hover:text-destructive"
+                        />
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -83,9 +82,7 @@ export function VolunteerManager() {
               ))}
             </ContentFlow>
           ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              {t('volunteers.empty')}
-            </p>
+            <EmptyState title={t('volunteers.empty')} />
           )}
         </ScrollArea>
       )}

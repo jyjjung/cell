@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import type { AppRole } from '@/types';
 import { useRoles } from '@/hooks/use-roles';
 import { useForm } from 'react-hook-form';
@@ -12,11 +13,12 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogAction, AlertDialogCancel, 
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Edit, Trash2, Users, Check, RefreshCw } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Users, Check, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import {
@@ -228,7 +230,7 @@ export function RolesManagementPanel() {
             onClick={handleSync}
             disabled={isSyncing || loading}
           >
-            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {isSyncing ? <ButtonSpinner className="mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             {t.adminSyncCircles}
           </Button>
 
@@ -314,7 +316,7 @@ export function RolesManagementPanel() {
                   <DialogFooter className="pt-2">
                     <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>{t.adminCancel}</Button>
                     <Button type="submit" disabled={isSaving}>
-                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isSaving && <ButtonSpinner className="mr-2" />}
                       {editingRole ? t.adminSaveChanges : t.adminNewRole}
                     </Button>
                   </DialogFooter>
@@ -332,18 +334,14 @@ export function RolesManagementPanel() {
         </TabsList>
         <TabsContent value="cell" className="pt-4">
           {loading ? (
-            <div className="empty-inline">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
+            <ListLoadingSkeleton />
           ) : (
             <RolesTable roles={cellRoles} onEdit={openEditDialog} onDelete={handleDelete} t={t} />
           )}
         </TabsContent>
         <TabsContent value="ndcpc" className="pt-4">
           {loading ? (
-            <div className="empty-inline">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
+            <ListLoadingSkeleton />
           ) : (
             <RolesTable roles={ndcpcRoles} onEdit={openEditDialog} onDelete={handleDelete} t={t} />
           )}

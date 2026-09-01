@@ -1,10 +1,10 @@
 "use client";
 
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
-import { MemberAvatarCuratorPanel } from '@/components/members/member-avatar-curator-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageLoading } from '@/components/ui/loading-spinner';
+import { EmptyState } from '@/components/ui/page-layout';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
@@ -12,7 +12,6 @@ import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useMemberCommunityProgress } from '@/hooks/use-community-progress';
 import { useEvents } from '@/hooks/use-events';
 import { useRoles } from '@/hooks/use-roles';
-import { isAvatarCurator } from '@/lib/avatar-curator';
 import { toDateSafe } from '@/lib/firestore-timestamp';
 import { hasCapability } from '@/lib/role-capabilities';
 import { translations } from '@/lib/translations';
@@ -29,7 +28,7 @@ export default function MemberProfilePage() {
   const params = useParams();
   const userId = params.id as string;
   const router = useRouter();
-  const { allUsers, loading: usersLoading, ensureUsers, patchUsers } = useAllUsers();
+  const { allUsers, loading: usersLoading, ensureUsers } = useAllUsers();
   const { progress, loading: progressLoading } = useMemberCommunityProgress(userId);
   const { roles, loading: rolesLoading } = useRoles();
   const { events, loading: eventsLoading } = useEvents();
@@ -79,15 +78,16 @@ export default function MemberProfilePage() {
 
   if (!user) {
     return (
-      <div className="empty-inline min-h-[50vh]">
-        <p className="text-foreground">{t.userNotFound}</p>
-        <Button variant="outline" onClick={() => router.back()} className="mt-3 rounded-lg">{t.goBack}</Button>
+      <div className="page-container">
+        <EmptyState title={t.userNotFound} />
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => router.back()} className="rounded-lg">{t.goBack}</Button>
+        </div>
       </div>
     );
   }
 
   const userRoles = (user.roleIds || []).map(id => rolesMap.get(id)).filter(Boolean) as string[];
-  const showCuratorPanel = isAvatarCurator(currentUser?.email);
 
   return (
     <div className="page-container-narrow">
@@ -126,15 +126,6 @@ export default function MemberProfilePage() {
           )}
         </div>
       </motion.div>
-
-      {showCuratorPanel && (
-        <MemberAvatarCuratorPanel
-          member={user}
-          onUpdated={(patch) => {
-            patchUsers([{ uid: user.uid, ...patch }]);
-          }}
-        />
-      )}
 
       {/* Stats Grid */}
       <div className={`grid grid-cols-1 ${user.showInCommunityProgress !== false ? 'sm:grid-cols-2' : ''} gap-4`}>

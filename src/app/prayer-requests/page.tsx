@@ -4,17 +4,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  Loader2,
   Pencil,
   Trash2,
   Check,
   X,
 } from 'lucide-react';
+import { PageLoading, LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
+import { SwitchRow } from '@/components/ui/switch-row';
 import { NavPageHeader, EmptyState, FeedCard } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,21 +112,15 @@ function PrayerRequestItem({
             className="min-h-[120px] resize-none rounded-xl"
             maxLength={2000}
           />
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
-            <div className="space-y-0.5">
-              <Label htmlFor={`anonymous-${item.id}`} className="text-sm font-semibold">
-                Submit anonymously
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {editAnonymous ? 'Shepherd Claire will not see your name' : 'Your name will be shown to Claire'}
-              </p>
-            </div>
-            <Switch
-              id={`anonymous-${item.id}`}
-              checked={editAnonymous}
-              onCheckedChange={setEditAnonymous}
-            />
-          </div>
+          <SwitchRow
+            id={`anonymous-${item.id}`}
+            label="Submit anonymously"
+            description={
+              editAnonymous ? 'Shepherd Claire will not see your name' : 'Your name will be shown to Claire'
+            }
+            checked={editAnonymous}
+            onCheckedChange={setEditAnonymous}
+          />
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -151,9 +145,7 @@ function PrayerRequestItem({
               disabled={!editText.trim() || isSaving}
               onClick={handleSave}
             >
-              {isSaving ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
+              {isSaving ? <LoadingSpinner size="sm" className="mr-1.5" /> : (
                 <Check className="mr-1.5 h-4 w-4" />
               )}
               Save
@@ -192,9 +184,7 @@ function PrayerRequestItem({
                     className="rounded-xl h-8 px-2.5 text-destructive hover:text-destructive"
                     disabled={isDeleting}
                   >
-                    {isDeleting ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
+                    {isDeleting ? <LoadingSpinner size="sm" className="mr-1.5" /> : (
                       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                     )}
                     Delete
@@ -273,11 +263,7 @@ export default function PrayerRequestsPage() {
   };
 
   if (loadingAuth || !currentUser) {
-    return (
-      <div className="page-container flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-      </div>
-    );
+    return <PageLoading className="page-container min-h-[40vh]" />;
   }
 
   return (
@@ -297,25 +283,19 @@ export default function PrayerRequestsPage() {
               maxLength={2000}
             />
 
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/40 bg-muted/20 px-4 py-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="anonymous-prayer" className="text-sm font-semibold">
-                  Submit anonymously
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {isAnonymous ? 'Shepherd Claire will not see your name' : 'Your name will be shown to Claire'}
-                </p>
-              </div>
-              <Switch
-                id="anonymous-prayer"
-                checked={isAnonymous}
-                onCheckedChange={setIsAnonymous}
-              />
-            </div>
+            <SwitchRow
+              id="anonymous-prayer"
+              label="Submit anonymously"
+              description={
+                isAnonymous ? 'Shepherd Claire will not see your name' : 'Your name will be shown to Claire'
+              }
+              checked={isAnonymous}
+              onCheckedChange={setIsAnonymous}
+            />
 
             <div className="flex justify-end">
               <Button type="submit" variant="primary" disabled={!text.trim() || isSubmitting} className="rounded-xl">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSubmitting ? <LoadingSpinner size="sm" className="mr-2" /> : null}
                 Submit
               </Button>
             </div>
@@ -329,9 +309,7 @@ export default function PrayerRequestsPage() {
         </h3>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
-          </div>
+          <ListLoadingSkeleton rows={3} />
         ) : requests.length === 0 ? (
           <EmptyState
             title={isShepherd ? 'No requests yet' : 'No requests submitted yet'}

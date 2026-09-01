@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   FileText,
-  Loader2,
   Plus,
   Trash2,
   Users,
   Lock,
 } from 'lucide-react';
+import { PageLoading } from '@/components/ui/loading-spinner';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { NavPageHeader, EmptyState, FeedCard } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,10 +90,11 @@ function DocListItem({
       className="group"
     >
       <FeedCard className="p-0 overflow-hidden">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onOpen}
-          className="w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors"
+          className="h-auto min-h-11 w-full justify-start rounded-none px-4 py-3 text-left hover:bg-muted/30"
         >
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -117,7 +119,7 @@ function DocListItem({
               </p>
             </div>
           </div>
-        </button>
+        </Button>
         {isOwner ? (
           <div className="flex justify-end border-t border-border/40 px-2 py-1">
             <AlertDialog>
@@ -185,17 +187,12 @@ export default function DocsPage() {
   }, [docs, tab]);
 
   if (loadingAuth || !currentUser) {
-    return (
-      <div className="page-container flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-      </div>
-    );
+    return <PageLoading className="page-container min-h-[40vh]" />;
   }
 
   return (
     <div className="page-container">
       <NavPageHeader
-        description={t.docsDesc}
         action={
           <Button
             variant="primary"
@@ -218,9 +215,7 @@ export default function DocsPage() {
       </Tabs>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/30" />
-        </div>
+        <ListLoadingSkeleton rows={4} />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={FileText}

@@ -3,6 +3,8 @@
 import {
     Popover, PopoverContent, PopoverTrigger
 } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 import { fetchYoutubeVideoTitle, getReferenceTracks, parseYoutubeVideoId } from '@/lib/worship-utils';
 import {
@@ -161,6 +163,7 @@ export function YoutubePlayerPanel({
   className,
   enabled = true,
   onClose,
+  compact = false,
 }: {
   url: string;
   note?: string;
@@ -168,6 +171,7 @@ export function YoutubePlayerPanel({
   className?: string;
   enabled?: boolean;
   onClose?: () => void;
+  compact?: boolean;
 }) {
   const videoId = parseYoutubeVideoId(url);
   const reactId = useId().replace(/:/g, '');
@@ -187,7 +191,8 @@ export function YoutubePlayerPanel({
   const isDark = theme === 'dark';
 
   const shell = cn(
-    'relative rounded-xl border transition-colors px-3 py-2.5 space-y-2',
+    'relative rounded-xl border transition-colors',
+    compact ? 'px-2 py-1.5' : 'px-3 py-2.5 space-y-2',
     isDark
       ? 'border-white/15 bg-white/10 backdrop-blur-md'
       : 'border-border/50 bg-muted/40',
@@ -195,24 +200,98 @@ export function YoutubePlayerPanel({
   );
 
   const titleClass = cn(
-    'text-xs font-semibold truncate flex items-center gap-1.5 min-w-0 flex-1',
+    'font-semibold truncate flex items-center gap-1 min-w-0 flex-1',
+    compact ? 'text-[10px]' : 'text-xs',
     isDark ? 'text-white/85' : 'text-foreground',
   );
 
   const timeClass = cn(
-    'text-[10px] font-semibold tabular-nums shrink-0',
+    'font-semibold tabular-nums shrink-0',
+    compact ? 'text-[9px]' : 'text-[10px]',
     isDark ? 'text-white/60' : 'text-muted-foreground',
   );
 
   const noteClass = cn(
-    'text-[10px] font-medium truncate',
+    'font-medium truncate',
+    compact ? 'text-[9px]' : 'text-[10px]',
     isDark ? 'text-white/55' : 'text-muted-foreground',
+  );
+
+  const playBtnClass = cn(
+    'shrink-0 disabled:opacity-40',
+    compact
+      ? cn('rounded-lg', isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-background text-foreground hover:bg-muted border border-border/50')
+      : cn('rounded-xl', isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-background text-foreground hover:bg-muted border border-border/50'),
+  );
+
+  const scrubClass = cn(
+    'flex-1 appearance-none rounded-full cursor-pointer disabled:opacity-40',
+    compact ? 'h-1' : 'h-1.5',
+    '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500',
+    '[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-red-500',
+    compact
+      ? '[&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5'
+      : '[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3',
+    isDark ? 'bg-white/15' : 'bg-muted',
   );
 
   return (
     <div className={shell}>
       <div id={containerId} className="absolute w-px h-px overflow-hidden opacity-0 pointer-events-none" aria-hidden />
 
+      {compact ? (
+        <div className="flex items-center gap-2 min-w-0">
+          <IconButton
+            type="button"
+            onClick={togglePlay}
+            disabled={!ready}
+            size="compact"
+            className={playBtnClass}
+            aria-label={playing ? 'Pause' : 'Play'}
+            icon={playing ? Pause : Play}
+            iconClassName={cn('h-3.5 w-3.5', !playing && 'fill-current')}
+          />
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className={titleClass} title={displayTitle ?? undefined}>
+              <Youtube className="h-3 w-3 text-red-500 shrink-0" />
+              <span className="truncate">
+                {failed ? 'Unavailable' : (displayTitle ?? 'Loading…')}
+              </span>
+            </p>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={timeClass}>{formatTime(currentTime)}</span>
+              <input
+                type="range"
+                min={0}
+                max={duration > 0 ? duration : 100}
+                step={0.1}
+                value={duration > 0 ? currentTime : 0}
+                disabled={!ready || duration <= 0}
+                onChange={(e) => seek(Number(e.target.value))}
+                className={scrubClass}
+                aria-label="Track position"
+              />
+              <span className={timeClass}>{formatTime(duration)}</span>
+            </div>
+            {note && <p className={noteClass}>{note}</p>}
+          </div>
+          {onClose && (
+            <IconButton
+              type="button"
+              onClick={onClose}
+              size="compact"
+              className={cn(
+                'shrink-0 rounded-lg',
+                isDark ? 'text-white/60 hover:bg-white/10' : 'text-muted-foreground hover:bg-muted',
+              )}
+              aria-label="Close player"
+              icon={X}
+              iconClassName="h-3.5 w-3.5"
+            />
+          )}
+        </div>
+      ) : (
+        <>
       <div className="flex items-start gap-2 min-w-0">
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className={titleClass} title={displayTitle ?? undefined}>
@@ -224,33 +303,30 @@ export function YoutubePlayerPanel({
           {note && <p className={noteClass}>{note}</p>}
         </div>
         {onClose && (
-          <button
+          <IconButton
             type="button"
             onClick={onClose}
             className={cn(
-              'p-1 rounded-lg shrink-0 transition-colors',
+              'shrink-0 rounded-lg',
               isDark ? 'text-white/60 hover:bg-white/10' : 'text-muted-foreground hover:bg-muted',
             )}
             aria-label="Close player"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            icon={X}
+            iconClassName="h-3.5 w-3.5"
+          />
         )}
       </div>
 
       <div className="flex items-center gap-2">
-        <button
+        <IconButton
           type="button"
           onClick={togglePlay}
           disabled={!ready}
-          className={cn(
-            'p-2.5 rounded-xl shrink-0 transition-colors disabled:opacity-40',
-            isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-background text-foreground hover:bg-muted border border-border/50',
-          )}
+          className={playBtnClass}
           aria-label={playing ? 'Pause' : 'Play'}
-        >
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-        </button>
+          icon={playing ? Pause : Play}
+          iconClassName={playing ? undefined : 'fill-current'}
+        />
 
         <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className={timeClass}>{formatTime(currentTime)}</span>
@@ -262,17 +338,14 @@ export function YoutubePlayerPanel({
             value={duration > 0 ? currentTime : 0}
             disabled={!ready || duration <= 0}
             onChange={(e) => seek(Number(e.target.value))}
-            className={cn(
-              'flex-1 h-1.5 appearance-none rounded-full cursor-pointer disabled:opacity-40',
-              '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500',
-              '[&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-red-500',
-              isDark ? 'bg-white/15' : 'bg-muted',
-            )}
+            className={scrubClass}
             aria-label="Track position"
           />
           <span className={timeClass}>{formatTime(duration)}</span>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -282,27 +355,31 @@ export function TrackPicker({
   activeIndex,
   onSelect,
   theme,
+  compact = false,
 }: {
   tracks: ReferenceTrack[];
   activeIndex: number;
   onSelect: (index: number) => void;
   theme: 'dark' | 'light';
+  compact?: boolean;
 }) {
   if (tracks.length <= 1) return null;
   const isDark = theme === 'dark';
 
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className={cn('flex gap-1', compact ? 'overflow-x-auto scrollbar-hide' : 'flex-wrap gap-1.5')}>
       {tracks.map((track, index) => {
         const label = track.note?.trim() || `Link ${index + 1}`;
         const active = index === activeIndex;
         return (
-          <button
+          <Button
             key={`${track.url}-${index}`}
             type="button"
+            variant="ghost"
             onClick={() => onSelect(index)}
             className={cn(
-              'px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors max-w-full truncate',
+              'h-auto shrink-0 truncate font-semibold',
+              compact ? 'rounded-md px-2 py-0.5 text-[9px]' : 'max-w-full rounded-lg px-2.5 py-1 text-[10px]',
               active
                 ? isDark
                   ? 'bg-rose-500/90 text-white'
@@ -314,7 +391,7 @@ export function TrackPicker({
             title={label}
           >
             {label}
-          </button>
+          </Button>
         );
       })}
     </div>
@@ -345,11 +422,12 @@ function ReferenceTracksPopover({
   return (
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onPointerDown={(e) => e.stopPropagation()}
           className={cn(
-            'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-colors',
+            'inline-flex h-auto min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold',
             isDark
               ? 'bg-white/10 text-white hover:bg-white/15 border border-white/10'
               : 'bg-muted text-foreground hover:bg-muted/80 border border-border/50',
@@ -359,7 +437,7 @@ function ReferenceTracksPopover({
         >
           <Headphones className="h-3.5 w-3.5" />
           Listen{tracks.length > 1 ? ` (${tracks.length})` : ''}
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         className="z-[400] w-[min(20rem,calc(100vw-2rem))] p-2 rounded-2xl space-y-2"

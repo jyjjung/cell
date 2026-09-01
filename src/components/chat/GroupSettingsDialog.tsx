@@ -2,6 +2,8 @@
 "use client";
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -19,7 +21,7 @@ import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import type { Chat } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { Camera, Loader2, LogOut, Save, Trash2, UserPlus, X } from 'lucide-react';
+import { Camera, LogOut, Save, Trash2, UserPlus, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -151,7 +153,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
               <div className="relative h-20 w-20 shrink-0 rounded-full border border-border/50 bg-muted/20 overflow-hidden">
                 {isUploadingPhoto ? (
                   <div className="flex h-full w-full items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+                    <LoadingSpinner size="md" className="text-primary/50" />
                   </div>
                 ) : (
                   <GroupChatAvatar photoURL={chat.photoURL} className="!rounded-full" />
@@ -208,7 +210,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                                <Input {...field} disabled={isSaving} />
                              </FormControl>
                              <Button type="submit" disabled={isSaving}>
-                               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                               {isSaving ? <ButtonSpinner /> : <Save className="h-4 w-4" />}
                              </Button>
                           </div>
                           <FormMessage />
@@ -281,7 +283,7 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
                       placeholder="Select users to add..."
                     />
                     <Button onClick={handleAddMembers} disabled={isAdding || usersToAdd.length === 0} className="w-full">
-                       {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                       {isAdding ? <ButtonSpinner className="mr-2" /> : <UserPlus className="mr-2 h-4 w-4" />}
                        Add Members
                     </Button>
                 </div>

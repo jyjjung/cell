@@ -3,35 +3,19 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { BIBLE_BOOKS_DATA, BOOK_NAME_LOOKUP_MAP } from '@/lib/bible-data';
-import {
-  readLocalCollectionCacheStale,
-  writeLocalCollectionCache,
-} from '@/lib/collection-cache';
-import { syncCommunityProgress } from '@/lib/community-progress';
 import { db } from '@/lib/firebase';
 import { makePassageKey } from '@/lib/passage-keys';
 import type { UserBibleChecklist } from '@/types';
 import {
+  subscribeUserBibleChecklist,
+  USER_BIBLE_CHECKLISTS_COLLECTION,
+} from '@/lib/user-bible-checklist-store';
+import {
     arrayRemove, arrayUnion, doc,
-    onSnapshot, serverTimestamp, setDoc, Timestamp
+    serverTimestamp, setDoc, Timestamp
 } from 'firebase/firestore';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useBiblePlan } from './use-bible-plan';
-
-const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
-
-function checklistCacheKey(uid: string) {
-  return `user_bible_checklist_v1_${uid}`;
-}
-
-function readCachedPassages(uid: string): string[] | null {
-  const cached = readLocalCollectionCacheStale<string[]>(checklistCacheKey(uid));
-  return Array.isArray(cached) ? cached : null;
-}
-
-function writeCachedPassages(uid: string, passages: string[]) {
-  writeLocalCollectionCache(checklistCacheKey(uid), passages);
-}
 
 interface ScripturePoint {
   bookFullName: string;
@@ -69,18 +53,7 @@ export function useUserBibleChecklist() {
   const [completedPassages, setCompletedPassages] = useState<string[]>([]);
   const [loadingChecklist, setLoadingChecklist] = useState(true);
   const [checklistDocExists, setChecklistDocExists] = useState(false);
-  const { plan: currentGlobalPlan } = useBiblePlan(); 
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleCommunityProgressSync = useCallback((passages: string[]) => {
-    if (!currentUser?.uid) return;
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => {
-      void syncCommunityProgress(currentUser.uid, passages).catch((e) => {
-        console.error('[BibleChecklist] communityProgress sync failed:', e);
-      });
-    }, 800);
-  }, [currentUser?.uid]);
+  const { plan: currentGlobalPlan } = useBiblePlan();
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -90,42 +63,12 @@ export function useUserBibleChecklist() {
       return;
     }
 
-    const uid = currentUser.uid;
-    const cached = readCachedPassages(uid);
-    if (cached) {
-      setCompletedPassages(cached);
-      setLoadingChecklist(false);
-    } else {
-      setLoadingChecklist(true);
-    }
-
-    const checklistDocRef = doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, uid);
-
-    const unsubscribe = onSnapshot(checklistDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        const data = docSnapshot.data() as UserBibleChecklist;
-        const passages = data.completedPassages || [];
-        setCompletedPassages(passages);
-        setChecklistDocExists(true);
-        writeCachedPassages(uid, passages);
-        scheduleCommunityProgressSync(passages);
-      } else {
-        setCompletedPassages([]);
-        setChecklistDocExists(false);
-        writeCachedPassages(uid, []);
-        // Do not sync empty progress — that would wipe communityProgress for users
-        // who only had leaderboard data or haven't created a checklist yet.
-      }
-      setLoadingChecklist(false);
-    }, (error) => {
-      console.error("Error fetching user Bible checklist:", error);
-      if (!cached) setCompletedPassages([]);
-      setLoadingChecklist(false);
-      setChecklistDocExists(false);
+    return subscribeUserBibleChecklist(currentUser.uid, (state) => {
+      setCompletedPassages(state.passages);
+      setChecklistDocExists(state.exists);
+      setLoadingChecklist(state.loading);
     });
-
-    return () => unsubscribe();
-  }, [currentUser?.uid, scheduleCommunityProgressSync]);
+  }, [currentUser?.uid]);
 
   const updateChecklistDocument = useCallback((updatePayload: Record<string, unknown>) => {
     if (!currentUser?.uid) throw new Error("User not logged in.");

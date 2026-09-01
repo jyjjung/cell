@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useGlobalBibleReader } from "@/contexts/global-bible-reader-context";
 import MiniBibleReader from "@/components/bible/mini-bible-reader";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type BibleReaderOverlayProps = {
@@ -71,10 +72,11 @@ export function BibleReaderOverlay({ placement }: BibleReaderOverlayProps) {
   return createPortal(
     <>
       {!isExpanded ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           aria-label="Close bible reader"
-          className="fixed inset-0 z-[120] ui-scrim"
+          className="fixed inset-0 z-[120] h-auto w-full rounded-none ui-scrim"
           onClick={() => setIsOpen(false)}
         />
       ) : null}

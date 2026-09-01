@@ -6,6 +6,7 @@ import { Link2 } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatLinks } from '@/lib/chat-media-extract';
+import { EmptyState } from '@/components/ui/page-layout';
 import ChatLinkCard from './ChatLinkCard';
 
 export { extractChatLinks } from '@/lib/chat-media-extract';
@@ -29,15 +30,11 @@ export default function ChatLinksList({
 
   if (links.length === 0) {
     return (
-      <div className="flex h-full min-h-[40vh] flex-col items-center justify-center px-6 text-center">
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border/40 bg-muted/40">
-          <Link2 className="h-7 w-7 text-muted-foreground/40" />
-        </div>
-        <p className="text-sm font-semibold text-foreground">No links yet</p>
-        <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
-          Links shared in messages will appear here.
-        </p>
-      </div>
+      <EmptyState
+        icon={Link2}
+        title="No links yet"
+        description="Links shared in messages will appear here."
+      />
     );
   }
 

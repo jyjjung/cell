@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useNavLabel } from '@/hooks/use-nav-label';
 
@@ -14,7 +15,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, action, className }: PageHeaderProps) {
   return (
-    <header className={cn('flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between', className)}>
+    <header
+      className={cn(
+        'page-header flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
+        className,
+      )}
+    >
       <div className="min-w-0 space-y-1">
         <h1 className="text-page-title">{title}</h1>
         {description ? <p className="text-body-hero max-w-lg">{description}</p> : null}
@@ -40,6 +46,11 @@ export function NavPageHeader({
       className={className}
     />
   );
+}
+
+/** Standard route shell — max width, shared header-to-body gap, hub-bar bottom padding. */
+export function PageShell({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('page-container', className)}>{children}</div>;
 }
 
 type PageSectionProps = {

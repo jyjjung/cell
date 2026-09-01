@@ -1,16 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { Check, ChevronDown, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { AppLogo } from '@/components/shell/app-logo';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   getAppHref,
   getAppLabel,
@@ -20,6 +21,10 @@ import {
 } from '@/lib/app-access';
 import { persistLastApp } from '@/lib/persist-last-app';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+
+const switcherTriggerClass =
+  'flex h-11 min-w-11 items-center justify-center gap-0.5 rounded-xl px-1.5 transition-colors touch-manipulation text-muted-foreground hover:bg-muted/70 hover:text-foreground data-[state=open]:bg-primary/10 data-[state=open]:text-primary';
 
 export function AppSwitcher({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -27,8 +32,8 @@ export function AppSwitcher({ className }: { className?: string }) {
   const accessible = listAccessibleApps(currentUser);
   const active = resolveActiveApp(pathname);
   const lastPersisted = useRef<CommunityAppId | null>(null);
+  const [open, setOpen] = useState(false);
 
-  // Remember wherever you actually are — not only when clicking the switcher.
   useEffect(() => {
     if (!active || !currentUser?.uid) return;
     if (lastPersisted.current === active) return;
@@ -38,46 +43,59 @@ export function AppSwitcher({ className }: { className?: string }) {
 
   if (!currentUser || accessible.length === 0) return null;
 
+  const displayApp = active ?? accessible[0];
+  const displayLabel = displayApp ? getAppLabel(displayApp) : 'Apps';
+
   return (
-    <TooltipProvider delayDuration={300}>
-      <div
-        className={cn(
-          'flex items-center gap-0.5 rounded-xl border border-border/60 bg-muted/40 p-0.5',
-          className,
-        )}
-        role="navigation"
-        aria-label="Switch app"
-      >
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className={cn(switcherTriggerClass, className)}
+          aria-label={`Switch app — ${displayLabel}`}
+          aria-expanded={open}
+          aria-haspopup="menu"
+        >
+          {displayApp ? (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+              <AppLogo app={displayApp} size={32} fit="contain" />
+            </span>
+          ) : (
+            <LayoutGrid className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+          )}
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[12rem]">
         {accessible.map((app) => {
           const href = getAppHref(app);
           const isActive = active === app;
           const label = getAppLabel(app);
           return (
-            <Tooltip key={app}>
-              <TooltipTrigger asChild>
-                <Link
-                  href={href}
-                  onClick={() => persistLastApp(app, currentUser.uid)}
-                  aria-label={label}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition-colors sm:px-2 sm:py-1.5',
-                    isActive
-                      ? 'bg-background text-foreground shadow-sm ring-1 ring-border/50'
-                      : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
-                  )}
-                >
-                  <AppLogo app={app} size={22} className="rounded-lg" />
-                  <span className="hidden md:inline text-xs font-medium">{label}</span>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="md:hidden">
-                {label}
-              </TooltipContent>
-            </Tooltip>
+            <DropdownMenuItem key={app} asChild>
+              <Link
+                href={href}
+                onClick={() => {
+                  persistLastApp(app, currentUser.uid);
+                  setOpen(false);
+                }}
+                className="flex cursor-pointer items-center gap-2.5"
+              >
+                <AppLogo app={app} size={24} fit="contain" />
+                <span className="flex-1 font-medium">{label}</span>
+                {isActive ? <Check className="h-4 w-4 text-primary" aria-hidden /> : null}
+              </Link>
+            </DropdownMenuItem>
           );
         })}
-      </div>
-    </TooltipProvider>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -9,7 +9,7 @@ import type { Announcement } from '@/types/ndcpc-ported';
 import { useAdmin } from '@/context/AuthProvider';
 import { useTranslation } from '@/context/LocaleProvider';
 import { formatAppDate } from '@/lib/ndcpc/format-date';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
 import { EmptyState } from '@/components/ndcpc/EmptyState';
 import { DATA_CACHE_KEYS } from '@/lib/ndcpc/data-cache';
 import { AddAnnouncementForm } from '@/components/ndcpc/AddAnnouncementForm';
@@ -57,7 +57,7 @@ export function AnnouncementList() {
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
   }
 
   if (!announcements || announcements.length === 0) {
@@ -87,25 +87,19 @@ export function AnnouncementList() {
                 </div>
                 {isAdmin && (
                   <div className="flex shrink-0 items-center gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    <IconButton
+                      aria-label={t('common.edit')}
+                      icon={Edit}
+                      className="text-muted-foreground hover:text-foreground"
                       onClick={() => setEditingAnnouncement(announcement)}
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      <span className="sr-only">{t('common.edit')}</span>
-                    </Button>
+                    />
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span className="sr-only">{t('common.delete')}</span>
-                        </Button>
+                        <IconButton
+                          aria-label={t('common.delete')}
+                          icon={Trash2}
+                          className="text-muted-foreground hover:text-destructive"
+                        />
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>

@@ -1,7 +1,19 @@
 
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { LinkifiedText } from '@/components/ui/linkified-text';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RemoteImage } from '@/components/ui/remote-image';
@@ -201,43 +213,29 @@ const MessageBubble = React.memo(function MessageBubble({
         </div>
 
         {(isSender || isAdmin) && (onDelete || (isSender && setPollResultsLocked)) && (
-          <div className="mt-1.5 flex justify-center gap-1.5">
+          <div className="mt-1.5 flex justify-center gap-2">
             {isSender && setPollResultsLocked && (
-              <button
+              <IconButton
                 type="button"
+                size="compact"
                 onClick={() =>
                   setPollResultsLocked(message.id, !(message.poll?.resultsLocked ?? false))
                 }
-                className="group/lock rounded-full bg-foreground/5 p-1 transition-colors hover:bg-foreground/10"
+                className="group/lock rounded-full bg-foreground/5 hover:bg-foreground/10"
                 aria-label={message.poll?.resultsLocked ? "Unlock voting" : "Lock voting"}
                 title={message.poll?.resultsLocked ? "Unlock voting" : "Lock voting"}
-              >
-                {message.poll?.resultsLocked ? (
-                  <LockOpen className="h-3 w-3 text-foreground/40 group-hover/lock:text-foreground/70" />
-                ) : (
-                  <Lock className="h-3 w-3 text-foreground/40 group-hover/lock:text-foreground/70" />
-                )}
-              </button>
+                icon={message.poll?.resultsLocked ? LockOpen : Lock}
+                iconClassName="text-foreground/40 group-hover/lock:text-foreground/70"
+              />
             )}
             {(isSender || isAdmin) && onDelete && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="group/del rounded-full bg-foreground/5 p-1 transition-colors hover:bg-rose-500/20">
-                    <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 rounded-2xl border border-border/20 bg-popover p-3 shadow-2xl">
-                  <p className="mb-3 text-sm font-semibold text-foreground">{t.deleteMessageConfirm}</p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8 w-full rounded-xl text-micro-label font-semibold"
-                    onClick={() => onDelete(message.id)}
-                  >
-                    {t.deleteAction}
-                  </Button>
-                </PopoverContent>
-              </Popover>
+              <MessageDeleteControl
+                confirmTitle={t.deleteMessageConfirm}
+                confirmDescription={t.deleteMessageDesc}
+                deleteLabel={t.deleteAction}
+                cancelLabel={t.cancel}
+                onDelete={() => onDelete(message.id)}
+              />
             )}
           </div>
         )}
@@ -311,11 +309,12 @@ const MessageBubble = React.memo(function MessageBubble({
                         )}
 
                         {message.threadParentId && threadParentMessage && onOpenThread && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
                             onClick={() => onOpenThread(message.threadParentId!)}
                             className={cn(
-                              "mb-2 w-full text-left p-2 rounded-xl text-xs border flex flex-col gap-1 transition-colors",
+                              "mb-2 h-auto min-h-0 w-full justify-start text-left p-2 rounded-xl text-xs border flex flex-col gap-1 items-start",
                               isSender
                                 ? "border-white/20 bg-black/20 text-white/90 hover:bg-black/30"
                                 : "border-primary/20 bg-primary/5 text-foreground/90 hover:bg-primary/10",
@@ -328,10 +327,9 @@ const MessageBubble = React.memo(function MessageBubble({
                             <span className="truncate opacity-70 text-[10px]">
                               {getMemberDisplayName(chat.memberInfo[threadParentMessage.senderId])}: {threadParentMessage.text || (threadParentMessage.imageUrl ? '📸 Image' : 'Message')}
                             </span>
-                          </button>
+                          </Button>
                         )}
 
-  
                         {message.imageUrl && !message.songId && (
                               <div 
                                   onClick={() => onOpenImage?.(message.imageUrl!)}
@@ -469,10 +467,11 @@ const MessageBubble = React.memo(function MessageBubble({
                           allowFullScreen
                         />
                       ) : (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
                           onClick={() => setYoutubePlaying(true)}
-                          className="relative block h-full w-full"
+                          className="relative block h-auto min-h-0 w-full rounded-none p-0"
                           aria-label="Play YouTube video"
                         >
                           <RemoteImage
@@ -487,20 +486,19 @@ const MessageBubble = React.memo(function MessageBubble({
                               ▶
                             </span>
                           </span>
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
               </div>
           </div>
 
-          {/* Reactions + actions sit under the bubble so the avatar stays on the message bottom */}
-          {reactionEntries.length > 0 && (
-              <div className={cn(
-                  "flex flex-wrap gap-1 mt-1.5",
-                  isSender ? "justify-end self-end" : "justify-start self-start",
-                  !isSender && isGroup && "pl-9",
-              )}>
+          {/* Reactions + react/reply/delete on one row so they never stack on top of each other */}
+          <div className={cn(
+              "mt-1.5 flex flex-wrap items-center gap-1.5",
+              isSender ? "justify-end self-end" : "justify-start self-start",
+              !isSender && isGroup && "pl-9",
+          )}>
                   {reactionEntries.map(([emoji, uids]) => {
                       const reactionNames = uids.map(uid =>
                         resolveChatUserName(uid, chat, usersById),
@@ -510,9 +508,12 @@ const MessageBubble = React.memo(function MessageBubble({
                       return (
                           <Popover key={emoji}>
                               <PopoverTrigger asChild>
-                                  <button
+                                  <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="chip"
                                       className={cn(
-                                          "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border",
+                                          "items-center gap-1 border",
                                           isSender
                                             ? userReacted
                                               ? "bg-white/25 border-white/40 text-primary-foreground"
@@ -524,7 +525,7 @@ const MessageBubble = React.memo(function MessageBubble({
                                   >
                                       <span>{emoji}</span>
                                       <span className="font-bold text-[10px]">{uids.length}</span>
-                                  </button>
+                                  </Button>
                               </PopoverTrigger>
                               <PopoverContent
                                   side="top"
@@ -537,77 +538,69 @@ const MessageBubble = React.memo(function MessageBubble({
                                           </span>
                                           <span className="font-medium text-foreground">{reactionNames}</span>
                                       </div>
-                                      <button
+                                      <Button
                                           type="button"
+                                          variant="secondary"
                                           onClick={(e) => {
                                               e.stopPropagation();
                                               toggleReaction(message.id, emoji);
                                           }}
-                                          className="w-full rounded-md bg-muted py-1.5 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted/80"
+                                          className="h-auto min-h-11 w-full rounded-md py-1.5 text-xs font-semibold"
                                       >
                                           {userReacted ? t.removeReaction : t.addReaction}
-                                      </button>
+                                      </Button>
                                   </div>
                               </PopoverContent>
                           </Popover>
                       );
                   })}
-              </div>
-          )}
-
-          <div className={cn(
-              "flex flex-row gap-2 mt-1.5 z-10",
-              isSender ? "justify-end mr-1 self-end" : "justify-start ml-1 self-start",
-              !isSender && isGroup && "pl-9",
-          )}>
+          <span className="inline-flex items-center gap-1.5">
           <Popover>
               <PopoverTrigger asChild>
-                  <button className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors">
-                      <SmilePlus className="h-3 w-3 text-foreground/40" />
-                  </button>
+                  <IconButton
+                      size="compact"
+                      className="rounded-full bg-foreground/5 hover:bg-foreground/10"
+                      aria-label="Add reaction"
+                      icon={SmilePlus}
+                      iconClassName="text-foreground/40"
+                  />
               </PopoverTrigger>
-              <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-0.5 shadow-2xl">
+              <PopoverContent className="w-fit p-1 bg-popover/95 backdrop-blur-2xl border border-border/20 rounded-full flex gap-1 shadow-2xl">
                   {standardReactions.map(emoji => (
-                      <button
+                      <Button
+                          type="button"
                           key={emoji}
+                          variant="ghost"
+                          size="iconCompact"
                           onClick={() => toggleReaction(message.id, emoji)}
-                          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-foreground/10 transition-transform hover:scale-125"
+                          aria-label={`React with ${emoji}`}
+                          className="h-8 w-8 hover:bg-foreground/10 motion-safe:hover:scale-125"
                       >
                           <span className="text-lg">{emoji}</span>
-                      </button>
+                      </Button>
                   ))}
               </PopoverContent>
           </Popover>
 
-          <button 
+          <IconButton
+              size="compact"
               onClick={() => onOpenThread?.(message.id)}
-              className="p-1 rounded-full bg-foreground/5 hover:bg-foreground/10 transition-colors"
-          >
-              <CornerUpLeft className="h-3 w-3 text-foreground/40" />
-          </button>
+              className="rounded-full bg-foreground/5 hover:bg-foreground/10"
+              aria-label="Reply in thread"
+              icon={CornerUpLeft}
+              iconClassName="text-foreground/40"
+          />
 
           {(isSender || isAdmin) && onDelete && (
-              <Popover>
-                  <PopoverTrigger asChild>
-                      <button className="p-1 rounded-full bg-foreground/5 hover:bg-rose-500/20 group/del transition-colors">
-                          <Trash2 className="h-3 w-3 text-foreground/40 group-hover/del:text-rose-500" />
-                      </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-3 bg-popover border border-border/20 rounded-2xl shadow-2xl">
-                      <p className="text-sm font-semibold text-foreground mb-3">{t.deleteMessageConfirm}</p>
-                      <div className="flex gap-2">
-                          <Button 
-                              variant="destructive" 
-                              size="sm" 
-                              className="flex-1 h-8 rounded-xl text-micro-label font-semibold"
-                              onClick={() => onDelete(message.id)}
-                          >
-                              {t.deleteAction}
-                          </Button>
-                      </div>
-                  </PopoverContent>
-              </Popover>
+              <MessageDeleteControl
+                  confirmTitle={t.deleteMessageConfirm}
+                  confirmDescription={t.deleteMessageDesc}
+                  deleteLabel={t.deleteAction}
+                  cancelLabel={t.cancel}
+                  onDelete={() => onDelete(message.id)}
+              />
           )}
+          </span>
           </div>
 
           {seenByNamesString && (
@@ -630,6 +623,49 @@ const MessageBubble = React.memo(function MessageBubble({
       </div>
   );
 }, messageBubblePropsEqual);
+
+function MessageDeleteControl({
+  confirmTitle,
+  confirmDescription,
+  deleteLabel,
+  cancelLabel,
+  onDelete,
+}: {
+  confirmTitle: string;
+  confirmDescription: string;
+  deleteLabel: string;
+  cancelLabel: string;
+  onDelete: () => void;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <IconButton
+          size="compact"
+          className="group/del rounded-full bg-foreground/5 hover:bg-rose-500/20"
+          aria-label="Delete message"
+          icon={Trash2}
+          iconClassName="text-foreground/40 group-hover/del:text-rose-500"
+        />
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-row justify-end gap-2 sm:space-x-0">
+          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleteLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 function ThreadReplyBadge({
   message,
@@ -654,11 +690,12 @@ function ThreadReplyBadge({
   const count = message.replyCount ?? 0;
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onOpenThread}
       className={cn(
-        "mt-1 mb-2 max-w-[85%] rounded-xl border border-border/30 bg-muted/20 px-3 py-1.5 text-left transition-colors hover:bg-muted/40",
+        "mt-1 mb-2 h-auto min-h-0 max-w-[85%] flex-col items-start justify-start rounded-xl border border-border/30 bg-muted/20 px-3 py-1.5 text-left hover:bg-muted/40",
         className,
       )}
     >
@@ -668,7 +705,7 @@ function ThreadReplyBadge({
       <p className="text-xs text-muted-foreground truncate mt-0.5">
         <span className="font-bold text-foreground/80">{replierName}:</span> {preview}
       </p>
-    </button>
+    </Button>
   );
 }
 

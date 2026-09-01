@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ClipboardList, ChevronRight } from "lucide-react";
+import { ClipboardList, ChevronRight } from "lucide-react";
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { NavPageHeader, EmptyState, FeedCard } from "@/components/ui/page-layout";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
 import { useRosterDefinitions } from "@/hooks/useRosterDefinitions";
@@ -23,10 +25,7 @@ export default function CustomRostersIndexPage() {
   if (loadingAuth || loading) {
     return (
       <div className="page-container">
-        <div className="empty-inline gap-3 py-16">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <p className="text-micro-label">{t.loadingRoster}</p>
-        </div>
+        <PageLoading label={t.loadingRoster} />
       </div>
     );
   }
@@ -47,11 +46,12 @@ export default function CustomRostersIndexPage() {
               ? userCanEditRoster(currentUser, def, isAdmin)
               : false;
             return (
-              <button
+              <Button
                 key={def.id}
                 type="button"
+                variant="ghost"
                 onClick={() => router.push(`/rosters/${def.id}`)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/30"
+                className="h-auto min-h-11 w-full items-center justify-between gap-3 rounded-none px-4 py-4 text-left hover:bg-muted/30"
               >
                 <div className="min-w-0">
                   <p className="font-semibold text-sm">{def.name}</p>
@@ -63,7 +63,7 @@ export default function CustomRostersIndexPage() {
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </button>
+              </Button>
             );
           })}
         </FeedCard>

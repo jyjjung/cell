@@ -3,15 +3,10 @@
 import { useMemo } from 'react';
 import {
   eachDayOfInterval,
-  endOfWeek,
   format,
   isAfter,
   isBefore,
-  isValid,
-  parseISO,
   startOfDay,
-  startOfWeek,
-  subWeeks,
 } from 'date-fns';
 import { DailyReading } from '@/types';
 import { cn } from '@/lib/utils';
@@ -21,7 +16,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { isPassageCompletedForPlan } from '@/lib/reading-utils';
+import {
+  buildFirstOccurrenceByDisplayText,
+  getPlanHeatmapRange,
+  isPassageCompletedForPlan,
+  parsePlanDateBounds,
+} from '@/lib/reading-utils';
+import { parseDay } from '@/lib/event-occurrences';
 import { themeHeat } from '@/lib/theme-status';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
@@ -29,8 +30,8 @@ import { translations } from '@/lib/translations';
 interface ReadingHeatmapProps {
   dailyReadings: DailyReading[];
   completedPassages: string[];
-  /** Week columns to show, matching GitHub’s year graph. */
-  weeksToShow?: number;
+  /** Hide title/range row when the parent section already has a heading. */
+  showHeader?: boolean;
 }
 
 type DayKind = 'outside' | 'future' | 'active';
@@ -45,9 +46,6 @@ type HeatmapDay = {
   outsideSide?: 'before' | 'after';
 };
 
-/** GitHub contribution graphs use ~53 week columns. */
-const DEFAULT_WEEKS = 53;
-
 const CELL_CLASS =
   "size-[11px] sm:size-3 rounded-[2px] sm:rounded-[3px] transition-transform hover:scale-125 cursor-pointer z-10";
 
@@ -58,26 +56,10 @@ function heatClassForDay(day: HeatmapDay): string {
   return themeHeat.partial;
 }
 
-function parsePlanBounds(dailyReadings: DailyReading[]): { start: Date; end: Date } | null {
-  let start: Date | null = null;
-  let end: Date | null = null;
-
-  for (const day of dailyReadings) {
-    const d = parseISO(day.date);
-    if (!isValid(d)) continue;
-    const dayStart = startOfDay(d);
-    if (!start || isBefore(dayStart, start)) start = dayStart;
-    if (!end || isAfter(dayStart, end)) end = dayStart;
-  }
-
-  if (!start || !end) return null;
-  return { start, end };
-}
-
 export default function ReadingHeatmap({
   dailyReadings,
   completedPassages,
-  weeksToShow = DEFAULT_WEEKS,
+  showHeader = true,
 }: ReadingHeatmapProps) {
   const { currentUser } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
@@ -85,32 +67,33 @@ export default function ReadingHeatmap({
   const { columns, rangeLabel } = useMemo(() => {
     const today = startOfDay(new Date());
     const planMap = new Map<string, { total: number; complete: number }>();
-    const bounds = parsePlanBounds(dailyReadings);
+    const bounds = parsePlanDateBounds(dailyReadings);
+    const range = getPlanHeatmapRange(dailyReadings, today);
+    const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(dailyReadings);
 
     dailyReadings.forEach((day) => {
-      const d = parseISO(day.date);
-      if (!isValid(d)) return;
-      const key = format(d, 'yyyy-MM-dd');
-
+      const parsed = parseDay(day.date);
+      if (!parsed || Number.isNaN(parsed.getTime())) return;
+      const key = format(parsed, 'yyyy-MM-dd');
       const validPassages =
         day.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:')) || [];
       const total = validPassages.length;
       const complete = validPassages.filter((p) =>
         isPassageCompletedForPlan(day.date, p.displayText, completedPassages, {
-          dailyReadings,
+          firstOccurrenceByDisplayText,
         }),
       ).length;
       planMap.set(key, { total, complete });
     });
 
-    const planStart = bounds?.start ?? today;
-    const planEnd = bounds?.end ?? today;
+    if (!range) {
+      return { columns: [] as HeatmapDay[][], rangeLabel: '' };
+    }
 
-    // GitHub-style: fixed week columns ending this week (or plan end if later).
-    const rangeEnd = endOfWeek(isAfter(planEnd, today) ? planEnd : today);
-    const rangeStart = startOfWeek(subWeeks(rangeEnd, weeksToShow - 1));
+    const planStart = bounds?.start ?? range.start;
+    const planEnd = bounds?.end ?? range.end;
 
-    const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd }).map((d) => {
+    const days = eachDayOfInterval({ start: range.start, end: range.end }).map((d) => {
       const key = format(d, 'yyyy-MM-dd');
       const stats = planMap.get(key);
       const hasReading = !!stats && stats.total > 0;
@@ -148,38 +131,20 @@ export default function ReadingHeatmap({
 
     return {
       columns: nextColumns,
-      rangeLabel: `${format(rangeStart, 'MMM d')} – ${format(rangeEnd, 'MMM d, yyyy')}`,
+      rangeLabel: `${format(range.start, 'MMM d')} – ${format(range.end, 'MMM d, yyyy')}`,
     };
-  }, [dailyReadings, completedPassages, weeksToShow]);
+  }, [dailyReadings, completedPassages]);
 
-  const getTooltipLabel = (day: HeatmapDay) => {
-    const dateStr = format(day.date, 'MMM d, yyyy');
-    if (day.kind === 'outside') {
-      return day.outsideSide === 'after'
-        ? `${t.afterPlan} · ${dateStr}`
-        : `${t.beforePlan} · ${dateStr}`;
-    }
-    if (day.kind === 'future') {
-      return day.hasReading
-        ? `${t.upcomingReading} · ${dateStr}`
-        : `${t.noAssignedReading} · ${dateStr}`;
-    }
-    if (!day.hasReading) return `${t.noAssignedReading} · ${dateStr}`;
-    const status =
-      day.complete === day.total
-        ? t.readingCompleted
-        : day.complete > 0
-          ? t.readingPartial
-          : t.readingMissed;
-    return `${status} · ${dateStr}`;
-  };
-
-  return (
-    <div className="widget-surface w-full">
-      <div className="panel-header">
-        <h3 className="panel-title">{t.readingConsistency}</h3>
-        <p className="text-micro-label">{rangeLabel}</p>
-      </div>
+  const grid = (
+    <>
+      {showHeader ? (
+        <div className="panel-header">
+          <h3 className="panel-title">{t.readingConsistency}</h3>
+          <p className="text-micro-label">{rangeLabel}</p>
+        </div>
+      ) : rangeLabel ? (
+        <p className="mb-2 text-micro-label">{rangeLabel}</p>
+      ) : null}
 
       <div className="w-full overflow-x-auto">
         <TooltipProvider>
@@ -194,7 +159,7 @@ export default function ReadingHeatmap({
                         <div className={cn(CELL_CLASS, heatClassForDay(day))} />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs font-medium px-3 py-1.5">
-                        {getTooltipLabel(day)}{' '}
+                        {getTooltipLabel(day, t)}{' '}
                         <span className="text-muted-foreground ml-1">({ratio})</span>
                       </TooltipContent>
                     </Tooltip>
@@ -216,6 +181,35 @@ export default function ReadingHeatmap({
         </div>
         {t.more}
       </div>
-    </div>
+    </>
   );
+
+  if (showHeader) return <div className="widget-surface w-full">{grid}</div>;
+
+  return <div className="w-full">{grid}</div>;
+}
+
+function getTooltipLabel(
+  day: HeatmapDay,
+  t: (typeof translations)['en'],
+) {
+  const dateStr = format(day.date, 'MMM d, yyyy');
+  if (day.kind === 'outside') {
+    return day.outsideSide === 'after'
+      ? `${t.afterPlan} · ${dateStr}`
+      : `${t.beforePlan} · ${dateStr}`;
+  }
+  if (day.kind === 'future') {
+    return day.hasReading
+      ? `${t.upcomingReading} · ${dateStr}`
+      : `${t.noAssignedReading} · ${dateStr}`;
+  }
+  if (!day.hasReading) return `${t.noAssignedReading} · ${dateStr}`;
+  const status =
+    day.complete === day.total
+      ? t.readingCompleted
+      : day.complete > 0
+        ? t.readingPartial
+        : t.readingMissed;
+  return `${status} · ${dateStr}`;
 }

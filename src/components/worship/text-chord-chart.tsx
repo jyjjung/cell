@@ -3,7 +3,20 @@
 import { parseChordChart, splitChartBodyColumns, transposeBlocks, type ChartBlock } from '@/lib/chord-chart';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+type ChartSurface = 'dark' | 'light';
+
+const ChartSurfaceContext = createContext<ChartSurface>('dark');
+
+function useChartSurface() {
+  return useContext(ChartSurfaceContext);
+}
+
+const SURFACE_BG: Record<ChartSurface, string> = {
+  dark: '#1f1f1f',
+  light: '#f7f7f5',
+};
 
 export const CHART_LOGICAL_WIDTH = 1200;
 
@@ -54,78 +67,109 @@ function clientToLogical(
   };
 }
 
+function ink(surface: ChartSurface, kind: 'primary' | 'muted' | 'soft' = 'primary') {
+  if (surface === 'light') {
+    if (kind === 'muted') return 'text-muted-foreground';
+    if (kind === 'soft') return 'text-muted-foreground/80';
+    return 'text-foreground';
+  }
+  if (kind === 'muted') return 'text-white/75';
+  if (kind === 'soft') return 'text-white/70';
+  return 'text-white';
+}
+
 function ChartBlockView({ block }: { block: ChartBlock }) {
+  const surface = useChartSurface();
   if (block.type === 'title') {
     return (
-      <h1 className="max-w-full text-[28px] font-bold leading-tight tracking-tight text-white [overflow-wrap:anywhere]">
+      <h1 className={cn('max-w-full text-[28px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </h1>
     );
   }
   if (block.type === 'credit') {
     return (
-      <p className="max-w-full text-[13px] leading-snug text-white/75 [overflow-wrap:anywhere]">
+      <p className={cn('max-w-full text-[13px] leading-snug [overflow-wrap:anywhere]', ink(surface, 'muted'))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'meta') {
     return (
-      <p className="max-w-full text-[13px] font-semibold text-white [overflow-wrap:anywhere]">
+      <p className={cn('max-w-full text-[13px] font-semibold [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'section') {
     return (
-      <p className="pt-2 text-[16px] font-bold uppercase tracking-wide text-white">
+      <p className={cn('pt-3 text-[15px] font-bold uppercase tracking-wide', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'measure') {
     return (
-      <p className="max-w-full text-[16px] font-bold text-white [overflow-wrap:anywhere]">
+      <p className={cn('max-w-full overflow-x-auto whitespace-nowrap text-[16px] font-bold', ink(surface))}>
         <span className="inline">{block.text}</span>
         {block.cue && (
-          <span className="ml-2 text-[13px] font-normal italic text-white/70">{block.cue}</span>
+          <span className={cn('ml-2 text-[13px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
         )}
       </p>
     );
   }
   if (block.type === 'note') {
     return (
-      <p className="text-[13px] italic text-white/70">
+      <p className={cn('text-[13px] italic', ink(surface, 'soft'))}>
         {block.text}
       </p>
     );
   }
   return (
-    <p className="flex max-w-full flex-wrap items-end gap-y-1 leading-none">
-      <span className="min-w-0">
-        {block.parts.map((part, pi) => (
-          <span key={pi} className="inline-flex max-w-full flex-col items-start align-bottom">
-            <span className="min-h-[1.15em] pr-1.5 text-[15px] font-bold leading-none text-white">
+    <LyricBlockView block={block} />
+  );
+}
+
+function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' }> }) {
+  const surface = useChartSurface();
+  const parts = block.parts.filter((part) => part.chord || (part.text ?? '').trim());
+  if (parts.length === 0) return null;
+
+  if (parts.length === 1 && parts[0].text.trim() && !parts[0].chord) {
+    return (
+      <p className={cn('max-w-full text-[18px] leading-snug [overflow-wrap:anywhere]', ink(surface))}>
+        {parts[0].text}
+        {block.cue && (
+          <span className={cn('ml-2 text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</span>
+        )}
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-w-full">
+      <div className="flex w-max min-w-full flex-row flex-nowrap items-end">
+        {parts.map((part, pi) => (
+          <span key={pi} className="inline-flex flex-col items-start pr-3 last:pr-0">
+            <span className={cn('min-h-[1.15em] whitespace-pre text-[15px] font-bold leading-none', ink(surface))}>
               {part.chord || '\u00a0'}
             </span>
-            <span className="pr-1.5 text-[18px] leading-snug text-white [overflow-wrap:anywhere]">
+            <span className={cn('whitespace-pre text-[18px] leading-snug', ink(surface))}>
               {part.text || '\u00a0'}
             </span>
           </span>
         ))}
-      </span>
+      </div>
       {block.cue && (
-        <span className="mb-auto ml-2 shrink-0 pt-px text-[13px] italic text-white/70">
-          {block.cue}
-        </span>
+        <p className={cn('text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</p>
       )}
-    </p>
+    </div>
   );
 }
 
 function ChartColumn({ blocks }: { blocks: ChartBlock[] }) {
   return (
-    <div className="min-w-0 max-w-full space-y-1.5 overflow-hidden">
+    <div className="min-w-0 max-w-full space-y-2 overflow-x-auto overflow-y-visible">
       {blocks.map((block, i) => (
         <ChartBlockView key={i} block={block} />
       ))}
@@ -133,7 +177,7 @@ function ChartColumn({ blocks }: { blocks: ChartBlock[] }) {
   );
 }
 
-function ChartBlocks({ blocks }: { blocks: ChartBlock[] }) {
+export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
   const firstBody = blocks.findIndex((b) =>
     b.type === 'section' || b.type === 'measure' || b.type === 'lyric' || b.type === 'note',
   );
@@ -161,6 +205,10 @@ function ChartBlocks({ blocks }: { blocks: ChartBlock[] }) {
   );
 }
 
+function ChartBlocks({ blocks }: { blocks: ChartBlock[] }) {
+  return <ChordChartBody blocks={blocks} />;
+}
+
 export function TextChordChartCanvas({
   sheet,
   originalKey,
@@ -168,8 +216,11 @@ export function TextChordChartCanvas({
   strokes,
   drawing,
   inkColor,
+  inkWidth,
   onStrokesChange,
   zoom = 1,
+  exportMode = false,
+  theme = 'dark',
 }: {
   sheet: SongChordSheet;
   originalKey: ChordKey;
@@ -177,15 +228,19 @@ export function TextChordChartCanvas({
   strokes: ChordChartStroke[];
   drawing?: boolean;
   inkColor?: string;
+  inkWidth?: number;
   onStrokesChange?: (strokes: ChordChartStroke[]) => void;
   zoom?: number;
+  /** Fixed 1:1 layout for PNG export — no responsive scaling. */
+  exportMode?: boolean;
+  theme?: ChartSurface;
 }) {
   const source = sheet.sourceText || '';
   const blocks = useMemo(
     () => transposeBlocks(parseChordChart(source), originalKey, displayKey),
     [source, originalKey, displayKey],
   );
-  const { outerRef, innerRef, scale, innerHeight } = useScaledChart(zoom);
+  const { outerRef, innerRef, scale, innerHeight } = useScaledChart(exportMode ? 1 : zoom);
   const svgRef = useRef<SVGSVGElement>(null);
   const currentRef = useRef<ChordChartStroke | null>(null);
   const strokesRef = useRef(strokes);
@@ -216,7 +271,7 @@ export function TextChordChartCanvas({
     const stroke: ChordChartStroke = {
       id: crypto.randomUUID(),
       color: inkColor || '#f43f5e',
-      width: INK_WIDTH,
+      width: inkWidth || INK_WIDTH,
       points: [pt],
     };
     currentRef.current = stroke;
@@ -239,6 +294,54 @@ export function TextChordChartCanvas({
     try { svgRef.current?.releasePointerCapture(e.pointerId); } catch { /* already released */ }
   };
 
+  const chartBody = (
+    <div
+      ref={innerRef}
+      className="relative px-8 py-7"
+      style={{
+        width: CHART_LOGICAL_WIDTH,
+        background: SURFACE_BG[theme],
+        transform: exportMode ? undefined : `scale(${scale})`,
+        transformOrigin: exportMode ? undefined : 'top left',
+        fontFamily: 'var(--font-geist-sans), var(--app-font-family), system-ui, sans-serif',
+      }}
+    >
+      <ChartSurfaceContext.Provider value={theme}>
+        <ChartBlocks blocks={blocks} />
+      </ChartSurfaceContext.Provider>
+      <svg
+        ref={svgRef}
+        className={cn('absolute inset-0 h-full w-full', drawing ? 'touch-none cursor-crosshair' : 'pointer-events-none')}
+        viewBox={`0 0 ${CHART_LOGICAL_WIDTH} ${Math.max(innerHeight, 1)}`}
+        preserveAspectRatio="none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        {strokes.map((stroke) => (
+          <polyline
+            key={stroke.id}
+            fill="none"
+            stroke={stroke.color}
+            strokeWidth={stroke.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={stroke.points.map((p) => `${p.x},${p.y}`).join(' ')}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+
+  if (exportMode) {
+    return (
+      <div ref={outerRef} style={{ width: CHART_LOGICAL_WIDTH }}>
+        {chartBody}
+      </div>
+    );
+  }
+
   return (
     <div ref={outerRef} className="w-full">
       <div
@@ -248,39 +351,7 @@ export function TextChordChartCanvas({
           width: CHART_LOGICAL_WIDTH * scale || undefined,
         }}
       >
-        <div
-          ref={innerRef}
-          className="relative origin-top-left bg-[#1f1f1f] px-7 py-6"
-          style={{
-            width: CHART_LOGICAL_WIDTH,
-            transform: `scale(${scale})`,
-            fontFamily: 'var(--font-geist-sans), var(--app-font-family), system-ui, sans-serif',
-          }}
-        >
-          <ChartBlocks blocks={blocks} />
-          <svg
-            ref={svgRef}
-            className={cn('absolute inset-0 h-full w-full', drawing ? 'touch-none cursor-crosshair' : 'pointer-events-none')}
-            viewBox={`0 0 ${CHART_LOGICAL_WIDTH} ${Math.max(innerHeight, 1)}`}
-            preserveAspectRatio="none"
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          >
-            {strokes.map((stroke) => (
-              <polyline
-                key={stroke.id}
-                fill="none"
-                stroke={stroke.color}
-                strokeWidth={stroke.width}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={stroke.points.map((p) => `${p.x},${p.y}`).join(' ')}
-              />
-            ))}
-          </svg>
-        </div>
+        {chartBody}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { LayoutGate } from "@/components/layout/layout-gate";
 
 export default function ChatLayout({
   children,
@@ -19,13 +20,11 @@ export default function ChatLayout({
     }
   }, [currentUser, loadingAuth, router]);
 
-  if (loadingAuth || !currentUser) {
-    return null;
-  }
-
   return (
-    <div className="w-full flex-1 flex flex-col min-h-0">
-      {children}
-    </div>
+    <LayoutGate loading={loadingAuth} ready={!!currentUser} label="Loading chat">
+      <div className="flex min-h-0 w-full flex-1 flex-col">
+        {children}
+      </div>
+    </LayoutGate>
   );
 }
