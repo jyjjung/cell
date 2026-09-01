@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { TextChordChartCanvas } from '@/components/worship/text-chord-chart';
+import { TextChordChartCanvas, TEXT_CHART_SURFACE } from '@/components/worship/text-chord-chart';
 import {
   useViewerTheme,
   viewerControlBtn,
@@ -32,7 +32,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 
 const INK_COLORS_DARK = ['#f43f5e', '#4ade80', '#facc15', '#38bdf8', '#f8fafc'];
-const INK_COLORS_LIGHT = ['#e11d48', '#16a34a', '#ca8a04', '#0284c7', '#18181b'];
 const PEN_WIDTH = 3.2;
 const HIGHLIGHT_WIDTH = 16;
 
@@ -123,7 +122,7 @@ export function TextChordChartViewer({
 
   const [annotations, setAnnotations] = useState<ChordChartAnnotation[]>(sheet.annotations ?? []);
   const active = annotations.find((a) => a.id === annotationId) ?? null;
-  const inkColors = isDark ? INK_COLORS_DARK : INK_COLORS_LIGHT;
+  const inkColors = INK_COLORS_DARK;
   const strokeColor = tool === 'highlight' ? withAlpha(inkColor, '59') : inkColor;
   const strokeWidth = tool === 'highlight' ? HIGHLIGHT_WIDTH : PEN_WIDTH;
 
@@ -454,7 +453,7 @@ export function TextChordChartViewer({
             inkWidth={strokeWidth}
             onStrokesChange={handleStrokesChange}
             zoom={zoom}
-            theme={viewerTheme}
+            theme={TEXT_CHART_SURFACE}
           />
         </div>
       </div>
@@ -525,15 +524,13 @@ export function EmbeddedTextChart({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const viewerTheme = useViewerTheme();
   const strokes = annotationId
     ? (sheet.annotations?.find((a) => a.id === annotationId)?.strokes ?? [])
     : [];
   return (
     <>
       <div className={cn(
-        'w-full max-w-6xl overflow-hidden rounded-xl border',
-        viewerTheme === 'dark' ? 'border-white/10' : 'border-border/60',
+        'w-full max-w-6xl overflow-hidden rounded-xl border border-white/10',
         className,
       )}>
         <TextChordChartCanvas
@@ -542,19 +539,14 @@ export function EmbeddedTextChart({
           displayKey={displayKey === 'numbers' ? sheet.key : displayKey}
           strokes={strokes}
           zoom={zoom}
-          theme={viewerTheme}
+          theme={TEXT_CHART_SURFACE}
         />
         {songId && (
           <Button
             type="button"
             variant="ghost"
             onClick={() => setOpen(true)}
-            className={cn(
-              'h-auto w-full justify-center gap-1.5 rounded-none px-3 py-2 text-xs font-medium',
-              viewerTheme === 'dark'
-                ? 'bg-black/40 text-white/80 hover:bg-black/55'
-                : 'bg-muted/60 text-muted-foreground hover:bg-muted',
-            )}
+            className="h-auto w-full justify-center gap-1.5 rounded-none bg-black/40 px-3 py-2 text-xs font-medium text-white/80 hover:bg-black/55"
           >
             <Pencil className="h-3.5 w-3.5" /> Transpose and notes
           </Button>

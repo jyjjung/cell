@@ -28,11 +28,14 @@ function weekStatusLabel(
   isGuest: boolean,
 ): string {
   if (week.isCompleted) return t.completed;
-  if (!isGuest && week.isOverdue) return t.overdue;
-  if (!isGuest && week.isCurrent) return t.currentWeek;
+  if (!isGuest && week.totalCount > 0 && (week.isOverdue || week.isCurrent)) {
+    return t.weekChaptersRead(week.completedCount, week.totalCount);
+  }
   if (week.totalCount > 0) {
     return t.weekPassagesCount(week.completedCount, week.totalCount);
   }
+  if (!isGuest && week.isOverdue) return t.overdue;
+  if (!isGuest && week.isCurrent) return t.currentWeek;
   return t.currentWeek;
 }
 

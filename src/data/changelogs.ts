@@ -7,6 +7,22 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.5',
+    subtitle: 'Reading plan & charts',
+    date: 'September 2, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'This week and overdue reading rows show how many chapters you have read (for example, 3/5 chapters read).',
+      },
+      {
+        type: 'Fixed',
+        text: 'Pasted text chord charts always use a dark background with white text so your note markings stay visible in any theme.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.17.4',
     subtitle: 'Reading plan & polish',
     date: 'September 1, 2026',
