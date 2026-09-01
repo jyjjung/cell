@@ -11,6 +11,7 @@ import {
   type AvatarCosmeticTier,
 } from "@/lib/avatar-cosmetics";
 import { PixelAvatar } from "@/components/avatar/PixelAvatar";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { AvatarData } from "@/types";
 import { DEFAULT_AVATAR_DATA } from "@/lib/avatar-options";
@@ -88,13 +89,14 @@ export function UnlockedHalosGrid({
           const avatarWithTier = { ...baseAvatar, cosmeticTier: tier.id };
 
           return (
-            <button
+            <Button
               key={tier.id}
               type="button"
+              variant="ghost"
               disabled={!unlocked}
               onClick={() => unlocked && onHaloTierSelect(tier.id)}
               className={cn(
-                "relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all text-left",
+                "relative h-auto min-h-11 w-full flex-col items-center gap-2 rounded-xl border p-3 text-left",
                 unlocked
                   ? selected
                     ? "border-primary bg-primary/10 ring-2 ring-primary/25"
@@ -127,7 +129,7 @@ export function UnlockedHalosGrid({
                   </div>
                 )}
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>

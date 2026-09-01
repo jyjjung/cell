@@ -1,12 +1,13 @@
 "use client";
 
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/contexts/auth-context';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { WorshipSong } from '@/types';
-import { ChevronRight, Loader2, Music2, User } from 'lucide-react';
+import { ChevronRight, Music2, User } from 'lucide-react';
 import {
   chatCardLoading,
   chatCardMeta,
@@ -27,7 +28,7 @@ export default function SongSummary({ songId, isSender, onOpenViewer }: SongSumm
   if (loading) {
     return (
       <div className={cn(chatCardLoading, 'flex items-center justify-center')}>
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <LoadingSpinner size="sm" className="text-muted-foreground" />
       </div>
     );
   }

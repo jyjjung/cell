@@ -83,10 +83,6 @@ export default function PrivacyPolicyPage() {
             <Link href="/terms" className="font-medium text-foreground underline-offset-4 hover:underline">
               Terms of Service
             </Link>
-            . For a feature overview, see{" "}
-            <Link href="/features" className="font-medium text-foreground underline-offset-4 hover:underline">
-              How it works
-            </Link>
             .
           </p>
           <p>We do not sell your information or use it for advertising.</p>

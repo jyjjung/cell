@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent, useEffect } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField, formFieldControlProps } from "@/components/ui/form-field";
 import {
   Lock,
   Shield,
@@ -16,13 +16,11 @@ import {
   ClipboardList,
   FileText,
   BookOpen,
-  Brain,
-  MessageCircle,
-  MessageSquarePlus,
   Info,
 } from "lucide-react";
 import { usePageLoading } from "@/contexts/page-loading-context";
 import { PageHeader } from "@/components/ui/page-layout";
+import { PageLoading } from "@/components/ui/loading-spinner";
 import { useQTRoster } from "@/hooks/useQTRoster";
 import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
@@ -67,7 +65,7 @@ export default function AdminHubPage() {
     router.push(path);
   };
 
-  if (!isMounted || loadingAuth) return null;
+  if (!isMounted || loadingAuth) return <PageLoading />;
 
   if (!isAdmin) {
     return (
@@ -82,26 +80,18 @@ export default function AdminHubPage() {
 
           {currentUser ? (
             <form onSubmit={handleAdminAuth} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password" className="sr-only">
-                  {t.adminAccessKey}
-                </Label>
+              <FormField id="admin-access-key" label={t.adminAccessKey} error={error || undefined}>
                 <Input
-                  id="password"
+                  {...formFieldControlProps('admin-access-key', error || undefined)}
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder={t.adminAccessKey}
+                  autoComplete="current-password"
                   className="h-11 rounded-xl border-border text-center"
                 />
-              </div>
-              {error && (
-                <p className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-center text-sm text-destructive">
-                  {error}
-                </p>
-              )}
-              <Button type="submit" className="h-10 w-full">
+              </FormField>
+              <Button type="submit" className="h-11 w-full">
                 <Lock className="mr-2 h-4 w-4" />
                 {t.signIn}
               </Button>
@@ -116,26 +106,23 @@ export default function AdminHubPage() {
     );
   }
 
-  const quickActions = [
+  const sections = [
     { title: t.announcements, href: "/admin/notifications", icon: Megaphone, badge: scheduledNotifs },
     { title: t.qtRoster, href: "/admin/qt-roster", icon: ListChecks, badge: unassignedRosterDays },
     { title: t.cleaningRoster, href: "/admin/cleaning-roster", icon: ListTodo },
     { title: t.adminCustomRosters, href: "/admin/custom-rosters", icon: ClipboardList },
     { title: t.events, href: "/admin/events", icon: Calendar },
-  ];
-
-  const allSections = [
     { title: t.forms, href: "/admin/forms", icon: FileText },
     { title: t.adminBiblePlan, href: "/admin/bible-plan", icon: BookOpen },
-    { title: t.adminMemorization, href: "/admin/memory-verses", icon: Brain },
     { title: t.adminInfoWidgets, href: "/admin/info-widgets", icon: Info },
-    { title: t.adminManageChats, href: "/admin/chats", icon: MessageCircle },
   ];
 
   const NavCard = ({ icon: Icon, title, href, badge }: { icon: React.ElementType; title: string; href: string; badge?: number }) => (
-    <button
+    <Button
+      type="button"
+      variant="ghost"
       onClick={() => handleLaunch(href)}
-      className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+      className="h-auto min-h-11 w-full justify-between rounded-xl border border-border/60 bg-card/50 px-3 py-2.5 text-left"
     >
       <div className="flex items-center gap-2.5">
         <Icon className="h-4 w-4 text-muted-foreground" />
@@ -146,7 +133,7 @@ export default function AdminHubPage() {
           {badge}
         </span>
       ) : null}
-    </button>
+    </Button>
   );
 
   return (
@@ -155,28 +142,11 @@ export default function AdminHubPage() {
 
       <ReminderCronHealth />
 
-      <section className="space-y-2">
-        <h2 className="text-micro-label">{t.adminQuickActions}</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {quickActions.map((action) => (
-            <NavCard key={action.href} {...action} />
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-micro-label">{t.adminAllSections}</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {allSections.map((section) => (
-            <NavCard key={section.href} {...section} />
-          ))}
-        </div>
-      </section>
-
-      <Button onClick={() => handleLaunch("/chat/system")} className="h-10 w-full sm:w-auto">
-        <MessageSquarePlus className="mr-2 h-4 w-4" />
-        {t.adminOpenSystemChat}
-      </Button>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {sections.map((section) => (
+          <NavCard key={section.href} {...section} />
+        ))}
+      </div>
     </div>
   );
 }

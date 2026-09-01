@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { motion } from 'framer-motion';
-import { ShieldCheck, Clock, LogOut, Loader2 } from 'lucide-react';
+import { ShieldCheck, Clock, LogOut } from 'lucide-react';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { translations } from '@/lib/translations';
 
@@ -31,11 +32,7 @@ export default function PendingApprovalPage() {
   }, [currentUser, loadingAuth, router, isMounted]);
 
   if (!isMounted || loadingAuth) {
-    return (
-        <div className="flex h-screen items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-    );
+    return <PageLoading />;
   }
 
   return (

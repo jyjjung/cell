@@ -22,6 +22,7 @@ import { buildInitialAnswers, formatProfileName } from '@/lib/forms/prefill';
 import { PageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -398,11 +399,6 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
         </Button>
         <PageHeader
           title={isNew ? 'New form' : builderTitle || formMeta?.title || 'Edit form'}
-          description={
-            isNew
-              ? 'Add questions, then save. You can publish and share a guest link afterward.'
-              : 'Edit questions and preview. Open Responses from the Forms hub to review submissions.'
-          }
         />
       </div>
 
@@ -566,9 +562,10 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
             </label>
 
             <div className="space-y-2 rounded-xl border border-border/60 p-3">
-              <button
+              <Button
                 type="button"
-                className="flex w-full items-center justify-between text-left"
+                variant="ghost"
+                className="h-auto min-h-11 w-full justify-between text-left"
                 onClick={() => {
                   const next = !accessOptionsOpen;
                   setAccessOptionsOpen(next);
@@ -584,7 +581,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                   </p>
                 </div>
                 <ChevronDown className={`h-4 w-4 transition-transform ${accessOptionsOpen ? 'rotate-180' : ''}`} />
-              </button>
+              </Button>
 
               {accessOptionsOpen ? (
                 <div className="space-y-3 pt-3 border-t border-border/50 mt-3">
@@ -706,30 +703,25 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                             </p>
                           </div>
                           <div className="flex gap-1.5 shrink-0">
-                            <Button
+                            <IconButton
                               variant="outline"
-                              size="icon"
-                              className="rounded-xl h-8 w-8"
+                              className="rounded-xl"
                               disabled={idx === 0}
                               onClick={() => moveFieldOrder(field.id, -1)}
                               aria-label="Move up"
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button
+                              icon={ChevronUp}
+                            />
+                            <IconButton
                               variant="outline"
-                              size="icon"
-                              className="rounded-xl h-8 w-8"
+                              className="rounded-xl"
                               disabled={idx === builderFields.length - 1}
                               onClick={() => moveFieldOrder(field.id, +1)}
                               aria-label="Move down"
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                            <Button
+                              icon={ChevronDown}
+                            />
+                            <IconButton
                               variant="outline"
-                              size="icon"
-                              className="rounded-xl h-8 w-8 text-destructive"
+                              className="rounded-xl text-destructive"
                               onClick={() =>
                                 setBuilderFields((prev) =>
                                   prev
@@ -738,9 +730,8 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                                 )
                               }
                               aria-label="Remove question"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              icon={Trash2}
+                            />
                           </div>
                         </div>
 
@@ -840,9 +831,10 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                         )}
 
                         <div className="space-y-2">
-                          <button
+                          <Button
                             type="button"
-                            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                            variant="ghost"
+                            className="h-auto min-h-11 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                             onClick={() =>
                               setExpandedConditional((prev) => ({
                                 ...prev,
@@ -851,7 +843,7 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
                             }
                           >
                             {showConditional ? 'Hide conditional rule' : 'Show only when…'}
-                          </button>
+                          </Button>
 
                           {showConditional ? (
                             <div className="grid gap-2 md:grid-cols-2 rounded-xl border border-border/50 bg-background/60 p-3">

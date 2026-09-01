@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useEffect } from 'react';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/page-layout';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { UserProfileData } from '@/types';
 import { extractChatPhotos } from '@/lib/chat-media-extract';
@@ -38,15 +41,11 @@ export default function ChatPhotosAlbum({
 
   if (photos.length === 0 && !loadingMore) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[40vh] px-6 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-muted/40 border border-border/40 flex items-center justify-center mb-4">
-          <ImageIcon className="h-7 w-7 text-muted-foreground/40" />
-        </div>
-        <p className="text-sm font-semibold text-foreground">No photos yet</p>
-        <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
-          Photos shared in this chat will appear here.
-        </p>
-      </div>
+      <EmptyState
+        icon={ImageIcon}
+        title="No photos yet"
+        description="Photos shared in this chat will appear here."
+      />
     );
   }
 
@@ -54,11 +53,12 @@ export default function ChatPhotosAlbum({
     <div className="absolute inset-0 overflow-y-auto px-3 py-3 custom-scrollbar">
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-w-3xl mx-auto">
         {photos.map((photo) => (
-          <button
+          <Button
             key={photo.id}
             type="button"
+            variant="ghost"
             onClick={() => onOpenImage(photo.imageUrl)}
-            className="relative aspect-square overflow-hidden rounded-xl bg-muted/30 border border-border/30 group [content-visibility:auto] [contain-intrinsic-size:120px]"
+            className="relative aspect-square h-auto w-full overflow-hidden rounded-xl bg-muted/30 border border-border/30 group [content-visibility:auto] [contain-intrinsic-size:120px]"
           >
             <RemoteImage
               src={photo.thumbUrl || photo.imageUrl}
@@ -70,12 +70,12 @@ export default function ChatPhotosAlbum({
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <p className="text-[9px] font-bold text-white truncate">{photo.senderLabel}</p>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
       {loadingMore && (
         <div className="flex justify-center py-4" aria-live="polite">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" />
+          <LoadingSpinner size="sm" className="text-muted-foreground/60" />
         </div>
       )}
     </div>

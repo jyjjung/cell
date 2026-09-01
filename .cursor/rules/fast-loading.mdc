@@ -1,0 +1,35 @@
+---
+description: Prioritise fast first paint and low blocking work on every page
+alwaysApply: true
+---
+
+# Fast loading
+
+Every route and feature must feel instant. Cheaper Firebase usage (see **firebase-cost**) and fast UX go together — fewer listeners and smaller chunks both help.
+
+## First paint
+
+- Show shell + skeleton immediately; never `return null` while auth or data loads (`LayoutGate`, `LoadingState`, route-level skeletons).
+- Code-split heavy pages and below-fold blocks with `next/dynamic` + a skeleton that matches final layout.
+- Defer non-critical UI (admin widgets, dialogs, secondary panels) until after the primary content paints.
+- No staggered entrance animations on lists above the fold; honour `prefers-reduced-motion`.
+
+## Data
+
+- Gate realtime listeners by route; unsubscribe on leave.
+- Prefer cache-first reads where staleness is acceptable.
+- Bound queries; paginate or load-on-open — never unbounded scans on mount.
+- One shared provider per dataset, not per-row listeners.
+
+## Assets
+
+- Compress and resize before Storage upload; thumbnails in lists, originals on open.
+- Do not prefetch full images, PDFs, or large files the user has not requested.
+- Reuse URLs on documents; avoid `getDownloadURL` every render.
+
+## Bundles
+
+- Import only what the route needs; lazy-load rare modals and admin tools.
+- Keep homepage and hub entry paths lean — split large components by section when each section owns its hooks.
+
+If a change adds blocking work, extra listeners, or large client bundles, choose the faster design or explain the trade-off.

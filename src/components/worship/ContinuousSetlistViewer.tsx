@@ -9,10 +9,14 @@ import {
   type ReactZoomPanPinchRef,
 } from 'react-zoom-pan-pinch';
 import {
-  X, Download, ZoomIn, ZoomOut, Maximize, FileText, Headphones,
+  X, Download, ZoomIn, ZoomOut, Maximize, FileText, Headphones, Loader2,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
+import { filesFromViewerSlides } from '@/lib/setlist-download';
+import { DownloadCancelledError, downloadNamedFiles } from '@/lib/setlist-download-client';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import type { ViewerSlide } from '@/components/worship/viewer-types';
@@ -24,65 +28,18 @@ import {
   viewerFooter,
   viewerKeyBadge,
   viewerListenBtn,
-  viewerPdfFrame,
   viewerSectionBar,
   viewerShell,
-  viewerSongChip,
   viewerTitleMuted,
   viewerTitlePrimary,
   viewerZoomBadge,
 } from '@/components/worship/viewer-theme';
-
-async function downloadFile(url: string, filename: string) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
-  } catch {
-    window.open(url, '_blank');
-  }
-}
 
 function KeyBadge({ keyName, isDark }: { keyName: ChordKey; isDark: boolean }) {
   return (
     <span className={viewerKeyBadge(isDark)}>
       {keyName === 'numbers' ? '#' : keyName}
     </span>
-  );
-}
-
-function ChordPage({
-  url, pageIndex, songTitle, isDark,
-}: { url: string; pageIndex: number; songTitle: string; isDark: boolean }) {
-  if (isPdfUrl(url)) {
-    return (
-      <div className={viewerPdfFrame(isDark)} style={{ minHeight: '70vh' }}>
-        <iframe
-          src={`${url}#toolbar=0&navpanes=0`}
-          className={cn('min-h-[60vh] w-full flex-1 border-none', isDark ? 'bg-white/5' : 'bg-background')}
-          title={`${songTitle} PDF page ${pageIndex + 1}`}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <RemoteImage
-      src={url}
-      alt={`${songTitle} page ${pageIndex + 1}`}
-      width={1400}
-      height={1800}
-      draggable={false}
-      className="block w-full h-auto rounded-xl"
-      sizes="(max-width: 768px) 100vw, 48rem"
-    />
   );
 }
 
@@ -104,7 +61,7 @@ function SectionTitleBar({
   onListen: () => void;
 }) {
   return (
-    <div className={viewerSectionBar(isDark)}>
+    <div className={cn(viewerSectionBar(isDark), 'rounded-none border-x-0 leading-normal')}>
       <div className="min-w-0">
         <p className={cn('truncate text-sm font-semibold', viewerTitlePrimary(isDark))}>
           {sectionIdx + 1}. {title}
@@ -113,19 +70,50 @@ function SectionTitleBar({
       <div className="flex shrink-0 items-center gap-2">
         <KeyBadge keyName={keyName} isDark={isDark} />
         {hasTracks && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={(e) => { e.stopPropagation(); onListen(); }}
             className={cn(
-              'setlist-control inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors',
+              'setlist-control inline-flex h-auto items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-semibold',
               viewerListenBtn(isDark, listening),
             )}
           >
             <Headphones className="h-3.5 w-3.5" />
             Listen
-          </button>
+          </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+function ChordPage({
+  url, pageIndex, songTitle,
+}: { url: string; pageIndex: number; songTitle: string }) {
+  if (isPdfUrl(url)) {
+    return (
+      <div className="flex w-full flex-col bg-white leading-[0]" style={{ minHeight: '70vh' }}>
+        <iframe
+          src={`${url}#toolbar=0&navpanes=0`}
+          className="min-h-[60vh] w-full flex-1 border-none bg-white"
+          title={`${songTitle} PDF page ${pageIndex + 1}`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="leading-[0]">
+      <RemoteImage
+        src={url}
+        alt={`${songTitle} page ${pageIndex + 1}`}
+        width={1400}
+        height={1800}
+        draggable={false}
+        className="block h-auto w-full rounded-none"
+        sizes="(max-width: 768px) 100vw, 56rem"
+      />
     </div>
   );
 }
@@ -156,6 +144,9 @@ export function ContinuousSetlistViewer({
   // through the setlist doesn't interrupt playback.
   const [listenSection, setListenSection] = useState<number | null>(null);
   const [activeTrackIdx, setActiveTrackIdx] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<string | null>(null);
   const didInitialScroll = useRef(false);
   const viewerTheme = useViewerTheme();
   const isDark = viewerTheme === 'dark';
@@ -165,14 +156,21 @@ export function ContinuousSetlistViewer({
   const zoomPct = Math.round(scale * 100);
   const minScale = 0.35;
 
-  const contentWidth = 'min(100vw - 1.5rem, 48rem)';
+  const contentWidth = 'min(100vw, 56rem)';
 
-  const centerContentHorizontally = useCallback((ref: ReactZoomPanPinchRef) => {
+  /** Lock horizontal position when the scaled page is narrower than the viewport. */
+  const centerHorizontallyIfFits = useCallback((ref: ReactZoomPanPinchRef, animationTime = 0) => {
     const wrapper = ref.instance.wrapperComponent;
     const content = ref.instance.contentComponent;
     if (!wrapper || !content) return;
-    const x = Math.max(0, (wrapper.offsetWidth - content.offsetWidth) / 2);
-    ref.setTransform(x, ref.instance.transformState.positionY, ref.instance.transformState.scale);
+
+    const { scale, positionY, positionX } = ref.instance.transformState;
+    const scaledWidth = content.offsetWidth * scale;
+    if (scaledWidth >= wrapper.offsetWidth - 0.5) return;
+
+    const targetX = (wrapper.offsetWidth - scaledWidth) / 2;
+    if (Math.abs(positionX - targetX) < 0.5) return;
+    ref.setTransform(targetX, positionY, scale, animationTime);
   }, []);
 
   const updateActiveSectionFromView = useCallback(() => {
@@ -209,13 +207,26 @@ export function ContinuousSetlistViewer({
       if (startIndex > 0) {
         jumpToSection(startIndex, 0);
       } else if (transformRef.current) {
-        centerContentHorizontally(transformRef.current);
+        centerHorizontallyIfFits(transformRef.current);
       }
       updateActiveSectionFromView();
       didInitialScroll.current = true;
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [startIndex, jumpToSection, centerContentHorizontally, updateActiveSectionFromView]);
+  }, [startIndex, jumpToSection, centerHorizontallyIfFits, updateActiveSectionFromView]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const observer = new ResizeObserver(() => {
+      if (transformRef.current) {
+        centerHorizontallyIfFits(transformRef.current);
+      }
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [centerHorizontallyIfFits]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -225,18 +236,30 @@ export function ContinuousSetlistViewer({
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const downloadAll = () => {
-    slides.forEach((section) => {
-      (section.imageUrls ?? []).forEach((url, i) => {
-        window.setTimeout(
-          () => downloadFile(
-            url,
-            `${section.songTitle} - ${section.key}${(section.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`,
-          ),
-          i * 300,
-        );
+  const downloadAll = async () => {
+    if (downloading) return;
+    const files = filesFromViewerSlides(slides);
+    if (files.length === 0) {
+      setDownloadError('No chord sheets to download');
+      return;
+    }
+    setDownloading(true);
+    setDownloadError(null);
+    setDownloadProgress(`Saving 0 of ${files.length}`);
+    try {
+      await downloadNamedFiles(files, {
+        onProgress: (done, total) => setDownloadProgress(`Saving ${done} of ${total}`),
       });
-    });
+    } catch (error) {
+      if (error instanceof DownloadCancelledError) {
+        setDownloadError('Choose a folder to save every photo');
+      } else {
+        setDownloadError('Couldn’t save the photos');
+      }
+    } finally {
+      setDownloading(false);
+      setDownloadProgress(null);
+    }
   };
 
   const openListenForSection = (index: number) => {
@@ -265,9 +288,7 @@ export function ContinuousSetlistViewer({
     >
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 pb-2 pt-4">
         <div className="flex min-w-0 items-center gap-2">
-          <button type="button" onClick={onClose} className={controlBtn} aria-label="Close">
-            <X className="h-5 w-5" />
-          </button>
+          <IconButton type="button" onClick={onClose} className={controlBtn} aria-label="Close" icon={X} />
           <div className="min-w-0">
             <p className={cn('truncate text-sm font-bold', viewerTitlePrimary(isDark))}>{title || activeSlide?.songTitle}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
@@ -276,50 +297,79 @@ export function ContinuousSetlistViewer({
               </span>
               {activeSlide && (
                 <span className={cn('truncate text-[11px] font-medium', viewerTitleMuted(isDark))}>
-                  · {activeSlide.songTitle}
+                  · {activeSection + 1}. {activeSlide.songTitle}
                 </span>
               )}
               {isZoomed && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => controlsRef.current?.resetTransform()}
-                  className={viewerZoomBadge(isDark)}
+                  className={cn('h-auto', viewerZoomBadge(isDark))}
                 >
                   {zoomPct}% · Reset
-                </button>
+                </Button>
+              )}
+              {downloadProgress && (
+                <span className={cn('text-[11px] font-medium', viewerTitleMuted(isDark, 'low'))} role="status">
+                  {downloadProgress}
+                </span>
+              )}
+              {downloadError && (
+                <span className={cn('text-[11px] font-medium', viewerTitleMuted(isDark, 'low'))}>
+                  {downloadError}
+                </span>
               )}
             </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
+          <IconButton
             type="button"
             onClick={() => controlsRef.current?.zoomOut(0.35)}
             disabled={scale <= minScale + 0.01}
             className={controlBtn}
             aria-label="Zoom out"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </button>
-          <button
+            icon={ZoomOut}
+          />
+          <IconButton
             type="button"
             onClick={() => controlsRef.current?.zoomIn(0.35)}
             className={controlBtn}
             aria-label="Zoom in"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </button>
-          <button
+            icon={ZoomIn}
+          />
+          <IconButton
             type="button"
             onClick={() => controlsRef.current?.resetTransform()}
             className={cn(controlBtn, 'hidden sm:inline-flex')}
             aria-label="Reset zoom"
-          >
-            <Maximize className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={downloadAll} className={controlBtn} aria-label="Download all">
-            <Download className="h-5 w-5" />
-          </button>
+            icon={Maximize}
+          />
+          {activeSlide && (activeSlide.referenceTracks?.length ?? 0) > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => openListenForSection(activeSection)}
+              className={cn(
+                'setlist-control inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold',
+                viewerListenBtn(isDark, listenSection === activeSection),
+              )}
+            >
+              <Headphones className="h-4 w-4" />
+              Listen
+            </Button>
+          )}
+          <IconButton
+            type="button"
+            onClick={() => void downloadAll()}
+            disabled={downloading}
+            className={controlBtn}
+            aria-label={downloading ? 'Downloading photos' : 'Download photos'}
+            aria-busy={downloading}
+            icon={downloading ? Loader2 : Download}
+            iconClassName={downloading ? 'motion-safe:animate-spin' : undefined}
+          />
         </div>
       </div>
 
@@ -347,14 +397,25 @@ export function ContinuousSetlistViewer({
           onInit={(ref) => {
             transformRef.current = ref;
             window.requestAnimationFrame(() => {
-              centerContentHorizontally(ref);
+              centerHorizontallyIfFits(ref);
             });
           }}
           onPanning={handleTransformChange}
           onZoom={handleTransformChange}
-          onTransformed={(_, state) => {
+          onPanningStop={() => {
+            handleTransformChange();
+            if (transformRef.current) centerHorizontallyIfFits(transformRef.current, 120);
+          }}
+          onZoomStop={() => {
+            if (transformRef.current) centerHorizontallyIfFits(transformRef.current, 120);
+          }}
+          onPinchingStop={() => {
+            if (transformRef.current) centerHorizontallyIfFits(transformRef.current, 120);
+          }}
+          onTransformed={(ref, state) => {
             setScale(state.scale);
             handleTransformChange();
+            centerHorizontallyIfFits(ref);
           }}
         >
           {({ zoomIn, zoomOut, resetTransform, zoomToElement }) => {
@@ -365,19 +426,17 @@ export function ContinuousSetlistViewer({
                 contentClass="!w-fit !max-w-full"
               >
                 <div
-                  className="flex flex-col gap-8 px-3 pb-4 pt-1"
+                  className="px-3 py-4 leading-[0]"
                   style={{ width: contentWidth }}
                 >
+                  <div className="flex flex-col overflow-hidden bg-white shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
                   {slides.map((section, sectionIdx) => {
                     const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
                     return (
                       <section
                         key={`${section.songTitle}-${section.key}-${sectionIdx}`}
                         id={`setlist-section-${sectionIdx}`}
-                        className={cn(
-                          "flex w-full flex-col gap-3",
-                          sectionIdx === 0 && "pt-16",
-                        )}
+                        className="flex w-full flex-col leading-[0]"
                       >
                         <div id={`setlist-anchor-${sectionIdx}`} className="h-0 w-full shrink-0" aria-hidden />
                         <SectionTitleBar
@@ -398,6 +457,7 @@ export function ContinuousSetlistViewer({
                               songTitle={section.songTitle}
                               displayKey={section.key}
                               annotationId={section.annotationId}
+                              className="max-w-none rounded-none border-0"
                             />
                           ))
                         )}
@@ -408,31 +468,32 @@ export function ContinuousSetlistViewer({
                               url={url}
                               pageIndex={pageIdx}
                               songTitle={section.songTitle}
-                              isDark={isDark}
                             />
                           ))
                         ) : (section.textSheets ?? []).length === 0 ? (
-                          <div className={viewerEmptyState(isDark)}>
+                          <div className={cn(viewerEmptyState(isDark), 'rounded-none leading-normal')}>
                             <FileText className={cn('h-8 w-8', isDark ? 'text-white/25' : 'text-muted-foreground/50')} />
                             <p className={cn('text-sm', isDark ? 'text-white/50' : 'text-muted-foreground')}>No chord sheets for this song</p>
                             {hasTracks && (
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={(e) => { e.stopPropagation(); openListenForSection(sectionIdx); }}
                                 className={cn(
-                                  'setlist-control mt-1 inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors',
+                                  'setlist-control mt-1 inline-flex h-auto items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold',
                                   viewerListenBtn(isDark, false),
                                 )}
                               >
                                 <Headphones className="h-4 w-4" />
                                 Play reference track
-                              </button>
+                              </Button>
                             )}
                           </div>
                         ) : null}
                       </section>
                     );
                   })}
+                  </div>
                 </div>
               </TransformComponent>
             );
@@ -440,24 +501,24 @@ export function ContinuousSetlistViewer({
         </TransformWrapper>
       </div>
 
-      <div className={viewerFooter(isDark)}>
-        {listenSection !== null && (() => {
-          const listenSlide = slides[listenSection];
-          const tracks = listenSlide?.referenceTracks;
-          if (!tracks || tracks.length === 0) return null;
-          const activeTrack = tracks[activeTrackIdx] ?? tracks[0];
-          // Name the song once the user has scrolled away from it.
-          const note = [
-            listenSection === activeSection ? null : listenSlide.songTitle,
-            activeTrack.note,
-          ].filter(Boolean).join(' · ');
-          return (
-            <div className="mx-auto w-full max-w-lg space-y-2">
+      {listenSection !== null && (() => {
+        const listenSlide = slides[listenSection];
+        const tracks = listenSlide?.referenceTracks;
+        if (!tracks || tracks.length === 0) return null;
+        const activeTrack = tracks[activeTrackIdx] ?? tracks[0];
+        const note = [
+          listenSection === activeSection ? null : listenSlide.songTitle,
+          activeTrack.note,
+        ].filter(Boolean).join(' · ');
+        return (
+          <div className={cn(viewerFooter(isDark), '!gap-1 !pt-2 !pb-3')}>
+            <div className="mx-auto w-full max-w-lg space-y-1">
               <TrackPicker
                 tracks={tracks}
                 activeIndex={activeTrackIdx}
                 onSelect={setActiveTrackIdx}
                 theme={viewerTheme}
+                compact
               />
               <YoutubePlayerPanel
                 key={activeTrack.url}
@@ -465,32 +526,13 @@ export function ContinuousSetlistViewer({
                 note={note || undefined}
                 enabled
                 theme={viewerTheme}
+                compact
                 onClose={() => setListenSection(null)}
               />
             </div>
-          );
-        })()}
-
-        {slides.length > 1 && (
-          <div className="mx-auto flex w-full max-w-lg gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {slides.map((section, i) => (
-              <button
-                key={`${section.songTitle}-${section.key}-${i}`}
-                type="button"
-                onClick={() => jumpToSection(i)}
-                title={`${section.songTitle} (${section.key})`}
-                className={cn(
-                  'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors',
-                  viewerSongChip(isDark, i === activeSection),
-                )}
-              >
-                {i + 1}. {section.songTitle}
-                {(section.referenceTracks?.length ?? 0) > 0 ? ' ♪' : ''}
-              </button>
-            ))}
           </div>
-        )}
-      </div>
+        );
+      })()}
     </motion.div>
   );
 

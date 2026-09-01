@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useFirestoreDoc } from '@/hooks/use-firestore-doc';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * Two sweeps run per community day (morning + midday catch-up), so the widest
@@ -40,7 +41,15 @@ export function ReminderCronHealth() {
   const t = translations[currentUser?.preferredLanguage || 'en'];
   const { data, loading } = useFirestoreDoc<CronHeartbeat>('config', 'dutyReminderCron');
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-border/60 p-3" role="status" aria-live="polite" aria-busy="true">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-2 h-3 w-64" />
+        <span className="sr-only">{t.loading}</span>
+      </div>
+    );
+  }
 
   const lastRun = data?.lastRunAt?.toDate?.() ?? null;
   const isStale = !lastRun || Date.now() - lastRun.getTime() > STALE_AFTER_MS;

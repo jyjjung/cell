@@ -7,7 +7,7 @@ import { WorshipFormat } from '@/types/ndcpc-ported';
 import { doc } from 'firebase/firestore';
 import { useTranslation } from '@/context/LocaleProvider';
 import { WEEKLY_WORSHIP_FORMAT_ID, resolveServiceSteps } from '@/lib/ndcpc/worship-format';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
 import { WorshipFormatForm } from '@/components/ndcpc/WorshipFormatForm';
 import { WorshipFormatList } from '@/components/ndcpc/WorshipFormatList';
 import {
@@ -39,7 +39,7 @@ export function WorshipFormatManager({ editOpen, onEditOpenChange }: WorshipForm
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />;
   }
 
   const serviceSteps = resolveServiceSteps(weeklyFormat?.items);

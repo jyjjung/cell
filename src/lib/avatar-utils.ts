@@ -89,3 +89,10 @@ export function avatarWithoutBrokenImage(avatar?: AvatarData | null): AvatarData
   }
   return merged;
 }
+
+/** When false, the member cannot change their own avatar from profile settings. Default: enabled. */
+export function canMemberChangeOwnAvatar(
+  avatarChangesEnabled: boolean | undefined,
+): boolean {
+  return avatarChangesEnabled !== false;
+}

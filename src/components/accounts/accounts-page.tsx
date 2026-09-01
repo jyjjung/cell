@@ -2,14 +2,16 @@
 "use client";
 
 import { AppearanceSettings } from '@/components/profile/appearance-settings';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { AccountsHubTabs, isAccountsTabId, type AccountsTabId } from '@/components/accounts/accounts-hub-tabs';
 import { ProfileIdentityCard } from '@/components/profile/profile-identity-card';
 import { UnlockedHalosGrid } from '@/components/profile/unlocked-halos-grid';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { PageSection } from '@/components/ui/page-layout';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { SwitchRow } from '@/components/ui/switch-row';
 import { useAuth } from '@/contexts/auth-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
@@ -20,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
 import type { AvatarCosmeticTier } from '@/lib/avatar-cosmetics';
 import { AVATAR_COSMETIC_TIERS, isHaloTierUnlocked } from '@/lib/avatar-cosmetics';
-import { canMemberChangeOwnAvatar } from '@/lib/avatar-curator';
+import { canMemberChangeOwnAvatar } from '@/lib/avatar-utils';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { sanitizeAvatarData } from '@/lib/avatar-utils';
 import { buildAvatarsPatch, resolveAppUserAvatar, sanitizeNdcpcAvatar, type AvatarAppId } from '@/lib/user-avatars';
@@ -37,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getToken } from 'firebase/messaging';
 import { motion } from 'framer-motion';
-import { AlertTriangle, BellOff, BellRing, Download, Languages, Loader2, LogOut, Send } from 'lucide-react';
+import { AlertTriangle, BellOff, BellRing, Download, Languages, LogOut, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -479,7 +481,7 @@ export function AccountsPage() {
   const renderNotificationButton = useMemo(() => {
     switch (pushSupport) {
       case 'LOADING':
-        return <Button disabled className={pushButtonClass}><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t.checking}</Button>;
+        return <Button disabled className={pushButtonClass}><ButtonSpinner className="mr-2" />{t.checking}</Button>;
       case 'SUPPORTED':
         if (currentUser && (!currentUser.fcmTokens || currentUser.fcmTokens.length === 0)) {
            return <Button className={pushButtonClass} onClick={handleEnableNotifications} disabled={isSubscriptionLoading}><BellRing className="mr-2 h-4 w-4" />{t.enable}</Button>;
@@ -498,8 +500,7 @@ export function AccountsPage() {
     }
   }, [pushSupport, isSubscriptionLoading, handleEnableNotifications, currentUser, t]);
   
-  if (!isMounted || loadingAuth || (!currentUser && isMounted)) return null;
-  if (!currentUser) return null;
+  if (!isMounted || loadingAuth || !currentUser) return <PageLoading />;
 
   return (
     <div className="page-container pb-24">
@@ -586,7 +587,7 @@ export function AccountsPage() {
                     disabled={isSavingBirthday || !birthdayInput}
                     className="sm:w-auto"
                   >
-                    {isSavingBirthday ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isSavingBirthday ? <ButtonSpinner className="mr-2" /> : null}
                     Save birthday
                   </Button>
                 </div>
@@ -633,6 +634,11 @@ export function AccountsPage() {
             <p className="mb-4 text-sm text-muted-foreground">Theme applies to em. and NDC Preschool.</p>
             <AppearanceSettings
               labels={{
+                colorScheme: t.colorScheme,
+                colorSchemeDesc: t.colorSchemeDesc,
+                light: t.appearanceLight,
+                dark: t.appearanceDark,
+                system: t.system,
                 theme: t.theme,
                 themeDesc: t.themeDesc,
               }}
@@ -663,13 +669,13 @@ export function AccountsPage() {
 
             {cellAccess ? (
               <PageSection title="em.">
-                <div className="setting-row sm:items-center">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[length:var(--app-ui-font-sm)] font-medium">{t.communityProgressTitle}</p>
-                    <p className="text-[length:var(--app-ui-font-xs)] text-muted-foreground">{t.communityVisibilityDesc}</p>
-                  </div>
-                  <Switch id="community-progress-switch" checked={showProgress} onCheckedChange={handleProgressToggle} className="shrink-0" />
-                </div>
+                <SwitchRow
+                  id="community-progress-switch"
+                  label={t.communityProgressTitle}
+                  description={t.communityVisibilityDesc}
+                  checked={showProgress}
+                  onCheckedChange={handleProgressToggle}
+                />
               </PageSection>
             ) : null}
 
@@ -738,10 +744,10 @@ export function AccountsPage() {
                 {pushSupport === 'SUPPORTED' && currentUser.fcmTokens && currentUser.fcmTokens.length > 0 && (
                   <div className="stack-gap-sm">
                     <Button onClick={handleTestPush} disabled={isTestingPush} variant="outline" className="w-full rounded-xl" size="sm">
-                      {isTestingPush ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
+                      {isTestingPush ? <ButtonSpinner className="mr-2" /> : <Send className="mr-2 h-4 w-4" />} {t.testPush}
                     </Button>
                     <Button onClick={handleRepairPush} disabled={isSubscriptionLoading} variant="ghost" size="sm" className="w-full rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors">
-                      {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />} {t.repairPushNotifications}
+                      {isSubscriptionLoading ? <ButtonSpinner size="sm" className="mr-2" /> : <AlertTriangle className="mr-2 h-3 w-3" />} {t.repairPushNotifications}
                     </Button>
                   </div>
                 )}
@@ -754,7 +760,7 @@ export function AccountsPage() {
                       size="sm"
                       className="w-full rounded-xl"
                     >
-                      {isSubscriptionLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <AlertTriangle className="mr-2 h-3 w-3" />}
+                      {isSubscriptionLoading ? <ButtonSpinner size="sm" className="mr-2" /> : <AlertTriangle className="mr-2 h-3 w-3" />}
                       {t.repairPushNotifications}
                     </Button>
                   )}
@@ -770,17 +776,17 @@ export function AccountsPage() {
 
             {cellAccess ? (
               <PageSection title="em. notifications">
-                <NotificationPrefRow label="Chat messages" checked={cellNotificationPrefs.chat ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'chat', v)} />
-                <NotificationPrefRow label="Announcements" checked={cellNotificationPrefs.announcements ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'announcements', v)} />
-                <NotificationPrefRow label="Duty reminders" checked={cellNotificationPrefs.dutyReminders ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'dutyReminders', v)} />
+                <SwitchRow id="cell-notif-chat" label="Chat messages" checked={cellNotificationPrefs.chat ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'chat', v)} />
+                <SwitchRow id="cell-notif-announcements" label="Announcements" checked={cellNotificationPrefs.announcements ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'announcements', v)} />
+                <SwitchRow id="cell-notif-duty" label="Duty reminders" checked={cellNotificationPrefs.dutyReminders ?? true} onCheckedChange={(v) => void updateNotificationPref('cell', 'dutyReminders', v)} />
               </PageSection>
             ) : null}
 
             {ndcpcAccess ? (
               <PageSection title="NDC Preschool notifications">
-                <NotificationPrefRow label="Team chat" checked={ndcpcNotificationPrefs.chat ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'chat', v)} />
-                <NotificationPrefRow label="Announcements" checked={ndcpcNotificationPrefs.announcements ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'announcements', v)} />
-                <NotificationPrefRow label="Roster reminders" checked={ndcpcNotificationPrefs.rosterReminders ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'rosterReminders', v)} />
+                <SwitchRow id="ndcpc-notif-chat" label="Team chat" checked={ndcpcNotificationPrefs.chat ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'chat', v)} />
+                <SwitchRow id="ndcpc-notif-announcements" label="Announcements" checked={ndcpcNotificationPrefs.announcements ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'announcements', v)} />
+                <SwitchRow id="ndcpc-notif-roster" label="Roster reminders" checked={ndcpcNotificationPrefs.rosterReminders ?? true} onCheckedChange={(v) => void updateNotificationPref('ndcpc', 'rosterReminders', v)} />
               </PageSection>
             ) : null}
           </>
@@ -797,23 +803,6 @@ export function AccountsPage() {
           notifications: 'Alerts',
         }}
       />
-    </div>
-  );
-}
-
-function NotificationPrefRow({
-  label,
-  checked,
-  onCheckedChange,
-}: {
-  label: string;
-  checked: boolean;
-  onCheckedChange: (value: boolean) => void;
-}) {
-  return (
-    <div className="setting-row sm:items-center">
-      <p className="text-[length:var(--app-ui-font-sm)] font-medium">{label}</p>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} className="shrink-0" />
     </div>
   );
 }

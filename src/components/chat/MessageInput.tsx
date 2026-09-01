@@ -10,6 +10,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/contexts/auth-context';
 import { isIOSLike, preLiftChatComposer } from '@/hooks/use-chat-visual-viewport-vars';
 import {
@@ -34,7 +35,8 @@ import type { ChatMessage, ChatPoll, DocNote } from '@/types';
 import { doc, getDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { AnimatePresence } from 'framer-motion';
-import { ArrowUp, Loader2, Plus, X } from 'lucide-react';
+import { IconButton } from '@/components/ui/icon-button';
+import { ArrowUp, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ChatAttachmentMenu, { type AttachmentPick } from './ChatAttachmentMenu';
@@ -465,39 +467,44 @@ export default function MessageInput({
             <span className="font-semibold text-foreground">Replying:</span>
             <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
           </div>
-          <button type="button" onClick={onCancelReply} className="text-muted-foreground transition-colors hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
+          <IconButton
+            type="button"
+            size="compact"
+            onClick={onCancelReply}
+            aria-label="Cancel reply"
+            icon={X}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          />
         </div>
       )}
       {/* attach | outlined pill field | send — outline only, no opaque fills */}
       <div className="relative flex items-center gap-2 bg-transparent">
         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" multiple className="hidden" />
-        <button
+        <IconButton
           type="button"
           onClick={() => setShowAttachmentMenu((v) => !v)}
           disabled={disabled || isUploading || isSendingDoc}
+          aria-label="Attach"
+          icon={isUploading || isSendingDoc ? ButtonSpinner : Plus}
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-transparent text-foreground transition-colors active:scale-95',
+            'shrink-0 rounded-full border border-border bg-transparent text-foreground',
             showAttachmentMenu && 'border-ring ring-1 ring-ring',
             (isUploading || isSendingDoc) && 'animate-pulse',
           )}
-          aria-label="Attach"
-        >
-          {isUploading || isSendingDoc ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" strokeWidth={2.5} />
-          )}
-        </button>
+        />
 
         <div className="flex min-h-8 flex-1 items-end overflow-hidden rounded-[20px] border border-border bg-transparent px-3 py-2">
           {stagedAttachment && (
             <div className="mb-0.5 mr-2 flex max-w-[120px] shrink-0 items-center gap-1 rounded-full border border-border bg-transparent px-2.5 py-1">
               <span className="truncate text-sm font-medium text-foreground">{stagedAttachment.label}</span>
-              <button type="button" onClick={() => setStagedAttachment(null)} className="text-muted-foreground transition-colors hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
+              <IconButton
+                type="button"
+                size="compact"
+                onClick={() => setStagedAttachment(null)}
+                aria-label="Remove attachment"
+                icon={X}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              />
             </div>
           )}
           <textarea
@@ -513,20 +520,20 @@ export default function MessageInput({
           />
         </div>
 
-        <button
+        <IconButton
           type="button"
           onClick={handleSend}
           disabled={disabled || (!text.trim() && !stagedAttachment) || isUploading || isSendingDoc}
+          aria-label="Send"
+          icon={ArrowUp}
+          variant={!disabled && (text.trim() || stagedAttachment) ? 'default' : 'ghost'}
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all',
+            'shrink-0 rounded-full',
             !disabled && (text.trim() || stagedAttachment)
-              ? 'border border-primary bg-primary text-primary-foreground'
+              ? 'border border-primary'
               : 'border border-border bg-transparent text-muted-foreground',
           )}
-          aria-label="Send"
-        >
-          <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
-        </button>
+        />
 
         <AnimatePresence>
           {showAttachmentMenu && (
@@ -568,7 +575,7 @@ export default function MessageInput({
                 void sendTextAsDocument(text);
               }}
             >
-              {isSendingDoc ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isSendingDoc ? <ButtonSpinner className="mr-2" /> : null}
               {t.sendAsDocument}
             </AlertDialogAction>
           </AlertDialogFooter>

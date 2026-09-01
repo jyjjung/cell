@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { motion } from 'framer-motion';
-import { Link2, Plus, Trash2, ExternalLink, Loader2, Pencil, Check } from 'lucide-react';
-import { NavPageHeader } from '@/components/ui/page-layout';
+import { Link2, Plus, Trash2, ExternalLink, Pencil, Check } from 'lucide-react';
+import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
@@ -127,7 +130,7 @@ function AddEditLinkDialog({
             <Button variant="outline" className="flex-1 rounded-lg" onClick={onClose}>{t.cancel}</Button>
             <Button variant="primary" className="flex-1 rounded-lg"
               onClick={handleSave} disabled={!title.trim() || !url.trim() || saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {saving ? <ButtonSpinner className="mr-2" /> : null}
               {existing ? t.save : t.addLink}
             </Button>
           </div>
@@ -217,17 +220,13 @@ export default function LinksPage() {
       </motion.div>
 
       {loading ? (
-        <div className="empty-inline py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <ListLoadingSkeleton />
       ) : links.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-inline">
-          <Link2 className="mb-2 h-8 w-8 text-muted-foreground/40" />
-          <p className="font-semibold text-foreground">{t.noLinksYet}</p>
-          {isAdmin && editMode && (
-            <p className="text-micro-label mt-1">{t.addFirstLink}</p>
-          )}
-        </motion.div>
+        <EmptyState
+          icon={Link2}
+          title={t.noLinksYet}
+          description={isAdmin && editMode ? t.addFirstLink : undefined}
+        />
       ) : (
         <div className="admin-table-wrap page-responsive-table">
           <Table className="admin-table">
@@ -283,22 +282,19 @@ export default function LinksPage() {
                     {isAdmin && editMode ? (
                       <TableCell className="py-2 whitespace-normal text-right" data-label={t.adminActions}>
                         <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditLink(link)}
-                            className="rounded-md border border-border/60 bg-background p-1.5 hover:text-primary transition-colors"
+                          <IconButton
                             aria-label={t.editLink}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteConfirm(link)}
-                            className="rounded-md border border-border/60 bg-background p-1.5 hover:text-destructive transition-colors"
+                            icon={Pencil}
+                            variant="outline"
+                            onClick={() => setEditLink(link)}
+                          />
+                          <IconButton
                             aria-label={t.removeLink}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                            icon={Trash2}
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(link)}
+                            className="hover:text-destructive"
+                          />
                         </div>
                       </TableCell>
                     ) : null}
@@ -323,7 +319,7 @@ export default function LinksPage() {
           <div className="flex gap-2 mt-3">
             <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setDeleteConfirm(null)}>{t.cancel}</Button>
             <Button variant="destructive" className="flex-1 rounded-lg" onClick={handleDelete} disabled={deleting}>
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} {t.removeLink}
+              {deleting ? <ButtonSpinner className="mr-2" /> : null} {t.removeLink}
             </Button>
           </div>
         </DialogContent>

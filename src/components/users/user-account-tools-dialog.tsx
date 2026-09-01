@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,8 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import type { MergeAccountPicks, MergeFieldPick } from '@/types/user-admin';
 import type { UserProfileData } from '@/types';
-import { Loader2, Mail, Merge, Star, Trash2 } from 'lucide-react';
-
+import { Mail, Merge, Star, Trash2 } from 'lucide-react';
 async function adminFetch(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken(true);
   if (!token) throw new Error('Authentication token not found.');
@@ -378,7 +378,7 @@ export function UserAccountToolsDialog({
 
             <DialogFooter className="px-0">
               <Button type="button" variant="destructive" disabled={!mergeTarget || busy} onClick={runMerge}>
-                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Merge className="mr-2 h-4 w-4" />}
+                {busy ? <ButtonSpinner className="mr-2" /> : <Merge className="mr-2 h-4 w-4" />}
                 Merge into account A
               </Button>
             </DialogFooter>

@@ -2,16 +2,18 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useNotifications } from '@/hooks/use-notifications';
 import NotificationAdminForm from '@/components/admin/notification-admin-form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Send, Trash2, Megaphone } from 'lucide-react';
+import { Send, Trash2, Megaphone } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
-import { PageHeader } from '@/components/ui/page-layout';
+import { EmptyState, PageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 
@@ -69,7 +71,7 @@ export default function AdminNotificationsPage() {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" disabled={isDeletingAll || loading || announcements.length === 0}>
-                {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                {isDeletingAll ? <ButtonSpinner className="mr-2" /> : <Trash2 className="mr-2 h-4 w-4" />}
                 {t.adminDeleteAll}
               </Button>
             </AlertDialogTrigger>
@@ -89,15 +91,9 @@ export default function AdminNotificationsPage() {
         </div>
 
         {loading ? (
-          <div className="empty-inline gap-3">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <p className="text-micro-label">{t.loading}</p>
-          </div>
+          <ListLoadingSkeleton />
         ) : announcements.length === 0 ? (
-          <div className="empty-inline border border-dashed border-border/50 rounded-2xl">
-            <Megaphone className="h-8 w-8 mb-2 opacity-40" />
-            <p className="text-micro-label">{t.adminNoAnnouncements}</p>
-          </div>
+          <EmptyState icon={Megaphone} title={t.adminNoAnnouncements} />
         ) : (
           <div className="admin-table-wrap">
             <Table className="admin-table">

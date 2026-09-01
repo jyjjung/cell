@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,8 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, LogIn } from 'lucide-react';
-
+import { LogIn } from 'lucide-react';
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(1, { message: "Password is required." }),
@@ -96,7 +96,7 @@ export default function LoginForm({ redirectTo = '/' }: { redirectTo?: string })
 
         <Button type="submit" className="w-full text-base py-6" disabled={isLoading}>
           {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <ButtonSpinner className="mr-2" />
           ) : (
             <LogIn className="mr-2 h-4 w-4" />
           )}

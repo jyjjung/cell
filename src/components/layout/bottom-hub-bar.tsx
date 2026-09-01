@@ -39,10 +39,10 @@ export function BottomHubBar({
   );
 }
 
-/** Figma hub tab: active = primary icon + foreground label; inactive = muted. */
+/** Hub tab: ≥44px hit target, aria-current on active tab (HIG). */
 export function bottomHubTabClass(active: boolean) {
   return cn(
-    "flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 transition-colors text-[10px] font-medium",
+    "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 touch-manipulation transition-colors text-[11px] font-medium",
     active
       ? "text-foreground"
       : "text-muted-foreground hover:text-foreground hover:bg-accent/50",

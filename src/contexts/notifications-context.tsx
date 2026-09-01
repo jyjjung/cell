@@ -281,7 +281,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         orderBy('createdAt', 'desc'),
         limit(NOTIFICATION_QUERY_LIMITS.announcements),
       );
-      // Globals (birthdays, memory verses) are isGlobal but not always type=announcement.
+      // Globals (e.g. birthdays) are isGlobal but not always type=announcement.
       // Must match server badge queries or icon badges disagree with the in-app list.
       const globalsQuery = query(
         collection(db, NOTIFICATIONS_COLLECTION),

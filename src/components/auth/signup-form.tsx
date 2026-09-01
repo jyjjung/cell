@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,8 +12,7 @@ import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, UserPlus } from 'lucide-react';
-
+import { UserPlus } from 'lucide-react';
 const signupFormSchema = z.object({
   firstName: z.string().min(1, { message: "First name is required." }),
   lastName: z.string().min(1, { message: "Last name is required." }),
@@ -141,7 +141,7 @@ export default function SignupForm() {
         )}
         <Button type="submit" className="w-full text-base py-6" disabled={isLoading}>
           {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <ButtonSpinner className="mr-2" />
           ) : (
             <UserPlus className="mr-2 h-4 w-4" />
           )}

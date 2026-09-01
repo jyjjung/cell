@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, UserCheck, UserPlus, UserX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   Dialog,
   DialogContent,
@@ -67,27 +68,27 @@ export function RosterRoleSlotRow({
                 {person.isMember ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
                 {formatNameString(person.displayName, 'Guest')}
                 {canManage && onRemove ? (
-                  <button
+                  <IconButton
                     type="button"
                     onClick={() => onRemove(index)}
-                    className="ml-0.5 hover:text-destructive transition-colors"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
+                    className="ml-0.5 hover:text-destructive"
+                    aria-label={`Remove ${person.displayName}`}
+                    icon={X}
+                    iconClassName="h-2.5 w-2.5"
+                  />
                 ) : null}
               </span>
             ))
           )}
         </div>
         {canManage && onAdd ? (
-          <button
+          <IconButton
             type="button"
             onClick={onAdd}
-            className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground/40 hover:text-primary transition-colors"
-            title="Add member"
-          >
-            <UserPlus className="h-4 w-4" />
-          </button>
+            className="shrink-0 rounded-lg text-muted-foreground/40 hover:bg-muted hover:text-primary"
+            aria-label="Add member"
+            icon={UserPlus}
+          />
         ) : null}
       </div>
     </div>
@@ -166,13 +167,14 @@ export function MemberGuestPickerDialog({
                 filteredMembers.map((member) => {
                   const already = assigned.has(member.uid);
                   return (
-                    <button
+                    <Button
                       key={member.uid}
                       type="button"
+                      variant="ghost"
                       disabled={already}
                       onClick={() => onSelectMember(member)}
                       className={cn(
-                        'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-sm transition-all',
+                        'h-auto w-full items-center justify-start gap-3 px-3 py-2 rounded-xl text-left text-sm',
                         already
                           ? 'opacity-40 cursor-not-allowed bg-muted'
                           : 'hover:bg-muted hover:border-border border border-transparent',
@@ -183,7 +185,7 @@ export function MemberGuestPickerDialog({
                       {already ? (
                         <span className="ml-auto text-[10px] text-muted-foreground/40">added</span>
                       ) : null}
-                    </button>
+                    </Button>
                   );
                 })
               )}

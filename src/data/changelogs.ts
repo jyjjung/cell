@@ -7,6 +7,34 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.4',
+    subtitle: 'Reading plan & polish',
+    date: 'September 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Reading plan progress, pace stats, and weekly breakdown are easier to scan on one screen.',
+      },
+      {
+        type: 'Improved',
+        text: 'The reading leaderboard is easier to scan — search members and see progress against passages due through today.',
+      },
+      {
+        type: 'Added',
+        text: 'You can download pasted text charts from a setlist, including note markings saved on that song.',
+      },
+      {
+        type: 'Improved',
+        text: 'Home groups your schedule, reading, and notices so the page is easier to scan.',
+      },
+      {
+        type: 'Changed',
+        text: 'Memory verses and the separate full-plan page are gone — use Reading plan and the leaderboard.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.15.4',
     subtitle: 'Stability',
     date: 'August 23, 2026',

@@ -48,8 +48,9 @@
     --spinner-duration: 900ms;
     --loading-fade-duration: 220ms;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     --app-card-padding-sm: 0.875rem;
+    color-scheme: light;
 
     /* Charts — harmonic set from Classic accent */
     --chart-1: 221 83% 48%;
@@ -67,22 +68,25 @@
 
     --route-accent: 221 83% 48%;
 
-    --app-font-family: var(--font-geist-sans), system-ui, sans-serif;
+    /* System UI stack: SF (Apple), Segoe UI (Windows), Roboto (Android), Noto (Linux). */
+    --app-font-system: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    --app-font-family: var(--app-font-system);
     --app-font-size-scale: 1;
-    --app-line-height: 1.5;
+    --app-line-height: 1.47;
     --app-letter-spacing: 0;
     --app-density-gap: 1;
     --app-section-gap: calc(1.5rem * var(--app-density-gap, 1));
     --app-inner-gap: calc(0.625rem * var(--app-density-gap, 1));
     --app-stack-tight: calc(0.375rem * var(--app-density-gap, 1));
-    --app-card-padding: calc(0.875rem * var(--app-density-gap, 1));
+    --app-card-padding: calc(1rem * var(--app-density-gap, 1));
     --app-card-padding-sm: 0.875rem;
-    --app-ui-font-sm: 0.875rem;
-    --app-ui-font-xs: 0.75rem;
-    --app-ui-font-base: 1rem;
-    --app-control-height-sm: 2.25rem;
+    --app-ui-font-sm: 0.9375rem;
+    --app-ui-font-xs: 0.8125rem;
+    --app-ui-font-base: 1.0625rem;
+    --app-control-height-sm: 2.75rem;
     --app-control-height-md: 2.75rem;
     --app-control-height-lg: 3rem;
+    --hit-min: 2.75rem;
     --font-literata: ui-serif, Georgia, "Times New Roman", serif;
     --bible-font-family: var(--font-literata), ui-serif, Georgia, "Times New Roman", serif;
     --bible-font-size: 1.06rem;
@@ -149,10 +153,9 @@
     --sidebar-ring: 221 83% 70%;
 
     --route-accent: 221 83% 62%;
+    color-scheme: dark;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -164,20 +167,19 @@
     overflow-x: hidden;
     overscroll-behavior-y: none;
     font-size: calc(16px * var(--app-font-size-scale, 1));
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply text-foreground;
     background-color: hsl(var(--background));
     background-image:
-      radial-gradient(ellipse 90% 55% at 8% -18%, hsl(var(--primary) / 0.12), transparent 55%),
-      radial-gradient(ellipse 70% 45% at 100% 0%, hsl(var(--chart-2) / 0.1), transparent 52%),
-      radial-gradient(ellipse 55% 40% at 70% 110%, hsl(var(--chart-3) / 0.08), transparent 50%);
-    font-family: var(--app-font-family, var(--font-geist-sans), system-ui, sans-serif);
-    font-size: 1rem;
-    line-height: var(--app-line-height, 1.5);
+      radial-gradient(ellipse 80% 40% at 50% -20%, hsl(var(--primary) / 0.06), transparent 58%);
+    font-family: var(--app-font-family, var(--app-font-system), sans-serif);
+    font-size: var(--app-ui-font-base, 1.0625rem);
+    line-height: var(--app-line-height, 1.47);
     letter-spacing: var(--app-letter-spacing, 0);
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -188,9 +190,7 @@
 
   .dark body {
     background-image:
-      radial-gradient(ellipse 90% 55% at 8% -18%, hsl(var(--primary) / 0.16), transparent 55%),
-      radial-gradient(ellipse 70% 45% at 100% 0%, hsl(var(--chart-2) / 0.12), transparent 52%),
-      radial-gradient(ellipse 55% 40% at 70% 110%, hsl(var(--chart-3) / 0.1), transparent 50%);
+      radial-gradient(ellipse 80% 40% at 50% -20%, hsl(var(--primary) / 0.1), transparent 58%);
   }
 
   h1,
@@ -200,31 +200,43 @@
   h5,
   h6 {
     @apply font-semibold tracking-tight text-foreground;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.022em;
   }
 
   h1 {
-    @apply text-2xl md:text-3xl;
+    font-size: 1.75rem;
+    line-height: 1.2;
   }
 
   h2 {
-    @apply text-xl md:text-2xl;
+    font-size: 1.375rem;
+    line-height: 1.25;
   }
 
   h3 {
-    @apply text-lg md:text-xl;
+    font-size: 1.25rem;
+    line-height: 1.3;
   }
 
   h4 {
-    @apply text-base md:text-lg;
+    font-size: 1.0625rem;
+    line-height: 1.35;
   }
 
   p {
-    @apply text-sm leading-relaxed text-muted-foreground;
+    font-size: 1.0625rem;
+    line-height: 1.47;
+    color: hsl(var(--muted-foreground));
   }
 
   small {
-    @apply text-xs font-medium text-muted-foreground;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
   }
 
   /* Prevent iOS Safari zoom on focus when font-size would be < 16px */
@@ -276,50 +288,79 @@
 
 @layer components {
 
-  /* ── Typography ── */
+  /* ── Typography (HIG text styles, rem-based for user text size) ── */
   .text-hero {
-    @apply text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-foreground;
+    @apply font-semibold tracking-tight leading-tight text-foreground;
+    font-size: 2.125rem;
+    letter-spacing: -0.025em;
   }
 
-  .text-page-title {
-    @apply text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem];
+  .text-page-title,
+  .home-greeting-title {
+    @apply font-semibold tracking-tight text-foreground;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.022em;
   }
 
   .text-section-title {
-    @apply text-sm font-semibold tracking-tight text-foreground;
+    @apply font-semibold tracking-tight text-foreground;
+    font-size: 1.0625rem;
   }
 
   .text-eyebrow {
-    @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+    @apply font-medium uppercase text-muted-foreground;
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
   }
 
   .text-stat-value {
-    @apply text-2xl font-semibold tracking-tight tabular-nums text-foreground;
+    @apply font-semibold tracking-tight tabular-nums text-foreground;
+    font-size: 1.75rem;
   }
 
   .text-stat-value-sm {
-    @apply text-xl font-bold tracking-tight tabular-nums text-foreground;
+    @apply font-semibold tracking-tight tabular-nums text-foreground;
+    font-size: 1.375rem;
   }
 
   .text-stat-label {
-    @apply text-xs text-muted-foreground leading-relaxed;
+    @apply text-muted-foreground leading-relaxed;
+    font-size: 0.8125rem;
   }
 
   .text-passage-ref {
-    @apply whitespace-nowrap font-mono text-xs text-muted-foreground;
+    @apply whitespace-nowrap font-mono text-muted-foreground;
+    font-size: 0.8125rem;
   }
 
   .text-micro-label {
-    @apply text-xs font-medium text-muted-foreground;
+    @apply font-medium text-muted-foreground;
+    font-size: 0.8125rem;
   }
 
   .text-body-hero {
-    @apply text-sm text-muted-foreground leading-relaxed md:text-base;
+    @apply text-muted-foreground;
+    font-size: 1.0625rem;
+    line-height: 1.47;
   }
 
   /* ── Page rhythm ── */
   .page-shell {
-    @apply w-full min-h-full px-5 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5;
+    @apply w-full min-h-full;
+    padding-top: 1rem;
+    padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+    padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .page-shell {
+      padding-top: 1.25rem;
+      padding-right: max(2rem, env(safe-area-inset-right, 0px));
+      padding-bottom: 2rem;
+      padding-left: max(2rem, env(safe-area-inset-left, 0px));
+    }
   }
 
   @keyframes permission-banner-in {
@@ -338,7 +379,165 @@
   }
 
   .page-container {
-    @apply relative mx-auto flex w-full max-w-3xl flex-col gap-7 pb-24;
+    @apply relative mx-auto flex w-full max-w-3xl flex-col gap-5 pb-24;
+  }
+
+  /** Vertical rhythm between major page blocks (header, grouped sections, footer controls). */
+  .page-flow {
+    @apply flex flex-col gap-5;
+  }
+
+  /** Page title row — shared inset with grouped section eyebrows. */
+  .page-header {
+    @apply px-1;
+  }
+
+  /* ── Home: grouped inset lists (HIG Settings / Calendar style) ── */
+  .home-flow {
+    @apply page-flow;
+  }
+
+  .home-greeting {
+    @apply page-header flex flex-col gap-1;
+  }
+
+  .home-group {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .home-group-header {
+    @apply flex items-center justify-between gap-2 px-4;
+  }
+
+  .home-group-action {
+    @apply -mr-2 h-8 gap-0.5 px-2 text-xs font-medium text-primary;
+  }
+
+  .home-group-list {
+    @apply flex flex-col divide-y divide-border/60;
+  }
+
+  .home-group-list-flush > div:first-child .home-group-subhead {
+    @apply border-t-0;
+  }
+
+  .home-group-subhead {
+    @apply border-t border-b border-border/60 bg-muted/30 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground;
+  }
+
+  .home-group-nav-row {
+    @apply flex min-h-11 items-center gap-3 px-4 py-2 text-left touch-manipulation transition-colors hover:bg-muted/40 active:bg-muted/60;
+  }
+
+  .home-bible-progress {
+    @apply space-y-1.5 border-b border-border/60 px-4 py-2;
+  }
+
+  .home-bible-progress-meta {
+    @apply text-micro-label;
+  }
+
+  .home-bible-hero {
+    @apply border-b border-border/50 px-4 pb-3 pt-3;
+  }
+
+  .home-bible-week-row {
+    @apply mb-3;
+  }
+
+  .home-bible-week {
+    @apply text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .home-bible-hero-main {
+    @apply flex items-end justify-between gap-4;
+  }
+
+  .home-bible-day-block {
+    @apply min-w-0 space-y-0.5;
+  }
+
+  .home-bible-day {
+    @apply text-[1.375rem] font-bold uppercase leading-none tracking-tight text-foreground;
+  }
+
+  .home-bible-date {
+    @apply text-[0.9375rem] leading-tight text-muted-foreground;
+  }
+
+  .home-bible-pace {
+    @apply pt-1 text-[0.6875rem] text-muted-foreground/80;
+  }
+
+  .home-bible-ring-block {
+    @apply flex shrink-0 flex-col items-center gap-1;
+  }
+
+  .home-bible-ratio {
+    @apply text-[0.6875rem] font-medium tabular-nums text-muted-foreground;
+  }
+
+  .home-reading-table,
+  .reading-check-table {
+    @apply flex flex-col divide-y divide-border/45;
+  }
+
+  .home-reading-list {
+    @apply divide-y divide-border/40;
+  }
+
+  .home-reading-row,
+  .reading-check-row {
+    @apply flex min-h-10 items-center gap-2.5 px-4 py-1.5 touch-manipulation;
+  }
+
+  .home-reading-row-done,
+  .reading-check-row-done {
+    @apply opacity-55;
+  }
+
+  .home-reading-row-label,
+  .reading-check-row-label {
+    @apply min-w-0 flex-1 truncate text-left text-[0.8125rem] font-medium leading-tight text-foreground;
+  }
+
+  .home-reading-row-lead,
+  .reading-check-row-lead {
+    @apply mr-1 text-[0.6875rem] font-normal uppercase tracking-wide text-muted-foreground;
+  }
+
+  .home-reading-row-label:hover,
+  .reading-check-row-label:hover {
+    @apply text-primary;
+  }
+
+  .home-reading-row-label:focus-visible,
+  .reading-check-row-label:focus-visible {
+    @apply rounded outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  .home-bible-footer {
+    @apply border-t border-border/45;
+  }
+
+  .home-bible-footer-link {
+    @apply flex min-h-11 w-full items-center justify-center gap-1 px-4 py-2 text-sm font-medium text-primary touch-manipulation hover:bg-muted/40 active:bg-muted/60;
+  }
+
+  .home-bible-empty {
+    @apply px-4 py-2.5 text-micro-label;
+  }
+
+  .home-group-empty {
+    @apply flex flex-col items-center px-4 py-8 text-center;
+  }
+
+  .home-notice-row {
+    @apply space-y-1 px-4 py-3;
+  }
+
+  .home-you-badge {
+    @apply inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground;
   }
 
   .page-container-narrow {
@@ -406,6 +605,7 @@
 
   .ui-list-item {
     @apply flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/40;
+    min-height: var(--hit-min, 2.75rem);
   }
 
   .event-row {
@@ -470,7 +670,12 @@
   }
 
   .app-header-bar {
-    @apply grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-5;
+    @apply flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background;
+    min-height: 3.5rem;
+    height: calc(3.5rem + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
   }
 
   .app-sidebar-header {
@@ -482,11 +687,9 @@
   }
 
   .app-footer-bar {
-    @apply flex h-[4.5rem] shrink-0 items-center border-t border-border/50;
-  }
-
-  .app-sidebar-footer {
-    @apply app-footer-bar mt-auto border-t border-border bg-card px-2;
+    @apply flex shrink-0 items-center border-t border-border/50;
+    min-height: 4.5rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .app-main-footer {
@@ -506,7 +709,8 @@
   }
 
   .hub-tabs {
-    @apply border-t border-border/80 bg-background/90 px-3 py-2 shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] backdrop-blur-md;
+    @apply border-t border-border/80 bg-background px-3 py-2;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   .stack-gap-lg {
@@ -550,7 +754,7 @@
 
   /* Admin */
   .admin-page {
-    @apply relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-0 pb-24;
+    @apply relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-0 pb-8;
   }
 
   .admin-table-wrap {
@@ -676,10 +880,49 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .animate-halo-spin,
   .animate-halo-spin-slow,
-  .animate-halo-spin-reverse {
-    animation: none;
+  .animate-halo-spin-reverse,
+  .animate-pulse-subtle,
+  .animate-permission-banner,
+  .motion-safe\:animate-spin {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ui-scrim,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: hsl(var(--background) / 0.96) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .text-muted-foreground {
+    color: hsl(var(--foreground) / 0.78);
+  }
+
+  .border-border,
+  .border {
+    border-color: hsl(var(--foreground) / 0.4);
   }
 }
 
@@ -772,6 +1015,58 @@
 }
 
 @layer utilities {
+  /* Layout-sized 44px control (toolbars, list rows, form submit). */
+  .hit-min {
+    min-height: var(--hit-min, 2.75rem);
+    min-width: var(--hit-min, 2.75rem);
+  }
+
+  /*
+   * Expand the tappable region to 44×44 without growing the drawn control.
+   * Only use where neighbors are far enough away (toolbars, form rows).
+   * Never on stacked chat reactions/actions — overflowing overlays overlap.
+   */
+  .hit-expand {
+    position: relative;
+    overflow: visible;
+  }
+
+  .hit-expand::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--hit-min, 2.75rem);
+    height: var(--hit-min, 2.75rem);
+    transform: translate(-50%, -50%);
+  }
+
+  .ui-loading-region[aria-busy='true'] {
+    pointer-events: none;
+  }
+
+  .ui-loading-region[aria-busy='true'] > :not([role='status']) {
+    opacity: 0.55;
+  }
+
+  .skip-to-content {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    z-index: 100;
+    transform: translateY(-150%);
+    border-radius: 0.75rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 0.625rem 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .skip-to-content:focus {
+    transform: translateY(0);
+  }
+
   /* Improve legacy hard-coded white borders in both themes */
   .border-white\/5 {
     border-color: hsl(var(--border) / 0.55) !important;
@@ -907,8 +1202,14 @@
 }
 
 html[data-glass="off"] .ui-scrim {
-  backdrop-filter: blur(18px) saturate(1.35) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(1.35) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: hsl(var(--foreground) / 0.32) !important;
+}
+
+.dark html[data-glass="off"] .ui-scrim,
+html[data-glass="off"] .dark .ui-scrim {
+  background-color: hsl(0 0% 0% / 0.48) !important;
 }
 
 /* TipTap editor placeholder */

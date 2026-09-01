@@ -20,9 +20,11 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { ChatMessageGroupView } from '@/components/ndcpc/ChatMessageBubble';
-import { LoadingState } from '@/components/ndcpc/LoadingState';
+import { LoadingState } from '@/components/ui/loading-state';
+import { EmptyState } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/context/LocaleProvider';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 import {
   getChatMessageGroups,
@@ -288,7 +290,7 @@ export function ChatRoom() {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 items-center justify-center">
-          <LoadingState />
+          <LoadingState isLoading delayMs={0} variant="skeleton" skeletonRows={4} />
         </div>
       </div>
     );
@@ -315,7 +317,7 @@ export function ChatRoom() {
         className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-2 py-3 [-webkit-overflow-scrolling:touch] sm:px-3"
       >
         {!messages || messages.length === 0 ? (
-          <p className="pt-12 text-center text-sm text-muted-foreground">{t('chat.empty')}</p>
+          <EmptyState title={t('chat.empty')} />
         ) : (
           <div>
             {getChatMessageGroups(messages).map((group) => {
@@ -379,14 +381,12 @@ export function ChatRoom() {
                 {replyTo.text || t('chat.messageDeleted')}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setReplyTo(null)}
-              className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            <IconButton
               aria-label={t('chat.cancelReply')}
-            >
-              <X className="h-4 w-4" />
-            </button>
+              icon={X}
+              onClick={() => setReplyTo(null)}
+              className="shrink-0 rounded-full text-muted-foreground"
+            />
           </div>
         ) : null}
 
@@ -408,19 +408,18 @@ export function ChatRoom() {
               className="max-h-[100px] min-h-6 w-full resize-none bg-transparent py-0.5 text-base leading-snug outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <button
+          <IconButton
             type="submit"
             disabled={!canSend}
             aria-label={t('chat.send')}
+            icon={ArrowUp}
+            variant={canSend ? 'default' : 'ghost'}
             className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors',
-              canSend
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
+              'shrink-0 rounded-full',
+              !canSend && 'bg-muted text-muted-foreground',
             )}
-          >
-            <ArrowUp className="h-5 w-5 stroke-[2.5]" />
-          </button>
+            iconClassName="stroke-[2.5]"
+          />
         </form>
       </div>
     </div>

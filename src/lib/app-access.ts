@@ -229,7 +229,6 @@ export function resolveActiveApp(pathname: string): CommunityAppId | null {
 export function isShellPath(pathname: string): boolean {
   return (
     pathname === '/' ||
-    pathname === '/apps' ||
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
@@ -298,8 +297,7 @@ export function isLegacyCellPath(pathname: string): boolean {
   ) {
     return false;
   }
-  const publicPrefixes = ['/features'];
-  return !publicPrefixes.some((p) => pathname.startsWith(p));
+  return true;
 }
 
 export function cellPath(path: string): string {

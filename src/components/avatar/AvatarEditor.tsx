@@ -2,6 +2,7 @@
 "use client";
 
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/auth-context';
@@ -15,10 +16,11 @@ import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
 import { cn } from '@/lib/utils';
 import type { AvatarData, AvatarMode } from '@/types';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { Crop, Dog, Eraser, Image as ImageIcon, Loader2, RefreshCw, Type, Upload, User } from 'lucide-react';
+import { Crop, Dog, Eraser, Image as ImageIcon, RefreshCw, Type, Upload, User } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import { Button } from '../ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '../ui/input';
 import { PixelAvatar } from './PixelAvatar';
 function BackgroundSelector({
@@ -32,21 +34,28 @@ function BackgroundSelector({
     const isNone = bgKey === 'none';
     const stops = gradient.stops.map((s) => `${s.color} ${s.offset}`).join(', ');
 
-    return (
-        <button
-            type="button"
+    return isNone ? (
+        <IconButton
+            aria-label={`Set background to ${bgKey}`}
+            icon={Eraser}
             className={cn(
-                "h-10 w-10 rounded-full border-2 transition-all hover:scale-110 flex items-center justify-center overflow-hidden bg-muted/20 shrink-0",
+                "rounded-full border-2",
                 currentData.backgroundColor === bgKey ? 'border-primary ring-2 ring-primary/40' : 'border-border'
             )}
-            style={isNone ? undefined : { background: `linear-gradient(to bottom, ${stops})` }}
+            onClick={() => onDataChange({ ...currentData, backgroundColor: bgKey })}
+        />
+    ) : (
+        <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+                "rounded-full border-2 p-0",
+                currentData.backgroundColor === bgKey ? 'border-primary ring-2 ring-primary/40' : 'border-border'
+            )}
+            style={{ background: `linear-gradient(to bottom, ${stops})` }}
             onClick={() => onDataChange({ ...currentData, backgroundColor: bgKey })}
             aria-label={`Set background to ${bgKey}`}
-        >
-            {isNone ? (
-                <Eraser className="h-5 w-5 text-muted-foreground" />
-            ) : null}
-        </button>
+        />
     );
   };
 
@@ -83,10 +92,11 @@ function CustomBuilderControls({
   onDataChange: (data: AvatarData) => void,
 }) {
   const ColorSwatch = ({ color, field, value }: { color: string, field: keyof AvatarData, value: string }) => (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       className={cn(
-        "h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 shrink-0",
+        "rounded-full border-2 p-0 shrink-0",
         currentData[field] === value ? 'border-primary ring-2 ring-primary/20' : 'border-border'
       )}
       style={{ backgroundColor: color }}
@@ -408,7 +418,7 @@ function ImageUploadControls({
                     >
                         {isUploading ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin relative z-10" />
+                                <ButtonSpinner className="mr-2" />
                                 <span className="relative z-10">Uploading {Math.round(uploadProgress)}%</span>
                                 <div 
                                     className="absolute top-0 left-0 bottom-0 bg-primary/30 z-0 transition-all duration-300" 
@@ -454,7 +464,7 @@ function ImageUploadControls({
                         className="rounded-2xl h-14 px-8 font-semibold"
                     >
                         {isLoadingExisting ? (
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            <ButtonSpinner size="md" className="mr-2" />
                         ) : (
                             <Crop className="mr-2 h-5 w-5" />
                         )}

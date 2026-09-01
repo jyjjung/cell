@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import Cropper, { type Area } from 'react-easy-crop';
-import { Crop, Loader2, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Crop, Upload } from 'lucide-react';import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -197,7 +197,7 @@ export function NdcpcPhotoAvatarEditor({ value, onChange }: NdcpcPhotoAvatarEdit
           <Button onClick={handleUpload} disabled={isUploading} className="flex-1 rounded-xl font-semibold relative overflow-hidden">
             {isUploading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin relative z-10" />
+                <ButtonSpinner className="mr-2" />
                 <span className="relative z-10">Uploading {Math.round(uploadProgress)}%</span>
               </>
             ) : (
@@ -238,7 +238,7 @@ export function NdcpcPhotoAvatarEditor({ value, onChange }: NdcpcPhotoAvatarEdit
         {hasPhoto ? (
           <Button onClick={() => void handleAdjustExisting()} disabled={isLoadingExisting} className="rounded-xl">
             {isLoadingExisting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <ButtonSpinner className="mr-2" />
             ) : (
               <Crop className="mr-2 h-4 w-4" />
             )}

@@ -161,11 +161,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /memoryVerses/{verseId} {
-      allow read: if request.auth != null;
-      allow write: if isAppAdmin(request.auth.uid);
-    }
-    
     match /qtRosters/{rosterId} {
       allow read: if request.auth != null;
       allow write: if isAppAdmin(request.auth.uid);

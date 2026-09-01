@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { LayoutGate } from "@/components/layout/layout-gate";
+import { AdminBackButton } from "@/components/admin/admin-back-button";
 
 export default function AdminLayout({
   children,
@@ -21,33 +21,23 @@ export default function AdminLayout({
   }, []);
 
   useEffect(() => {
-    // If auth is loaded, user is not an admin, and they are on a protected sub-page,
-    // redirect them to the admin login page.
     if (isMounted && !loadingAuth && !isAdmin && pathname !== '/admin') {
       router.push("/admin");
     }
   }, [isAdmin, loadingAuth, router, isMounted, pathname]);
 
-  // Show a loader while authentication is in progress.
-  if (!isMounted || loadingAuth) {
-    return (
-        <div className="flex h-96 items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+  const loading = !isMounted || loadingAuth;
+  const ready = isAdmin || pathname === '/admin';
+  const showBack = pathname !== '/admin';
+
+  return (
+    <LayoutGate loading={loading} ready={ready} label="Loading admin">
+      {showBack ? (
+        <div className="mx-auto w-full max-w-5xl px-[var(--page-padding-x,1rem)] pt-4">
+          <AdminBackButton />
         </div>
-    );
-  }
-
-  // If the user is not an admin and is trying to access a protected page,
-  // show a loader while the redirect (from useEffect) happens.
-  // This prevents flashing the page content before redirecting.
-  if (!isAdmin && pathname !== '/admin') {
-      return (
-          <div className="flex h-96 items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </div>
-      );
-  }
-
-  // If the user is an admin OR they are on the admin login page, show the content.
-  return <>{children}</>;
+      ) : null}
+      {children}
+    </LayoutGate>
+  );
 }

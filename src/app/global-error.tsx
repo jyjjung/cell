@@ -78,8 +78,10 @@ export default function GlobalError({
             <button
               type="button"
               onClick={handleTryAgain}
+              className="hit-min"
               style={{
                 padding: '8px 14px',
+                minHeight: 44,
                 borderRadius: 8,
                 border: 'none',
                 background: '#fafafa',
@@ -94,9 +96,10 @@ export default function GlobalError({
               onClick={() => {
                 window.location.href = '/';
               }}
+              className="hit-min"
               style={{
                 padding: '8px 14px',
-                borderRadius: 8,
+                minHeight: 44,
                 border: '1px solid #444',
                 background: 'transparent',
                 color: '#fafafa',

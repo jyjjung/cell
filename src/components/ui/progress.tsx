@@ -1,9 +1,7 @@
-
 "use client"
 
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
-import { motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 
@@ -14,13 +12,14 @@ const Progress = React.forwardRef<
   <ProgressPrimitive.Root
     ref={ref}
     className={cn(
-      "relative h-2 w-full overflow-hidden rounded-full bg-secondary",
+      "relative h-2 w-full overflow-hidden rounded-full bg-muted",
       className
     )}
+    aria-valuenow={value ?? undefined}
     {...props}
   >
-    <motion.div
-      className="h-full w-full flex-1 bg-gradient-to-r from-primary via-chart-2 to-chart-3"
+    <ProgressPrimitive.Indicator
+      className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out motion-reduce:transition-none"
       style={{ width: `${value || 0}%` }}
     />
   </ProgressPrimitive.Root>
@@ -28,5 +27,3 @@ const Progress = React.forwardRef<
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }
-
-    

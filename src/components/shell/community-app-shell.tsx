@@ -18,14 +18,12 @@ export function CommunityAppShell({
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="sticky top-0 z-40 border-b border-border/40 bg-background/95 backdrop-blur">
-        <div className="grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4">
-          <Link href="/" className="min-w-0 truncate text-sm font-semibold tracking-tight justify-self-start">
+        <div className="app-header-bar">
+          <Link href="/" className="min-w-0 truncate text-sm font-semibold tracking-tight">
             {title}
           </Link>
-          <div className="justify-self-center">
+          <div className="flex shrink-0 items-center gap-2">
             <AppSwitcher />
-          </div>
-          <div className="justify-self-end">
             <Button variant="ghost" size="sm" onClick={onSignOut} className="shrink-0">
               <LogOut className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign out</span>

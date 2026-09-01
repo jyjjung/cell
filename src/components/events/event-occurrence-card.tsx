@@ -3,6 +3,7 @@
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { type EventOccurrenceRow } from "@/lib/event-occurrences";
 import { ScheduleRowDate, ScheduleRowTime } from "@/components/schedule/schedule-occurrence-row";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { EventCategory } from "@/types";
 import { AnimatePresence, motion } from "framer-motion";
@@ -39,8 +40,9 @@ export default function EventOccurrenceCard({
       transition={{ duration: 0.2, delay: index * 0.02 }}
       key={row.occurrenceKey}
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => {
           if (onCardClick) {
             onCardClick(row);
@@ -48,7 +50,7 @@ export default function EventOccurrenceCard({
           }
           setOpen((o) => !o);
         }}
-        className={cn("event-row group", className)}
+        className={cn("event-row group h-auto min-h-11 w-full justify-start", className)}
       >
         <ScheduleRowDate date={eventDate} />
 
@@ -80,7 +82,7 @@ export default function EventOccurrenceCard({
         <motion.div animate={{ rotate: onCardClick ? 0 : open ? 90 : 0 }} transition={{ duration: 0.15 }}>
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
         </motion.div>
-      </button>
+      </Button>
 
       <AnimatePresence>
         {!onCardClick && open && event.details && (

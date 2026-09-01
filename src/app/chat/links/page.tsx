@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Link2, Loader2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Link2, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { useChats } from '@/hooks/useChats';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
@@ -13,7 +13,8 @@ import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatLinks } from '@/lib/chat-media-extract';
 import { chatLinkFaviconUrl, chatLinkHostname } from '@/lib/chat-url-utils';
 import { RemoteImage } from '@/components/ui/remote-image';
-import { NavPageHeader } from '@/components/ui/page-layout';
+import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -92,15 +93,9 @@ export default function AllChatLinksPage() {
       />
 
       {loading ? (
-        <div className="empty-inline py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <ListLoadingSkeleton />
       ) : links.length === 0 ? (
-        <div className="empty-inline">
-          <Link2 className="mb-2 h-8 w-8 text-muted-foreground/40" />
-          <p className="font-semibold text-foreground">{t.noLinksYetChat}</p>
-          <p className="text-micro-label mt-1">{t.linksSharedHint}</p>
-        </div>
+        <EmptyState icon={Link2} title={t.noLinksYetChat} description={t.linksSharedHint} />
       ) : (
         <div className="admin-table-wrap page-responsive-table">
           <Table className="admin-table">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Palette, Save } from "lucide-react";
+import { Palette, Save } from 'lucide-react';import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,7 +115,7 @@ export function ProfileIdentityCard({
             </Button>
             <Button onClick={onAvatarSave} disabled={isSaving}>
               {isSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <ButtonSpinner className="mr-2" />
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}{" "}

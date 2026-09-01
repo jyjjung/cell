@@ -1,6 +1,8 @@
 "use client";
 
 import { DeletedContentNotice } from '@/components/chat/DeletedContentNotice';
+import { Button } from '@/components/ui/button';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { useAuth } from '@/contexts/auth-context';
 import { useSetlistPlaylistOptional } from '@/contexts/setlist-playlist-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
@@ -15,7 +17,7 @@ import { getReferenceTracks, hasReferenceTracks, resolveChordSheetsForSetlistSon
 import type { WorshipSetlist } from '@/types';
 import { format } from 'date-fns';
 import {
-    Check, ChevronRight, CloudDownload, ListMusic, Loader2, Music, Pause, Play, Youtube
+    Check, ChevronRight, CloudDownload, ListMusic, Music, Pause, Play, Youtube
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -347,11 +349,13 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
 
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {playlistQueue.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={handlePlayPlaylist}
               className={cn(
                 chatCardAction,
+                'h-auto hit-min',
                 playlistActiveForSetlist && 'border-primary/40 text-primary hover:bg-primary/10',
               )}
             >
@@ -365,17 +369,18 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                   ? 'Playing'
                   : 'Paused'
                 : `Playlist (${playlistQueue.length})`}
-            </button>
+            </Button>
           )}
           {mediaUrls.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={handleCacheOffline}
               disabled={offlineCaching}
-              className={chatCardAction}
+              className={cn(chatCardAction, 'h-auto hit-min')}
             >
               {offlineCaching ? (
-                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                <ButtonSpinner size="sm" className="shrink-0" />
               ) : allOfflineReady ? (
                 <Check className="h-3.5 w-3.5 shrink-0" />
               ) : (
@@ -388,7 +393,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                   : partialOffline
                     ? `${offlineCached!.cached}/${offlineCached!.total}`
                     : 'Save offline'}
-            </button>
+            </Button>
           )}
           <div className={cn(chatCardFooter, 'min-w-0 flex-1 pt-0')}>
             <span className="truncate">Open charts</span>

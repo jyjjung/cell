@@ -4,7 +4,7 @@ import { hasAccountsAccess } from '@/lib/app-access';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LayoutGate } from '@/components/layout/layout-gate';
 
 export default function AccountsAppLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, loadingAuth } = useAuth();
@@ -20,15 +20,11 @@ export default function AccountsAppLayout({ children }: { children: React.ReactN
     }
   }, [currentUser, loadingAuth, router]);
 
-  if (loadingAuth || !currentUser) {
-    return (
-      <div className="flex min-h-svh items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  const ready = !!currentUser && hasAccountsAccess(currentUser);
 
-  if (!hasAccountsAccess(currentUser)) return null;
-
-  return <>{children}</>;
+  return (
+    <LayoutGate loading={loadingAuth} ready={ready} label="Loading account">
+      {children}
+    </LayoutGate>
+  );
 }

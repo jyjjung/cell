@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import {
   Dialog,
   DialogContent,
@@ -143,7 +143,7 @@ export function CreateDocDialog({ open, onClose, onCreate }: CreateDocDialogProp
               onClick={handleCreate}
               disabled={!canSubmit}
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {saving ? <ButtonSpinner className="mr-2" /> : null}
               {t.create}
             </Button>
           </div>

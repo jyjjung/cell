@@ -10,10 +10,8 @@ import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import ResponsesTable from '@/components/forms/ResponsesTable';
 import ExportResponsesDialog from '@/components/forms/ExportResponsesDialog';
-import { sortedFields } from '@/lib/forms/export-responses';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft,
   Check,
   Download,
   Link2,
@@ -148,37 +146,10 @@ export default function AdminFormResponsesPage({ formId }: Props) {
     );
   }
 
-  const fieldCount = sortedFields(form).length;
-  const totalLabel =
-    typeof form.responseCount === 'number'
-      ? `${form.responseCount} response${form.responseCount === 1 ? '' : 's'}`
-      : `${responses.length} loaded`;
-  const generatedAt = new Date().toLocaleString();
-
   return (
     <div className="page-container space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <Button asChild variant="ghost" className="rounded-xl -ml-2 w-fit">
-            <Link href="/forms">
-              <ArrowLeft className="h-4 w-4" />
-              Forms
-            </Link>
-          </Button>
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Forms export
-            </p>
-            <PageHeader
-              title={form.title}
-              description={`${totalLabel} · ${fieldCount} column${fieldCount === 1 ? '' : 's'} · ${generatedAt}${
-                typeof form.maxResponses === 'number' && form.maxResponses > 0
-                  ? ` · limit ${form.maxResponses}`
-                  : ''
-              }`}
-            />
-          </div>
-        </div>
+        <PageHeader title={form.title} />
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" className="rounded-xl">
             <Link href={`/admin/forms/${encodeURIComponent(form.id)}`}>Edit form</Link>

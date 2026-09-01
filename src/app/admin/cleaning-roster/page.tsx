@@ -2,12 +2,15 @@
 "use client";
 
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import UserSelector from '@/components/chat/UserSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -24,7 +27,7 @@ import { cn } from '@/lib/utils';
 import type { CleaningRosterEntry, UserProfileData } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { addMonths, eachDayOfInterval, endOfMonth, format, getDay, startOfMonth, subMonths } from 'date-fns';
-import { ChevronsLeft, ChevronsRight, Edit, Loader2, PlusCircle, Save, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Edit, PlusCircle, Save, Trash2, UserPlus, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -89,7 +92,7 @@ function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
                         </div>
                         <div className="flex gap-2">
                             <Button type="submit" disabled={isSaving} size="sm" className="flex-grow">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingDay ? <><Save className="h-4 w-4 mr-2" /> {t.adminSaveModule}</> : <><PlusCircle className="h-4 w-4 mr-2" /> {t.adminAddModule}</>)}
+                                {isSaving ? <ButtonSpinner className="mr-2" /> : (editingDay ? <><Save className="h-4 w-4 mr-2" /> {t.adminSaveModule}</> : <><PlusCircle className="h-4 w-4 mr-2" /> {t.adminAddModule}</>)}
                             </Button>
                             {editingDay && <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingDay(null); form.reset({ name: "" }); }}>{t.adminCancel}</Button>}
                         </div>
@@ -110,11 +113,9 @@ function ManageCleaningDays({ t }: { t: (typeof translations)['en'] }) {
                                     <TableCell className="font-medium text-sm">{day.name}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setEditingDay(day); form.setValue("name", day.name); }}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
+                                            <IconButton variant="outline" aria-label="Edit" icon={Edit} onClick={() => { setEditingDay(day); form.setValue("name", day.name); }} />
                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild><Button variant="destructive" size="icon" className="h-8 w-8 opacity-30 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                <AlertDialogTrigger asChild><IconButton variant="destructive" aria-label="Delete" icon={Trash2} className="opacity-30 group-hover:opacity-100 transition-opacity" /></AlertDialogTrigger>
                                                 <AlertDialogContent className="rounded-2xl">
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle className="text-section-title">{t.adminDeleteModule}</AlertDialogTitle>
@@ -244,13 +245,9 @@ export default function AdminCleaningRosterPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/50 pb-3">
                 <h2 className="text-section-title">{t.adminTimelineView}</h2>
                 <div className="flex items-center gap-2 bg-muted p-1 rounded-xl border border-border/50">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
-                        <ChevronsLeft className="h-4 w-4" />
-                    </Button>
+                    <IconButton aria-label="Previous month" icon={ChevronsLeft} onClick={() => setCurrentDate(subMonths(currentDate, 1))} />
                     <span className="text-micro-label px-2">{monthLabel}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-                        <ChevronsRight className="h-4 w-4" />
-                    </Button>
+                    <IconButton aria-label="Next month" icon={ChevronsRight} onClick={() => setCurrentDate(addMonths(currentDate, 1))} />
                 </div>
             </div>
 
@@ -264,10 +261,7 @@ export default function AdminCleaningRosterPage() {
         </div>
 
         {loading ? (
-            <div className="empty-inline gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <p className="text-micro-label">{t.loading}</p>
-            </div>
+            <ListLoadingSkeleton />
         ) : (
             <div className="admin-table-wrap">
                 <Table className="admin-table">
@@ -322,15 +316,16 @@ export default function AdminCleaningRosterPage() {
                                                     <span className="text-[10px] font-medium truncate max-w-[80px]">
                                                         {formatUserDisplayName(user)}
                                                     </span>
-                                                    <button 
+                                                    <IconButton
+                                                        aria-label={`Remove ${formatUserDisplayName(user)}`}
+                                                        icon={X}
                                                         onClick={() => {
                                                             const newList = displayData.assignedUserIds.filter(id => id !== user.uid);
                                                             handleFieldChange(dateStr, 'assignedUserIds', newList);
                                                         }}
-                                                        className="hover:text-destructive transition-colors p-0.5 opacity-40 hover:opacity-100"
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
+                                                        className="hover:text-destructive opacity-40 hover:opacity-100"
+                                                        iconClassName="h-3 w-3"
+                                                    />
                                                 </Badge>
                                             ))}
                                             
@@ -356,12 +351,22 @@ export default function AdminCleaningRosterPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button size="icon" variant={isDirty ? "default" : "outline"} onClick={() => handleSave(dateStr)} disabled={isSaving || !canSave} className="h-9 w-9 rounded-lg">
-                                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                            </Button>
-                                            <Button size="icon" variant="destructive" onClick={() => handleDelete(dateStr)} disabled={!entry} className="h-9 w-9 rounded-lg opacity-30 group-hover:opacity-100 transition-opacity">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <IconButton
+                                                aria-label="Save"
+                                                icon={isSaving ? ButtonSpinner : Save}
+                                                variant={isDirty ? "default" : "outline"}
+                                                onClick={() => handleSave(dateStr)}
+                                                disabled={isSaving || !canSave}
+                                                className="rounded-lg"
+                                            />
+                                            <IconButton
+                                                aria-label="Delete"
+                                                icon={Trash2}
+                                                variant="destructive"
+                                                onClick={() => handleDelete(dateStr)}
+                                                disabled={!entry}
+                                                className="rounded-lg opacity-30 group-hover:opacity-100 transition-opacity"
+                                            />
                                         </div>
                                     </TableCell>
                                 </TableRow>

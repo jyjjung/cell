@@ -8,8 +8,12 @@ import {
   ArrowRight, ArrowLeft as ArrowLeftIcon, Headphones,
 } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { cn, isPdfUrl } from '@/lib/utils';
+import { filesFromViewerSlides } from '@/lib/setlist-download';
+import { downloadNamedFiles } from '@/lib/setlist-download-client';
 import type { ChordKey } from '@/types';
 import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeReferenceEmbed';
 import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
@@ -25,21 +29,6 @@ import {
 } from '@/components/worship/viewer-theme';
 
 export type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
-
-async function downloadFile(url: string, filename: string) {
-  try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
-  } catch { window.open(url, '_blank'); }
-}
 
 function KeyBadge({
   keyName, accent = false, onDark = false,
@@ -80,10 +69,10 @@ function renderChordPage(
           className="w-full flex-1 border-none bg-white/5" title={`PDF pg ${pageIndex + 1}`} />
         <div className="flex flex-col items-center py-8 px-6 bg-black/20 sm:hidden">
           <FileText className="h-10 w-10 text-rose-500/50 mb-3" />
-          <button onClick={() => window.open(url, '_blank')}
-            className="w-full py-4 rounded-2xl bg-rose-500 text-white font-semibold flex items-center justify-center gap-3">
+          <Button type="button" onClick={() => window.open(url, '_blank')}
+            className="w-full h-auto py-4 rounded-2xl bg-rose-500 text-white font-semibold flex items-center justify-center gap-3 hover:bg-rose-500">
             <Maximize className="h-5 w-5" /> Open PDF
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -373,9 +362,7 @@ function SlidesFullScreenViewer({
   const isZoomed  = fitW > 0 && Math.abs(currentW - fitW) > 3;
 
   const downloadCurrent = () => {
-    (slide.imageUrls ?? []).forEach((url, i) =>
-      setTimeout(() => downloadFile(url, `${slide.songTitle} - ${slide.key}${(slide.imageUrls?.length ?? 0) > 1 ? ` pg${i + 1}` : ''}.jpg`), i * 300),
-    );
+    void downloadNamedFiles(filesFromViewerSlides([slide]));
   };
 
   const viewerContent = (
@@ -388,9 +375,7 @@ function SlidesFullScreenViewer({
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <button onClick={onClose} className={cn(viewerControlBtn(isDark), 'shrink-0')}>
-              <X className="h-5 w-5" />
-            </button>
+            <IconButton onClick={onClose} className={cn(viewerControlBtn(isDark), 'shrink-0')} aria-label="Close" icon={X} />
             <div className="min-w-0">
               <p className={cn('font-bold text-sm truncate', viewerTitlePrimary(isDark))}>{slide.songTitle}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -399,28 +384,22 @@ function SlidesFullScreenViewer({
                   <span className={cn('text-[11px] font-bold', viewerTitleMuted(isDark, 'low'))}>{slide.imageUrls.length} pages</span>
                 )}
                 {isZoomed && (
-                  <button onClick={resetZoom}
-                    className={viewerZoomBadge(isDark)}>
+                  <Button type="button" variant="ghost" onClick={resetZoom}
+                    className={cn(viewerZoomBadge(isDark), 'h-auto')}>
                     {zoomPct}% · Reset
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <span className={cn('text-xs font-bold mr-1', viewerTitleMuted(isDark, 'low'))}>{idx + 1} / {slides.length}</span>
-            <button onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) / 1.35))}
-              className={viewerControlBtn(isDark)} title="Zoom Out">
-              <ZoomOut className="h-4 w-4" />
-            </button>
-            <button onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) * 1.35))}
-              className={viewerControlBtn(isDark)} title="Zoom In">
-              <ZoomIn className="h-4 w-4" />
-            </button>
-            <button onClick={downloadCurrent}
-              className={viewerControlBtn(isDark)} title="Download to device">
-              <Download className="h-5 w-5" />
-            </button>
+            <IconButton onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) / 1.35))}
+              className={viewerControlBtn(isDark)} aria-label="Zoom out" icon={ZoomOut} />
+            <IconButton onClick={() => setImgPxWidth(w => clampWidth((w ?? fitWidthRef.current) * 1.35))}
+              className={viewerControlBtn(isDark)} aria-label="Zoom in" icon={ZoomIn} />
+            <IconButton onClick={downloadCurrent}
+              className={viewerControlBtn(isDark)} aria-label="Download to device" icon={Download} />
           </div>
         </div>
 
@@ -488,19 +467,21 @@ function SlidesFullScreenViewer({
             );
           })()}
           <div className="flex items-center justify-center gap-3">
-            <button onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
-              className={cn(viewerControlBtn(isDark), 'p-3 rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}>
-              <ChevronLeft className="h-6 w-6" />
-            </button>
+            <IconButton onClick={() => setIdx(i => Math.max(i - 1, 0))} disabled={idx === 0}
+              className={cn(viewerControlBtn(isDark), 'rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}
+              aria-label="Previous slide"
+              icon={ChevronLeft}
+              iconClassName="h-6 w-6"
+            />
             {slide.referenceTracks && slide.referenceTracks.length > 0 && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setActiveTrackIdx(0);
                   setListenSlideIdx((current) => (current === idx ? null : idx));
                 }}
                 className={cn(
-                  'flex items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold backdrop-blur-sm transition-colors',
+                  'flex h-auto items-center gap-1.5 px-4 py-3 rounded-2xl text-sm font-semibold backdrop-blur-sm',
                   listenSlideIdx === idx
                     ? 'bg-rose-500/90 hover:bg-rose-500 text-white'
                     : isDark
@@ -510,25 +491,27 @@ function SlidesFullScreenViewer({
               >
                 <Headphones className="h-5 w-5" />
                 Listen{slide.referenceTracks.length > 1 ? ` (${slide.referenceTracks.length})` : ''}
-              </button>
+              </Button>
             )}
             {slides.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[30vw]">
                 {slides.map((s, i) => (
-                  <button key={i} onClick={() => setIdx(i)} title={`${s.songTitle} (${s.key})`}
-                    className={cn('rounded-full transition-all',
+                  <button key={i} type="button" onClick={() => setIdx(i)} aria-label={`${s.songTitle} (${s.key})`}
+                    className={cn('hit-min rounded-full transition-all',
                       i === idx
-                        ? 'w-4 h-2 bg-rose-500'
+                        ? 'w-4 min-w-[1rem] h-2 bg-rose-500'
                         : isDark
-                          ? 'w-2 h-2 bg-white/25 hover:bg-white/50'
-                          : 'w-2 h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50')} />
+                          ? 'w-2 min-w-[0.5rem] h-2 bg-white/25 hover:bg-white/50'
+                          : 'w-2 min-w-[0.5rem] h-2 bg-muted-foreground/30 hover:bg-muted-foreground/50')} />
                 ))}
               </div>
             )}
-            <button onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))} disabled={idx === slides.length - 1}
-              className={cn(viewerControlBtn(isDark), 'p-3 rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}>
-              <ChevronRight className="h-6 w-6" />
-            </button>
+            <IconButton onClick={() => setIdx(i => Math.min(i + 1, slides.length - 1))} disabled={idx === slides.length - 1}
+              className={cn(viewerControlBtn(isDark), 'rounded-2xl disabled:opacity-20 disabled:pointer-events-none backdrop-blur-sm')}
+              aria-label="Next slide"
+              icon={ChevronRight}
+              iconClassName="h-6 w-6"
+            />
           </div>
         </div>
         {/* Swipe-and-Hold Indicator */}

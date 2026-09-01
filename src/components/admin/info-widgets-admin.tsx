@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Info, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
+import { ArrowDown, ArrowUp, Info, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { useInfoWidgets, type InfoWidgetInput } from '@/hooks/use-info-widgets';
@@ -12,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { EmptyState } from '@/components/ui/page-layout';
+import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import {
   Dialog,
   DialogContent,
@@ -152,7 +154,7 @@ function WidgetEditorDialog({
               onClick={() => void handleSave()}
               disabled={!canSave || saving}
             >
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {saving ? <ButtonSpinner className="mr-2" /> : null}
               {existing ? t.save : t.adminAddInfoWidget}
             </Button>
           </div>
@@ -243,9 +245,7 @@ export default function InfoWidgetsAdmin() {
       </section>
 
       {loading ? (
-        <div className="empty-inline">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
+        <ListLoadingSkeleton />
       ) : widgets.length === 0 ? (
         <EmptyState
           icon={Info}
@@ -278,7 +278,7 @@ export default function InfoWidgetsAdmin() {
                       aria-label={t.adminMoveUp}
                     >
                       {isReordering ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <ButtonSpinner size="sm" />
                       ) : (
                         <ArrowUp className="h-3.5 w-3.5" />
                       )}

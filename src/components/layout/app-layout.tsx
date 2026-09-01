@@ -18,10 +18,12 @@ import { cn } from '@/lib/utils';
 import Footer from './footer';
 import { Bell } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
+import { Button } from '@/components/ui/button';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
 import { NdcpcUnreadProvider } from '@/contexts/ndcpc-unread-context';
 import { CellBibleReaderShell } from '@/components/bible/cell-bible-reader-shell';
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
+import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const InboxSheetLazy = dynamic(
@@ -40,28 +42,34 @@ const ScheduleHubTabsLazy = dynamic(
   () => import('@/components/schedule/schedule-hub-tabs'),
   { ssr: false },
 );
-const AdminHubTabsLazy = dynamic(
-  () => import('@/components/admin/admin-hub-tabs'),
-  { ssr: false },
-);
 
 function GuestShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === '/';
 
   return (
-    <main role="main" className="flex-1 relative overflow-hidden h-svh flex flex-col bg-background">
-      <OfflineBanner />
+    <>
+      <a href="#main-content" className="skip-to-content">
+        Skip to content
+      </a>
+    <main role="main" id="main-content" className="flex-1 relative overflow-hidden h-svh flex flex-col bg-background">
+      <div className="pointer-events-none absolute inset-x-0 top-[max(0.5rem,env(safe-area-inset-top))] z-20 flex justify-center">
+        <div className="pointer-events-auto">
+          <OfflineBanner />
+        </div>
+      </div>
       <div className="relative z-10 flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden">
         <div className={cn('flex-grow flex flex-col', !isLanding && 'page-shell')}>{children}</div>
       </div>
       <Footer />
     </main>
+    </>
   );
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useClientSearchParams();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser, hasSession, loadingAuth, initialSessionCookie } = useAuth();
@@ -99,20 +107,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showPermissionBanner, setShowPermissionBanner] = useState(false);
   const showReadingsTabs =
     pathname.startsWith('/bible-checklist') ||
-    pathname.startsWith('/full-plan') ||
-    pathname.startsWith('/memorize') ||
     pathname.startsWith('/leaderboard');
   const showScheduleTabs =
     pathname.startsWith('/events') ||
     pathname.startsWith('/qt') ||
     pathname.startsWith('/cleaning-roster') ||
     pathname.startsWith('/rosters');
-  const showAdminTabs = pathname.startsWith('/admin');
   const isShellRoute = isShellPath(pathname);
 
+  const search = searchParams.toString();
   useEffect(() => {
     setIsPageLoading(false);
-  }, [pathname, setIsPageLoading]);
+  }, [pathname, search, setIsPageLoading]);
 
   useEffect(() => {
     if (currentUser && typeof window !== 'undefined' && 'Notification' in window) {
@@ -188,6 +194,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
       <AuthenticatedAppChrome currentUser={currentUser} />
       <Sidebar />
+      <a href="#main-content" className="skip-to-content">
+        Skip to content
+      </a>
       <SidebarInset
         data-chat-shell={lockChatShell ? '' : undefined}
         className={cn(
@@ -198,8 +207,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex flex-1 flex-col min-h-0">
-          <OfflineBanner />
-          <Header pinStatic={lockChatShell} />
+          {!isIndividualChat ? <Header pinStatic={lockChatShell} /> : null}
           <InboxSheetLazy />
 
           <div
@@ -210,6 +218,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <main
               role="main"
+              id="main-content"
               className={cn(
                 'flex flex-col min-h-0',
                 isIndividualChat ? 'flex-1' : 'min-h-full',
@@ -233,7 +242,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         {showReadingsTabs && <ReadingsHubTabsLazy />}
         {showScheduleTabs && <ScheduleHubTabsLazy />}
-        {showAdminTabs && <AdminHubTabsLazy />}
         <PWAInstallPrompt />
 
         <SetlistPlaylistBarLazy />
@@ -251,21 +259,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
                   onClick={handleDismissBanner}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+                  className="text-muted-foreground"
                 >
                   Later
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
                   onClick={() => {
                     setShowPermissionBanner(false);
                     router.push('/accounts?tab=notifications');
                   }}
-                  className="bg-primary px-4 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground active:scale-95 transition-all"
                 >
                   Set Up
-                </button>
+                </Button>
               </div>
             </div>
           </div>

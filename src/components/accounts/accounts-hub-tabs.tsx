@@ -1,7 +1,8 @@
 "use client";
 
 import { User, Palette, Bell, SlidersHorizontal } from "lucide-react";
-import { BottomHubBar, bottomHubIconClass, bottomHubTabClass } from "@/components/layout/bottom-hub-bar";
+import { BottomHubBar } from "@/components/layout/bottom-hub-bar";
+import { HubTab } from "@/components/layout/hub-tab";
 
 export type AccountsTabId = "profile" | "appearance" | "apps" | "notifications";
 
@@ -27,22 +28,15 @@ export function AccountsHubTabs({ activeTab, onTabChange, labels }: AccountsHubT
   return (
     <BottomHubBar>
       <div className="grid grid-cols-4 gap-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = tab.value === activeTab;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => onTabChange(tab.value)}
-              className={bottomHubTabClass(active)}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon className={bottomHubIconClass(active)} />
-              <span className="truncate">{labels[tab.labelKey]}</span>
-            </button>
-          );
-        })}
+        {TABS.map((tab) => (
+          <HubTab
+            key={tab.value}
+            active={tab.value === activeTab}
+            label={labels[tab.labelKey]}
+            icon={tab.icon}
+            onClick={() => onTabChange(tab.value)}
+          />
+        ))}
       </div>
     </BottomHubBar>
   );

@@ -3,7 +3,7 @@
 
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function GlobalPageLoader() {
   const { isPageLoading } = usePageLoading();
@@ -22,7 +22,7 @@ export default function GlobalPageLoader() {
           role="status"
         >
           <div className="mb-12">
-            <Loader2 className="spinner-standard h-12 w-12 animate-spin text-primary/40" />
+            <LoadingSpinner size="lg" className="h-12 w-12 text-primary/40" label="Loading page" />
           </div>
         </motion.div>
       )}

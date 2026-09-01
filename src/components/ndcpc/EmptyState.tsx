@@ -1,3 +1,4 @@
+import { EmptyState as UiEmptyState } from '@/components/ui/page-layout';
 import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
@@ -5,10 +6,11 @@ interface EmptyStateProps {
   className?: string;
 }
 
+/** @deprecated Prefer `EmptyState` from `@/components/ui/page-layout`. */
 export function EmptyState({ message, className }: EmptyStateProps) {
   return (
-    <p className={cn('py-10 text-center text-sm text-muted-foreground', className)}>
-      {message}
-    </p>
+    <div className={cn(className)}>
+      <UiEmptyState title={message} />
+    </div>
   );
 }

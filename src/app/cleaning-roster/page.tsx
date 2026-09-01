@@ -11,6 +11,7 @@ import { ListTodo, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import BackToTopButton from '@/components/ui/back-to-top-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleListSkeleton, ScheduleMonthGroup, ScheduleOccurrenceRow, ScheduleRowMeta } from '@/components/schedule/schedule-occurrence-row';
@@ -76,7 +77,7 @@ export default function CleaningRosterPage() {
         };
     }, [roster]);
 
-    if (!isMounted) return null;
+    if (!isMounted) return <PageLoading />;
 
     let globalIdx = 0;
 
