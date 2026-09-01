@@ -35,6 +35,32 @@ export const changelogs: ChangelogEntry[] = [
   },
 
   {
+    version: 'v1.15.6',
+    subtitle: 'Worship Charts',
+    date: 'August 29, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted charts no longer treat lyric words like “breath”, “Ev’ry”, or “Great” as chord symbols.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Chord detection only kicks in when a symbol has a space on each side, so lyrics are not misread.',
+      },
+    ],
+  },
+  {
+    version: 'v1.15.5',
+    subtitle: 'Worship Charts',
+    date: 'August 29, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasting a chart from SongSelect keeps chords above lyrics instead of gluing them into words like “Dlife”.',
+      },
+    ],
+  },
+  {
     version: 'v1.15.4',
     subtitle: 'Stability',
     date: 'August 23, 2026',
