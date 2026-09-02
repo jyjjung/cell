@@ -471,6 +471,11 @@ service cloud.firestore {
       allow write: if canManageWorship(request.auth.uid);
     }
 
+    match /worshipSettings/{docId} {
+      allow read: if request.auth != null;
+      allow write: if canManageWorship(request.auth.uid);
+    }
+
     // Chat Rules
     match /chats/{chatId} {
       function chatDoc() {

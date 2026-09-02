@@ -7,6 +7,18 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.6',
+    subtitle: 'Worship Rosters',
+    date: 'September 2, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'You can add and remove the roles people are assigned to on worship rosters.',
+      },
+    ],
+  },
+
+  {
     version: 'v1.17.5',
     subtitle: 'Reading plan & charts',
     date: 'September 2, 2026',

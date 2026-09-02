@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, UserCheck, UserPlus, UserX, X } from 'lucide-react';
+import { Search, Trash2, UserCheck, UserPlus, UserX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -34,6 +34,7 @@ export function RosterRoleSlotRow({
   canManage,
   onAdd,
   onRemove,
+  onDeleteRole,
 }: {
   roleLabel: string;
   roleClassName: string;
@@ -41,6 +42,7 @@ export function RosterRoleSlotRow({
   canManage: boolean;
   onAdd?: () => void;
   onRemove?: (index: number) => void;
+  onDeleteRole?: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-border">
@@ -88,6 +90,16 @@ export function RosterRoleSlotRow({
             className="shrink-0 rounded-lg text-muted-foreground/40 hover:bg-muted hover:text-primary"
             aria-label="Add member"
             icon={UserPlus}
+          />
+        ) : null}
+        {canManage && onDeleteRole ? (
+          <IconButton
+            type="button"
+            size="compact"
+            onClick={onDeleteRole}
+            className="shrink-0 rounded-lg text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Remove ${roleLabel} role`}
+            icon={Trash2}
           />
         ) : null}
       </div>

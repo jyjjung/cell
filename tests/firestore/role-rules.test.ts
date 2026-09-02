@@ -81,6 +81,20 @@ describe('role-derived authorization rules', () => {
     await assertFails(deleteDoc(doc(db, 'worshipSongs/protected-song')));
   });
 
+  it('allows worship managers to edit roster role settings', async () => {
+    const db = env.authenticatedContext('worship').firestore();
+    await assertSucceeds(setDoc(doc(db, 'worshipSettings/rosterRoles'), {
+      roles: ['Lead', 'Vox 4'],
+    }));
+  });
+
+  it('blocks non-worship users from editing roster role settings', async () => {
+    const db = env.authenticatedContext('youth').firestore();
+    await assertFails(setDoc(doc(db, 'worshipSettings/rosterRoles'), {
+      roles: ['Lead'],
+    }));
+  });
+
   it('prevents a youth user from creating a group chat', async () => {
     const db = env.authenticatedContext('youth').firestore();
     await assertFails(setDoc(doc(db, 'chats/group'), {

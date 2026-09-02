@@ -629,21 +629,8 @@ export interface WorshipSetlist {
 
 // ── Worship Roster ───────────────────────────────────────────────────────────
 
-export type WorshipRole =
-  | 'Lead'
-  | 'Drums'
-  | 'Keys 1'
-  | 'Keys 2'
-  | 'Bass'
-  | 'Vox 1'
-  | 'Vox 2'
-  | 'Vox 3'
-  | 'E/G 1'
-  | 'E/G 2'
-  | 'A/G'
-  | 'PPT'
-  | 'Sound'
-  | 'Lighting';
+/** Role label on a worship roster slot. Built-in defaults live in `WORSHIP_ROLES`. */
+export type WorshipRole = string;
 
 export const WORSHIP_ROLES: WorshipRole[] = [
   'Lead', 'Drums', 'Keys 1', 'Keys 2', 'Bass',
@@ -651,13 +638,27 @@ export const WORSHIP_ROLES: WorshipRole[] = [
   'A/G', 'PPT', 'Sound', 'Lighting',
 ];
 
-/** Ensures every defined role exists (e.g. after new roles are added). */
-export function mergeWorshipRosterSlots(slots: WorshipRosterSlot[]): WorshipRosterSlot[] {
+/**
+ * Aligns a roster's slots with the current role catalog.
+ * Catalog roles always appear (empty if new). Slots that are no longer in the
+ * catalog are kept only when they still have people assigned.
+ */
+export function mergeWorshipRosterSlots(
+  slots: WorshipRosterSlot[],
+  catalog: readonly string[] = WORSHIP_ROLES,
+): WorshipRosterSlot[] {
   const byRole = new Map(slots.map((s) => [s.role, s]));
-  return WORSHIP_ROLES.map((role, order) => {
+  const catalogSlots = catalog.map((role, order) => {
     const existing = byRole.get(role);
-    return existing ? { ...existing, order } : { role, members: [], order };
+    return existing ? { ...existing, role, order } : { role, members: [], order };
   });
+  const extras = slots.filter(
+    (slot) => !catalog.includes(slot.role) && (slot.members?.length ?? 0) > 0,
+  );
+  return [
+    ...catalogSlots,
+    ...extras.map((slot, i) => ({ ...slot, order: catalog.length + i })),
+  ];
 }
 
 export interface WorshipRosterMember {

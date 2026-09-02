@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/auth-context';
+import { useWorshipRosterRoles } from '@/hooks/useWorshipRosterRoles';
 import type { WorshipSetlist, WorshipSong } from '@/types';
 
 const SONGS_COLLECTION = 'worshipSongs';
@@ -26,6 +27,10 @@ type WorshipDataContextValue = {
   setlists: WorshipSetlist[];
   songsLoading: boolean;
   setlistsLoading: boolean;
+  rosterRoles: string[];
+  rosterRolesLoading: boolean;
+  addRosterRole: (name: string) => Promise<string>;
+  deleteRosterRole: (role: string) => Promise<void>;
 };
 
 const WorshipDataContext = createContext<WorshipDataContextValue | null>(null);
@@ -42,6 +47,12 @@ export function WorshipDataProvider({
   const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
   const [songsLoading, setSongsLoading] = useState(enabled);
   const [setlistsLoading, setSetlistsLoading] = useState(enabled);
+  const {
+    roles: rosterRoles,
+    loading: rosterRolesLoading,
+    addRole: addRosterRole,
+    deleteRole: deleteRosterRole,
+  } = useWorshipRosterRoles(enabled);
 
   useEffect(() => {
     if (!enabled || !currentUser?.uid) {
@@ -84,8 +95,26 @@ export function WorshipDataProvider({
   }, [enabled, currentUser?.uid]);
 
   const value = useMemo(
-    () => ({ songs, setlists, songsLoading, setlistsLoading }),
-    [songs, setlists, songsLoading, setlistsLoading],
+    () => ({
+      songs,
+      setlists,
+      songsLoading,
+      setlistsLoading,
+      rosterRoles,
+      rosterRolesLoading,
+      addRosterRole,
+      deleteRosterRole,
+    }),
+    [
+      songs,
+      setlists,
+      songsLoading,
+      setlistsLoading,
+      rosterRoles,
+      rosterRolesLoading,
+      addRosterRole,
+      deleteRosterRole,
+    ],
   );
 
   return (
