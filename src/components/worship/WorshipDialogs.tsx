@@ -20,6 +20,7 @@ import {
 import { detectKeyFromText, isTextChordSheet, parseChordChart, prepareChordChartClipboard, savePastedChartText } from '@/lib/chord-chart';
 import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
+import { useWorshipData } from '@/contexts/worship-data-context';
 import { emptyChordAnnotation } from '@/components/worship/text-chord-chart-viewer';
 import { ChordChartBody } from '@/components/worship/text-chord-chart';
 import { format, parseISO } from 'date-fns';
@@ -148,6 +149,7 @@ export function NewRosterDialog({
   onCreated: (id: string) => void;
 }) {
   const { createRoster } = useWorshipRosters();
+  const worshipData = useWorshipData();
   const { setlists: playlists } = useWorshipSetlists();
   const { toast } = useToast();
   const [name, setName] = useState('');
@@ -166,7 +168,7 @@ export function NewRosterDialog({
     if (!name.trim() || !date) return;
     setSaving(true);
     try {
-      const id = await createRoster(name, date, setlistId || null);
+      const id = await createRoster(name, date, setlistId || null, worshipData?.rosterRoles);
       toast({ title: 'Roster created' });
       setName(''); setDate(format(new Date(), 'yyyy-MM-dd')); setSetlistId('');
       onCreated(id);

@@ -5,6 +5,16 @@ import { IconButton } from '@/components/ui/icon-button';
 import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading, ButtonSpinner } from '@/components/ui/loading-spinner';;
@@ -13,10 +23,11 @@ import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
 import { MemberGuestPickerDialog, RosterRoleSlotRow } from '@/components/worship/roster-people-picker';
+import { AddWorshipRoleDialog, WorshipRosterRolesPanel } from '@/components/worship/worship-roster-roles-panel';
 import { AddChordSheetDialog, NewRosterDialog, NewSetlistDialog, NewSongDialog, SetlistSongConfigPanel } from '@/components/worship/WorshipDialogs';
 import { ReferenceTracksListen } from '@/components/worship/YoutubeReferenceEmbed';
 import { useAuth } from '@/contexts/auth-context';
-import { WorshipDataProvider } from '@/contexts/worship-data-context';
+import { WorshipDataProvider, useWorshipData } from '@/contexts/worship-data-context';
 import { useAllUsers } from '@/hooks/use-all-users';
 import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { useToast } from '@/hooks/use-toast';
@@ -40,11 +51,12 @@ import {
     referenceTrackDraftsInvalid, referenceTracksToDrafts, resolveChordSheetsForSetlistSong,
     setlistSongEntryKey, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import type { ChordKey, SetlistSong, SongChordSheet, WorshipRole, WorshipRoster, WorshipRosterMember, WorshipRosterSlot, WorshipSetlist, WorshipSong } from '@/types';
+import type { ChordKey, SetlistSong, SongChordSheet, WorshipRoster, WorshipRosterMember, WorshipRosterSlot, WorshipSetlist, WorshipSong } from '@/types';
 import { mergeWorshipRosterSlots } from '@/types';
+import { roleBadgeClass } from '@/lib/worship-roster-roles';
 import { format, parseISO } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Shield, Trash2, Upload, Users, X, Youtube } from 'lucide-react';import Link from 'next/link';
+import { ArrowLeft, BookOpen, Calendar, Check, ChevronDown, ChevronUp, Download, Eye, GripVertical, Image as ImageIcon, Link2, ListMusic, Music, Music2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Shield, Trash2, Upload, Users, X, Youtube } from 'lucide-react';import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -1372,22 +1384,6 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
   );
 }
 
-// ── Worship Roster Components ─────────────────────────────────────────────────
-
-function roleBadgeClass(role: WorshipRole) {
-  if (role === 'Lead') return 'bg-primary/10 border-primary/30 text-primary';
-  if (role === 'Drums') return 'bg-chart-4/15 border-chart-4/30 text-chart-4';
-  if (role.startsWith('Keys')) return 'bg-chart-4/15 border-chart-4/30 text-chart-4';
-  if (role === 'Bass') return 'bg-chart-3/15 border-chart-3/30 text-chart-3';
-  if (role.startsWith('Vox')) return 'bg-success/10 border-success/30 text-success';
-  if (role.startsWith('E/G')) return 'bg-chart-2/15 border-chart-2/30 text-chart-2';
-  if (role === 'A/G') return 'bg-chart-5/15 border-chart-5/30 text-chart-5';
-  if (role === 'PPT') return 'bg-secondary border-border text-secondary-foreground';
-  if (role === 'Sound') return 'bg-chart-3/10 border-chart-3/25 text-chart-3';
-  if (role === 'Lighting') return 'bg-chart-4/10 border-chart-4/25 text-chart-4';
-  return 'bg-muted border-border/40 text-muted-foreground';
-}
-
 // ── RosterDetailView ────────────────────────────────────────────────────────────
 function RosterDetailView({
   roster, playlists, onBack, onOpenPlaylist,
@@ -1398,27 +1394,28 @@ function RosterDetailView({
   onOpenPlaylist: (setlistId: string) => void;
 }) {
   const { updateRosterSlots, updateRosterMeta } = useWorshipRosters();
+  const worshipData = useWorshipData();
+  const rosterRoles = worshipData?.rosterRoles ?? [];
   const { allUsers } = useAllUsers();
   const canManageWorship = useCanManageWorship();
   const { toast } = useToast();
 
-  // Local editable slots state
   const [slots, setSlots] = useState<WorshipRosterSlot[]>(() =>
-    mergeWorshipRosterSlots(roster.slots),
+    mergeWorshipRosterSlots(roster.slots, rosterRoles),
   );
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const [deleteRole, setDeleteRole] = useState<string | null>(null);
+  const [deletingRole, setDeletingRole] = useState(false);
 
-  // Member picker state
   const [pickerSlotIdx, setPickerSlotIdx] = useState<number | null>(null);
   const [linkSetlistOpen, setLinkSetlistOpen] = useState(false);
 
-  // Keep in sync when roster refreshes from Firestore (only if not dirty)
-  const prevRosterRef = useRef(roster);
-  if (prevRosterRef.current !== roster && !dirty) {
-    prevRosterRef.current = roster;
-    setSlots(mergeWorshipRosterSlots(roster.slots));
-  }
+  useEffect(() => {
+    if (dirty) return;
+    setSlots(mergeWorshipRosterSlots(roster.slots, rosterRoles));
+  }, [dirty, roster, rosterRoles]);
 
   // Worship-team users: all users who are members with roleIds (we show all site users)
   const siteUserOptions = useMemo(() =>
@@ -1480,6 +1477,35 @@ function RosterDetailView({
     }
   };
 
+  const handleAddRole = async (name: string) => {
+    const label = await worshipData?.addRosterRole(name);
+    if (!label) return;
+    const next = mergeWorshipRosterSlots(slots, [...rosterRoles, label]);
+    setSlots(next);
+    await updateRosterSlots(roster.id, next);
+    setDirty(false);
+    toast({ title: 'Role added' });
+  };
+
+  const handleDeleteRole = async () => {
+    if (!deleteRole) return;
+    setDeletingRole(true);
+    try {
+      await worshipData?.deleteRosterRole(deleteRole);
+      const next = slots
+        .filter((slot) => slot.role !== deleteRole)
+        .map((slot, order) => ({ ...slot, order }));
+      setSlots(next);
+      await updateRosterSlots(roster.id, next);
+      setDirty(false);
+      setDeleteRole(null);
+      toast({ title: 'Role removed' });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setDeletingRole(false);
+    }
+  };
 
   const linkedPlaylist = playlists.find(p => p.id === roster.setlistId);
 
@@ -1560,9 +1586,55 @@ function RosterDetailView({
             canManage={canManageWorship}
             onAdd={() => setPickerSlotIdx(slotIdx)}
             onRemove={(memberIdx) => removeMember(slotIdx, memberIdx)}
+            onDeleteRole={() => setDeleteRole(slot.role)}
           />
         ))}
+        {canManageWorship ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full rounded-2xl h-11 gap-1.5 border-dashed"
+            onClick={() => setAddRoleOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add role
+          </Button>
+        ) : null}
       </div>
+
+      <AddWorshipRoleDialog
+        open={addRoleOpen}
+        onOpenChange={setAddRoleOpen}
+        existingRoles={rosterRoles}
+        onAdd={handleAddRole}
+      />
+
+      <AlertDialog open={!!deleteRole} onOpenChange={(open) => { if (!open) setDeleteRole(null); }}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove “{deleteRole}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {slots.find((slot) => slot.role === deleteRole)?.members.length
+                ? 'People assigned to this role on this roster will be unassigned. New rosters will not include this role.'
+                : 'New rosters will not include this role.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingRole}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDeleteRole();
+              }}
+              disabled={deletingRole}
+            >
+              {deletingRole ? <ButtonSpinner className="mr-2" /> : null}
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <MemberGuestPickerDialog
         open={pickerSlotIdx !== null}
@@ -1641,10 +1713,14 @@ function RosterDetailView({
 // ── RostersTab ────────────────────────────────────────────────────────────────
 function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpenPlaylist: (setlistId: string) => void; initialRosterId?: string | null; openNewSignal?: number }) {
   const { rosters, loading, deleteRoster } = useWorshipRosters();
+  const worshipData = useWorshipData();
   const canManageWorship = useCanManageWorship();
+  const { currentUser } = useAuth();
+  const t = translations[currentUser?.preferredLanguage || 'en'];
   const { setlists: playlists } = useWorshipSetlists();
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<WorshipRoster | null>(null);
+  const [managingRoles, setManagingRoles] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipRoster | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
@@ -1688,8 +1764,38 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
           onBack={() => setDetail(null)}
           onOpenPlaylist={onOpenPlaylist}
         />
+      ) : managingRoles ? (
+        <motion.div key="roles" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+          <WorshipRosterRolesPanel
+            roles={worshipData?.rosterRoles ?? []}
+            canManage={canManageWorship}
+            onBack={() => setManagingRoles(false)}
+            onAdd={async (name) => {
+              await worshipData?.addRosterRole(name);
+              toast({ title: 'Role added' });
+            }}
+            onDelete={async (role) => {
+              await worshipData?.deleteRosterRole(role);
+              toast({ title: 'Role removed' });
+            }}
+          />
+        </motion.div>
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
+          {canManageWorship ? (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-lg gap-1.5 px-3 text-sm"
+                onClick={() => setManagingRoles(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+                {t.rosterRoles}
+              </Button>
+            </div>
+          ) : null}
           {rosters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 rounded-xl border-2 border-dashed border-border/40 text-center">
               <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
