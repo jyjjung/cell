@@ -16,7 +16,7 @@ import {
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
 import Footer from './footer';
-import { Bell } from 'lucide-react';
+import { Bell, WifiOff } from 'lucide-react';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { Button } from '@/components/ui/button';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
@@ -25,6 +25,29 @@ import { CellBibleReaderShell } from '@/components/bible/cell-bible-reader-shell
 import { useChatVisualViewportVars } from '@/hooks/use-chat-visual-viewport-vars';
 import { useClientSearchParams } from '@/hooks/use-client-search-params';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+
+function AuthHydrateShell({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-svh flex-col bg-background">
+      <div className="relative flex h-14 shrink-0 items-center justify-center border-b border-border/40 bg-background/80 px-4">
+        <OfflineBanner />
+      </div>
+      {children ?? (
+        <div className="flex flex-1 flex-col gap-3 p-4" role="status" aria-live="polite" aria-busy="true">
+          <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
+          <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
+          <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
+          <span className="sr-only">Loading account</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const InboxSheetLazy = dynamic(
   () => import('@/components/inbox/AppInboxSheet').then((m) => m.AppInboxSheet),
@@ -84,6 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isIndividualChat =
     (!!chatSubpath && !isChatListSubpage) || Boolean(ndcpcChatSubpath);
   const isMobile = useIsMobile();
+  const online = useOnlineStatus();
   // iOS keyboard shell lock is mobile-only — desktop must keep the normal sidebar layout.
   const lockChatShell =
     isIndividualChat
@@ -156,16 +180,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Guests (no cookie) paint immediately — better FCP/LCP on landing and auth pages.
   if (!hasSession) {
     if (loadingAuth && initialSessionCookie) {
-      return (
-        <div className="flex min-h-svh flex-col bg-background">
-          <div className="h-14 border-b border-border/40 bg-background/80" />
-          <div className="flex flex-1 flex-col gap-3 p-4">
-            <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
-          </div>
-        </div>
-      );
+      return <AuthHydrateShell />;
     }
     return <GuestShell>{children}</GuestShell>;
   }
@@ -176,15 +191,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!currentUser) {
     // Session exists but profile still hydrating (cold cache) — light chrome stub.
+    // Never stay here after loadingAuth finishes (offline / empty cache used to look blank forever).
+    if (loadingAuth) {
+      return <AuthHydrateShell />;
+    }
+
     return (
-      <div className="flex min-h-svh flex-col bg-background">
-        <div className="h-14 border-b border-border/40 bg-background/80" />
-        <div className="flex flex-1 flex-col gap-3 p-4">
-          <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
-          <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
-          <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
+      <AuthHydrateShell>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <WifiOff className="h-8 w-8 text-muted-foreground" aria-hidden />
+          <div className="space-y-1.5">
+            <h1 className="text-section-title text-foreground">
+              {online ? "Couldn't load your account" : "You're offline"}
+            </h1>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {online
+                ? 'Pull to refresh or try again in a moment.'
+                : "This device doesn't have your account cached yet. Connect once while signed in, then offline will work."}
+            </p>
+          </div>
+          <Button type="button" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
         </div>
-      </div>
+      </AuthHydrateShell>
     );
   }
 
