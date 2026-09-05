@@ -8,6 +8,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.10',
+    subtitle: 'Offline launch',
+    date: 'September 5, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Opening the installed app offline no longer shows a blank white screen — home opens from this device and takes you back to your last app.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Offline mode keeps your saved pages instead of clearing the app cache when a screen fails to load.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.9',
     subtitle: 'Offline launch',
     date: 'September 5, 2026',
