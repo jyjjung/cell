@@ -55,20 +55,10 @@ export function isUnrecoverableNextClientError(error: unknown): boolean {
 
 /**
  * Clear stale Next/Workbox caches, activate a waiting SW, and hard-reload once.
- * Returns false when a recovery reload already ran this session (loop guard),
- * or when the tab is offline (wiping the shell cache then reloading blanks the app).
+ * Returns false when a recovery reload already ran this session (loop guard).
  */
 export async function recoverStaleNextClient(reason: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-
-  // Offline chunk/script failures are expected. Clearing Workbox precache +
-  // start-url then reloading leaves a plain white page with nothing to fetch.
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    console.warn(
-      `[next-client-recovery] ${reason} while offline — skipping cache wipe/reload.`,
-    );
-    return false;
-  }
 
   try {
     if (sessionStorage.getItem(CLIENT_RECOVERY_FLAG)) {

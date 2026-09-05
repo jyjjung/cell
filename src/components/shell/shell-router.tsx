@@ -28,12 +28,9 @@ export function ShellRouter() {
 
     const entry = resolveEntryApp(currentUser);
     if (entry) {
-      // Keep last-app cookie/localStorage fresh for switcher + next visit.
-      // Hard navigate so offline/PWA does not stall on App Router RSC soft-nav.
+      // Seed last-app cookie so the next `/` hit can server-redirect.
       persistLastApp(entry, currentUser.uid);
-      const href = getAppHref(entry);
-      if (window.location.pathname === href) return;
-      window.location.replace(href);
+      router.replace(getAppHref(entry));
     }
   }, [currentUser, loadingAuth, router]);
 

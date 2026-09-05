@@ -27,11 +27,6 @@ export default function AdminError({
 
     if (!unrecoverable) return;
 
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      setManualReload(true);
-      return;
-    }
-
     if (hasClientRecoveryAlreadyRun()) {
       setManualReload(true);
       return;
@@ -40,21 +35,15 @@ export default function AdminError({
     void recoverStaleNextClient(error.name || 'unrecoverable Next client error');
   }, [error, unrecoverable]);
 
-  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
-      <h2 className="text-xl font-semibold">
-        {offline ? 'You are offline' : 'Admin page error'}
-      </h2>
+      <h2 className="text-xl font-semibold">Admin page error</h2>
       <p className="max-w-md text-sm text-muted-foreground">
-        {offline
-          ? 'This admin screen is not available offline. Reconnect and try again.'
-          : manualReload
-            ? 'The admin screen could not recover automatically. Reload the page or return home.'
-            : unrecoverable
-              ? 'Updating the app… If this stays stuck, reload the page.'
-              : 'This admin screen failed to load. Try again or return to the main app.'}
+        {manualReload
+          ? 'The admin screen could not recover automatically. Reload the page or return home.'
+          : unrecoverable
+            ? 'Updating the app… If this stays stuck, reload the page.'
+            : 'This admin screen failed to load. Try again or return to the main app.'}
         {error.digest ? (
           <span className="mt-2 block font-mono text-xs text-muted-foreground/80">
             Reference: {error.digest}
