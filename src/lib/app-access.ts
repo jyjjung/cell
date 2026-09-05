@@ -196,6 +196,25 @@ export function readLastAppLocal(): CommunityAppId | null {
   return parseCommunityAppId(localStorage.getItem(LAST_APP_STORAGE_KEY));
 }
 
+/** Non-HttpOnly last-app cookie (same value as localStorage when persist ran). */
+export function readLastAppCookie(): CommunityAppId | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${LAST_APP_COOKIE_NAME}=([^;]*)`),
+  );
+  if (!match?.[1]) return null;
+  try {
+    return parseCommunityAppId(decodeURIComponent(match[1]));
+  } catch {
+    return null;
+  }
+}
+
+/** Prefer localStorage, then cookie — enough to resume without waiting on Firebase. */
+export function readLastAppPreference(): CommunityAppId | null {
+  return readLastAppLocal() ?? readLastAppCookie();
+}
+
 export function writeLastAppLocal(app: CommunityAppId): void {
   if (typeof window === 'undefined') return;
   if (!VALID_APPS.has(app)) return;

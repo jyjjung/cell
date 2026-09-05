@@ -16,6 +16,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Opening the app offline from the home screen works again — resume still takes you to your last app after the shell loads.',
       },
+      {
+        type: 'Fixed',
+        text: 'Signed-in visits to Home no longer sit on a loading spinner — you return to your last app right away.',
+      },
     ],
   },
   {
