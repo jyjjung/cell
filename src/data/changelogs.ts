@@ -8,6 +8,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.9',
+    subtitle: 'Offline',
+    date: 'September 5, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'The app installs its offline cache again, so pages you already opened can load without a connection.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Going offline no longer clears saved pages and leaves a blank white screen.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.8',
     subtitle: 'Worship rosters',
     date: 'September 5, 2026',
