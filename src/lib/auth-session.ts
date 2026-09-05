@@ -3,7 +3,7 @@ export const SESSION_COOKIE_NAME = '__session';
 
 /**
  * Non-HttpOnly cookie mirroring last-visited community app.
- * Lets `/` server-redirect signed-in users without waiting on client auth.
+ * Used for client resume on `/` without waiting on Firebase auth.
  */
 export const LAST_APP_COOKIE_NAME = 'ndc_last_app';
 
