@@ -59,8 +59,10 @@ export function ChunkErrorListener() {
       }
     };
 
-    // Also handle CSS/script load failures (net::ERR_ABORTED for missing hashed files)
+    // Also handle CSS/script load failures (net::ERR_ABORTED for missing hashed files).
+    // Skip while offline — recovery would wipe the shell cache and reload into a blank page.
     const handleResourceError = (e: Event) => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       const target = e.target as HTMLElement;
       if (target?.tagName === 'SCRIPT' || target?.tagName === 'LINK') {
         const src = (target as HTMLScriptElement).src || (target as HTMLLinkElement).href || '';

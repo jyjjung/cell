@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  CLIENT_RECOVERY_FLAG,
   isChunkLoadError,
   isNextRouterCorruptError,
   isUnrecoverableNextClientError,
+  recoverStaleNextClient,
 } from './next-client-recovery';
 
 describe('next-client-recovery error detection', () => {
@@ -53,5 +55,37 @@ describe('next-client-recovery error detection', () => {
     ).toBe(true);
 
     expect(isUnrecoverableNextClientError(new Error('permission-denied'))).toBe(false);
+  });
+});
+
+describe('recoverStaleNextClient offline guard', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('skips cache wipe and reload while offline', async () => {
+    const reload = vi.fn();
+    const store: Record<string, string> = {};
+    const sessionStorageMock = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete store[k];
+      },
+    };
+
+    vi.stubGlobal('navigator', { onLine: false, serviceWorker: undefined });
+    vi.stubGlobal('window', {
+      location: { reload },
+      sessionStorage: sessionStorageMock,
+    });
+    vi.stubGlobal('sessionStorage', sessionStorageMock);
+
+    const recovered = await recoverStaleNextClient('ChunkLoadError while offline');
+    expect(recovered).toBe(false);
+    expect(reload).not.toHaveBeenCalled();
+    expect(sessionStorageMock.getItem(CLIENT_RECOVERY_FLAG)).toBeNull();
   });
 });
