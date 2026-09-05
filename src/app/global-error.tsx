@@ -26,6 +26,11 @@ export default function GlobalError({
 
     if (!unrecoverable) return;
 
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setManualReload(true);
+      return;
+    }
+
     // Soft React reset cannot rebuild a null App Router tree after a chunk
     // timeout — hard-reload once. If we already tried this session, show UI.
     if (hasClientRecoveryAlreadyRun()) {
@@ -44,6 +49,8 @@ export default function GlobalError({
     reset();
   };
 
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
   return (
     <html lang="en">
       <body
@@ -61,13 +68,17 @@ export default function GlobalError({
         }}
       >
         <div>
-          <h2 style={{ fontSize: 20, marginBottom: 12 }}>Something went wrong</h2>
+          <h2 style={{ fontSize: 20, marginBottom: 12 }}>
+            {offline ? 'You are offline' : 'Something went wrong'}
+          </h2>
           <p style={{ fontSize: 14, opacity: 0.75, maxWidth: 420, margin: '0 auto 20px' }}>
-            {manualReload
-              ? 'The app could not recover automatically. Reload the page or go home.'
-              : unrecoverable
-                ? 'Updating the app… If this stays stuck, reload the page.'
-                : 'The app hit an unexpected error. You can try again or reload the page.'}
+            {offline
+              ? 'This screen is not available offline yet. Reconnect and try again.'
+              : manualReload
+                ? 'The app could not recover automatically. Reload the page or go home.'
+                : unrecoverable
+                  ? 'Updating the app… If this stays stuck, reload the page.'
+                  : 'The app hit an unexpected error. You can try again or reload the page.'}
             {error.digest ? (
               <span style={{ display: 'block', marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>
                 Reference: {error.digest}

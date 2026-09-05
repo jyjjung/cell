@@ -53,6 +53,36 @@ function isFirebaseStorageMediaUrl(url: string): boolean {
   }
 }
 
+/** Cache Storage bucket matching Workbox rules in next.config.js. */
+function mediaCacheNameForUrl(url: string): string | null {
+  try {
+    const { hostname } = new URL(url);
+    if (hostname === 'firebasestorage.googleapis.com') return 'firebase-storage-media';
+    if (hostname === 'storage.googleapis.com' || hostname.endsWith('.firebasestorage.app')) {
+      return 'google-cloud-storage-media';
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist a fetched media response even when the service worker is not yet
+ * controlling this tab (common right after first register).
+ */
+async function putMediaInCacheStorage(url: string, response: Response): Promise<void> {
+  if (typeof caches === 'undefined' || !response.ok) return;
+  const cacheName = mediaCacheNameForUrl(url);
+  if (!cacheName) return;
+  try {
+    const cache = await caches.open(cacheName);
+    await cache.put(url, response.clone());
+  } catch {
+    /* quota / opaque — SW CacheFirst may still hold a copy later */
+  }
+}
+
 function filterFirebaseMediaUrls(urls: Iterable<string | undefined | null>): string[] {
   return [
     ...new Set(
@@ -100,7 +130,8 @@ export async function countCachedMediaUrls(
 async function primeOne(url: string): Promise<void> {
   try {
     if (!(await isMediaCached(url))) {
-      await fetch(url, { mode: 'cors', credentials: 'omit' });
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (res.ok) await putMediaInCacheStorage(url, res);
     }
     markPrimed(url);
   } catch {
@@ -206,6 +237,7 @@ export async function cacheMediaUrlsForOffline(
             signal,
           });
           if (res.ok) {
+            await putMediaInCacheStorage(url, res);
             markPrimed(url);
             return 'ok' as const;
           }

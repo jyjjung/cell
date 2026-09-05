@@ -27,6 +27,11 @@ export default function Error({
 
     if (!unrecoverable) return;
 
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      setManualReload(true);
+      return;
+    }
+
     if (hasClientRecoveryAlreadyRun()) {
       setManualReload(true);
       return;
@@ -35,15 +40,21 @@ export default function Error({
     void recoverStaleNextClient(error.name || 'unrecoverable Next client error');
   }, [error, unrecoverable]);
 
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
-      <h2 className="text-xl font-semibold">Something went wrong</h2>
+      <h2 className="text-xl font-semibold">
+        {offline ? 'You are offline' : 'Something went wrong'}
+      </h2>
       <p className="max-w-md text-sm text-muted-foreground">
-        {manualReload
-          ? 'The app could not recover automatically. Reload the page or go back home.'
-          : unrecoverable
-            ? 'Updating the app… If this stays stuck, reload the page.'
-            : 'The page hit an unexpected error. You can try again or go back to the home screen.'}
+        {offline
+          ? 'This screen is not available offline yet. Reconnect and open it once while online so it can be saved on this device.'
+          : manualReload
+            ? 'The app could not recover automatically. Reload the page or go back home.'
+            : unrecoverable
+              ? 'Updating the app… If this stays stuck, reload the page.'
+              : 'The page hit an unexpected error. You can try again or go back to the home screen.'}
         {error.digest ? (
           <span className="mt-2 block font-mono text-xs text-muted-foreground/80">
             Reference: {error.digest}
