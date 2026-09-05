@@ -20,6 +20,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Signed-in visits to Home no longer sit on a loading spinner — you return to your last app right away.',
       },
+      {
+        type: 'Improved',
+        text: 'Returning to your last app is snappier and more reliable after opening Home.',
+      },
     ],
   },
   {

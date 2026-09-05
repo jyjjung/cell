@@ -5,28 +5,37 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { CommunityLanding } from '@/components/shell/community-landing';
 import { ShellRouter } from '@/components/shell/shell-router';
-import { getAppHref, readLastAppPreference } from '@/lib/app-access';
+import {
+  getAppHref,
+  readLastAppPreference,
+  type CommunityAppId,
+} from '@/lib/app-access';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function HomeClient({
   initialHasSession,
+  initialLastApp = null,
 }: {
   initialHasSession: boolean;
+  initialLastApp?: CommunityAppId | null;
 }) {
   const { currentUser, hasSession, loadingAuth } = useAuth();
   const router = useRouter();
-  const [resumingHref, setResumingHref] = useState<string | null>(null);
+  const [resumingHref, setResumingHref] = useState<string | null>(() =>
+    initialHasSession && initialLastApp ? getAppHref(initialLastApp) : null,
+  );
 
-  // Resume from last-app storage/cookie immediately — do not wait on Firebase.
-  // Server redirect broke offline PWA launch; waiting on auth hung `/` on a spinner.
+  // Resume immediately from cookie/localStorage — do not wait on Firebase.
+  // Hard navigate so App Router soft-nav (RSC) cannot stall on `/`.
   useEffect(() => {
     if (!initialHasSession && !hasSession) return;
-    const last = readLastAppPreference();
+    const last = initialLastApp ?? readLastAppPreference();
     if (!last) return;
     const href = getAppHref(last);
     setResumingHref(href);
-    router.replace(href);
-  }, [initialHasSession, hasSession, router]);
+    if (window.location.pathname === href) return;
+    window.location.replace(href);
+  }, [initialHasSession, hasSession, initialLastApp]);
 
   if (!initialHasSession && !hasSession) {
     return (
