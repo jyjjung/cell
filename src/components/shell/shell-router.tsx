@@ -28,9 +28,11 @@ export function ShellRouter() {
 
     const entry = resolveEntryApp(currentUser);
     if (entry) {
-      // Keep last-app cookie/localStorage fresh for the app switcher.
       persistLastApp(entry, currentUser.uid);
-      router.replace(getAppHref(entry));
+      const href = getAppHref(entry);
+      if (window.location.pathname === href) return;
+      // Hard navigate — soft RSC replace can stall on `/` (spinner forever).
+      window.location.replace(href);
     }
   }, [currentUser, loadingAuth, router]);
 
