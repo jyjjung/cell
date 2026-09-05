@@ -16,6 +16,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Opening the app offline from the home screen no longer shows a blank white page.',
       },
+      {
+        type: 'Fixed',
+        text: 'Signed-in visits to home take you straight back to your last app without hanging on Loading.',
+      },
     ],
   },
   {
