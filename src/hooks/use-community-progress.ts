@@ -40,12 +40,23 @@ export function useCommunityProgress() {
 
     if (cachedFresh?.length) {
       applyRows(cachedFresh);
+      // Keep self on the board if they fall outside the cached top-N set.
+      if (!cachedFresh.some((row) => row.userId === currentUser.uid)) {
+        void fetchCommunityProgressForUser(currentUser.uid).then((self) => {
+          if (cancelled || !self) return;
+          applyRows(
+            cachedFresh.some((row) => row.userId === self.userId)
+              ? cachedFresh
+              : [...cachedFresh, self],
+          );
+        });
+      }
     } else {
       const stale = getCachedCommunityProgress();
       if (stale.length > 0) {
         applyRows(stale);
       }
-      void loadCommunityProgress({ forceRefresh: true }).then(applyRows).catch((err) => {
+      void loadCommunityProgress({ forceRefresh: true, ensureUserId: currentUser.uid }).then(applyRows).catch((err) => {
         console.error('[useCommunityProgress] load error:', err);
         if (!cancelled) setLoading(false);
       });
@@ -55,7 +66,7 @@ export function useCommunityProgress() {
       if (document.visibilityState !== 'visible' || !currentUser?.uid) return;
       const fresh = readLocalCollectionCache<CommunityProgressDoc[]>(CACHE_KEY, COLLECTION_CACHE_TTL_MS);
       if (fresh?.length) return;
-      void loadCommunityProgress({ forceRefresh: true }).then((rows) => {
+      void loadCommunityProgress({ forceRefresh: true, ensureUserId: currentUser.uid }).then((rows) => {
         if (!cancelled) setAllProgress(rows);
       }).catch(() => {});
     };
@@ -67,10 +78,13 @@ export function useCommunityProgress() {
   }, [loadingAuth, currentUser?.uid]);
 
   const refresh = useCallback(async () => {
-    const rows = await loadCommunityProgress({ forceRefresh: true });
+    const rows = await loadCommunityProgress({
+      forceRefresh: true,
+      ensureUserId: currentUser?.uid,
+    });
     setAllProgress(rows);
     return rows;
-  }, []);
+  }, [currentUser?.uid]);
 
   return { allProgress, loading, refresh };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useBiblePlan } from '@/hooks/use-bible-plan';
 import { useCommunityProgress } from '@/hooks/use-community-progress';
@@ -40,18 +40,25 @@ export default function LeaderboardPage() {
   const { currentUser } = useAuth();
   const { plan, loading: planLoading } = useBiblePlan();
   const { allProgress, loading: progressLoading } = useCommunityProgress();
-  const { allUsers, loading: usersLoading } = useAllUsers();
+  const { allUsers, loading: usersLoading, ensureUsers } = useAllUsers();
   const [searchTerm, setSearchTerm] = useState('');
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
-  const loading = planLoading || progressLoading || usersLoading;
+  // Ensure profile docs for ranked UIDs without waiting on a full directory cold scan.
+  useEffect(() => {
+    if (progressLoading || allProgress.length === 0) return;
+    void ensureUsers(allProgress.map((row) => row.userId));
+  }, [allProgress, progressLoading, ensureUsers]);
+
+  // Paint when we have any directory cache; ensureUsers fills gaps without blocking.
+  const loading = planLoading || progressLoading || (usersLoading && allUsers.length === 0);
 
   const totalPassagesToDate = useMemo(() => {
     return countPlanPassagesDueThrough(plan?.dailyReadings, startOfDay(new Date()));
   }, [plan]);
 
   const userProgressData = useMemo((): UserProgressDisplay[] => {
-    if (progressLoading || usersLoading || !allProgress || !allUsers) return [];
+    if (progressLoading || !allProgress || !allUsers) return [];
     const visibleUids = new Set(allUsers.filter(u => u.showInCommunityProgress ?? true).map(u => u.uid));
     const usersMap = new Map(allUsers.map(u => [u.uid, u]));
     return allProgress
@@ -75,7 +82,7 @@ export default function LeaderboardPage() {
       })
       .filter((x): x is UserProgressDisplay => x !== null)
       .sort((a, b) => b.completedCount - a.completedCount);
-  }, [allProgress, allUsers, totalPassagesToDate, progressLoading, usersLoading, currentUser?.uid, currentUser?.avatar]);
+  }, [allProgress, allUsers, totalPassagesToDate, progressLoading, currentUser?.uid, currentUser?.avatar]);
 
   const filteredProgress = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();

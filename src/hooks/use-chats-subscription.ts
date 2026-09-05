@@ -7,7 +7,9 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { UsersContext } from '@/contexts/users-context';
 import { useContext } from 'react';
+import { usePathname } from 'next/navigation';
 import { primeMediaUrls } from '@/lib/media-cache';
+import { scheduleIdle } from '@/lib/schedule-idle';
 
 const CHATS_COLLECTION = 'chats';
 
@@ -15,9 +17,22 @@ type UseChatsSubscriptionOptions = {
   enabled?: boolean;
 };
 
+function isChatRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === '/cell/chat' ||
+    pathname.startsWith('/cell/chat/') ||
+    pathname === '/ndcpc/chat' ||
+    pathname.startsWith('/ndcpc/chat/') ||
+    pathname === '/chat' ||
+    pathname.startsWith('/chat/')
+  );
+}
+
 export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) {
   const { enabled = true } = options;
   const { currentUser } = useAuth();
+  const pathname = usePathname();
   const usersContext = useContext(UsersContext);
   const patchUsers = usersContext?.patchUsers;
   const [chats, setChats] = useState<Chat[]>([]);
@@ -26,6 +41,7 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
   const [tabVisible, setTabVisible] = useState(
     () => typeof document === 'undefined' || document.visibilityState !== 'hidden',
   );
+  const [listenersReady, setListenersReady] = useState(() => isChatRoute(pathname));
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -34,11 +50,27 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
+  // Chat routes need data immediately; elsewhere idle-defer to protect LCP (badges catch up after paint).
   useEffect(() => {
     if (!enabled || !currentUser?.uid) {
-      loadedUidRef.current = null;
-      setChats([]);
-      setLoading(false);
+      setListenersReady(false);
+      return;
+    }
+    if (isChatRoute(pathname) || loadedUidRef.current === currentUser.uid) {
+      setListenersReady(true);
+      return;
+    }
+    setListenersReady(false);
+    return scheduleIdle(() => setListenersReady(true), 2000);
+  }, [enabled, currentUser?.uid, pathname]);
+
+  useEffect(() => {
+    if (!enabled || !currentUser?.uid || !listenersReady) {
+      if (!enabled || !currentUser?.uid) {
+        loadedUidRef.current = null;
+        setChats([]);
+        setLoading(false);
+      }
       return;
     }
 
@@ -110,7 +142,7 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
     );
 
     return () => unsubscribe();
-  }, [enabled, currentUser?.uid, patchUsers, tabVisible]);
+  }, [enabled, currentUser?.uid, patchUsers, tabVisible, listenersReady]);
 
   return { chats, loading };
 }

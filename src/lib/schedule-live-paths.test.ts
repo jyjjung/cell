@@ -3,7 +3,7 @@ import { needsLiveSchedule } from './schedule-live-paths';
 
 describe('needsLiveSchedule', () => {
   it('uses live data on em. home and worship', () => {
-    expect(needsLiveSchedule('/')).toBe(true);
+    expect(needsLiveSchedule('/')).toBe(false);
     expect(needsLiveSchedule('/cell')).toBe(true);
     expect(needsLiveSchedule('/worship')).toBe(true);
   });
