@@ -196,25 +196,6 @@ export function readLastAppLocal(): CommunityAppId | null {
   return parseCommunityAppId(localStorage.getItem(LAST_APP_STORAGE_KEY));
 }
 
-/** Non-HttpOnly last-app cookie (same value as localStorage when persist ran). */
-export function readLastAppCookie(): CommunityAppId | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(
-    new RegExp(`(?:^|;\\s*)${LAST_APP_COOKIE_NAME}=([^;]*)`),
-  );
-  if (!match?.[1]) return null;
-  try {
-    return parseCommunityAppId(decodeURIComponent(match[1]));
-  } catch {
-    return null;
-  }
-}
-
-/** Prefer localStorage, then cookie — enough to resume without waiting on Firebase. */
-export function readLastAppPreference(): CommunityAppId | null {
-  return readLastAppLocal() ?? readLastAppCookie();
-}
-
 export function writeLastAppLocal(app: CommunityAppId): void {
   if (typeof window === 'undefined') return;
   if (!VALID_APPS.has(app)) return;
@@ -238,9 +219,9 @@ export function resolveEntryApp(
   if (accessible.length === 0) return null;
   if (accessible.length === 1) return accessible[0]!;
 
-  // localStorage/cookie wins: the switcher updates it immediately; Firestore can lag
+  // localStorage wins: the switcher updates it immediately; Firestore can lag
   // and was previously preferred, which stuck people on Users after visiting Cell.
-  const preferred = readLastAppPreference() ?? profile?.preferences?.lastApp;
+  const preferred = readLastAppLocal() ?? profile?.preferences?.lastApp;
   if (preferred && accessible.includes(preferred)) return preferred;
 
   for (const app of ENTRY_FALLBACK_ORDER) {

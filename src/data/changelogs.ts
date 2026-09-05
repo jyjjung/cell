@@ -8,40 +8,6 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
-    version: 'v1.17.10',
-    subtitle: 'Offline launch',
-    date: 'September 5, 2026',
-    changes: [
-      {
-        type: 'Fixed',
-        text: 'Opening the app offline from the home screen works again — resume still takes you to your last app after the shell loads.',
-      },
-      {
-        type: 'Fixed',
-        text: 'Signed-in visits to Home no longer sit on a loading spinner — you return to your last app right away.',
-      },
-      {
-        type: 'Improved',
-        text: 'Returning to your last app is snappier and more reliable after opening Home.',
-      },
-    ],
-  },
-  {
-    version: 'v1.17.9',
-    subtitle: 'Offline',
-    date: 'September 5, 2026',
-    changes: [
-      {
-        type: 'Fixed',
-        text: 'The app installs its offline cache again, so pages you already opened can load without a connection.',
-      },
-      {
-        type: 'Fixed',
-        text: 'Going offline no longer clears saved pages and leaves a blank white screen.',
-      },
-    ],
-  },
-  {
     version: 'v1.17.8',
     subtitle: 'Worship rosters',
     date: 'September 5, 2026',
