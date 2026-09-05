@@ -1,24 +1,24 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { LAST_APP_COOKIE_NAME, SESSION_COOKIE_NAME } from '@/lib/auth-session';
-import { parseCommunityAppId } from '@/lib/app-access';
+import { getAppHref, parseCommunityAppId } from '@/lib/app-access';
 import HomeClient from './home-client';
 
 /**
  * Server-read session cookie so guests paint the landing page immediately
  * instead of waiting on Firebase auth restore (FCP/LCP).
- *
- * Pass last-app from the cookie for client resume — do not server-redirect
- * (that blanks offline PWA launches whose start_url is `/`).
+ * Signed-in users with a last-app cookie skip the client redirect spinner.
  */
 export default async function HomePage() {
   const jar = await cookies();
   const initialHasSession = Boolean(jar.get(SESSION_COOKIE_NAME)?.value);
-  const initialLastApp = parseCommunityAppId(jar.get(LAST_APP_COOKIE_NAME)?.value);
 
-  return (
-    <HomeClient
-      initialHasSession={initialHasSession}
-      initialLastApp={initialLastApp}
-    />
-  );
+  if (initialHasSession) {
+    const lastApp = parseCommunityAppId(jar.get(LAST_APP_COOKIE_NAME)?.value);
+    if (lastApp) {
+      redirect(getAppHref(lastApp));
+    }
+  }
+
+  return <HomeClient initialHasSession={initialHasSession} />;
 }

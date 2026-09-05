@@ -28,8 +28,7 @@ export function ShellRouter() {
 
     const entry = resolveEntryApp(currentUser);
     if (entry) {
-      // Keep last-app cookie/localStorage fresh for switcher + next visit.
-      // Resume itself stays client-side so `/` still works offline (PWA start_url).
+      // Seed last-app cookie so the next `/` hit can server-redirect.
       persistLastApp(entry, currentUser.uid);
       router.replace(getAppHref(entry));
     }
