@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { hasNdcpcAccess } from '@/lib/app-access';
 import { LayoutGate } from '@/components/layout/layout-gate';
 import { syncProfileToChats } from '@/lib/sync-profile-chats';
+import { redirectToAccessibleApp } from '@/lib/persist-last-app';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
@@ -20,7 +21,7 @@ export default function NdcpcChatLayout({
     if (!loadingAuth && !currentUser) {
       router.push('/login?next=/ndcpc/chat');
     } else if (!loadingAuth && currentUser && !hasNdcpcAccess(currentUser)) {
-      router.replace('/');
+      redirectToAccessibleApp(router, currentUser);
     }
   }, [currentUser, loadingAuth, router]);
 

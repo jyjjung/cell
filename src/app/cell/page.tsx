@@ -6,6 +6,7 @@ import { hasCellAccess } from '@/lib/app-access';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { DashboardSkeleton } from '@/components/home/dashboard-skeleton';
+import { redirectToAccessibleApp } from '@/lib/persist-last-app';
 
 const DashboardPage = dynamic(() => import('@/components/home/dashboard-page'), {
   loading: () => <DashboardSkeleton />,
@@ -21,7 +22,7 @@ export default function CellHomePage() {
       return;
     }
     if (!loadingAuth && currentUser && !hasCellAccess(currentUser)) {
-      router.replace('/');
+      redirectToAccessibleApp(router, currentUser);
     }
   }, [currentUser, loadingAuth, router]);
 

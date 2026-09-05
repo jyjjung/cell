@@ -1,5 +1,6 @@
 import type { RoleCapability } from '@/lib/role-capabilities';
 import { hasCapability } from '@/lib/role-capabilities';
+import { LAST_APP_COOKIE_NAME } from '@/lib/auth-session';
 
 export type CommunityAppId = 'cell' | 'ndcpc' | 'users' | 'accounts' | 'updates';
 
@@ -43,6 +44,22 @@ export type AccessProfile = {
 };
 
 const LAST_APP_STORAGE_KEY = 'ndcCommunityLastApp';
+
+const VALID_APPS = new Set<CommunityAppId>(['cell', 'ndcpc', 'users', 'accounts', 'updates']);
+
+export function parseCommunityAppId(raw: string | null | undefined): CommunityAppId | null {
+  if (raw === 'cell' || raw === 'ndcpc' || raw === 'users' || raw === 'accounts' || raw === 'updates') {
+    return raw;
+  }
+  return null;
+}
+
+function writeLastAppCookie(app: CommunityAppId): void {
+  if (typeof document === 'undefined') return;
+  const maxAgeSec = 60 * 60 * 24 * 400; // ~13 months
+  const secure = typeof location !== 'undefined' && location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${LAST_APP_COOKIE_NAME}=${encodeURIComponent(app)}; Path=/; Max-Age=${maxAgeSec}; SameSite=Lax${secure}`;
+}
 
 function isMembershipActive(
   profile: Pick<AccessProfile, 'isApproved' | 'capabilityKeys'> | null | undefined,
@@ -176,16 +193,14 @@ export function getAppDescription(app: CommunityAppId): string {
 
 export function readLastAppLocal(): CommunityAppId | null {
   if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(LAST_APP_STORAGE_KEY);
-  if (raw === 'cell' || raw === 'ndcpc' || raw === 'users' || raw === 'accounts' || raw === 'updates') {
-    return raw;
-  }
-  return null;
+  return parseCommunityAppId(localStorage.getItem(LAST_APP_STORAGE_KEY));
 }
 
 export function writeLastAppLocal(app: CommunityAppId): void {
   if (typeof window === 'undefined') return;
+  if (!VALID_APPS.has(app)) return;
   localStorage.setItem(LAST_APP_STORAGE_KEY, app);
+  writeLastAppCookie(app);
 }
 
 /** First visit (no last-app): Account. After that, resume where they left off. */

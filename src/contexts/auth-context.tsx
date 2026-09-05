@@ -188,10 +188,14 @@ export function AuthProvider({
         const userDocRef = doc(db, USERS_COLLECTION, firebaseUser.uid);
 
         // Paint chrome immediately from last known profile while the live snapshot catches up.
+        // Clear loadingAuth here — waiting only on the first snapshot kept skeletons up even
+        // when currentUser was already hydrated from cache (hurts FCP on /cell and chat).
         const cachedProfile = readCachedAuthProfile(firebaseUser.uid);
         if (cachedProfile) {
           const generation = ++profileGenerationRef.current;
-          void applyProfile(firebaseUser, cachedProfile as UserProfileData, generation);
+          void applyProfile(firebaseUser, cachedProfile as UserProfileData, generation).finally(() => {
+            setLoadingAuth(false);
+          });
         }
 
         unsubscribeFromProfile = onSnapshot(userDocRef, (userDocSnap) => {

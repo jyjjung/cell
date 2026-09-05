@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
 import { NOTIFICATION_QUERY_LIMITS, NOTIFICATION_UNREAD_LOOKBACK_DAYS } from '@/lib/notification-visibility';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
+import { scheduleIdle } from '@/lib/schedule-idle';
 import { reactionsMapsEqual, toggleReactionMap, type ReactionMap } from '@/lib/reaction-utils';
 import type { AppNotification } from '@/types';
 import {
@@ -84,27 +85,6 @@ function notificationLookbackTimestamp(): Timestamp {
   const since = new Date();
   since.setDate(since.getDate() - NOTIFICATION_UNREAD_LOOKBACK_DAYS);
   return Timestamp.fromDate(since);
-}
-
-function scheduleIdle(callback: () => void, timeoutMs = 2000): () => void {
-  const ric = (
-    window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    }
-  ).requestIdleCallback;
-
-  if (typeof ric === 'function') {
-    const id = ric(callback, { timeout: timeoutMs });
-    return () => {
-      (
-        window as Window & { cancelIdleCallback?: (id: number) => void }
-      ).cancelIdleCallback?.(id);
-    };
-  }
-
-  const timer = window.setTimeout(callback, Math.min(timeoutMs, 1500));
-  return () => window.clearTimeout(timer);
 }
 
 const triggerPushNotification = async (notificationId: string): Promise<void> => {

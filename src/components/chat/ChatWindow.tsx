@@ -2,11 +2,11 @@
 "use client";
 
 import { useAuth } from '@/contexts/auth-context';
-import { PageLoading } from '@/components/ui/loading-spinner';
 import { useAllUsers, useUsersById } from '@/hooks/use-all-users';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useMessages } from '@/hooks/useMessages';
 import { useChatPhotoMessages } from '@/hooks/use-chat-photo-messages';
+import { useChats } from '@/hooks/useChats';
 import { getLastSeenNamesPerMessage, getMemberDisplayName, resolveChatAvatar, chatBelongsToApp, chatHrefForApp } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { ChevronLeft, Images, Info, Link2, MessageSquare } from 'lucide-react';
@@ -24,6 +24,7 @@ import { splitSheetsForViewer } from '@/lib/chord-chart';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
 import { IconButton } from '../ui/icon-button';
+import { ListLoadingSkeleton } from '../ui/loading-state';
 import type { ViewerSlide } from '../worship/viewer-types';
 import ChatLinksList, { extractChatLinks } from './ChatLinksList';
 import ChatMessageList from './ChatMessageList';
@@ -155,6 +156,7 @@ function ChatWindowBody({
   const { allUsers } = useAllUsers();
   const usersById = useUsersById();
   const online = useOnlineStatus();
+  const { chats } = useChats();
   const isInitialLoad = useRef(true);
   const seenDebounceRef = useRef<number | null>(null);
   const lastSeenMessageIdRef = useRef<string | null>(null);
@@ -166,13 +168,18 @@ function ChatWindowBody({
 
   const routeApp: 'cell' | 'ndcpc' = pathname.startsWith('/ndcpc/') ? 'ndcpc' : 'cell';
 
+  const t = translations[currentUser?.preferredLanguage || 'en'];
+  const blockingLoad = loadingMessages && messages.length === 0;
+  const listChat = useMemo(() => chats.find((c) => c.id === chatId) ?? null, [chats, chatId]);
+  const displayChat = chat ?? listChat;
+
   // Keep em. and Preschool chats on their own URL trees.
   useEffect(() => {
-    if (!chat) return;
-    if (chatBelongsToApp(chat, routeApp)) return;
-    const correctApp = chat.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
+    if (!displayChat) return;
+    if (chatBelongsToApp(displayChat, routeApp)) return;
+    const correctApp = displayChat.appScope === 'ndcpc' ? 'ndcpc' : 'cell';
     router.replace(chatHrefForApp(chatId, correctApp));
-  }, [chat, chatId, routeApp, router]);
+  }, [displayChat, chatId, routeApp, router]);
 
   const photosEnabled = chatTab === 'photos';
   const { photoMessages, loadingMore: loadingMorePhotos } = useChatPhotoMessages(
@@ -190,9 +197,6 @@ function ChatWindowBody({
     () => extractChatLinks(messages, usersById).length,
     [messages, usersById],
   );
-
-  const t = translations[currentUser?.preferredLanguage || 'en'];
-  const blockingLoad = loadingMessages && messages.length === 0;
 
   const newestMessageId = messages[0]?.id ?? null;
 
@@ -271,13 +275,15 @@ function ChatWindowBody({
   }, [chat?.memberSeen, chat?.members, messages, usersById, currentUser, allUsers.length]);
 
   const chatDetails = useMemo(() => {
-    if (!chat || !currentUser || !allUsers) return { name: 'Chat', avatar: null, photoURL: null as string | null };
-    if (chat.type === 'private') {
-      const peerId = chat.members.find(id => id !== currentUser.uid);
+    if (!displayChat || !currentUser || !allUsers) {
+      return { name: 'Chat', avatar: null, photoURL: null as string | null };
+    }
+    if (displayChat.type === 'private') {
+      const peerId = displayChat.members.find(id => id !== currentUser.uid);
       if (!peerId) return { name: 'Private Chat', avatar: null, photoURL: null };
 
       const peerProfile = allUsers.find(u => u.uid === peerId);
-      const peerInfoFromChat = chat.memberInfo[peerId];
+      const peerInfoFromChat = displayChat.memberInfo[peerId];
 
       let name = 'Private Chat';
       if (peerProfile && peerProfile.firstName) {
@@ -288,12 +294,16 @@ function ChatWindowBody({
 
       return {
         name: name,
-        avatar: resolveChatAvatar(peerProfile, peerInfoFromChat, chat.appScope),
+        avatar: resolveChatAvatar(peerProfile, peerInfoFromChat, displayChat.appScope),
         photoURL: null,
       };
     }
-    return { name: chat.name || 'Unnamed Circle', avatar: null, photoURL: chat.photoURL || null };
-  }, [chat, currentUser, allUsers]);
+    return {
+      name: displayChat.name || 'Unnamed Circle',
+      avatar: null,
+      photoURL: displayChat.photoURL || null,
+    };
+  }, [displayChat, currentUser, allUsers]);
 
   const chatImages = useMemo(() => {
     const source = photoMessages.length > 0 ? photoMessages : messages;
@@ -348,7 +358,34 @@ function ChatWindowBody({
   }, [messages, usersById, chat]);
 
   if (blockingLoad) {
-    return <PageLoading variant="spinner" className="h-full min-h-[12rem]" label="Loading chat" />;
+    return (
+      <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden" aria-busy="true" aria-label="Loading chat">
+        <header
+          className="z-40 flex-shrink-0 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 border-b border-border/50 bg-background pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] pl-[max(1.5rem,env(safe-area-inset-left,0px))] pr-[max(1.5rem,env(safe-area-inset-right,0px))]"
+          style={{ touchAction: 'none' }}
+        >
+          <IconButton
+            variant="ghost"
+            onClick={() => router.push(backHref)}
+            className="rounded-full bg-muted/20 hover:bg-muted/40"
+            aria-label={t.back}
+            icon={ChevronLeft}
+          />
+          <div className="flex flex-col items-center gap-1 min-w-0">
+            <div className="h-10 w-10 rounded-full bg-muted border border-border shadow-sm overflow-hidden">
+              <GroupChatAvatar
+                avatar={chatDetails.avatar}
+                photoURL={chatDetails.photoURL}
+                showHalo={displayChat?.appScope !== 'ndcpc'}
+              />
+            </div>
+            <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
+          </div>
+          <div className="h-10 w-10" aria-hidden />
+        </header>
+        <ListLoadingSkeleton rows={6} className="flex-1 p-4" />
+      </div>
+    );
   }
 
   if (!chat) {

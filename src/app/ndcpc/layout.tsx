@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LayoutGate } from '@/components/layout/layout-gate';
+import { redirectToAccessibleApp } from '@/lib/persist-last-app';
 
 export default function NdcpcAppLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, loadingAuth } = useAuth();
@@ -16,7 +17,7 @@ export default function NdcpcAppLayout({ children }: { children: React.ReactNode
       return;
     }
     if (!loadingAuth && currentUser && !hasNdcpcAccess(currentUser)) {
-      router.replace('/');
+      redirectToAccessibleApp(router, currentUser);
     }
   }, [currentUser, loadingAuth, router]);
 

@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/auth-context';
 import { hasCellAccess } from '@/lib/app-access';
 import { LayoutGate } from '@/components/layout/layout-gate';
+import { redirectToAccessibleApp } from '@/lib/persist-last-app';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -20,7 +21,7 @@ export default function CellChatLayout({
       return;
     }
     if (!loadingAuth && currentUser && !hasCellAccess(currentUser)) {
-      router.replace('/');
+      redirectToAccessibleApp(router, currentUser);
     }
   }, [currentUser, loadingAuth, router]);
 

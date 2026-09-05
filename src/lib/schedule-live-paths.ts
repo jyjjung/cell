@@ -4,7 +4,7 @@
  */
 export function needsLiveSchedule(pathname: string): boolean {
   return (
-    pathname === '/' ||
+    // `/` is a redirect shell for signed-in users — skip 4 live roster listeners there.
     pathname === '/cell' ||
     pathname.startsWith('/worship') ||
     pathname.startsWith('/qt') ||

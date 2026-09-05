@@ -19,6 +19,12 @@ import { Input } from '@/components/ui/input';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading, ButtonSpinner } from '@/components/ui/loading-spinner';;
 import { ScheduleRowDate, DrillDownListRow, ScheduleListCard, drillDownRowButtonClass } from '@/components/schedule/schedule-occurrence-row';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { RemoteImage } from '@/components/ui/remote-image';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
@@ -1755,121 +1761,175 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
   if (loading) return <PageLoading />;
 
   return (
-    <AnimatePresence mode="wait">
-      {detail ? (
-        <RosterDetailView
-          key="detail"
-          roster={rosters.find(r => r.id === detail.id) || detail}
-          playlists={playlists}
-          onBack={() => setDetail(null)}
-          onOpenPlaylist={onOpenPlaylist}
-        />
-      ) : managingRoles ? (
-        <motion.div key="roles" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-          <WorshipRosterRolesPanel
-            roles={worshipData?.rosterRoles ?? []}
-            canManage={canManageWorship}
-            onBack={() => setManagingRoles(false)}
-            onAdd={async (name) => {
-              await worshipData?.addRosterRole(name);
-              toast({ title: 'Role added' });
-            }}
-            onDelete={async (role) => {
-              await worshipData?.deleteRosterRole(role);
-              toast({ title: 'Role removed' });
-            }}
+    <>
+      <AnimatePresence mode="wait">
+        {detail ? (
+          <RosterDetailView
+            key="detail"
+            roster={rosters.find(r => r.id === detail.id) || detail}
+            playlists={playlists}
+            onBack={() => setDetail(null)}
+            onOpenPlaylist={onOpenPlaylist}
           />
-        </motion.div>
-      ) : (
-        <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-          {canManageWorship ? (
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-lg gap-1.5 px-3 text-sm"
-                onClick={() => setManagingRoles(true)}
-              >
-                <Settings2 className="h-4 w-4" />
-                {t.rosterRoles}
-              </Button>
-            </div>
-          ) : null}
-          {rosters.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 rounded-xl border-2 border-dashed border-border/40 text-center">
-              <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="font-semibold text-muted-foreground">No rosters yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Create a team roster for an upcoming service.</p>
-            </div>
-          ) : (
-            <ScheduleListCard>
-              {rosters.map((r, i) => {
-                const linked = playlists.find(p => p.id === r.setlistId);
-                const filled = r.slots.filter(s => s.members.length > 0).length;
-                return (
-                  <motion.div
-                    key={r.id}
-                    custom={i}
-                    variants={fadeUp}
-                    initial="hidden"
-                    animate="visible"
-                  >
-                    <DrillDownListRow
-                      leading={<ScheduleRowDate date={parseISO(r.date)} />}
-                      title={r.name}
-                      subtitle={
-                        <>
-                          <span className="event-row-meta">
-                            {filled}/{r.slots.length} roles filled
-                          </span>
-                          {linked ? (
-                            <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                              <Link2 className="h-2 w-2" /> {linked.name}
-                            </span>
-                          ) : null}
-                        </>
-                      }
-                      onClick={() => setDetail(r)}
-                      trailing={
-                        canManageWorship ? (
-                          <IconButton
-                            variant="ghost"
-                            className="rounded-lg hover:text-destructive hover:bg-destructive/10"
-                            aria-label="Delete roster"
-                            onClick={() => setDeleteConfirm(r)}
-                            icon={Trash2}
-                            iconClassName="h-3.5 w-3.5"
-                          />
-                        ) : undefined
-                      }
-                    />
-                  </motion.div>
-                );
-              })}
-            </ScheduleListCard>
-          )}
-
-          <NewRosterDialog open={newOpen} onClose={() => setNewOpen(false)}
-            onCreated={id => { const r = rosters.find(x => x.id === id); if (r) setDetail(r); }} />
-
-          <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
-            <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete &ldquo;{deleteConfirm?.name}&rdquo;?</DialogTitle>
-                <DialogDescription>This will permanently remove the roster.</DialogDescription>
-              </DialogHeader>
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-                <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? <ButtonSpinner className="mr-2" /> : null} Delete
+        ) : managingRoles ? (
+          <motion.div key="roles" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <WorshipRosterRolesPanel
+              roles={worshipData?.rosterRoles ?? []}
+              canManage={canManageWorship}
+              onBack={() => setManagingRoles(false)}
+              onAdd={async (name) => {
+                await worshipData?.addRosterRole(name);
+                toast({ title: 'Role added' });
+              }}
+              onDelete={async (role) => {
+                await worshipData?.deleteRosterRole(role);
+                toast({ title: 'Role removed' });
+              }}
+            />
+          </motion.div>
+        ) : (
+          <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
+            {canManageWorship ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg gap-1.5 px-3 text-sm"
+                  onClick={() => setManagingRoles(true)}
+                >
+                  <Settings2 className="h-4 w-4" />
+                  {t.rosterRoles}
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </motion.div>
-      )}
-    </AnimatePresence>
+            ) : null}
+            {rosters.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 rounded-xl border-2 border-dashed border-border/40 text-center">
+                <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                <p className="font-semibold text-muted-foreground">No rosters yet</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Create a team roster for an upcoming service.</p>
+              </div>
+            ) : (
+              <ScheduleListCard>
+                <Accordion type="single" collapsible className="w-full">
+                  {rosters.map((r) => {
+                    const linked = playlists.find(p => p.id === r.setlistId);
+                    const filled = r.slots.filter(s => s.members.length > 0).length;
+                    return (
+                      <AccordionItem
+                        key={r.id}
+                        value={r.id}
+                        className="border-b border-border/40 last:border-0"
+                      >
+                        <div className="flex items-center gap-0.5">
+                          <div className="min-w-0 flex-1">
+                            <AccordionTrigger className="py-3 text-[0.9375rem] no-underline hover:no-underline">
+                              <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
+                                <ScheduleRowDate date={parseISO(r.date)} />
+                                <div className="event-row-body min-w-0">
+                                  <p className="event-row-title">{r.name}</p>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="event-row-meta">
+                                      {filled}/{r.slots.length} roles filled
+                                    </span>
+                                    {linked ? (
+                                      <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                        <Link2 className="h-2 w-2" /> {linked.name}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            </AccordionTrigger>
+                          </div>
+                          <IconButton
+                            variant="ghost"
+                            className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
+                            aria-label="Edit roster"
+                            onClick={() => setDetail(r)}
+                            icon={Pencil}
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                          {canManageWorship ? (
+                            <IconButton
+                              variant="ghost"
+                              className="shrink-0 rounded-lg hover:text-destructive hover:bg-destructive/10"
+                              aria-label="Delete roster"
+                              onClick={() => setDeleteConfirm(r)}
+                              icon={Trash2}
+                              iconClassName="h-3.5 w-3.5"
+                            />
+                          ) : null}
+                        </div>
+                        <AccordionContent className="pb-4 pt-0">
+                          <div className="space-y-2">
+                            {r.slots.map((slot, slotIdx) => (
+                              <RosterRoleSlotRow
+                                key={slot.role}
+                                roleLabel={slot.role}
+                                roleClassName={roleBadgeClass(slot.role)}
+                                people={slot.members.map((member, memberIdx) => ({
+                                  id: member.userId ?? `guest-${slotIdx}-${memberIdx}`,
+                                  displayName: member.displayName,
+                                  isMember: Boolean(member.userId),
+                                }))}
+                                canManage={false}
+                              />
+                            ))}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-9 gap-1.5 rounded-lg"
+                              onClick={() => setDetail(r)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {canManageWorship ? 'Edit roster' : 'Open roster'}
+                            </Button>
+                            {linked ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9 gap-1.5 rounded-lg"
+                                onClick={() => onOpenPlaylist(linked.id)}
+                              >
+                                <Link2 className="h-3.5 w-3.5" />
+                                Open setlist
+                              </Button>
+                            ) : null}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </ScheduleListCard>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <NewRosterDialog open={newOpen} onClose={() => setNewOpen(false)}
+        onCreated={id => { const r = rosters.find(x => x.id === id); if (r) setDetail(r); }} />
+
+      <Dialog open={!!deleteConfirm} onOpenChange={v => !v && setDeleteConfirm(null)}>
+        <DialogContent className="rounded-xl p-8 border-border/50 bg-card/95 backdrop-blur-3xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold normal-case not-italic">Delete &ldquo;{deleteConfirm?.name}&rdquo;?</DialogTitle>
+            <DialogDescription>This will permanently remove the roster.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <ButtonSpinner className="mr-2" /> : null} Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

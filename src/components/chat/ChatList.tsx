@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from 'next/navigation';
 import { useChats } from "@/hooks/useChats";
 import { useAllUsers } from "@/hooks/use-all-users";
@@ -14,13 +15,14 @@ import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Plus } from "lucide-react";
 import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import CreateChatDialog from "./CreateChatDialog";
+import { ListLoadingSkeleton } from "@/components/ui/loading-state";
 import { GroupChatAvatar } from "./GroupChatAvatar";
 import type { Chat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { translations } from "@/lib/translations";
 import { formatDistanceToNow } from "date-fns";
+
+const CreateChatDialog = dynamic(() => import("./CreateChatDialog"), { ssr: false });
 
 export type ChatListAppScope = 'cell' | 'ndcpc';
 
@@ -115,9 +117,7 @@ export default function ChatList({
 
       <div className="relative">
         {loading ? (
-          <div className="flex min-h-[240px] items-center justify-center">
-            <LoadingSpinner size="lg" />
-          </div>
+          <ListLoadingSkeleton rows={8} />
         ) : filteredChats.length === 0 ? (
           <EmptyState
             icon={MessageCircle}
