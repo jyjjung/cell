@@ -88,8 +88,6 @@ function createWithPWA() {
     dest: 'public',
     register: false,
     skipWaiting: true,
-    // Avoid full reload on reconnect — App Router + Firestore already reconnect.
-    reloadOnOnline: false,
     workboxOptions: {
       runtimeCaching: [
         ...FIREBASE_MEDIA_CACHING,
