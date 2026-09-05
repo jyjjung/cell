@@ -8,6 +8,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.10',
+    subtitle: 'Offline launch',
+    date: 'September 5, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Opening the app offline from the home screen works again — resume still takes you to your last app after the shell loads.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.9',
     subtitle: 'Offline',
     date: 'September 5, 2026',
