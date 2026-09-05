@@ -24,7 +24,7 @@ import * as Sentry from '@sentry/nextjs';
 import {
     createUserWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updateProfile as updateFirebaseProfile, type User as FirebaseUser
 } from 'firebase/auth';
-import { arrayUnion, doc, getDoc, getDocFromCache, getDocFromServer, onSnapshot, serverTimestamp, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, getDocFromServer, onSnapshot, serverTimestamp, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -219,29 +219,7 @@ export function AuthProvider({
             });
         }, (error) => {
           console.error('Error listening to user profile:', error);
-          // Offline / unavailable: paint from device cache so AppLayout does not stay blank.
-          const generation = ++profileGenerationRef.current;
-          void (async () => {
-            try {
-              const cacheSnap = await getDocFromCache(userDocRef);
-              if (generation !== profileGenerationRef.current) return;
-              if (cacheSnap.exists()) {
-                await applyProfile(firebaseUser, cacheSnap.data() as UserProfileData, generation);
-                return;
-              }
-            } catch {
-              /* no Firestore device cache for this profile */
-            }
-            if (generation !== profileGenerationRef.current) return;
-            const local = readCachedAuthProfile(firebaseUser.uid);
-            if (local) {
-              await applyProfile(firebaseUser, local as UserProfileData, generation);
-            }
-          })().finally(() => {
-            if (generation === profileGenerationRef.current) {
-              setLoadingAuth(false);
-            }
-          });
+          setLoadingAuth(false);
         });
 
       } else {
