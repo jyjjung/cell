@@ -25,8 +25,7 @@ export default function HomeClient({
     initialHasSession && initialLastApp ? getAppHref(initialLastApp) : null,
   );
 
-  // Same speed as a server redirect, without breaking offline PWA launch:
-  // hard-navigate from cookie/localStorage immediately — do not wait on Firebase.
+  // Head inline script usually navigates first. This covers late cookie/localStorage.
   useEffect(() => {
     if (!initialHasSession && !hasSession) return;
     const last = initialLastApp ?? readLastAppPreference();
@@ -36,6 +35,19 @@ export default function HomeClient({
     if (window.location.pathname === href) return;
     window.location.replace(href);
   }, [initialHasSession, hasSession, initialLastApp]);
+
+  // Profile failed to load — still leave `/` if we know the last app.
+  useEffect(() => {
+    if (loadingAuth || currentUser) return;
+    if (!hasSession && !initialHasSession) return;
+    if (resumingHref) return;
+    const last = readLastAppPreference();
+    if (!last) return;
+    const href = getAppHref(last);
+    setResumingHref(href);
+    if (window.location.pathname === href) return;
+    window.location.replace(href);
+  }, [loadingAuth, currentUser, hasSession, initialHasSession, resumingHref]);
 
   if (!initialHasSession && !hasSession) {
     return (
