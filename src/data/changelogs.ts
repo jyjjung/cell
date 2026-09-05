@@ -8,6 +8,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.9',
+    subtitle: 'Offline home',
+    date: 'September 5, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Opening the app offline from the home screen no longer shows a blank white page.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.8',
     subtitle: 'Worship rosters',
     date: 'September 5, 2026',
