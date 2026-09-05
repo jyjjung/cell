@@ -28,7 +28,7 @@ export function ShellRouter() {
 
     const entry = resolveEntryApp(currentUser);
     if (entry) {
-      // Seed last-app cookie so the next `/` hit can server-redirect.
+      // Keep last-app cookie/localStorage fresh for the app switcher.
       persistLastApp(entry, currentUser.uid);
       router.replace(getAppHref(entry));
     }
