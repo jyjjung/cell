@@ -18,7 +18,7 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Fixed',
-        text: 'Signed-in visits to home take you straight back to your last app without hanging on Loading.',
+        text: 'Signed-in visits to home jump straight to your last app — no more stuck Loading spinner.',
       },
     ],
   },
