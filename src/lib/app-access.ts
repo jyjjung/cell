@@ -238,9 +238,9 @@ export function resolveEntryApp(
   if (accessible.length === 0) return null;
   if (accessible.length === 1) return accessible[0]!;
 
-  // localStorage wins: the switcher updates it immediately; Firestore can lag
+  // localStorage/cookie wins: the switcher updates it immediately; Firestore can lag
   // and was previously preferred, which stuck people on Users after visiting Cell.
-  const preferred = readLastAppLocal() ?? profile?.preferences?.lastApp;
+  const preferred = readLastAppPreference() ?? profile?.preferences?.lastApp;
   if (preferred && accessible.includes(preferred)) return preferred;
 
   for (const app of ENTRY_FALLBACK_ORDER) {
