@@ -425,6 +425,9 @@ NDCPC video metadata, and profile/chat synchronization.
 API handlers must authenticate server-side with Firebase Admin or the existing
 API auth helpers, validate inputs with existing schemas/utilities, and return
 explicit errors. Cron endpoints use the existing cron authentication pattern.
+The admin QT roster scan endpoint accepts bounded PDF/image uploads and sends
+them to the server-configured Gemini API for draft extraction only; it must
+never write roster entries without an explicit admin save.
 
 ### Domain capabilities
 

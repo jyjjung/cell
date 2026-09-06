@@ -8,6 +8,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.18.0',
+    subtitle: 'Roster scanning',
+    date: 'September 7, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Admins can scan a QT roster PDF or photo, choose the relevant name language, and review assignments before saving.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.43',
     subtitle: 'Faster return visits',
     date: 'September 7, 2026',
