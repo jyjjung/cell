@@ -82,12 +82,12 @@ function Calendar({
         day_button: cn(
           buttonVariants({ variant: "ghost" }),
           compact
-            ? "h-8 w-8 rounded-lg p-0 text-xs font-normal aria-selected:opacity-100"
-            : "h-10 w-10 rounded-lg p-0 font-normal aria-selected:opacity-100",
+            ? "h-8 w-8 rounded-lg p-0 text-xs font-normal aria-selected:rounded-lg aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:opacity-100 aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground aria-selected:focus:bg-primary aria-selected:focus:text-primary-foreground"
+            : "h-10 w-10 rounded-lg p-0 font-normal aria-selected:rounded-lg aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:opacity-100 aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground aria-selected:focus:bg-primary aria-selected:focus:text-primary-foreground",
         ),
         range_end: "day-range-end",
         selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+          "rounded-lg bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         today: "font-semibold",
         outside:
           "day-outside text-muted-foreground/50 aria-selected:bg-muted/50 aria-selected:text-muted-foreground/50",
