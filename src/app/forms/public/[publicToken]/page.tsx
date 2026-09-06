@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { LoadingSpinner, PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
@@ -20,9 +21,11 @@ import {
 import { formIsAcceptingResponses } from '@/lib/forms/lifecycle';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
+import { ArrowLeft } from 'lucide-react';
 
 export default function PublicFormPage(props: { params: Promise<{ publicToken: string }> }) {
   const params = use(props.params);
+  const router = useRouter();
   const { currentUser, loadingAuth } = useAuth();
   const { toast } = useToast();
 
@@ -223,20 +226,31 @@ export default function PublicFormPage(props: { params: Promise<{ publicToken: s
 
   return (
     <div className="page-container">
+      <Button
+        type="button"
+        variant="outline"
+        className="mb-4 h-10 w-fit rounded-lg px-3"
+        onClick={() => (currentUser ? router.push('/forms') : router.back())}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {currentUser ? 'Back to forms' : 'Back'}
+      </Button>
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
-        <div className="space-y-1">
-          <h1 className="text-page-title">{form.title}</h1>
-          {form.description ? (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{form.description}</p>
-          ) : null}
-          {form.deadlineDate ? (
-            <p className="text-xs text-muted-foreground">Deadline: {form.deadlineDate}</p>
-          ) : null}
-          {typeof form.maxResponses === 'number' && form.maxResponses > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {form.responseCount ?? 0} / {form.maxResponses} responses
-            </p>
-          ) : null}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h1 className="text-page-title">{form.title}</h1>
+            {form.description ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">{form.description}</p>
+            ) : null}
+            {form.deadlineDate ? (
+              <p className="text-xs text-muted-foreground">Deadline: {form.deadlineDate}</p>
+            ) : null}
+            {typeof form.maxResponses === 'number' && form.maxResponses > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {form.responseCount ?? 0} / {form.maxResponses} responses
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {!acceptingResponses ? (

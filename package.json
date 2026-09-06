@@ -60,7 +60,7 @@
     "dotenv": "^17.4.2",
     "fast-xml-parser": "^5.11.1",
     "firebase": "^12.18.0",
-    "firebase-admin": "^14.3.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^13.2.0",
     "geist": "^1.7.2",
     "google-auth-library": "^11.0.2",

@@ -12,7 +12,7 @@ import { formResponsesAreLocked, formResponsesLockedMessage } from '@/lib/forms/
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
-import { AlertTriangle, Save, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Save, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -204,6 +204,16 @@ export default function GuestResponsePage(props: { params: Promise<{ formId: str
 
   return (
     <div className="page-container">
+      <Button
+        type="button"
+        variant="outline"
+        className="mb-4 h-10 w-fit rounded-lg px-3"
+        onClick={() => (currentUser ? router.push('/forms') : router.back())}
+        disabled={saving || deleting}
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {currentUser ? 'Back to forms' : 'Back'}
+      </Button>
       <div className="ui-card p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
         <div className="space-y-1">
           <h1 className="text-page-title">{form.title}</h1>
