@@ -89,10 +89,9 @@ export default function FormDateFieldInput({
             <span className="truncate">{summaryLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto border-0 bg-transparent p-0 shadow-none" align="start">
           {mode === 'single' ? (
             <Calendar
-              size="compact"
               mode="single"
               selected={selectedSingle}
               disabled={disabledMatcher}
@@ -100,7 +99,6 @@ export default function FormDateFieldInput({
             />
           ) : (
             <Calendar
-              size="compact"
               mode="multiple"
               selected={selectedMultiple}
               disabled={disabledMatcher}
