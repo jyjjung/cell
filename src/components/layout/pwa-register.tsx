@@ -19,6 +19,22 @@ declare global {
  */
 export function PwaRegister() {
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      if ('serviceWorker' in navigator) {
+        void navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(registrations.map((registration) => registration.unregister())),
+          );
+      }
+      if ('caches' in window) {
+        void window.caches.keys().then((keys) => {
+          return Promise.all(keys.map((key) => window.caches.delete(key)));
+        });
+      }
+      return;
+    }
+
     const wb = window.workbox;
     if (!wb?.register) return;
     void Promise.resolve(wb.register()).catch((err) => {
