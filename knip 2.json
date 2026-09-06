@@ -1,0 +1,7 @@
+{
+  "entry": [
+    "scripts/**/*.mjs",
+    "tests/**/*.test.ts",
+    "public/firebase-messaging-sw.js"
+  ]
+}
