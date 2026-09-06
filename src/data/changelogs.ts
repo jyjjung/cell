@@ -14,7 +14,7 @@ export const changelogs: ChangelogEntry[] = [
     changes: [
       {
         type: 'Added',
-        text: 'Admins can scan a QT roster PDF or photo, choose the relevant name language, and review assignments before saving.',
+        text: 'Admins can scan a QT roster PDF or photo, choose row 1 or row 2, and review assignments before saving.',
       },
     ],
   },

@@ -23,6 +23,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronsLeft, ChevronsRight, FileScan, Save, Trash2, UserCheck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+type ScannedRosterEntry = {
+  date: string;
+  row1?: string;
+  row2?: string;
+  title?: string;
+  passage?: string;
+};
+
 export default function AdminQTRosterPage() {
   const { roster, loading: rosterLoading, upsertEntry, deleteEntry } = useQTRoster();
   const { allUsers, loading: usersLoading } = useAllUsers();
@@ -30,8 +38,10 @@ export default function AdminQTRosterPage() {
   const [localChanges, setLocalChanges] = useState<Record<string, Partial<QTRosterEntry>>>({});
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState<'uploading' | 'analyzing' | 'preparing' | null>(null);
   const [scanFile, setScanFile] = useState<File | null>(null);
-  const [scanNamePreference, setScanNamePreference] = useState<'english' | 'korean'>('english');
+  const [scanRowPreference, setScanRowPreference] = useState<'1' | '2'>('1');
+  const [scannedEntries, setScannedEntries] = useState<ScannedRosterEntry[]>([]);
   const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
   
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -139,6 +149,33 @@ export default function AdminQTRosterPage() {
     }
   };
 
+  const handleCancelChanges = () => {
+    setLocalChanges({});
+    setScanFile(null);
+    setScannedEntries([]);
+  };
+
+  const applyScannedRow = (entries: ScannedRosterEntry[], row: '1' | '2') => {
+    setLocalChanges((previousChanges) => {
+      const nextChanges = { ...previousChanges };
+      entries.forEach((entry) => {
+        const personName = row === '1' ? entry.row1 : entry.row2;
+        if (!personName?.trim()) return;
+        const matchedUser = otherUsers.find((user) =>
+          `${user.firstName} ${user.lastName}`.trim().toLowerCase() === personName.trim().toLowerCase(),
+        );
+        nextChanges[entry.date] = {
+          ...nextChanges[entry.date],
+          personName: personName.trim(),
+          ...(entry.title?.trim() ? { title: entry.title } : {}),
+          ...(entry.passage?.trim() ? { passage: entry.passage } : {}),
+          ...(matchedUser ? { userId: matchedUser.uid } : {}),
+        };
+      });
+      return nextChanges;
+    });
+  };
+
   const handleDelete = async (date: string) => {
     if (!rosterMap.has(date)) return;
     try {
@@ -153,49 +190,42 @@ export default function AdminQTRosterPage() {
   const handleScan = async () => {
     if (!scanFile) return;
     setIsScanning(true);
+    setScanStatus('uploading');
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('Not authenticated');
       const formData = new FormData();
       formData.append('file', scanFile);
-      formData.append('namePreference', scanNamePreference);
+      formData.append('year', String(currentDate.getFullYear()));
+      formData.append('month', String(currentDate.getMonth() + 1));
+      setScanStatus('analyzing');
       const response = await fetch('/api/admin/qt-roster/scan', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      setScanStatus('preparing');
       const result = await response.json() as {
-        entries?: Array<Omit<QTRosterEntry, 'id'>>;
+        entries?: ScannedRosterEntry[];
         defaults?: { title?: string; passage?: string };
         error?: string;
       };
       if (!response.ok) throw new Error(result.error || 'Could not scan the file.');
-      const scannedEntries = result.entries || [];
-      if (scannedEntries.length === 0) {
+      const entries = result.entries || [];
+      if (entries.length === 0) {
         toast({ variant: 'destructive', title: t.adminScanNoRows });
         return;
       }
-      const nextChanges = { ...localChanges };
-      scannedEntries.forEach((entry) => {
-        const matchedUser = otherUsers.find((user) =>
-          `${user.firstName} ${user.lastName}`.trim().toLowerCase() === entry.personName.trim().toLowerCase(),
-        );
-        nextChanges[entry.date] = {
-          ...nextChanges[entry.date],
-          ...entry,
-          title: entry.title || result.defaults?.title || '',
-          passage: entry.passage || result.defaults?.passage || '',
-          ...(matchedUser ? { userId: matchedUser.uid } : {}),
-        };
-      });
-      setLocalChanges(nextChanges);
+      setScannedEntries(entries);
+      applyScannedRow(entries, scanRowPreference);
       setScanFile(null);
-      toast({ title: t.adminScanComplete, description: t.adminScanCompleteDesc.replace('{count}', String(scannedEntries.length)) });
+      toast({ title: t.adminScanComplete, description: t.adminScanCompleteDesc.replace('{count}', String(entries.length)) });
     } catch (error) {
       console.error('Failed to scan QT roster', error);
       toast({ variant: 'destructive', title: t.adminScanFailed, description: error instanceof Error ? error.message : undefined });
     } finally {
       setIsScanning(false);
+      setScanStatus(null);
     }
   };
 
@@ -218,20 +248,29 @@ export default function AdminQTRosterPage() {
             <h2 className="text-section-title">{monthLabel}</h2>
             <div className="flex items-center gap-2">
                 {Object.keys(localChanges).length > 0 && (
-                    <Button onClick={handleBulkSave} disabled={isSavingAll} size="sm">
+                    <>
+                      <Button variant="outline" onClick={handleCancelChanges} disabled={isSavingAll} size="sm">
+                        {t.adminCancelDrafts}
+                    </Button>
+                      <Button onClick={handleBulkSave} disabled={isSavingAll} size="sm">
                         {isSavingAll ? <ButtonSpinner className="mr-2" /> : <Save className="mr-2 h-4 w-4" />}
                         {t.adminSaveDrafts.replace('{count}', String(Object.keys(localChanges).length))}
-                    </Button>
+                      </Button>
+                    </>
                 )}
                 <div className="flex items-center gap-2">
                   <select
-                    value={scanNamePreference}
-                    onChange={(event) => setScanNamePreference(event.target.value as 'english' | 'korean')}
-                    aria-label={t.adminScanNameLanguage}
+                    value={scanRowPreference}
+                    onChange={(event) => {
+                      const row = event.target.value as '1' | '2';
+                      setScanRowPreference(row);
+                      if (scannedEntries.length > 0) applyScannedRow(scannedEntries, row);
+                    }}
+                    aria-label={t.adminScanRow}
                     className="h-9 rounded-lg border border-input bg-muted px-2 text-xs text-foreground"
                   >
-                    <option value="english">{t.adminScanEnglishNames}</option>
-                    <option value="korean">{t.adminScanKoreanNames}</option>
+                    <option value="1">{t.adminScanRow1}</option>
+                    <option value="2">{t.adminScanRow2}</option>
                   </select>
                   <Input
                     type="file"
@@ -251,6 +290,28 @@ export default function AdminQTRosterPage() {
             </div>
         </div>
       </header>
+
+      {isScanning && (
+        <div
+          className="rounded-xl border border-primary/30 bg-primary/5 p-4"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {scanStatus === 'uploading' ? t.adminScanUploading : scanStatus === 'preparing' ? t.adminScanPreparing : t.adminScanAnalyzing}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.adminScanPleaseWait}</p>
+            </div>
+            <span className="text-xs font-medium text-primary">{t.adminScanInProgress}</span>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-primary/15">
+            <div className="h-full w-1/3 animate-[scan-progress_1.4s_ease-in-out_infinite] rounded-full bg-primary motion-reduce:animate-none motion-reduce:w-full" />
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <ListLoadingSkeleton />
