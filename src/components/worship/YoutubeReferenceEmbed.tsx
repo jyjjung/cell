@@ -12,7 +12,7 @@ import {
     loadYoutubeIframeApi, YT_ENDED, YT_PAUSED, YT_PLAYING, type YTPlayer
 } from '@/lib/youtube-player-api';
 import type { ReferenceTrack, SetlistSong } from '@/types';
-import { Headphones, Pause, Play, X, Youtube } from 'lucide-react';
+import { Headphones, Pause, Play, PlaySquare, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 function formatTime(seconds: number): string {
@@ -253,7 +253,7 @@ export function YoutubePlayerPanel({
           />
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className={titleClass} title={displayTitle ?? undefined}>
-              <Youtube className="h-3 w-3 text-red-500 shrink-0" />
+              <PlaySquare className="h-4 w-4 text-red-500 shrink-0" />
               <span className="truncate">
                 {failed ? 'Unavailable' : (displayTitle ?? 'Loading…')}
               </span>
@@ -295,7 +295,7 @@ export function YoutubePlayerPanel({
       <div className="flex items-start gap-2 min-w-0">
         <div className="flex-1 min-w-0 space-y-0.5">
           <p className={titleClass} title={displayTitle ?? undefined}>
-            <Youtube className="h-3.5 w-3.5 text-red-500 shrink-0" />
+            <PlaySquare className="h-4 w-4 text-red-500 shrink-0" />
             <span className="truncate">
               {failed ? 'Unavailable' : (displayTitle ?? 'Loading…')}
             </span>

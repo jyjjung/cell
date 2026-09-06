@@ -8,6 +8,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.17.10',
+    subtitle: 'Simpler components',
+    date: 'September 6, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Buttons, cards, forms, and page surfaces now share clearer spacing, sizing, and elevation.',
+      },
+      {
+        type: 'Changed',
+        text: 'Your chosen colour themes remain unchanged while the component system becomes easier to use.',
+      },
+      {
+        type: 'Improved',
+        text: 'Common interface icons now use a more consistent size across navigation, actions, and compact controls.',
+      },
+    ],
+  },
+  {
     version: 'v1.17.9',
     subtitle: 'Offline home',
     date: 'September 5, 2026',

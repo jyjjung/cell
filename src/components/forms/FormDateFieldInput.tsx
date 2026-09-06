@@ -97,7 +97,6 @@ export default function FormDateFieldInput({
               selected={selectedSingle}
               disabled={disabledMatcher}
               onSelect={(date) => onChange(date ? formatDateValue(date) : '')}
-              initialFocus
             />
           ) : (
             <Calendar
@@ -111,7 +110,6 @@ export default function FormDateFieldInput({
                   .sort();
                 onChange(next);
               }}
-              initialFocus
             />
           )}
         </PopoverContent>
