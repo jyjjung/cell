@@ -12,6 +12,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/auth-context';
+import { useAdmin } from '@/context/AuthProvider';
 import { useInbox, type InboxTab } from '@/contexts/inbox-context';
 import { useNdcpcUnread } from '@/contexts/ndcpc-unread-context';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -37,7 +38,9 @@ import { collection, getDocs, limit, orderBy, query, where } from 'firebase/fire
 import type { Announcement } from '@/types/ndcpc-ported';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { useDeferredLoading } from '@/hooks/use-deferred-loading';
-import { Bell, BellOff, Check, CheckCheck, Megaphone, X } from 'lucide-react';
+import { AddAnnouncementForm } from '@/components/ndcpc/AddAnnouncementForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Bell, BellOff, Check, CheckCheck, Megaphone, Plus, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -138,7 +141,7 @@ function InboxItemCard({
       exit={{ opacity: 0, x: 16 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'flex flex-col gap-2 rounded-lg border border-border bg-transparent p-4 transition-colors',
+        'ui-card flex flex-col gap-2 bg-transparent transition-colors',
         isRead && 'opacity-60',
         onOpen && 'cursor-pointer hover:bg-muted/30',
       )}
@@ -216,7 +219,7 @@ function NdcpcAnnouncementCard({
       exit={{ opacity: 0, x: 16 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        'flex flex-col gap-2 rounded-lg border border-border bg-transparent p-4 transition-colors',
+        'ui-card flex flex-col gap-2 bg-transparent transition-colors',
         !isUnread && 'opacity-60',
       )}
     >
@@ -254,6 +257,7 @@ function NdcpcAnnouncementCard({
 
 export function InboxSheet() {
   const { currentUser } = useAuth();
+  const { isAdmin } = useAdmin();
   const { isOpen, tab, setTab, closeInbox } = useInbox();
   const { notifications, markAsRead, markAllAsRead, toggleReaction } = useNotifications();
   const {
@@ -274,6 +278,7 @@ export function InboxSheet() {
   const [viewFilter, setViewFilter] = useState<ViewFilter>('unread');
   const [history, setHistory] = useState<AppNotification[] | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [isCreateAnnouncementOpen, setIsCreateAnnouncementOpen] = useState(false);
   /** Local optimistic reactions so pills update immediately inside the sheet. */
   const [reactionOverrides, setReactionOverrides] = useState<Record<string, ReactionMap>>({});
 
@@ -493,7 +498,7 @@ export function InboxSheet() {
           : 'text-muted-foreground hover:text-foreground',
       )}
     >
-      <Icon className={cn('h-3.5 w-3.5', tab === id && (id === 'announcements' ? 'text-chart-4' : 'text-primary'))} />
+      <Icon className={cn('h-4 w-4', tab === id && (id === 'announcements' ? 'text-chart-4' : 'text-primary'))} />
       {label}
       {count > 0 && (
         <span
@@ -581,11 +586,23 @@ export function InboxSheet() {
           </div>
         ) : null}
 
-        <div className="shrink-0 border-b border-border px-4 py-2">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
           <div className="inline-flex rounded-lg bg-muted/50 p-0.5">
             {filterButton('unread', t.unread)}
             {filterButton('all', t.archive)}
           </div>
+          {isNdcpcAnnouncements && isAdmin && tab === 'announcements' ? (
+            <Button
+              type="button"
+              variant="subtle"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs"
+              onClick={() => setIsCreateAnnouncementOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              {t.adminNewAnnouncement}
+            </Button>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
@@ -659,6 +676,17 @@ export function InboxSheet() {
           )}
         </div>
       </SheetContent>
+      <Dialog
+        open={isCreateAnnouncementOpen}
+        onOpenChange={setIsCreateAnnouncementOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.adminNewAnnouncement}</DialogTitle>
+          </DialogHeader>
+          <AddAnnouncementForm onSuccess={() => setIsCreateAnnouncementOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }

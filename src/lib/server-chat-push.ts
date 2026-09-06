@@ -1,5 +1,5 @@
 import { FieldPath, FieldValue, type Firestore } from 'firebase-admin/firestore';
-import type { Messaging } from 'firebase-admin/messaging';
+import type { Messaging, MulticastMessage } from 'firebase-admin/messaging';
 import type { Chat, UserProfileData } from '@/types';
 import { calculateTotalUnread, toSafeStringMap } from '@/lib/server-badge-utils';
 import { chatPushBadgeFields } from '@/lib/chat-push-badge';
@@ -27,7 +27,7 @@ function isTransientFcmError(error: unknown): boolean {
 
 async function sendMulticastWithRetry(
   adminMessaging: Messaging,
-  message: Parameters<Messaging['sendEachForMulticast']>[0],
+  message: MulticastMessage,
 ) {
   let lastError: unknown;
   for (let attempt = 1; attempt <= FCM_SEND_ATTEMPTS; attempt++) {
@@ -258,7 +258,7 @@ export async function deliverChatPush(
 
         const response = await sendMulticastWithRetry(
           adminMessaging,
-          payload as Parameters<Messaging['sendEachForMulticast']>[0],
+          payload as MulticastMessage,
         );
 
         if (response.failureCount > 0) {

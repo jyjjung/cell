@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, type DocumentSnapshot } from 'firebase/firestore';
 import { FileText, ChevronRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';

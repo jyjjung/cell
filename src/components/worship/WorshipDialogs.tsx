@@ -24,7 +24,7 @@ import { useWorshipData } from '@/contexts/worship-data-context';
 import { emptyChordAnnotation } from '@/components/worship/text-chord-chart-viewer';
 import { ChordChartBody } from '@/components/worship/text-chord-chart';
 import { format, parseISO } from 'date-fns';
-import { Check, Pencil, Plus, Trash2, Youtube } from 'lucide-react';import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Pencil, PlaySquare, Plus, Trash2 } from 'lucide-react';import { useEffect, useMemo, useRef, useState } from 'react';
 
 const WORSHIP_ALL_KEYS: ChordKey[] = [
   'numbers',
@@ -472,7 +472,7 @@ export function SetlistSongConfigPanel({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Label className="flex items-center gap-1.5">
-            <Youtube className="h-3.5 w-3.5" /> Reference Tracks <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            <PlaySquare className="h-4 w-4" /> Reference Tracks <span className="text-muted-foreground text-xs font-normal">(optional)</span>
           </Label>
           <Button type="button" size="sm" variant="outline" className="h-7 rounded-lg text-xs gap-1"
             onClick={addTrack}>

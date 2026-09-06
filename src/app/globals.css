@@ -49,6 +49,29 @@
     --loading-fade-duration: 220ms;
 
     --radius: 0.75rem;
+    /* Simple Design System foundations. Colour remains owned by the theme tokens above. */
+    --ds-space-100: 0.25rem;
+    --ds-space-200: 0.5rem;
+    --ds-space-300: 0.75rem;
+    --ds-space-400: 1rem;
+    --ds-space-600: 1.5rem;
+    --ds-space-800: 2rem;
+    --ds-radius-100: 0.25rem;
+    --ds-radius-200: 0.5rem;
+    --ds-radius-400: 1rem;
+    --ds-radius-xl: 1.5rem;
+    --ds-radius-full: 9999px;
+    --ds-shadow-100: 0 1px 4px rgb(12 12 13 / 0.05);
+    --ds-shadow-200: 0 1px 4px rgb(12 12 13 / 0.05), 0 1px 4px rgb(12 12 13 / 0.1);
+    --ds-shadow-300: 0 4px 4px rgb(12 12 13 / 0.05), 0 4px 4px rgb(12 12 13 / 0.1);
+    --ds-blur-100: 4px;
+    --ds-title-hero-size: clamp(2.25rem, 8vw, 4.5rem);
+    --ds-title-page-size: clamp(2rem, 6vw, 3rem);
+    --ds-subtitle-size: clamp(1.75rem, 4vw, 2rem);
+    --ds-heading-size: 1.5rem;
+    --ds-subheading-size: 1.25rem;
+    --ds-body-size: 1rem;
+    --ds-body-small-size: 0.875rem;
     --app-card-padding-sm: 0.875rem;
     color-scheme: light;
 
@@ -288,24 +311,34 @@
 
 @layer components {
 
+  /* Figma icon set starts at 16px; normalize legacy 12px and 14px icon usages. */
+  .lucide[class~='h-3'][class~='w-3'],
+  .lucide[class~='h-3.5'][class~='w-3.5'] {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
   /* ── Typography (HIG text styles, rem-based for user text size) ── */
   .text-hero {
     @apply font-semibold tracking-tight leading-tight text-foreground;
-    font-size: 2.125rem;
-    letter-spacing: -0.025em;
+    font-size: var(--ds-title-hero-size);
+    line-height: 1.2;
+    letter-spacing: -0.04em;
   }
 
   .text-page-title,
   .home-greeting-title {
     @apply font-semibold tracking-tight text-foreground;
-    font-size: 1.75rem;
+    font-size: var(--ds-title-page-size);
     line-height: 1.2;
-    letter-spacing: -0.022em;
+    letter-spacing: -0.04em;
   }
 
   .text-section-title {
     @apply font-semibold tracking-tight text-foreground;
-    font-size: 1.0625rem;
+    font-size: var(--ds-heading-size);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
   }
 
   .text-eyebrow {
@@ -341,8 +374,8 @@
 
   .text-body-hero {
     @apply text-muted-foreground;
-    font-size: 1.0625rem;
-    line-height: 1.47;
+    font-size: var(--ds-body-size);
+    line-height: 1.4;
   }
 
   /* ── Page rhythm ── */
@@ -558,19 +591,25 @@
 
   /* ── Surfaces ── */
   .ui-card {
-    @apply rounded-2xl border border-border bg-card p-4 text-card-foreground;
+    @apply border border-border bg-card p-4 text-card-foreground;
+    border-radius: var(--ds-radius-400);
+    box-shadow: var(--ds-shadow-200);
   }
 
   .ui-card-flat {
-    @apply rounded-2xl border border-border bg-card text-card-foreground;
+    @apply border border-border bg-card text-card-foreground;
+    border-radius: var(--ds-radius-400);
   }
 
   .ui-surface {
-    @apply rounded-2xl bg-secondary/60 p-4;
+    @apply bg-secondary/60 p-4;
+    border-radius: var(--ds-radius-400);
   }
 
   .ui-callout {
-    @apply rounded-xl border border-primary/25 bg-accent p-4 text-accent-foreground;
+    @apply border border-primary/25 bg-accent p-4 text-accent-foreground;
+    border-radius: var(--ds-radius-200);
+    box-shadow: var(--ds-shadow-100);
   }
 
   .ui-empty {

@@ -30,7 +30,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         className={className}
         {...props}
       >
-        <Icon className={cn(compact ? 'h-3 w-3' : 'h-5 w-5', iconClassName)} aria-hidden />
+        <Icon className={cn(compact ? 'h-4 w-4' : 'h-5 w-5', iconClassName)} aria-hidden />
       </Button>
     );
   },

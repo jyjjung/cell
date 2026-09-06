@@ -17,7 +17,7 @@ import { getReferenceTracks, hasReferenceTracks, resolveChordSheetsForSetlistSon
 import type { WorshipSetlist } from '@/types';
 import { format } from 'date-fns';
 import {
-    Check, ChevronRight, CloudDownload, ListMusic, Music, Pause, Play, Youtube
+    Check, ChevronRight, CloudDownload, ListMusic, Music, Pause, Play, PlaySquare
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -334,7 +334,7 @@ export default function SetlistSummary({ setlistId, isSender, onOpenViewer, onMi
                 <span className="w-4 shrink-0 text-xs font-semibold text-muted-foreground">{i + 1}</span>
                 <p className="min-w-0 truncate text-sm font-medium text-foreground">{song.title}</p>
                 {hasReferenceTracks(song) && (
-                  <Youtube
+                  <PlaySquare
                     className="h-3 w-3 shrink-0 text-red-500"
                     aria-label={getReferenceTracks(song).length > 1 ? 'Has reference tracks' : 'Has reference track'}
                   />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { URL_REGEX, normalizeChatUrl } from '@/lib/chat-url-utils';

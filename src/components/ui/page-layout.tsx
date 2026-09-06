@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useNavLabel } from '@/hooks/use-nav-label';
+import { Card } from '@/components/ui/card';
 
 interface PageHeaderProps {
   /** ReactNode so loading states can pass a Skeleton and reuse this layout. */
@@ -90,19 +91,23 @@ export function PageSection({
     );
   }
 
-  const surfaceClass =
-    variant === 'muted'
-      ? 'ui-surface'
-      : variant === 'accent'
-        ? 'ui-callout'
-        : 'ui-card';
+  if (variant === 'accent') {
+    return (
+      <section className={cn('ui-section', className)}>
+        <div className="ui-callout">
+          {header}
+          {children}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={cn('ui-section', className)}>
-      <div className={surfaceClass}>
+      <Card variant={variant === 'muted' ? 'muted' : 'default'}>
         {header}
         {children}
-      </div>
+      </Card>
     </section>
   );
 }
