@@ -6,7 +6,8 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 
 function normalizePrivateKey(privateKey: string): string {
-  return privateKey.replace(/\\n/g, '\n').trim();
+  const unquoted = privateKey.trim().replace(/^['"]|['"]$/g, '');
+  return unquoted.replace(/\\n/g, '\n').trim();
 }
 
 function loadServiceAccountFromParts(): ServiceAccount | null {
@@ -14,10 +15,14 @@ function loadServiceAccountFromParts(): ServiceAccount | null {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
   if (!projectId || !clientEmail || !privateKeyRaw) return null;
+  const privateKey = normalizePrivateKey(privateKeyRaw);
+  if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
+    return null;
+  }
   return {
-    projectId,
-    clientEmail,
-    privateKey: normalizePrivateKey(privateKeyRaw),
+    projectId: projectId.trim(),
+    clientEmail: clientEmail.trim(),
+    privateKey,
   };
 }
 
@@ -44,10 +49,20 @@ function loadServiceAccountFromEnv(): ServiceAccount | null {
       const projectId = parsed.projectId || parsed.project_id;
       const clientEmail = parsed.clientEmail || parsed.client_email;
       const privateKey = parsed.privateKey || parsed.private_key;
-      if (!projectId || !clientEmail || !privateKey) return null;
+      if (
+        typeof projectId !== 'string' ||
+        typeof clientEmail !== 'string' ||
+        typeof privateKey !== 'string' ||
+        !projectId.trim() ||
+        !clientEmail.trim() ||
+        !normalizePrivateKey(privateKey).includes('BEGIN PRIVATE KEY') ||
+        !normalizePrivateKey(privateKey).includes('END PRIVATE KEY')
+      ) {
+        continue;
+      }
       return {
-        projectId,
-        clientEmail,
+        projectId: projectId.trim(),
+        clientEmail: clientEmail.trim(),
         privateKey: normalizePrivateKey(privateKey),
       };
     } catch {
