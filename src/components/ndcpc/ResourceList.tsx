@@ -101,11 +101,11 @@ export function ResourceList({
     }
 
     return (
-      <AccordionItem value={resource.id} key={resource.id} className="border-b border-border/40 last:border-0">
-        <AccordionTrigger className="py-4 text-[0.9375rem] no-underline hover:no-underline">
+      <AccordionItem value={resource.id} key={resource.id}>
+        <AccordionTrigger>
           {trigger}
         </AccordionTrigger>
-        <AccordionContent className="pb-5 pt-0">
+        <AccordionContent>
           <div className="space-y-3">
             <VideoEmbed
               url={resource.url}

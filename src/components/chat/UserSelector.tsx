@@ -3,13 +3,11 @@
 
 import * as React from "react";
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Label } from "@/components/ui/label";
 import type { UserProfileData } from '@/types';
-import { Search, UserX } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { UserX } from 'lucide-react';
+import { RadioGroup } from "@/components/ui/radio-group";
+import { CheckboxField, RadioField, SearchInput } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
 function UserListAvatar({ user }: { user: UserProfileData }) {
@@ -74,36 +72,45 @@ export default function UserSelector({
   }
 
   const renderUserItem = (user: UserProfileData) => (
-    <div className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted" key={user.uid}>
+    <div className="rounded-lg transition-colors hover:bg-muted" key={user.uid}>
       {selectionMode === 'multiple' ? (
-        <Checkbox
+        <CheckboxField
           id={`user-selector-${user.uid}`}
+          label={
+            <>
+              <UserListAvatar user={user} />
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                {user.firstName} {user.lastName}
+              </span>
+            </>
+          }
           checked={selectedUsers.includes(user.uid)}
           onCheckedChange={(checked) => handleMultiSelect(user.uid, !!checked)}
-          className="h-5 w-5"
         />
       ) : (
-        <RadioGroupItem value={user.uid} id={`user-selector-${user.uid}`} className="h-5 w-5" />
+        <RadioField
+          value={user.uid}
+          id={`user-selector-${user.uid}`}
+          label={
+            <>
+              <UserListAvatar user={user} />
+              <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                {user.firstName} {user.lastName}
+              </span>
+            </>
+          }
+        />
       )}
-      <Label htmlFor={`user-selector-${user.uid}`} className="flex flex-1 cursor-pointer items-center gap-3">
-        <UserListAvatar user={user} />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{user.firstName} {user.lastName}</p>
-        </div>
-      </Label>
     </div>
   );
 
   return (
     <div className="flex flex-col gap-2 p-1">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
+      <div>
+        <SearchInput
           placeholder={placeholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
         />
       </div>
       <ScrollArea className={`${height} w-full rounded-md border p-1`}>

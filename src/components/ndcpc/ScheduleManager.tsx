@@ -19,19 +19,17 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScheduleListCard, ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
+import {
+  DrillDownListRow,
+  ScheduleListCard,
+  ScheduleRowDate,
+} from '@/components/schedule/schedule-occurrence-row';
 import { useAdmin } from '@/context/AuthProvider';
 import { useTranslation } from '@/context/LocaleProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -305,76 +303,45 @@ export function ScheduleManager({
               </div>
             ) : (
               <ScheduleListCard>
-                <Accordion type="single" collapsible className="w-full">
-                  {visible.map((schedule) => {
-                    const date = schedule.date?.seconds
-                      ? new Date(schedule.date.seconds * 1000)
-                      : null;
-                    const filled = filledRoleCount(schedule);
-                    return (
-                      <AccordionItem
-                        key={schedule.id}
-                        value={schedule.id}
-                        className="border-b border-border/40 last:border-0"
-                      >
-                        <div className="flex items-center gap-0.5">
-                          <div className="min-w-0 flex-1">
-                            <AccordionTrigger className="py-3 text-[0.9375rem] no-underline hover:no-underline">
-                              <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
-                                {date ? <ScheduleRowDate date={date} /> : <div className="w-10" />}
-                                <div className="event-row-body min-w-0">
-                                  <p className="event-row-title">
-                                    {date
-                                      ? formatAppDate(date, 'EEEE, MMMM d', locale)
-                                      : t('schedules.add')}
-                                  </p>
-                                  <p className="event-row-meta mt-0.5 text-xs text-muted-foreground">
-                                    {filled} / {SCHEDULE_ROLE_KEYS.length} roles filled
-                                  </p>
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                          </div>
-                          {isAdmin ? (
-                            <IconButton
-                              aria-label="Edit roster"
-                              icon={Pencil}
-                              className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
-                              onClick={() => setDetailId(schedule.id)}
-                            />
-                          ) : null}
-                          {isAdmin ? (
-                            <IconButton
-                              aria-label="Delete roster"
-                              icon={Trash2}
-                              className="shrink-0 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => setDeleteConfirm(schedule)}
-                            />
-                          ) : null}
-                        </div>
-                        <AccordionContent className="pb-4 pt-0">
-                          <ScheduleRosterPreview
-                            schedule={schedule}
-                            directory={directory}
-                            t={t}
-                          />
-                          {isAdmin ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="mt-3 h-9 gap-1.5 rounded-lg"
-                              onClick={() => setDetailId(schedule.id)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit roster
-                            </Button>
-                          ) : null}
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
+                {visible.map((schedule, i) => {
+                  const date = schedule.date?.seconds
+                    ? new Date(schedule.date.seconds * 1000)
+                    : null;
+                  const filled = filledRoleCount(schedule);
+                  return (
+                    <motion.div
+                      key={schedule.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.3 }}
+                    >
+                      <DrillDownListRow
+                        leading={date ? <ScheduleRowDate date={date} /> : <div className="w-10" />}
+                        title={date ? formatAppDate(date, 'EEEE, MMMM d', locale) : t('schedules.add')}
+                        subtitle={`${filled} / ${SCHEDULE_ROLE_KEYS.length} roles filled`}
+                        onClick={() => setDetailId(schedule.id)}
+                        trailing={
+                          isAdmin ? (
+                            <>
+                              <IconButton
+                                aria-label="Edit roster"
+                                icon={Pencil}
+                                className="rounded-lg text-muted-foreground hover:text-foreground"
+                                onClick={() => setDetailId(schedule.id)}
+                              />
+                              <IconButton
+                                aria-label="Delete roster"
+                                icon={Trash2}
+                                className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setDeleteConfirm(schedule)}
+                              />
+                            </>
+                          ) : undefined
+                        }
+                      />
+                    </motion.div>
+                  );
+                })}
               </ScheduleListCard>
             )}
           </motion.div>

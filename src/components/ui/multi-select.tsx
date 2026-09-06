@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { IconButton } from "@/components/ui/icon-button";
+import { Tag } from "@/components/ui/tag"
 import { cn } from "@/lib/utils";
 
 export type MultiSelectItem = {
@@ -74,24 +72,15 @@ export function MultiSelect({
           {selected.map((itemValue) => {
             const item = options.find((o) => o.value === itemValue);
             return (
-              <Badge key={itemValue} variant="secondary">
-                {item?.label}
-                <IconButton
-                  size="compact"
-                  aria-label={`Remove ${item?.label ?? itemValue}`}
-                  icon={X}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleUnselect(itemValue);
-                    }
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={() => handleUnselect(itemValue)}
-                />
-              </Badge>
+              <Tag
+                key={itemValue}
+                label={item?.label}
+                scheme="Neutral"
+                variant="Secondary"
+                removable
+                removeLabel={`Remove ${item?.label ?? itemValue}`}
+                onRemove={() => handleUnselect(itemValue)}
+              />
             );
           })}
           <input

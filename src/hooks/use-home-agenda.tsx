@@ -78,13 +78,14 @@ export function useHomeAgenda(currentUser: AppUser) {
   const t = translations[lang];
   const today = startOfToday();
 
-  const { events } = useEvents();
-  const { roster: cleaningRoster } = useCleaningRoster();
-  const { roster: qtRoster } = useQTRoster();
-  const { allUsers } = useAllUsers();
-  const { cleaningDays } = useCleaningDays();
-  const { rosters: worshipRosters } = useWorshipRosters();
-  const { entries: customRosterEntries } = useAllCustomRosterEntries();
+  const { events, loading: eventsLoading } = useEvents();
+  const { roster: cleaningRoster, loading: cleaningLoading } = useCleaningRoster();
+  const { roster: qtRoster, loading: qtLoading } = useQTRoster();
+  const { allUsers, loading: usersLoading } = useAllUsers();
+  const { cleaningDays, loading: cleaningDaysLoading } = useCleaningDays();
+  const { rosters: worshipRosters, loading: worshipLoading } = useWorshipRosters();
+  const { entries: customRosterEntries, loading: customRosterLoading } =
+    useAllCustomRosterEntries();
 
   const usersMap = useMemo(() => new Map(allUsers.map((u) => [u.uid, u])), [allUsers]);
   const cleaningDaysMap = useMemo(
@@ -349,5 +350,18 @@ export function useHomeAgenda(currentUser: AppUser) {
     return Array.from(groups.entries());
   }, [agenda]);
 
-  return { agenda, agendaByMonth, entryTypeLabel, t };
+  return {
+    agenda,
+    agendaByMonth,
+    entryTypeLabel,
+    t,
+    loading:
+      eventsLoading ||
+      cleaningLoading ||
+      qtLoading ||
+      usersLoading ||
+      cleaningDaysLoading ||
+      worshipLoading ||
+      customRosterLoading,
+  };
 }

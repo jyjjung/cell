@@ -18,5 +18,8 @@ test.describe('smoke: schedule', () => {
       timeout: 30_000,
     });
     await expect(page.getByRole('tab', { name: /Past/i })).toBeVisible();
+    await expect(page.getByTestId('unified-upcoming-schedule')).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

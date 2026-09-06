@@ -4,6 +4,7 @@ import type { ElementType, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { bottomHubIconClass, bottomHubTabClass } from '@/components/layout/bottom-hub-bar';
 import { IconButton } from '@/components/ui/icon-button';
+import { NavigationButton } from '@/components/ui/navigation';
 
 type HubTabProps = {
   active: boolean;
@@ -16,15 +17,13 @@ type HubTabProps = {
 /** Bottom hub navigation tab — 44px hit target, aria-current, shared styles. */
 export function HubTab({ active, label, icon: Icon, onClick, className }: HubTabProps) {
   return (
-    <button
-      type="button"
+    <NavigationButton
       onClick={onClick}
       className={cn(bottomHubTabClass(active), className)}
-      aria-current={active ? 'page' : undefined}
-    >
-      <Icon className={bottomHubIconClass(active)} aria-hidden />
-      <span className="truncate">{label}</span>
-    </button>
+      active={active}
+      icon={<Icon className={bottomHubIconClass(active)} aria-hidden />}
+      label={<span className="truncate">{label}</span>}
+    />
   );
 }
 

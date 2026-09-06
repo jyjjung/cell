@@ -3,6 +3,28 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Global text foundation. Component-level utilities remain free to refine
+   * hierarchy, while unstyled native text uses the same design-system base.
+   */
+  :where(p, h1, h2, h3, h4, h5, h6, li, dt, dd, label, legend, blockquote) {
+    font-family: var(--app-font-family);
+    color: hsl(var(--foreground));
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    font-weight: 600;
+  }
+
+  :where(small) {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--ds-body-small-size);
+    line-height: 1.4;
+  }
+
   :root {
     /* Classic light — multi-hue palette (surface + primary + analogous secondary) */
     --background: 221 28% 97%;

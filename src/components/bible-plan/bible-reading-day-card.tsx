@@ -8,6 +8,7 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { ReadingCheckRow } from '@/components/bible-plan/plan-progress';
 import { Button } from '@/components/ui/button';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
+import { Card } from '@/components/ui/card';
 import { makeManualPassageKey, makePassageKey } from '@/lib/passage-keys';
 import { isPassageCompletedForPlan } from '@/lib/reading-utils';
 import type { DailyReading } from '@/types';
@@ -97,7 +98,7 @@ export function BibleReadingDayCard({
     : { dayLabel: '', dateLabel: '' };
 
   return (
-    <div className="ui-card-flat overflow-hidden">
+    <Card variant="flat" className="overflow-hidden">
       {parsedDate ? (
         <div className="home-bible-hero">
           <div className="home-bible-hero-main">
@@ -156,7 +157,7 @@ export function BibleReadingDayCard({
       {afterPassages}
 
       {footer}
-    </div>
+    </Card>
   );
 }
 

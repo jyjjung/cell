@@ -5,13 +5,48 @@ import { useEvents } from '@/hooks/use-events';
 import { format, isBefore, startOfToday, compareAsc, subYears, addYears } from 'date-fns';
 import { CalendarOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, PageShell } from '@/components/ui/page-layout';
 import { expandEventsToOccurrenceRows, type EventOccurrenceRow } from '@/lib/event-occurrences';
 import { userCanSeeEvent } from '@/lib/event-visibility';
 import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
 import { ScheduleListSkeleton, ScheduleMonthGroup } from '@/components/schedule/schedule-occurrence-row';
+import { useHomeAgenda } from '@/hooks/use-home-agenda';
+import { HomeAgendaRow, mergeAgendaDetail } from '@/components/home/home-agenda-row';
+import type { AppUser } from '@/types';
+
+function UnifiedUpcomingSchedule({ currentUser }: { currentUser: AppUser }) {
+  const { agendaByMonth, loading, t } = useHomeAgenda(currentUser);
+
+  if (loading) {
+    return <ScheduleListSkeleton />;
+  }
+
+  if (agendaByMonth.length === 0) {
+    return <EmptyState icon={CalendarOff} title={t.noUpcomingEvents} description={t.checkBackLater} />;
+  }
+
+  return (
+    <div className="stack-gap-sm" data-testid="unified-upcoming-schedule">
+      {agendaByMonth.map(([month, entries]) => (
+        <ScheduleMonthGroup key={month} month={month}>
+          {entries.map((entry) => (
+            <HomeAgendaRow
+              key={entry.sourceKey}
+              date={entry.date}
+              title={entry.title}
+              detail={mergeAgendaDetail(entry.subtitle, entry.meta)}
+              type={entry.type}
+              typeLabel={t.schedule}
+              rightElement={entry.rightElement}
+            />
+          ))}
+        </ScheduleMonthGroup>
+      ))}
+    </div>
+  );
+}
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
@@ -80,15 +115,15 @@ export default function EventsPage() {
 
   if (!isMounted || loading) {
     return (
-      <div className="page-container">
+      <PageShell>
         <NavPageHeader />
         <ScheduleListSkeleton />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader />
 
       <Tabs defaultValue="upcoming" className="w-full">
@@ -98,9 +133,15 @@ export default function EventsPage() {
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
-          {upcomingEventsByMonth.length > 0
-            ? upcomingEventsByMonth.map(([month, evs]) => <MonthGroup key={`up-${month}`} month={month} rows={evs} />)
-            : <EmptyState icon={CalendarOff} title={t.noUpcomingEvents} description={t.checkBackLater} />}
+          {currentUser ? (
+            <UnifiedUpcomingSchedule currentUser={currentUser} />
+          ) : upcomingEventsByMonth.length > 0 ? (
+            upcomingEventsByMonth.map(([month, evs]) => (
+              <MonthGroup key={`up-${month}`} month={month} rows={evs} />
+            ))
+          ) : (
+            <EmptyState icon={CalendarOff} title={t.noUpcomingEvents} description={t.checkBackLater} />
+          )}
         </TabsContent>
 
         <TabsContent value="past" className="mt-4 stack-gap-sm opacity-80">
@@ -109,6 +150,6 @@ export default function EventsPage() {
             : <EmptyState icon={CalendarOff} title={t.noPastEvents} />}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

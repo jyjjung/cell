@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useInfoWidgets } from '@/hooks/use-info-widgets';
 import { translations } from '@/lib/translations';
 import { HomeGroupedSection, HomeGroupList } from '@/components/home/home-grouped-section';
+import { Text } from '@/components/ui/text';
 
 export default function HomeInfoWidgets() {
   const { currentUser } = useAuth();
@@ -28,8 +29,8 @@ export default function HomeInfoWidgets() {
           const body = lang === 'ko' && widget.bodyKo ? widget.bodyKo : widget.body;
           return (
             <article key={widget.id} className="home-notice-row">
-              {title ? <h3 className="text-sm font-medium text-foreground">{title}</h3> : null}
-              <p className="whitespace-pre-wrap text-sm leading-snug text-muted-foreground">{body}</p>
+              {title ? <Text as="h3" variant="strong" className="text-sm">{title}</Text> : null}
+              <Text variant="small" className="whitespace-pre-wrap leading-snug">{body}</Text>
             </article>
           );
         })}

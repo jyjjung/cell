@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { FormDefinition } from '@/types/forms';
-import { PageHeader, EmptyState } from '@/components/ui/page-layout';
+import { PageHeader, EmptyState, PageShell } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -115,10 +115,10 @@ export default function AdminFormsListPage() {
 
   if (!loadingAuth && !isAdmin) {
     return (
-      <div className="page-container">
+      <PageShell>
         <PageHeader title="Admin • Forms" />
         <EmptyState title="Permission denied" description="Sign in as an admin to manage forms." />
-      </div>
+      </PageShell>
     );
   }
 
@@ -127,7 +127,7 @@ export default function AdminFormsListPage() {
   const deletingForm = deletingId ? forms.find((f) => f.id === deletingId) : null;
 
   return (
-    <div className="page-container space-y-8">
+    <PageShell className="space-y-8">
       <PageHeader
         title="Admin • Forms"
         action={
@@ -321,6 +321,6 @@ export default function AdminFormsListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageShell>
   );
 }

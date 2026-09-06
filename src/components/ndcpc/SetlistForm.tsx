@@ -46,14 +46,14 @@ function ResourceTitle({
 }: {
   title: string;
   className?: string;
-  lines?: 1 | 2;
+  lines?: 1 | 2 | 'none';
 }) {
   return (
     <span
       title={title}
       className={cn(
         'min-w-0 break-words [overflow-wrap:anywhere]',
-        lines === 1 ? 'line-clamp-1' : 'line-clamp-2',
+        lines === 1 ? 'line-clamp-1' : lines === 2 ? 'line-clamp-2' : '',
         className
       )}
     >
@@ -92,7 +92,7 @@ function OrderedResourceList({
             <span className="pt-0.5 text-xs tabular-nums text-muted-foreground">
               {index + 1}
             </span>
-            <ResourceTitle title={title} lines={2} className="pt-0.5" />
+            <ResourceTitle title={title} lines="none" className="pt-0.5" />
             <div className="flex shrink-0 items-center">
               <Button
                 type="button"
@@ -291,10 +291,10 @@ export function SetlistForm({ setlist, onSuccess, allowEmpty = false }: SetlistF
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex min-h-0 flex-1 flex-col"
+        className="space-y-5"
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
-          <div className="space-y-6 pr-3">
+        <div>
+          <div className="space-y-6">
             <FormField
               control={form.control}
               name="date"
@@ -357,7 +357,7 @@ export function SetlistForm({ setlist, onSuccess, allowEmpty = false }: SetlistF
           </div>
         </div>
 
-        <Button type="submit" className="mt-4 w-full shrink-0" disabled={form.formState.isSubmitting}>
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting
             ? t('common.saving')
             : isEditing

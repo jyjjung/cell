@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Trash2, UserCheck, UserPlus, UserX, X } from 'lucide-react';
+import { Trash2, UserCheck, UserPlus, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchInput } from '@/components/ui/field';
+import { Tag } from '@/components/ui/tag';
 import { formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 
@@ -47,39 +49,36 @@ export function RosterRoleSlotRow({
   return (
     <div className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-border">
       <div className="flex items-center gap-3 px-4 py-3">
-        <span className={cn(
-          'text-[11px] font-semibold px-2.5 py-1 rounded-lg border shrink-0',
-          roleClassName,
-        )}>
-          {roleLabel}
-        </span>
+        <Tag
+          scheme="Neutral"
+          variant="Secondary"
+          className={cn('shrink-0 text-[11px] font-semibold', roleClassName)}
+          label={roleLabel}
+          removable={false}
+        />
         <div className="flex-1 flex flex-wrap items-center gap-2 min-w-0">
           {people.length === 0 ? (
             <span className="text-xs text-muted-foreground/40 font-medium italic">Unassigned</span>
           ) : (
             people.map((person, index) => (
-              <span
+              <Tag
                 key={person.id}
-                className={cn(
-                  'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border',
-                  person.isMember
-                    ? 'bg-success/10 border-success/30 text-success'
-                    : 'bg-muted border-border/50 text-muted-foreground',
-                )}
+                scheme={person.isMember ? 'Positive' : 'Neutral'}
+                variant="Secondary"
+                className={cn('rounded-full text-xs font-semibold', !person.isMember && 'border-border/50')}
+                icon={
+                  person.isMember ? (
+                    <UserCheck className="h-3 w-3" aria-hidden />
+                  ) : (
+                    <UserX className="h-3 w-3" aria-hidden />
+                  )
+                }
+                removable={canManage && !!onRemove}
+                removeLabel={`Remove ${person.displayName}`}
+                onRemove={onRemove ? () => onRemove(index) : undefined}
               >
-                {person.isMember ? <UserCheck className="h-2.5 w-2.5" /> : <UserX className="h-2.5 w-2.5" />}
                 {formatNameString(person.displayName, 'Guest')}
-                {canManage && onRemove ? (
-                  <IconButton
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    className="ml-0.5 hover:text-destructive"
-                    aria-label={`Remove ${person.displayName}`}
-                    icon={X}
-                    iconClassName="h-2.5 w-2.5"
-                  />
-                ) : null}
-              </span>
+              </Tag>
             ))
           )}
         </div>
@@ -161,15 +160,12 @@ export function MemberGuestPickerDialog({
         <div className="space-y-4 mt-2">
           <div className="space-y-2">
             <Label className="text-micro-label text-muted-foreground">Members</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
-              <Input
+            <SearchInput
                 placeholder="Search members…"
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                className="pl-8 rounded-xl h-9 text-sm"
-              />
-            </div>
+                className="text-sm"
+            />
             <div className="space-y-1 max-h-44 overflow-y-auto">
               {loading ? (
                 <p className="text-center text-xs text-muted-foreground py-4">Loading members…</p>

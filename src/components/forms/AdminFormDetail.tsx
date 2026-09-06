@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FormRenderer from '@/components/forms/FormRenderer';
+import FormDateFieldInput from '@/components/forms/FormDateFieldInput';
 import FieldOptionsEditor from '@/components/forms/FieldOptionsEditor';
 import WeekdaySelector from '@/components/forms/WeekdaySelector';
 import { useToast } from '@/hooks/use-toast';
@@ -516,11 +517,11 @@ export default function AdminFormDetailPage({ formId: initialFormId }: Props) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="form-deadline">Deadline (optional)</Label>
-                <Input
+                <FormDateFieldInput
                   id="form-deadline"
-                  type="date"
                   value={builderDeadlineDate}
-                  onChange={(e) => setBuilderDeadlineDate(e.target.value)}
+                  mode="single"
+                  onChange={setBuilderDeadlineDate}
                 />
               </div>
               <div className="space-y-2">

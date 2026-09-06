@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarOff } from 'lucide-react';
+import { CalendarOff, ChevronRight } from 'lucide-react';
 import type { AppUser } from '@/types';
 import { useHomeAgenda, type HomeAgendaEntry } from '@/hooks/use-home-agenda';
+import { usePageLoading } from '@/contexts/page-loading-context';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loading-state';
 import {
   ScheduleDetailDialog,
   ScheduleDetailField,
@@ -21,43 +25,64 @@ import {
   HomeGroupList,
   HomeGroupSubhead,
 } from '@/components/home/home-grouped-section';
+import { Text } from '@/components/ui/text';
 
 interface HomeAgendaSectionProps {
   currentUser: AppUser;
 }
 
 export function HomeAgendaSection({ currentUser }: HomeAgendaSectionProps) {
-  const { agendaByMonth, entryTypeLabel, t } = useHomeAgenda(currentUser);
+  const { agendaByMonth, entryTypeLabel, loading, t } = useHomeAgenda(currentUser);
   const [selectedEntry, setSelectedEntry] = useState<HomeAgendaEntry | null>(null);
+  const router = useRouter();
+  const { setIsPageLoading } = usePageLoading();
 
   return (
     <>
       <HomeGroupedSection id="home-agenda-heading" title={t.communitySchedule}>
-        {agendaByMonth.length > 0 ? (
-          <HomeGroupList className="home-group-list-flush">
-            {agendaByMonth.map(([month, entries]) => (
-              <div key={month}>
-                <HomeGroupSubhead>{month}</HomeGroupSubhead>
-                {entries.map((entry) => (
-                  <HomeAgendaRow
-                    key={entry.sourceKey}
-                    date={entry.date}
-                    title={entry.title}
-                    detail={mergeAgendaDetail(entry.subtitle, entry.meta)}
-                    rightElement={entry.rightElement}
-                    onClick={() => setSelectedEntry(entry)}
-                  />
-                ))}
-              </div>
-            ))}
-          </HomeGroupList>
-        ) : (
-          <div className="home-group-empty">
-            <CalendarOff className="mb-2 h-5 w-5 text-muted-foreground" aria-hidden />
-            <p className="text-sm font-medium text-foreground">{t.clearSchedule}</p>
-            <p className="text-micro-label mt-0.5">{t.nothingComingUp}</p>
-          </div>
-        )}
+        <LoadingState isLoading={loading} variant="skeleton" skeletonRows={3} delayMs={250}>
+          {agendaByMonth.length > 0 ? (
+            <HomeGroupList className="home-group-list-flush">
+              {agendaByMonth.map(([month, entries]) => (
+                <div key={month}>
+                  <HomeGroupSubhead>{month}</HomeGroupSubhead>
+                  {entries.map((entry) => (
+                    <HomeAgendaRow
+                      key={entry.sourceKey}
+                      date={entry.date}
+                      title={entry.title}
+                      detail={mergeAgendaDetail(entry.subtitle, entry.meta)}
+                      type={entry.type}
+                      typeLabel={entryTypeLabel(entry.type)}
+                      rightElement={entry.rightElement}
+                      onClick={() => setSelectedEntry(entry)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </HomeGroupList>
+          ) : (
+            <div className="home-group-empty">
+              <CalendarOff className="mb-2 h-5 w-5 text-muted-foreground" aria-hidden />
+              <Text variant="strong">{t.clearSchedule}</Text>
+              <Text variant="small" className="mt-0.5">{t.nothingComingUp}</Text>
+            </div>
+          )}
+        </LoadingState>
+        <div className="home-bible-footer" data-testid="home-full-schedule">
+          <Button
+            type="button"
+            variant="ghost"
+            className="home-bible-footer-link rounded-none"
+            onClick={() => {
+              setIsPageLoading(true);
+              router.push('/events');
+            }}
+          >
+            {t.fullScheduleLink}
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
       </HomeGroupedSection>
 
       <ScheduleDetailDialog

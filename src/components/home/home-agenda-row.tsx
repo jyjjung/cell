@@ -1,7 +1,15 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import {
+  CalendarCheck,
+  ChevronRight,
+  ClipboardList,
+  Gift,
+  ListChecks,
+  Music2,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
@@ -12,6 +20,8 @@ interface HomeAgendaRowProps {
   date: Date;
   title: string;
   detail?: ReactNode;
+  type?: string;
+  typeLabel?: string;
   rightElement?: ReactNode;
   onClick?: () => void;
   className?: string;
@@ -22,6 +32,8 @@ export function HomeAgendaRow({
   date,
   title,
   detail,
+  type,
+  typeLabel,
   rightElement,
   onClick,
   className,
@@ -29,6 +41,7 @@ export function HomeAgendaRow({
   const body = (
     <>
       <ScheduleRowDate date={date} />
+      {type ? <ScheduleTypeIndicator type={type} label={typeLabel} /> : null}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{title}</p>
         {detail ? <div className="truncate text-xs text-muted-foreground">{detail}</div> : null}
@@ -54,6 +67,33 @@ export function HomeAgendaRow({
   }
 
   return <div className={cn('home-group-nav-row', className)}>{body}</div>;
+}
+
+const scheduleTypeConfig: Record<
+  string,
+  { icon: typeof CalendarCheck; className: string; label: string }
+> = {
+  event: { icon: CalendarCheck, className: 'bg-primary/10 text-primary', label: 'Event' },
+  birthday: { icon: Gift, className: 'bg-chart-4/15 text-chart-4', label: 'Birthday' },
+  cleaning: { icon: Sparkles, className: 'bg-chart-2/15 text-chart-2', label: 'Cleaning' },
+  qt: { icon: ListChecks, className: 'bg-chart-3/15 text-chart-3', label: 'QT' },
+  worship: { icon: Music2, className: 'bg-chart-5/15 text-chart-5', label: 'Worship' },
+  custom: { icon: ClipboardList, className: 'bg-muted text-muted-foreground', label: 'Roster' },
+};
+
+export function ScheduleTypeIndicator({ type, label }: { type: string; label?: string }) {
+  const config = scheduleTypeConfig[type] ?? scheduleTypeConfig.custom;
+  const Icon = config.icon;
+
+  return (
+    <span
+      className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', config.className)}
+      title={label || config.label}
+      aria-label={label || config.label}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden />
+    </span>
+  );
 }
 
 /** Merge subtitle + meta into one scannable line. */

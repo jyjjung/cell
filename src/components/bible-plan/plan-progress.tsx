@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 28 };
@@ -226,10 +227,16 @@ export function ReadingCheckRow({
         className="h-3.5 w-3.5 shrink-0 rounded-[3px]"
         aria-label={label}
       />
-      <button type="button" className="reading-check-row-label" onClick={onRead} disabled={disabled}>
+      <Button
+        type="button"
+        variant="ghost"
+        className="reading-check-row-label h-auto min-h-0 w-full justify-start rounded-none px-0 py-0 text-left text-[0.8125rem] font-medium leading-tight"
+        onClick={onRead}
+        disabled={disabled}
+      >
         {lead ? <span className="reading-check-row-lead">{lead}</span> : null}
         <span className={cn(done && 'line-through decoration-muted-foreground/60')}>{label}</span>
-      </button>
+      </Button>
     </div>
   );
 

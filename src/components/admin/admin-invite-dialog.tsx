@@ -30,6 +30,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select';
 import { useInvites } from '@/hooks/use-invites';
 import { useRoles } from '@/hooks/use-roles';
@@ -431,9 +432,9 @@ export function AdminInviteDialog({
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(invite.roles?.length ?? 0) > 0 ? (
                             invite.roles.map((roleId) => (
-                              <Badge key={roleId} variant="outline" className="h-5 px-1.5 text-[10px]">
+                              <Tag key={roleId} scheme="Brand" variant="Secondary" className="h-5 px-1.5 text-[10px]">
                                 {rolesMap.get(roleId) || roleId}
-                              </Badge>
+                              </Tag>
                             ))
                           ) : (
                             <span className="text-[10px] text-muted-foreground">{t.adminInviteNoRoles}</span>

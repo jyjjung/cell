@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { NavPageHeader, FeedCard } from '@/components/ui/page-layout';
+import { NavPageHeader, FeedCard, PageShell } from '@/components/ui/page-layout';
 import { formatAppDateTime, getAppLocale, getStatusLabel } from '@/lib/formatting';
 import { notifyFeedbackChange } from '@/lib/feedback-notify';
 import { changelogs } from '@/data/changelogs';
@@ -168,7 +168,7 @@ export default function FeedbackPage() {
   /* ── Render ───────────────────────────────────────────── */
 
   return (
-    <div className="page-container">
+    <PageShell>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
 
           <NavPageHeader />
@@ -354,6 +354,6 @@ export default function FeedbackPage() {
           </motion.div>
 
       </motion.div>
-    </div>
+    </PageShell>
   );
 }

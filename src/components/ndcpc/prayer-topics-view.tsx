@@ -13,7 +13,7 @@ import { getFirestoreMillis } from '@/lib/ndcpc/unread-counts';
 import { translations } from '@/lib/translations';
 import type { PrayerTopic } from '@/types/ndcpc-ported';
 import { collection, orderBy, query } from 'firebase/firestore';
-import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, PageShell } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -61,7 +61,7 @@ export function PrayerTopicsView() {
   };
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader
         title={t('nav.prayer')}
         action={
@@ -144,6 +144,6 @@ export function PrayerTopicsView() {
           <PrayerTopicForm onSuccess={() => setCreateOpen(false)} />
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

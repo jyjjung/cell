@@ -36,6 +36,8 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { ReadingCheckRow } from '@/components/bible-plan/plan-progress';
 import { HomeGroupedSection } from '@/components/home/home-grouped-section';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import type { DailyReading } from '@/types';
 
 interface HomeBibleSectionProps {
@@ -179,24 +181,24 @@ export function HomeBibleSection({ currentUser }: HomeBibleSectionProps) {
   return (
     <HomeGroupedSection id="home-bible-heading" title={t.bibleReadingHub}>
         <div className="home-bible-hero">
-          <p className="home-bible-week">
+          <Text variant="label" className="home-bible-week">
             {weekLabel ?? t.bibleReadingHub}
-          </p>
+          </Text>
 
           <div className="home-bible-hero-main">
             <div className="home-bible-day-block">
-              <p className="home-bible-day">{dayLabel}</p>
-              <p className="home-bible-date">{dateLabel}</p>
+              <Text variant="strong" className="home-bible-day">{dayLabel}</Text>
+              <Text variant="small" className="home-bible-date">{dateLabel}</Text>
               {daysLeft != null ? (
-                <p className="home-bible-pace">
+                <Text variant="small" className="home-bible-pace">
                   {daysLeft} {t.daysLeftLabel}
-                </p>
+                </Text>
               ) : null}
             </div>
 
             <div className="home-bible-ring-block">
               <ProgressRing value={progressSoFar.percentage} size={54} strokeWidth={3.5} />
-              {ratioLabel ? <p className="home-bible-ratio">{ratioLabel}</p> : null}
+              {ratioLabel ? <Text variant="small" className="home-bible-ratio">{ratioLabel}</Text> : null}
             </div>
           </div>
         </div>
@@ -234,18 +236,19 @@ export function HomeBibleSection({ currentUser }: HomeBibleSectionProps) {
             ) : null}
           </div>
         ) : (
-          <p className="home-bible-empty">{t.restDayMessage}</p>
+          <Text variant="small" className="home-bible-empty">{t.restDayMessage}</Text>
         )}
 
         <div className="home-bible-footer">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className="home-bible-footer-link"
             onClick={() => go('/bible-checklist')}
           >
             {t.fullPlanLink}
             <ChevronRight className="h-4 w-4" aria-hidden />
-          </button>
+          </Button>
         </div>
     </HomeGroupedSection>
   );
@@ -284,4 +287,3 @@ export function HomeBibleSectionSkeleton() {
     </HomeGroupedSection>
   );
 }
-

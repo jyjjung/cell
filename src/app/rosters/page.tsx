@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardList, ChevronRight } from "lucide-react";
 import { PageLoading } from '@/components/ui/loading-spinner';
-import { NavPageHeader, EmptyState, FeedCard } from "@/components/ui/page-layout";
+import { NavPageHeader, EmptyState, FeedCard, PageShell } from "@/components/ui/page-layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { translations } from "@/lib/translations";
@@ -24,14 +24,14 @@ export default function CustomRostersIndexPage() {
 
   if (loadingAuth || loading) {
     return (
-      <div className="page-container">
+      <PageShell>
         <PageLoading label={t.loadingRoster} />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader title={t.customRosters} />
 
       {visibleRosters.length === 0 ? (
@@ -68,6 +68,6 @@ export default function CustomRostersIndexPage() {
           })}
         </FeedCard>
       )}
-    </div>
+    </PageShell>
   );
 }

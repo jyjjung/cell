@@ -9,7 +9,6 @@ import {
   Music2,
   BarChart3,
   ChevronLeft,
-  Search,
   Plus,
   Trash2,
   FileText,
@@ -23,6 +22,7 @@ import { useDocs } from "@/hooks/use-docs";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { SearchInput } from '@/components/ui/field';
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { displayDocTitle, stripHtmlPreview } from "@/lib/docs-utils";
@@ -378,15 +378,12 @@ export default function ChatAttachmentMenu({ onPick, onClose, photoOnly = false 
             </Button>
           )}
           <div className="border-b border-border px-3 py-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+            <SearchInput
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
                 className={cn("pl-9", MENU_INPUT_CLASS)}
-              />
-            </div>
+            />
           </div>
           <div className="max-h-[240px] overflow-y-auto">
             {(view === "song" && songsLoading) || (view === "doc" && docsLoading) ? (

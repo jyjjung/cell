@@ -11,6 +11,7 @@ import { formatUserDisplayName } from '@/lib/formatting';
 import { useRouter } from 'next/navigation';
 import { usePageLoading } from '@/contexts/page-loading-context';
 import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { HomeGroupList } from '@/components/home/home-grouped-section';
 
 function getGreeting(lang: string) {
@@ -51,9 +52,9 @@ export function HomeGreeting({ currentUser }: HomeGreetingProps) {
 
   return (
     <header className="home-greeting">
-      <h1 className="home-greeting-title">
+      <Text as="h1" variant="pageTitle" className="home-greeting-title">
         {getGreeting(lang)}, {displayName}
-      </h1>
+      </Text>
 
       {unreadChatCount > 0 ? (
         <div className="ui-card-flat mt-3 overflow-hidden">
@@ -65,9 +66,9 @@ export function HomeGreeting({ currentUser }: HomeGreetingProps) {
               onClick={() => go('/cell/chat')}
             >
               <MessageCircle className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-              <span className="min-w-0 flex-1 text-left text-sm font-medium">
+              <Text as="span" variant="strong" className="min-w-0 flex-1 text-left text-sm">
                 {t.unreadMessagesLine.replace('{count}', String(unreadChatCount))}
-              </span>
+              </Text>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             </Button>
           </HomeGroupList>

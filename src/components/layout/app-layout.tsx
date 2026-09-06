@@ -17,6 +17,7 @@ import { usePageLoading } from '@/contexts/page-loading-context';
 import { cn } from '@/lib/utils';
 import Footer from './footer';
 import { Bell } from 'lucide-react';
+import { PageLoading } from '@/components/ui/loading-spinner';
 import { PWAInstallPrompt } from './pwa-install-prompt';
 import { Button } from '@/components/ui/button';
 import { AuthenticatedAppChrome } from './authenticated-app-chrome';
@@ -156,16 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Guests (no cookie) paint immediately — better FCP/LCP on landing and auth pages.
   if (!hasSession) {
     if (loadingAuth && initialSessionCookie) {
-      return (
-        <div className="flex min-h-svh flex-col bg-background">
-          <div className="h-14 border-b border-border/40 bg-background/80" />
-          <div className="flex flex-1 flex-col gap-3 p-4">
-            <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
-          </div>
-        </div>
-      );
+      return <PageLoading className="min-h-svh bg-background" label="Restoring your session" />;
     }
     return <GuestShell>{children}</GuestShell>;
   }
@@ -178,16 +170,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Session exists but profile still hydrating (cold cache) — light chrome stub.
     // Never stay here after loadingAuth finishes (empty cache / listener failure).
     if (loadingAuth) {
-      return (
-        <div className="flex min-h-svh flex-col bg-background">
-          <div className="h-14 border-b border-border/40 bg-background/80" />
-          <div className="flex flex-1 flex-col gap-3 p-4">
-            <div className="h-8 w-40 animate-pulse rounded-lg bg-muted/50" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/30" />
-            <div className="h-32 animate-pulse rounded-2xl bg-muted/25" />
-          </div>
-        </div>
-      );
+      return <PageLoading className="min-h-svh bg-background" label="Loading your profile" />;
     }
     return <GuestShell>{children}</GuestShell>;
   }

@@ -12,7 +12,7 @@ import {
 import { PageLoading, LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { SwitchRow } from '@/components/ui/switch-row';
-import { NavPageHeader, EmptyState, FeedCard } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, FeedCard, PageShell } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -263,11 +263,15 @@ export default function PrayerRequestsPage() {
   };
 
   if (loadingAuth || !currentUser) {
-    return <PageLoading className="page-container min-h-[40vh]" />;
+    return (
+      <PageShell className="min-h-[40vh]">
+        <PageLoading />
+      </PageShell>
+    );
   }
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader description={t.prayerRequestsDesc} />
 
       <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
@@ -336,6 +340,6 @@ export default function PrayerRequestsPage() {
           </div>
         )}
       </motion.div>
-    </div>
+    </PageShell>
   );
 }

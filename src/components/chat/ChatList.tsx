@@ -14,7 +14,7 @@ import { formatUserDisplayName } from "@/lib/formatting";
 import { isChatUnread } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Plus } from "lucide-react";
-import { NavPageHeader, EmptyState } from "@/components/ui/page-layout";
+import { NavPageHeader, EmptyState, PageShell } from "@/components/ui/page-layout";
 import { ListLoadingSkeleton } from "@/components/ui/loading-state";
 import { GroupChatAvatar } from "./GroupChatAvatar";
 import type { Chat } from "@/types";
@@ -99,7 +99,7 @@ export default function ChatList({
   const chatHref = (chatId: string) => `${basePath}/${chatId}`;
 
   return (
-    <div className="page-container stack-gap-sm pb-20">
+    <PageShell className="stack-gap-sm pb-20">
       <NavPageHeader
         className="flex-row items-center justify-between gap-3"
         action={
@@ -218,6 +218,6 @@ export default function ChatList({
       {toolsVisible && isCreateDialogOpen && (
         <CreateChatDialog isOpen={isCreateDialogOpen} onOpenChange={setCreateDialogOpen} />
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -8,8 +8,8 @@ import FormDateFieldInput from '@/components/forms/FormDateFieldInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioGroup } from '@/components/ui/radio-group';
+import { CheckboxField, Field, FieldLabel, RadioField } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -119,12 +119,11 @@ export default function FormRenderer({
                     : 'text';
 
         return (
-          <div key={field.id} className="space-y-2">
+          <Field key={field.id}>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <Label className="text-sm font-medium" htmlFor={`field-${field.id}`}>
+              <FieldLabel className="text-sm font-medium" htmlFor={`field-${field.id}`} required={required}>
                 {field.label}
-                {required ? <span className="text-destructive ml-0.5">*</span> : null}
-              </Label>
+              </FieldLabel>
               {linked && profileLinkedHint ? (
                 <span className="text-[11px] text-muted-foreground">
                   From your profile — editing here can update your account
@@ -222,18 +221,18 @@ export default function FormRenderer({
                   (field.type === 'yesno' ? YES_NO_OPTIONS : field.options ?? []).map((opt) => {
                     const id = `field-${field.id}-${opt}`;
                     return (
-                      <label
+                      <RadioField
                         key={opt}
-                        htmlFor={id}
+                        value={opt}
+                        id={id}
+                        label={opt}
+                        disabled={readOnly}
                         className={cn(
-                          'flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm cursor-pointer transition-colors',
+                          'rounded-lg px-2 py-1.5 text-sm transition-colors',
                           selectValue === opt ? 'bg-primary/10 text-foreground' : 'hover:bg-muted/40',
                           readOnly ? 'cursor-default' : undefined,
                         )}
-                      >
-                        <RadioGroupItem value={opt} id={id} disabled={readOnly} />
-                        <span>{opt}</span>
-                      </label>
+                      />
                     );
                   })
                 )}
@@ -248,22 +247,23 @@ export default function FormRenderer({
                   (field.options ?? []).map((opt) => {
                     const selected = Array.isArray(value[field.id]) && (value[field.id] as string[]).includes(opt);
                     return (
-                      <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                          checked={selected}
-                          disabled={readOnly}
-                          onCheckedChange={(checked) => {
-                            const current = Array.isArray(value[field.id]) ? (value[field.id] as string[]) : [];
-                            if (checked === true) {
-                              if (current.includes(opt)) return;
-                              setAnswer(field.id, [...current, opt]);
-                            } else {
-                              setAnswer(field.id, current.filter((x) => x !== opt));
-                            }
-                          }}
-                        />
-                        <span>{opt}</span>
-                      </label>
+                      <CheckboxField
+                        key={opt}
+                        id={`field-${field.id}-${opt}`}
+                        label={opt}
+                        checked={selected}
+                        disabled={readOnly}
+                        className="px-2"
+                        onCheckedChange={(checked) => {
+                          const current = Array.isArray(value[field.id]) ? (value[field.id] as string[]) : [];
+                          if (checked === true) {
+                            if (current.includes(opt)) return;
+                            setAnswer(field.id, [...current, opt]);
+                          } else {
+                            setAnswer(field.id, current.filter((x) => x !== opt));
+                          }
+                        }}
+                      />
                     );
                   })
                 )}
@@ -275,7 +275,7 @@ export default function FormRenderer({
                 {fieldError}
               </p>
             ) : null}
-          </div>
+          </Field>
         );
       })}
     </div>

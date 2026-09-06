@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 
 interface HomeGroupedSectionProps {
   id: string;
@@ -26,13 +28,15 @@ export function HomeGroupedSection({
     <section className={cn('home-group', className)} aria-labelledby={title ? id : undefined}>
       {title ? (
         <div className="home-group-header">
-          <h2 id={id} className="text-eyebrow">
+          <Text as="h2" id={id} variant="label" className="text-eyebrow">
             {title}
-          </h2>
+          </Text>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       ) : null}
-      <div className="ui-card-flat overflow-hidden">{children}</div>
+      <Card variant="flat" className="overflow-hidden">
+        {children}
+      </Card>
     </section>
   );
 }

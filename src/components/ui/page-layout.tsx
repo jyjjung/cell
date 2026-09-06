@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useNavLabel } from '@/hooks/use-nav-label';
 import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 
 interface PageHeaderProps {
   /** ReactNode so loading states can pass a Skeleton and reuse this layout. */
@@ -23,8 +24,8 @@ export function PageHeader({ title, description, action, className }: PageHeader
       )}
     >
       <div className="min-w-0 space-y-1">
-        <h1 className="text-page-title">{title}</h1>
-        {description ? <p className="text-body-hero max-w-lg">{description}</p> : null}
+        <Text as="h1" variant="pageTitle">{title}</Text>
+        {description ? <Text variant="hero" className="max-w-lg">{description}</Text> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>
@@ -75,8 +76,8 @@ export function PageSection({
     title || description || action ? (
       <div className={cn('ui-section-header', variant !== 'plain' && children ? 'mb-1' : '')}>
         <div className="min-w-0 space-y-0.5">
-          {title ? <h2 className="text-section-title">{title}</h2> : null}
-          {description ? <p className="text-stat-label">{description}</p> : null}
+          {title ? <Text as="h2" variant="heading">{title}</Text> : null}
+          {description ? <Text variant="label">{description}</Text> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -128,9 +129,9 @@ export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) 
       ) : (
         <div className="mb-1 h-12 w-12 rounded-full bg-muted" />
       )}
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <Text as="h3" variant="strong">{title}</Text>
       {description ? (
-        <p className="max-w-[260px] text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <Text variant="small" className="max-w-[260px]">{description}</Text>
       ) : null}
     </div>
   );

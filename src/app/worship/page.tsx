@@ -19,13 +19,8 @@ import { Input } from '@/components/ui/input';
 import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
 import { PageLoading, ButtonSpinner } from '@/components/ui/loading-spinner';;
 import { ScheduleRowDate, DrillDownListRow, ScheduleListCard, drillDownRowButtonClass } from '@/components/schedule/schedule-occurrence-row';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { RemoteImage } from '@/components/ui/remote-image';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { FullScreenViewer, ViewerSlide } from '@/components/worship/FullScreenViewer';
 import { TextChordChartViewer } from '@/components/worship/text-chord-chart-viewer';
 import { MemberGuestPickerDialog, RosterRoleSlotRow } from '@/components/worship/roster-people-picker';
@@ -1276,12 +1271,73 @@ function SetlistDetailView({
   );
 }
 
+function SetlistSongViewer({
+  playlist,
+  songId,
+  onClose,
+}: {
+  playlist: WorshipSetlist;
+  songId: string;
+  onClose: () => void;
+}) {
+  const { songs, loading } = useWorshipSongs();
+  const { toast } = useToast();
+
+  const allSlides = useMemo<ViewerSlide[]>(() => {
+    const slides: ViewerSlide[] = [];
+    for (const ps of [...playlist.songs].sort((a, b) => a.order - b.order)) {
+      const libSong = songs.find(s => s.id === ps.songId);
+      const sheets = resolveChordSheetsForSetlistSong(libSong, ps);
+      const tracks = getReferenceTracks(ps);
+      if (sheets.length > 0 || tracks.length > 0) {
+        slides.push({
+          songTitle: ps.title,
+          key: ps.key,
+          ...splitSheetsForViewer(sheets),
+          songId: libSong?.id,
+          annotationId: ps.annotationId,
+          referenceTracks: tracks.length > 0 ? tracks : undefined,
+        });
+      }
+    }
+    return slides;
+  }, [playlist.songs, songs]);
+
+  const startIndex = useMemo(() => {
+    const songIndex = playlist.songs.findIndex(song => song.songId === songId);
+    if (songIndex === -1) return -1;
+    const target = playlist.songs[songIndex];
+    return allSlides.findIndex(slide => slide.songTitle === target.title && slide.key === target.key);
+  }, [allSlides, playlist.songs, songId]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (allSlides.length === 0 || startIndex === -1) {
+      toast({ title: 'No chord sheets', description: 'No sheets or reference tracks are saved for this song.' });
+      onClose();
+    }
+  }, [allSlides.length, loading, onClose, startIndex, toast]);
+
+  if (loading || allSlides.length === 0 || startIndex === -1) return null;
+
+  return (
+    <FullScreenViewer
+      slides={allSlides}
+      startIndex={startIndex}
+      mode="continuous"
+      title={playlist.name}
+      onClose={onClose}
+    />
+  );
+}
+
 // ── SetlistsTab ──────────────────────────────────────────────────────────────
 function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: string | null; openNewSignal?: number }) {
   const { setlists: playlists, loading, deleteSetlist: deletePlaylist } = useWorshipSetlists();
   const canManageWorship = useCanManageWorship();
   const [newOpen, setNewOpen] = useState(false);
   const [detail, setDetail] = useState<WorshipSetlist | null>(null);
+  const [songViewer, setSongViewer] = useState<{ playlist: WorshipSetlist; songId: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipSetlist | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
@@ -1319,21 +1375,23 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
     <AnimatePresence mode="wait">
       {detail ? (
         <SetlistDetailView
-          key="detail"
+          key={detail.id}
           playlist={playlists.find(p => p.id === detail.id) || detail}
-          onBack={() => setDetail(null)}
+          onBack={() => {
+            setDetail(null);
+          }}
           initialSongId={typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('songId')) : undefined}
         />
       ) : (
         <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
           {playlists.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 rounded-xl border-2 border-dashed border-border/40 text-center">
-              <ListMusic className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="font-semibold text-muted-foreground">No setlists yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Create a setlist for an upcoming worship service.</p>
-            </div>
+            <EmptyState
+              icon={ListMusic}
+              title="No setlists yet"
+              description="Create a setlist for an upcoming worship service."
+            />
           ) : (
-            <ScheduleListCard>
+            <Accordion type="single" collapsible className="gap-2">
               {playlists.map((pl, i) => (
                 <motion.div
                   key={pl.id}
@@ -1342,27 +1400,63 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
                   initial="hidden"
                   animate="visible"
                 >
-                  <DrillDownListRow
-                    leading={<ScheduleRowDate date={parseISO(pl.date)} />}
-                    title={pl.name}
-                    subtitle={`${pl.songs.length} song${pl.songs.length !== 1 ? 's' : ''}`}
-                    onClick={() => setDetail(pl)}
-                    trailing={
-                      canManageWorship ? (
-                        <IconButton
-                          variant="ghost"
-                          className="rounded-lg hover:text-destructive hover:bg-destructive/10"
-                          aria-label="Delete setlist"
-                          onClick={() => setDeleteConfirm(pl)}
-                          icon={Trash2}
-                          iconClassName="h-3.5 w-3.5"
-                        />
-                      ) : undefined
-                    }
-                  />
+                  <AccordionItem value={pl.id} className="rounded-2xl border border-border/40 bg-card/50 p-0">
+                    <AccordionTrigger className="px-4 py-3 hover:bg-accent/30">
+                      <div className="flex min-w-0 items-center gap-3 text-left">
+                        <ScheduleRowDate date={parseISO(pl.date)} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{pl.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pl.songs.length} song{pl.songs.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-3 px-4 pb-4">
+                        {pl.songs.length > 0 ? (
+                          <div className="space-y-1">
+                            {[...pl.songs]
+                              .sort((a, b) => a.order - b.order)
+                              .map((song, songIndex) => (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setSongViewer({ playlist: pl, songId: song.songId });
+                                  }}
+                                  key={setlistSongEntryKey(song, songIndex)}
+                                  className="h-auto w-full !justify-start rounded-lg bg-muted/40 px-3 py-2 text-left text-sm hover:bg-muted"
+                                >
+                                  <span className="w-5 text-xs text-muted-foreground">{songIndex + 1}</span>
+                                  <span className="min-w-0 flex-1 truncate">{song.title}</span>
+                                  <span className="text-xs text-muted-foreground">{song.key}</span>
+                                </Button>
+                              ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No songs yet.</p>
+                        )}
+                        <div className="flex justify-start gap-2">
+                          {canManageWorship ? (
+                            <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(pl)}>
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            onClick={() => setDetail(pl)}
+                          >
+                            Open setlist
+                          </Button>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 </motion.div>
               ))}
-            </ScheduleListCard>
+            </Accordion>
           )}
 
           <NewSetlistDialog open={newOpen} onClose={() => setNewOpen(false)} onCreated={id => {
@@ -1385,6 +1479,13 @@ function SetlistsTab({ initialSetlistId, openNewSignal }: { initialSetlistId?: s
             </DialogContent>
           </Dialog>
         </motion.div>
+      )}
+      {songViewer && (
+        <SetlistSongViewer
+          playlist={playlists.find(p => p.id === songViewer.playlist.id) || songViewer.playlist}
+          songId={songViewer.songId}
+          onClose={() => setSongViewer(null)}
+        />
       )}
     </AnimatePresence>
   );
@@ -1410,6 +1511,7 @@ function RosterDetailView({
     mergeWorshipRosterSlots(roster.slots, rosterRoles),
   );
   const [dirty, setDirty] = useState(false);
+  const [editing, setEditing] = useState(canManageWorship);
   const [saving, setSaving] = useState(false);
   const [addRoleOpen, setAddRoleOpen] = useState(false);
   const [deleteRole, setDeleteRole] = useState<string | null>(null);
@@ -1445,6 +1547,7 @@ function RosterDetailView({
       await updateRosterSlots(roster.id, slots);
       toast({ title: 'Roster saved' });
       setDirty(false);
+      setEditing(false);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
@@ -1543,7 +1646,7 @@ function RosterDetailView({
                 <Link2 className="h-3.5 w-3.5" />
                 {linkedPlaylist.name}
               </Button>
-              {canManageWorship && (
+              {canManageWorship && editing && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -1556,7 +1659,7 @@ function RosterDetailView({
                 </Button>
               )}
             </>
-          ) : canManageWorship ? (
+          ) : canManageWorship && editing ? (
             <Button
               size="sm"
               variant="outline"
@@ -1568,7 +1671,32 @@ function RosterDetailView({
               Link Setlist
             </Button>
           ) : null}
-          {canManageWorship && dirty && (
+          {canManageWorship && editing && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-xl h-9"
+              onClick={() => {
+                setSlots(mergeWorshipRosterSlots(roster.slots, rosterRoles));
+                setDirty(false);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+          {canManageWorship && !editing && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-xl h-9 gap-1.5 border-border/70 bg-background"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          )}
+          {canManageWorship && editing && dirty && (
             <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={handleSave} disabled={saving}>
               {saving ? <ButtonSpinner size="sm" /> : <Save className="h-3.5 w-3.5" />} Save
             </Button>
@@ -1589,13 +1717,13 @@ function RosterDetailView({
               displayName: member.displayName,
               isMember: Boolean(member.userId),
             }))}
-            canManage={canManageWorship}
-            onAdd={() => setPickerSlotIdx(slotIdx)}
-            onRemove={(memberIdx) => removeMember(slotIdx, memberIdx)}
-            onDeleteRole={() => setDeleteRole(slot.role)}
+            canManage={canManageWorship && editing}
+            onAdd={editing ? () => setPickerSlotIdx(slotIdx) : undefined}
+            onRemove={editing ? (memberIdx) => removeMember(slotIdx, memberIdx) : undefined}
+            onDeleteRole={editing ? () => setDeleteRole(slot.role) : undefined}
           />
         ))}
-        {canManageWorship ? (
+        {canManageWorship && editing ? (
           <Button
             type="button"
             variant="outline"
@@ -1804,109 +1932,74 @@ function RostersTab({ onOpenPlaylist, initialRosterId, openNewSignal }: { onOpen
               </div>
             ) : null}
             {rosters.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 rounded-xl border-2 border-dashed border-border/40 text-center">
-                <Users className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                <p className="font-semibold text-muted-foreground">No rosters yet</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Create a team roster for an upcoming service.</p>
-              </div>
+              <EmptyState
+                icon={Users}
+                title="No rosters yet"
+                description="Create a team roster for an upcoming service."
+              />
             ) : (
-              <ScheduleListCard>
-                <Accordion type="single" collapsible className="w-full">
-                  {rosters.map((r) => {
-                    const linked = playlists.find(p => p.id === r.setlistId);
-                    const filled = r.slots.filter(s => s.members.length > 0).length;
-                    return (
-                      <AccordionItem
-                        key={r.id}
-                        value={r.id}
-                        className="border-b border-border/40 last:border-0"
-                      >
-                        <div className="flex items-center gap-0.5">
-                          <div className="min-w-0 flex-1">
-                            <AccordionTrigger className="py-3 text-[0.9375rem] no-underline hover:no-underline">
-                              <div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
-                                <ScheduleRowDate date={parseISO(r.date)} />
-                                <div className="event-row-body min-w-0">
-                                  <p className="event-row-title">{r.name}</p>
-                                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <span className="event-row-meta">
-                                      {filled}/{r.slots.length} roles filled
-                                    </span>
-                                    {linked ? (
-                                      <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                                        <Link2 className="h-2 w-2" /> {linked.name}
-                                      </span>
-                                    ) : null}
-                                  </div>
+              <Accordion type="single" collapsible className="gap-2">
+                {rosters.map((r, i) => {
+                  const linked = playlists.find(p => p.id === r.setlistId);
+                  const filled = r.slots.filter(s => s.members.length > 0).length;
+                  return (
+                    <motion.div
+                      key={r.id}
+                      custom={i}
+                      variants={fadeUp}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <AccordionItem value={r.id} className="rounded-2xl border border-border/40 bg-card/50 p-0">
+                        <AccordionTrigger className="px-4 py-3 hover:bg-accent/30">
+                          <div className="flex min-w-0 items-center gap-3 text-left">
+                            <ScheduleRowDate date={parseISO(r.date)} />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{r.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {filled}/{r.slots.length} roles filled
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 px-4 pb-4">
+                            <div className="space-y-1">
+                              {r.slots.map((slot) => (
+                                <div key={slot.role} className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                                  <span className="font-medium">{slot.role}</span>
+                                  <span className="truncate text-xs text-muted-foreground">
+                                    {slot.members.length > 0
+                                      ? slot.members.map((member) => member.displayName).join(', ')
+                                      : 'Unassigned'}
+                                  </span>
                                 </div>
-                              </div>
-                            </AccordionTrigger>
-                          </div>
-                          <IconButton
-                            variant="ghost"
-                            className="shrink-0 rounded-lg text-muted-foreground hover:text-foreground"
-                            aria-label="Edit roster"
-                            onClick={() => setDetail(r)}
-                            icon={Pencil}
-                            iconClassName="h-3.5 w-3.5"
-                          />
-                          {canManageWorship ? (
-                            <IconButton
-                              variant="ghost"
-                              className="shrink-0 rounded-lg hover:text-destructive hover:bg-destructive/10"
-                              aria-label="Delete roster"
-                              onClick={() => setDeleteConfirm(r)}
-                              icon={Trash2}
-                              iconClassName="h-3.5 w-3.5"
-                            />
-                          ) : null}
-                        </div>
-                        <AccordionContent className="pb-4 pt-0">
-                          <div className="space-y-2">
-                            {r.slots.map((slot, slotIdx) => (
-                              <RosterRoleSlotRow
-                                key={slot.role}
-                                roleLabel={slot.role}
-                                roleClassName={roleBadgeClass(slot.role)}
-                                people={slot.members.map((member, memberIdx) => ({
-                                  id: member.userId ?? `guest-${slotIdx}-${memberIdx}`,
-                                  displayName: member.displayName,
-                                  isMember: Boolean(member.userId),
-                                }))}
-                                canManage={false}
-                              />
-                            ))}
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-9 gap-1.5 rounded-lg"
-                              onClick={() => setDetail(r)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {canManageWorship ? 'Edit roster' : 'Open roster'}
-                            </Button>
+                              ))}
+                            </div>
                             {linked ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-9 gap-1.5 rounded-lg"
-                                onClick={() => onOpenPlaylist(linked.id)}
-                              >
-                                <Link2 className="h-3.5 w-3.5" />
-                                Open setlist
-                              </Button>
+                              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Link2 className="h-3 w-3" />
+                                {linked.name}
+                              </p>
                             ) : null}
+                            <div className="flex justify-end gap-2">
+                              {canManageWorship ? (
+                                <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(r)}>
+                                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                  Delete
+                                </Button>
+                              ) : null}
+                              <Button size="sm" onClick={() => setDetail(r)}>
+                                Open roster
+                              </Button>
+                            </div>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              </ScheduleListCard>
+                    </motion.div>
+                  );
+                })}
+              </Accordion>
             )}
           </motion.div>
         )}

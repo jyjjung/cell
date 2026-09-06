@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatPhotos, type ChatPhoto } from '@/lib/chat-media-extract';
-import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { EmptyState, NavPageHeader, PageShell } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import { ChatImageGallery } from '@/components/chat/ImageLightbox';
@@ -63,7 +63,7 @@ export default function AllChatPhotosPage() {
   const loading = loadingChats || (chatIds.length > 0 && loadingMessages);
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader
         action={
           <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
@@ -113,6 +113,6 @@ export default function AllChatPhotosPage() {
           onDownload={downloadChatImage}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -5,10 +5,10 @@ import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import UserSelector from '@/components/chat/UserSelector';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
+import { Tag } from '@/components/ui/tag';
 import { PageHeader } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import type { CleaningRosterEntry, UserProfileData } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { addMonths, eachDayOfInterval, endOfMonth, format, getDay, startOfMonth, subMonths } from 'date-fns';
-import { ChevronsLeft, ChevronsRight, Edit, PlusCircle, Save, Trash2, UserPlus, X } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Edit, PlusCircle, Save, Trash2, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -309,24 +309,25 @@ export default function AdminCleaningRosterPage() {
                                     <TableCell>
                                         <div className="flex flex-wrap gap-2 items-center">
                                             {assignedUsers.map(user => (
-                                                <Badge key={user.uid} variant="secondary" className="pl-1 pr-1 py-0.5 h-7 rounded-md gap-1 border-white/5 bg-muted">
+                                                <Tag
+                                                    key={user.uid}
+                                                    scheme="Neutral"
+                                                    variant="Secondary"
+                                                    className="h-7 pl-1 pr-1"
+                                                    removable
+                                                    removeLabel={`Remove ${formatUserDisplayName(user)}`}
+                                                    onRemove={() => {
+                                                        const newList = displayData.assignedUserIds.filter(id => id !== user.uid);
+                                                        handleFieldChange(dateStr, 'assignedUserIds', newList);
+                                                    }}
+                                                >
                                                     <div className="h-6 w-6 rounded-full bg-muted border border-white/10 shrink-0">
                                                         <PixelAvatar avatar={user.avatar} />
                                                     </div>
                                                     <span className="text-[10px] font-medium truncate max-w-[80px]">
                                                         {formatUserDisplayName(user)}
                                                     </span>
-                                                    <IconButton
-                                                        aria-label={`Remove ${formatUserDisplayName(user)}`}
-                                                        icon={X}
-                                                        onClick={() => {
-                                                            const newList = displayData.assignedUserIds.filter(id => id !== user.uid);
-                                                            handleFieldChange(dateStr, 'assignedUserIds', newList);
-                                                        }}
-                                                        className="hover:text-destructive opacity-40 hover:opacity-100"
-                                                        iconClassName="h-3 w-3"
-                                                    />
-                                                </Badge>
+                                                </Tag>
                                             ))}
                                             
                                             <Popover>

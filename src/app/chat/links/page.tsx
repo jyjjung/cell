@@ -13,7 +13,7 @@ import { getChatDisplayDetails } from '@/lib/chat-utils';
 import { extractChatLinks } from '@/lib/chat-media-extract';
 import { chatLinkFaviconUrl, chatLinkHostname } from '@/lib/chat-url-utils';
 import { RemoteImage } from '@/components/ui/remote-image';
-import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { EmptyState, NavPageHeader, PageShell } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,7 +80,7 @@ export default function AllChatLinksPage() {
   const loading = loadingChats || (chatIds.length > 0 && loadingMessages);
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader
         action={
           <Button asChild variant="outline" className="h-8 rounded-lg px-3 text-sm">
@@ -164,6 +164,6 @@ export default function AllChatLinksPage() {
           </Table>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

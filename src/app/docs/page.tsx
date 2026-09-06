@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
-import { NavPageHeader, EmptyState, FeedCard } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, FeedCard, PageShell } from '@/components/ui/page-layout';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -191,7 +191,7 @@ export default function DocsPage() {
   }
 
   return (
-    <div className="page-container">
+    <PageShell>
       <NavPageHeader
         action={
           <Button
@@ -286,6 +286,6 @@ export default function DocsPage() {
           }
         }}
       />
-    </div>
+    </PageShell>
   );
 }

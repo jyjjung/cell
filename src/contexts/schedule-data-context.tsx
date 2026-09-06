@@ -129,76 +129,85 @@ export function ScheduleDataProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    let inFlightLoad: Promise<void> | null = null;
 
-    const loadOneShot = async () => {
-      const load = async <T,>(
-        key: string,
-        fetchDocs: () => Promise<T[]>,
-        setData: (v: T[]) => void,
-        setLoading: (v: boolean) => void,
-      ) => {
-        const fresh = readLocalCollectionCache<T[]>(key, COLLECTION_CACHE_TTL_MS);
-        if (fresh?.length) {
-          setData(fresh);
-          setLoading(false);
-          return;
-        }
-        const stale = readCached<T>(key);
-        if (stale.length > 0) {
-          setData(stale);
-          setLoading(false);
-        }
-        try {
-          const data = await fetchDocs();
-          if (cancelled) return;
-          setData(data);
-          writeLocalCollectionCache(key, data);
-          setLoading(false);
-        } catch {
-          if (!cancelled) setLoading(false);
-        }
-      };
+    const loadOneShot = (): Promise<void> => {
+      if (inFlightLoad) return inFlightLoad;
 
-      await Promise.all([
-        load(
-          CACHE_KEYS.cleaningRoster,
-          async () => {
-            const snap = await getDocsFromServer(query(collection(db, 'cleaningRosters')));
-            return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningRosterEntry));
-          },
-          setCleaningRoster,
-          setCleaningRosterLoading,
-        ),
-        load(
-          CACHE_KEYS.qtRoster,
-          async () => {
-            const snap = await getDocsFromServer(query(collection(db, 'qtRosters'), orderBy('date', 'asc')));
-            return snap.docs.map((d) => ({ id: d.id, ...d.data() } as QTRosterEntry));
-          },
-          setQtRoster,
-          setQtRosterLoading,
-        ),
-        load(
-          CACHE_KEYS.cleaningDays,
-          async () => {
-            const snap = await getDocsFromServer(query(collection(db, 'cleaningDays'), orderBy('order', 'asc')));
-            return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningDay));
-          },
-          setCleaningDays,
-          setCleaningDaysLoading,
-        ),
-        load(
-          CACHE_KEYS.worshipRosters,
-          async () => {
-            const snap = await getDocsFromServer(
-              query(collection(db, 'worshipRosters'), orderBy('date', 'desc')),
-            );
-            return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
-          },
-          setWorshipRosters,
-          setWorshipRostersLoading,
-        ),
-      ]);
+      inFlightLoad = (async () => {
+        const load = async <T,>(
+          key: string,
+          fetchDocs: () => Promise<T[]>,
+          setData: (v: T[]) => void,
+          setLoading: (v: boolean) => void,
+        ) => {
+          const fresh = readLocalCollectionCache<T[]>(key, COLLECTION_CACHE_TTL_MS);
+          if (fresh?.length) {
+            setData(fresh);
+            setLoading(false);
+            return;
+          }
+          const stale = readCached<T>(key);
+          if (stale.length > 0) {
+            setData(stale);
+            setLoading(false);
+          }
+          try {
+            const data = await fetchDocs();
+            if (cancelled) return;
+            setData(data);
+            writeLocalCollectionCache(key, data);
+            setLoading(false);
+          } catch {
+            if (!cancelled) setLoading(false);
+          }
+        };
+
+        await Promise.all([
+          load(
+            CACHE_KEYS.cleaningRoster,
+            async () => {
+              const snap = await getDocsFromServer(query(collection(db, 'cleaningRosters')));
+              return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningRosterEntry));
+            },
+            setCleaningRoster,
+            setCleaningRosterLoading,
+          ),
+          load(
+            CACHE_KEYS.qtRoster,
+            async () => {
+              const snap = await getDocsFromServer(query(collection(db, 'qtRosters'), orderBy('date', 'asc')));
+              return snap.docs.map((d) => ({ id: d.id, ...d.data() } as QTRosterEntry));
+            },
+            setQtRoster,
+            setQtRosterLoading,
+          ),
+          load(
+            CACHE_KEYS.cleaningDays,
+            async () => {
+              const snap = await getDocsFromServer(query(collection(db, 'cleaningDays'), orderBy('order', 'asc')));
+              return snap.docs.map((d) => ({ id: d.id, ...d.data() } as CleaningDay));
+            },
+            setCleaningDays,
+            setCleaningDaysLoading,
+          ),
+          load(
+            CACHE_KEYS.worshipRosters,
+            async () => {
+              const snap = await getDocsFromServer(
+                query(collection(db, 'worshipRosters'), orderBy('date', 'desc')),
+              );
+              return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipRoster));
+            },
+            setWorshipRosters,
+            setWorshipRostersLoading,
+          ),
+        ]);
+      })().finally(() => {
+        inFlightLoad = null;
+      });
+
+      return inFlightLoad;
     };
 
     void loadOneShot();

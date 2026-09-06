@@ -11,7 +11,7 @@ import type { QTRosterEntry } from '@/types';
 import { format } from 'date-fns';
 import { BookOpen, Calendar, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Avatar } from '@/components/ui/avatar';
+import { Avatar, AvatarBlock } from '@/components/ui/avatar';
 import { PixelAvatar } from '@/components/avatar/PixelAvatar';
 import {
   chatCardEyebrow,
@@ -80,18 +80,20 @@ export default function QTSummary({ date, isSender }: QTSummaryProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-[10px] bg-muted/50 p-3">
-          <Avatar className="h-8 w-8 shrink-0 overflow-hidden border border-border">
-            <PixelAvatar
-              avatar={user?.avatar}
-              className="h-full w-full"
-              nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
-            />
-          </Avatar>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">{name}</p>
-            <p className={chatCardMeta}>Reader</p>
-          </div>
+        <div className="rounded-[10px] bg-muted/50 p-3">
+          <AvatarBlock
+            avatar={
+              <Avatar size="md" className="border border-border">
+                <PixelAvatar
+                  avatar={user?.avatar}
+                  className="h-full w-full"
+                  nameHint={{ firstName: user?.firstName, lastName: user?.lastName }}
+                />
+              </Avatar>
+            }
+            title={<span className="text-foreground">{name}</span>}
+            description={<span className={chatCardMeta}>Reader</span>}
+          />
         </div>
 
         <div className={chatCardFooter}>

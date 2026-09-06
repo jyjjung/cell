@@ -12,11 +12,13 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { ArrowLeft, ListMusic, Plus, Trash2 } from 'lucide-react';import { SetlistForm } from '@/components/ndcpc/SetlistForm';
+import { ArrowLeft, ListMusic, Trash2 } from 'lucide-react';import { SetlistForm } from '@/components/ndcpc/SetlistForm';
 import { SetlistMedia } from '@/components/ndcpc/SetlistMedia';
 import { LoadingState } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { EmptyState } from '@/components/ui/page-layout';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DrillDownListRow, ScheduleListCard, ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
+import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
 import { useTranslation } from '@/context/LocaleProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -178,7 +180,7 @@ export function SetlistManager({
               onClick={() => setDetailId(null)}
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-semibold">
+              <p className="break-words text-base font-semibold">
                 {detail.date?.seconds
                   ? formatAppDate(new Date(detail.date.seconds * 1000), 'EEEE, MMMM d', locale)
                   : t('setlist.new')}
@@ -198,18 +200,21 @@ export function SetlistManager({
             />
           </div>
 
-          <div className="rounded-xl border border-border/60 p-4">
+          <div className="ui-card">
             <SetlistForm key={detail.id} setlist={detail} onSuccess={() => {}} allowEmpty />
           </div>
 
           {detailSongs.length + detailChants.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Preview
-              </p>
+            <div className="ui-card !p-0">
               <SetlistMedia songs={detailSongs} chants={detailChants} />
             </div>
-          ) : null}
+          ) : (
+            <EmptyState
+              icon={ListMusic}
+              title="No resources yet"
+              description="Edit this setlist to add songs and chants."
+            />
+          )}
 
           <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
             <DialogContent className="max-w-sm rounded-xl">
@@ -272,25 +277,18 @@ export function SetlistManager({
           </div>
 
           {visible.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/40 py-20 text-center">
-              <ListMusic className="mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="font-semibold text-muted-foreground">
-                {listFilter === 'upcoming' ? 'No upcoming setlists' : 'No past setlists'}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground/60">
-                {listFilter === 'upcoming'
+            <EmptyState
+              icon={ListMusic}
+              title={listFilter === 'upcoming' ? 'No upcoming setlists' : 'No past setlists'}
+              description={
+                listFilter === 'upcoming'
                   ? 'Create a setlist for an upcoming Sunday service.'
-                  : 'Earlier Sundays will show up here.'}
-              </p>
-              {listFilter === 'upcoming' ? (
-                <Button size="sm" className="mt-4 rounded-lg" onClick={() => setNewOpen(true)}>
-                  <Plus className="mr-1.5 h-4 w-4" /> New setlist
-                </Button>
-              ) : null}
-            </div>
+                  : 'Earlier Sundays will show up here.'
+              }
+            />
           ) : (
-            <ScheduleListCard>
-                {visible.map((setlist, i) => {
+            <Accordion type="single" collapsible className="gap-2">
+              {visible.map((setlist, i) => {
                   const date = setlist.date?.seconds
                     ? new Date(setlist.date.seconds * 1000)
                     : null;
@@ -303,31 +301,50 @@ export function SetlistManager({
                       initial="hidden"
                       animate="visible"
                     >
-                      <DrillDownListRow
-                        leading={date ? <ScheduleRowDate date={date} /> : <div className="w-10" />}
-                        title={
-                          date
-                            ? formatAppDate(date, 'EEEE, MMMM d', locale)
-                            : t('setlist.noDate')
-                        }
-                        subtitle={t('setlist.summary', {
-                          songs: songIds.length,
-                          chants: chantIds.length,
-                        })}
-                        onClick={() => setDetailId(setlist.id)}
-                        trailing={
-                          <IconButton
-                            aria-label="Delete setlist"
-                            icon={Trash2}
-                            className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setDeleteConfirm(setlist)}
-                          />
-                        }
-                      />
+                      <AccordionItem value={setlist.id} className="rounded-2xl border border-border/40 bg-card/50 p-0">
+                        <AccordionTrigger className="px-4 py-3 hover:bg-accent/30">
+                          <div className="flex min-w-0 items-center gap-3 text-left">
+                            {date ? <ScheduleRowDate date={date} /> : <div className="w-10 shrink-0" />}
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">
+                                {date ? formatAppDate(date, 'EEEE, MMMM d', locale) : t('setlist.noDate')}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {t('setlist.summary', { songs: songIds.length, chants: chantIds.length })}
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 px-4 pb-4">
+                            {songIds.length + chantIds.length > 0 ? (
+                              <SetlistMedia
+                                songs={resolveSetlistResources(songIds, resourceMap)}
+                                chants={resolveSetlistResources(chantIds, resourceMap)}
+                              />
+                            ) : (
+                              <p className="text-sm text-muted-foreground">{t('setlist.pickVideos')}</p>
+                            )}
+                            <div className="flex justify-start gap-2">
+                              <Button size="sm" onClick={() => setDetailId(setlist.id)}>
+                                Open setlist
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDeleteConfirm(setlist)}
+                              >
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                {t('common.delete')}
+                              </Button>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
                     </motion.div>
                   );
                 })}
-            </ScheduleListCard>
+            </Accordion>
           )}
 
           <Dialog open={newOpen} onOpenChange={closeNew}>

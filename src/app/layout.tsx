@@ -74,7 +74,13 @@ export default async function RootLayout({
   const initialSessionCookie = Boolean(jar.get(SESSION_COOKIE_NAME)?.value);
 
   return (
-    <html lang="en" suppressHydrationWarning data-glass="off" className={appFontVariableClasses}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-glass="off"
+      data-scroll-behavior="smooth"
+      className={appFontVariableClasses}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: getLastAppResumeInlineScript() }}

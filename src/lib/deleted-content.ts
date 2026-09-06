@@ -82,3 +82,36 @@ export function resolveDeletedMessageLabel(
   const type = message.deletedContentType ?? 'message';
   return getDeletedContentLabel(type, t);
 }
+
+export function markChatMessageDeleted(
+  message: ChatMessage,
+  deletedBy: string,
+  deletedContentType: DeletedMessageContentType,
+): ChatMessage {
+  const next = {
+    ...message,
+    isDeleted: true,
+    deletedBy,
+    deletedContentType,
+  };
+
+  delete next.text;
+  delete next.imageUrl;
+  delete next.imageThumbUrl;
+  delete next.eventId;
+  delete next.setlistId;
+  delete next.rosterId;
+  delete next.qtDate;
+  delete next.cleaningDate;
+  delete next.songId;
+  delete next.songTitle;
+  delete next.sheetKey;
+  delete next.docId;
+  delete next.threadParentId;
+  delete next.reactions;
+  delete next.poll;
+  delete next.pollVotes;
+  delete next.pollUpdatedAt;
+
+  return next;
+}

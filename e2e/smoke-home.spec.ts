@@ -25,5 +25,13 @@ test.describe('smoke: home spine', () => {
         )
         .first(),
     ).toBeVisible({ timeout: 30_000 });
+
+    const fullScheduleButton = page.getByRole('button', { name: /Full schedule|전체 일정/i });
+    await expect(fullScheduleButton).toBeVisible({ timeout: 30_000 });
+    await fullScheduleButton.click();
+    await expect(page).toHaveURL(/\/events$/, { timeout: 30_000 });
+    await expect(page.getByRole('tab', { name: /Upcoming|예정/i })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

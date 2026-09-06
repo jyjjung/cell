@@ -6,11 +6,13 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/field';
 import { MultiSelect, type MultiSelectItem } from '@/components/ui/multi-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
@@ -21,7 +23,7 @@ import { auth } from '@/lib/firebase';
 import type { UserProfileData } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-    AlertCircle, AlertTriangle, BadgeCheck, CheckSquare, Clock, Edit, Mail, Search,
+    AlertCircle, AlertTriangle, BadgeCheck, CheckSquare, Clock, Edit, Mail,
     ShieldAlert, ShieldCheck, Trash2, UserPlus, Users
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -141,13 +143,14 @@ function UserRolePills({
   return (
     <div className="flex flex-wrap gap-1 max-w-[220px]">
       {roleIds.map((roleId) => (
-        <Badge
+        <Tag
           key={roleId}
-          variant="outline"
-          className="h-5 px-1.5 rounded border-primary/20 bg-primary/5 text-primary font-medium text-[10px]"
+          scheme="Brand"
+          variant="Secondary"
+          className="h-5 px-1.5 text-[10px]"
         >
           {rolesMap.get(roleId) || 'Unknown'}
-        </Badge>
+        </Tag>
       ))}
     </div>
   );
@@ -528,13 +531,12 @@ export function UsersManagementPage() {
         />
         {activeTab !== 'roles' ? (
         <div className="flex flex-col md:flex-row items-center gap-2 w-full">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
+          <div className="w-full md:max-w-md">
+            <SearchInput
               placeholder={t.adminSearchUsers}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-9 rounded-lg text-sm"
+              className="text-sm"
             />
           </div>
 

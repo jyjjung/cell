@@ -125,12 +125,21 @@ Always use shared primitives. Do not create one-off equivalents.
 | Button | `Button` | Raw `<button>` without the shared sizing/focus behavior |
 | Icon-only control | `IconButton` with required `aria-label` | Unlabelled icon buttons |
 | Hub navigation | `HubTab`, `HubTabIconButton`, `BottomHubBar` | Page-specific tab markup |
+| Navigation controls | `NavigationButton`, `NavigationPill`, and their list primitives | One-off nav button or pill styling |
 | Loading | `LoadingState`, `PageLoading`, `ListLoadingSkeleton` | Blank screens or ad-hoc spinners |
 | Auth/layout gate | `LayoutGate` | `return null` while loading |
 | Settings toggle | `SwitchRow` | Bare switch without a visible row label |
 | Form field | `FormField` and `formFieldControlProps` | Placeholder-only inputs |
+| Body text | `Text` | Repeated ad-hoc body typography |
+| Form field | `FormField`, `Input`, `Textarea`, `Label` | Placeholder-only or unlabeled controls |
+| Field groups/search | `Field`, `FieldLabel`, `FieldDescription`, `CheckboxField`, `RadioField`, `SearchInput` | One-off labeled controls or search icon/input wrappers |
 | React Hook Form | Shared `Form`, `FormLabel`, `FormControl` | Ad-hoc labels and error wiring |
 | Selection row | `SelectionRow` | Tiny checkbox/switch rows |
+| Menu | `DropdownMenu*` primitives, including `DropdownMenuHeader`, `DropdownMenuHeading`, and `DropdownMenuShortcut` | One-off popover menu rows |
+| In-app notification | `Toast`, `Toaster`, and `useToast` | One-off notification banners |
+| Pagination | `Pagination` and its page/previous/next/ellipsis primitives | One-off numbered pagination controls |
+| Tabs | `Tabs`, `TabsList`, `TabsTrigger`, and `TabsContent` | One-off tab state and underline styling |
+| Tags and filters | `Tag`, `TagToggle`, and `TagToggleGroup` | One-off chips, removable tags, or filter toggles |
 | Empty content | `EmptyState` | Custom empty divs |
 | Page structure | `PageShell`, `NavPageHeader`, `PageSection` | Ad-hoc page containers or nested rhythm wrappers |
 | Destructive confirmation | `AlertDialog` with Cancel and destructive action | `window.confirm` or delete-only popovers |

@@ -240,8 +240,8 @@ export default function AdminEventsPage() {
           <h2 className="text-section-title">{t.adminPastEvents}</h2>
            <div className="admin-table-wrap">
             <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="past-events" className="border-b-0">
-                    <AccordionTrigger className="app-card-sm text-sm hover:no-underline">
+                <AccordionItem value="past-events">
+                    <AccordionTrigger>
                         {t.adminViewPastEvents.replace('{count}', String(pastEvents.length))}
                     </AccordionTrigger>
                     <AccordionContent className="p-0">

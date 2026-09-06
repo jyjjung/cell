@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { motion } from 'framer-motion';
 import { Link2, Plus, Trash2, ExternalLink, Pencil, Check } from 'lucide-react';
-import { EmptyState, NavPageHeader } from '@/components/ui/page-layout';
+import { EmptyState, NavPageHeader, PageShell } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -126,14 +127,14 @@ function AddEditLinkDialog({
             <Input id="link-desc" placeholder={t.linkDescPlaceholder} value={desc}
               onChange={e => setDesc(e.target.value)} className="rounded-lg" />
           </div>
-          <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1 rounded-lg" onClick={onClose}>{t.cancel}</Button>
-            <Button variant="primary" className="flex-1 rounded-lg"
+          <ButtonGroup align="justify" className="pt-1">
+            <Button size="medium" variant="outline" onClick={onClose}>{t.cancel}</Button>
+            <Button size="medium" variant="primary"
               onClick={handleSave} disabled={!title.trim() || !url.trim() || saving}>
               {saving ? <ButtonSpinner className="mr-2" /> : null}
               {existing ? t.save : t.addLink}
             </Button>
-          </div>
+          </ButtonGroup>
         </div>
       </DialogContent>
     </Dialog>
@@ -184,7 +185,7 @@ export default function LinksPage() {
   };
 
   return (
-    <div className="page-container">
+    <PageShell>
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <NavPageHeader
           action={
@@ -324,6 +325,6 @@ export default function LinksPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

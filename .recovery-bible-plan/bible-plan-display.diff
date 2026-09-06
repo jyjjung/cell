@@ -1,0 +1,91 @@
+--- /tmp/head-bible-plan-display.tsx	2026-09-01 23:04:21
++++ .recovery-bible-plan/bible-plan-display.tsx	2026-09-01 23:04:19
+@@ -7,11 +7,7 @@
+ import { CalendarX, Info, Loader2 } from 'lucide-react';
+ import { useEffect, useState, useMemo } from 'react';
+ import { cn } from '@/lib/utils';
+-import {
+-  makeManualPassageKey,
+-  makePassageKey,
+-} from '@/lib/passage-keys';
+-import { isPassageCompletedForPlan } from '@/lib/reading-utils';
++import { makePassageKey } from '@/hooks/use-user-bible-checklist';
+ import type { AppUser } from '@/types';
+ import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+ import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
+@@ -27,7 +23,6 @@
+   togglePassageCompletion: (passageDisplayText: string, date?: string) => Promise<void>;
+   markMultiplePassages?: (passageKeys: string[], markAsComplete: boolean) => Promise<void>;
+   allPassageTextsForDay?: string[];
+-  planDailyReadings?: DailyReading[] | null;
+   loading?: boolean;
+   planAvailable?: boolean;
+   planDescription?: string;
+@@ -37,8 +32,6 @@
+   isStandalone?: boolean;
+ }
+ 
+-const spring = { type: 'spring' as const, stiffness: 500, damping: 35 };
+-
+ export default function BiblePlanDisplay({
+   readingToDisplay,
+   displayTitle,
+@@ -47,7 +40,6 @@
+   togglePassageCompletion,
+   markMultiplePassages,
+   allPassageTextsForDay = [],
+-  planDailyReadings = null,
+   loading = false,
+   planAvailable = false,
+   planDescription,
+@@ -77,11 +69,11 @@
+     const date = readingToDisplay?.date;
+     return validTextsFromProp.every(text => {
+       if (date) {
+-        return isPassageCompletedForPlan(date, text, completedPassages, { dailyReadings: planDailyReadings });
++        return completedPassages.includes(makePassageKey(date, text)) || completedPassages.includes(text);
+       }
+-      return completedPassages.includes(makeManualPassageKey(text));
++      return completedPassages.includes(text);
+     });
+-  }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date, planDailyReadings]);
++  }, [allPassageTextsForDay, completedPassages, readingToDisplay?.date]);
+ 
+   let parsedDayDate: Date | null = null;
+   if (readingToDisplay?.date) {
+@@ -138,8 +130,8 @@
+   const surfaceClass = cn(
+     'ui-card space-y-3',
+     isAllPassagesForThisReadingComplete && 'ring-1 ring-success/25',
+-    isCurrentDay && !isAllPassagesForThisReadingComplete && 'ring-1 ring-primary/30',
+-    isOverdueDay && 'ring-1 ring-destructive/30',
++    isCurrentDay && !isAllPassagesForThisReadingComplete && 'ring-1 ring-blue-500/25',
++    isOverdueDay && 'ring-1 ring-destructive/25',
+   );
+ 
+   if (!isMounted) {
+@@ -191,9 +183,9 @@
+           <p className={cn(
+             'text-eyebrow',
+             isAllPassagesForThisReadingComplete ? 'text-success' :
+-            isCurrentDay ? 'text-primary' :
++            isCurrentDay ? 'text-blue-600 dark:text-blue-400' :
+             isOverdueDay ? 'text-destructive' :
+-            'text-chart-2',
++            undefined,
+           )}>
+             {format(parsedDayDate, 'EEEE')}
+           </p>
+@@ -213,10 +205,8 @@
+             const passageIdPart = `passage-${readingToDisplay.date}-${index}`;
+             const date = readingToDisplay.date;
+             const isChecked = date
+-              ? isPassageCompletedForPlan(date, passage.displayText, completedPassages, {
+-                  dailyReadings: planDailyReadings,
+-                })
+-              : completedPassages.includes(makeManualPassageKey(passage.displayText));
++              ? completedPassages.includes(makePassageKey(date, passage.displayText)) || completedPassages.includes(passage.displayText)
++              : completedPassages.includes(passage.displayText);
+             const isPassageValid = !passage.displayText.startsWith('Error:');
+ 
+             return (

@@ -28,7 +28,7 @@ import {
   type RoleCapability,
 } from '@/lib/role-capabilities';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 
 function createRoleSchema(scope: RoleAppScope, nameMinMessage: string) {
   const capabilityEnum = z.enum(roleCapabilitiesForScope(scope) as [RoleCapability, ...RoleCapability[]]);
@@ -74,9 +74,9 @@ function RolesTable({
               <TableCell>
                 <div className="flex flex-wrap gap-1">
                   {(role.capabilities ?? []).map((capability) => (
-                    <Badge key={capability} variant="outline" className="text-[10px]">
+                    <Tag key={capability} scheme="Neutral" variant="Secondary" className="text-[10px]">
                       {ROLE_CAPABILITY_LABELS[capability]}
-                    </Badge>
+                    </Tag>
                   ))}
                 </div>
               </TableCell>

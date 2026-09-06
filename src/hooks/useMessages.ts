@@ -21,7 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatChatMessagePreview } from '@/lib/chat-utils';
-import { getDeletedMessageContentType } from '@/lib/deleted-content';
+import { getDeletedMessageContentType, markChatMessageDeleted } from '@/lib/deleted-content';
 import { primeChatPreviewMedia } from '@/lib/media-cache';
 import {
   CHAT_MESSAGES_LIVE_LIMIT,
@@ -581,6 +581,13 @@ export function useMessages(chatId: string | null) {
         pollVotes: deleteField(),
         pollUpdatedAt: deleteField(),
       });
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId
+            ? markChatMessageDeleted(message, currentUser.uid, deletedContentType)
+            : message,
+        ),
+      );
 
       const latestSnap = await getDocs(
         query(messagesColRef, orderBy('createdAt', 'desc'), limit(1)),

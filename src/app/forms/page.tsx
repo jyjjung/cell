@@ -7,7 +7,7 @@ import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { FormDefinition, FormResponse } from '@/types/forms';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/page-layout';
+import { EmptyState, PageShell } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
 import { PageHeader } from '@/components/ui/page-layout';
 import { useToast } from '@/hooks/use-toast';
@@ -113,7 +113,7 @@ export default function FormsPage() {
   if (loadingAuth) return <PageLoading />;
 
   return (
-    <div className="page-container">
+    <PageShell>
       <PageHeader title="Forms" />
 
       {!currentUser ? (
@@ -356,6 +356,6 @@ export default function FormsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageShell>
   );
 }

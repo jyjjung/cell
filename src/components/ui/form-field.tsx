@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { Text } from '@/components/ui/text';
 
 type FormFieldProps = {
   id: string;
@@ -33,14 +34,14 @@ export function FormField({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <Label htmlFor={id} className="text-base">
+      <Label htmlFor={id}>
         {label}
         {required ? <span className="text-destructive"> *</span> : null}
       </Label>
       {description ? (
-        <p id={descId} className="text-sm leading-relaxed text-muted-foreground">
+        <Text id={descId} variant="small" className="text-base">
           {description}
-        </p>
+        </Text>
       ) : null}
       <div
         data-form-field-control
@@ -51,9 +52,9 @@ export function FormField({
         {children}
       </div>
       {error ? (
-        <p id={errorId} className="text-sm text-destructive" role="alert">
+        <Text id={errorId} variant="small" className="text-destructive" role="alert">
           {error}
-        </p>
+        </Text>
       ) : null}
     </div>
   );

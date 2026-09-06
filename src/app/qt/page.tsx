@@ -8,7 +8,7 @@ import { format, isBefore, startOfToday, compareAsc } from 'date-fns';
 import { parseDay } from '@/lib/event-occurrences';
 import { CalendarOff } from 'lucide-react';
 import { LinkifiedText } from '@/components/ui/linkified-text';
-import { NavPageHeader, EmptyState } from '@/components/ui/page-layout';
+import { NavPageHeader, EmptyState, PageShell } from '@/components/ui/page-layout';
 import { PageLoading } from '@/components/ui/loading-spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -117,7 +117,7 @@ export default function QTRosterPage() {
     };
     
     return (
-      <div className="page-container">
+      <PageShell>
             <NavPageHeader />
             
             {(rosterLoading || usersLoading) ? (
@@ -167,6 +167,6 @@ export default function QTRosterPage() {
                     )}
                 </Tabs>
             )}
-        </div>
+        </PageShell>
     )
 }

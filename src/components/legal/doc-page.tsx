@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-layout";
+import { PageHeader, PageShell } from "@/components/ui/page-layout";
 import { DocNav, type DocNavItem } from "@/components/legal/doc-section";
 
 export function DocPage({
@@ -22,7 +22,7 @@ export function DocPage({
   const router = useRouter();
 
   return (
-    <div className="page-container-wide !pb-8">
+    <PageShell className="max-w-5xl !pb-8">
       <PageHeader
         title={title}
         description={description}
@@ -39,6 +39,6 @@ export function DocPage({
         <DocNav items={nav} className="lg:w-44 lg:shrink-0 lg:sticky lg:top-6" />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
-    </div>
+    </PageShell>
   );
 }

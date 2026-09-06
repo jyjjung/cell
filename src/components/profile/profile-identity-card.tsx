@@ -3,6 +3,7 @@
 import { Palette, Save } from 'lucide-react';import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   Dialog,
   DialogContent,
@@ -110,17 +111,19 @@ export function ProfileIdentityCard({
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => onAvatarEditorOpenChange(false)}>
-              {labels.cancel}
-            </Button>
-            <Button onClick={onAvatarSave} disabled={isSaving}>
-              {isSaving ? (
-                <ButtonSpinner className="mr-2" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}{" "}
-              {labels.save}
-            </Button>
+            <ButtonGroup align="end">
+              <Button size="medium" variant="outline" onClick={() => onAvatarEditorOpenChange(false)}>
+                {labels.cancel}
+              </Button>
+              <Button size="medium" onClick={onAvatarSave} disabled={isSaving}>
+                {isSaving ? (
+                  <ButtonSpinner className="mr-2" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}{" "}
+                {labels.save}
+              </Button>
+            </ButtonGroup>
           </DialogFooter>
         </DialogContent>
       </Dialog>

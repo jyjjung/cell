@@ -1,0 +1,425 @@
+
+"use client";
+
+import { BibleReadingDayCard } from '@/components/bible-plan/bible-reading-day-card';
+import { MarkAsReadMenu } from '@/components/bible/mark-as-read-menu';
+import ReadingHeatmap from '@/components/dashboard-widgets/reading-heatmap';
+import BackToTopButton from '@/components/ui/back-to-top-button';
+import { Button } from '@/components/ui/button';
+import { PageLoading } from '@/components/ui/loading-spinner';
+import { EmptyState, NavPageHeader, PageSection } from '@/components/ui/page-layout';
+import { PlanPaceList, PlanProgressBar } from '@/components/bible-plan/plan-progress';
+import { ReadingPlanSubpage } from '@/components/bible-plan/reading-plan-subpage';
+import {
+  ReadingPlanCompletedWeeksSummary,
+  ReadingPlanWeekRow,
+} from '@/components/bible-plan/reading-plan-week-row';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { useAuth } from '@/contexts/auth-context';
+import { useBiblePlan } from '@/hooks/use-bible-plan';
+import { useUserBibleChecklist } from '@/hooks/use-user-bible-checklist';
+import { parseDay } from '@/lib/event-occurrences';
+import { parsePassageReferenceForNavigation } from '@/lib/bible-navigation';
+import { useGlobalBibleReader } from '@/contexts/global-bible-reader-context';
+import {
+  buildFirstOccurrenceByDisplayText,
+  calculatePlanPaceStats,
+  countPlanPassageProgress,
+  getWeekPassageKeys,
+  isPassageCompletedForPlan,
+} from '@/lib/reading-utils';
+import { translations } from '@/lib/translations';
+import type { DailyReading, WeeklyProgress } from '@/types';
+import { endOfWeek, format, isBefore, isValid, isWithinInterval, startOfDay, startOfWeek } from 'date-fns';
+import { Info, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+type ViewState =
+  | { view: 'all-weeks' }
+  | { view: 'completed-weeks-list'; weeks: WeeklyProgress[] }
+  | { view: 'single-week-details'; week: WeeklyProgress };
+
+function generatePassageSummary(readings: DailyReading[]): string {
+  const bookChapters: { [book: string]: number[] } = {};
+
+  readings.forEach((reading) => {
+    reading.passages.forEach((passage) => {
+      if (passage.book && !passage.book.includes('Error')) {
+        if (!bookChapters[passage.book]) {
+          bookChapters[passage.book] = [];
+        }
+        if (!bookChapters[passage.book].includes(passage.chapter)) {
+          bookChapters[passage.book].push(passage.chapter);
+        }
+      }
+    });
+  });
+
+  return Object.entries(bookChapters)
+    .map(([book, chapters]) => {
+      if (chapters.length === 0) return '';
+      chapters.sort((a, b) => a - b);
+      if (chapters.length === 1) return `${book} ${chapters[0]}`;
+      return `${book} ${chapters[0]}-${chapters[chapters.length - 1]}`;
+    })
+    .filter((summary) => summary)
+    .join(', ');
+}
+
+export default function BibleChecklistPage() {
+  const { currentUser } = useAuth();
+  const { plan, loading: planLoading } = useBiblePlan();
+  const { completedPassages, togglePassageCompletion, markMultiplePassages, loadingChecklist } =
+    useUserBibleChecklist();
+  const { openBibleReader } = useGlobalBibleReader();
+
+  const [isMounted, setIsMounted] = useState(false);
+  const [viewState, setViewState] = useState<ViewState>({ view: 'all-weeks' });
+  const [isMarkingWeek, setIsMarkingWeek] = useState(false);
+
+  const isGuest = !currentUser;
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const lang = currentUser?.preferredLanguage || 'en';
+  const t = translations[lang];
+
+  const readPassage = useCallback(
+    (text: string) => {
+      const parsed = parsePassageReferenceForNavigation(text);
+      if (parsed) openBibleReader(parsed.book, parsed.chapter);
+    },
+    [openBibleReader],
+  );
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const weeklyProgressData = useMemo((): WeeklyProgress[] => {
+    if (!plan?.dailyReadings) return [];
+
+    const weeksMap = new Map<string, DailyReading[]>();
+    const firstOccurrenceByDisplayText = buildFirstOccurrenceByDisplayText(plan.dailyReadings);
+
+    for (const reading of plan.dailyReadings) {
+      try {
+        const date = parseDay(reading.date);
+        if (!isValid(date)) continue;
+        const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+        const weekKey = format(weekStart, 'yyyy-MM-dd');
+
+        if (!weeksMap.has(weekKey)) {
+          weeksMap.set(weekKey, []);
+        }
+        weeksMap.get(weekKey)!.push(reading);
+      } catch (e) {
+        console.error('Error processing reading for week grouping:', reading, e);
+      }
+    }
+
+    return Array.from(weeksMap.entries())
+      .map(([weekKey, readings], index) => {
+        const weekStartDate = parseDay(weekKey);
+        const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+
+        let totalCount = 0;
+        let completedCount = 0;
+
+        readings.forEach((reading) => {
+          const validPassages =
+            reading.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:')) || [];
+          const numValidPassages = validPassages.length;
+          totalCount += numValidPassages;
+
+          if (isGuest) {
+            const readingDate = parseDay(reading.date);
+            if (isValid(readingDate) && isBefore(readingDate, today)) {
+              completedCount += numValidPassages;
+            }
+          } else {
+            completedCount += validPassages.filter((p) =>
+              isPassageCompletedForPlan(reading.date, p.displayText, completedPassages, {
+                firstOccurrenceByDisplayText,
+              }),
+            ).length;
+          }
+        });
+
+        const isCompleted = totalCount > 0 && completedCount === totalCount;
+        const isCurrent = isWithinInterval(today, { start: weekStartDate, end: weekEndDate });
+        const isOverdue = !isGuest && !isCompleted && isBefore(weekEndDate, today);
+
+        return {
+          weekNumber: index + 1,
+          startDate: weekStartDate,
+          endDate: weekEndDate,
+          readings,
+          completedCount,
+          totalCount,
+          progressPercentage: totalCount > 0 ? (completedCount / totalCount) * 100 : 0,
+          isCompleted,
+          isCurrent,
+          isOverdue,
+          passageSummary: generatePassageSummary(readings),
+        };
+      })
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+  }, [plan, completedPassages, isGuest, today]);
+
+  const overallProgress = useMemo(() => {
+    if (!plan?.dailyReadings || loadingChecklist) {
+      return { total: 0, completed: 0, percentage: 0 };
+    }
+
+    if (isGuest) {
+      let total = 0;
+      let completed = 0;
+      plan.dailyReadings.forEach((day) => {
+        const dayDate = parseDay(day.date);
+        const validPassages =
+          day.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:')) || [];
+        total += validPassages.length;
+        if (isValid(dayDate) && isBefore(dayDate, today)) {
+          completed += validPassages.length;
+        }
+      });
+      const percentage = total > 0 ? (completed / total) * 100 : 0;
+      return { total, completed, percentage };
+    }
+
+    const { total, completed } = countPlanPassageProgress(plan.dailyReadings, completedPassages);
+    const percentage = total > 0 ? (completed / total) * 100 : 0;
+    return { total, completed, percentage };
+  }, [plan, completedPassages, loadingChecklist, isGuest, today]);
+
+  const paceStats = useMemo(() => {
+    if (!plan?.dailyReadings || isGuest) {
+      return { passagesLeft: 0, daysLeft: 0, passagesPerDay: 0, passagesToCatchUp: 0, catchUpPace: 0 };
+    }
+    return calculatePlanPaceStats(plan.dailyReadings, completedPassages, today);
+  }, [plan, completedPassages, today, isGuest]);
+
+  const { completedWeeks, currentWeek, futureWeeks } = useMemo(() => {
+    const completed: WeeklyProgress[] = [];
+    const upcoming: WeeklyProgress[] = [];
+    let consecutive = true;
+    weeklyProgressData.forEach((week) => {
+      if (week.isCompleted && consecutive) {
+        completed.push(week);
+      } else {
+        consecutive = false;
+        upcoming.push(week);
+      }
+    });
+    const current = upcoming.find((week) => week.isCurrent) ?? null;
+    const future = upcoming.filter((week) => !week.isCurrent);
+    return { completedWeeks: completed, currentWeek: current, futureWeeks: future };
+  }, [weeklyProgressData]);
+
+  const activeWeekDetails = useMemo(() => {
+    if (viewState.view !== 'single-week-details') return null;
+    return (
+      weeklyProgressData.find((week) => week.weekNumber === viewState.week.weekNumber) ?? viewState.week
+    );
+  }, [viewState, weeklyProgressData]);
+
+  const openWeek = useCallback((week: WeeklyProgress) => {
+    setViewState({ view: 'single-week-details', week });
+  }, []);
+
+  if (!isMounted || planLoading) {
+    return <PageLoading />;
+  }
+
+  if (!plan || !plan.dailyReadings || plan.dailyReadings.length === 0) {
+    return (
+      <div className="page-container">
+        <EmptyState icon={Info} title={t.noPlanAvailable} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      {viewState.view === 'single-week-details' && activeWeekDetails ? (
+        <ReadingPlanSubpage
+          title={`${t.week} ${activeWeekDetails.weekNumber}`}
+          backLabel={t.back}
+          onBack={() => setViewState({ view: 'all-weeks' })}
+          action={
+            !isGuest && activeWeekDetails.totalCount > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0 rounded-xl text-xs font-semibold"
+                disabled={isMarkingWeek}
+                onClick={async () => {
+                  const keys = getWeekPassageKeys(activeWeekDetails.readings);
+                  if (keys.length === 0) return;
+                  setIsMarkingWeek(true);
+                  try {
+                    await markMultiplePassages(keys, !activeWeekDetails.isCompleted);
+                  } finally {
+                    setIsMarkingWeek(false);
+                  }
+                }}
+              >
+                {isMarkingWeek ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+                {activeWeekDetails.isCompleted ? t.markWeekAsUnread : t.markWeekAsRead}
+              </Button>
+            ) : undefined
+          }
+        >
+          <div className="space-y-4">
+            {activeWeekDetails.readings
+              .slice()
+              .sort((a, b) => parseDay(a.date).getTime() - parseDay(b.date).getTime())
+              .map((reading) => {
+                const parsedDate = parseDay(reading.date);
+                if (!isValid(parsedDate)) return null;
+                const validCount =
+                  reading.passages?.filter((p) => p.displayText && !p.displayText.startsWith('Error:'))
+                    .length ?? 0;
+
+                return (
+                  <BibleReadingDayCard
+                    key={reading.date}
+                    reading={validCount > 0 ? reading : null}
+                    parsedDate={parsedDate}
+                    lang={lang}
+                    completedPassages={completedPassages}
+                    planDailyReadings={plan.dailyReadings}
+                    emptyMessage={validCount === 0 ? t.restDayMessage : undefined}
+                    showCheckboxes={!isGuest}
+                    onToggle={isGuest ? undefined : togglePassageCompletion}
+                    onRead={readPassage}
+                    markMultiplePassages={isGuest ? undefined : markMultiplePassages}
+                    markDayReadLabel={t.markDayAsRead}
+                    markDayUnreadLabel={t.markDayAsUnread}
+                  />
+                );
+              })}
+          </div>
+          <BackToTopButton />
+        </ReadingPlanSubpage>
+      ) : null}
+
+      {viewState.view === 'completed-weeks-list' ? (
+        <ReadingPlanSubpage
+          title={`${t.completed} ${t.allWeeks}`}
+          backLabel={t.back}
+          onBack={() => setViewState({ view: 'all-weeks' })}
+        >
+          <div className="space-y-3">
+            {viewState.weeks.map((week) => (
+              <ReadingPlanWeekRow
+                key={week.weekNumber}
+                week={week}
+                lang={lang}
+                isGuest={isGuest}
+                variant="completed"
+                onClick={() => openWeek(week)}
+              />
+            ))}
+          </div>
+          <BackToTopButton />
+        </ReadingPlanSubpage>
+      ) : null}
+
+      {viewState.view === 'all-weeks' ? (
+        <div className="stack-gap-sm">
+          <NavPageHeader
+            className="flex-row items-center justify-between gap-3"
+            action={
+              !isGuest && plan.dailyReadings ? (
+                <MarkAsReadMenu lang={lang} dailyReadings={plan.dailyReadings} />
+              ) : undefined
+            }
+          />
+
+          <PageSection variant="plain" title={t.overallProgress}>
+            <PlanProgressBar
+              value={overallProgress.percentage}
+              caption={
+                isGuest
+                  ? t.planProgressGuest(Math.round(overallProgress.percentage))
+                  : t.planProgressUser(overallProgress.completed, overallProgress.total)
+              }
+            />
+            {!isGuest && paceStats.passagesLeft > 0 ? (
+              <Accordion type="single" collapsible className="mt-3 border-t border-border/50 pt-1">
+                <AccordionItem value="pace" className="border-b-0">
+                  <AccordionTrigger className="py-2.5 text-sm font-medium hover:no-underline">
+                    {t.planPace}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-1">
+                    <PlanPaceList
+                      items={[
+                        { label: t.passagesLeft, value: paceStats.passagesLeft },
+                        { label: t.daysLeft, value: paceStats.daysLeft },
+                        {
+                          label: t.avgPerDay,
+                          value: paceStats.passagesPerDay,
+                          unit: t.passages,
+                        },
+                      ]}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            ) : null}
+          </PageSection>
+
+          {currentWeek ? (
+            <PageSection variant="plain" title={t.currentWeek}>
+              <ReadingPlanWeekRow
+                week={currentWeek}
+                lang={lang}
+                isGuest={isGuest}
+                variant="current"
+                onClick={() => openWeek(currentWeek)}
+              />
+            </PageSection>
+          ) : null}
+
+          <PageSection title={t.weeklyBreakdown}>
+            <div className="space-y-3">
+              {completedWeeks.length > 0 ? (
+                <ReadingPlanCompletedWeeksSummary
+                  weeks={completedWeeks}
+                  lang={lang}
+                  onClick={() => setViewState({ view: 'completed-weeks-list', weeks: completedWeeks })}
+                />
+              ) : null}
+
+              {futureWeeks.map((week) => (
+                <ReadingPlanWeekRow
+                  key={week.weekNumber}
+                  week={week}
+                  lang={lang}
+                  isGuest={isGuest}
+                  onClick={() => openWeek(week)}
+                />
+              ))}
+            </div>
+          </PageSection>
+
+          <PageSection variant="plain" title={t.readingConsistency}>
+            <ReadingHeatmap
+              showHeader={false}
+              dailyReadings={plan.dailyReadings}
+              completedPassages={completedPassages}
+            />
+          </PageSection>
+
+          <BackToTopButton />
+        </div>
+      ) : null}
+    </div>
+  );
+}

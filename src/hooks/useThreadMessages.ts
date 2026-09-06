@@ -13,7 +13,7 @@ import {
 import { formatChatMessagePreview } from '@/lib/chat-utils';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
-import { getDeletedMessageContentType } from '@/lib/deleted-content';
+import { getDeletedMessageContentType, markChatMessageDeleted } from '@/lib/deleted-content';
 import { db } from '@/lib/firebase';
 import { primeChatPreviewMedia } from '@/lib/media-cache';
 import { buildUnreadCountIncrements } from '@/lib/notification-utils';
@@ -377,6 +377,13 @@ export function useThreadMessages(chatId: string | null, parentMessageId: string
         pollVotes: deleteField(),
         pollUpdatedAt: deleteField(),
       });
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId
+            ? markChatMessageDeleted(message, currentUser.uid, deletedContentType)
+            : message,
+        ),
+      );
 
       const latestThreadSnap = await getDocs(
         query(threadColRef, orderBy('createdAt', 'desc'), limit(1)),
