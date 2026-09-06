@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import MarkDaysReadDialog from '@/components/bible/mark-days-read-dialog';
 import MarkRangeReadDialog from '@/components/bible/mark-range-read-dialog';
-import { releaseStuckDialogLayers } from '@/lib/dialog-cleanup';
 import { translations } from '@/lib/translations';
 import type { DailyReading } from '@/types';
 
@@ -33,12 +32,10 @@ export function MarkAsReadMenu({ lang, dailyReadings }: MarkAsReadMenuProps) {
 
   const handleRangeOpenChange = useCallback((open: boolean) => {
     setRangeOpen(open);
-    if (!open) window.setTimeout(releaseStuckDialogLayers, 0);
   }, []);
 
   const handleDaysOpenChange = useCallback((open: boolean) => {
     setDaysOpen(open);
-    if (!open) window.setTimeout(releaseStuckDialogLayers, 0);
   }, []);
 
   return (

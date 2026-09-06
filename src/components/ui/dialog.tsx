@@ -6,7 +6,6 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { releaseStuckDialogLayers } from "@/lib/dialog-cleanup"
 
 const Dialog = DialogPrimitive.Root
 
@@ -42,17 +41,11 @@ function isNestedLayerTarget(target: EventTarget | null) {
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { showCloseButton?: boolean }
->(({ className, children, showCloseButton = true, onAnimationEnd, ...props }, ref) => (
+>(({ className, children, showCloseButton = true, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      onAnimationEnd={(event) => {
-        onAnimationEnd?.(event)
-        if ((event.currentTarget as HTMLElement).dataset.state === 'closed') {
-          releaseStuckDialogLayers()
-        }
-      }}
       onInteractOutside={(event) => {
         if (isNestedLayerTarget(event.target)) {
           event.preventDefault()
