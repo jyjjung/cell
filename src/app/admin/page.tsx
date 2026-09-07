@@ -26,6 +26,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { isSameMonth, parseISO } from "date-fns";
 import { translations } from "@/lib/translations";
 import { ReminderCronHealth } from "@/components/admin/reminder-cron-health";
+import { toMillisSafe } from "@/lib/firestore-timestamp";
 
 export default function AdminHubPage() {
   const [password, setPassword] = useState("");
@@ -50,7 +51,7 @@ export default function AdminHubPage() {
   }).length;
 
   const scheduledNotifs = notifications.filter(
-    (n) => n.scheduledFor && n.scheduledFor.toDate() > new Date()
+    (n) => n.scheduledFor && toMillisSafe(n.scheduledFor) > Date.now()
   ).length;
 
   const handleAdminAuth = async (e: FormEvent) => {

@@ -64,6 +64,39 @@ function getExactChangelogDate(log: ChangelogEntry): string {
   return log.date;
 }
 
+type ChangelogVersionGroup = {
+  version: string;
+  subtitle?: string;
+  date: string;
+  summary: ChangelogEntry['changes'];
+  history: ChangelogEntry[];
+};
+
+function groupChangelogsByVersion(entries: ChangelogEntry[]): ChangelogVersionGroup[] {
+  const groups = new Map<string, ChangelogVersionGroup>();
+
+  for (const entry of entries) {
+    const match = entry.version.match(/^v?(\d+\.\d+)/);
+    const groupKey = match?.[1] ?? entry.version;
+    const existing = groups.get(groupKey);
+
+    if (existing) {
+      existing.history.push(entry);
+      continue;
+    }
+
+    groups.set(groupKey, {
+      version: entry.version,
+      subtitle: entry.subtitle,
+      date: entry.date,
+      summary: entry.changes,
+      history: [entry],
+    });
+  }
+
+  return [...groups.values()];
+}
+
 
 /* ── Page ────────────────────────────────────────────────── */
 
@@ -77,6 +110,7 @@ export default function FeedbackPage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [adminNoteText, setAdminNoteText] = useState('');
   const [activeTab, setActiveTab] = useState('suggestions');
+  const changelogGroups = groupChangelogsByVersion(changelogs);
 
   /* ── Firestore listener ───────────────────────────────── */
 
@@ -318,25 +352,25 @@ export default function FeedbackPage() {
               {/* ─── Changelog ───────────────────────────────── */}
               <TabsContent value="changelog">
                 <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-3">
-                  {changelogs.map((log, index) => (
+                  {changelogGroups.map((group) => (
                     <motion.div
-                      key={index}
+                      key={group.version}
                       variants={fadeUp}
                       className="rounded-2xl border border-border/40 bg-card/60 p-4"
                     >
                       <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <h3 className="text-base font-bold">{log.version}</h3>
-                        {log.subtitle && (
-                          <span className="text-xs font-semibold text-primary">{log.subtitle}</span>
+                        <h3 className="text-base font-bold">{group.version}</h3>
+                        {group.subtitle && (
+                          <span className="text-xs font-semibold text-primary">{group.subtitle}</span>
                         )}
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                          {getExactChangelogDate(log)}
+                          {group.date}
                         </span>
                       </div>
 
                       <ul className="mt-2 space-y-1.5">
-                        {log.changes.map((change, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        {group.summary.map((change) => (
+                          <li key={`${change.type}-${change.text}`} className="flex items-start gap-2 text-sm text-muted-foreground">
                             <span
                               className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${CHANGELOG_TYPE_CLASSES[change.type]}`}
                             >
@@ -346,6 +380,32 @@ export default function FeedbackPage() {
                           </li>
                         ))}
                       </ul>
+
+                      <details className="mt-3 border-t border-border/40 pt-3">
+                        <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
+                          View release history
+                        </summary>
+                        <div className="mt-3 space-y-3">
+                          {group.history.map((release) => (
+                            <div key={release.version}>
+                              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                <span className="text-xs font-semibold text-foreground">{release.version}</span>
+                                <span className="text-[11px] text-muted-foreground">{getExactChangelogDate(release)}</span>
+                              </div>
+                              <ul className="mt-1 space-y-1">
+                                {release.changes.map((change) => (
+                                  <li key={`${release.version}-${change.type}-${change.text}`} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                    <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${CHANGELOG_TYPE_CLASSES[change.type]}`}>
+                                      {change.type}
+                                    </span>
+                                    <span className="leading-relaxed">{change.text}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
                     </motion.div>
                   ))}
                 </motion.div>

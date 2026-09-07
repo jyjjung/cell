@@ -100,6 +100,9 @@ function createWithPWA() {
 const withPWA = createWithPWA();
 
 const nextConfig = {
+  // Bundle Firebase Admin's auth dependency chain so Turbopack does not load
+  // CommonJS jwks-rsa against jose's ESM entrypoint at runtime.
+  transpilePackages: ['firebase-admin', 'jwks-rsa', 'jose'],
   experimental: {
     // Keep lucide-react out: Turbopack HMR can break when icon imports are removed
     // ("module factory is not available") under optimizePackageImports.

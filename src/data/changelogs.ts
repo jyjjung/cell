@@ -1,12 +1,29 @@
 /**
  * In-app product changelog (Keep a Changelog + SemVer).
  * Style: `.cursor/rules/changelog-on-push.mdc` — member-facing, benefit-first, short.
- * New releases: add an object at the top of `changelogs`.
+ * New releases: add an object at the top of `changelogs`. The feedback view
+ * groups patch releases into their major/minor version and keeps this history
+ * available inside the expanded version entry.
  * Older eras stay few and short — do not recreate patch spam.
  */
 import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
+  {
+    version: 'v1.18.1',
+    subtitle: 'Reliable admin access',
+    date: 'September 7, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Admin pages now keep working when schedule and announcement data is restored from cache.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Form access is more reliable after a new deployment.',
+      },
+    ],
+  },
   {
     version: 'v1.18.0',
     subtitle: 'Roster scanning',
