@@ -10,6 +10,45 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.0',
+    subtitle: 'Smarter QT imports',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Admins can import QT titles and Bible passages from a pasted image or file with a chosen starting date.',
+      },
+      {
+        type: 'Improved',
+        text: 'QT Bible references now open the matching chapter and highlight the requested verses.',
+      },
+      {
+        type: 'Improved',
+        text: 'The QT roster editor is easier to navigate on phones and larger screens while keeping calendar roster imports available.',
+      },
+      {
+        type: 'Improved',
+        text: 'AI imports now recognize custom calendar rosters versus QT titles and passages automatically.',
+      },
+      {
+        type: 'Improved',
+        text: 'Choosing an import starting date now uses the same calendar picker as the rest of the app.',
+      },
+      {
+        type: 'Fixed',
+        text: 'QT image imports now continue working with the latest supported scanning service.',
+      },
+      {
+        type: 'Improved',
+        text: 'Notifications now stay relevant to the active app, while system alerts remain available across both community spaces.',
+      },
+      {
+        type: 'Improved',
+        text: 'NDCPC opens directly to a combined announcements view with read and unread posts together.',
+      },
+    ],
+  },
+  {
     version: 'v1.18.10',
     subtitle: 'Live rich paste preview',
     date: 'September 8, 2026',

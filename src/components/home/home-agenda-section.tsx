@@ -55,6 +55,7 @@ export function HomeAgendaSection({ currentUser }: HomeAgendaSectionProps) {
                       type={entry.type}
                       typeLabel={entryTypeLabel(entry.type)}
                       rightElement={entry.rightElement}
+                      interactiveDetail={Boolean(entry.passage)}
                       onClick={() => setSelectedEntry(entry)}
                     />
                   ))}

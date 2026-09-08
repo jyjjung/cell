@@ -4,11 +4,13 @@
 import UserSelector from '@/components/chat/UserSelector';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { IconButton } from '@/components/ui/icon-button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-layout';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { auth } from '@/lib/firebase';
@@ -20,8 +22,9 @@ import { cn } from '@/lib/utils';
 import type { QTRosterEntry } from '@/types';
 import { addMonths, eachDayOfInterval, endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronsLeft, ChevronsRight, FileScan, Save, Trash2, UserCheck, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { CalendarIcon, ChevronsLeft, ChevronsRight, FileScan, Save, Trash2, UserCheck, Users } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { parseISO } from 'date-fns';
 
 type ScannedRosterEntry = {
   date: string;
@@ -40,9 +43,12 @@ export default function AdminQTRosterPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState<'uploading' | 'analyzing' | 'preparing' | null>(null);
   const [scanFile, setScanFile] = useState<File | null>(null);
+  const [detectedScanType, setDetectedScanType] = useState<'roster' | 'qt' | null>(null);
+  const [scanStartDate, setScanStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [scanRowPreference, setScanRowPreference] = useState<'1' | '2'>('1');
   const [scannedEntries, setScannedEntries] = useState<ScannedRosterEntry[]>([]);
   const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
+  const scanInputRef = useRef<HTMLInputElement>(null);
   
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
@@ -153,9 +159,14 @@ export default function AdminQTRosterPage() {
     setLocalChanges({});
     setScanFile(null);
     setScannedEntries([]);
+    setDetectedScanType(null);
   };
 
-  const applyScannedRow = (entries: ScannedRosterEntry[], row: '1' | '2') => {
+  const applyScannedRow = (
+    entries: ScannedRosterEntry[],
+    row: '1' | '2',
+    defaults?: { title?: string; passage?: string },
+  ) => {
     setLocalChanges((previousChanges) => {
       const nextChanges = { ...previousChanges };
       entries.forEach((entry) => {
@@ -167,9 +178,24 @@ export default function AdminQTRosterPage() {
         nextChanges[entry.date] = {
           ...nextChanges[entry.date],
           personName: personName.trim(),
-          ...(entry.title?.trim() ? { title: entry.title } : {}),
-          ...(entry.passage?.trim() ? { passage: entry.passage } : {}),
+          ...(entry.title?.trim() || defaults?.title?.trim() ? { title: entry.title?.trim() || defaults?.title?.trim() } : {}),
+          ...(entry.passage?.trim() || defaults?.passage?.trim() ? { passage: entry.passage?.trim() || defaults?.passage?.trim() } : {}),
           ...(matchedUser ? { userId: matchedUser.uid } : {}),
+        };
+
+      });
+      return nextChanges;
+    });
+  };
+
+  const applyScannedQT = (entries: ScannedRosterEntry[], defaults?: { title?: string; passage?: string }) => {
+    setLocalChanges((previousChanges) => {
+      const nextChanges = { ...previousChanges };
+      entries.forEach((entry) => {
+        nextChanges[entry.date] = {
+          ...nextChanges[entry.date],
+          title: entry.title?.trim() || defaults?.title?.trim() || '',
+          passage: entry.passage?.trim() || defaults?.passage?.trim() || '',
         };
       });
       return nextChanges;
@@ -192,22 +218,24 @@ export default function AdminQTRosterPage() {
     setIsScanning(true);
     setScanStatus('uploading');
     try {
-      const token = await auth.currentUser?.getIdToken();
+      const token = await auth.currentUser?.getIdToken(true);
       if (!token) throw new Error('Not authenticated');
       const formData = new FormData();
       formData.append('file', scanFile);
       formData.append('year', String(currentDate.getFullYear()));
       formData.append('month', String(currentDate.getMonth() + 1));
+      formData.append('startDate', scanStartDate);
       setScanStatus('analyzing');
       const response = await fetch('/api/admin/qt-roster/scan', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: new Headers({ Authorization: ['Bearer', token].join(' ') }),
         body: formData,
       });
       setScanStatus('preparing');
       const result = await response.json() as {
         entries?: ScannedRosterEntry[];
         defaults?: { title?: string; passage?: string };
+        documentType?: 'roster' | 'qt';
         error?: string;
       };
       if (!response.ok) throw new Error(result.error || 'Could not scan the file.');
@@ -217,12 +245,24 @@ export default function AdminQTRosterPage() {
         return;
       }
       setScannedEntries(entries);
-      applyScannedRow(entries, scanRowPreference);
+      const documentType = result.documentType ?? 'roster';
+      setDetectedScanType(documentType);
+      if (documentType === 'qt') {
+        applyScannedQT(entries, result.defaults);
+      } else {
+        applyScannedRow(entries, scanRowPreference, result.defaults);
+      }
       setScanFile(null);
       toast({ title: t.adminScanComplete, description: t.adminScanCompleteDesc.replace('{count}', String(entries.length)) });
     } catch (error) {
       console.error('Failed to scan QT roster', error);
-      toast({ variant: 'destructive', title: t.adminScanFailed, description: error instanceof Error ? error.message : undefined });
+      toast({
+        variant: 'destructive',
+        title: t.adminScanFailed,
+        description: error instanceof TypeError && error.message === 'Failed to fetch'
+          ? 'The local server could not be reached. Check that the dev server is running on port 9002.'
+          : error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsScanning(false);
       setScanStatus(null);
@@ -230,23 +270,50 @@ export default function AdminQTRosterPage() {
   };
 
   const loading = rosterLoading || usersLoading;
+  const scanLabel = detectedScanType === 'qt' ? 'Import QT titles' : t.adminScan;
 
   return (
     <div className="admin-page">
       <header className="space-y-3">
         <PageHeader title={t.adminQTRoster} />
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-3 border-y border-border/50">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 border-y border-border/50 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
                     <ChevronsLeft className="mr-1 h-4 w-4" /> {t.adminPrevMonth}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'timeline' ? 'grid' : 'timeline')}>
                     {viewMode === 'timeline' ? t.adminSwitchToGrid : t.adminSwitchToTimeline}
                 </Button>
+              </div>
+              <h2 className="text-section-title">{monthLabel}</h2>
+              <Button variant="outline" size="sm" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                {t.adminNextMonth} <ChevronsRight className="ml-1 h-4 w-4" />
+              </Button>
             </div>
-            <h2 className="text-section-title">{monthLabel}</h2>
-            <div className="flex items-center gap-2">
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                  AI detects custom calendar, QT titles, or passages
+                </span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="justify-start bg-muted font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
+                      Starting date: {format(parseISO(scanStartDate), 'MMM d, yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseISO(scanStartDate)}
+                      onSelect={(date) => {
+                        if (date) setScanStartDate(format(date, 'yyyy-MM-dd'));
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
                 {Object.keys(localChanges).length > 0 && (
                     <>
                       <Button variant="outline" onClick={handleCancelChanges} disabled={isSavingAll} size="sm">
@@ -258,7 +325,7 @@ export default function AdminQTRosterPage() {
                       </Button>
                     </>
                 )}
-                <div className="flex items-center gap-2">
+                {detectedScanType === 'roster' ? (
                   <select
                     value={scanRowPreference}
                     onChange={(event) => {
@@ -267,26 +334,43 @@ export default function AdminQTRosterPage() {
                       if (scannedEntries.length > 0) applyScannedRow(scannedEntries, row);
                     }}
                     aria-label={t.adminScanRow}
-                    className="h-9 rounded-lg border border-input bg-muted px-2 text-xs text-foreground"
+                    className="h-10 rounded-lg border border-input bg-muted px-2 text-sm text-foreground"
                   >
                     <option value="1">{t.adminScanRow1}</option>
                     <option value="2">{t.adminScanRow2}</option>
                   </select>
-                  <Input
-                    type="file"
-                    accept="application/pdf,image/jpeg,image/png,image/webp"
-                    aria-label={t.adminScanFile}
-                    onChange={(event) => setScanFile(event.target.files?.[0] || null)}
-                    className="h-9 w-52 rounded-lg bg-muted text-xs"
-                  />
-                  <Button variant="outline" size="sm" onClick={handleScan} disabled={!scanFile || isScanning}>
-                    {isScanning ? <ButtonSpinner className="mr-2" /> : <FileScan className="mr-2 h-4 w-4" />}
-                    {t.adminScan}
-                  </Button>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
-                    {t.adminNextMonth} <ChevronsRight className="ml-1 h-4 w-4" />
+                ) : null}
+              </div>
+              <div
+                role="group"
+                aria-label="AI import file"
+                tabIndex={0}
+                onPaste={(event) => {
+                  const pastedImage = Array.from(event.clipboardData.files).find((file) => file.type.startsWith('image/'));
+                  if (pastedImage) {
+                    event.preventDefault();
+                    setScanFile(pastedImage);
+                  }
+                }}
+                onClick={() => scanInputRef.current?.click()}
+                className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 text-center text-xs text-muted-foreground outline-none hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <FileScan className="h-4 w-4 text-primary" />
+                <span>{scanFile ? scanFile.name : 'Choose or paste an image / PDF'}</span>
+                <Input
+                  ref={scanInputRef}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  aria-label={t.adminScanFile}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => setScanFile(event.target.files?.[0] || null)}
+                  className="sr-only"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); void handleScan(); }} disabled={!scanFile || isScanning}>
+                  {isScanning ? <ButtonSpinner className="mr-2" /> : null}
+                  {scanLabel}
                 </Button>
+              </div>
             </div>
         </div>
       </header>

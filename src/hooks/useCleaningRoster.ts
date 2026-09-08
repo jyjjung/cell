@@ -78,6 +78,7 @@ export function useCleaningRoster(enabled = true) {
             title: "New Cleaning Assignment",
             message: `You've been added to the cleaning roster for ${entryData.date}.`,
             type: 'reminder',
+            appScope: 'cell',
             isGlobal: false,
             userId: uid,
             relatedUrl: '/cleaning-roster'

@@ -13,7 +13,8 @@ export type VerifiedAdminContext = {
 export async function verifyAdminRequest(
   request: NextRequest,
 ): Promise<{ ok: true; ctx: VerifiedAdminContext } | { ok: false; status: number; error: string }> {
-  const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+  const authorization = request.headers.get('Authorization');
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (!token) {
     return { ok: false, status: 401, error: 'Unauthorized' };
   }
@@ -28,7 +29,11 @@ export async function verifyAdminRequest(
       return { ok: false, status: 403, error: 'Forbidden' };
     }
     return { ok: true, ctx: { adminAuth, adminDb, callerUid: decoded.uid } };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Firebase Admin credentials missing')) {
+      console.error('[verifyAdminRequest] Firebase Admin credentials are not configured');
+      return { ok: false, status: 503, error: 'Server authentication is not configured for local development.' };
+    }
     return { ok: false, status: 401, error: 'Unauthorized' };
   }
 }

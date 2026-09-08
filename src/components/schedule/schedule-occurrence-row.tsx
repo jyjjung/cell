@@ -7,6 +7,8 @@ import { ChevronRight, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { parsePassageReferenceForNavigation } from "@/lib/bible-navigation";
+import { useGlobalBibleReader } from "@/contexts/global-bible-reader-context";
 
 /** Month card shell matching the Events page layout. */
 export function ScheduleMonthGroup({
@@ -224,7 +226,23 @@ export function ScheduleRowTime({ start, end }: { start: string; end?: string })
 
 /** Scripture reference shown at the trailing edge of a row. */
 export function SchedulePassageRef({ passage }: { passage: string }) {
-  return <span className="text-passage-ref">{passage}</span>;
+  const { openBibleReader } = useGlobalBibleReader();
+  const parsed = parsePassageReferenceForNavigation(passage);
+  if (!parsed) return <span className="text-passage-ref">{passage}</span>;
+  return (
+    <Button
+      type="button"
+      variant="link"
+      size="chip"
+      className="text-passage-ref h-auto rounded px-1 text-left"
+      onClick={(event) => {
+        event.stopPropagation();
+        openBibleReader(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd);
+      }}
+    >
+      {passage}
+    </Button>
+  );
 }
 
 /**

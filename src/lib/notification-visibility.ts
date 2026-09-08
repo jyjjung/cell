@@ -21,7 +21,15 @@ export type NotificationUnreadFields = {
   type?: string;
   readBy?: string[] | null;
   createdAt?: unknown;
+  appScope?: 'cell' | 'ndcpc';
 };
+
+export function isNotificationForApp(
+  notification: NotificationUnreadFields,
+  app: 'cell' | 'ndcpc',
+): boolean {
+  return !notification.appScope || notification.appScope === app;
+}
 
 export function isNotificationVisibleToUser(
   notification: NotificationUnreadFields,

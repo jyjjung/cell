@@ -24,6 +24,7 @@ interface HomeAgendaRowProps {
   typeLabel?: string;
   rightElement?: ReactNode;
   onClick?: () => void;
+  interactiveDetail?: boolean;
   className?: string;
 }
 
@@ -36,6 +37,7 @@ export function HomeAgendaRow({
   typeLabel,
   rightElement,
   onClick,
+  interactiveDetail = false,
   className,
 }: HomeAgendaRowProps) {
   const body = (
@@ -53,7 +55,7 @@ export function HomeAgendaRow({
     </>
   );
 
-  if (onClick) {
+  if (onClick && !interactiveDetail) {
     return (
       <Button
         type="button"
@@ -66,7 +68,27 @@ export function HomeAgendaRow({
     );
   }
 
-  return <div className={cn('home-group-nav-row', className)}>{body}</div>;
+  return (
+    <div
+      className={cn('home-group-nav-row', onClick && 'cursor-pointer', className)}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
+      {body}
+    </div>
+  );
 }
 
 const scheduleTypeConfig: Record<

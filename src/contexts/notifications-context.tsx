@@ -10,7 +10,11 @@ import {
 } from '@/lib/collection-cache';
 import { db } from '@/lib/firebase';
 import { reviveTimestamp, toMillisSafe } from '@/lib/firestore-timestamp';
-import { NOTIFICATION_QUERY_LIMITS, NOTIFICATION_UNREAD_LOOKBACK_DAYS } from '@/lib/notification-visibility';
+import {
+    isNotificationForApp,
+    NOTIFICATION_QUERY_LIMITS,
+    NOTIFICATION_UNREAD_LOOKBACK_DAYS,
+} from '@/lib/notification-visibility';
 import { shouldDeferScheduledAnnouncement } from '@/lib/scheduled-notifications';
 import { scheduleIdle } from '@/lib/schedule-idle';
 import { reactionsMapsEqual, toggleReactionMap, type ReactionMap } from '@/lib/reaction-utils';
@@ -33,6 +37,7 @@ import {
     writeBatch
 } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
+import { resolveActiveApp } from '@/lib/app-access';
 import {
     createContext,
     useCallback,
@@ -161,6 +166,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const { currentUser, isAdmin } = useAuth();
   const adminMode = pathname.startsWith('/admin/notifications');
   const mode: 'app' | 'admin' = adminMode ? 'admin' : 'app';
+  const activeApp = resolveActiveApp(pathname);
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     if (!currentUser) return [];
@@ -486,9 +492,17 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     });
   }, [currentUser, mode]);
 
+  const visibleNotifications = useMemo(
+    () =>
+      adminMode || (activeApp !== 'cell' && activeApp !== 'ndcpc')
+        ? notifications
+        : notifications.filter((notification) => isNotificationForApp(notification, activeApp)),
+    [activeApp, adminMode, notifications],
+  );
+
   const value = useMemo(
     () => ({
-      notifications,
+      notifications: visibleNotifications,
       loading,
       createNotification,
       deleteNotification,
@@ -496,7 +510,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       markAllAsRead,
       toggleReaction,
     }),
-    [notifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead, toggleReaction],
+    [visibleNotifications, loading, createNotification, deleteNotification, markAsRead, markAllAsRead, toggleReaction],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

@@ -326,6 +326,12 @@
   .prose-sm .verse-num {
     @apply text-xs font-bold text-muted-foreground align-super mr-0.5;
   }
+  .bible-target-verse {
+    border-radius: 0.75rem;
+    background: hsl(var(--primary) / 0.12);
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.18);
+    padding: 0.35rem 0.5rem;
+  }
 
   .prose .bible-text h2,
   .prose-sm .bible-text h2,

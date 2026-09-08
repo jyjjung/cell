@@ -90,6 +90,7 @@ export function useWorshipSetlists(enabled = true) {
             title: `Setlist updated: ${setlistLabel}`,
             message: `${detail} in “${setlistLabel}”.`,
             type: 'reminder',
+            appScope: 'cell',
             isGlobal: false,
             userId,
             relatedUrl,

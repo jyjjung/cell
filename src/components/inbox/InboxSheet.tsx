@@ -29,6 +29,7 @@ import {
   toggleReactionMap,
   type ReactionMap,
 } from '@/lib/reaction-utils';
+import { isNotificationForApp } from '@/lib/notification-visibility';
 import { translations } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/types';
@@ -76,7 +77,7 @@ function mergeById(...lists: AppNotification[][]): AppNotification[] {
   return [...map.values()].sort(sortNewest);
 }
 
-async function fetchInboxHistory(uid: string): Promise<AppNotification[]> {
+async function fetchInboxHistory(uid: string, app: 'cell' | 'ndcpc'): Promise<AppNotification[]> {
   const [announcementsSnap, personalSnap, globalsSnap] = await Promise.all([
     getDocs(
       query(
@@ -107,7 +108,8 @@ async function fetchInboxHistory(uid: string): Promise<AppNotification[]> {
   const mapDocs = (snap: typeof announcementsSnap) =>
     snap.docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification));
 
-  return mergeById(mapDocs(announcementsSnap), mapDocs(personalSnap), mapDocs(globalsSnap));
+  return mergeById(mapDocs(announcementsSnap), mapDocs(personalSnap), mapDocs(globalsSnap))
+    .filter((notification) => isNotificationForApp(notification, app));
 }
 
 function InboxItemCard({
@@ -291,8 +293,16 @@ export function InboxSheet() {
     useCollection<Announcement>(ndcpcAnnouncementsQuery);
 
   useEffect(() => {
-    if (tab === 'prayer') setTab('notifications');
-  }, [tab, setTab]);
+    if (isNdcpcAnnouncements && (tab === 'notifications' || tab === 'prayer')) {
+      setTab('announcements');
+    } else if (!isNdcpcAnnouncements && tab === 'prayer') {
+      setTab('notifications');
+    }
+  }, [isNdcpcAnnouncements, tab, setTab]);
+
+  useEffect(() => {
+    if (isNdcpcAnnouncements && isOpen) setTab('announcements');
+  }, [isNdcpcAnnouncements, isOpen, setTab]);
 
   useEffect(() => {
     if (!hasAnnouncementsTab && tab === 'announcements') setTab('notifications');
@@ -301,6 +311,10 @@ export function InboxSheet() {
   // Prefer All when opening with nothing unread, so older items are visible immediately.
   useEffect(() => {
     if (!isOpen || !uid) return;
+    if (isNdcpcAnnouncements) {
+      setViewFilter('all');
+      return;
+    }
     const hasUnreadNotifications = notifications.some(
       (n) => n.type !== 'announcement' && !(n.readBy || []).includes(uid),
     );
@@ -331,7 +345,7 @@ export function InboxSheet() {
 
     let cancelled = false;
     setHistoryLoading(true);
-    void fetchInboxHistory(uid)
+    void fetchInboxHistory(uid, activeApp === 'ndcpc' ? 'ndcpc' : 'cell')
       .then((items) => {
         if (!cancelled) setHistory(items);
       })
@@ -581,16 +595,20 @@ export function InboxSheet() {
           <div className="shrink-0 border-b border-border bg-muted/40 p-1.5">
             <div className="flex gap-1">
               {tabButton('announcements', t.announcements, announcementUnreadCount, Megaphone)}
-              {tabButton('notifications', t.notifications, unreadGeneral.length, Bell)}
+              {!isNdcpcAnnouncements
+                ? tabButton('notifications', t.notifications, unreadGeneral.length, Bell)
+                : null}
             </div>
           </div>
         ) : null}
 
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
+        {!isNdcpcAnnouncements ? (
           <div className="inline-flex rounded-lg bg-muted/50 p-0.5">
             {filterButton('unread', t.unread)}
             {filterButton('all', t.archive)}
           </div>
+        ) : <div />}
           {isNdcpcAnnouncements && isAdmin && tab === 'announcements' ? (
             <Button
               type="button"

@@ -64,6 +64,7 @@ export function useQTRoster(enabled = true) {
           title: "New QT Assignment",
           message: `You've been assigned for ${entryData.date}: "${entryData.title}" (${entryData.passage}).`,
           type: 'reminder',
+          appScope: 'cell',
           isGlobal: false,
           userId: entryData.userId,
           relatedUrl: '/qt'

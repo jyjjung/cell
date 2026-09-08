@@ -144,6 +144,24 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
   }, [html, book, chapter]);
 
   useEffect(() => {
+    if (!html || !targetPassage?.verseStart) return;
+    const frame = window.requestAnimationFrame(() => {
+      const verseNodes = Array.from(document.querySelectorAll('.bible-text .verse-num'));
+      verseNodes.forEach((node) => {
+        const verse = Number(node.textContent?.trim());
+        const paragraph = node.closest('p');
+        const selected = Number.isFinite(verse)
+          && verse >= targetPassage.verseStart!
+          && verse <= (targetPassage.verseEnd ?? targetPassage.verseStart!);
+        paragraph?.classList.toggle('bible-target-verse', selected);
+      });
+      const first = document.querySelector('.bible-target-verse');
+      first?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [html, targetPassage]);
+
+  useEffect(() => {
     if (!targetPassage) return;
     setBook(targetPassage.book);
     setChapter(targetPassage.chapter);

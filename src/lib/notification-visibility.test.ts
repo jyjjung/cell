@@ -4,10 +4,19 @@ import {
   communityWallTimeToUtcDate,
   countUnreadNotificationsForUser,
   isNotificationUnreadForUser,
+  isNotificationForApp,
   isNotificationVisibleToUser,
 } from '@/lib/notification-visibility';
 
 describe('notification visibility', () => {
+  it('shows system notifications in both apps and scoped notifications only in their app', () => {
+    expect(isNotificationForApp({}, 'cell')).toBe(true);
+    expect(isNotificationForApp({}, 'ndcpc')).toBe(true);
+    expect(isNotificationForApp({ appScope: 'cell' }, 'cell')).toBe(true);
+    expect(isNotificationForApp({ appScope: 'cell' }, 'ndcpc')).toBe(false);
+    expect(isNotificationForApp({ appScope: 'ndcpc' }, 'ndcpc')).toBe(true);
+  });
+
   it('shows personal, global, and announcement notifications to the user', () => {
     expect(isNotificationVisibleToUser({ userId: 'u1' }, 'u1')).toBe(true);
     expect(isNotificationVisibleToUser({ userId: 'u2' }, 'u1')).toBe(false);

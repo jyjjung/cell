@@ -101,6 +101,7 @@ export function useCustomRoster(
           title: 'New Roster Assignment',
           message: `You've been added to ${rosterName} for ${entryData.date}${rolePart}.`,
           type: 'reminder',
+          appScope: 'cell',
           isGlobal: false,
           userId: uid,
           relatedUrl: `/rosters/${rosterDefId}`,

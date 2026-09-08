@@ -3,6 +3,8 @@ import { verifyAdminRequest } from '@/lib/server-admin-request';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+// Flash is multimodal, supports structured JSON responses, and is the model
+// currently enabled for new Gemini API users.
 const GEMINI_MODEL = 'gemini-3.6-flash';
 
 type ExtractedEntry = {
@@ -18,12 +20,31 @@ type ScanDefaults = {
   passage: string;
 };
 
-function normalizeEntry(value: unknown, year: string, month: string, defaults: ScanDefaults): ExtractedEntry | null {
+type ImportType = 'roster' | 'qt';
+
+function addDays(date: string, days: number): string {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function normalizeEntry(
+  value: unknown,
+  year: string,
+  month: string,
+  defaults: ScanDefaults,
+  startDate: string | null,
+  index: number,
+  importType: ImportType,
+): ExtractedEntry | null {
   if (!value || typeof value !== 'object') return null;
   const entry = value as Record<string, unknown>;
   const row1 = typeof entry.row1 === 'string' ? entry.row1.trim() : '';
   const row2 = typeof entry.row2 === 'string' ? entry.row2.trim() : '';
-  if (!row1 && !row2) return null;
+  const rawTitle = typeof entry.title === 'string' ? entry.title.trim() : '';
+  const rawPassage = typeof entry.passage === 'string' ? entry.passage.trim() : '';
+  if (importType === 'roster' && !row1 && !row2) return null;
+  if (importType === 'qt' && !rawTitle && !rawPassage) return null;
   const rawDate = typeof entry.date === 'string' ? entry.date.trim() : '';
   const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
     ? rawDate
@@ -31,15 +52,17 @@ function normalizeEntry(value: unknown, year: string, month: string, defaults: S
       ? `${year}-${rawDate.split('-').map((part) => part.padStart(2, '0')).join('-')}`
       : /^\d{1,2}$/.test(rawDate)
         ? `${year}-${month}-${rawDate.padStart(2, '0')}`
-        : '';
+        : startDate
+          ? addDays(startDate, index)
+          : '';
   if (!date) return null;
   const normalized: ExtractedEntry = {
     date,
     ...(row1 ? { row1 } : {}),
     ...(row2 ? { row2 } : {}),
   };
-  const title = typeof entry.title === 'string' && entry.title.trim() ? entry.title.trim() : defaults.title;
-  const passage = typeof entry.passage === 'string' && entry.passage.trim() ? entry.passage.trim() : defaults.passage;
+  const title = rawTitle || defaults.title;
+  const passage = rawPassage || defaults.passage;
   if (title) normalized.title = title;
   if (passage) normalized.passage = passage;
   return normalized;
@@ -75,16 +98,21 @@ export async function POST(request: NextRequest) {
   const scanMonth = typeof formData.get('month') === 'string' && /^\d{1,2}$/.test(formData.get('month') as string)
     ? String(Number(formData.get('month'))).padStart(2, '0')
     : String(new Date().getMonth() + 1).padStart(2, '0');
+  const rawStartDate = formData.get('startDate');
+  const startDate = typeof rawStartDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawStartDate)
+    ? rawStartDate
+    : null;
   const prompt = [
-    'Extract QT roster assignments from this document or photo.',
-    'Each calendar cell may contain two rows of people. Extract both rows separately as row1 and row2. Row 1 means the first person line in each cell; row 2 means the second person line.',
-    'The people calendar and the QT title/passage may be separate sections. Extract title and passage from the separate QT section as shared defaults, not as person names.',
+    'Identify the document type as either "roster" for a custom calendar of people or "qt" for a table of QT titles and Bible passages.',
+    'For roster documents, each calendar cell may contain two rows of people. Extract both rows separately as row1 and row2. The custom calendar is the primary roster destination.',
+    'For QT documents, each table row is one consecutive QT day. Extract the Bible reference exactly as passage and the Korean or English QT title exactly as title. Do not treat the title as a person name.',
+    `When dates are not visible, assign rows consecutively starting at ${startDate || 'the supplied starting date'}.`,
     'Return only rows that are explicitly present. Do not invent missing values.',
     `Convert dates to YYYY-MM-DD. This scan is for ${scanYear}-${scanMonth}; use that year and month when the document shows only a month/day calendar.`,
     'Use an empty string for a missing row1, row2, title, or passage.',
     'Return a JSON object only, shaped exactly as:',
-    '{"entries":[{"date":"YYYY-MM-DD","row1":"...","row2":"...","title":"","passage":""}],"defaults":{"title":"...","passage":"..."}}',
-    'Put a title or passage on an entry only when it is specific to that date. Otherwise put shared values in defaults.',
+    '{"documentType":"roster","entries":[{"date":"YYYY-MM-DD","row1":"","row2":"","title":"","passage":""}],"defaults":{"title":"...","passage":"..."}}',
+    'For roster documents, put shared QT title or passage values in defaults unless they are specific to a date. For QT rows, put each row title and passage on the entry.',
   ].join(' ');
 
   const response = await fetch(
@@ -145,19 +173,31 @@ export async function POST(request: NextRequest) {
   }
 
   const result = Array.isArray(parsed)
-    ? { entries: parsed, defaults: {} }
-    : parsed as { entries?: unknown; defaults?: Partial<ScanDefaults> };
+    ? { entries: parsed, defaults: {}, documentType: undefined }
+    : parsed as { entries?: unknown; defaults?: Partial<ScanDefaults>; documentType?: unknown };
   if (!Array.isArray(result.entries)) {
     return NextResponse.json({ error: 'The scan did not return a roster list.' }, { status: 422 });
   }
+  const importType: ImportType =
+    result.documentType === 'qt'
+      ? 'qt'
+      : result.documentType === 'roster'
+        ? 'roster'
+        : result.entries.some((entry) => {
+            if (!entry || typeof entry !== 'object') return false;
+            const value = entry as Record<string, unknown>;
+            return typeof value.row1 === 'string' || typeof value.row2 === 'string';
+          })
+          ? 'roster'
+          : 'qt';
 
   const defaults: ScanDefaults = {
     title: typeof result.defaults?.title === 'string' ? result.defaults.title : '',
     passage: typeof result.defaults?.passage === 'string' ? result.defaults.passage : '',
   };
   const entries = result.entries
-    .map((entry) => normalizeEntry(entry, scanYear, scanMonth, defaults))
+    .map((entry, index) => normalizeEntry(entry, scanYear, scanMonth, defaults, startDate, index, importType))
     .filter((entry): entry is ExtractedEntry => entry !== null)
     .slice(0, 366);
-  return NextResponse.json({ entries, defaults });
+  return NextResponse.json({ documentType: importType, entries, defaults });
 }

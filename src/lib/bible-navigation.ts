@@ -4,11 +4,17 @@ import { BIBLE_BOOKS_DATA, CANONICAL_BIBLE_ORDER } from './bible-data';
 export interface ParsedPassage {
   book: string;
   chapter: number;
-  // Verses are not strictly needed for chapter navigation but can be parsed if present
+  verseStart?: number;
+  verseEnd?: number;
 }
 
 export function parsePassageReferenceForNavigation(passageRef: string): ParsedPassage | null {
   if (!passageRef) return null;
+  const normalizedReference = passageRef
+    .replace(/^\s*성경\s*/, '')
+    .replace(/[–—−]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   // Regex to capture "BookName Chapter" from various formats like "Book Name Chapter:Verse-Verse" or "Book Name Chapter"
   // It tries to find the longest book name match first.
@@ -18,16 +24,20 @@ export function parsePassageReferenceForNavigation(passageRef: string): ParsedPa
     const bookMeta = BIBLE_BOOKS_DATA[bookName];
     if (!bookMeta) continue;
 
-    const possibleNames = [bookName, ...(bookMeta.shortNames || [])];
+    const possibleNames = [bookName, bookMeta.koFull, bookMeta.koAbbr, ...(bookMeta.shortNames || [])];
     for (const nameToTest of possibleNames) {
-      const regex = new RegExp(`^${nameToTest.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(\\d+)([:.\\s(].*)?$`, 'i');
-      const match = passageRef.match(regex);
+      const escapedName = nameToTest.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`^${escapedName}\\s*(\\d+)([:.\\s(장].*)?$`, 'i');
+      const bilingualReference = normalizedReference
+        .replace(new RegExp(`^${bookMeta.koFull}\\s*${bookName}\\s*`, 'i'), `${bookName} `)
+        .replace(new RegExp(`^${bookName}\\s*${bookMeta.koFull}\\s*`, 'i'), `${bookName} `);
+      const match = bilingualReference.match(regex);
       if (match && match[1]) {
         const chapter = parseInt(match[1], 10);
         if (chapter > 0 && chapter <= bookMeta.chapters) {
           // Prioritize longer book name matches if abbreviations overlap
           if (!bestMatch || nameToTest.length > bestMatch.book.length) {
-            bestMatch = { book: bookName, chapter };
+            bestMatch = { book: bookName, chapter, ...parseVerseRange(match[2]) };
           }
         }
       }
@@ -38,7 +48,7 @@ export function parsePassageReferenceForNavigation(passageRef: string): ParsedPa
   // This is similar to the API route's regex but we need the canonical book name.
   if (!bestMatch) {
     const BOOK_CHAPTER_REGEX = /^([1-3]?\s?[A-Za-z\s]+?)\s*(\d+)([:.\s(].*)?$/;
-    const match = passageRef.match(BOOK_CHAPTER_REGEX);
+    const match = normalizedReference.match(BOOK_CHAPTER_REGEX);
     if (match && match[1] && match[2]) {
         const bookNamePart = match[1].trim();
         const chapter = parseInt(match[2], 10);
@@ -57,14 +67,24 @@ export function parsePassageReferenceForNavigation(passageRef: string): ParsedPa
         if (canonicalBookName) {
             const bookMeta = BIBLE_BOOKS_DATA[canonicalBookName];
             if (bookMeta && chapter > 0 && chapter <= bookMeta.chapters) {
-                bestMatch = { book: canonicalBookName, chapter };
+                bestMatch = { book: canonicalBookName, chapter, ...parseVerseRange(match[3]) };
             }
+
         }
     }
   }
 
 
   return bestMatch;
+}
+
+function parseVerseRange(suffix?: string): Pick<ParsedPassage, 'verseStart' | 'verseEnd'> {
+  if (!suffix) return {};
+  const match = suffix.match(/(?:[:.]\s*|장\s*)(\d+)(?:\s*(?:절\s*)?[-~]\s*(\d+))?/);
+  if (!match) return {};
+  const verseStart = Number(match[1]);
+  const verseEnd = match[2] ? Number(match[2]) : verseStart;
+  return verseStart > 0 && verseEnd >= verseStart ? { verseStart, verseEnd } : {};
 }
 
 export function getPreviousChapterRef(currentBook: string, currentChapter: number): string | null {

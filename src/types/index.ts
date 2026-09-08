@@ -426,6 +426,8 @@ export interface AppNotification {
   pushDeliveredCount?: number;
   pushNeedsRetry?: boolean;
   pushRetryCount?: number;
+  /** App-specific notifications are filtered by the active app. Omit for system notifications shown in both apps. */
+  appScope?: 'cell' | 'ndcpc';
 }
 
 export interface PrayerRequest {
@@ -740,4 +742,3 @@ export interface DocComment {
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
-
