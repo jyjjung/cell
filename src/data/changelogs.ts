@@ -10,6 +10,94 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.18.10',
+    subtitle: 'Live rich paste preview',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Chord formatting is now visible immediately in the paste editor and preview before saving.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.9',
+    subtitle: 'Preserved chord layouts',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Richly formatted chord sheets now keep their original chord placement when viewed after saving.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.8',
+    subtitle: 'Cleaner SongSelect pastes',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'SongSelect pastes now remove Markdown artifacts and extra spacing while keeping chord and lyric lines readable.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.7',
+    subtitle: 'Better chord alignment',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted chord sheets now keep chords aligned with the words they belong to.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.6',
+    subtitle: 'Cleaner pasted chord sheets',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted SongSelect chord sheets now place bold chords above the matching lyrics instead of running them together.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.5',
+    subtitle: 'Markdown chord sheets',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Chord sheets now understand Markdown formatting from Apple Notes while keeping the original text editable.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.4',
+    subtitle: 'Editable chord sheets',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Text chord sheets can now be edited directly after they are saved.',
+      },
+    ],
+  },
+  {
+    version: 'v1.18.3',
+    subtitle: 'Clearer chord sheets',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Text chord sheets now keep chords and lyrics separate when pasted from song resources.',
+      },
+    ],
+  },
+  {
     version: 'v1.18.2',
     subtitle: 'Clearer everyday navigation',
     date: 'September 8, 2026',

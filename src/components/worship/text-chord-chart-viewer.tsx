@@ -23,7 +23,8 @@ import {
 } from '@/components/worship/viewer-theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { LETTER_KEYS } from '@/lib/chord-chart';
+import { formatChartHtml, LETTER_KEYS, prepareChordChartClipboard, savePastedChartText } from '@/lib/chord-chart';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartAnnotation, ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
 import { Timestamp } from 'firebase/firestore';
@@ -34,6 +35,14 @@ import { createPortal } from 'react-dom';
 const INK_COLORS_DARK = ['#f43f5e', '#4ade80', '#facc15', '#38bdf8', '#f8fafc'];
 const PEN_WIDTH = 3.2;
 const HIGHLIGHT_WIDTH = 16;
+
+function editableChartText(sheet: Pick<SongChordSheet, 'sourceText' | 'sourceHtml'>): string {
+  if (sheet.sourceHtml?.trim()) {
+    const prepared = prepareChordChartClipboard(sheet.sourceText ?? '', sheet.sourceHtml);
+    if (prepared.text.trim()) return prepared.text;
+  }
+  return sheet.sourceText ?? '';
+}
 
 function emptyAnnotation(uid: string, name: string): ChordChartAnnotation {
   return {
@@ -118,6 +127,10 @@ export function TextChordChartViewer({
   const [zoom, setZoom] = useState(1);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [textEditing, setTextEditing] = useState(false);
+  const [textDraft, setTextDraft] = useState(() => editableChartText(sheet));
+  const [textDirty, setTextDirty] = useState(false);
+  const textEditorRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [annotations, setAnnotations] = useState<ChordChartAnnotation[]>(sheet.annotations ?? []);
@@ -133,7 +146,20 @@ export function TextChordChartViewer({
   useEffect(() => {
     setDisplayKey(sheet.key);
     setAnnotations(sheet.annotations ?? []);
+    if (!textEditing) {
+      setTextDraft(editableChartText(sheet));
+      setTextDirty(false);
+    }
   }, [sheet.id, sheet.key, sheet.annotations]);
+
+  useEffect(() => {
+    if (!textEditing || !textEditorRef.current) return;
+    if (sheet.sourceHtml?.trim()) {
+      textEditorRef.current.innerHTML = sanitizeRichHtml(formatChartHtml(sheet.sourceHtml));
+    } else {
+      textEditorRef.current.textContent = textDraft;
+    }
+  }, [textEditing, sheet.id]);
 
   useEffect(() => {
     setStrokes(active?.strokes ?? []);
@@ -167,9 +193,9 @@ export function TextChordChartViewer({
   };
 
   const requestClose = useCallback(() => {
-    if (dirty) setLeaveOpen(true);
+    if (dirty || textDirty) setLeaveOpen(true);
     else onClose();
-  }, [dirty, onClose]);
+  }, [dirty, onClose, textDirty]);
 
   const handleStrokesChange = (next: ChordChartStroke[]) => {
     setStrokes(next);
@@ -188,6 +214,8 @@ export function TextChordChartViewer({
   dirtyRef.current = dirty;
   const strokesLenRef = useRef(strokes.length);
   strokesLenRef.current = strokes.length;
+  const textDirtyRef = useRef(textDirty);
+  textDirtyRef.current = textDirty;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -206,7 +234,8 @@ export function TextChordChartViewer({
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (dirtyRef.current && annotationIdRef.current !== 'none') void saveActiveRef.current();
+        if (textDirtyRef.current) void saveText();
+        else if (dirtyRef.current && annotationIdRef.current !== 'none') void saveActiveRef.current();
         return;
       }
       if (e.key === '=' || e.key === '+') {
@@ -261,6 +290,26 @@ export function TextChordChartViewer({
     setEditing(false);
   };
 
+  const saveText = async () => {
+    if (!currentUser || !textDirty) return;
+    setSaving(true);
+    try {
+      const editorHtml = textEditorRef.current?.innerHTML ?? '';
+      const prepared = prepareChordChartClipboard(textDraft, editorHtml);
+      const sourceText = savePastedChartText(prepared.text);
+      const sourceHtml = prepared.html?.trim() ? sanitizeRichHtml(prepared.html) : '';
+      await updateChordSheet(songId, sheet.id, {
+        sourceText,
+        sourceHtml,
+      });
+      setTextDraft(sourceText);
+      setTextDirty(false);
+      setTextEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -311,6 +360,43 @@ export function TextChordChartViewer({
             className={viewerControlBtn(isDark)}
             onClick={() => void createAnnotation()}
           />
+          {textEditing ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn('h-11 rounded-xl', isDark ? 'border-white/20 bg-transparent text-white hover:bg-white/10' : '')}
+                onClick={() => {
+                  setTextDraft(editableChartText(sheet));
+                  setTextDirty(false);
+                  setTextEditing(false);
+                }}
+              >
+                Cancel text edit
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-xl"
+                disabled={!textDirty || saving}
+                onClick={() => void saveText()}
+              >
+                {saving ? <ButtonSpinner size="sm" /> : null} Save text
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className={cn('h-11 rounded-xl', isDark ? 'border-white/20 bg-transparent text-white hover:bg-white/10' : '')}
+              onClick={() => {
+                setTextDraft(editableChartText(sheet));
+                setTextDirty(false);
+                setTextEditing(true);
+              }}
+            >
+              <Pencil className="h-4 w-4" /> Edit text
+            </Button>
+          )}
           {annotationId !== 'none' && (
             <IconButton
               aria-label="Delete notes"
@@ -443,18 +529,54 @@ export function TextChordChartViewer({
           'mx-auto w-full max-w-6xl overflow-hidden rounded-xl border',
           isDark ? 'border-white/10' : 'border-border/60',
         )}>
-          <TextChordChartCanvas
-            sheet={sheet}
-            originalKey={sheet.key}
-            displayKey={displayKey}
-            strokes={annotationId === 'none' ? [] : strokes}
-            drawing={editing && annotationId !== 'none'}
-            inkColor={strokeColor}
-            inkWidth={strokeWidth}
-            onStrokesChange={handleStrokesChange}
-            zoom={zoom}
-            theme={TEXT_CHART_SURFACE}
-          />
+          {textEditing ? (
+            <>
+              <style>{`
+                .text-chart-editor .chart-line { line-height: 2.2; white-space: pre-wrap; }
+                .text-chart-editor .chart-chord { position: relative; top: -.72em; display: inline-block; font-weight: 700; line-height: 1; }
+                .text-chart-editor .chart-section { margin-top: 16px; font-weight: 700; text-transform: uppercase; }
+              `}</style>
+              <div
+                ref={textEditorRef}
+                contentEditable
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Chord sheet text"
+                suppressContentEditableWarning
+                onPaste={(e) => {
+                  const html = e.clipboardData.getData('text/html');
+                  const plain = e.clipboardData.getData('text/plain');
+                  const prepared = prepareChordChartClipboard(plain, html);
+                  e.preventDefault();
+                  setTextDraft(prepared.text);
+                  e.currentTarget.innerHTML = prepared.html || '';
+                  if (!prepared.html) e.currentTarget.textContent = prepared.text;
+                  setTextDirty(true);
+                }}
+                onInput={(e) => {
+                  setTextDraft(e.currentTarget.innerText);
+                  setTextDirty(true);
+                }}
+                className={cn(
+                  'text-chart-editor min-h-[70vh] whitespace-pre-wrap overflow-auto rounded-none border-0 p-4 font-mono text-sm leading-relaxed outline-none focus-visible:ring-0',
+                  isDark ? 'bg-black/30 text-white' : 'bg-background',
+                )}
+              />
+            </>
+          ) : (
+            <TextChordChartCanvas
+              sheet={sheet}
+              originalKey={sheet.key}
+              displayKey={displayKey}
+              strokes={annotationId === 'none' ? [] : strokes}
+              drawing={editing && annotationId !== 'none'}
+              inkColor={strokeColor}
+              inkWidth={strokeWidth}
+              onStrokesChange={handleStrokesChange}
+              zoom={zoom}
+              theme={TEXT_CHART_SURFACE}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -484,7 +606,7 @@ export function TextChordChartViewer({
         <AlertDialogHeader>
           <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
           <AlertDialogDescription>
-            Your marks on this chart have not been saved.
+            Your text or marks on this chart have not been saved.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -493,6 +615,12 @@ export function TextChordChartViewer({
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={() => {
               setLeaveOpen(false);
+              if (textDirty) {
+                setTextDraft(sheet.sourceText ?? '');
+                setTextDirty(false);
+                setTextEditing(false);
+              }
+              setDirty(false);
               onClose();
             }}
           >

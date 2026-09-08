@@ -1,6 +1,7 @@
 'use client';
 
-import { parseChordChart, splitChartBodyColumns, transposeBlocks, type ChartBlock } from '@/lib/chord-chart';
+import { formatChartHtml, parseChordChart, prepareChordChartClipboard, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -153,12 +154,14 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
     <div className="max-w-full">
       <div className="flex w-max min-w-full flex-row flex-nowrap items-end">
         {parts.map((part, pi) => (
-          <span key={pi} className="inline-flex flex-col items-start pr-3 last:pr-0">
+          <span key={pi} className="inline-flex flex-col items-start pr-0 last:pr-0">
             <span className={cn('min-h-[1.15em] whitespace-pre text-[15px] font-bold leading-none', ink(surface))}>
               {part.chord || '\u00a0'}
             </span>
             <span className={cn('whitespace-pre text-[18px] leading-snug', ink(surface))}>
-              {part.text || '\u00a0'}
+              {part.text
+                ? `${pi > 0 && parts[pi - 1]?.text && !/^\s/.test(part.text) && !/\s$/.test(parts[pi - 1]?.text ?? '') ? ' ' : ''}${part.text.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ')}`
+                : '\u00a0'}
             </span>
           </span>
         ))}
@@ -214,6 +217,31 @@ function ChartBlocks({ blocks }: { blocks: ChartBlock[] }) {
   return <ChordChartBody blocks={blocks} />;
 }
 
+export function RichChordChartBody({ html, originalKey, displayKey }: {
+  html: string;
+  originalKey: ChordKey;
+  displayKey: ChordKey;
+}) {
+  const rendered = transposeChartHtml(sanitizeRichHtml(formatChartHtml(html)), originalKey, displayKey);
+  return (
+    <>
+      <style>{`
+        .rich-chord-chart { color: white; }
+        .rich-chord-chart .chart-title { font-size: 28px; font-weight: 700; line-height: 1.15; margin-bottom: 4px; }
+        .rich-chord-chart .chart-credit, .rich-chord-chart .chart-meta { font-size: 13px; line-height: 1.35; color: rgba(255,255,255,.72); }
+        .rich-chord-chart .chart-meta { font-weight: 600; color: white; }
+        .rich-chord-chart .chart-section { margin-top: 16px; font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .rich-chord-chart .chart-line { font-size: 18px; line-height: 2.2; white-space: pre-wrap; }
+        .rich-chord-chart .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 15px; font-weight: 700; line-height: 1; }
+        .rich-chord-chart .chart-chord-line { font-weight: 700; }
+        .rich-chord-chart .chart-measure { overflow-x: auto; white-space: nowrap; font-size: 16px; font-weight: 700; }
+        .rich-chord-chart .chart-note { font-size: 13px; font-style: italic; color: rgba(255,255,255,.7); }
+      `}</style>
+      <div className="rich-chord-chart max-w-full space-y-2" dangerouslySetInnerHTML={{ __html: rendered }} />
+    </>
+  );
+}
+
 export function TextChordChartCanvas({
   sheet,
   originalKey,
@@ -241,7 +269,11 @@ export function TextChordChartCanvas({
   theme?: ChartSurface;
 }) {
   const surface = TEXT_CHART_SURFACE;
-  const source = sheet.sourceText || '';
+  const richSource = sheet.sourceHtml?.trim() || '';
+  const source = useMemo(() => {
+    if (!richSource) return sheet.sourceText || '';
+    return prepareChordChartClipboard(sheet.sourceText || '', richSource).text || sheet.sourceText || '';
+  }, [richSource, sheet.sourceText]);
   const blocks = useMemo(
     () => transposeBlocks(parseChordChart(source), originalKey, displayKey),
     [source, originalKey, displayKey],

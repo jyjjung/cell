@@ -3,6 +3,7 @@ import {
   detectKeyFromText,
   expandInlineChords,
   parseChordChart,
+  normalizeMarkdownChart,
   prepareChordChartPaste,
   repairBrokenMeasureLines,
   splitChartBodyColumns,
@@ -185,6 +186,117 @@ And You broke Your E/G#bod - B/D#y
     }
   });
 
+  it('repairs inline chords from Touch of Heaven when saving pasted text', () => {
+    const saved = parseChordChart(`PRE-CHORUS
+Lord, I C/Eknow my F2(no3)heart wants more of You
+My Am7heart wants something new,
+So, C5I surrender all Gsus
+
+CHORUS
+All I F2want is to live within Your love
+Be undone by who You Am7are
+My desire is to C/Eknow You deeper
+F2Lord, I will open up a - Ggain
+Throw my fears into the Am7wind
+I am desp'rate for a C/Etouch of heaven`);
+
+    const text = saved.flatMap((block) => (
+      block.type === 'lyric' ? block.parts.map((part) => `${part.chord ?? ''}${part.text}`) : []
+    )).join('\n');
+    expect(text).toContain('C/Eknow');
+    expect(text).toContain('F2(no3)heart');
+    expect(text).toContain('Am7heart');
+    expect(text).toContain('C5I surrender');
+    expect(text).toContain('F2want');
+    expect(text).not.toContain('C/Eknow my F2');
+  });
+
+  it('removes Apple Notes leading spaces from lyric continuations', () => {
+    const blocks = parseChordChart(`VERSE 1
+Bm
+You call me out up -
+A/C#
+ on the waters
+D
+ the mystery`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics.flatMap((line) => line.parts.map((part) => part.text))).not.toContain(' on the waters');
+    expect(lyrics.flatMap((line) => line.parts.map((part) => part.text))).toContain('on the waters');
+  });
+
+  it('keeps an indented Apple Notes continuation in the same lyric line', () => {
+    const blocks = parseChordChart(`VERSE 1
+Bm
+You call me out up -
+A/C#
+ on the waters`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics).toHaveLength(1);
+    expect(lyrics[0].parts).toEqual([
+      { chord: 'Bm', text: 'You call me out up -' },
+      { chord: 'A/C#', text: 'on the waters' },
+    ]);
+  });
+
+  it('keeps the final chord and hanging continuation before the next section', () => {
+    const blocks = parseChordChart(`VERSE 1
+Bm
+You call me out up -
+A/C#
+ on the waters
+G
+ fail
+
+CHORUS 1
+G
+ And I will call upon Your name`);
+    const verse = blocks.find((block) => block.type === 'lyric' && block.parts.some((part) => part.text === 'fail'));
+    expect(verse?.type).toBe('lyric');
+    if (verse?.type === 'lyric') {
+      expect(verse.parts).toContainEqual({ chord: 'G', text: 'fail' });
+    }
+    expect(blocks).toContainEqual({ type: 'section', text: 'CHORUS 1' });
+    const chorus = blocks.find((block) => block.type === 'lyric' && block.parts.some((part) => part.text.includes('And I will')));
+    expect(chorus?.type).toBe('lyric');
+    if (chorus?.type === 'lyric') {
+      expect(chorus.parts).toContainEqual({ chord: 'G', text: 'And I will call upon Your name' });
+    }
+  });
+
+  it('recognizes a trailing chord before a new section', () => {
+    const blocks = parseChordChart(`PRE-CHORUS
+G
+So, I surrender all
+Gsus
+
+CHORUS
+All I F2want is to live within Your love`);
+   const preChorus = blocks.find((block) => (
+     block.type === 'lyric' && block.parts.some((part) => part.chord === 'Gsus')
+   ));
+   expect(preChorus?.type).toBe('lyric');
+   if (preChorus?.type === 'lyric') {
+     expect(preChorus.parts).toContainEqual({ chord: 'Gsus', text: '' });
+     expect(preChorus.parts.map((part) => part.text).join(' ')).toContain('So,');
+   }
+    expect(blocks).toContainEqual({ type: 'section', text: 'CHORUS' });
+  });
+
+  it('parses Markdown chord spans and bold section names', () => {
+    const markdown = `**VERSE 1**
+**Bm**
+You call me out up -
+**A/C#**
+ on the waters
+**G****6**`;
+    expect(normalizeMarkdownChart(markdown)).toContain('G6');
+    const blocks = parseChordChart(markdown);
+    expect(blocks).toContainEqual({ type: 'section', text: 'VERSE 1' });
+    expect(blocks.some((block) => (
+      block.type === 'lyric' && block.parts.some((part) => part.chord === 'A/C#' && part.text === 'on the waters')
+    ))).toBe(true);
+  });
+
   it('keeps song titles intact when they start with chord letters', () => {
     const blocks = parseChordChart(`Great Are You Lord
 David Leonard | Jason Ingram | Leslie Jordan
@@ -194,6 +306,36 @@ INTRO
 | D | D |
 `);
     expect(blocks[0]).toEqual({ type: 'title', text: 'Great Are You Lord' });
+  });
+
+  it('cleans Markdown SongSelect paste without stealing letters from lyrics', () => {
+    const pasted = prepareChordChartPaste(`Great Are You Lord![SongSelect logo](https://cdn.ccli.com/songselect.svg)David Leonard | Jason Ingram | Leslie Jordan(as published by Integrity Music)Key - \`A\` | Tempo - 144 | Time - 6/8
+
+INTRO
+\`\`\`
+||:  D  |  F#m7  |  Esus  |  Esus  :||
+\`\`\`
+
+VERSE
+You give  D  life You are  F#m7  love
+You bring  Esus  light to the darkness
+Ev'ry  Esus  heart that is broken
+
+CHORUS
+It's Your  D  breath in our  F#m7  lungs
+
+CCLI Song # 6460220
+© 2012 Open Hands Music
+For use solely with the SongSelect® Terms of Use. All rights reserved. www.ccli.com
+`);
+    expect(pasted).not.toContain('```');
+    expect(pasted).not.toContain('  ');
+    expect(pasted).toContain('Key - A | Tempo - 144 | Time - 6/8');
+    const blocks = parseChordChart(pasted);
+    expect(blocks[0]).toEqual({ type: 'title', text: 'Great Are You Lord' });
+    expect(blocks.some((block) =>
+      block.type === 'lyric' && block.parts.some((part) => part.chord === 'Esus' && part.text.includes('heart')),
+    )).toBe(true);
   });
 
   it('pairs chord-only lines with the next lyric using line breaks only', () => {
@@ -268,14 +410,14 @@ gain
     }
   });
 
-  it('keeps mashed plain text unchanged on paste (use SongSelect HTML for structure)', () => {
+  it('normalizes mashed plain text on paste', () => {
     const mashed = `Verse 1a
 G  Goodbye yesterday
 I'm Gliving in the light of a new day
 `;
     const pasted = prepareChordChartPaste(mashed);
-    expect(pasted).toContain('G  Goodbye yesterday');
-    expect(pasted).toContain("I'm Gliving");
+    expect(pasted).toContain('G\nGoodbye yesterday');
+    expect(pasted).toContain("I'm\nG\nliving");
   });
 
   it('parses line-break SongSelect format like Notes', () => {
