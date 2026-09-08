@@ -496,7 +496,7 @@ function SlidesFullScreenViewer({
             {slides.length > 1 && (
               <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[30vw]">
                 {slides.map((s, i) => (
-                  <button key={i} type="button" onClick={() => setIdx(i)} aria-label={`${s.songTitle} (${s.key})`}
+                  <Button key={i} type="button" variant="ghost" size="iconCompact" onClick={() => setIdx(i)} aria-label={`${s.songTitle} (${s.key})`}
                     className={cn('hit-min rounded-full transition-all',
                       i === idx
                         ? 'w-4 min-w-[1rem] h-2 bg-rose-500'

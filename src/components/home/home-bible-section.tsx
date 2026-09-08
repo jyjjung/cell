@@ -187,7 +187,7 @@ export function HomeBibleSection({ currentUser }: HomeBibleSectionProps) {
 
           <div className="home-bible-hero-main">
             <div className="home-bible-day-block">
-              <Text variant="strong" className="home-bible-day">{dayLabel}</Text>
+              <p className="home-bible-day">{dayLabel}</p>
               <Text variant="small" className="home-bible-date">{dateLabel}</Text>
               {daysLeft != null ? (
                 <Text variant="small" className="home-bible-pace">
@@ -264,7 +264,7 @@ export function HomeBibleSectionSkeleton() {
           <Skeleton className="h-3 w-40" />
           <div className="home-bible-hero-main">
             <div className="space-y-2">
-              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-3 w-28" />
               <Skeleton className="h-4 w-24" />
             </div>
             <div className="flex flex-col items-center gap-1.5">

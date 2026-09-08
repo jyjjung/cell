@@ -97,11 +97,12 @@ export function ReadingPlanWeekRow({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onClick}
       className={cn(
-        'ui-card w-full text-left touch-manipulation transition-[box-shadow,transform,background-color] motion-safe:active:scale-[0.99] hover:shadow-md',
+        'ui-card h-auto w-full justify-start p-0 text-left touch-manipulation transition-[box-shadow,transform,background-color] motion-safe:active:scale-[0.99] hover:shadow-md',
         isCompleted && 'ring-1 ring-success/35',
         isCurrent && !isCompleted && 'ring-1 ring-primary/35 bg-accent/30',
         isOverdue && 'ring-1 ring-destructive/35 bg-destructive/5',
@@ -122,7 +123,7 @@ export function ReadingPlanWeekRow({
           <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
         </div>
       </div>
-    </button>
+    </Button>
   );
 }
 
@@ -170,10 +171,11 @@ export function ReadingPlanCompletedWeeksSummary({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onClick}
-      className="ui-card w-full text-left ring-1 ring-success/35 touch-manipulation transition-[box-shadow,transform] motion-safe:active:scale-[0.99] hover:shadow-md"
+      className="ui-card h-auto w-full justify-start p-0 text-left ring-1 ring-success/35 touch-manipulation transition-[box-shadow,transform] motion-safe:active:scale-[0.99] hover:shadow-md"
     >
       <div className="flex w-full items-center justify-between gap-3 p-4">
         <div className="min-w-0">
@@ -185,6 +187,6 @@ export function ReadingPlanCompletedWeeksSummary({
           <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

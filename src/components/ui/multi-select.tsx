@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { Tag } from "@/components/ui/tag"
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type MultiSelectItem = {
@@ -105,9 +106,11 @@ export function MultiSelect({
         >
           {selectables.map((option) => (
             <li key={option.value} role="presentation">
-              <button
+              <Button
                 type="button"
                 role="option"
+                variant="ghost"
+                size="small"
                 className="flex w-full cursor-pointer select-none items-center rounded-xl px-2 py-2 text-left text-sm outline-none transition-all duration-200 ease-out hover:bg-accent/50 hover:text-accent-foreground focus-visible:bg-accent/50 focus-visible:text-accent-foreground active:scale-[0.98]"
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -116,7 +119,7 @@ export function MultiSelect({
                 onClick={() => addOption(option.value)}
               >
                 {option.label}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

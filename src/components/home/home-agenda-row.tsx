@@ -43,8 +43,8 @@ export function HomeAgendaRow({
       <ScheduleRowDate date={date} />
       {type ? <ScheduleTypeIndicator type={type} label={typeLabel} /> : null}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{title}</p>
-        {detail ? <div className="truncate text-xs text-muted-foreground">{detail}</div> : null}
+        <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+        {detail ? <div className="truncate text-xs leading-relaxed text-muted-foreground">{detail}</div> : null}
       </div>
       {rightElement ? <div className="shrink-0 self-center">{rightElement}</div> : null}
       {onClick ? (
@@ -87,11 +87,12 @@ export function ScheduleTypeIndicator({ type, label }: { type: string; label?: s
 
   return (
     <span
-      className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', config.className)}
+      className={cn('inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2 text-[0.6875rem] font-medium', config.className)}
       title={label || config.label}
       aria-label={label || config.label}
     >
       <Icon className="h-3.5 w-3.5" aria-hidden />
+      <span className="hidden sm:inline">{label || config.label}</span>
     </span>
   );
 }
@@ -116,7 +117,7 @@ export function mergeAgendaDetail(subtitle?: ReactNode, meta?: ReactNode): React
 export function HomeAgendaRowSkeleton() {
   return (
     <div className="home-group-nav-row">
-      <div className="flex w-10 shrink-0 flex-col items-center gap-0.5">
+      <div className="flex w-12 shrink-0 flex-col items-center gap-0.5">
         <Skeleton className="h-2 w-5" />
         <Skeleton className="h-3.5 w-5" />
         <Skeleton className="h-2 w-5" />

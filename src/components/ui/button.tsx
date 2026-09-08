@@ -33,9 +33,10 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-11 min-h-11 px-4",
-        medium: "h-10 min-h-10 px-3 text-base",
+        /** Standard action button aliases keep the same 44px touch target. */
+        medium: "h-11 min-h-11 px-4 text-base",
         small: "h-8 min-h-8 px-3 text-sm",
-        sm: "h-9 min-h-9 rounded-xl px-3 text-[0.9375rem] hit-expand",
+        sm: "h-11 min-h-11 rounded-lg px-4 text-[0.9375rem]",
         xs: "h-8 min-h-8 rounded-lg px-2.5 text-[0.8125rem] hit-expand",
         lg: "h-12 min-h-12 rounded-xl px-5 text-base",
         hero: "h-12 min-h-12 rounded-xl px-8 text-base font-semibold",

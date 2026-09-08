@@ -270,6 +270,7 @@ export const translations = {
     searchMembers: "Search members...",
     noMembersFound: "No members match your search.",
     memberCount: "{count} members active",
+    leaderboardYourRank: "Your rank",
 
     // Profile
     myProfile: "My profile",
@@ -1165,6 +1166,7 @@ export const translations = {
     searchMembers: "멤버 검색...",
     noMembersFound: "검색 결과와 일치하는 멤버가 없습니다.",
     memberCount: "{count}명의 멤버가 활동 중입니다.",
+    leaderboardYourRank: "내 순위",
 
     // Profile
     myProfile: "내 프로필",

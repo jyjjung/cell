@@ -51,6 +51,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Fixed',
         text: 'Pasted chord sheets now keep chords aligned with the words they belong to.',
       },
+      {
+        type: 'Improved',
+        text: 'Community schedule entries now make the date, activity type, title, and supporting details easier to scan.',
+      },
     ],
   },
   {
@@ -61,6 +65,10 @@ export const changelogs: ChangelogEntry[] = [
       {
         type: 'Fixed',
         text: 'Pasted SongSelect chord sheets now place bold chords above the matching lyrics instead of running them together.',
+      },
+      {
+        type: 'Improved',
+        text: 'Regular action buttons now share the same comfortable height and touch target across the app.',
       },
     ],
   },
@@ -73,6 +81,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'Chord sheets now understand Markdown formatting from Apple Notes while keeping the original text editable.',
       },
+      {
+        type: 'Improved',
+        text: 'The reading leaderboard now keeps your position and community progress easier to scan.',
+      },
     ],
   },
   {
@@ -84,6 +96,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Added',
         text: 'Text chord sheets can now be edited directly after they are saved.',
       },
+      {
+        type: 'Improved',
+        text: 'The homepage Bible reading day label now matches the larger, bold style used throughout reading cards.',
+      },
     ],
   },
   {
@@ -94,6 +110,10 @@ export const changelogs: ChangelogEntry[] = [
       {
         type: 'Fixed',
         text: 'Text chord sheets now keep chords and lyrics separate when pasted from song resources.',
+      },
+      {
+        type: 'Improved',
+        text: 'Buttons across reading, selection, tagging, and worship tools now share consistent sizing, focus states, and touch feedback.',
       },
     ],
   },

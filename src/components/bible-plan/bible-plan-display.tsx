@@ -237,16 +237,18 @@ export default function BiblePlanDisplay({
                   />
                 )}
                 {isPassageValid ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="small"
                     onClick={() => handlePassageClick(passage.displayText)}
                     className={cn(
-                      'flex-1 text-left text-sm font-medium',
+                      'h-auto min-h-0 flex-1 justify-start p-0 text-left text-sm font-medium',
                       isChecked && 'line-through text-muted-foreground',
                     )}
                   >
                     {passage.displayText}
-                  </button>
+                  </Button>
                 ) : (
                   <span className="flex-1 text-sm font-medium text-destructive italic">
                     {passage.displayText || 'Error: Passage Data Invalid'}

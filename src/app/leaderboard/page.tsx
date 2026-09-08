@@ -90,6 +90,8 @@ export default function LeaderboardPage() {
     return userProgressData.filter((item) => item.displayName.toLowerCase().includes(query));
   }, [userProgressData, searchTerm]);
 
+  const currentUserRank = userProgressData.findIndex((item) => item.isCurrentUser) + 1;
+
   return (
     <PageShell>
       <NavPageHeader />
@@ -103,6 +105,12 @@ export default function LeaderboardPage() {
           {totalPassagesToDate > 0 ? (
             <p className="px-1 text-stat-label">
               {t.progressBasedOn.replace('{count}', String(totalPassagesToDate))}
+            </p>
+          ) : null}
+
+          {currentUserRank > 0 ? (
+            <p className="px-1 text-sm text-muted-foreground">
+              {t.leaderboardYourRank} <span className="font-semibold text-foreground">#{currentUserRank}</span>
             </p>
           ) : null}
 

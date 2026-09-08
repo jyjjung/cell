@@ -33,9 +33,9 @@ export function ScheduleMonthGroup({
  */
 export function ScheduleRowDate({ date }: { date: Date }) {
   return (
-    <div className="flex w-10 shrink-0 flex-col items-center leading-none">
-      <span className="text-[10px] font-medium text-muted-foreground">{format(date, "MMM")}</span>
-      <span className="text-sm font-semibold tabular-nums text-foreground">{format(date, "d")}</span>
+    <div className="flex w-12 shrink-0 flex-col items-center leading-none">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{format(date, "MMM")}</span>
+      <span className="text-lg font-bold tabular-nums text-foreground">{format(date, "d")}</span>
       <span className="mt-0.5 text-[10px] font-medium text-muted-foreground">{format(date, "EEE")}</span>
     </div>
   );

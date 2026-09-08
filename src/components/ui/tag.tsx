@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 
 type TagScheme = 'Brand' | 'Danger' | 'Positive' | 'Warning' | 'Neutral';
@@ -103,22 +104,22 @@ export const TagToggle = React.forwardRef<HTMLButtonElement, TagToggleProps>(
     },
     ref,
   ) => (
-    <button
+    <Button
       ref={ref}
       type="button"
       aria-pressed={state}
+      variant={state ? 'primary' : 'ghost'}
+      size="xs"
       className={cn(
-        'inline-flex min-h-8 items-center justify-center gap-2 rounded-lg p-2 text-base leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        state
-          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-          : 'bg-primary/10 text-muted-foreground hover:bg-primary/15',
+        'h-auto min-h-8 rounded-lg p-2 text-base leading-none',
+        !state && 'bg-primary/10 text-muted-foreground hover:bg-primary/15',
         className,
       )}
       {...props}
     >
       {state && showIcon ? icon ?? <Check className="h-4 w-4" aria-hidden /> : null}
       <span className="whitespace-nowrap">{label ?? children}</span>
-    </button>
+    </Button>
   ),
 );
 TagToggle.displayName = 'TagToggle';

@@ -485,9 +485,11 @@ export function TextChordChartViewer({
           </div>
           <div className="flex items-center gap-1.5">
             {inkColors.map((color) => (
-              <button
+              <Button
                 key={color}
                 type="button"
+                variant="ghost"
+                size="iconCompact"
                 aria-label={`Ink color ${color}`}
                 aria-pressed={inkColor === color}
                 onClick={() => setInkColor(color)}
@@ -497,7 +499,7 @@ export function TextChordChartViewer({
                 )}
               >
                 <span className="h-7 w-7 rounded-full border-2 border-transparent" style={{ background: color }} />
-              </button>
+              </Button>
             ))}
           </div>
           <IconButton
