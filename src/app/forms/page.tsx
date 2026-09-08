@@ -54,19 +54,44 @@ export default function FormsPage() {
       try {
         const headers = await getClientAuthHeaders();
 
-        const [formsRes, responsesRes] = await Promise.all([
+        const [formsResult, responsesResult] = await Promise.allSettled([
           fetch('/api/forms/user/definitions', { headers }),
           fetch('/api/forms/user/responses', { headers }),
         ]);
 
-        if (!formsRes.ok) throw new Error('Failed to load forms');
-        if (!responsesRes.ok) throw new Error('Failed to load responses');
+        if (formsResult.status === 'rejected') {
+          throw formsResult.reason instanceof Error
+            ? formsResult.reason
+            : new Error('Failed to load forms');
+        }
 
-        const formsData = await formsRes.json();
-        const responsesData = await responsesRes.json();
+        if (!formsResult.value.ok) {
+          const data = await formsResult.value.json().catch(() => null);
+          throw new Error(
+            typeof data?.details === 'string' ? data.details : 'Failed to load forms',
+          );
+        }
 
+        const formsData = await formsResult.value.json();
         setForms(Array.isArray(formsData.forms) ? formsData.forms : []);
-        setResponses(Array.isArray(responsesData.responses) ? responsesData.responses : []);
+
+        if (responsesResult.status === 'fulfilled' && responsesResult.value.ok) {
+          const responsesData = await responsesResult.value.json();
+          setResponses(Array.isArray(responsesData.responses) ? responsesData.responses : []);
+        } else {
+          const responseMessage =
+            responsesResult.status === 'rejected'
+              ? responsesResult.reason instanceof Error
+                ? responsesResult.reason.message
+                : 'Failed to load responses'
+              : ((await responsesResult.value.json().catch(() => null))?.details ??
+                'Failed to load responses');
+          toast({
+            variant: 'destructive',
+            title: 'Responses unavailable',
+            description: String(responseMessage),
+          });
+        }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Failed to load forms';
         toast({ variant: 'destructive', title: 'Forms', description: message });

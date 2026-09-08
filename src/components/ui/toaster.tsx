@@ -23,7 +23,7 @@ export function Toaster() {
         return (
           <Toast key={id} {...props}>
             <div className="flex min-w-0 flex-1 items-start gap-3 p-4 pr-12">
-              <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-current" aria-hidden />
               <div className="flex min-w-0 flex-1 flex-col items-start gap-4">
                 <div className="flex w-full min-w-0 flex-col gap-1 break-words">
                   {title && <ToastTitle>{title}</ToastTitle>}

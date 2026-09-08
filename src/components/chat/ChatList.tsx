@@ -127,6 +127,17 @@ export default function ChatList({
                 ? 'Role chats appear here when you are assigned a preschool role.'
                 : t.startConversation
             }
+            action={
+              toolsVisible ? (
+                <Button
+                  onClick={() => setCreateDialogOpen(true)}
+                  size="sm"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t.newChat}
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="overflow-hidden border-y border-border bg-background">

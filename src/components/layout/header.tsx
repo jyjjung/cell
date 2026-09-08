@@ -15,6 +15,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AppSwitcher } from "@/components/shell/app-switcher";
 import { IconButton } from "@/components/ui/icon-button";
 import { OfflineBanner } from "./offline-banner";
+import { getAppLabel, resolveActiveApp } from "@/lib/app-access";
+import { usePathname } from "next/navigation";
 
 interface HeaderProps {
   /** When true, header stays in the flex column instead of sticky document scroll. */
@@ -26,6 +28,7 @@ export default function Header({ pinStatic = false }: HeaderProps) {
   const { notifications } = useNotifications();
   const inbox = useInboxOptional();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -61,8 +64,13 @@ export default function Header({ pinStatic = false }: HeaderProps) {
     >
       <div className="app-header-bar">
         <SidebarTrigger className="md:hidden shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground sm:text-base">
+            {getAppLabel(resolveActiveApp(pathname) ?? 'cell')}
+          </p>
+        </div>
 
-        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-2">
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
           <OfflineBanner />
           <AppSwitcher />
           {showBell && inbox ? (

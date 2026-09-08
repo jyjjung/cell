@@ -38,6 +38,7 @@ import { translations } from '@/lib/translations';
 import { sumChatUnreadMessageCounts } from '@/lib/notification-utils';
 import { chatBelongsToApp } from '@/lib/chat-utils';
 import { Button } from '../ui/button';
+import { getAppLabel } from '@/lib/app-access';
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -173,7 +174,16 @@ export default function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={active}
-                    tooltip={item.label}
+                    tooltip={{
+                      children: (
+                        <span className="flex flex-col gap-0.5">
+                          <span className="font-semibold">{item.label}</span>
+                          <span className="text-xs text-popover-foreground/70">
+                            {active ? `Current section in ${getAppLabel(activeApp)}` : `Open ${item.label}`}
+                          </span>
+                        </span>
+                      ),
+                    }}
                     onClick={() => navigate(item.href)}
                     className={cn(
                       "h-9 rounded-lg px-3 text-[13px] font-medium transition-colors gap-2.5 focus-visible:ring-2 focus-visible:ring-ring/50",

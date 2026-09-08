@@ -64,6 +64,9 @@ export function AppSwitcher({ className }: { className?: string }) {
           ) : (
             <LayoutGrid className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
           )}
+          <span className="hidden max-w-32 truncate text-sm font-semibold text-foreground sm:inline">
+            {displayLabel}
+          </span>
           <ChevronDown
             className={cn(
               'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',

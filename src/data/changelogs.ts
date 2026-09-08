@@ -10,6 +10,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.18.2',
+    subtitle: 'Clearer everyday navigation',
+    date: 'September 8, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'App names, navigation hints, loading states, and empty screens are now easier to understand at a glance.',
+      },
+      {
+        type: 'Improved',
+        text: 'Shared screens use calmer surfaces and clearer next steps so important actions stand out.',
+      },
+    ],
+  },
+  {
     version: 'v1.18.1',
     subtitle: 'Reliable admin access',
     date: 'September 7, 2026',

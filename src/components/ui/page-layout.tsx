@@ -70,7 +70,7 @@ export function PageSection({
   action,
   children,
   className,
-  variant = 'card',
+  variant = 'plain',
 }: PageSectionProps) {
   const header =
     title || description || action ? (
@@ -117,11 +117,12 @@ interface EmptyStateProps {
   icon?: React.ElementType;
   title: string;
   description?: string;
+  action?: React.ReactNode;
 }
 
-export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
+    <div className="ui-empty flex flex-col items-center gap-2 px-6 py-10 text-center" role="status">
       {Icon ? (
         <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <Icon className="h-5 w-5" />
@@ -133,6 +134,7 @@ export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) 
       {description ? (
         <Text variant="small" className="max-w-[260px]">{description}</Text>
       ) : null}
+      {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
 }

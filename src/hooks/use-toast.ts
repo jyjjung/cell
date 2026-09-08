@@ -10,7 +10,9 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 3
-const TOAST_REMOVE_DELAY = 10000
+const TOAST_REMOVE_DELAY = 8000
+const DEFAULT_TOAST_DURATION = 6000
+const DESTRUCTIVE_TOAST_DURATION = 9000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -143,7 +145,28 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
+function toastKey(props: Toast): string | null {
+  const title = typeof props.title === "string" ? props.title : ""
+  const description = typeof props.description === "string" ? props.description : ""
+  if (!title && !description) return null
+  return `${props.variant ?? "default"}|${title}|${description}`
+}
+
 function toast({ ...props }: Toast) {
+  const key = toastKey(props)
+  const existing = key
+    ? memoryState.toasts.find((item) => item.open && toastKey(item) === key)
+    : undefined
+
+  if (existing) {
+    return {
+      id: existing.id,
+      dismiss: () => dispatch({ type: "DISMISS_TOAST", toastId: existing.id }),
+      update: (nextProps: ToasterToast) =>
+        dispatch({ type: "UPDATE_TOAST", toast: { ...nextProps, id: existing.id } }),
+    }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -159,6 +182,11 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
+      duration:
+        props.duration ??
+        (props.variant === "destructive"
+          ? DESTRUCTIVE_TOAST_DURATION
+          : DEFAULT_TOAST_DURATION),
       onOpenChange: (open) => {
         if (!open) dismiss()
       },

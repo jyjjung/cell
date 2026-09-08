@@ -35,7 +35,7 @@ export function LoadingState({
   if (!isLoading && children) return <>{children}</>;
   if (!show) {
     return (
-      <div className={cn('min-h-[1px]', className)} aria-busy={isLoading} aria-live="polite">
+      <div className={cn('ui-loading-region min-h-[1px]', className)} aria-busy={isLoading} aria-live="polite">
         {children}
       </div>
     );
@@ -44,7 +44,7 @@ export function LoadingState({
   if (variant === 'skeleton') {
     return (
       <div
-        className={cn('space-y-3', className)}
+        className={cn('ui-loading-region space-y-3', className)}
         role="status"
         aria-live="polite"
         aria-busy="true"
@@ -60,7 +60,7 @@ export function LoadingState({
 
   return (
     <div
-      className={cn('flex items-center justify-center py-12', className)}
+      className={cn('ui-loading-region flex items-center justify-center py-12', className)}
       role="status"
       aria-live="polite"
       aria-busy="true"
