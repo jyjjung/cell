@@ -170,22 +170,23 @@ export function SetlistManager({
           initial={{ opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -12 }}
-          className="space-y-4"
+          className="space-y-6"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <IconButton
               aria-label="Back"
               icon={ArrowLeft}
-              className="rounded-lg"
+              variant="ghost"
+              className="rounded-xl"
               onClick={() => setDetailId(null)}
             />
             <div className="min-w-0 flex-1">
-              <p className="break-words text-base font-semibold">
+              <h2 className="truncate text-lg font-semibold leading-tight">
                 {detail.date?.seconds
                   ? formatAppDate(new Date(detail.date.seconds * 1000), 'EEEE, MMMM d', locale)
                   : t('setlist.new')}
-              </p>
-              <p className="text-xs text-muted-foreground">
+              </h2>
+              <p className="text-xs font-medium text-muted-foreground/60">
                 {t('setlist.summary', {
                   songs: detailSongs.length,
                   chants: detailChants.length,
@@ -195,7 +196,8 @@ export function SetlistManager({
             <IconButton
               aria-label="Delete setlist"
               icon={Trash2}
-              className="rounded-lg text-muted-foreground hover:text-destructive"
+              variant="ghost"
+              className="rounded-xl text-muted-foreground hover:text-destructive"
               onClick={() => setDeleteConfirm(detail)}
             />
           </div>
@@ -245,7 +247,7 @@ export function SetlistManager({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="space-y-5"
+          className="space-y-6"
         >
           <div className="inline-flex rounded-lg bg-muted/50 p-0.5">
             <Button

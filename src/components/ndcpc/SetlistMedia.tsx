@@ -64,10 +64,10 @@ export function SetlistMedia({ songs, chants }: SetlistMediaProps) {
   if (songs.length === 0 && chants.length === 0) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 p-4 sm:p-5">
       {songs.length > 0 && (
         <section className="space-y-4">
-          <Text as="h3" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <Text as="h3" className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
             {t('resources.songs')}
           </Text>
           <VideoList resources={songs} />
@@ -75,7 +75,7 @@ export function SetlistMedia({ songs, chants }: SetlistMediaProps) {
       )}
       {chants.length > 0 && (
         <section className="space-y-4">
-          <Text as="h3" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <Text as="h3" className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
             {t('resources.chants')}
           </Text>
           <VideoList resources={chants} startIndex={1} />

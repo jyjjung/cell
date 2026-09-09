@@ -12,7 +12,7 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { ArrowLeft, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Trash2, Users } from 'lucide-react';
 import { RosterRoleSlotRow } from '@/components/worship/roster-people-picker';
 import { ScheduleForm } from '@/components/ndcpc/ScheduleForm';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -25,11 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DrillDownListRow,
-  ScheduleListCard,
-  ScheduleRowDate,
-} from '@/components/schedule/schedule-occurrence-row';
+import { ScheduleRowDate } from '@/components/schedule/schedule-occurrence-row';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAdmin } from '@/context/AuthProvider';
 import { useTranslation } from '@/context/LocaleProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -39,7 +36,6 @@ import { NDCPc_COLLECTIONS } from '@/lib/ndcpc/collections';
 import { formatAppDate } from '@/lib/ndcpc/format-date';
 import {
   dateInputValueToDate,
-  isPastCalendarDate,
   timestampToDateInputValue,
 } from '@/lib/ndcpc/dates';
 import {
@@ -51,12 +47,9 @@ import {
   ndcpcRosterDirectoryEntries,
   ndcpcRosterMemberUidForName,
 } from '@/lib/ndcpc/roster-people';
-import { cn } from '@/lib/utils';
 import type { Schedule } from '@/types/ndcpc-ported';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-type ListFilter = 'upcoming' | 'past';
 
 interface ScheduleManagerProps {
   createOpen?: boolean;
@@ -116,7 +109,6 @@ export function ScheduleManager({
   const { allUsers } = useAllUsers();
   const directory = useMemo(() => ndcpcRosterDirectoryEntries(allUsers), [allUsers]);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [listFilter, setListFilter] = useState<ListFilter>('upcoming');
   const [newOpen, setNewOpen] = useState(false);
   const [newDate, setNewDate] = useState(() => timestampToDateInputValue(null));
   const [creating, setCreating] = useState(false);
@@ -134,18 +126,6 @@ export function ScheduleManager({
 
   const { data: schedules, isLoading } = useCollection<Schedule>(schedulesQuery);
   const detail = schedules?.find((s) => s.id === detailId) ?? null;
-
-  const { upcoming, past } = useMemo(() => {
-    const upcomingList: Schedule[] = [];
-    const pastList: Schedule[] = [];
-    for (const schedule of schedules ?? []) {
-      if (isPastCalendarDate(schedule.date)) pastList.push(schedule);
-      else upcomingList.push(schedule);
-    }
-    return { upcoming: upcomingList, past: pastList };
-  }, [schedules]);
-
-  const visible = listFilter === 'upcoming' ? upcoming : past;
 
   const closeNew = (open: boolean) => {
     setNewOpen(open);
@@ -202,22 +182,23 @@ export function ScheduleManager({
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
-            className="space-y-4"
+            className="space-y-6"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <IconButton
                 aria-label="Back"
                 icon={ArrowLeft}
-                className="rounded-lg"
+                variant="ghost"
+                className="rounded-xl"
                 onClick={() => setDetailId(null)}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold">
+                <h2 className="truncate text-lg font-semibold leading-tight">
                   {detail.date?.seconds
                     ? formatAppDate(new Date(detail.date.seconds * 1000), 'EEEE, MMMM d', locale)
                     : t('schedules.add')}
-                </p>
-                <p className="text-xs text-muted-foreground">
+                </h2>
+                <p className="text-xs font-medium text-muted-foreground/60">
                   {filledRoleCount(detail)} / {SCHEDULE_ROLE_KEYS.length} assigned
                 </p>
               </div>
@@ -225,7 +206,8 @@ export function ScheduleManager({
                 <IconButton
                   aria-label="Delete roster"
                   icon={Trash2}
-                  className="rounded-lg text-muted-foreground hover:text-destructive"
+                  variant="ghost"
+                  className="rounded-xl text-muted-foreground hover:text-destructive"
                   onClick={() => setDeleteConfirm(detail)}
                 />
               ) : null}
@@ -249,61 +231,19 @@ export function ScheduleManager({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-5"
+            className="space-y-6"
           >
-            <div className="inline-flex rounded-lg bg-muted/50 p-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setListFilter('upcoming')}
-                className={cn(
-                  'h-auto min-h-11 rounded-md px-3 py-1.5 text-xs font-medium',
-                  listFilter === 'upcoming'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Upcoming{upcoming.length > 0 ? ` (${upcoming.length})` : ''}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setListFilter('past')}
-                className={cn(
-                  'h-auto min-h-11 rounded-md px-3 py-1.5 text-xs font-medium',
-                  listFilter === 'past'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Past{past.length > 0 ? ` (${past.length})` : ''}
-              </Button>
-            </div>
-
-            {visible.length === 0 ? (
+            {schedules?.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/40 py-20 text-center">
                 <Users className="mb-3 h-10 w-10 text-muted-foreground/30" />
-                <p className="font-semibold text-muted-foreground">
-                  {listFilter === 'upcoming' ? 'No upcoming rosters' : 'No past rosters'}
-                </p>
+                <p className="font-semibold text-muted-foreground">No rosters yet</p>
                 <p className="mt-1 text-xs text-muted-foreground/60">
-                  {listFilter === 'upcoming'
-                    ? 'Create a Sunday roster to assign preschool duties.'
-                    : 'Earlier Sundays will show up here.'}
+                  Create a Sunday roster to assign preschool duties.
                 </p>
-                {listFilter === 'upcoming' && isAdmin ? (
-                  <Button
-                    size="sm"
-                    className="mt-4 rounded-lg"
-                    onClick={() => setNewOpen(true)}
-                  >
-                    <Plus className="mr-1.5 h-4 w-4" /> New roster
-                  </Button>
-                ) : null}
               </div>
             ) : (
-              <ScheduleListCard>
-                {visible.map((schedule, i) => {
+              <Accordion type="single" collapsible className="gap-2">
+                {(schedules ?? []).map((schedule, i) => {
                   const date = schedule.date?.seconds
                     ? new Date(schedule.date.seconds * 1000)
                     : null;
@@ -311,38 +251,46 @@ export function ScheduleManager({
                   return (
                     <motion.div
                       key={schedule.id}
+                      custom={i}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04, duration: 0.3 }}
                     >
-                      <DrillDownListRow
-                        leading={date ? <ScheduleRowDate date={date} /> : <div className="w-10" />}
-                        title={date ? formatAppDate(date, 'EEEE, MMMM d', locale) : t('schedules.add')}
-                        subtitle={`${filled} / ${SCHEDULE_ROLE_KEYS.length} roles filled`}
-                        onClick={() => setDetailId(schedule.id)}
-                        trailing={
-                          isAdmin ? (
-                            <>
-                              <IconButton
-                                aria-label="Edit roster"
-                                icon={Pencil}
-                                className="rounded-lg text-muted-foreground hover:text-foreground"
-                                onClick={() => setDetailId(schedule.id)}
-                              />
-                              <IconButton
-                                aria-label="Delete roster"
-                                icon={Trash2}
-                                className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => setDeleteConfirm(schedule)}
-                              />
-                            </>
-                          ) : undefined
-                        }
-                      />
+                      <AccordionItem value={schedule.id} className="rounded-2xl border border-border/40 bg-card/50 p-0">
+                        <AccordionTrigger className="px-4 py-3 hover:bg-accent/30">
+                          <div className="flex min-w-0 items-center gap-3 text-left">
+                            {date ? <ScheduleRowDate date={date} /> : <div className="w-10 shrink-0" />}
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">
+                                {date ? formatAppDate(date, 'EEEE, MMMM d', locale) : t('schedules.add')}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {filled} / {SCHEDULE_ROLE_KEYS.length} roles filled
+                              </p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 px-4 pb-4">
+                            <ScheduleRosterPreview schedule={schedule} directory={directory} t={t} />
+                            <div className="flex justify-end gap-2">
+                              {isAdmin ? (
+                                <Button variant="outline" size="sm" onClick={() => setDeleteConfirm(schedule)}>
+                                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                  Delete
+                                </Button>
+                              ) : null}
+                              <Button size="sm" onClick={() => setDetailId(schedule.id)}>
+                                Open roster
+                              </Button>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
                     </motion.div>
                   );
                 })}
-              </ScheduleListCard>
+              </Accordion>
             )}
           </motion.div>
         )}

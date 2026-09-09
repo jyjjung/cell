@@ -10,6 +10,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.1',
+    subtitle: 'Setlist tab stability',
+    date: 'September 9, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'The new setlist window now stays closed when switching between em. worship tabs.',
+      },
+      {
+        type: 'Improved',
+        text: 'NDCPC rosters now use the same clear, spacious layout as em. worship.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.0',
     subtitle: 'Smarter QT imports',
     date: 'September 8, 2026',

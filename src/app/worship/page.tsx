@@ -2054,6 +2054,12 @@ export default function WorshipPortalPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (tab !== 'playlists') {
+      setOpenNewSetlistSignal(0);
+    }
+  }, [tab]);
+
   const selectTab = (next: 'playlists' | 'songs' | 'rosters', id?: string | null) => {
     setTab(next);
     const params = new URLSearchParams(

@@ -155,6 +155,18 @@ export default function NdcpcWorshipPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (tab !== 'setlist') {
+      setCreateSetlistOpen(false);
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'roster') {
+      setCreateRosterOpen(false);
+    }
+  }, [tab]);
+
   const selectTab = (next: WorshipTab) => {
     setTab(next);
     const params = new URLSearchParams(searchParams.toString());
@@ -174,24 +186,24 @@ export default function NdcpcWorshipPage() {
   return (
     <div className="page-container-wide">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <PageHeader title={title} />
-          {tab === 'roster' && isAdmin ? (
-            <Button size="sm" className="h-8 rounded-lg gap-1.5 px-3 text-sm" onClick={() => setCreateRosterOpen(true)}>
-              <Plus className="h-4 w-4" /> New
-            </Button>
-          ) : null}
-          {tab === 'setlist' ? (
-            <Button size="sm" className="h-8 rounded-lg gap-1.5 px-3 text-sm" onClick={() => setCreateSetlistOpen(true)}>
-              <Plus className="h-4 w-4" /> New
-            </Button>
-          ) : null}
-          {tab === 'order' && isAdmin ? (
-            <Button size="sm" variant="outline" onClick={() => setEditOrderOpen(true)}>
-              <Edit className="mr-1.5 h-4 w-4" /> Edit
-            </Button>
-          ) : null}
-        </div>
+        <PageHeader
+          title={title}
+          action={
+            tab === 'roster' && isAdmin ? (
+              <Button size="sm" className="h-8 rounded-lg gap-1.5 px-3 text-sm" onClick={() => setCreateRosterOpen(true)}>
+                <Plus className="h-4 w-4" /> New
+              </Button>
+            ) : tab === 'setlist' && isAdmin ? (
+              <Button size="sm" className="h-8 rounded-lg gap-1.5 px-3 text-sm" onClick={() => setCreateSetlistOpen(true)}>
+                <Plus className="h-4 w-4" /> New
+              </Button>
+            ) : tab === 'order' && isAdmin ? (
+              <Button size="sm" variant="outline" onClick={() => setEditOrderOpen(true)}>
+                <Edit className="mr-1.5 h-4 w-4" /> Edit
+              </Button>
+            ) : undefined
+          }
+        />
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
