@@ -79,6 +79,12 @@ describe('isIndexedDbPersistenceError', () => {
     ).toBe(true);
   });
 
+  it('matches the null persistent-cache pipeline failure from mobile Chrome', () => {
+    expect(
+      isIndexedDbPersistenceError(new TypeError("Cannot read properties of null (reading 'isCorePipeline')")),
+    ).toBe(true);
+  });
+
   it('ignores unrelated errors', () => {
     expect(isIndexedDbPersistenceError(new Error('Network request failed'))).toBe(false);
     expect(isIndexedDbPersistenceError(new Error('INTERNAL ASSERTION FAILED: Unexpected state'))).toBe(

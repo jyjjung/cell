@@ -34,6 +34,9 @@ export function isIndexedDbPersistenceError(reason: unknown): boolean {
     msg.includes('iterate a cursor that does not exist') ||
     (msg.includes('IndexedDB transaction') &&
       (msg.includes('AbortError') || msg.includes('code=unavailable'))) ||
+    // Firestore 12.x can leave the persistent cache unusable after this
+    // internal pipeline assertion, especially in mobile Chrome.
+    (msg.includes('Cannot read properties of null') && msg.includes('isCorePipeline')) ||
     // Firestore SDK bricks the client after these assertions (see firebase-js-sdk#8856, #9267).
     (msg.includes('INTERNAL ASSERTION FAILED') &&
       (msg.includes('Indexed') ||

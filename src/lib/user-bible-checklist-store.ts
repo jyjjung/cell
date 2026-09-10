@@ -5,7 +5,7 @@ import {
 } from '@/lib/collection-cache';
 import { syncCommunityProgress } from '@/lib/community-progress';
 import type { UserBibleChecklist } from '@/types';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, type DocumentData } from 'firebase/firestore';
 
 export const USER_BIBLE_CHECKLISTS_COLLECTION = 'userBibleChecklists';
 
@@ -38,6 +38,28 @@ export function readCachedPassages(uid: string): string[] | null {
 
 export function writeCachedPassages(uid: string, passages: string[]) {
   writeLocalCollectionCache(checklistCacheKey(uid), passages);
+}
+
+/**
+ * Do not let a persistent-cache miss replace known progress with an empty list.
+ * A server-confirmed empty snapshot remains authoritative.
+ */
+export function shouldAcceptChecklistSnapshot(
+  currentPassages: string[],
+  snapshot: {
+    exists: () => boolean;
+    data: () => DocumentData | undefined;
+    metadata: { fromCache: boolean };
+  },
+): boolean {
+  const nextPassages = snapshot.exists()
+    ? snapshot.data()?.completedPassages
+    : [];
+  return !(
+    snapshot.metadata.fromCache &&
+    currentPassages.length > 0 &&
+    (!Array.isArray(nextPassages) || nextPassages.length === 0)
+  );
 }
 
 function emit(entry: SharedChecklistListener, next: UserBibleChecklistState) {
@@ -87,19 +109,28 @@ export function subscribeUserBibleChecklist(
 
     created.unsub = onSnapshot(
       doc(db, USER_BIBLE_CHECKLISTS_COLLECTION, uid),
+      { includeMetadataChanges: true },
       (docSnapshot) => {
         const current = sharedListeners.get(uid);
         if (!current) return;
+        if (!shouldAcceptChecklistSnapshot(current.state.passages, docSnapshot)) {
+          return;
+        }
 
         if (docSnapshot.exists()) {
           const data = docSnapshot.data() as UserBibleChecklist;
-          const passages = data.completedPassages || [];
+          const passages = Array.isArray(data.completedPassages) ? data.completedPassages : [];
           writeCachedPassages(uid, passages);
-          emit(current, { passages, exists: true, loading: false });
-          scheduleCommunityProgressSync(current, uid, passages);
+          emit(current, { passages, exists: passages.length > 0, loading: false });
+          if (passages.length > 0 || !docSnapshot.metadata.fromCache) {
+            scheduleCommunityProgressSync(current, uid, passages);
+          }
         } else {
           writeCachedPassages(uid, []);
           emit(current, { passages: [], exists: false, loading: false });
+          if (!docSnapshot.metadata.fromCache) {
+            scheduleCommunityProgressSync(current, uid, []);
+          }
         }
       },
       (error) => {

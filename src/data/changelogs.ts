@@ -10,6 +10,28 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.3',
+    subtitle: 'Protected reading progress',
+    date: 'September 10, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Temporary phone storage issues can no longer make saved Bible reading progress appear empty.',
+      },
+    ],
+  },
+  {
+    version: 'v1.19.2',
+    subtitle: 'Smoother mobile loading',
+    date: 'September 10, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'NDCPC now recovers cleanly when a phone encounters a temporary offline data-cache problem.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.1',
     subtitle: 'Setlist tab stability',
     date: 'September 9, 2026',
