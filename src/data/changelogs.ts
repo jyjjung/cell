@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.4',
+    subtitle: 'Reliable sheet downloads',
+    date: 'September 11, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Worship sheet downloads now work reliably for older saved charts and clearly report temporary download problems.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.3',
     subtitle: 'Protected reading progress',
     date: 'September 10, 2026',

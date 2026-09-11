@@ -25,6 +25,11 @@ service firebase.storage {
       allow read, write: if isSignedIn();
     }
 
+    match /worship-sheets/{fileName} {
+      // Legacy chord sheets remain readable while their records are migrated.
+      allow read: if isSignedIn();
+    }
+
     function hasNdcpcAccess() {
       return isSignedIn()
         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))

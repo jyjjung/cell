@@ -272,7 +272,7 @@ function SongDetailView({
                           aria-label="Download sheet"
                           onClick={(e) => {
                             e.stopPropagation();
-                            downloadImage(
+                            void downloadImage(
                               sheet.imageUrl,
                               sheetDownloadFilename({
                                 songTitle: song.title,
@@ -280,7 +280,13 @@ function SongDetailView({
                                 pageCount: sheets.filter((s) => !isTextChordSheet(s)).length,
                                 ext: sheetExtension(sheet.imageUrl),
                               }),
-                            );
+                            ).catch((error: unknown) => {
+                              toast({
+                                title: 'Could not download sheet',
+                                description: error instanceof Error ? error.message : 'Please try again.',
+                                variant: 'destructive',
+                              });
+                            });
                           }}
                           className="rounded-lg bg-black/50 text-white hover:bg-black/70"
                           icon={Download}
@@ -296,7 +302,13 @@ function SongDetailView({
                               filesFromSetlistSlides([
                                 sheetDownloadSourceFromSongSheets(song.title, [sheet], key),
                               ]),
-                            );
+                            ).catch((error: unknown) => {
+                              toast({
+                                title: 'Could not download sheet',
+                                description: error instanceof Error ? error.message : 'Please try again.',
+                                variant: 'destructive',
+                              });
+                            });
                           }}
                           className="rounded-lg bg-black/50 text-white hover:bg-black/70"
                           icon={Download}
@@ -1168,7 +1180,13 @@ function SetlistDetailView({
                             e.stopPropagation();
                             void downloadNamedFiles(filesFromSetlistSlides([
                               sheetDownloadSourceFromSetlistSong(ps, sheetsForKey, i + 1),
-                            ]));
+                            ])).catch((error: unknown) => {
+                              toast({
+                                title: 'Could not download sheet',
+                                description: error instanceof Error ? error.message : 'Please try again.',
+                                variant: 'destructive',
+                              });
+                            });
                           }}
                           icon={Download}
                           iconClassName="h-3.5 w-3.5"

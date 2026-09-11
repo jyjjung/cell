@@ -4,6 +4,7 @@ import {
   sheetDownloadFilename,
   sheetExtension,
 } from './setlist-download';
+import { storagePathFromUrl } from './setlist-download-client';
 
 describe('sheet download names', () => {
   it('puts setlist order in front of the song title', () => {
@@ -69,5 +70,11 @@ describe('sheet download names', () => {
 
   it('reads extension from the storage path', () => {
     expect(sheetExtension('https://firebasestorage.googleapis.com/v0/b/x/o/worshipChordSheets%2Fid.png?alt=media')).toBe('png');
+  });
+
+  it('extracts legacy worship sheet storage paths', () => {
+    expect(storagePathFromUrl(
+      'https://storage.googleapis.com/cell-abca4.firebasestorage.app/worship-sheets/sheet.jpg',
+    )).toBe('worship-sheets/sheet.jpg');
   });
 });

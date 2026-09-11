@@ -19,6 +19,7 @@ import { TrackPicker, YoutubePlayerPanel } from '@/components/worship/YoutubeRef
 import { ContinuousSetlistViewer } from '@/components/worship/ContinuousSetlistViewer';
 import { EmbeddedTextChart } from '@/components/worship/text-chord-chart-viewer';
 import type { ViewerMode, ViewerSlide } from '@/components/worship/viewer-types';
+import { useToast } from '@/hooks/use-toast';
 import {
   useViewerTheme,
   viewerControlBtn,
@@ -136,6 +137,7 @@ function SlidesFullScreenViewer({
   startIndex?: number;
   onClose: () => void;
 }) {
+  const { toast } = useToast();
   const [idx, setIdx] = useState(startIndex);
   // Pinned to the song the user started, so moving between songs doesn't
   // interrupt playback.
@@ -362,7 +364,13 @@ function SlidesFullScreenViewer({
   const isZoomed  = fitW > 0 && Math.abs(currentW - fitW) > 3;
 
   const downloadCurrent = () => {
-    void downloadNamedFiles(filesFromViewerSlides([slide]));
+    void downloadNamedFiles(filesFromViewerSlides([slide])).catch((error: unknown) => {
+      toast({
+        title: 'Could not download sheet',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    });
   };
 
   const viewerContent = (

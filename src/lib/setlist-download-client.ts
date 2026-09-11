@@ -12,7 +12,7 @@ export class DownloadCancelledError extends Error {
   }
 }
 
-function storagePathFromUrl(url: string): string | null {
+export function storagePathFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
     const encodedPath = parsed.pathname.split('/o/')[1];
@@ -20,7 +20,9 @@ function storagePathFromUrl(url: string): string | null {
       return decodeURIComponent(encodedPath.split('?')[0] ?? encodedPath);
     }
     const parts = parsed.pathname.split('/').filter(Boolean);
-    const start = parts.indexOf('worshipChordSheets');
+    const start = parts.findIndex((part) => (
+      part === 'worshipChordSheets' || part === 'worship-sheets'
+    ));
     if (start >= 0) return parts.slice(start).join('/');
     return null;
   } catch {
@@ -57,8 +59,12 @@ async function fetchSheetBlob(url: string): Promise<Blob> {
 
   const path = storagePathFromUrl(url);
   if (path) {
-    const blob = await getBlob(ref(storage, path));
-    if (blob.size > 0) return blob;
+    try {
+      const blob = await getBlob(ref(storage, path));
+      if (blob.size > 0) return blob;
+    } catch {
+      /* preserve the download error below when SDK access is unavailable */
+    }
   }
 
   throw new Error('Could not download sheet');
