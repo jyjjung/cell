@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.5',
+    subtitle: 'Smoother Bible scrolling',
+    date: 'September 11, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Bible reading now keeps its scroll position indicator steady while you move through a chapter.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.4',
     subtitle: 'Reliable sheet downloads',
     date: 'September 11, 2026',
