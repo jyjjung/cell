@@ -1047,6 +1047,33 @@
   overscroll-behavior: contain;
 }
 
+.bible-reader-scroll {
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bible-reader-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bible-reader-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.35);
+  border-radius: 999px;
+}
+
+.bible-reader-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.55);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.bible-reader-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.75);
+  background-clip: padding-box;
+}
+
 /* Chat detail (mobile only): lock document + pin shell for iOS keyboard.
    Desktop must keep normal SidebarInset flow so the sidebar stays visible. */
 @media (max-width: 767px) {

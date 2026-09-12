@@ -5,7 +5,6 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ChevronLeft,
   ChevronRight,
@@ -136,10 +135,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
   useEffect(() => {
     if (scrollRef.current) {
-      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTop = 0;
-      }
+      scrollRef.current.scrollTop = 0;
     }
   }, [html, book, chapter]);
 
@@ -445,7 +441,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {isBrowsing ? (
-          <ScrollArea type="always" className="h-full min-h-0">
+          <div className="bible-reader-scroll h-full min-h-0 overflow-y-auto overscroll-contain">
             <div className="space-y-4 p-2.5 pb-6">
               {(
                 [
@@ -463,7 +459,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         ) : (
           <>
             {isLoading && (
@@ -471,10 +467,9 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                 <LoadingSpinner size="md" className="text-primary" />
               </div>
             )}
-            <ScrollArea
+            <div
               ref={scrollRef}
-              type="always"
-              className="h-full px-6 py-8 md:px-10"
+              className="bible-reader-scroll h-full overflow-y-auto overscroll-contain px-6 py-8 md:px-10"
             >
               {error ? (
                 <div className="rounded-2xl bg-destructive/10 py-20 text-center font-bold text-destructive">
@@ -486,7 +481,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
               )}
-            </ScrollArea>
+            </div>
           </>
         )}
       </div>
