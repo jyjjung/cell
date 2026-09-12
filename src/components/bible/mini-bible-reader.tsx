@@ -445,7 +445,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {isBrowsing ? (
-          <ScrollArea scrollbarType="always" className="h-full min-h-0">
+          <ScrollArea type="always" className="h-full min-h-0">
             <div className="space-y-4 p-2.5 pb-6">
               {(
                 [
@@ -473,7 +473,7 @@ export default function MiniBibleReader({ onClose }: MiniBibleReaderProps) {
             )}
             <ScrollArea
               ref={scrollRef}
-              scrollbarType="always"
+              type="always"
               className="h-full px-6 py-8 md:px-10"
             >
               {error ? (
