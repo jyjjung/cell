@@ -107,14 +107,14 @@ function ChartBlockView({ block }: { block: ChartBlock }) {
   }
   if (block.type === 'section') {
     return (
-      <p className={cn('pt-3 text-[15px] font-bold uppercase tracking-wide', ink(surface))}>
+      <p className={cn('pt-3 text-[22px] font-bold uppercase tracking-wide', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'measure') {
     return (
-      <p className={cn('max-w-full overflow-x-auto whitespace-nowrap text-[16px] font-bold', ink(surface))}>
+      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[22px] font-bold leading-snug', ink(surface))}>
         <span className="inline">{block.text}</span>
         {block.cue && (
           <span className={cn('ml-2 text-[13px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
@@ -152,15 +152,20 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
   return (
     <div className="max-w-full">
-      <div className="flex w-max min-w-full flex-row flex-nowrap items-end">
+      <div className="max-w-full whitespace-normal text-[22px] leading-snug">
         {parts.map((part, pi) => (
-          <span key={pi} className="inline-flex flex-col items-start pr-0 last:pr-0">
-            <span className={cn('min-h-[1.15em] whitespace-pre text-[15px] font-bold leading-none', ink(surface))}>
-              {part.chord || '\u00a0'}
-            </span>
-            <span className={cn('whitespace-pre text-[18px] leading-snug', ink(surface))}>
+          <span
+            key={pi}
+            className="relative inline-block align-top pt-[1.15em]"
+          >
+            {part.chord && (
+              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[18px] font-bold leading-none', ink(surface))}>
+                {part.chord}
+              </span>
+            )}
+            <span className={cn('whitespace-pre-wrap break-words', ink(surface))}>
               {part.text
-                ? `${pi > 0 && parts[pi - 1]?.text && !/^\s/.test(part.text) && !/\s$/.test(parts[pi - 1]?.text ?? '') ? ' ' : ''}${part.text.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ')}`
+                ? `${pi > 0 && parts[pi - 1]?.text ? ' ' : ''}${part.text.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim()}`
                 : '\u00a0'}
             </span>
           </span>
@@ -175,7 +180,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
 function ChartColumn({ blocks }: { blocks: ChartBlock[] }) {
   return (
-    <div className="min-w-0 max-w-full space-y-2 overflow-x-auto overflow-y-visible">
+    <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden overflow-y-visible">
       {blocks.map((block, i) => (
         <ChartBlockView key={i} block={block} />
       ))}
@@ -190,7 +195,6 @@ export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
   const header = firstBody === -1 ? blocks : blocks.slice(0, firstBody);
   const body = firstBody === -1 ? [] : blocks.slice(firstBody);
   const [left, right] = splitChartBodyColumns(body);
-
   return (
     <ChartSurfaceContext.Provider value={TEXT_CHART_SURFACE}>
       <div className="max-w-full space-y-2">
@@ -230,11 +234,12 @@ export function RichChordChartBody({ html, originalKey, displayKey }: {
         .rich-chord-chart .chart-title { font-size: 28px; font-weight: 700; line-height: 1.15; margin-bottom: 4px; }
         .rich-chord-chart .chart-credit, .rich-chord-chart .chart-meta { font-size: 13px; line-height: 1.35; color: rgba(255,255,255,.72); }
         .rich-chord-chart .chart-meta { font-weight: 600; color: white; }
-        .rich-chord-chart .chart-section { margin-top: 16px; font-size: 15px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-        .rich-chord-chart .chart-line { font-size: 18px; line-height: 2.2; white-space: pre-wrap; }
-        .rich-chord-chart .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 15px; font-weight: 700; line-height: 1; }
+        .rich-chord-chart .chart-section { margin-top: 16px; font-size: 22px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .rich-chord-chart .chart-line { font-size: 22px; line-height: 1.65; white-space: pre-wrap; }
+        .rich-chord-chart .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 18px; font-weight: 700; line-height: 1; }
         .rich-chord-chart .chart-chord-line { font-weight: 700; }
-        .rich-chord-chart .chart-measure { overflow-x: auto; white-space: nowrap; font-size: 16px; font-weight: 700; }
+        .rich-chord-chart .chart-measure { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 22px; line-height: 1.65; font-weight: 700; }
+        .rich-chord-chart .chart-line { overflow-wrap: anywhere; }
         .rich-chord-chart .chart-note { font-size: 13px; font-style: italic; color: rgba(255,255,255,.7); }
       `}</style>
       <div className="rich-chord-chart max-w-full space-y-2" dangerouslySetInnerHTML={{ __html: rendered }} />

@@ -345,18 +345,9 @@ function SongDetailView({
 
       <AddChordSheetDialog open={addSheetOpen} song={song} onClose={() => setAddSheetOpen(false)} />
 
-      {viewSheet && isTextChordSheet(viewSheet) && (
-        <TextChordChartViewer
-          songId={song.id}
-          songTitle={song.title}
-          sheet={song.chordSheets.find((s) => s.id === viewSheet.id) ?? viewSheet}
-          onClose={() => setViewSheet(null)}
-        />
-      )}
-
-      {/* Full-screen image viewer — slides through all sheets for this song */}
-      {viewSheet && !isTextChordSheet(viewSheet) && (() => {
-        const allSheets = song.chordSheets.filter((s) => !isTextChordSheet(s));
+      {/* Full-screen viewer — continuously scrolls through all photo and text sheets for this song */}
+      {viewSheet && (() => {
+        const allSheets = song.chordSheets;
         const slides: ViewerSlide[] = Array.from(
           allSheets.reduce((map, s) => {
             if (!map.has(s.key)) map.set(s.key, []);
@@ -370,8 +361,19 @@ function SongDetailView({
             songId: song.id,
           } as ViewerSlide)
         );
-        const start = slides.findIndex(sl => sl.imageUrls.includes(viewSheet.imageUrl));
-        return <FullScreenViewer slides={slides} startIndex={Math.max(0, start)} onClose={() => setViewSheet(null)} />;
+        const start = slides.findIndex((slide) =>
+          (slide.textSheets ?? []).some((sheet) => sheet.id === viewSheet.id)
+          || (viewSheet.imageUrl && slide.imageUrls.includes(viewSheet.imageUrl)),
+        );
+        return (
+          <FullScreenViewer
+            slides={slides}
+            startIndex={Math.max(0, start)}
+            mode="continuous"
+            title={song.title}
+            onClose={() => setViewSheet(null)}
+          />
+        );
       })()}
     </motion.div>
   );

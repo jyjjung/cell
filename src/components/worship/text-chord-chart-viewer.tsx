@@ -245,11 +245,11 @@ export function TextChordChartViewer({
       }
       if (e.key === '=' || e.key === '+') {
         e.preventDefault();
-        setZoom((z) => Math.min(3, +(z * 1.25).toFixed(2)));
+        setZoom((z) => Math.min(5, +(z * 1.35).toFixed(2)));
       }
       if (e.key === '-') {
         e.preventDefault();
-        setZoom((z) => Math.max(0.5, +(z / 1.25).toFixed(2)));
+        setZoom((z) => Math.max(0.5, +(z / 1.35).toFixed(2)));
       }
       if (e.key === '0') setZoom(1);
     };
@@ -263,8 +263,8 @@ export function TextChordChartViewer({
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
-      const dir = e.deltaY > 0 ? 1 / 1.12 : 1.12;
-      setZoom((z) => Math.min(3, Math.max(0.5, +(z * dir).toFixed(2))));
+      const dir = e.deltaY > 0 ? 0.93 : 1.07;
+      setZoom((z) => Math.min(5, Math.max(0.5, +(z * dir).toFixed(2))));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -434,7 +434,7 @@ export function TextChordChartViewer({
             aria-label="Zoom out"
             icon={ZoomOut}
             className={viewerControlBtn(isDark)}
-            onClick={() => setZoom((z) => Math.max(0.5, +(z / 1.25).toFixed(2)))}
+            onClick={() => setZoom((z) => Math.max(0.5, +(z / 1.35).toFixed(2)))}
           />
           <Button
             type="button"
@@ -452,7 +452,7 @@ export function TextChordChartViewer({
             aria-label="Zoom in"
             icon={ZoomIn}
             className={viewerControlBtn(isDark)}
-            onClick={() => setZoom((z) => Math.min(3, +(z * 1.25).toFixed(2)))}
+            onClick={() => setZoom((z) => Math.min(5, +(z * 1.35).toFixed(2)))}
           />
         </div>
       </div>
@@ -531,9 +531,13 @@ export function TextChordChartViewer({
         </div>
       )}
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto p-3 sm:p-5">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-auto p-3 sm:p-5"
+        style={{ touchAction: 'pan-x pan-y' }}
+      >
         <div className={cn(
-          'mx-auto w-full max-w-6xl overflow-hidden rounded-xl border',
+          'mx-auto w-full max-w-6xl overflow-visible rounded-xl border',
           isDark ? 'border-white/10' : 'border-border/60',
         )}>
           {textEditing ? (

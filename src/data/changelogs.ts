@@ -10,6 +10,25 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.7',
+    subtitle: 'Wrapped chord charts',
+    date: 'September 14, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Text-based chord charts now wrap to fit the screen so you can read the full sheet without horizontal scrolling.',
+      },
+      {
+        type: 'Improved',
+        text: 'Text charts now keep section headings and instrumental chord lines as readable as the rest of the sheet, with previews available when choosing pages.',
+      },
+      {
+        type: 'Improved',
+        text: 'Photo and text sheets now open in the same continuous viewer, making it easy to scroll through every page in order.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.6',
     subtitle: 'Accurate chart transposing',
     date: 'September 13, 2026',

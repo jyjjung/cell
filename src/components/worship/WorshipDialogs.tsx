@@ -26,7 +26,7 @@ import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
 import { emptyChordAnnotation } from '@/components/worship/text-chord-chart-viewer';
-import { ChordChartBody } from '@/components/worship/text-chord-chart';
+import { CHART_LOGICAL_WIDTH, ChordChartBody } from '@/components/worship/text-chord-chart';
 import { format, parseISO } from 'date-fns';
 import { Check, Pencil, PlaySquare, Plus, Trash2 } from 'lucide-react';import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -397,8 +397,16 @@ export function SetlistSongConfigPanel({
                   )}
                 >
                   {isTextChordSheet(sheet) ? (
-                    <div className="flex h-full w-full items-center justify-center bg-[#2b2b2b] text-[9px] font-bold text-white">
-                      Text
+                    <div className="h-full w-full overflow-hidden bg-[#1f1f1f]">
+                      <div
+                        className="origin-top-left"
+                        style={{
+                          width: CHART_LOGICAL_WIDTH,
+                          transform: 'scale(0.055)',
+                        }}
+                      >
+                        <ChordChartBody blocks={parseChordChart(sheet.sourceText ?? '')} />
+                      </div>
                     </div>
                   ) : (
                     <RemoteImage src={sheet.imageUrl} alt={`Page ${i + 1}`} fill className="object-cover" sizes="64px" />
@@ -669,7 +677,7 @@ export function AddChordSheetDialog({
                 .rich-paste-editor .chart-line { font-size: 18px; line-height: 2.2; white-space: pre-wrap; }
                 .rich-paste-editor .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 15px; font-weight: 700; line-height: 1; }
                 .rich-paste-editor .chart-section { margin-top: 16px; font-size: 15px; font-weight: 700; text-transform: uppercase; }
-                .rich-paste-editor .chart-measure { font-weight: 700; white-space: nowrap; }
+                .rich-paste-editor .chart-measure { font-weight: 700; white-space: pre-wrap; overflow-wrap: anywhere; }
               `}</style>
               <div
                 id="cs-paste"
