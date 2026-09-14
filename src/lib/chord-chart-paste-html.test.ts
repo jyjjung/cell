@@ -6,6 +6,7 @@ import {
   parseChordChart,
   prepareChordChartClipboard,
   prepareChordChartPaste,
+  chartHtmlToMarkdown,
   savePastedChartText,
   transposeChartHtml,
 } from './chord-chart';
@@ -184,6 +185,27 @@ I'm Abliving in the light of a new day
     expect(formatted).toContain('living in the light of a new day');
     expect(formatted).not.toContain('Abliving');
     expect(formatted).toMatch(/I(?:'|&#39;)m[\s\S]*chart-chord">Ab[\s\S]*living/);
+  });
+
+  it('keeps semantic chord spans in the editor HTML after rich paste', () => {
+    const html = `<div>VERSE 1</div><div><b>F2</b>&nbsp; How I live for the moments</div>`;
+    const prepared = prepareChordChartClipboard('', html);
+    expect(prepared.html).toContain('class="chart-chord"');
+    expect(prepared.html).toContain('F2');
+    expect(parseChordChart(prepared.text)).toContainEqual(
+      expect.objectContaining({
+        type: 'lyric',
+        parts: expect.arrayContaining([
+          { chord: 'F2', text: '' },
+          { text: ' How I live for the moments' },
+        ]),
+      }),
+    );
+  });
+
+  it('converts rich chord spans to visible Markdown bold markers', () => {
+    expect(chartHtmlToMarkdown('<div>VERSE 1</div><div><b>F2</b>&nbsp; How I live</div>'))
+      .toMatch(/\*\*F2\*\*\s+How I live/);
   });
 
   it('does not re-split chords when saving an already-formatted paste', () => {

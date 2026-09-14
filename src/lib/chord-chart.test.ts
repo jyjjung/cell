@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   detectKeyFromText,
   expandInlineChords,
+  canonicalizeChordChartText,
   parseChordChart,
   normalizeMarkdownChart,
   prepareChordChartPaste,
@@ -337,6 +338,35 @@ You call me out up -
     expect(blocks.some((block) => (
       block.type === 'lyric' && block.parts.some((part) => part.chord === 'A/C#' && part.text === 'on the waters')
     ))).toBe(true);
+  });
+
+  it('keeps Markdown bar-and-chord rows as inline measures', () => {
+    const blocks = parseChordChart(`**The Wonderful Blood**Author | Author
+
+**Intro**
+**|** **F#m7(4)**  **|** **E**  **|** **C#m7**  **B**  **|** **A2**  **|**
+`);
+    expect(blocks[0]).toEqual({ type: 'title', text: 'The Wonderful Blood' });
+    expect(blocks[1]).toEqual({ type: 'credit', text: 'Author | Author' });
+    expect(blocks).toContainEqual({ type: 'section', text: 'INTRO' });
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '| F#m7(4)  | E  | C#m7  B  | A2  |',
+    });
+    expect(blocks.filter((block) => block.type === 'measure')).toHaveLength(1);
+  });
+
+  it('renders a trailing Markdown measure as a measure instead of lyric text', () => {
+    const markdown = `**Tag 1a**
+**E**The wonder of the working blood **|** **F#m7(4)** **|**
+`;
+    expect(normalizeMarkdownChart(markdown)).toContain('| [F#m7(4)] |');
+    const blocks = parseChordChart(markdown);
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '| F#m7(4) |',
+    });
+    expect(blocks.some((block) => block.type === 'lyric' && block.parts.some((part) => part.text.includes('| F#m7')))).toBe(false);
   });
 
   it('keeps song titles intact when they start with chord letters', () => {
@@ -757,8 +787,149 @@ E/G#Nothing but the A2blood of B(4)Je - C#m7sus`);
       .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
       .flatMap((block) => block.parts.map((part) => part.text))
       .join(' ');
-    expect(chords).toEqual(['E', 'B(4)', 'E', 'B/D#', 'C#m7', 'A2', 'E/G#', 'A2', 'B(4)', 'C#m7sus']);
-    expect(lyricText).toContain('Je -');
+    expect(chords).toEqual(['E', 'B(4)', 'E', 'B/D#', 'C#m7', 'A2', 'E/G#', 'A2', 'B(4)', 'C#m7']);
+    expect(lyricText).toContain('Je - sus');
+  });
+
+  it('keeps one-space Tag lines aligned and preserves trailing parenthesized measures', () => {
+    const blocks = parseChordChart(`Tag 1a
+A2 Oh the wonder of the working blood
+E/G# Oh the wonder of the working blood
+E Oh the wonder of the working blood | F#m7(4) |`);
+    expect(blocks).toEqual([
+      { type: 'section', text: 'TAG 1A' },
+      { type: 'lyric', parts: [{ chord: 'A2', text: 'Oh the wonder of the working blood' }], cue: undefined },
+      { type: 'lyric', parts: [{ chord: 'E/G#', text: 'Oh the wonder of the working blood' }], cue: undefined },
+      { type: 'lyric', parts: [{ chord: 'E', text: 'Oh the wonder of the working blood' }], cue: undefined },
+      { type: 'measure', text: '| F#m7(4) |' },
+    ]);
+  });
+
+  it('keeps a terminal sus syllable below its preceding chord', () => {
+    const blocks = parseChordChart(`BRIDGE 2B
+E/G#Nothing but the A2blood of B(4)Je - C#m7sus`);
+    const lyrics = blocks
+      .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
+      .flatMap((block) => block.parts);
+    expect(lyrics).toContainEqual({ chord: 'C#m7', text: 'sus' });
+    expect(lyrics.map((part) => part.text).join('')).toContain('Je -');
+  });
+
+  it('keeps Bridge 2A sus as a lyric syllable under the E chord', () => {
+    const blocks = parseChordChart(`BRIDGE 2A
+E/G#Nothing but the A2blood of B(4)Je - Esus`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    const finalLine = lyrics.at(-1);
+    expect(finalLine?.parts).toContainEqual({ chord: 'E', text: 'sus' });
+    expect(lyrics.some((line) => line.parts.some((part) => part.chord === 'Esus'))).toBe(false);
+    expect(lyrics.flatMap((line) => line.parts.map((part) => part.text)).join('')).toContain('Je -sus');
+  });
+
+  it('keeps compact Bridge 2B and Tag 2 rows on their source lines', () => {
+    const blocks = parseChordChart(`BRIDGE 2B
+B(4)That makes me white as Esnow B/D#
+C#m7No other A2fount I know
+E/G#Nothing but the A2blood of B(4)Je - C#m7sus
+TAG 2
+E/G#            A2       B(4) C#m7
+Nothing but the blood of Je - sus
+E/G#            A2       B(4) E
+Nothing but the blood of Je - sus`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics.map((line) => line.parts.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim())).toEqual([
+      'That makes me white as snow',
+      'No other fount I know',
+      'Nothing but the blood of Je - sus',
+      'Nothing but the blood of Je - sus',
+      'Nothing but the blood of Je - sus',
+    ]);
+  });
+
+  it('restores collapsed Bridge 2B and Tag 2 lyric line breaks', () => {
+    const blocks = parseChordChart(`BRIDGE 2B
+E/G#Nothing but the blood of Je - sus
+B(4)That makes me white as snow No other fount I know
+E/G#Nothing but the blood of Je - sus Nothing but the blood of Je - sus`);
+    const text = blocks
+      .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
+      .map((line) => line.parts.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim());
+    expect(text).toContain('That makes me white as snow');
+    expect(text).toContain('No other fount I know');
+    expect(text.filter((line) => line === 'Nothing but the blood of Je - sus')).toHaveLength(3);
+  });
+
+  it('starts the next Tag 2 chord row after the completed Je - sus line', () => {
+    const blocks = parseChordChart(`TAG 2
+E/G# A2 B(4) C#m7 Nothing but the blood of Je - sus E/G# A2 B(4) E
+Nothing but the blood of Je - sus`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics.length).toBeGreaterThanOrEqual(2);
+    expect(lyrics[0]?.parts.some((part) => part.chord === 'C#m7')).toBe(true);
+    expect(lyrics[1]?.parts.some((part) => part.chord === 'E')).toBe(true);
+  });
+
+  it('splits merged Bridge 2B and Tag 2 lyric rows at visible phrase boundaries', () => {
+    const blocks = parseChordChart(`TAG 2
+E/G# A2 B(4) C#m7 Nothing but the blood of Je - sus E/G# A2 B(4) E Nothing but the blood of Je - sus`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics).toHaveLength(2);
+    expect(lyrics.map((line) => line.parts.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim())).toEqual([
+      'Nothing but the blood of Je - sus',
+      'Nothing but the blood of Je - sus',
+    ]);
+  });
+
+  it('splits repeated Tag 2 chord groups into separate Je - sus rows', () => {
+    const blocks = parseChordChart(`TAG 2
+E/G# A2 B(4) C#m7 E/G# A2 B(4) E
+Nothing but the blood of Je - sus Nothing but the blood of Je - sus`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics.length).toBeGreaterThanOrEqual(2);
+    expect(lyrics.slice(0, 2).every((line) => line.parts.map((part) => part.text).join(' ').includes('Nothing but the blood of Je - sus'))).toBe(true);
+  });
+
+  it('canonicalizes compact input without changing source line boundaries', () => {
+    const canonical = canonicalizeChordChartText(`BRIDGE 2B
+EOh precious is the flow
+B(4)That makes me white as Esnow B/D#
+C#m7No other A2fount I know
+E/G#Nothing but the A2blood of B(4)Je - C#m7sus
+TAG 2
+E/G#Nothing but the A2blood of B(4)Je - C#m7sus
+E/G#Nothing but the A2blood of B(4)Je - Esus`);
+    expect(canonical.split('\n')).toEqual([
+      'BRIDGE 2B',
+      '**E**Oh precious is the flow',
+      '**B(4)**That makes me white as **E**snow **B/D#**',
+      '**C#m7**No other **A2**fount I know',
+      '**E/G#**Nothing but the **A2**blood of **B(4)**Je - **C#m7**sus',
+      'TAG 2',
+      '**E/G#**Nothing but the **A2**blood of **B(4)**Je - **C#m7**sus',
+      '**E/G#**Nothing but the **A2**blood of **B(4)**Je - **E**sus',
+    ]);
+  });
+
+  it('accepts caret superscript chord notation', () => {
+    const blocks = parseChordChart('[C^2]over [B]');
+    const lyric = blocks.find((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyric?.parts[0]).toMatchObject({ chord: 'C^2' });
+    expect(lyric?.parts[0]?.text).toContain('over');
+    expect(lyric?.parts[1]).toMatchObject({ chord: 'B' });
+  });
+
+  it('keeps both Tag 2 lyric lines as separate chart rows', () => {
+    const blocks = parseChordChart(`TAG 2
+E/G#            A2       B(4) C#m7
+Nothing but the blood of Je - sus
+E/G#            A2       B(4) E
+Nothing but the blood of Je - sus
+| A2 | A2 |`);
+    const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
+    expect(lyrics).toHaveLength(2);
+    expect(lyrics.map((line) => line.parts.map((part) => part.text).filter(Boolean).join(' '))).toEqual([
+      'Nothing but the blood of Je - sus',
+      'Nothing but the blood of Je - sus',
+    ]);
   });
 
   it('parses ChordPro brackets', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { detectKeyFromText, formatChartHtml, parseChordChart, prepareChordChartClipboard, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, formatChartHtml, parseChordChart, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
@@ -86,7 +86,7 @@ function ChartBlockView({ block }: { block: ChartBlock }) {
   const surface = useChartSurface();
   if (block.type === 'title') {
     return (
-      <h1 className={cn('max-w-full text-[28px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
+      <h1 className={cn('max-w-full text-[24px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </h1>
     );
@@ -107,14 +107,14 @@ function ChartBlockView({ block }: { block: ChartBlock }) {
   }
   if (block.type === 'section') {
     return (
-      <p className={cn('pt-3 text-[22px] font-bold uppercase tracking-wide', ink(surface))}>
+      <p className={cn('pt-2 text-[17px] font-bold uppercase tracking-wide', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'measure') {
     return (
-      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[22px] font-bold leading-snug', ink(surface))}>
+      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[17px] font-bold leading-snug', ink(surface))}>
         <span className="inline">{block.text}</span>
         {block.cue && (
           <span className={cn('ml-2 text-[13px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
@@ -134,6 +134,18 @@ function ChartBlockView({ block }: { block: ChartBlock }) {
   );
 }
 
+function ChordLabel({ chord, className }: { chord: string; className?: string }) {
+  const match = chord.match(/^(.*)\^(\d+)(.*)$/);
+  if (!match) return <span className={className}>{chord}</span>;
+  return (
+    <span className={className}>
+      {match[1]}
+      <sup className="text-[0.72em]">{match[2]}</sup>
+      {match[3]}
+    </span>
+  );
+}
+
 function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' }> }) {
   const surface = useChartSurface();
   const parts = block.parts.filter((part) => part.chord || (part.text ?? '').trim());
@@ -141,7 +153,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
   if (parts.length === 1 && parts[0].text.trim() && !parts[0].chord) {
     return (
-      <p className={cn('max-w-full text-[18px] leading-snug [overflow-wrap:anywhere]', ink(surface))}>
+      <p className={cn('max-w-full text-[17px] leading-snug [overflow-wrap:anywhere]', ink(surface))}>
         {parts[0].text}
         {block.cue && (
           <span className={cn('ml-2 text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</span>
@@ -151,27 +163,25 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
   }
 
   return (
-    <div className="max-w-full">
-      <div className="max-w-full whitespace-normal text-[22px] leading-snug">
+    <div className="max-w-full pb-1">
+      <div className="max-w-full whitespace-normal text-[17px] leading-snug">
         {parts.map((part, pi) => (
           <span
             key={pi}
             className="relative inline-block align-top pt-[1.15em]"
             style={{
-              minWidth: part.chord
-                ? `${Math.max(part.chord.length * 0.62 * 18, 8)}px`
+              minWidth: part.chord && !part.text.trim()
+                ? `${Math.max(part.chord.length * 5.5 + 2, 6)}px`
                 : undefined,
             }}
           >
             {part.chord && (
-              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[18px] font-bold leading-none', ink(surface))}>
-                {part.chord}
+              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[15px] font-bold leading-none', ink(surface))}>
+                <ChordLabel chord={part.chord} />
               </span>
             )}
             <span className={cn('whitespace-pre-wrap break-words', ink(surface))}>
-              {part.text
-                ? `${pi > 0 && parts[pi - 1]?.text ? ' ' : ''}${part.text.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim()}`
-                : '\u00a0'}
+              {part.text || '\u00a0'}
             </span>
           </span>
         ))}
@@ -185,7 +195,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
 function ChartColumn({ blocks }: { blocks: ChartBlock[] }) {
   return (
-    <div className="min-w-0 max-w-full space-y-2 overflow-x-hidden overflow-y-visible">
+    <div className="min-w-0 max-w-full space-y-0.5 overflow-x-hidden overflow-y-visible">
       {blocks.map((block, i) => (
         <ChartBlockView key={i} block={block} />
       ))}
@@ -236,14 +246,14 @@ export function RichChordChartBody({ html, originalKey, displayKey }: {
     <>
       <style>{`
         .rich-chord-chart { color: white; }
-        .rich-chord-chart .chart-title { font-size: 28px; font-weight: 700; line-height: 1.15; margin-bottom: 4px; }
+        .rich-chord-chart .chart-title { font-size: 24px; font-weight: 700; line-height: 1.15; margin-bottom: 4px; }
         .rich-chord-chart .chart-credit, .rich-chord-chart .chart-meta { font-size: 13px; line-height: 1.35; color: rgba(255,255,255,.72); }
         .rich-chord-chart .chart-meta { font-weight: 600; color: white; }
-        .rich-chord-chart .chart-section { margin-top: 16px; font-size: 22px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-        .rich-chord-chart .chart-line { font-size: 22px; line-height: 1.65; white-space: pre-wrap; }
-        .rich-chord-chart .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 18px; font-weight: 700; line-height: 1; }
+        .rich-chord-chart .chart-section { margin-top: 10px; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .rich-chord-chart .chart-line { font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+        .rich-chord-chart .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 14px; font-weight: 700; line-height: 1; }
         .rich-chord-chart .chart-chord-line { font-weight: 700; }
-        .rich-chord-chart .chart-measure { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 22px; line-height: 1.65; font-weight: 700; }
+        .rich-chord-chart .chart-measure { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; font-weight: 700; }
         .rich-chord-chart .chart-line { overflow-wrap: anywhere; }
         .rich-chord-chart .chart-note { font-size: 13px; font-style: italic; color: rgba(255,255,255,.7); }
       `}</style>
@@ -254,6 +264,7 @@ export function RichChordChartBody({ html, originalKey, displayKey }: {
 
 export function TextChordChartCanvas({
   sheet,
+  chartTitle,
   originalKey,
   displayKey,
   strokes,
@@ -266,6 +277,7 @@ export function TextChordChartCanvas({
   theme: _theme = TEXT_CHART_SURFACE,
 }: {
   sheet: SongChordSheet;
+  chartTitle?: string;
   originalKey: ChordKey;
   displayKey: ChordKey;
   strokes: ChordChartStroke[];
@@ -282,7 +294,7 @@ export function TextChordChartCanvas({
   const richSource = sheet.sourceHtml?.trim() || '';
   const source = useMemo(() => {
     if (!richSource) return sheet.sourceText || '';
-    return prepareChordChartClipboard(sheet.sourceText || '', richSource).text || sheet.sourceText || '';
+    return chartHtmlToMarkdown(richSource) || sheet.sourceText || '';
   }, [richSource, sheet.sourceText]);
   const sourceOriginalKey = useMemo(
     // Prefer the persisted plain text: rich clipboard extraction can contain
@@ -290,10 +302,15 @@ export function TextChordChartCanvas({
     () => detectKeyFromText(sheet.sourceText || '') ?? detectKeyFromText(source) ?? originalKey,
     [sheet.sourceText, source, originalKey],
   );
-  const blocks = useMemo(
-    () => transposeBlocks(parseChordChart(source), sourceOriginalKey, displayKey),
-    [source, sourceOriginalKey, displayKey],
-  );
+  const blocks = useMemo(() => {
+    const parsed = transposeBlocks(parseChordChart(source), sourceOriginalKey, displayKey);
+    if (parsed.some((block) => block.type === 'title') || !chartTitle?.trim()) return parsed;
+    return [
+      { type: 'title' as const, text: chartTitle.trim() },
+      { type: 'meta' as const, text: `Key - ${displayKey === 'numbers' ? '#' : displayKey}` },
+      ...parsed,
+    ];
+  }, [chartTitle, displayKey, source, sourceOriginalKey]);
   const { outerRef, innerRef, scale, innerHeight } = useScaledChart(exportMode ? 1 : zoom);
   const svgRef = useRef<SVGSVGElement>(null);
   const currentRef = useRef<ChordChartStroke | null>(null);

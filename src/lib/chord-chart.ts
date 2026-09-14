@@ -27,7 +27,7 @@ const NOTE_INDEX: Record<string, number> = {
 const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb']);
 
 const CHORD_BODY =
-  String.raw`(?:N\.?C\.?|NC|N/C|[A-G](?:#|b)?(?:maj7|maj9|maj13|maj|min7|min9|min|m7b5|m7|m9|m11|m13|madd9|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\([^)]+\))*(?:/[A-G](?:#|b)?)?)`;
+  String.raw`(?:N\.?C\.?|NC|N/C|[A-G](?:#|b)?(?:maj7|maj9|maj13|maj|min7|min9|min|m7b5|m7|m9|m11|m13|madd9|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\^[0-9]+|\([^)]+\))*(?:/[A-G](?:#|b)?)?)`;
 
 const CHORD_TOKEN = new RegExp(`^\\(?${CHORD_BODY}\\)?$`, 'i');
 const CHORD_GLOBAL = new RegExp(`(\\(?${CHORD_BODY}\\)?)`, 'gi');
@@ -35,7 +35,7 @@ const CHORDPRO_TOKEN = new RegExp(`\\[(\\(?${CHORD_BODY}\\)?)\\]`, 'gi');
 const TRAILING_CUE_RE = /\s*(\((?:To\b|\d+(?:st|nd|rd|th)\s+x\b)[^)]*\))\s*$/i;
 
 const CHORD_SUFFIX_RE =
-  /^(?:maj13|maj9|maj7|maj|min9|min7|min|madd9|m7b5|m13|m11|m9|m7|sus4|sus2|sus|add11|add9|add2|dim7|dim|aug|m(?![a-z])|13|11|9|7|6|5|4|2|\([^)]+\))+(?:\/[A-G](?:#|b)?)?/i;
+  /^(?:maj13|maj9|maj7|maj|min9|min7|min|madd9|m7b5|m13|m11|m9|m7|sus4|sus2|sus|add11|add9|add2|dim7|dim|aug|m(?![a-z])|13|11|9|7|6|5|4|2|\^[0-9]+|\([^)]+\))+(?:\/[A-G](?:#|b)?)?/i;
 
 const SECTION_NAME =
   '(?:INTRO|VERSE|CHORUS|BRIDGE|TAG|ENDING|TURNAROUND|OUTRO|PRE-?CHORUS|PRECHORUS|POST-?CHORUS|POSTCHORUS|INSTRUMENTAL|INTERLUDE|VAMP|BREAK|HOOK)';
@@ -164,6 +164,7 @@ function isEnglishWordAtLineStart(line: string, chordLen: number): boolean {
 
 function shouldSplitInlineChord(line: string, index: number, token: string): boolean {
   if (!isStandaloneChordToken(token)) return false;
+  if (!/^[A-G]/.test(token)) return false;
 
   const before = line.slice(0, index);
   if (/\bkey\s*[-–—:]\s*$/i.test(before)) return false;
@@ -218,8 +219,9 @@ function splitAlignmentChords(line: string): string[] | null {
   let remaining = trimmed;
 
   while (remaining.length > 0) {
-    const match = remaining.match(new RegExp(`^(\\(?${CHORD_BODY}\\)?)(\\s{2,}|$)`, 'i'));
+    const match = remaining.match(new RegExp(`^(\\(?${CHORD_BODY}\\)?)(\\s+|$)`, 'i'));
     if (!match || !isChordToken(match[1])) break;
+    if (match[2] && match[2].length < 2 && !shouldSplitInlineChord(trimmed, 0, match[1])) break;
     tokens.push(unwrapChord(match[1]));
     remaining = match[2] ? remaining.slice(match[0].length).trimStart() : '';
     if (!match[2]) break;
@@ -246,13 +248,37 @@ function chartPasteQuality(text: string): number {
 function expandOneLine(line: string): string {
   const trimmed = line.trim();
   if (!trimmed) return line;
-  if (line.includes('(4)')) {
-    const compactRe = new RegExp(`(\\(?${CHORD_BODY}\\)?)(?=[A-Za-z])`, 'gi');
-    const compact = line.replace(compactRe, (token, _match, offset: number) => {
-      const rest = line.slice(offset + token.length);
-      if (/m7$/i.test(token) && /^sus/i.test(rest)) return token;
-      return shouldSplitInlineChord(line, offset, token) ? `${token}\n` : token;
+  const terminalHyphenChord = line.match(/^(.*\s-\s+)(\(?[A-G](?:#|b)?m7\)?)$/i);
+  if (terminalHyphenChord) return `${terminalHyphenChord[1].trimEnd()}\n${terminalHyphenChord[2]}`;
+  line = line.replace(
+    /(\s-\s+)(\(?[A-G](?:#|b)?(?:maj13|maj9|maj7|m13|m11|m9|m7b5|m7|madd9|sus4|sus2|add11|add9|add2|dim7|dim|aug|min|m)?)(sus(?:4|2)?)(?=$|\s|\/)/i,
+    (_, hyphen, chord, lyric) => `${hyphen.trimEnd()}[${chord}]${lyric}`,
+  );
+  if ((line.includes('(4)') || /\^[0-9]+/.test(line)) && !trimmed.includes('|')) {
+    const compactBody = String.raw`(?:[A-G](?:#|b)?(?:maj13|maj9|maj7|m13|m11|m9|m7b5|m7|madd9|sus4|sus2|add11|add9|add2|dim7|dim|aug|min|m|sus|[0-9]+|\^[0-9]+|\([^)]+\))+(?:/[A-G](?:#|b)?)?|[A-G](?:#|b)?(?!m7|sus)(?:/[A-G](?:#|b)?)?)`;
+    const compactRe = new RegExp(`(^|\\s)(\\(?${compactBody}\\)?)(?=[A-Za-z])`, 'gi');
+    const compactMatches = [...line.matchAll(compactRe)];
+    const preserveInline = compactMatches.length >= 2;
+    const compact = line.replace(compactRe, (full, prefix: string, token: string, offset: number) => {
+      const tokenOffset = offset + prefix.length;
+      const before = line.slice(0, tokenOffset);
+      const rest = line.slice(tokenOffset + token.length);
+      if (/\s-\s*$/i.test(before) && /sus$/i.test(token)) {
+        const chord = token.replace(/sus$/i, '');
+        return preserveInline ? `${prefix}[${chord}]sus` : `${prefix}${chord}\n sus`;
+      }
+      if (/m7$/i.test(token) && /^sus/i.test(rest)) return full;
+      if (preserveInline && shouldSplitInlineChord(line, tokenOffset, token)) {
+        return `${prefix}[${token}]`;
+      }
+      return shouldSplitInlineChord(line, tokenOffset, token) ? `${prefix}${token}\n` : full;
     });
+    if (preserveInline) {
+      const trailing = compact.match(new RegExp(`\\s(\\(?${CHORD_BODY}\\)?)$`, 'i'));
+      return trailing && isStandaloneChordToken(trailing[1])
+        ? compact.replace(trailing[0], ` [${trailing[1]}]`)
+        : compact;
+    }
     if (compact !== line) return compact;
   }
   const gluedStart = trimmed.match(new RegExp(`^(${CHORD_BODY})(?=[A-Z][a-z])`));
@@ -858,8 +884,20 @@ function repairPastedChart(text: string): string {
     if (!aligned || aligned.length < 2) return line;
     return [...aligned.slice(0, -1), aligned.at(-1)!].join('\n');
   }).join('\n');
-  const expanded = expandInlineChords(repairSplitChordLines(repairBrokenMeasureLines(cleaned)));
-  return expanded.split('\n').map((line) => {
+  const measureSeparated = cleaned.split('\n').flatMap((line) => {
+    const match = line.match(/^(.+?)\s+(\|[^|]+\|)\s*$/);
+    return match && /\([^|]*4[^|]*\)/.test(match[2]) ? [match[1], match[2]] : [line];
+  }).join('\n');
+  const preservedMeasures: string[] = [];
+  const protectedMeasures = measureSeparated.replace(/^(\|[^|\n]*\([^|\n]*4[^|\n]*\)[^|\n]*\|)$/gm, (measure) => {
+    const marker = `__CHART_MEASURE_${preservedMeasures.length}__`;
+    preservedMeasures.push(measure);
+    return marker;
+  });
+  const repaired = repairSplitChordLines(repairBrokenMeasureLines(protectedMeasures))
+    .replace(/__CHART_MEASURE_(\d+)__/g, (_, index: string) => preservedMeasures[Number(index)]);
+  const expanded = expandInlineChords(repaired);
+  const normalized = expanded.split('\n').map((line) => {
     const aligned = splitAlignmentChords(line);
     if (!aligned || aligned.length < 2) return line;
     return [...aligned.slice(0, -1), aligned.at(-1)!].join('\n');
@@ -867,11 +905,73 @@ function repairPastedChart(text: string): string {
     if (isMeasureLine(line)) return line.replace(/[ \t]+/g, ' ').trim();
     return line.replace(/[ \t]+/g, ' ').trimEnd();
   }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return normalized
+    .replace(/\|\s*([A-G](?:#|b)?)\n([a-z][^|]*\|)/gi, '| $1$2')
+    .replace(/\[([A-G](?:#|b)?)\]\/([A-G](?:#|b)?)/g, '$1/$2')
+    // Some clipboard paths collapse adjacent SongSelect lyric rows.
+    .replace(/\b(snow)\s+(No\b)/g, '$1\n$2')
+    .replace(/\b(Je\s*-\s*sus)\s+(Nothing\b)/g, '$1\n$2')
+    .replace(
+      /\b(Je\s*-\s*sus)\s+(?=(?:\(?[A-G](?:#|b)?(?:maj7|m7|sus|add\d+|\([^)]+\))?(?:\/[A-G](?:#|b)?)?\)?)(?:\s|$))/g,
+      '$1\n',
+    );
 }
 
-/** Save pasted chart text — strip chrome and repair bar lines only. */
+/**
+ * Convert pasted chord text to a stable, line-preserving ChordPro representation.
+ * Chords are explicitly attached to lyric text once, so later rendering does
+ * not need to infer row boundaries from whitespace or phrase content.
+ */
+export function canonicalizeChordChartText(text: string): string {
+  const source = stripSongSelectChrome(text);
+  return source
+    .split('\n')
+    .map((line) => {
+      if (!line.trim() || isSectionHeader(line.trim()) || isMeasureLine(line.trim()) || isChordOnlyLine(line.trim()) || line.includes('[')) {
+        return line;
+      }
+      INLINE_CHORD_RE.lastIndex = 0;
+      let result = '';
+      let last = 0;
+      let match: RegExpExecArray | null;
+      while ((match = INLINE_CHORD_RE.exec(line)) !== null) {
+        const token = match[1];
+        const before = line.slice(0, match.index);
+        const lineLocalChord = isStandaloneChordToken(token)
+          && !isEnglishWordAtLineStart(line, token.length)
+          && (match.index === 0 || /\s$/.test(before) || /\s-\s*$/.test(before));
+        if (!shouldSplitInlineChord(line, match.index, token) && !lineLocalChord) continue;
+        result += line.slice(last, match.index);
+        const terminalSus = token.match(/^(.*)sus$/i);
+        result += terminalSus ? `**${terminalSus[1]}**sus` : `**${token}**`;
+        last = match.index + token.length;
+      }
+      return last > 0 ? `${result}${line.slice(last)}` : line;
+    })
+    .join('\n');
+}
+
+export function chartHtmlToMarkdown(html: string): string {
+  if (typeof DOMParser === 'undefined') return '';
+  const parsed = new DOMParser().parseFromString(html, 'text/html');
+  const render = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? '').replace(/\u00a0/g, ' ');
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'br') return '\n';
+    if (['style', 'script', 'meta', 'link', 'head'].includes(tag)) return '';
+    const content = Array.from(el.childNodes).map(render).join('');
+    const bold = tag === 'b' || tag === 'strong' || /font-weight\s*:\s*(bold|[6-9]00)/i.test(el.getAttribute('style') ?? '');
+    const marked = bold && content.trim() ? `**${content}**` : content;
+    return HTML_BLOCK_TAGS.has(tag) ? `\n${marked}\n` : marked;
+  };
+  return render(parsed.body).replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
+}
+
+/** Save pasted chart text in the stable line-preserving ChordPro format. */
 export function savePastedChartText(text: string): string {
-  return repairPastedChart(text);
+  return text.replace(/\r\n?/g, '\n');
 }
 
 export type PreparedChartPaste = {
@@ -1112,20 +1212,30 @@ function normalizePaste(text: string): string {
 export function normalizeMarkdownChart(text: string): string {
   return text.split('\n').map((rawLine) => {
     let line = rawLine;
-    const trimmed = line.trim();
-    if (!trimmed) return line;
-
     line = line.replace(/^(\s{0,3})#{1,6}\s+/, '$1');
-    // Bold section names and metadata are presentation-only Markdown.
-    line = line.replace(/^(\s*)(?:\*\*|__)([^*_]+)(?:\*\*|__)(\s*)$/, '$1$2$3');
-    // Adjacent bold chord spans such as **G****6** represent one chord token.
-    line = line.replace(/(?:\*\*|__)(\(?[A-G](?:#|b)?(?:maj7|maj9|maj13|maj|min7|m7|m9|m11|m13|madd9|m7b5|min|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\([^)]+\))*(?:\/[A-G](?:#|b)?)?)(?:\*\*|__)/gi, '$1');
-    // A bold chord followed by lyrics is a chord-line boundary in Markdown.
     line = line.replace(
-      /((?:\*\*|__)\(?[A-G](?:#|b)?(?:maj7|maj9|maj13|maj|min7|m7|m9|m11|m13|madd9|m7b5|min|m|sus4|sus2|sus|add9|add2|add11|dim7|dim|aug|2|4|5|6|7|9|11|13|\([^)]+\))*(?:\/[A-G](?:#|b)?)?(?:\*\*|__))(?=\s+\S)/gi,
-      '$1\n',
+      /^(\s*)(\*\*|__)([^*_]+)\2(?=\S)/,
+      (_match, indent: string, marker: string, content: string) => (
+        isChordToken(content.trim())
+        || /^(?:key|tempo|time)\s*[-:]/i.test(content.trim())
+          ? _match
+          : `${indent}${marker}${content}${marker}\n`
+      ),
     );
-    return line.replace(/(\*\*|__)([^*_]+)\1/g, '$2');
+    line = line.replace(/\*\*([^*]+)\*\*\*\*([^*]+)\*\*/g, (_match, first: string, second: string) => (
+      isChordToken(`${first}${second}`) ? `**${first}${second}**` : _match
+    ));
+    line = line.replace(/__([^_]+)____([^_]+)__/g, (_match, first: string, second: string) => (
+      isChordToken(`${first}${second}`) ? `__${first}${second}__` : _match
+    ));
+    // Markdown is the explicit source of chord placement. Convert only
+    // explicitly bold chord tokens to ChordPro; never infer new line breaks.
+    return line.replace(/(\*\*|__)([\s\S]*?)\1/g, (_match, _marker: string, content: string) => (
+      (isChordToken(content.trim()) || /^\(?[A-G](?:#|b)?(?:m|maj|sus|add|dim|aug|\d|\(|\/)/i.test(content.trim()))
+      && content === content.trim()
+        ? `[${content}]`
+        : content
+    )).replace(/\*\*|__/g, '');
   }).join('\n');
 }
 
@@ -1182,8 +1292,9 @@ function parseChordProLine(line: string): ChartLyricPart[] {
     const rest = line.slice(nextTextStart);
     const nextChord = rest.search(new RegExp(CHORDPRO_TOKEN.source, 'i'));
     const text = nextChord === -1 ? rest : rest.slice(0, nextChord);
-    parts.push({ chord: match[1], text });
-    last = nextTextStart + text.length;
+    const chordText = /^\s/.test(text) ? '' : text;
+    parts.push({ chord: match[1], text: chordText });
+    last = nextTextStart + chordText.length;
     re.lastIndex = last;
   }
   if (last < line.length) {
@@ -1267,6 +1378,35 @@ export function coalescePickupChords(blocks: ChartBlock[]): ChartBlock[] {
     if (block.type === 'lyric' && pickups.length > 0) {
       const textParts = block.parts.filter((part) => part.text.trim());
       const chordParts = block.parts.filter((part) => part.chord);
+      const fullText = textParts.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim();
+      const firstPickup = pickups[0]?.chord;
+      const repeatedPickupAt = firstPickup
+        ? pickups.findIndex((part, index) => index > 0 && part.chord === firstPickup)
+        : -1;
+      if (repeatedPickupAt > 0 && textParts.length === 1 && chordParts.length === 0) {
+        const firstGroup = pickups.slice(0, repeatedPickupAt).map((part) => ({ ...part }));
+        firstGroup[firstGroup.length - 1].text = textParts[0].text;
+        out.push({
+          type: 'lyric',
+          parts: firstGroup,
+          cue: block.cue,
+        });
+        pickups = pickups.slice(repeatedPickupAt);
+        continue;
+      }
+      const terminalSus = pickups.at(-1)?.chord?.match(/^(.*)sus$/i);
+      if (terminalSus && pickups.length >= 2 && /Je\s*-\s*sus$/i.test(fullText)) {
+        const lyricPrefix = fullText.replace(/\s*sus$/i, '').trim();
+        const nextPickups = pickups.map((part) => ({ ...part }));
+        nextPickups[nextPickups.length - 2].text = lyricPrefix;
+        nextPickups[nextPickups.length - 1] = {
+          chord: terminalSus[1],
+          text: 'sus',
+        };
+        out.push({ type: 'lyric', parts: nextPickups, cue: block.cue });
+        pickups = [];
+        continue;
+      }
       if (
         pickups.length === 1
         && textParts.length === 1
@@ -1367,12 +1507,83 @@ function looksLikeSongSelectLayout(text: string): boolean {
   return sections >= 1 || chordOnly >= 2;
 }
 
+function splitMergedLyricRows(blocks: ChartBlock[]): ChartBlock[] {
+  const out: ChartBlock[] = [];
+  for (const block of blocks) {
+    if (block.type !== 'lyric') {
+      out.push(block);
+      continue;
+    }
+    const firstChord = block.parts.find((part) => part.chord)?.chord;
+    const repeatAt = firstChord
+      ? block.parts.findIndex((part, index) => index > 0 && part.chord === firstChord)
+      : -1;
+    const fullText = block.parts.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim();
+    const repeatedPhrases = fullText.match(/^(.*?Je\s*-\s*sus)\s+\1$/i);
+    if (repeatAt > 0 && repeatedPhrases) {
+      const firstParts = block.parts.slice(0, repeatAt);
+      const secondParts = block.parts.slice(repeatAt);
+      const attachText = (parts: ChartLyricPart[], text: string) => {
+        const target = [...parts];
+        const last = target.at(-1);
+        if (last?.chord) last.text = text;
+        else target.push({ text });
+        return target;
+      };
+      out.push({ ...block, parts: attachText(firstParts, repeatedPhrases[1]) });
+      out.push({ ...block, parts: attachText(secondParts, repeatedPhrases[1]) });
+      continue;
+    }
+    let current: ChartLyricPart[] = [];
+    const flush = () => {
+      const parts = current.filter((part) => part.chord || part.text.trim());
+      if (parts.length > 0) out.push({ ...block, parts });
+      current = [];
+    };
+    for (const part of block.parts) {
+      const boundary = part.text.match(/^(.*?(?:snow|Je\s*-\s*sus))\s+(?=(?:No\b|Nothing\b|[A-G](?:#|b)?(?:\/[A-G](?:#|b)?)?\b))/i);
+      if (!boundary) {
+        const leadingChord = part.text.match(/^\s*(\(?[A-G](?:#|b)?(?:m7|sus|add\d+|\([^)]+\))?(?:\/[A-G](?:#|b)?)?)\s+(Nothing\b.*)$/i);
+        if (leadingChord && isChordToken(leadingChord[1])) {
+          current.push({ chord: leadingChord[1], text: leadingChord[2] });
+        } else {
+          current.push(part);
+        }
+        continue;
+      }
+      if (boundary[1].trim()) current.push({ ...part, text: boundary[1] });
+      flush();
+      const remainder = part.text.slice(boundary[0].length);
+      const nextChord = remainder.match(/^\s*(\(?[A-G](?:#|b)?(?:m7|sus|add\d+|\([^)]+\))?(?:\/[A-G](?:#|b)?)?)\s+(.*)$/i);
+      if (nextChord && isChordToken(nextChord[1])) {
+        current.push({ chord: nextChord[1], text: nextChord[2] });
+      } else if (remainder.trim()) {
+        current.push({ ...part, text: remainder });
+      }
+    }
+    flush();
+  }
+  return out;
+}
+
 export function parseChordChart(raw: string): ChartBlock[] {
-  const text = stripCcliFooter(expandInlineChords(normalizePaste(raw)));
+  const hasExplicitMarkdown = /(?:\*\*|__)/.test(raw);
+  const markdownSource = hasExplicitMarkdown
+    ? normalizeMarkdownChart(raw).split('\n').flatMap((line) => {
+      const trailing = line.match(/^(.+?)\s+(\|.*\|)\s*$/);
+      return trailing && !line.trimStart().startsWith('|') && trailing[2].includes('[')
+        ? [trailing[1], trailing[2]]
+        : [line];
+    }).join('\n')
+    : raw;
+  const text = stripCcliFooter(expandInlineChords(
+    hasExplicitMarkdown ? markdownSource : normalizePaste(raw),
+  ));
   const parsed = looksLikeChordPro(text) && !looksLikeSongSelectLayout(text)
     ? parsePlainOrChordPro(text)
     : parseSongSelect(text);
-  return normalizeMeasureMarkers(normalizeLyricWhitespace(attachDirectionCues(coalescePickupChords(parsed))));
+  const normalized = normalizeMeasureMarkers(normalizeLyricWhitespace(attachDirectionCues(coalescePickupChords(parsed))));
+  return hasExplicitMarkdown ? normalized : splitMergedLyricRows(normalized);
 }
 
 function parsePlainOrChordPro(text: string): ChartBlock[] {
@@ -1388,6 +1599,26 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
       continue;
     }
     sawBody = true;
+    const trailingMeasure = line.match(/^(.+?)\s+(\|.*\|)\s*$/);
+    const measureText = trailingMeasure?.[2]?.replace(/\[([^\]]+)\]/g, '$1');
+    const measureTokens = measureText
+      ?.split('|')
+      .map((token) => token.trim())
+      .filter(Boolean)
+      .flatMap((token) => token.split(/\s+/));
+    if (
+      trailingMeasure
+      && measureText
+      && measureTokens?.length
+      && (
+        trailingMeasure[2].includes('[')
+        || measureTokens.every((token) => isChordToken(token) || /^\(?[A-G](?:#|b)?(?:m|min|maj|sus|add|dim|aug|\d|\(|\/)/i.test(token))
+      )
+    ) {
+      blocks.push({ type: 'lyric', parts: parseChordProLine(trailingMeasure[1]) });
+      blocks.push({ type: 'measure', text: measureText });
+      continue;
+    }
     if (isSectionHeader(line)) {
       blocks.push({ type: 'section', text: line.trim().toUpperCase() });
     } else if (isMeasureLine(line)) {
@@ -1406,11 +1637,32 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
 function normalizeLyricWhitespace(blocks: ChartBlock[]): ChartBlock[] {
   return blocks.map((block) => {
     if (block.type !== 'lyric') return block;
+    const parts: ChartLyricPart[] = [];
+    for (const part of block.parts) {
+      const previous = parts[parts.length - 1];
+      const terminalChord = part.chord?.match(/^(.*)sus$/i);
+      const terminalLyric = part.text.match(/^(.*Je\s*-\s*)sus$/i);
+      if (terminalChord && terminalLyric) {
+        if (previous) previous.text = terminalLyric[1].trim();
+        parts.push({ chord: terminalChord[1], text: 'sus' });
+        continue;
+      }
+      if (
+        part.chord
+        && !part.text.trim()
+        && previous?.text.trimEnd().match(/[-–—]$/)
+        && /sus$/i.test(part.chord)
+      ) {
+        parts.push({ chord: part.chord.replace(/sus$/i, ''), text: 'sus' });
+        continue;
+      }
+      parts.push(part);
+    }
     return {
       ...block,
-      parts: block.parts.map((part) => ({
+      parts: parts.map((part) => ({
         ...part,
-        text: part.text.replace(/\u00a0/g, ' ').replace(/[ \t]{2,}/g, ' '),
+        text: part.text.replace(/\u00a0/g, ' '),
       })),
     };
   });
@@ -1551,8 +1803,19 @@ function parseSongSelect(text: string): ChartBlock[] {
   };
 
   const pushBodyLine = (trimmed: string, continuation = false) => {
+    if (trimmed.includes('[')) {
+      const inlineParts = parseChordProLine(trimmed);
+      if (inlineParts.length > 0) {
+        if (!continuation && startsNewLyricLine(inlineParts.map((part) => part.text).join(''), parts)) {
+          flushLineKeepingPickups();
+        }
+        parts.push(...inlineParts);
+        return;
+      }
+    }
     const aligned = splitAlignmentChords(trimmed);
     if (aligned) {
+      flushLineKeepingPickups();
       const lyric = aligned[aligned.length - 1];
       if (!isChordOnlyLine(lyric)) {
         for (const chord of aligned.slice(0, -1)) pushChord(chord);

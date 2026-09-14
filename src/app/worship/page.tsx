@@ -107,6 +107,7 @@ function SongDetailView({
   const { toast } = useToast();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [viewSheet, setViewSheet] = useState<SongChordSheet | null>(null);
+  const [textViewerSheet, setTextViewerSheet] = useState<SongChordSheet | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -114,6 +115,14 @@ function SongDetailView({
   const [editArtist, setEditArtist] = useState(song.artist || '');
   const [saving, setSaving] = useState(false);
   const { addChordSheet } = useWorshipSongs();
+
+  const openSheet = (sheet: SongChordSheet) => {
+    if (isTextChordSheet(sheet)) {
+      setTextViewerSheet(sheet);
+      return;
+    }
+    setViewSheet(sheet);
+  };
 
   const handleConvertPdf = async (sheet: SongChordSheet) => {
     setConvertingId(sheet.id);
@@ -254,13 +263,13 @@ function SongDetailView({
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => setViewSheet(sheet)}
+                      onClick={() => openSheet(sheet)}
                       className="absolute inset-0 z-[1] h-auto w-full cursor-pointer rounded-none p-0"
                       aria-label={`View ${song.title} chart`}
                     />
                     <div className="pointer-events-none absolute inset-0 z-[2] bg-black/50 opacity-0 transition-opacity [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100" />
                     <div className="hover-reveal absolute inset-x-0 bottom-0 z-[3] flex items-end justify-center gap-2 p-2 transition-opacity">
-                      <IconButton type="button" onClick={() => setViewSheet(sheet)}
+                      <IconButton type="button" onClick={() => openSheet(sheet)}
                         aria-label="View sheet"
                         className="rounded-lg bg-black/50 text-white hover:bg-black/70"
                         icon={Eye}
@@ -344,6 +353,16 @@ function SongDetailView({
       )}
 
       <AddChordSheetDialog open={addSheetOpen} song={song} onClose={() => setAddSheetOpen(false)} />
+
+      {textViewerSheet && (
+        <TextChordChartViewer
+          songId={song.id}
+          songTitle={song.title}
+          sheet={textViewerSheet}
+          onClose={() => setTextViewerSheet(null)}
+          initialDisplayKey={textViewerSheet.key}
+        />
+      )}
 
       {/* Full-screen viewer — continuously scrolls through all photo and text sheets for this song */}
       {viewSheet && (() => {

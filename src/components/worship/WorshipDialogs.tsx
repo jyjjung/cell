@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import { detectKeyFromText, isTextChordSheet, parseChordChart, prepareChordChartClipboard, savePastedChartText } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, isTextChordSheet, parseChordChart, savePastedChartText } from '@/lib/chord-chart';
 import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
@@ -551,9 +551,6 @@ export function AddChordSheetDialog({
   const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [file, setFile] = useState<File | null>(null);
   const [pasteText, setPasteText] = useState('');
-  const [pasteHtml, setPasteHtml] = useState<string | null>(null);
-  const pasteEditorRef = useRef<HTMLDivElement>(null);
-  const keepPasteHtmlRef = useRef(false);
   const keyOverrideRef = useRef(false);
   const [key, setKey] = useState<ChordKey>(defaultKey ?? 'E');
   const [keyConfirmationOpen, setKeyConfirmationOpen] = useState(false);
@@ -564,9 +561,7 @@ export function AddChordSheetDialog({
     setMode('paste');
     setFile(null);
     setPasteText('');
-    setPasteHtml(null);
     keyOverrideRef.current = false;
-    if (pasteEditorRef.current) pasteEditorRef.current.innerHTML = '';
   }, [open]);
 
   useEffect(() => {
@@ -620,17 +615,14 @@ export function AddChordSheetDialog({
       // extracted from the clipboard. Keep the normalized text as the
       // editable/parser fallback and preserve the rich HTML separately.
       const sourceText = pasteText;
-      const sourceHtml = pasteHtml || pasteEditorRef.current?.innerHTML || undefined;
       const savedKey = getSaveKey();
       const sheet = await addTextChordSheet(
         song.id,
         savePastedChartText(sourceText.trim()),
         savedKey,
-        sourceHtml,
       );
       toast({ title: 'Chart saved', description: `Pasted ${sheet.key === 'numbers' ? '#' : sheet.key} chart for ${song.title}.` });
       setPasteText('');
-      setPasteHtml(null);
       setKeyConfirmationOpen(false);
       onUploaded?.([sheet.id]);
       onClose();
@@ -673,56 +665,33 @@ export function AddChordSheetDialog({
           {mode === 'paste' ? (
             <div className="space-y-1.5">
               <Label htmlFor="cs-paste">Paste chart text <span className="text-destructive">*</span></Label>
-              <style>{`
-                .rich-paste-editor .chart-line { font-size: 18px; line-height: 2.2; white-space: pre-wrap; }
-                .rich-paste-editor .chart-chord { position: relative; top: -.72em; display: inline-block; min-width: .2em; margin-right: .08em; font-size: 15px; font-weight: 700; line-height: 1; }
-                .rich-paste-editor .chart-section { margin-top: 16px; font-size: 15px; font-weight: 700; text-transform: uppercase; }
-                .rich-paste-editor .chart-measure { font-weight: 700; white-space: pre-wrap; overflow-wrap: anywhere; }
-              `}</style>
-              <div
+              <textarea
                 id="cs-paste"
-                ref={pasteEditorRef}
-                contentEditable
-                role="textbox"
-                aria-multiline="true"
+                value={pasteText}
                 aria-label="Chord sheet text"
-                suppressContentEditableWarning
-                data-placeholder="Paste from Apple Notes or SongSelect…"
+                placeholder="Paste from Apple Notes or SongSelect…"
                 onPaste={(e) => {
                   const html = e.clipboardData.getData('text/html');
                   const plain = e.clipboardData.getData('text/plain');
-                  const next = prepareChordChartClipboard(plain, html);
+                  const markdown = html ? chartHtmlToMarkdown(html) : plain.replace(/\r\n?/g, '\n');
                   e.preventDefault();
-                  keepPasteHtmlRef.current = Boolean(next.html);
-                  setPasteHtml(next.html);
-                  setPasteText(next.text);
-                  if (next.html) {
-                    e.currentTarget.innerHTML = next.html;
-                  } else {
-                    e.currentTarget.textContent = next.text;
-                  }
-                  const found = detectKeyFromText(next.text);
+                  setPasteText(markdown);
+                  const found = detectKeyFromText(markdown);
                   if (found) {
                     keyOverrideRef.current = false;
                     setKey(found);
                   }
-                  keepPasteHtmlRef.current = false;
                 }}
                 onInput={(e) => {
-                  const next = e.currentTarget.innerText;
+                  const next = e.currentTarget.value;
                   setPasteText(next);
-                  if (keepPasteHtmlRef.current) {
-                    keepPasteHtmlRef.current = false;
-                  } else {
-                    setPasteHtml(null);
-                  }
                   const found = detectKeyFromText(next);
                   if (found) {
                     keyOverrideRef.current = false;
                     setKey(found);
                   }
                 }}
-                className="rich-paste-editor min-h-[180px] w-full whitespace-pre-wrap overflow-auto rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]"
+                className="min-h-[240px] w-full resize-y overflow-auto rounded-xl border border-border/50 bg-background px-3 py-2 font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-ring/40"
               />
               {pasteText.trim() && (
                 <div className="space-y-1.5">

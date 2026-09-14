@@ -23,8 +23,7 @@ import {
 } from '@/components/worship/viewer-theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
-import { formatChartHtml, LETTER_KEYS, prepareChordChartClipboard, savePastedChartText } from '@/lib/chord-chart';
-import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { chartHtmlToMarkdown, LETTER_KEYS, savePastedChartText } from '@/lib/chord-chart';
 import { cn } from '@/lib/utils';
 import type { ChordChartAnnotation, ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
 import { Timestamp } from 'firebase/firestore';
@@ -38,8 +37,8 @@ const HIGHLIGHT_WIDTH = 16;
 
 function editableChartText(sheet: Pick<SongChordSheet, 'sourceText' | 'sourceHtml'>): string {
   if (sheet.sourceHtml?.trim()) {
-    const prepared = prepareChordChartClipboard(sheet.sourceText ?? '', sheet.sourceHtml);
-    if (prepared.text.trim()) return prepared.text;
+    const markdown = chartHtmlToMarkdown(sheet.sourceHtml);
+    if (markdown.trim()) return markdown;
   }
   return sheet.sourceText ?? '';
 }
@@ -132,7 +131,7 @@ export function TextChordChartViewer({
   const [textEditing, setTextEditing] = useState(false);
   const [textDraft, setTextDraft] = useState(() => editableChartText(sheet));
   const [textDirty, setTextDirty] = useState(false);
-  const textEditorRef = useRef<HTMLDivElement>(null);
+  const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [annotations, setAnnotations] = useState<ChordChartAnnotation[]>(sheet.annotations ?? []);
@@ -159,11 +158,9 @@ export function TextChordChartViewer({
 
   useEffect(() => {
     if (!textEditing || !textEditorRef.current) return;
-    if (sheet.sourceHtml?.trim()) {
-      textEditorRef.current.innerHTML = sanitizeRichHtml(formatChartHtml(sheet.sourceHtml));
-    } else {
-      textEditorRef.current.textContent = textDraft;
-    }
+    textEditorRef.current.value = sheet.sourceHtml?.trim()
+      ? chartHtmlToMarkdown(sheet.sourceHtml) || textDraft
+      : textDraft;
   }, [textEditing, sheet.id]);
 
   useEffect(() => {
@@ -299,13 +296,10 @@ export function TextChordChartViewer({
     if (!currentUser || !textDirty) return;
     setSaving(true);
     try {
-      const editorHtml = textEditorRef.current?.innerHTML ?? '';
-      const prepared = prepareChordChartClipboard(textDraft, editorHtml);
-      const sourceText = savePastedChartText(prepared.text);
-      const sourceHtml = prepared.html?.trim() ? sanitizeRichHtml(prepared.html) : '';
+      const sourceText = savePastedChartText(textDraft);
       await updateChordSheet(songId, sheet.id, {
         sourceText,
-        sourceHtml,
+        sourceHtml: '',
       });
       setTextDraft(sourceText);
       setTextDirty(false);
@@ -542,34 +536,24 @@ export function TextChordChartViewer({
         )}>
           {textEditing ? (
             <>
-              <style>{`
-                .text-chart-editor .chart-line { line-height: 2.2; white-space: pre-wrap; }
-                .text-chart-editor .chart-chord { position: relative; top: -.72em; display: inline-block; font-weight: 700; line-height: 1; }
-                .text-chart-editor .chart-section { margin-top: 16px; font-weight: 700; text-transform: uppercase; }
-              `}</style>
-              <div
+              <textarea
                 ref={textEditorRef}
-                contentEditable
-                role="textbox"
-                aria-multiline="true"
+                value={textDraft}
                 aria-label="Chord sheet text"
-                suppressContentEditableWarning
                 onPaste={(e) => {
                   const html = e.clipboardData.getData('text/html');
                   const plain = e.clipboardData.getData('text/plain');
-                  const prepared = prepareChordChartClipboard(plain, html);
+                  const markdown = html ? chartHtmlToMarkdown(html) : plain.replace(/\r\n?/g, '\n');
                   e.preventDefault();
-                  setTextDraft(prepared.text);
-                  e.currentTarget.innerHTML = prepared.html || '';
-                  if (!prepared.html) e.currentTarget.textContent = prepared.text;
+                  setTextDraft(markdown);
                   setTextDirty(true);
                 }}
                 onInput={(e) => {
-                  setTextDraft(e.currentTarget.innerText);
+                  setTextDraft(e.currentTarget.value);
                   setTextDirty(true);
                 }}
                 className={cn(
-                  'text-chart-editor min-h-[70vh] whitespace-pre-wrap overflow-auto rounded-none border-0 p-4 font-mono text-sm leading-relaxed outline-none focus-visible:ring-0',
+                  'text-chart-editor min-h-[70vh] w-full resize-y overflow-auto rounded-none border-0 p-4 font-mono text-sm leading-relaxed outline-none focus-visible:ring-0',
                   isDark ? 'bg-black/30 text-white' : 'bg-background',
                 )}
               />
@@ -577,6 +561,7 @@ export function TextChordChartViewer({
           ) : (
             <TextChordChartCanvas
               sheet={sheet}
+              chartTitle={songTitle}
               originalKey={sheet.key}
               displayKey={displayKey}
               strokes={annotationId === 'none' ? [] : strokes}
@@ -674,6 +659,7 @@ export function EmbeddedTextChart({
       )}>
         <TextChordChartCanvas
           sheet={sheet}
+          chartTitle={songTitle}
           originalKey={sheet.key}
           displayKey={displayKey === 'numbers' ? sheet.key : displayKey}
           strokes={strokes}
