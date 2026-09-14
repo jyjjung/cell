@@ -1,6 +1,6 @@
 'use client';
 
-import { formatChartHtml, parseChordChart, prepareChordChartClipboard, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
+import { detectKeyFromText, formatChartHtml, parseChordChart, prepareChordChartClipboard, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
@@ -274,9 +274,15 @@ export function TextChordChartCanvas({
     if (!richSource) return sheet.sourceText || '';
     return prepareChordChartClipboard(sheet.sourceText || '', richSource).text || sheet.sourceText || '';
   }, [richSource, sheet.sourceText]);
+  const sourceOriginalKey = useMemo(
+    // Prefer the persisted plain text: rich clipboard extraction can contain
+    // presentation-only metadata that should not redefine the chart's key.
+    () => detectKeyFromText(sheet.sourceText || '') ?? detectKeyFromText(source) ?? originalKey,
+    [sheet.sourceText, source, originalKey],
+  );
   const blocks = useMemo(
-    () => transposeBlocks(parseChordChart(source), originalKey, displayKey),
-    [source, originalKey, displayKey],
+    () => transposeBlocks(parseChordChart(source), sourceOriginalKey, displayKey),
+    [source, sourceOriginalKey, displayKey],
   );
   const { outerRef, innerRef, scale, innerHeight } = useScaledChart(exportMode ? 1 : zoom);
   const svgRef = useRef<SVGSVGElement>(null);

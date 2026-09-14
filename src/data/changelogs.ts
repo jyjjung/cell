@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.6',
+    subtitle: 'Accurate chart transposing',
+    date: 'September 13, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted chord charts now detect their declared original key accurately, confirm it before saving, and transpose their chords and displayed key together in worship views and setlists.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.5',
     subtitle: 'Smoother Bible scrolling',
     date: 'September 11, 2026',

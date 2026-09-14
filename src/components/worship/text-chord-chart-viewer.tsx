@@ -102,6 +102,7 @@ export function TextChordChartViewer({
   sheet,
   onClose,
   initialAnnotationId,
+  initialDisplayKey,
   startDrawing,
 }: {
   songId: string;
@@ -109,13 +110,14 @@ export function TextChordChartViewer({
   sheet: SongChordSheet;
   onClose: () => void;
   initialAnnotationId?: string;
+  initialDisplayKey?: ChordKey;
   startDrawing?: boolean;
 }) {
   const { currentUser } = useAuth();
   const { updateChordSheet } = useWorshipSongs();
   const viewerTheme = useViewerTheme();
   const isDark = viewerTheme === 'dark';
-  const [displayKey, setDisplayKey] = useState<ChordKey>(sheet.key);
+  const [displayKey, setDisplayKey] = useState<ChordKey>(initialDisplayKey ?? sheet.key);
   const [annotationId, setAnnotationId] = useState<string | 'none'>(initialAnnotationId ?? 'none');
   const [editing, setEditing] = useState(Boolean(startDrawing && initialAnnotationId));
   const [tool, setTool] = useState<'pen' | 'highlight'>('pen');
@@ -144,13 +146,16 @@ export function TextChordChartViewer({
   }, [inkColor, inkColors]);
 
   useEffect(() => {
-    setDisplayKey(sheet.key);
-    setAnnotations(sheet.annotations ?? []);
+    setDisplayKey(initialDisplayKey ?? sheet.key);
     if (!textEditing) {
       setTextDraft(editableChartText(sheet));
       setTextDirty(false);
     }
-  }, [sheet.id, sheet.key, sheet.annotations]);
+  }, [initialDisplayKey, sheet.id, sheet.key]);
+
+  useEffect(() => {
+    setAnnotations(sheet.annotations ?? []);
+  }, [sheet.id, sheet.annotations]);
 
   useEffect(() => {
     if (!textEditing || !textEditorRef.current) return;
@@ -689,6 +694,7 @@ export function EmbeddedTextChart({
           sheet={sheet}
           onClose={() => setOpen(false)}
           initialAnnotationId={annotationId}
+          initialDisplayKey={displayKey === 'numbers' ? sheet.key : displayKey}
         />
       )}
     </>

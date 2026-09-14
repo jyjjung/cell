@@ -6,6 +6,10 @@ import { ButtonSpinner } from '@/components/ui/loading-spinner';
 import {
     Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RemoteImage } from '@/components/ui/remote-image';
@@ -542,7 +546,9 @@ export function AddChordSheetDialog({
   const [pasteHtml, setPasteHtml] = useState<string | null>(null);
   const pasteEditorRef = useRef<HTMLDivElement>(null);
   const keepPasteHtmlRef = useRef(false);
+  const keyOverrideRef = useRef(false);
   const [key, setKey] = useState<ChordKey>(defaultKey ?? 'E');
+  const [keyConfirmationOpen, setKeyConfirmationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -551,6 +557,7 @@ export function AddChordSheetDialog({
     setFile(null);
     setPasteText('');
     setPasteHtml(null);
+    keyOverrideRef.current = false;
     if (pasteEditorRef.current) pasteEditorRef.current.innerHTML = '';
   }, [open]);
 
@@ -590,6 +597,13 @@ export function AddChordSheetDialog({
     } finally { setSaving(false); }
   };
 
+  const getSaveKey = () => keyOverrideRef.current ? key : (detectKeyFromText(pasteText) ?? key);
+
+  const requestPasteSave = () => {
+    if (!song || !pasteText.trim()) return;
+    setKeyConfirmationOpen(true);
+  };
+
   const handlePaste = async () => {
     if (!song || !pasteText.trim()) return;
     setSaving(true);
@@ -599,15 +613,17 @@ export function AddChordSheetDialog({
       // editable/parser fallback and preserve the rich HTML separately.
       const sourceText = pasteText;
       const sourceHtml = pasteHtml || pasteEditorRef.current?.innerHTML || undefined;
+      const savedKey = getSaveKey();
       const sheet = await addTextChordSheet(
         song.id,
         savePastedChartText(sourceText.trim()),
-        key,
+        savedKey,
         sourceHtml,
       );
       toast({ title: 'Chart saved', description: `Pasted ${sheet.key === 'numbers' ? '#' : sheet.key} chart for ${song.title}.` });
       setPasteText('');
       setPasteHtml(null);
+      setKeyConfirmationOpen(false);
       onUploaded?.([sheet.id]);
       onClose();
     } catch (e: any) {
@@ -616,6 +632,7 @@ export function AddChordSheetDialog({
   };
 
   const detected = pasteText ? detectKeyFromText(pasteText) : null;
+  const saveKey = pasteText ? getSaveKey() : key;
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -677,7 +694,10 @@ export function AddChordSheetDialog({
                     e.currentTarget.textContent = next.text;
                   }
                   const found = detectKeyFromText(next.text);
-                  if (found) setKey(found);
+                  if (found) {
+                    keyOverrideRef.current = false;
+                    setKey(found);
+                  }
                   keepPasteHtmlRef.current = false;
                 }}
                 onInput={(e) => {
@@ -689,7 +709,10 @@ export function AddChordSheetDialog({
                     setPasteHtml(null);
                   }
                   const found = detectKeyFromText(next);
-                  if (found) setKey(found);
+                  if (found) {
+                    keyOverrideRef.current = false;
+                    setKey(found);
+                  }
                 }}
                 className="rich-paste-editor min-h-[180px] w-full whitespace-pre-wrap overflow-auto rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]"
               />
@@ -717,7 +740,10 @@ export function AddChordSheetDialog({
               id="cs-key"
               value={key}
               disabled={lockKey && mode === 'upload'}
-              onChange={e => setKey(e.target.value as ChordKey)}
+              onChange={e => {
+                keyOverrideRef.current = true;
+                setKey(e.target.value as ChordKey);
+              }}
               className="w-full rounded-xl border border-border/50 bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-60"
             >
               {WORSHIP_ALL_KEYS.map(k => (
@@ -728,9 +754,9 @@ export function AddChordSheetDialog({
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
             {mode === 'paste' ? (
-              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handlePaste}
+              <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={requestPasteSave}
                 disabled={!pasteText.trim() || saving}>
-                {saving ? <ButtonSpinner className="mr-2" /> : null} Save chart
+                Save chart
               </Button>
             ) : (
               <Button className="flex-1 rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpload}
@@ -741,6 +767,25 @@ export function AddChordSheetDialog({
           </div>
         </div>
       </DialogContent>
+      <AlertDialog open={keyConfirmationOpen} onOpenChange={setKeyConfirmationOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm original key</AlertDialogTitle>
+            <AlertDialogDescription>
+              This chart will be saved as being in the key of{' '}
+              <strong className="text-foreground">{saveKey === 'numbers' ? '#' : saveKey}</strong>.
+              Is this correct?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Go back</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePaste} disabled={saving}>
+              {saving ? <ButtonSpinner className="mr-2" /> : null}
+              Confirm and save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

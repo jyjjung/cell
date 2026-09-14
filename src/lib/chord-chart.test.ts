@@ -66,6 +66,14 @@ describe('chord chart paste', () => {
     expect(detectKeyFromText(SAMPLE)).toBe('E');
   });
 
+  it('prefers the explicit key metadata line over an earlier lyric phrase', () => {
+    expect(detectKeyFromText('The key - E is important\nKey - A | Tempo - 72')).toBe('A');
+  });
+
+  it('detects bracketed key metadata from pasted chord sheets', () => {
+    expect(detectKeyFromText('Song title\nKey - [D] | Tempo - 72')).toBe('D');
+  });
+
   it('parses title, intro bars, and verse chords above lyrics', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks[0]).toEqual({ type: 'title', text: "Thank God I'm Free" });
@@ -125,6 +133,40 @@ CCLI License # 620075
     if (verse?.type === 'lyric') {
       expect(verse.parts.some((p) => p.chord === 'G/B')).toBe(true);
     }
+  });
+
+  it('can transpose from the key declared in the pasted chart', () => {
+    const blocks = transposeBlocks(parseChordChart(`Touch Of Heaven
+Key - A
+
+VERSE
+D2
+How I live for the moments`), detectKeyFromText(`Key - A`) ?? 'C', 'C');
+    const verse = blocks.find((b) => b.type === 'lyric');
+    expect(verse?.type).toBe('lyric');
+    if (verse?.type === 'lyric') {
+      expect(verse.parts[0]?.chord).toBe('F2');
+    }
+  });
+
+  it('updates the chart key header when transposing', () => {
+    const blocks = transposeBlocks(parseChordChart(SAMPLE), 'E', 'G');
+    expect(blocks).toContainEqual({
+      type: 'meta',
+      text: 'Key - G | Tempo - 128 | Time - 4/4',
+    });
+  });
+
+  it('adds a chart key header when pasted text has no metadata key', () => {
+    const blocks = transposeBlocks(parseChordChart(`VERSE
+E
+Amazing grace`), 'E', 'G');
+    expect(blocks[0]).toEqual({ type: 'meta', text: 'Key - G' });
+    expect(blocks[1]).toEqual({ type: 'section', text: 'VERSE' });
+  });
+
+  it('transposes lowercase chord roots and slash bass notes', () => {
+    expect(transposeChord('e/g#', 1, 'F')).toBe('F/A');
   });
 
   it('parses a verse as separate lyric lines, not one run-on block', () => {

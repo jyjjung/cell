@@ -77,7 +77,9 @@ export function splitSheetsForViewer(sheets: SongChordSheet[]): {
 }
 
 export function detectKeyFromText(text: string): ChordKey | null {
-  const match = text.match(/\bkey\s*[-–—:]\s*([A-G](?:#|b)?)/i);
+  const keyValue = String.raw`(?:\[\s*)?([A-G](?:#|b)?)(?:\s*\])?`;
+  const explicitMatch = text.match(new RegExp(String.raw`(?:^|[|\n])\s*key\s*[-–—:]\s*${keyValue}`, 'im'));
+  const match = explicitMatch ?? text.match(new RegExp(String.raw`\bkey\s*[-–—:]\s*${keyValue}`, 'i'));
   if (!match) return null;
   const raw = match[1];
   const normalized = `${raw[0].toUpperCase()}${raw.slice(1)}` as ChordKey;
@@ -1055,7 +1057,7 @@ export function transposeChartHtml(html: string, originalKey: ChordKey, displayK
   });
   root.querySelectorAll('.chart-meta').forEach((el) => {
     el.textContent = (el.textContent ?? '').replace(
-      /\bkey\s*[-–—:]\s*([A-G](?:#|b)?)/i,
+      /\bkey\s*[-–—:]\s*(?:\[\s*)?([A-G](?:#|b)?)(?:\s*\])?/i,
       () => `Key - ${displayKey === 'numbers' ? '#' : displayKey}`,
     );
   });
@@ -1633,7 +1635,8 @@ function preferFlats(key: ChordKey): boolean {
 }
 
 function transposeNote(note: string, semitones: number, flats: boolean): string {
-  const idx = NOTE_INDEX[note];
+  const normalized = `${note[0]?.toUpperCase() ?? ''}${note.slice(1)}`;
+  const idx = NOTE_INDEX[normalized];
   if (idx == null) return note;
   const next = (idx + semitones + 12 * 8) % 12;
   return flats ? FLAT_NOTES[next] : SHARP_NOTES[next];
@@ -1649,7 +1652,7 @@ export function transposeChord(chord: string, semitones: number, targetKey: Chor
   const inner = wrapped ? chord.slice(1, -1) : chord;
   if (/^N\.?C\.?$|^NC$|^N\/C$/i.test(inner)) return chord;
 
-  const match = inner.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/);
+  const match = inner.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/i);
   if (!match) return chord;
   const flats = preferFlats(targetKey);
   const root = transposeNote(match[1], semitones, flats);
@@ -1657,6 +1660,44 @@ export function transposeChord(chord: string, semitones: number, targetKey: Chor
   const bass = match[3] ? `/${transposeNote(match[3], semitones, flats)}` : '';
   const next = `${root}${suffix}${bass}`;
   return wrapped ? `(${next})` : next;
+}
+
+function displayedKeyLabel(key: ChordKey): string {
+  return key === 'numbers' ? '#' : key;
+}
+
+function ensureDisplayedKey(blocks: ChartBlock[], displayKey: ChordKey): ChartBlock[] {
+  const keyText = `Key - ${displayedKeyLabel(displayKey)}`;
+  const keyIndex = blocks.findIndex((block) => (
+    block.type === 'meta' && /\bkey\s*[-–—:]\s*(?:\[\s*)?[A-G](?:#|b)?(?:\s*\])?/i.test(block.text)
+  ));
+
+  if (keyIndex >= 0) {
+    return blocks.map((block, index) => (
+      index === keyIndex && block.type === 'meta'
+        ? {
+            ...block,
+            text: block.text.replace(
+              /\bkey\s*[-–—:]\s*(?:\[\s*)?[A-G](?:#|b)?(?:\s*\])?/i,
+              keyText,
+            ),
+          }
+        : block
+    ));
+  }
+
+  const firstBodyIndex = blocks.findIndex((block) => (
+    block.type === 'section'
+      || block.type === 'measure'
+      || block.type === 'lyric'
+      || block.type === 'note'
+  ));
+  const insertAt = firstBodyIndex >= 0 ? firstBodyIndex : blocks.length;
+  return [
+    ...blocks.slice(0, insertAt),
+    { type: 'meta', text: keyText },
+    ...blocks.slice(insertAt),
+  ];
 }
 
 const NASHVILLE: Record<number, string> = {
@@ -1678,16 +1719,20 @@ function toNashville(chord: string, originalKey: Exclude<ChordKey, 'numbers'>): 
   const wrapped = chord.startsWith('(') && chord.endsWith(')');
   const inner = wrapped ? chord.slice(1, -1) : chord;
   if (/^N\.?C\.?$|^NC$|^N\/C$/i.test(inner)) return chord;
-  const match = inner.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/);
+  const match = inner.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/i);
   if (!match) return chord;
-  const rootIdx = NOTE_INDEX[match[1]];
+  const root = `${match[1][0]?.toUpperCase() ?? ''}${match[1].slice(1)}`;
+  const rootIdx = NOTE_INDEX[root];
   const keyIdx = NOTE_INDEX[originalKey];
   if (rootIdx == null || keyIdx == null) return chord;
   const degree = NASHVILLE[(rootIdx - keyIdx + 12) % 12];
   const suffix = match[2] ?? '';
   let bass = '';
-  if (match[3] && NOTE_INDEX[match[3]] != null) {
-    bass = `/${NASHVILLE[(NOTE_INDEX[match[3]] - keyIdx + 12) % 12]}`;
+  const bassNote = match[3]
+    ? `${match[3][0]?.toUpperCase() ?? ''}${match[3].slice(1)}`
+    : '';
+  if (bassNote && NOTE_INDEX[bassNote] != null) {
+    bass = `/${NASHVILLE[(NOTE_INDEX[bassNote] - keyIdx + 12) % 12]}`;
   }
   const next = `${degree}${suffix}${bass}`;
   return wrapped ? `(${next})` : next;
@@ -1706,16 +1751,16 @@ export function transposeBlocks(
   displayKey: ChordKey,
 ): ChartBlock[] {
   const map = chordTransposeMapper(originalKey, displayKey);
-  if (!map) return blocks;
+  if (!map) return ensureDisplayedKey(blocks, displayKey);
 
-  return blocks.map((block) => {
+  return ensureDisplayedKey(blocks.map((block) => {
     if (block.type === 'measure') {
       return { ...block, text: mapChordsInText(block.text, map) };
     }
     if (block.type === 'meta') {
       return {
         ...block,
-        text: block.text.replace(/\bkey\s*[-–—:]\s*([A-G](?:#|b)?)/i, (_m, _k) =>
+        text: block.text.replace(/\bkey\s*[-–—:]\s*(?:\[\s*)?([A-G](?:#|b)?)(?:\s*\])?/i, (_m, _k) =>
           `Key - ${displayKey === 'numbers' ? '#' : displayKey}`),
       };
     }
@@ -1728,7 +1773,7 @@ export function transposeBlocks(
       };
     }
     return block;
-  });
+  }), displayKey);
 }
 
 export function lyricLineText(parts: ChartLyricPart[]): string {

@@ -750,6 +750,7 @@ function AddSongToSetlistDialog({
             ?? notesEditor.sheet
           }
           initialAnnotationId={notesEditor.annotationId}
+          initialDisplayKey={selectedKey}
           startDrawing
           onClose={() => setNotesEditor(null)}
         />
@@ -906,6 +907,7 @@ function EditSetlistSongDialog({
             ?? notesEditor.sheet
           }
           initialAnnotationId={notesEditor.annotationId}
+          initialDisplayKey={selectedKey}
           startDrawing
           onClose={() => setNotesEditor(null)}
         />
