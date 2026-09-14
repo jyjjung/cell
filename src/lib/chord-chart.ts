@@ -246,6 +246,15 @@ function chartPasteQuality(text: string): number {
 function expandOneLine(line: string): string {
   const trimmed = line.trim();
   if (!trimmed) return line;
+  if (line.includes('(4)')) {
+    const compactRe = new RegExp(`(\\(?${CHORD_BODY}\\)?)(?=[A-Za-z])`, 'gi');
+    const compact = line.replace(compactRe, (token, _match, offset: number) => {
+      const rest = line.slice(offset + token.length);
+      if (/m7$/i.test(token) && /^sus/i.test(rest)) return token;
+      return shouldSplitInlineChord(line, offset, token) ? `${token}\n` : token;
+    });
+    if (compact !== line) return compact;
+  }
   const gluedStart = trimmed.match(new RegExp(`^(${CHORD_BODY})(?=[A-Z][a-z])`));
   if (gluedStart && isStandaloneChordToken(gluedStart[1])) {
     return `${gluedStart[1]}\n${trimmed.slice(gluedStart[1].length)}`;

@@ -157,6 +157,11 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
           <span
             key={pi}
             className="relative inline-block align-top pt-[1.15em]"
+            style={{
+              minWidth: part.chord
+                ? `${Math.max(part.chord.length * 0.62 * 18, 8)}px`
+                : undefined,
+            }}
           >
             {part.chord && (
               <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[18px] font-bold leading-none', ink(surface))}>

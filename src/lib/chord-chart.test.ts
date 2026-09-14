@@ -728,6 +728,39 @@ never be ashamed to praise like this (To Ch. 1a)
     expect(texts).not.toMatch(/^ut /m);
   });
 
+  it('preserves hyphenated lyrics such as Je - sus beside nearby chords', () => {
+    const blocks = parseChordChart(`BRIDGE 2B
+E
+Oh precious is the flow
+B(4)        E       B(4)   C#m7sus   A2
+That makes me white as snow  No other fount I know
+E/G#             A2          B(4) C#m7sus
+Nothing but the blood of Je - sus
+`);
+    const lyricText = blocks
+      .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
+      .flatMap((block) => block.parts.map((part) => part.text))
+      .join(' ');
+    expect(lyricText).toContain('Je - sus');
+  });
+
+  it('unglues chords from the exact compact Bridge 2B paste format', () => {
+    const blocks = parseChordChart(`Bridge 2b
+EOh precious is the flow
+B(4)That makes me white as Esnow B/D#
+C#m7No other A2fount I know
+E/G#Nothing but the A2blood of B(4)Je - C#m7sus`);
+    const chords = blocks
+      .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
+      .flatMap((block) => block.parts.filter((part) => part.chord).map((part) => part.chord));
+    const lyricText = blocks
+      .filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric')
+      .flatMap((block) => block.parts.map((part) => part.text))
+      .join(' ');
+    expect(chords).toEqual(['E', 'B(4)', 'E', 'B/D#', 'C#m7', 'A2', 'E/G#', 'A2', 'B(4)', 'C#m7sus']);
+    expect(lyricText).toContain('Je -');
+  });
+
   it('parses ChordPro brackets', () => {
     const blocks = parseChordChart('[E]Hello [G]world');
     const lyric = blocks.find((b) => b.type === 'lyric');

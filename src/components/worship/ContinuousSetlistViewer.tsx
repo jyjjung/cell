@@ -123,11 +123,13 @@ export function ContinuousSetlistViewer({
   title,
   startIndex = 0,
   onClose,
+  presentation = 'setlist',
 }: {
   slides: ViewerSlide[];
   title?: string;
   startIndex?: number;
   onClose: () => void;
+  presentation?: 'setlist' | 'single';
 }) {
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -293,11 +295,11 @@ export function ContinuousSetlistViewer({
             <p className={cn('truncate text-sm font-bold', viewerTitlePrimary(isDark))}>{title || activeSlide?.songTitle}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
               <span className={cn('text-[11px] font-semibold', viewerTitleMuted(isDark, 'low'))}>
-                {slides.length} songs
+                {presentation === 'setlist' ? `${slides.length} songs` : `${slides.length} sheet groups`}
               </span>
               {activeSlide && (
                 <span className={cn('truncate text-[11px] font-medium', viewerTitleMuted(isDark))}>
-                  · {activeSection + 1}. {activeSlide.songTitle}
+                  {presentation === 'setlist' ? `· ${activeSection + 1}. ${activeSlide.songTitle}` : `· ${activeSlide.key}`}
                 </span>
               )}
               {isZoomed && (
@@ -429,7 +431,10 @@ export function ContinuousSetlistViewer({
                   className="px-3 py-4 leading-[0]"
                   style={{ width: contentWidth }}
                 >
-                  <div className="flex flex-col overflow-hidden bg-white shadow-[0_12px_40px_rgba(0,0,0,0.28)]">
+                  <div className={cn(
+                    'flex flex-col overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.28)]',
+                    presentation === 'setlist' ? 'bg-white' : 'bg-[#1f1f1f]',
+                  )}>
                   {slides.map((section, sectionIdx) => {
                     const hasTracks = (section.referenceTracks?.length ?? 0) > 0;
                     return (
@@ -439,15 +444,17 @@ export function ContinuousSetlistViewer({
                         className="flex w-full flex-col leading-[0]"
                       >
                         <div id={`setlist-anchor-${sectionIdx}`} className="h-0 w-full shrink-0" aria-hidden />
-                        <SectionTitleBar
-                          sectionIdx={sectionIdx}
-                          title={section.songTitle}
-                          keyName={section.key}
-                          hasTracks={hasTracks}
-                          listening={listenSection === sectionIdx}
-                          isDark={isDark}
-                          onListen={() => openListenForSection(sectionIdx)}
-                        />
+                        {presentation === 'setlist' && (
+                          <SectionTitleBar
+                            sectionIdx={sectionIdx}
+                            title={section.songTitle}
+                            keyName={section.key}
+                            hasTracks={hasTracks}
+                            listening={listenSection === sectionIdx}
+                            isDark={isDark}
+                            onListen={() => openListenForSection(sectionIdx)}
+                          />
+                        )}
                         {(section.textSheets ?? []).length > 0 && (
                           (section.textSheets ?? []).map((sheet) => (
                             <EmbeddedTextChart

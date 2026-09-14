@@ -102,13 +102,14 @@ function renderChordPage(
 }
 
 export function FullScreenViewer({
-  slides, startIndex = 0, onClose, mode = 'slides', title,
+  slides, startIndex = 0, onClose, mode = 'slides', title, presentation = 'setlist',
 }: {
   slides: ViewerSlide[];
   startIndex?: number;
   onClose: () => void;
   mode?: ViewerMode;
   title?: string;
+  presentation?: 'setlist' | 'single';
 }) {
   if (mode === 'continuous') {
     return (
@@ -117,6 +118,7 @@ export function FullScreenViewer({
         title={title}
         startIndex={startIndex}
         onClose={onClose}
+        presentation={presentation}
       />
     );
   }

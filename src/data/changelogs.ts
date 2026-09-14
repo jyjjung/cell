@@ -26,6 +26,10 @@ export const changelogs: ChangelogEntry[] = [
         type: 'Improved',
         text: 'Photo and text sheets now open in the same continuous viewer, making it easy to scroll through every page in order.',
       },
+      {
+        type: 'Improved',
+        text: 'Single-song sheets now keep their normal presentation while using the same smooth zooming and panning controls as setlists.',
+      },
     ],
   },
   {

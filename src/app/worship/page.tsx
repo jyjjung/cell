@@ -347,30 +347,19 @@ function SongDetailView({
 
       {/* Full-screen viewer — continuously scrolls through all photo and text sheets for this song */}
       {viewSheet && (() => {
-        const allSheets = song.chordSheets;
-        const slides: ViewerSlide[] = Array.from(
-          allSheets.reduce((map, s) => {
-            if (!map.has(s.key)) map.set(s.key, []);
-            map.get(s.key)!.push(s);
-            return map;
-          }, new Map<ChordKey, SongChordSheet[]>())
-        ).map(([key, sheets]) => ({
-            ...splitSheetsForViewer(sheets),
-            songTitle: song.title,
-            key,
-            songId: song.id,
-          } as ViewerSlide)
-        );
-        const start = slides.findIndex((slide) =>
-          (slide.textSheets ?? []).some((sheet) => sheet.id === viewSheet.id)
-          || (viewSheet.imageUrl && slide.imageUrls.includes(viewSheet.imageUrl)),
-        );
+        const slides: ViewerSlide[] = [{
+          ...splitSheetsForViewer([viewSheet]),
+          songTitle: song.title,
+          key: viewSheet.key,
+          songId: song.id,
+        }];
         return (
           <FullScreenViewer
             slides={slides}
-            startIndex={Math.max(0, start)}
+            startIndex={0}
             mode="continuous"
             title={song.title}
+            presentation="single"
             onClose={() => setViewSheet(null)}
           />
         );
