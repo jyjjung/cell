@@ -675,8 +675,15 @@ export function AddChordSheetDialog({
                   const plain = e.clipboardData.getData('text/plain');
                   const markdown = html ? chartHtmlToMarkdown(html) : plain.replace(/\r\n?/g, '\n');
                   e.preventDefault();
-                  setPasteText(markdown);
-                  const found = detectKeyFromText(markdown);
+                  const target = e.currentTarget;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  const next = `${target.value.slice(0, start)}${markdown}${target.value.slice(end)}`;
+                  setPasteText(next);
+                  requestAnimationFrame(() => {
+                    target.selectionStart = target.selectionEnd = start + markdown.length;
+                  });
+                  const found = detectKeyFromText(next);
                   if (found) {
                     keyOverrideRef.current = false;
                     setKey(found);

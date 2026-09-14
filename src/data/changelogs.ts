@@ -28,6 +28,10 @@ export const changelogs: ChangelogEntry[] = [
       },
       {
         type: 'Improved',
+        text: 'Text-based sheet music now uses larger, easier-to-read text throughout the chart.',
+      },
+      {
+        type: 'Improved',
         text: 'Text charts now keep section headings and instrumental chord lines as readable as the rest of the sheet, with previews available when choosing pages.',
       },
       {

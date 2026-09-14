@@ -130,6 +130,7 @@ export function TextChordChartViewer({
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [textEditing, setTextEditing] = useState(false);
   const [textDraft, setTextDraft] = useState(() => editableChartText(sheet));
+  const [renderedText, setRenderedText] = useState(() => editableChartText(sheet));
   const [textDirty, setTextDirty] = useState(false);
   const textEditorRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -147,7 +148,9 @@ export function TextChordChartViewer({
   useEffect(() => {
     setDisplayKey(initialDisplayKey ?? sheet.key);
     if (!textEditing) {
-      setTextDraft(editableChartText(sheet));
+      const nextText = editableChartText(sheet);
+      setTextDraft(nextText);
+      setRenderedText(nextText);
       setTextDirty(false);
     }
   }, [initialDisplayKey, sheet.id, sheet.key]);
@@ -296,12 +299,13 @@ export function TextChordChartViewer({
     if (!currentUser || !textDirty) return;
     setSaving(true);
     try {
-      const sourceText = savePastedChartText(textDraft);
+      const sourceText = savePastedChartText(textEditorRef.current?.value ?? textDraft);
       await updateChordSheet(songId, sheet.id, {
         sourceText,
         sourceHtml: '',
       });
       setTextDraft(sourceText);
+      setRenderedText(sourceText);
       setTextDirty(false);
       setTextEditing(false);
     } finally {
@@ -545,7 +549,14 @@ export function TextChordChartViewer({
                   const plain = e.clipboardData.getData('text/plain');
                   const markdown = html ? chartHtmlToMarkdown(html) : plain.replace(/\r\n?/g, '\n');
                   e.preventDefault();
-                  setTextDraft(markdown);
+                  const target = e.currentTarget;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  const next = `${target.value.slice(0, start)}${markdown}${target.value.slice(end)}`;
+                  setTextDraft(next);
+                  requestAnimationFrame(() => {
+                    target.selectionStart = target.selectionEnd = start + markdown.length;
+                  });
                   setTextDirty(true);
                 }}
                 onInput={(e) => {
@@ -561,6 +572,7 @@ export function TextChordChartViewer({
           ) : (
             <TextChordChartCanvas
               sheet={sheet}
+              sourceText={renderedText}
               chartTitle={songTitle}
               originalKey={sheet.key}
               displayKey={displayKey}

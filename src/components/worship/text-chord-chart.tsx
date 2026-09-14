@@ -82,49 +82,60 @@ function ink(surface: ChartSurface, kind: 'primary' | 'muted' | 'soft' = 'primar
   return 'text-white';
 }
 
+function updateRenderedKeyMetadata(block: ChartBlock, displayKey: ChordKey): ChartBlock {
+  if (block.type !== 'meta' || !/^\s*key\s*[-–—:]/i.test(block.text)) return block;
+  return {
+    ...block,
+    text: block.text.replace(
+      /^(\s*key\s*[-–—:]\s*)[A-G](?:#|b)?/i,
+      `$1${displayKey === 'numbers' ? '#' : displayKey}`,
+    ),
+  };
+}
+
 function ChartBlockView({ block }: { block: ChartBlock }) {
   const surface = useChartSurface();
   if (block.type === 'title') {
     return (
-      <h1 className={cn('max-w-full text-[24px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
+      <h1 className={cn('max-w-full text-[28px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </h1>
     );
   }
   if (block.type === 'credit') {
     return (
-      <p className={cn('max-w-full text-[13px] leading-snug [overflow-wrap:anywhere]', ink(surface, 'muted'))}>
+      <p className={cn('max-w-full text-[16px] leading-snug [overflow-wrap:anywhere]', ink(surface, 'muted'))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'meta') {
     return (
-      <p className={cn('max-w-full text-[13px] font-semibold [overflow-wrap:anywhere]', ink(surface))}>
+      <p className={cn('max-w-full text-[16px] font-semibold [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'section') {
     return (
-      <p className={cn('pt-2 text-[17px] font-bold uppercase tracking-wide', ink(surface))}>
+      <p className={cn('pt-2 text-[20px] font-bold uppercase tracking-wide', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'measure') {
     return (
-      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[17px] font-bold leading-snug', ink(surface))}>
+      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[20px] font-bold leading-snug', ink(surface))}>
         <span className="inline">{block.text}</span>
         {block.cue && (
-          <span className={cn('ml-2 text-[13px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
+          <span className={cn('ml-2 text-[16px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
         )}
       </p>
     );
   }
   if (block.type === 'note') {
     return (
-      <p className={cn('text-[13px] italic', ink(surface, 'soft'))}>
+      <p className={cn('text-[16px] italic', ink(surface, 'soft'))}>
         {block.text}
       </p>
     );
@@ -153,10 +164,10 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
   if (parts.length === 1 && parts[0].text.trim() && !parts[0].chord) {
     return (
-      <p className={cn('max-w-full text-[17px] leading-snug [overflow-wrap:anywhere]', ink(surface))}>
+      <p className={cn('max-w-full text-[20px] leading-snug [overflow-wrap:anywhere]', ink(surface))}>
         {parts[0].text}
         {block.cue && (
-          <span className={cn('ml-2 text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</span>
+          <span className={cn('ml-2 text-[16px] italic', ink(surface, 'soft'))}>{block.cue}</span>
         )}
       </p>
     );
@@ -164,7 +175,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
 
   return (
     <div className="max-w-full pb-1">
-      <div className="max-w-full whitespace-normal text-[17px] leading-snug">
+      <div className="max-w-full whitespace-normal text-[20px] leading-snug">
         {parts.map((part, pi) => (
           <span
             key={pi}
@@ -176,7 +187,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
             }}
           >
             {part.chord && (
-              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[15px] font-bold leading-none', ink(surface))}>
+              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[18px] font-bold leading-none', ink(surface))}>
                 <ChordLabel chord={part.chord} />
               </span>
             )}
@@ -187,7 +198,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
         ))}
       </div>
       {block.cue && (
-        <p className={cn('text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</p>
+        <p className={cn('text-[16px] italic', ink(surface, 'soft'))}>{block.cue}</p>
       )}
     </div>
   );
@@ -264,6 +275,7 @@ export function RichChordChartBody({ html, originalKey, displayKey }: {
 
 export function TextChordChartCanvas({
   sheet,
+  sourceText,
   chartTitle,
   originalKey,
   displayKey,
@@ -277,6 +289,7 @@ export function TextChordChartCanvas({
   theme: _theme = TEXT_CHART_SURFACE,
 }: {
   sheet: SongChordSheet;
+  sourceText?: string;
   chartTitle?: string;
   originalKey: ChordKey;
   displayKey: ChordKey;
@@ -293,9 +306,10 @@ export function TextChordChartCanvas({
   const surface = TEXT_CHART_SURFACE;
   const richSource = sheet.sourceHtml?.trim() || '';
   const source = useMemo(() => {
+    if (sourceText != null) return sourceText;
     if (!richSource) return sheet.sourceText || '';
     return chartHtmlToMarkdown(richSource) || sheet.sourceText || '';
-  }, [richSource, sheet.sourceText]);
+  }, [richSource, sheet.sourceText, sourceText]);
   const sourceOriginalKey = useMemo(
     // Prefer the persisted plain text: rich clipboard extraction can contain
     // presentation-only metadata that should not redefine the chart's key.
@@ -303,12 +317,27 @@ export function TextChordChartCanvas({
     [sheet.sourceText, source, originalKey],
   );
   const blocks = useMemo(() => {
-    const parsed = transposeBlocks(parseChordChart(source), sourceOriginalKey, displayKey);
-    if (parsed.some((block) => block.type === 'title') || !chartTitle?.trim()) return parsed;
+    const transposed = transposeBlocks(parseChordChart(source), sourceOriginalKey, displayKey);
+    const keyMetadata = transposed
+      .map((block, index) => ({ block, index }))
+      .filter(({ block }) => block.type === 'meta' && /^\s*key\s*[-–—:]/i.test(block.text));
+    const preferredKeyMetadata = keyMetadata.find(({ block }) => (
+      block.type === 'meta' && /\|/.test(block.text)
+    ));
+    const parsed = preferredKeyMetadata
+      ? transposed.flatMap((block, index) => {
+        if (block.type !== 'meta' || !/^\s*key\s*[-–—:]/i.test(block.text)) return [block];
+        if (index !== preferredKeyMetadata.index) return [];
+        return [updateRenderedKeyMetadata(block, displayKey)];
+      })
+      : transposed.filter((block) => !(
+        block.type === 'meta' && /^\s*key\s*[-–—:]/i.test(block.text)
+      ));
+    const rendered = parsed.map((block) => updateRenderedKeyMetadata(block, displayKey));
+    if (rendered.some((block) => block.type === 'title') || !chartTitle?.trim()) return rendered;
     return [
       { type: 'title' as const, text: chartTitle.trim() },
-      { type: 'meta' as const, text: `Key - ${displayKey === 'numbers' ? '#' : displayKey}` },
-      ...parsed,
+      ...rendered,
     ];
   }, [chartTitle, displayKey, source, sourceOriginalKey]);
   const { outerRef, innerRef, scale, innerHeight } = useScaledChart(exportMode ? 1 : zoom);

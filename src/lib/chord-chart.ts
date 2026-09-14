@@ -77,9 +77,10 @@ export function splitSheetsForViewer(sheets: SongChordSheet[]): {
 }
 
 export function detectKeyFromText(text: string): ChordKey | null {
+  const searchableText = text.replace(/(?:\*\*|__|`)/g, '');
   const keyValue = String.raw`(?:\[\s*)?([A-G](?:#|b)?)(?:\s*\])?`;
-  const explicitMatch = text.match(new RegExp(String.raw`(?:^|[|\n])\s*key\s*[-–—:]\s*${keyValue}`, 'im'));
-  const match = explicitMatch ?? text.match(new RegExp(String.raw`\bkey\s*[-–—:]\s*${keyValue}`, 'i'));
+  const explicitMatch = searchableText.match(new RegExp(String.raw`(?:^|[|\n])\s*key\s*[-–—:]\s*${keyValue}`, 'im'));
+  const match = explicitMatch ?? searchableText.match(new RegExp(String.raw`\bkey\s*[-–—:]\s*${keyValue}`, 'i'));
   if (!match) return null;
   const raw = match[1];
   const normalized = `${raw[0].toUpperCase()}${raw.slice(1)}` as ChordKey;
@@ -343,6 +344,10 @@ export function expandInlineChords(text: string): string {
   for (const line of text.split('\n')) {
     if (!line.trim()) {
       out.push('');
+      continue;
+    }
+    if (/^\s*##\s+/.test(line)) {
+      out.push(line);
       continue;
     }
     // Rich clipboard extraction already uses ChordPro markers. Do not run
@@ -1149,7 +1154,7 @@ function chordTransposeMapper(originalKey: ChordKey, displayKey: ChordKey): ((ch
 /** Transpose `.chart-chord` spans and measure lines in stored chart HTML. */
 export function transposeChartHtml(html: string, originalKey: ChordKey, displayKey: ChordKey): string {
   const map = chordTransposeMapper(originalKey, displayKey);
-  if (!map || typeof DOMParser === 'undefined') return html;
+  if (typeof DOMParser === 'undefined') return html;
   let parsed: Document;
   try {
     parsed = new DOMParser().parseFromString(`<div id="chart-root">${html}</div>`, 'text/html');
@@ -1158,19 +1163,24 @@ export function transposeChartHtml(html: string, originalKey: ChordKey, displayK
   }
   const root = parsed.getElementById('chart-root');
   if (!root) return html;
-  root.querySelectorAll('.chart-chord').forEach((el) => {
-    el.textContent = map(el.textContent ?? '');
-  });
-  root.querySelectorAll('.chart-measure').forEach((el) => {
-    el.textContent = mapChordsInText(el.textContent ?? '', map);
-  });
+  if (map) {
+    root.querySelectorAll('.chart-chord').forEach((el) => {
+      el.textContent = map(el.textContent ?? '');
+    });
+    root.querySelectorAll('.chart-measure').forEach((el) => {
+      el.textContent = mapChordsInText(el.textContent ?? '', map);
+    });
+  }
   root.querySelectorAll('.chart-meta').forEach((el) => {
+    // A Markdown key token is already a chart chord; let the normal chord
+    // mapping above preserve its formatting and transpose it.
+    if (el.querySelector('.chart-chord')) return;
     el.textContent = (el.textContent ?? '').replace(
       /\bkey\s*[-–—:]\s*(?:\[\s*)?([A-G](?:#|b)?)(?:\s*\])?/i,
       () => `Key - ${displayKey === 'numbers' ? '#' : displayKey}`,
     );
   });
-  root.querySelectorAll('.chart-line:not(.chart-chord-line)').forEach((el) => {
+  if (map) root.querySelectorAll('.chart-line:not(.chart-chord-line)').forEach((el) => {
     if (el.querySelector('.chart-chord')) return;
     const text = el.textContent ?? '';
     if (isMeasureLine(text)) el.textContent = mapChordsInText(text, map);
@@ -1213,6 +1223,10 @@ export function normalizeMarkdownChart(text: string): string {
   return text.split('\n').map((rawLine) => {
     let line = rawLine;
     line = line.replace(/^(\s{0,3})#{1,6}\s+/, '$1');
+    const boldHeader = line.match(/^\s*(\*\*|__)([^*_]+)\1\s*$/);
+    if (boldHeader && !isChordToken(boldHeader[2].trim()) && !isSkipLine(boldHeader[2])) {
+      return `## ${boldHeader[2].trim()}`;
+    }
     line = line.replace(
       /^(\s*)(\*\*|__)([^*_]+)\2(?=\S)/,
       (_match, indent: string, marker: string, content: string) => (
@@ -1579,9 +1593,11 @@ export function parseChordChart(raw: string): ChartBlock[] {
   const text = stripCcliFooter(expandInlineChords(
     hasExplicitMarkdown ? markdownSource : normalizePaste(raw),
   ));
-  const parsed = looksLikeChordPro(text) && !looksLikeSongSelectLayout(text)
+  const parsed = hasExplicitMarkdown
     ? parsePlainOrChordPro(text)
-    : parseSongSelect(text);
+    : looksLikeChordPro(text) && !looksLikeSongSelectLayout(text)
+      ? parsePlainOrChordPro(text)
+      : parseSongSelect(text);
   const normalized = normalizeMeasureMarkers(normalizeLyricWhitespace(attachDirectionCues(coalescePickupChords(parsed))));
   return hasExplicitMarkdown ? normalized : splitMergedLyricRows(normalized);
 }
@@ -1591,15 +1607,25 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
   let sawBody = false;
   for (const rawLine of text.split('\n')) {
     const line = rawLine.replace(/\s+$/g, '');
+    const explicitHeader = line.match(/^##\s+(.+)$/);
     if (isSkipLine(line)) continue;
     if (!line.trim()) continue;
-    if (!sawBody && !isSectionHeader(line) && !isMeasureLine(line) && !line.includes('[')) {
+    if (
+      !sawBody
+      && !explicitHeader
+      && !isSectionHeader(line)
+      && !isMeasureLine(line)
+      && !isMetaLine(line)
+      && !line.includes('[')
+    ) {
       if (blocks.length === 0) blocks.push({ type: 'title', text: line.trim() });
       else blocks.push({ type: 'credit', text: line.trim() });
       continue;
     }
     sawBody = true;
-    const trailingMeasure = line.match(/^(.+?)\s+(\|.*\|)\s*$/);
+    const trailingMeasure = !line.trimStart().startsWith('|')
+      ? line.match(/^(.+?)\s+(\|.*\|)\s*$/)
+      : null;
     const measureText = trailingMeasure?.[2]?.replace(/\[([^\]]+)\]/g, '$1');
     const measureTokens = measureText
       ?.split('|')
@@ -1619,7 +1645,11 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
       blocks.push({ type: 'measure', text: measureText });
       continue;
     }
-    if (isSectionHeader(line)) {
+    if (explicitHeader) {
+      const headerText = explicitHeader[1].trim();
+      if (blocks.length === 0 && !sawBody) blocks.push({ type: 'title', text: headerText });
+      else blocks.push({ type: 'section', text: isSectionHeader(headerText) ? headerText.toUpperCase() : headerText });
+    } else if (isSectionHeader(line)) {
       blocks.push({ type: 'section', text: line.trim().toUpperCase() });
     } else if (isMeasureLine(line)) {
       blocks.push({ type: 'measure', text: line.trim() });

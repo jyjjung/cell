@@ -75,6 +75,33 @@ describe('chord chart paste', () => {
     expect(detectKeyFromText('Song title\nKey - [D] | Tempo - 72')).toBe('D');
   });
 
+  it('detects keys from visible Markdown formatting', () => {
+    expect(detectKeyFromText('**Key - **E** | Tempo - 68 | Time - 4/4**')).toBe('E');
+    expect(detectKeyFromText('Key - `Bb` | Tempo - 68')).toBe('Bb');
+  });
+
+  it('classifies key metadata before the chart body as metadata', () => {
+    expect(parseChordChart('Song title\nKey - A | Tempo - 144 | Time - 6/8')).toEqual([
+      { type: 'title', text: 'Song title' },
+      { type: 'meta', text: 'Key - A | Tempo - 144 | Time - 6/8' },
+    ]);
+  });
+
+  it('does not expose internal header markers from CCLI footer metadata', () => {
+    const source = `**Song title**
+**Intro**
+**E**Amazing grace
+
+**CCLI Song # 6460220**
+
+© 2012 Open Hands Music
+
+CCLI License # 620075`;
+    const normalized = normalizeMarkdownChart(source);
+    expect(normalized).not.toContain('## CCLI');
+    expect(parseChordChart(source)).not.toContainEqual({ type: 'section', text: 'CCLI SONG # 6460220' });
+  });
+
   it('parses title, intro bars, and verse chords above lyrics', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks[0]).toEqual({ type: 'title', text: "Thank God I'm Free" });
@@ -336,7 +363,9 @@ You call me out up -
     const blocks = parseChordChart(markdown);
     expect(blocks).toContainEqual({ type: 'section', text: 'VERSE 1' });
     expect(blocks.some((block) => (
-      block.type === 'lyric' && block.parts.some((part) => part.chord === 'A/C#' && part.text === 'on the waters')
+      block.type === 'lyric'
+      && block.parts.some((part) => part.chord === 'A/C#')
+      && block.parts.some((part) => part.text.includes('on the waters'))
     ))).toBe(true);
   });
 

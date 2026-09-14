@@ -275,4 +275,11 @@ describe('transposeChartHtml', () => {
     expect(next).not.toContain('E/G#');
     expect(next).toContain('shaking');
   });
+
+  it('transposes a bold Markdown key token like any other chord', () => {
+    const html = formatChartHtml(`<div>Key - <strong>E</strong> | Tempo - 144</div>`);
+    const next = transposeChartHtml(html, 'E', 'F');
+    expect(next).toContain('Key - <span class="chart-chord">F</span>');
+    expect(next).not.toContain('Key - E');
+  });
 });
