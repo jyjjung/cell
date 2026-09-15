@@ -351,6 +351,22 @@ export function TextChordChartCanvas({
     onStrokesChange?.(next);
   };
 
+  useEffect(() => {
+    if (!drawing || !onStrokesChange) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    // iPad Safari can continue scrolling the parent after pointer events begin.
+    // Keep the chart still for the duration of a touch gesture while drawing.
+    const preventTouchScroll = (event: TouchEvent) => {
+      event.preventDefault();
+    };
+    svg.addEventListener('touchmove', preventTouchScroll, { passive: false });
+    return () => {
+      svg.removeEventListener('touchmove', preventTouchScroll);
+    };
+  }, [drawing, onStrokesChange]);
+
   const appendPoint = (pt: PointerPt) => {
     const cur = currentRef.current;
     if (!cur) return;

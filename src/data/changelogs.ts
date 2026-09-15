@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.19.9',
+    subtitle: 'Steady sheet notes',
+    date: 'September 15, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Sheet music now stays still while you draw notes on iPad, and you can switch to scrolling mode to reach any part of a long chart.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.8',
     subtitle: 'Ready chord viewing',
     date: 'September 14, 2026',

@@ -27,7 +27,7 @@ import { chartHtmlToMarkdown, LETTER_KEYS, savePastedChartText } from '@/lib/cho
 import { cn } from '@/lib/utils';
 import type { ChordChartAnnotation, ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
 import { Timestamp } from 'firebase/firestore';
-import { Check, Eraser, Highlighter, Pencil, Plus, Trash2, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, Eraser, Highlighter, MoveVertical, Pencil, Plus, Trash2, Undo2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -520,6 +520,18 @@ export function TextChordChartViewer({
             onClick={() => handleStrokesChange([])}
           />
           <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className={cn(
+              'h-11 rounded-xl',
+              isDark ? 'border-white/20 bg-transparent text-white hover:bg-white/10' : '',
+            )}
+            onClick={() => setEditing(false)}
+          >
+            <MoveVertical className="h-4 w-4" /> Scroll sheet
+          </Button>
+          <Button
             className="h-11 rounded-xl"
             disabled={!dirty || saving}
             onClick={() => void saveActive()}
@@ -532,7 +544,10 @@ export function TextChordChartViewer({
       <div
         ref={scrollRef}
         className="min-h-0 flex-1 overflow-auto p-3 sm:p-5"
-        style={{ touchAction: 'pan-x pan-y' }}
+        style={{
+          touchAction: editing && annotationId !== 'none' ? 'none' : 'pan-x pan-y',
+          overscrollBehavior: editing && annotationId !== 'none' ? 'contain' : undefined,
+        }}
       >
         <div className={cn(
           'mx-auto w-full max-w-6xl overflow-visible rounded-xl border',
