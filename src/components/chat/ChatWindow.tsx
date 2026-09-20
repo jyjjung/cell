@@ -174,7 +174,11 @@ function ChatWindowBody({
   const listChat = useMemo(() => chats.find((c) => c.id === chatId) ?? null, [chats, chatId]);
   const displayChat = chat ?? listChat;
   const isBirthdayChat = displayChat?.kind === 'birthday';
-  const isArchivedBirthdayChat = isBirthdayChat && displayChat?.archived === true;
+  const isArchivedBirthdayChat = Boolean(
+    isBirthdayChat &&
+      (displayChat?.archived === true ||
+        (displayChat?.expiresAt?.toDate().getTime() ?? Infinity) <= Date.now()),
+  );
   const canWriteBirthdayChat =
     !isBirthdayChat ||
     (!isArchivedBirthdayChat && Boolean(currentUser && displayChat?.members.includes(currentUser.uid)));
@@ -487,13 +491,15 @@ function ChatWindowBody({
           )}
         </div>
 
-        <IconButton
-          variant="ghost"
-          onClick={() => setSettingsOpen(true)}
-          className="rounded-full bg-muted/20 hover:bg-muted/40"
-          aria-label="Chat info"
-          icon={Info}
-        />
+        {!isArchivedBirthdayChat && (
+          <IconButton
+            variant="ghost"
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-full bg-muted/20 hover:bg-muted/40"
+            aria-label="Chat info"
+            icon={Info}
+          />
+        )}
       </header>
 
       <div
@@ -719,7 +725,9 @@ function ChatWindowBody({
         />
       )}
 
-      {chat && <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />}
+      {chat && !isArchivedBirthdayChat && (
+        <GroupSettingsDialog isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} chat={chat} />
+      )}
 
       {activeThreadId && chat && (
         <ThreadWindow

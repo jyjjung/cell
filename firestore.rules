@@ -507,7 +507,11 @@ service cloud.firestore {
       }
 
       function isArchivedBirthdayChat() {
-        return isBirthdayChat() && chatDoc().data.get('archived', false) == true;
+        return isBirthdayChat()
+          && (
+            chatDoc().data.get('archived', false) == true
+            || chatDoc().data.expiresAt <= request.time
+          );
       }
 
       function isCreatingMember() {
@@ -634,10 +638,13 @@ service cloud.firestore {
                         : true
                     );
 
-      allow update: if (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen', 'memberUnreadCount']))
-                    || memberCanUpdateGroupPhoto()
-                    || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
-                    || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
+      allow update: if !isArchivedBirthdayChat()
+                    && (
+                      (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen', 'memberUnreadCount']))
+                      || memberCanUpdateGroupPhoto()
+                      || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
+                      || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group')
+                    ); // App admin can update any group chat meta
 
       match /messages/{messageId} {
         allow read: if isBirthdayChat() ? request.auth != null : isMember();

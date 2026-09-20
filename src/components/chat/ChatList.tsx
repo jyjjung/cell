@@ -91,16 +91,24 @@ export default function ChatList({
     .filter((chat) => chatBelongsToApp(chat, appScope))
     .filter(
       (chat) =>
-        chat.archived === true ||
-        chat.kind !== 'birthday' ||
-        chat.birthdayPersonId === currentUser?.uid,
+        (chat.kind === 'birthday' && (
+          chat.archived === true ||
+          (chat.expiresAt?.toDate().getTime() ?? Infinity) <= Date.now() ||
+          chat.birthdayPersonId === currentUser?.uid
+        )) ||
+        chat.kind !== 'birthday',
     )
     .filter((chat) => !!getChatDetails(chat));
   const archivedChats = filteredChats.filter(
-    (chat) => chat.kind === 'birthday',
+    (chat) =>
+      chat.kind === 'birthday' &&
+      (chat.archived === true || (chat.expiresAt?.toDate().getTime() ?? Infinity) <= Date.now()),
   );
   const activeChats = filteredChats.filter(
-    (chat) => chat.kind !== 'birthday',
+    (chat) => !(
+      chat.kind === 'birthday' &&
+      (chat.archived === true || (chat.expiresAt?.toDate().getTime() ?? Infinity) <= Date.now())
+    ),
   );
 
   const handleLinkClick = (path: string) => {
