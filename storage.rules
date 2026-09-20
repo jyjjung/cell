@@ -14,39 +14,26 @@ service firebase.storage {
     }
 
     match /chats/{chatId}/{fileName} {
-      function isBirthdayChat() {
-        return firestore.exists(/databases/(default)/documents/chats/$(chatId))
-          && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') == 'birthday';
-      }
-
-      function isActiveBirthdayChat() {
-        return isBirthdayChat()
-          && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time;
-      }
-
       function canReadChatMedia() {
-        return isBirthdayChat()
-          ? isActiveBirthdayChat()
-          : firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members.hasAny([request.auth.uid]);
+        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members.hasAny([request.auth.uid]);
       }
 
       allow read: if isSignedIn()
-        && canReadChatMedia();
+        && (
+          (chatId.matches('^birthday-.*')
+            && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time)
+          || canReadChatMedia()
+        );
       allow write: if isSignedIn()
         && (
-          isActiveBirthdayChat()
+          chatId.matches('^birthday-.*')
           || (
             canReadChatMedia()
-            && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') != 'birthday'
           )
         )
         && (
-          firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') != 'birthday'
-          || (
-            request.resource.size < 10 * 1024 * 1024
-            && request.resource.contentType.matches('image/.*')
-            && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time
-          )
+          request.resource.size < 10 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*')
         );
     }
 
