@@ -14,33 +14,12 @@ service firebase.storage {
     }
 
     match /chats/{chatId}/{fileName} {
-      function isBirthdayChat() {
-        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') == 'birthday';
-      }
-
-      function isBirthdayPerson() {
-        return isBirthdayChat()
-          && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('birthdayPersonId', '') == request.auth.uid;
-      }
-
-      function isChatMember() {
-        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members.hasAny([request.auth.uid]);
-      }
-
-      function isActiveBirthdayChat() {
-        return !isBirthdayChat()
-          || firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time;
-      }
-
-      allow read: if isSignedIn()
-        && isChatMember()
-        && (isActiveBirthdayChat() || isBirthdayPerson());
+      // Chat/page access is enforced by the app and Firestore. Storage only
+      // validates authentication and uploaded image limits.
+      allow read: if isSignedIn();
       allow write: if isSignedIn()
-        && (isBirthdayChat() || isChatMember())
-        && (
-          request.resource.size < 25 * 1024 * 1024
-          && request.resource.contentType.matches('image/.*')
-        );
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
 
     match /worshipChordSheets/{songId}/{fileName} {
