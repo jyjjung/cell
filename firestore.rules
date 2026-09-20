@@ -578,24 +578,16 @@ service cloud.firestore {
       // Allow get on non-existent docs so private-chat creation can check existence.
       allow get: if request.auth != null
                  && (!exists(/databases/$(database)/documents/chats/$(chatId))
-                 || (isArchivedBirthdayChat()
+                 || (isBirthdayChat()
                      ? request.auth != null
-                     : (isBirthdayChat()
-                       ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
-                       : request.auth.uid in chatDoc().data.members)));
+                     : request.auth.uid in chatDoc().data.members));
       allow list: if request.auth != null
                   && (
                     (resource.data.get('kind', '') == 'birthday'
-                  && resource.data.get('archived', false) == true)
-                    || (resource.data.get('kind', '') == 'birthday'
-                  && request.auth.uid in resource.data.members
-                      && (
-                        resource.data.expiresAt > request.time
-                        || resource.data.get('birthdayPersonId', '') == request.auth.uid
-                      ))
+                  )
                     || (
-                      resource.data.get('kind', '') != 'birthday'
-                      && request.auth.uid in resource.data.members
+                  resource.data.get('kind', '') != 'birthday'
+                  && request.auth.uid in resource.data.members
                     )
                   );
       allow delete: if isAppAdmin(request.auth.uid)
@@ -648,11 +640,7 @@ service cloud.firestore {
                     || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
 
       match /messages/{messageId} {
-        allow read: if isArchivedBirthdayChat()
-                   ? request.auth != null
-                   : (isBirthdayChat()
-                     ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
-                     : isMember());
+        allow read: if isBirthdayChat() ? request.auth != null : isMember();
 
         allow create: if (!isArchivedBirthdayChat()
                        && (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember()))
@@ -682,7 +670,7 @@ service cloud.firestore {
                         );
 
         match /thread/{threadMessageId} {
-          allow read: if isArchivedBirthdayChat() ? request.auth != null : isMember();
+          allow read: if isBirthdayChat() ? request.auth != null : isMember();
 
           allow create: if !isArchivedBirthdayChat() && isMember()
                          && request.auth.uid == request.resource.data.senderId

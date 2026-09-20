@@ -88,7 +88,6 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
     const archivedBirthdayChatsQuery = query(
       collection(db, CHATS_COLLECTION),
       where('kind', '==', 'birthday'),
-      where('archived', '==', true),
     );
     const snapshots = new Map<string, Chat>();
 

@@ -175,6 +175,9 @@ function ChatWindowBody({
   const displayChat = chat ?? listChat;
   const isBirthdayChat = displayChat?.kind === 'birthday';
   const isArchivedBirthdayChat = isBirthdayChat && displayChat?.archived === true;
+  const canWriteBirthdayChat =
+    !isBirthdayChat ||
+    (!isArchivedBirthdayChat && Boolean(currentUser && displayChat?.members.includes(currentUser.uid)));
   const birthdayImagesRestricted = isBirthdayChat;
   const birthdayMemberSyncRef = useRef<string | null>(null);
 
@@ -667,7 +670,7 @@ function ChatWindowBody({
         />
       )}
 
-      {chatTab === 'messages' && !isArchivedBirthdayChat && (
+      {chatTab === 'messages' && canWriteBirthdayChat && (
       <div className="mt-auto shrink-0 bg-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
         <MessageInput
           chatId={chatId}

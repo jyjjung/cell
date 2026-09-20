@@ -97,10 +97,10 @@ export default function ChatList({
     )
     .filter((chat) => !!getChatDetails(chat));
   const archivedChats = filteredChats.filter(
-    (chat) => chat.kind === 'birthday' && chat.archived === true,
+    (chat) => chat.kind === 'birthday',
   );
   const activeChats = filteredChats.filter(
-    (chat) => !(chat.kind === 'birthday' && chat.archived === true),
+    (chat) => chat.kind !== 'birthday',
   );
 
   const handleLinkClick = (path: string) => {
