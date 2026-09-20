@@ -88,7 +88,11 @@ export default function ChatList({
 
   const filteredChats = chats
     .filter((chat) => chatBelongsToApp(chat, appScope))
-    .filter((chat) => chat.kind !== 'birthday')
+    .filter(
+      (chat) =>
+        chat.kind !== 'birthday' ||
+        chat.birthdayPersonId === currentUser?.uid,
+    )
     .filter((chat) => !!getChatDetails(chat));
 
   const handleLinkClick = (path: string) => {

@@ -579,8 +579,16 @@ service cloud.firestore {
                          : request.auth.uid in chatDoc().data.members));
       allow list: if request.auth != null
                   && (
-                    (resource.data.get('kind', '') == 'birthday' && request.auth.uid in resource.data.members && resource.data.expiresAt > request.time)
-                    || request.auth.uid in resource.data.members
+                    (resource.data.get('kind', '') == 'birthday'
+                      && request.auth.uid in resource.data.members
+                      && (
+                        resource.data.expiresAt > request.time
+                        || resource.data.get('birthdayPersonId', '') == request.auth.uid
+                      ))
+                    || (
+                      resource.data.get('kind', '') != 'birthday'
+                      && request.auth.uid in resource.data.members
+                    )
                   );
       allow delete: if isAppAdmin(request.auth.uid)
                     || (isMember() && chatDoc().data.type == 'private');

@@ -14,23 +14,30 @@ service firebase.storage {
     }
 
     match /chats/{chatId}/{fileName} {
-      function canReadChatMedia() {
+      function isBirthdayChat() {
+        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') == 'birthday';
+      }
+
+      function isBirthdayPerson() {
+        return isBirthdayChat()
+          && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('birthdayPersonId', '') == request.auth.uid;
+      }
+
+      function isChatMember() {
         return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members.hasAny([request.auth.uid]);
       }
 
+      function isActiveBirthdayChat() {
+        return !isBirthdayChat()
+          || firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time;
+      }
+
       allow read: if isSignedIn()
-        && (
-          (chatId.matches('^birthday-.*')
-            && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time)
-          || canReadChatMedia()
-        );
+        && isChatMember()
+        && (isActiveBirthdayChat() || isBirthdayPerson());
       allow write: if isSignedIn()
-        && (
-          chatId.matches('^birthday-.*')
-          || (
-            canReadChatMedia()
-          )
-        )
+        && isChatMember()
+        && isActiveBirthdayChat()
         && (
           request.resource.size < 10 * 1024 * 1024
           && request.resource.contentType.matches('image/.*')
