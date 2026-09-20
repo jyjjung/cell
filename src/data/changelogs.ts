@@ -10,6 +10,21 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.1',
+    subtitle: 'Cleaner forms',
+    date: 'September 20, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Forms now explain whether your responses are anonymous or visible to leaders before you begin, without requiring an email address.',
+      },
+      {
+        type: 'Added',
+        text: 'Form leaders can now remove responses from the admin response list when needed.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.0',
     subtitle: 'Birthday rooms',
     date: 'September 20, 2026',

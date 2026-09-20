@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { LoadingSpinner, PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import FormRenderer from '@/components/forms/FormRenderer';
 import FormSubmitThanks from '@/components/forms/FormSubmitThanks';
 import type { FormAnswerValue, FormDefinition } from '@/types/forms';
-import { isValidEmail, validateFormResponse } from '@/lib/forms/validation';
+import { validateFormResponse } from '@/lib/forms/validation';
 import {
   applyProfileReferenceAnswers,
   buildInitialAnswers,
@@ -35,15 +33,19 @@ export default function PublicFormPage(props: { params: Promise<{ publicToken: s
   const [submitted, setSubmitted] = useState(false);
 
   const [email, setEmail] = useState<string>('');
-  const [emailTouched, setEmailTouched] = useState(false);
-
   const [answers, setAnswers] = useState<Record<string, FormAnswerValue>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const hasContactEmailField = useMemo(() => (form ? formHasContactEmailField(form) : false), [form]);
-  const hasProfileEmailField = useMemo(
-    () => !!form?.fields.some((f) => f.type === 'email'),
+  const collectsIdentity = useMemo(
+    () =>
+      !!form?.fields.some((field) =>
+        field.type === 'name' ||
+        field.type === 'email' ||
+        field.type === 'contactName' ||
+        field.type === 'contactEmail',
+      ),
     [form],
   );
 
@@ -88,9 +90,6 @@ export default function PublicFormPage(props: { params: Promise<{ publicToken: s
     setFieldErrors(null);
   }, [form, currentUser, submitted]);
 
-  const emailValid = useMemo(() => isValidEmail(email), [email]);
-  const askForEmail = !currentUser && !hasContactEmailField;
-
   const handleAnswersChange = (next: Record<string, FormAnswerValue>) => {
     setAnswers(next);
     if (fieldErrors) setFieldErrors(null);
@@ -118,18 +117,6 @@ export default function PublicFormPage(props: { params: Promise<{ publicToken: s
     if (!form) return;
 
     const submitEmail = resolveSubmitEmail();
-    if (!isValidEmail(submitEmail)) {
-      setEmailTouched(true);
-      if (hasContactEmailField) {
-        const emailField = findFirstContactEmailField(form.fields);
-        if (emailField) {
-          setFieldErrors({ [emailField.id]: 'Enter a valid email address.' });
-        }
-      }
-      toast({ variant: 'destructive', title: 'Email required', description: 'Enter a valid email to submit.' });
-      return;
-    }
-
     const profile = currentUser
       ? {
           name: formatProfileName(currentUser),
@@ -271,35 +258,11 @@ export default function PublicFormPage(props: { params: Promise<{ publicToken: s
           </div>
         ) : (
           <>
-        {askForEmail ? (
-          <div className="space-y-2">
-            <Label htmlFor="guestEmail">Your email</Label>
-            <Input
-              id="guestEmail"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => setEmailTouched(true)}
-              placeholder="you@example.com"
-              aria-invalid={emailTouched && !emailValid}
-              className={emailTouched && !emailValid ? 'border-destructive focus-visible:ring-destructive' : undefined}
-            />
-            {emailTouched && !emailValid ? (
-              <p className="text-xs text-destructive" role="alert">
-                Enter a valid email address.
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                We use this to save your response so you can come back later.
-              </p>
-            )}
-          </div>
-        ) : currentUser && !hasContactEmailField && !hasProfileEmailField ? (
-          <p className="text-sm text-muted-foreground">
-            Submitting as <span className="font-medium text-foreground">{email}</span>
-          </p>
-        ) : null}
+        <p className="text-sm text-muted-foreground">
+          {collectsIdentity
+            ? 'The leaders will be able to see your name/email.'
+            : 'Your responses are anonymous.'}
+        </p>
 
         <FormRenderer
           form={form}

@@ -679,4 +679,42 @@ export async function deleteFormResponseForOwner(input: {
   return { deleted: true };
 }
 
+/** Delete a response as an admin and keep the form counters in sync. */
+export async function deleteFormResponseForAdmin(input: {
+  responseId: string;
+  formId: string;
+}): Promise<boolean> {
+  const adminApp = getAdminApp();
+  const adminDb = getAdminDb(adminApp);
+  const responseRef = adminDb.collection(FORM_RESPONSES_COLLECTION).doc(input.responseId);
+  const formRef = adminDb.collection(FORMS_COLLECTION).doc(input.formId);
+
+  await adminDb.runTransaction(async (tx) => {
+    const responseSnap = await tx.get(responseRef);
+    if (!responseSnap.exists) return;
+    const response = mapResponseDoc(responseSnap.id, responseSnap.data());
+    if (response.formId !== input.formId) return;
+
+    const formSnap = await tx.get(formRef);
+    if (!formSnap.exists) return;
+    const hadErrors = !!(
+      response.lastValidationErrors && Object.keys(response.lastValidationErrors).length > 0
+    );
+
+    tx.delete(responseRef);
+    tx.set(
+      formRef,
+      {
+        responseCount: FieldValue.increment(-1),
+        ...(hadErrors ? { needsAttentionCount: FieldValue.increment(-1) } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+
+  const remaining = await getFormResponseById(adminDb, input.responseId);
+  return remaining === null;
+}
+
 export { normalizeEmail };

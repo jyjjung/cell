@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/table';
 import { resolveExportFields, stringifyAnswerValue, type FormExportOptions } from '@/lib/forms/export-responses';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 
 type Props = {
   form: FormDefinition;
@@ -20,6 +22,7 @@ type Props = {
   startIndex?: number;
   responsive?: boolean;
   getRowClassName?: (response: FormResponse) => string | undefined;
+  onDelete?: (response: FormResponse) => void;
 };
 
 export default function ResponsesTable({
@@ -30,6 +33,7 @@ export default function ResponsesTable({
   startIndex = 0,
   responsive = false,
   getRowClassName,
+  onDelete,
 }: Props) {
   const fields: FormFieldDefinition[] = resolveExportFields(form, options);
 
@@ -43,7 +47,7 @@ export default function ResponsesTable({
 
   return (
     <div className={cn('admin-table-wrap', responsive && 'page-responsive-table')}>
-      <Table className="admin-table min-w-[640px]">
+      <Table className={cn('admin-table', onDelete ? 'min-w-[700px]' : 'min-w-[640px]')}>
         <TableHeader>
           <TableRow>
             <TableHead className="w-12">#</TableHead>
@@ -51,6 +55,7 @@ export default function ResponsesTable({
             {fields.map((field) => (
               <TableHead key={field.id}>{field.label}</TableHead>
             ))}
+            {onDelete ? <TableHead className="w-14">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,6 +74,19 @@ export default function ResponsesTable({
                   </TableCell>
                 );
               })}
+              {onDelete ? (
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
+                    aria-label="Delete response"
+                    onClick={() => onDelete(response)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

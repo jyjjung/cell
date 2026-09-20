@@ -1,7 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminApp, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { userHasAdminAccess } from '@/lib/server-admin-access';
-import { getFormById, getFormResponseById, updateFormResponseAnswers } from '@/lib/server-forms';
+import {
+  deleteFormResponseForAdmin,
+  getFormById,
+  getFormResponseById,
+  updateFormResponseAnswers,
+} from '@/lib/server-forms';
 import { validateFormResponse } from '@/lib/forms/validation';
 import { resolveSubmitterName } from '@/lib/forms/submitter-display';
 import type { FormAnswerValue } from '@/types/forms';
@@ -86,3 +91,37 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  props: { params: Promise<{ formId: string; responseId: string }> }
+) {
+  const params = await props.params;
+  try {
+    const adminApp = getAdminApp();
+    const adminDb = getAdminDb(adminApp);
+    const adminAuth = getAdminAuth(adminApp);
+
+    const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const decoded = await adminAuth.verifyIdToken(token);
+    if (!(await userHasAdminAccess(adminDb, decoded.uid))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const response = await getFormResponseById(adminDb, params.responseId);
+    if (!response || response.formId !== params.formId) {
+      return NextResponse.json({ error: 'Response not found' }, { status: 404 });
+    }
+
+    const deleted = await deleteFormResponseForAdmin({
+      responseId: params.responseId,
+      formId: params.formId,
+    });
+    if (!deleted) return NextResponse.json({ error: 'Response not found' }, { status: 404 });
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
+  }
+}

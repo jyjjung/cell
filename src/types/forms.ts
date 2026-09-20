@@ -110,7 +110,7 @@ export interface FormResponse {
   id: string;
   formId: string;
   formTitleSnapshot?: string;
-  submitterEmail: string; // normalized lowercase
+  submitterEmail: string; // normalized lowercase; empty for anonymous submissions
   submitterName?: string;
   submitterUserId?: string | null; // when submitted by an authenticated user
   /**
@@ -123,4 +123,3 @@ export interface FormResponse {
   updatedAt?: Timestamp;
   updatedBy?: 'guest' | 'admin';
 }
-

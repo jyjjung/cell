@@ -10,6 +10,16 @@ import { PageLoading } from '@/components/ui/loading-spinner';
 import { Button } from '@/components/ui/button';
 import ResponsesTable from '@/components/forms/ResponsesTable';
 import ExportResponsesDialog from '@/components/forms/ExportResponsesDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   Check,
@@ -35,6 +45,8 @@ export default function AdminFormResponsesPage({ formId }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [deletingResponse, setDeletingResponse] = useState<FormResponse | null>(null);
+  const [busyDelete, setBusyDelete] = useState(false);
 
   const loadForm = useCallback(async () => {
     const headers = await getClientAuthHeaders();
@@ -127,6 +139,33 @@ export default function AdminFormResponsesPage({ formId }: Props) {
     }
   };
 
+  const confirmDeleteResponse = async () => {
+    if (!deletingResponse) return;
+    setBusyDelete(true);
+    try {
+      const headers = await getClientAuthHeaders();
+      const res = await fetch(
+        `/api/forms/admin/definitions/${encodeURIComponent(formId)}/responses/${encodeURIComponent(deletingResponse.id)}`,
+        { method: 'DELETE', headers },
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Delete failed');
+      }
+      setResponses((prev) => prev.filter((response) => response.id !== deletingResponse.id));
+      setForm((prev) =>
+        prev ? { ...prev, responseCount: Math.max(0, (prev.responseCount ?? 0) - 1) } : prev,
+      );
+      toast({ title: 'Response deleted' });
+      setDeletingResponse(null);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Delete failed';
+      toast({ variant: 'destructive', title: 'Forms', description: message });
+    } finally {
+      setBusyDelete(false);
+    }
+  };
+
   if (!loadingAuth && !isAdmin) {
     return (
       <div className="page-container">
@@ -193,6 +232,7 @@ export default function AdminFormResponsesPage({ formId }: Props) {
                 ? 'bg-destructive/5'
                 : undefined
             }
+            onDelete={setDeletingResponse}
           />
 
           {cursor ? (
@@ -222,6 +262,35 @@ export default function AdminFormResponsesPage({ formId }: Props) {
         fetchAllForExport={fetchAllForExport}
         exportCap={EXPORT_CAP}
       />
+
+      <AlertDialog
+        open={!!deletingResponse}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) setDeletingResponse(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this response?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the response and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busyDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={busyDelete}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDeleteResponse();
+              }}
+            >
+              {busyDelete ? 'Deleting…' : 'Delete response'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

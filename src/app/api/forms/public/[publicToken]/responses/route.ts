@@ -72,15 +72,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ publ
     const emailRaw = body.email;
     const answersRaw = body.answers;
 
-    if (typeof emailRaw !== 'string' || emailRaw.trim().length === 0) {
-      return NextResponse.json({ error: 'email is required' }, { status: 400 });
-    }
     if (!answersRaw || typeof answersRaw !== 'object') {
       return NextResponse.json({ error: 'answers is required' }, { status: 400 });
     }
 
     let answers = answersRaw as Record<string, FormAnswerValue>;
-    const submitterEmail = normalizeEmail(emailRaw);
+    let submitterEmail = typeof emailRaw === 'string' ? normalizeEmail(emailRaw) : '';
 
     const adminApp = getAdminApp();
     const adminDb = getAdminDb(adminApp);
@@ -123,9 +120,13 @@ export async function POST(request: NextRequest, props: { params: Promise<{ publ
         const firstName = typeof data.firstName === 'string' ? data.firstName : '';
         const lastName = typeof data.lastName === 'string' ? data.lastName : '';
         profileName = formatProfileName({ firstName, lastName });
+        const profileEmail = typeof data.email === 'string' ? normalizeEmail(data.email) : '';
+        if (!submitterEmail && profileEmail) {
+          submitterEmail = profileEmail;
+        }
         answers = applyProfileReferenceAnswers(form, answers, {
           name: profileName,
-          email: typeof data.email === 'string' ? data.email : submitterEmail,
+          email: profileEmail || submitterEmail,
         });
       }
     }
