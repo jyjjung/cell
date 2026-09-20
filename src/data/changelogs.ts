@@ -10,6 +10,29 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.0',
+    subtitle: 'Birthday rooms',
+    date: 'September 20, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'People with the Birthday chat role can celebrate each birthday together in a temporary room with image sharing.',
+      },
+      {
+        type: 'Security',
+        text: 'Birthday room images have no in-app download control and rooms are automatically removed at midnight.',
+      },
+      {
+        type: 'Added',
+        text: 'The em. home page now reminds you when there is a birthday chat to join.',
+      },
+      {
+        type: 'Changed',
+        text: 'Everyone with the Birthday chat role is added automatically, with membership managed by the role.',
+      },
+    ],
+  },
+  {
     version: 'v1.19.9',
     subtitle: 'Steady sheet notes',
     date: 'September 15, 2026',

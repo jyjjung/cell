@@ -32,6 +32,7 @@ interface ChatMessageListProps {
   onLoadOlder?: () => void;
   loadingOlder?: boolean;
   hasMoreOlder?: boolean;
+  restrictedImages?: boolean;
 }
 
 function findVisibleNeighbor(messages: ChatMessage[], startIndex: number, direction: 1 | -1): ChatMessage | undefined {
@@ -58,6 +59,7 @@ export default function ChatMessageList({
   onLoadOlder,
   loadingOlder = false,
   hasMoreOlder = false,
+  restrictedImages = false,
 }: ChatMessageListProps) {
   const scrollRef = useChatScrollLoadOlder({ onLoadOlder, hasMoreOlder, loadingOlder });
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -160,6 +162,7 @@ export default function ChatMessageList({
             showAvatar={showAvatar}
             showName={showName}
             showHalo={chat.appScope !== 'ndcpc'}
+            restrictedImages={restrictedImages}
           />
         </div>,
       );
@@ -193,6 +196,7 @@ export default function ChatMessageList({
     onOpenImage,
     onOpenWorshipViewer,
     sendersByUserId,
+    restrictedImages,
   ]);
 
   return (

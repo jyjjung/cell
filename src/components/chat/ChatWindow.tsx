@@ -21,6 +21,7 @@ import { translations } from '@/lib/translations';
 import { primeChatPreviewMedia } from '@/lib/media-cache';
 import { getReferenceTracks, resolveChordSheetsForSetlistSong } from '@/lib/worship-utils';
 import { splitSheetsForViewer } from '@/lib/chord-chart';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import type { ChatMemberInfo, WorshipSong } from '@/types';
 import { Button } from '../ui/button';
 import { IconButton } from '../ui/icon-button';
@@ -172,6 +173,42 @@ function ChatWindowBody({
   const blockingLoad = loadingMessages && messages.length === 0;
   const listChat = useMemo(() => chats.find((c) => c.id === chatId) ?? null, [chats, chatId]);
   const displayChat = chat ?? listChat;
+  const isBirthdayChat = displayChat?.kind === 'birthday';
+  const birthdayImagesRestricted = isBirthdayChat;
+  const birthdayMemberSyncRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isBirthdayChat || !displayChat || birthdayMemberSyncRef.current === displayChat.id) return;
+    birthdayMemberSyncRef.current = displayChat.id;
+
+    void getClientAuthHeaders()
+      .then((headers) =>
+        fetch('/api/chat/birthday-members', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            chatId: displayChat.id,
+            expiresAt: displayChat.birthdayDate
+              ? new Date(
+                  Number(displayChat.birthdayDate.slice(0, 4)),
+                  Number(displayChat.birthdayDate.slice(5, 7)) - 1,
+                  Number(displayChat.birthdayDate.slice(8, 10)) + 1,
+                ).toISOString()
+              : undefined,
+          }),
+        }),
+      )
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(data.error || 'Could not update birthday chat members.');
+        }
+      })
+      .catch((error) => {
+        birthdayMemberSyncRef.current = null;
+        console.error('[ChatWindow] Birthday member sync failed:', error);
+      });
+  }, [displayChat, isBirthdayChat]);
 
   // Keep em. and Preschool chats on their own URL trees.
   useEffect(() => {
@@ -380,6 +417,17 @@ function ChatWindowBody({
               />
             </div>
             <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
+            {isBirthdayChat && displayChat?.expiresAt && (
+              <p className="text-xs font-medium text-primary truncate">
+                Closes {displayChat.expiresAt.toDate().toLocaleString([], {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </p>
+            )}
           </div>
           <div className="h-10 w-10" aria-hidden />
         </header>
@@ -422,6 +470,17 @@ function ChatWindowBody({
             />
           </div>
           <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
+          {isBirthdayChat && displayChat?.expiresAt && (
+            <p className="text-xs font-medium text-primary truncate">
+              Closes {displayChat.expiresAt.toDate().toLocaleString([], {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </p>
+          )}
         </div>
 
         <IconButton
@@ -498,6 +557,7 @@ function ChatWindowBody({
             onLoadOlder={loadOlderMessages}
             loadingOlder={loadingOlder}
             hasMoreOlder={hasMoreOlder}
+            restrictedImages={birthdayImagesRestricted}
           />
         ) : chatTab === 'photos' ? (
           <ChatPhotosAlbum
@@ -505,6 +565,7 @@ function ChatWindowBody({
             allUsers={allUsers}
             onOpenImage={setOpenImageUrl}
             loadingMore={loadingMorePhotos}
+            restrictedImages={birthdayImagesRestricted}
           />
         ) : (
           <ChatLinksList messages={messages} allUsers={allUsers} />
@@ -601,6 +662,7 @@ function ChatWindowBody({
           initialIndex={Math.max(0, openImageIndex)}
           onClose={() => setOpenImageUrl(null)}
           onDownload={downloadChatImage}
+          hideDownload={birthdayImagesRestricted}
         />
       )}
 
@@ -662,6 +724,7 @@ function ChatWindowBody({
           chat={chat}
           onClose={() => setActiveThreadId(null)}
           onDeleteParentMessage={deleteMessage}
+          restrictedImages={birthdayImagesRestricted}
         />
       )}
     </div>

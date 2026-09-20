@@ -60,6 +60,7 @@ interface MessageBubbleProps {
   showName?: boolean;
   /** Halos are Cell-only; NDCPC and other surfaces pass false. */
   showHalo?: boolean;
+  restrictedImages?: boolean;
 }
 
 function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubbleProps): boolean {
@@ -82,6 +83,7 @@ function messageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubblePr
     prev.showAvatar === next.showAvatar &&
     prev.showName === next.showName &&
     prev.showHalo === next.showHalo
+    && prev.restrictedImages === next.restrictedImages
   );
 }
 
@@ -90,6 +92,7 @@ const MessageBubble = React.memo(function MessageBubble({
   onOpenThread, onOpenImage, onOpenWorshipViewer, parentMessage, parentSenderName,
   threadParentMessage, onDelete,
   showAvatar = true, showName = true, showHalo = true,
+  restrictedImages = false,
 }: MessageBubbleProps) {
   const { currentUser, isAdmin } = useAuth();
   const [youtubePlaying, setYoutubePlaying] = useState(false);
@@ -299,6 +302,9 @@ const MessageBubble = React.memo(function MessageBubble({
                       ),
                       isSpecialContent && (isSender ? "ml-auto" : "mr-auto")
                       )}
+                      onContextMenu={(event) => {
+                        if (restrictedImages) event.preventDefault();
+                      }}
                   >
                         {/* Parent message quote block */}
                         {parentMessage && (

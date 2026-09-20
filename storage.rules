@@ -14,9 +14,39 @@ service firebase.storage {
     }
 
     match /chats/{chatId}/{fileName} {
-      // Membership checks via Firestore were blocking upload and getDownloadURL.
-      // Any signed-in user may read/write chat media paths.
-      allow read, write: if isSignedIn();
+      function canUseBirthdayChat() {
+        return firestore.exists(/databases/(default)/documents/chats/$(chatId))
+          && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') == 'birthday'
+          && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+          && (
+            firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isApproved == true
+            || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['app.admin'])
+          )
+          && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['birthday.chat', 'app.admin']);
+      }
+
+      function canReadChatMedia() {
+        return firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') == 'birthday'
+          ? canUseBirthdayChat()
+          : firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members.hasAny([request.auth.uid]);
+      }
+
+      allow read: if isSignedIn()
+        && canReadChatMedia()
+        && (
+          firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') != 'birthday'
+          || firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time
+        );
+      allow write: if isSignedIn()
+        && canReadChatMedia()
+        && (
+          firestore.get(/databases/(default)/documents/chats/$(chatId)).data.get('kind', '') != 'birthday'
+          || (
+            request.resource.size < 10 * 1024 * 1024
+            && request.resource.contentType.matches('image/.*')
+            && firestore.get(/databases/(default)/documents/chats/$(chatId)).data.expiresAt > request.time
+          )
+        );
     }
 
     match /worshipChordSheets/{songId}/{fileName} {

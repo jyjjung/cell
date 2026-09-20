@@ -19,8 +19,15 @@ import { getPrivateChatId } from '@/lib/chat-utils';
 import { formatUserDisplayName } from '@/lib/formatting';
 import { DEFAULT_AVATAR_DATA } from '@/lib/avatar-options';
 import { resolveAvatarForApp } from '@/lib/user-avatars';
+import { hasCapability } from '@/lib/role-capabilities';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 
 const CHATS_COLLECTION = 'chats';
+
+function birthdayDayEnd(birthdayDate: string): Date {
+  const [year, month, day] = birthdayDate.split('-').map(Number);
+  return new Date(year, month - 1, day + 1);
+}
 
 export function useChats() {
   const { currentUser } = useAuth();
@@ -129,8 +136,119 @@ export function useChats() {
     return chatId;
   }, [currentUser]);
 
+  const createBirthdayChat = useCallback(async (
+    birthdayPerson: UserProfileData,
+    birthdayDate: string,
+    members: UserProfileData[],
+  ): Promise<string> => {
+    if (!currentUser || !hasCapability(currentUser.capabilityKeys, 'birthday.chat') && !currentUser.isAdmin) {
+      throw new Error('You do not have permission to use birthday chat.');
+    }
+    if (!birthdayPerson.uid || !birthdayDate) throw new Error('Birthday chat details are incomplete.');
+
+    const memberProfiles = [currentUser, ...members, birthdayPerson]
+      .filter((profile, index, all) => all.findIndex((item) => item.uid === profile.uid) === index);
+    const memberIds = memberProfiles.map((profile) => profile.uid);
+    const chatId = `birthday-${birthdayPerson.uid}-${birthdayDate}`;
+    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+    const memberInfo: { [uid: string]: ChatMemberInfo } = {};
+    const memberSeen: { [uid: string]: Timestamp | ReturnType<typeof serverTimestamp> } = {};
+    const memberUnreadCount: { [uid: string]: number } = {};
+
+    memberProfiles.forEach((profile) => {
+      memberInfo[profile.uid] = {
+        firstName: profile.firstName ?? '',
+        lastName: profile.lastName ?? '',
+        avatar: resolveAvatarForApp(profile, 'cell') || DEFAULT_AVATAR_DATA,
+      };
+      memberSeen[profile.uid] = profile.uid === currentUser.uid ? serverTimestamp() : new Timestamp(0, 0);
+      memberUnreadCount[profile.uid] = 0;
+    });
+
+    await runTransaction(db, async (transaction) => {
+      const existing = await transaction.get(chatDocRef);
+      if (existing.exists()) {
+        const existingData = existing.data();
+        const existingMembers = Array.isArray(existingData.members) ? existingData.members : [];
+        const existingAdmins = Array.isArray(existingData.admins) ? existingData.admins : [];
+
+        if (
+          existingData.kind === 'birthday' &&
+          existingAdmins.includes(currentUser.uid)
+        ) {
+          const missingProfiles = memberProfiles.filter(
+            (profile) => !existingMembers.includes(profile.uid),
+          );
+
+          if (missingProfiles.length > 0) {
+            const mergedMemberInfo = {
+              ...(existingData.memberInfo ?? {}),
+              ...Object.fromEntries(
+                missingProfiles.map((profile) => [
+                  profile.uid,
+                  {
+                    firstName: profile.firstName ?? '',
+                    lastName: profile.lastName ?? '',
+                    avatar: resolveAvatarForApp(profile, 'cell') || DEFAULT_AVATAR_DATA,
+                  },
+                ]),
+              ),
+            };
+            const mergedMemberSeen = {
+              ...(existingData.memberSeen ?? {}),
+              ...Object.fromEntries(missingProfiles.map((profile) => [profile.uid, new Timestamp(0, 0)])),
+            };
+            const mergedUnreadCount = {
+              ...(existingData.memberUnreadCount ?? {}),
+              ...Object.fromEntries(missingProfiles.map((profile) => [profile.uid, 0])),
+            };
+
+            transaction.update(chatDocRef, {
+              members: [...existingMembers, ...missingProfiles.map((profile) => profile.uid)],
+              memberInfo: mergedMemberInfo,
+              memberSeen: mergedMemberSeen,
+              memberUnreadCount: mergedUnreadCount,
+            });
+          }
+        }
+        return;
+      }
+      const expiresAt = Timestamp.fromDate(birthdayDayEnd(birthdayDate));
+      transaction.set(chatDocRef, {
+        type: 'group',
+        appScope: 'cell',
+        kind: 'birthday',
+        birthdayPersonId: birthdayPerson.uid,
+        birthdayDate,
+        expiresAt,
+        name: `${formatUserDisplayName(birthdayPerson)}'s birthday`,
+        members: memberIds,
+        memberInfo,
+        admins: [currentUser.uid],
+        createdAt: serverTimestamp(),
+        lastMessageText: 'Birthday chat created',
+        lastMessageSentAt: serverTimestamp(),
+        memberSeen,
+        memberUnreadCount,
+      });
+    });
+
+    const headers = await getClientAuthHeaders();
+    const response = await fetch('/api/chat/birthday-members', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ chatId }),
+    });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error || 'Could not update birthday chat members.');
+    }
+
+    return chatId;
+  }, [currentUser]);
+
   if (!ctx) {
-    return { chats, loading, createPrivateChat, createGroupChat };
+    return { chats, loading, createPrivateChat, createGroupChat, createBirthdayChat };
   }
 
   return {
@@ -138,5 +256,6 @@ export function useChats() {
     loading: ctx.loading,
     createPrivateChat,
     createGroupChat,
+    createBirthdayChat,
   };
 }

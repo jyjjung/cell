@@ -49,7 +49,8 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
 
   const isGroupAdmin = chat.type === 'group' && chat.admins?.includes(currentUser!.uid);
   const membershipLocked =
-    chat.appScope === 'ndcpc' && (chat.ndcpcKind === 'role' || chat.ndcpcKind === 'team');
+    chat.kind === 'birthday' ||
+    (chat.appScope === 'ndcpc' && (chat.ndcpcKind === 'role' || chat.ndcpcKind === 'team'));
   const canManageMembers = isGroupAdmin && !membershipLocked;
 
   const form = useForm({
@@ -149,6 +150,16 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
 
         {chat.type === 'group' ? (
           <div className="space-y-6">
+            {chat.kind === 'birthday' && chat.expiresAt && (
+              <p className="text-sm text-muted-foreground">
+                Temporary chat · closes at midnight on{' '}
+                {chat.expiresAt.toDate().toLocaleDateString([], {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+            )}
             <div className="flex flex-col items-center gap-3">
               <div className="relative h-20 w-20 shrink-0 rounded-full border border-border/50 bg-muted/20 overflow-hidden">
                 {isUploadingPhoto ? (
@@ -227,7 +238,9 @@ export default function GroupSettingsDialog({ isOpen, onOpenChange, chat }: { is
               <h4 className="font-medium text-sm">Members ({currentMembers.length})</h4>
               {membershipLocked ? (
                 <p className="text-xs text-muted-foreground">
-                  {chat.ndcpcKind === 'team'
+                  {chat.kind === 'birthday'
+                    ? 'Membership follows the Birthday chat role.'
+                    : chat.ndcpcKind === 'team'
                     ? 'Membership follows preschool manage access.'
                     : 'Membership follows the linked preschool role.'}
                 </p>

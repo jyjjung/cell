@@ -18,11 +18,13 @@ export default function ChatPhotosAlbum({
   allUsers,
   onOpenImage,
   loadingMore = false,
+  restrictedImages = false,
 }: {
   messages: ChatMessage[];
   allUsers: UserProfileData[];
   onOpenImage: (imageUrl: string) => void;
   loadingMore?: boolean;
+  restrictedImages?: boolean;
 }) {
   const usersById = useMemo(
     () => new Map(allUsers.map((u) => [u.uid, u])),
@@ -58,6 +60,9 @@ export default function ChatPhotosAlbum({
             type="button"
             variant="ghost"
             onClick={() => onOpenImage(photo.imageUrl)}
+            onContextMenu={(event) => {
+              if (restrictedImages) event.preventDefault();
+            }}
             className="relative aspect-square h-auto w-full overflow-hidden rounded-xl bg-muted/30 border border-border/30 group [content-visibility:auto] [contain-intrinsic-size:120px]"
           >
             <RemoteImage

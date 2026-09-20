@@ -14,6 +14,7 @@ interface ChatImageGalleryProps {
   initialIndex: number;
   onClose: () => void;
   onDownload: (url: string) => void;
+  hideDownload?: boolean;
   altText?: string;
 }
 
@@ -22,6 +23,7 @@ export function ChatImageGallery({
   initialIndex,
   onClose,
   onDownload,
+  hideDownload = false,
   altText = 'Image',
 }: ChatImageGalleryProps) {
   const [idx, setIdx] = useState(initialIndex);
@@ -169,15 +171,17 @@ export function ChatImageGallery({
               <Maximize className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
             <div className="w-px h-5 bg-white/20 mx-0.5 hidden sm:block" />
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => onDownload(imageUrl)}
-              className={cn(controlBtn, 'hover:bg-primary/80')}
-              aria-label="Download"
-            >
-              <Download className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
+            {!hideDownload && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onDownload(imageUrl)}
+                className={cn(controlBtn, 'hover:bg-primary/80')}
+                aria-label="Download"
+              >
+                <Download className="h-4 w-4 md:h-5 md:w-5" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -217,15 +221,21 @@ export function ChatImageGallery({
                   wrapperClass="!w-full !h-full"
                   contentClass="!w-full !h-full flex items-center justify-center"
                 >
-                  <RemoteImage
-                    src={imageUrl}
-                    alt={altText}
-                    width={1920}
-                    height={1080}
-                    draggable={false}
-                    className="max-w-[95vw] max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] object-contain select-none"
-                    sizes="95vw"
-                  />
+                  <div
+                    onContextMenu={(event) => {
+                      if (hideDownload) event.preventDefault();
+                    }}
+                  >
+                    <RemoteImage
+                      src={imageUrl}
+                      alt={altText}
+                      width={1920}
+                      height={1080}
+                      draggable={false}
+                      className="max-w-[95vw] max-h-[calc(100dvh-4.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] object-contain select-none"
+                      sizes="95vw"
+                    />
+                  </div>
                 </TransformComponent>
               );
             }}

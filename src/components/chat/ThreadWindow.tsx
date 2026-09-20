@@ -22,13 +22,15 @@ export default function ThreadWindow({
   parentMessageId,
   chat,
   onClose,
-  onDeleteParentMessage
+  onDeleteParentMessage,
+  restrictedImages = false,
 }: { 
   chatId: string; 
   parentMessageId: string;
   chat: Chat;
   onClose: () => void;
   onDeleteParentMessage?: (id: string) => void;
+  restrictedImages?: boolean;
 }) {
   const { messages, parentMessage, loading, loadingOlder, hasMoreOlder, loadOlderMessages, toggleReaction, deleteMessage, sendMessage, sendImageMessage } = useThreadMessages(chatId, parentMessageId);
   const { currentUser } = useAuth();
@@ -80,6 +82,7 @@ export default function ThreadWindow({
           onDelete={deleteMessage}
           onOpenImage={setOpenImageUrl}
           showHalo={showHalo}
+          restrictedImages={restrictedImages}
         />
       );
 
@@ -151,6 +154,7 @@ export default function ThreadWindow({
                           toggleReaction={toggleReaction}
                           onOpenImage={setOpenImageUrl}
                           showHalo={showHalo}
+                          restrictedImages={restrictedImages}
                           onDelete={(id) => {
                              onDeleteParentMessage?.(id);
                              onClose();
@@ -190,6 +194,7 @@ export default function ThreadWindow({
           initialIndex={Math.max(0, openImageIndex)}
           onClose={() => setOpenImageUrl(null)}
           onDownload={downloadChatImage}
+          hideDownload={restrictedImages}
         />
       )}
     </div>

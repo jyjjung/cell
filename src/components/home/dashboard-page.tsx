@@ -5,6 +5,7 @@ import type { AppUser } from '@/types';
 import { HomeGreeting } from '@/components/home/home-greeting';
 import { HomeBibleSection } from '@/components/home/home-bible-section';
 import { HomeAgendaSkeleton } from '@/components/home/home-agenda-row';
+import { HomeBirthdayPrompt } from '@/components/home/home-birthday-prompt';
 import { PageShell } from '@/components/ui/page-layout';
 
 /** Deferred — schedule/events hooks; not needed for first paint. */
@@ -27,6 +28,7 @@ export default function DashboardPage({ currentUser }: DashboardPageProps) {
   return (
     <PageShell>
       <HomeGreeting currentUser={currentUser} />
+      <HomeBirthdayPrompt />
       <HomeBibleSection currentUser={currentUser} />
       <HomeAgendaSection currentUser={currentUser} />
       <HomeInfoWidgets />
