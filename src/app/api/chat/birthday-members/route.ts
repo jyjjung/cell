@@ -47,13 +47,14 @@ export async function POST(request: NextRequest) {
       memberUnreadCount?: Record<string, number>;
       birthdayPersonId?: string;
       expiresAt?: FirebaseFirestore.Timestamp;
+      archived?: boolean;
     };
     const requestedExpiresAt =
       typeof body.expiresAt === 'string' ? new Date(body.expiresAt) : null;
     if (requestedExpiresAt && Number.isNaN(requestedExpiresAt.getTime())) {
       return NextResponse.json({ error: 'Invalid expiry time.' }, { status: 400 });
     }
-    if (chat.expiresAt && chat.expiresAt.toMillis() <= Date.now() && !requestedExpiresAt) {
+    if (chat.archived || (chat.expiresAt && chat.expiresAt.toMillis() <= Date.now() && !requestedExpiresAt)) {
       return NextResponse.json({ error: 'Birthday chat has expired.' }, { status: 410 });
     }
 

@@ -506,6 +506,10 @@ service cloud.firestore {
         return !isBirthdayChat() || chatDoc().data.expiresAt > request.time;
       }
 
+      function isArchivedBirthdayChat() {
+        return isBirthdayChat() && chatDoc().data.get('archived', false) == true;
+      }
+
       function isCreatingMember() {
         return request.auth != null
           && request.auth.uid in request.resource.data.members;
@@ -574,13 +578,17 @@ service cloud.firestore {
       // Allow get on non-existent docs so private-chat creation can check existence.
       allow get: if request.auth != null
                  && (!exists(/databases/$(database)/documents/chats/$(chatId))
-                     || (isBirthdayChat()
-                         ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
-                         : request.auth.uid in chatDoc().data.members));
+                 || (isArchivedBirthdayChat()
+                     ? request.auth != null
+                     : (isBirthdayChat()
+                       ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
+                       : request.auth.uid in chatDoc().data.members)));
       allow list: if request.auth != null
                   && (
                     (resource.data.get('kind', '') == 'birthday'
-                      && request.auth.uid in resource.data.members
+                  && resource.data.get('archived', false) == true)
+                    || (resource.data.get('kind', '') == 'birthday'
+                  && request.auth.uid in resource.data.members
                       && (
                         resource.data.expiresAt > request.time
                         || resource.data.get('birthdayPersonId', '') == request.auth.uid
@@ -640,11 +648,14 @@ service cloud.firestore {
                     || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group'); // App admin can update any group chat meta
 
       match /messages/{messageId} {
-        allow read: if isBirthdayChat()
-                   ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
-                     : isMember();
+        allow read: if isArchivedBirthdayChat()
+                   ? request.auth != null
+                   : (isBirthdayChat()
+                     ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
+                     : isMember());
 
-        allow create: if (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember())
+        allow create: if (!isArchivedBirthdayChat()
+                       && (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember()))
                        && request.auth.uid == request.resource.data.senderId
                        && request.resource.data.createdAt == request.time
                        && request.resource.data.seenBy.size() == 1
@@ -652,7 +663,8 @@ service cloud.firestore {
                        && (hasMessagePayload() || hasValidPollPayload())
                        && (!request.resource.data.keys().hasAny(['poll']) || hasValidPollPayload());
 
-        allow update: if (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember())
+        allow update: if (!isArchivedBirthdayChat()
+                        && (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember()))
                         && (
                            // Allow updating 'seenBy' only by adding oneself
                            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
@@ -670,16 +682,16 @@ service cloud.firestore {
                         );
 
         match /thread/{threadMessageId} {
-          allow read: if isMember();
+          allow read: if isArchivedBirthdayChat() ? request.auth != null : isMember();
 
-          allow create: if isMember()
+          allow create: if !isArchivedBirthdayChat() && isMember()
                          && request.auth.uid == request.resource.data.senderId
                          && request.resource.data.createdAt == request.time
                          && request.resource.data.seenBy.size() == 1
                          && request.resource.data.seenBy[0] == request.auth.uid
                          && hasMessagePayload();
 
-          allow update: if isMember()
+          allow update: if !isArchivedBirthdayChat() && isMember()
                           && (
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']) && !(request.auth.uid in resource.data.seenBy)) ||
                              (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||

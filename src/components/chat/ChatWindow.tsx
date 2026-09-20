@@ -174,11 +174,12 @@ function ChatWindowBody({
   const listChat = useMemo(() => chats.find((c) => c.id === chatId) ?? null, [chats, chatId]);
   const displayChat = chat ?? listChat;
   const isBirthdayChat = displayChat?.kind === 'birthday';
+  const isArchivedBirthdayChat = isBirthdayChat && displayChat?.archived === true;
   const birthdayImagesRestricted = isBirthdayChat;
   const birthdayMemberSyncRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isBirthdayChat || !displayChat || birthdayMemberSyncRef.current === displayChat.id) return;
+    if (!isBirthdayChat || isArchivedBirthdayChat || !displayChat || birthdayMemberSyncRef.current === displayChat.id) return;
     birthdayMemberSyncRef.current = displayChat.id;
 
     void getClientAuthHeaders()
@@ -208,7 +209,7 @@ function ChatWindowBody({
         birthdayMemberSyncRef.current = null;
         console.error('[ChatWindow] Birthday member sync failed:', error);
       });
-  }, [displayChat, isBirthdayChat]);
+  }, [displayChat, isBirthdayChat, isArchivedBirthdayChat]);
 
   // Keep em. and Preschool chats on their own URL trees.
   useEffect(() => {
@@ -419,7 +420,7 @@ function ChatWindowBody({
             <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
             {isBirthdayChat && displayChat?.expiresAt && (
               <p className="text-xs font-medium text-primary truncate">
-                Closes {displayChat.expiresAt.toDate().toLocaleString([], {
+                {isArchivedBirthdayChat ? 'Archived' : 'Closes'} {displayChat.expiresAt.toDate().toLocaleString([], {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -472,7 +473,7 @@ function ChatWindowBody({
           <h1 className="text-micro-label font-semibold text-foreground truncate">{chatDetails.name}</h1>
           {isBirthdayChat && displayChat?.expiresAt && (
             <p className="text-xs font-medium text-primary truncate">
-              Closes {displayChat.expiresAt.toDate().toLocaleString([], {
+              {isArchivedBirthdayChat ? 'Archived' : 'Closes'} {displayChat.expiresAt.toDate().toLocaleString([], {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -666,7 +667,7 @@ function ChatWindowBody({
         />
       )}
 
-      {chatTab === 'messages' && (
+      {chatTab === 'messages' && !isArchivedBirthdayChat && (
       <div className="mt-auto shrink-0 bg-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
         <MessageInput
           chatId={chatId}

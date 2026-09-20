@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.5',
+    subtitle: 'Birthday archive',
+    date: 'September 21, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Birthday chats are kept as shared memories in a visible archive for everyone.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.4',
     subtitle: 'Open photo sharing',
     date: 'September 20, 2026',

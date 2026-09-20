@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron-auth";
+import { getAdminApp, getAdminDb } from "@/lib/firebase-admin";
 
 export async function GET(request: NextRequest) {
   if (!isAuthorizedCronRequest(request)) {
@@ -7,11 +8,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Expired birthday rooms remain available to the birthday person as an
-    // archive. Firestore rules hide them from other members after expiry.
-    const deleted = 0;
+    const db = getAdminDb(getAdminApp());
+    const now = new Date();
+    const snapshot = await db
+      .collection('chats')
+      .where('kind', '==', 'birthday')
+      .where('expiresAt', '<=', now)
+      .get();
+    const batch = db.batch();
+    snapshot.docs.forEach((chat) => batch.update(chat.ref, { archived: true }));
+    if (!snapshot.empty) await batch.commit();
 
-    return NextResponse.json({ deleted });
+    return NextResponse.json({ archived: snapshot.size });
   } catch (error) {
     console.error("[cron/birthday-chat-cleanup]", error);
     return NextResponse.json(

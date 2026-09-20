@@ -218,6 +218,7 @@ export function useChats() {
         type: 'group',
         appScope: 'cell',
         kind: 'birthday',
+        archived: false,
         birthdayPersonId: birthdayPerson.uid,
         birthdayDate,
         expiresAt,

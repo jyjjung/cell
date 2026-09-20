@@ -457,8 +457,9 @@ export interface Chat {
   appScope?: 'cell' | 'ndcpc';
   /** Preschool team room (managers only) vs role circle. */
   ndcpcKind?: 'team' | 'role';
-  /** Birthday chats are hidden from the regular chat list and expire automatically. */
+  /** Birthday chats are hidden from the regular chat list and archived after the birthday. */
   kind?: 'birthday';
+  archived?: boolean;
   birthdayPersonId?: string;
   birthdayDate?: string;
   expiresAt?: Timestamp;

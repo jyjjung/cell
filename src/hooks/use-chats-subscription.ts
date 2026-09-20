@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Chat } from '@/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, type QuerySnapshot } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { UsersContext } from '@/contexts/users-context';
 import { useContext } from 'react';
@@ -85,63 +85,86 @@ export function useChatsSubscription(options: UseChatsSubscriptionOptions = {}) 
       collection(db, CHATS_COLLECTION),
       where('members', 'array-contains', currentUser.uid),
     );
+    const archivedBirthdayChatsQuery = query(
+      collection(db, CHATS_COLLECTION),
+      where('kind', '==', 'birthday'),
+      where('archived', '==', true),
+    );
+    const snapshots = new Map<string, Chat>();
 
-    const unsubscribe = onSnapshot(
-      chatsQuery,
-      (snapshot) => {
-        const chatsData = snapshot.docs.map((docSnap) => ({
+    const handleSnapshot = (snapshot: QuerySnapshot) => {
+      for (const docSnap of snapshot.docs) {
+        snapshots.set(docSnap.id, {
           id: docSnap.id,
           ...docSnap.data(),
-        } as Chat));
+        } as Chat);
+      }
 
-        chatsData.sort((a, b) => {
-          const getMillis = (c: Chat) => {
-            const ts = c.lastMessageSentAt || c.createdAt;
-            if (!ts) return 0;
-            if (typeof (ts as { toMillis?: () => number }).toMillis === 'function') {
-              return (ts as { toMillis: () => number }).toMillis();
-            }
-            if (ts instanceof Date) return ts.getTime();
-            return 0;
-          };
-          return getMillis(b) - getMillis(a);
-        });
+      const chatsData = [...snapshots.values()];
 
-        setChats(chatsData);
-        setLoading(false);
-        loadedUidRef.current = currentUser.uid;
-
-        primeMediaUrls(
-          chatsData.filter((c) => c.type === 'group').map((c) => c.photoURL),
-        );
-
-        // Names only — never copy chat memberInfo.avatar into the users directory.
-        // That field is app-scoped (cell vs ndcpc) and would bleed em. photos into preschool.
-        if (patchUsers) {
-          const byUid = new Map<
-            string,
-            { uid: string; firstName?: string; lastName?: string }
-          >();
-          for (const chat of chatsData) {
-            for (const [uid, info] of Object.entries(chat.memberInfo || {})) {
-              const prev = byUid.get(uid);
-              byUid.set(uid, {
-                uid,
-                firstName: info.firstName ?? prev?.firstName,
-                lastName: info.lastName ?? prev?.lastName,
-              });
-            }
+      chatsData.sort((a, b) => {
+        const getMillis = (c: Chat) => {
+          const ts = c.lastMessageSentAt || c.createdAt;
+          if (!ts) return 0;
+          if (typeof (ts as { toMillis?: () => number }).toMillis === 'function') {
+            return (ts as { toMillis: () => number }).toMillis();
           }
-          patchUsers([...byUid.values()]);
+          if (ts instanceof Date) return ts.getTime();
+          return 0;
+        };
+        return getMillis(b) - getMillis(a);
+      });
+
+      setChats(chatsData);
+      setLoading(false);
+      loadedUidRef.current = currentUser.uid;
+
+      primeMediaUrls(
+        chatsData.filter((c) => c.type === 'group').map((c) => c.photoURL),
+      );
+
+      // Names only — never copy chat memberInfo.avatar into the users directory.
+      // That field is app-scoped (cell vs ndcpc) and would bleed em. photos into preschool.
+      if (patchUsers) {
+        const byUid = new Map<
+          string,
+          { uid: string; firstName?: string; lastName?: string }
+        >();
+        for (const chat of chatsData) {
+          for (const [uid, info] of Object.entries(chat.memberInfo || {})) {
+            const prev = byUid.get(uid);
+            byUid.set(uid, {
+              uid,
+              firstName: info.firstName ?? prev?.firstName,
+              lastName: info.lastName ?? prev?.lastName,
+            });
+          }
         }
-      },
+        patchUsers([...byUid.values()]);
+      }
+    };
+
+    const unsubscribeMemberChats = onSnapshot(
+      chatsQuery,
+      handleSnapshot,
       (error) => {
         console.error('Error fetching user chats:', error);
         setLoading(false);
       },
     );
+    const unsubscribeArchivedBirthdayChats = onSnapshot(
+      archivedBirthdayChatsQuery,
+      handleSnapshot,
+      (error) => {
+        console.error('Error fetching archived birthday chats:', error);
+        setLoading(false);
+      },
+    );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeMemberChats();
+      unsubscribeArchivedBirthdayChats();
+    };
   }, [enabled, currentUser?.uid, patchUsers, tabVisible, listenersReady]);
 
   return { chats, loading };
