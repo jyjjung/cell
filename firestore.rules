@@ -496,6 +496,12 @@ service cloud.firestore {
         return chatDoc().data.get('kind', '') == 'birthday';
       }
 
+      function isBirthdayPerson() {
+        return isBirthdayChat()
+          && request.auth != null
+          && chatDoc().data.get('birthdayPersonId', '') == request.auth.uid;
+      }
+
       function isBirthdayChatActive() {
         return !isBirthdayChat() || chatDoc().data.expiresAt > request.time;
       }
@@ -569,7 +575,7 @@ service cloud.firestore {
       allow get: if request.auth != null
                  && (!exists(/databases/$(database)/documents/chats/$(chatId))
                      || (isBirthdayChat()
-                         ? isMember() && isBirthdayChatActive()
+                         ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
                          : request.auth.uid in chatDoc().data.members));
       allow list: if request.auth != null
                   && (
@@ -627,7 +633,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if isBirthdayChat()
-                     ? isMember() && isBirthdayChatActive()
+                   ? isMember() && (isBirthdayChatActive() || isBirthdayPerson())
                      : isMember();
 
         allow create: if (isBirthdayChat() ? isMember() && isBirthdayChatActive() : isMember())
