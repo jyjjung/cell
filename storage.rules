@@ -37,9 +37,8 @@ service firebase.storage {
         && (isActiveBirthdayChat() || isBirthdayPerson());
       allow write: if isSignedIn()
         && chatId.matches('^birthday-.*')
-        && isActiveBirthdayChat()
         && (
-          request.resource.size < 10 * 1024 * 1024
+          request.resource.size < 25 * 1024 * 1024
           && request.resource.contentType.matches('image/.*')
         );
     }
