@@ -36,7 +36,7 @@ service firebase.storage {
         && isChatMember()
         && (isActiveBirthdayChat() || isBirthdayPerson());
       allow write: if isSignedIn()
-        && isChatMember()
+        && chatId.matches('^birthday-.*')
         && isActiveBirthdayChat()
         && (
           request.resource.size < 10 * 1024 * 1024
