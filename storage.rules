@@ -36,7 +36,7 @@ service firebase.storage {
         && isChatMember()
         && (isActiveBirthdayChat() || isBirthdayPerson());
       allow write: if isSignedIn()
-        && isChatMember()
+        && (isBirthdayChat() || isChatMember())
         && (
           request.resource.size < 25 * 1024 * 1024
           && request.resource.contentType.matches('image/.*')
