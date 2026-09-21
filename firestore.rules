@@ -638,13 +638,20 @@ service cloud.firestore {
                         : true
                     );
 
-      allow update: if !isArchivedBirthdayChat()
-                    && (
-                      (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen', 'memberUnreadCount']))
-                      || memberCanUpdateGroupPhoto()
-                      || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
-                      || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group')
-                    ); // App admin can update any group chat meta
+      allow update: if (
+                      request.auth != null
+                      && isArchivedBirthdayChat()
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberSeen', 'memberUnreadCount'])
+                    )
+                    || (
+                      !isArchivedBirthdayChat()
+                      && (
+                        (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageText', 'lastMessageSentAt', 'lastMessageSenderId', 'typing', 'memberSeen', 'memberUnreadCount']))
+                        || memberCanUpdateGroupPhoto()
+                        || (isChatAdmin() && request.resource.data.type == 'group' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL', 'members', 'admins', 'memberInfo']))
+                        || (isAppAdmin(request.auth.uid) && request.resource.data.type == 'group')
+                      )
+                    ); // Archived rooms permit read-state updates only.
 
       match /messages/{messageId} {
         allow read: if isBirthdayChat() ? request.auth != null : isMember();
