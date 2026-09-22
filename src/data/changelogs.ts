@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.6',
+    subtitle: 'Reaction fixes',
+    date: 'September 22, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: "Removing your reaction now leaves everyone else's reactions on the message.",
+      },
+    ],
+  },
+  {
     version: 'v1.20.5',
     subtitle: 'Birthday archive',
     date: 'September 21, 2026',

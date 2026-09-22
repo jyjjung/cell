@@ -39,6 +39,7 @@ import { useChatsContext } from '@/contexts/chats-context';
 import { useToast } from '@/hooks/use-toast';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { dispatchChatPush } from '@/lib/dispatch-chat-push';
+import { toggleReactionMap } from '@/lib/reaction-utils';
 import {
   buildUnreadCountClear,
   buildUnreadCountIncrements,
@@ -390,20 +391,12 @@ export function useMessages(chatId: string | null) {
     const previousReactions = previous?.reactions ? { ...previous.reactions } : {};
     const wasReacted = (previousReactions[emoji] || []).includes(currentUser.uid);
     const isAdding = !wasReacted;
+    const nextReactions = toggleReactionMap(previousReactions, emoji, currentUser.uid);
 
-    let nextReactions: ChatMessage['reactions'] = {};
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== messageId) return m;
-        const currentReactions = { ...(m.reactions || {}) };
-        const reactors: string[] = [...(currentReactions[emoji] || [])];
-        const userIndex = reactors.indexOf(currentUser.uid);
-        if (userIndex > -1) reactors.splice(userIndex, 1);
-        else reactors.push(currentUser.uid);
-        if (reactors.length > 0) currentReactions[emoji] = reactors;
-        else delete currentReactions[emoji];
-        nextReactions = currentReactions;
-        return { ...m, reactions: currentReactions };
+        return { ...m, reactions: nextReactions };
       }),
     );
 
