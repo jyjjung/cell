@@ -139,6 +139,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    if (!loadingAuth && !currentUser && !isShellRoute) {
+      router.replace('/login');
+      return;
+    }
+
     if (!loadingAuth && currentUser) {
       const isApproved = currentUser.isApproved || currentUser.isAdmin;
       const isQuarantineRoute = pathname === '/pending-approval';
@@ -151,7 +156,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         router.push('/');
       }
     }
-  }, [currentUser, loadingAuth, pathname, router]);
+  }, [currentUser, isShellRoute, loadingAuth, pathname, router]);
 
   // Cookie hint from the server: only block with a skeleton when we expect a restore.
   // Guests (no cookie) paint immediately — better FCP/LCP on landing and auth pages.

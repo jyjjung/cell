@@ -268,7 +268,9 @@ export function isShellPath(pathname: string): boolean {
     pathname === '/forgot-password' ||
     pathname === '/pending-approval' ||
     pathname.startsWith('/privacy') ||
-    pathname.startsWith('/terms')
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/forms/public/') ||
+    pathname.startsWith('/forms/guest/')
   );
 }
 

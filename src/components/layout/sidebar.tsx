@@ -4,10 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Shield,
-  LogIn, UserPlus,
-} from 'lucide-react';
+import { Shield, LogIn, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   cellPath,

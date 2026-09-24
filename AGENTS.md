@@ -320,6 +320,9 @@ offline blank screen.
   `FIREBASE_PRIVATE_KEY`; JSON service-account env is the fallback.
 - Unapproved members are routed to `/pending-approval`, except for allowed
   profile/account flows. Admins bypass approval.
+- Signed-out visitors are redirected to `/login` for member routes. The
+  homepage, authentication/legal pages, approval page, and public/guest form
+  routes remain available without a session.
 - Never hard-code passwords or treat a UI gate as authorization.
 
 ### Shared data providers
@@ -377,6 +380,8 @@ page.
 - `/rosters`, `/rosters/[id]` - configurable rosters.
 - `/worship` - worship portal, rosters, setlists, and chord/media viewers.
 - `/media` - shared links/media.
+- `/files` - shared files and resources; signed-in members can view and download,
+  while admins can upload, organize folders, rename, and delete resources.
 - `/docs`, `/docs/[docId]` - collaborative documents, comments, and chat share.
 - `/forms` - member forms and responses.
 - `/forms/public/[publicToken]` - public form entry.
@@ -469,9 +474,9 @@ Important authorization concepts:
 - Access is enforced by Firestore rules, Storage rules, server handlers, and
   route/UI checks as appropriate.
 
-Storage paths currently include avatars, chat media, worship chord sheets, and
-NDCPC photos. Keep uploads scoped, size/type validated, and cached according
-to the existing rules and helpers.
+Storage paths currently include avatars, chat media, worship chord sheets,
+NDCPC photos, and admin-managed `admin-files/` resources. Keep uploads scoped,
+size/type validated, and cached according to the existing rules and helpers.
 
 ### PWA, caching, and deployment
 

@@ -33,6 +33,18 @@ service firebase.storage {
       allow read: if isSignedIn();
     }
 
+    match /admin-files/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['app.admin'])
+        && request.resource.size <= 50 * 1024 * 1024
+        && request.resource.contentType is string;
+      allow delete: if isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['app.admin']);
+    }
+
     function hasNdcpcAccess() {
       return isSignedIn()
         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))

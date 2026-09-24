@@ -7,6 +7,7 @@ import {
   Calendar,
   CalendarCheck,
   FileText,
+  FolderOpen,
   HeartHandshake,
   Heart,
   Home,
@@ -55,6 +56,7 @@ export function getSidebarNavForApp(
           ? [{ href: '/worship', label: labels.worshipPortal, icon: Music }]
           : []),
         { href: '/media', label: labels.links, icon: Library },
+        { href: '/files', label: 'Files', icon: FolderOpen, requiresAuth: true },
         { href: '/docs', label: labels.docs, icon: FileText, requiresAuth: true },
         { href: '/forms', label: labels.forms, icon: FileText },
         {
