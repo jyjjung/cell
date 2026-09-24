@@ -18,7 +18,7 @@ function safeNextPath(next: string | null): string {
 }
 
 function LoginPageInner() {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, hasSession, loadingAuth } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
@@ -31,7 +31,7 @@ function LoginPageInner() {
   }, []);
 
   useEffect(() => {
-    if (!isMounted || loadingAuth || !currentUser || redirecting) return;
+    if (!isMounted || !hasSession || redirecting) return;
 
     let cancelled = false;
     setRedirecting(true);
@@ -43,16 +43,24 @@ function LoginPageInner() {
       } catch (error) {
         console.error('[LoginPage] Failed to sync session before redirect:', error);
       }
-      if (!cancelled) router.replace(nextPath);
+
+      if (!cancelled) {
+        const destination = safeNextPath(nextPath);
+        router.replace(destination === '/login' ? '/' : destination);
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [currentUser, loadingAuth, router, isMounted, nextPath, redirecting]);
+  }, [hasSession, router, isMounted, nextPath, redirecting]);
 
-  if (!isMounted || loadingAuth || redirecting || (isMounted && !loadingAuth && currentUser)) {
+  if (!isMounted || (loadingAuth && !hasSession)) {
     return <PageLoading />;
+  }
+
+  if (hasSession || currentUser) {
+    return <PageLoading label="Redirecting you back to your app" />;
   }
 
   return (

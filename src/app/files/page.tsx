@@ -5,13 +5,13 @@ import { format } from "date-fns";
 import {
   ChevronRight,
   Download,
-  Eye,
   File,
   FileArchive,
   FileImage,
   FileText,
   Folder,
   FolderOpen,
+  MoreHorizontal,
   Pencil,
   Plus,
   X,
@@ -46,11 +46,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { ButtonSpinner } from "@/components/ui/loading-spinner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState, PageHeader, PageShell } from "@/components/ui/page-layout";
 import { ListLoadingSkeleton } from "@/components/ui/loading-state";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const FILES_COLLECTION = "adminFiles";
 const STORAGE_PREFIX = "admin-files";
@@ -292,9 +297,9 @@ export default function FilesPage() {
     <PageShell>
       <PageHeader
         title="Files"
-        description="Browse shared resources. Admins can upload and organize the library."
+        description="Shared resources"
         action={isAdmin ? (
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <input
               ref={inputRef}
               type="file"
@@ -305,10 +310,10 @@ export default function FilesPage() {
                 if (selectedFiles.length) void handleUpload(selectedFiles);
               }}
             />
-            <Button type="button" variant="outline" onClick={() => setNameDialog({ entry: null, value: "" })}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setNameDialog({ entry: null, value: "" })}>
               <Plus className="mr-2 h-4 w-4" /> New folder
             </Button>
-            <Button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}>
+            <Button type="button" className="w-full sm:w-auto" onClick={() => inputRef.current?.click()} disabled={uploading}>
               {uploading ? <ButtonSpinner className="mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
               {uploading ? "Uploading..." : "Upload files"}
             </Button>
@@ -316,19 +321,24 @@ export default function FilesPage() {
         ) : undefined}
       />
 
-      <nav aria-label="Files breadcrumb" className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-        <Button type="button" variant="ghost" className="h-8 px-2 font-medium" onClick={() => setCurrentFolderId(null)}>
-          Files
-        </Button>
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <nav aria-label="Files breadcrumb" className="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto overscroll-x-contain text-sm text-muted-foreground [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Button type="button" variant="ghost" className="h-9 shrink-0 rounded-lg px-2 font-medium" onClick={() => setCurrentFolderId(null)}>
+            Files
+          </Button>
         {breadcrumbs.map((folder) => (
-          <span key={folder.id} className="flex items-center gap-1">
+          <span key={folder.id} className="flex shrink-0 items-center gap-1">
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            <Button type="button" variant="ghost" className="h-8 px-2" onClick={() => setCurrentFolderId(folder.id)}>
+            <Button type="button" variant="ghost" className="h-9 max-w-[13rem] truncate rounded-lg px-2" onClick={() => setCurrentFolderId(folder.id)}>
               {folder.name}
             </Button>
           </span>
         ))}
-      </nav>
+        </nav>
+        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+          {visibleEntries.length} {visibleEntries.length === 1 ? "item" : "items"}
+        </span>
+      </div>
 
       {loading ? (
         <ListLoadingSkeleton />
@@ -340,80 +350,64 @@ export default function FilesPage() {
           action={isAdmin ? <Button onClick={() => setNameDialog({ entry: null, value: "" })}>New folder</Button> : undefined}
         />
       ) : (
-        <div className="admin-table-wrap">
-          <Table className="admin-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Modified</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleEntries.map((entry) => {
-                const isFolder = entry.kind === "folder";
-                const Icon = isFolder ? Folder : getFileIcon(entry.contentType);
-                return (
-                  <TableRow key={entry.id}>
-                    <TableCell className="min-w-[240px]">
-                      <button
-                        type="button"
-                        className="flex min-h-10 min-w-0 items-center gap-2.5 text-left font-medium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
-                        onClick={() => isFolder ? setCurrentFolderId(entry.id) : setPreviewEntry(entry)}
-                      >
-                        <Icon className="h-4 w-4 shrink-0 text-primary" />
-                        <span className="truncate" title={entry.name}>{entry.name}</span>
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{isFolder ? "Folder" : entry.contentType}</TableCell>
-                    <TableCell className="text-muted-foreground">{isFolder ? "--" : formatBytes(entry.size)}</TableCell>
-                    <TableCell className="text-muted-foreground">{safeDate(entry.uploadedAt)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+          <div className="divide-y divide-border/60">
+            {visibleEntries.map((entry) => {
+              const isFolder = entry.kind === "folder";
+              const Icon = isFolder ? Folder : getFileIcon(entry.contentType);
+              return (
+                <div key={entry.id} className="group flex min-w-0 items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/30 sm:px-4">
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    onClick={() => isFolder ? setCurrentFolderId(entry.id) : setPreviewEntry(entry)}
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block max-w-full truncate text-sm font-medium leading-snug" title={entry.name}>{entry.name}</span>
+                      <span className="mt-1 block break-words text-xs leading-snug text-muted-foreground">
+                        {isFolder ? "Folder" : `${entry.contentType} · ${formatBytes(entry.size)}`} · {safeDate(entry.uploadedAt)}
+                      </span>
+                    </span>
+                    {isFolder ? <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
+                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="ghost" size="icon" aria-label={`More actions for ${entry.name}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 rounded-xl p-1">
                         {!isFolder ? (
-                          <>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Preview ${entry.name}`}
-                              onClick={() => setPreviewEntry(entry)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button asChild variant="ghost" size="icon" aria-label={`Download ${entry.name}`}>
-                              <a href={entry.downloadUrl} target="_blank" rel="noreferrer">
-                                <Download className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          </>
+                          <DropdownMenuItem asChild>
+                            <a href={entry.downloadUrl} target="_blank" rel="noreferrer">
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </a>
+                          </DropdownMenuItem>
                         ) : null}
                         {isAdmin ? (
                           <>
-                            <Button type="button" variant="ghost" size="icon" aria-label={`Rename ${entry.name}`} onClick={() => openRename(entry)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Delete ${entry.name}`}
-                              onClick={() => setDeleteTarget(entry)}
-                              disabled={deleting === entry.id}
-                            >
-                              {deleting === entry.id ? <ButtonSpinner /> : <Trash2 className="h-4 w-4 text-destructive" />}
-                            </Button>
+                            <DropdownMenuItem onClick={() => openRename(entry)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeleteTarget(entry)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
                           </>
                         ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -446,19 +440,30 @@ export default function FilesPage() {
       </Dialog>
 
       <Dialog open={!!previewEntry} onOpenChange={(open) => !open && setPreviewEntry(null)}>
-        <DialogContent showCloseButton={false} className="flex h-[min(90vh,900px)] w-[min(96vw,1100px)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl p-0">
-          <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-4 border-b border-border/60 px-5 py-4">
+        <DialogContent showCloseButton={false} className="flex h-[min(90dvh,900px)] w-[calc(100vw-1rem)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-[min(96vw,1100px)]">
+          <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
             <div className="min-w-0">
               <DialogTitle className="truncate">{previewEntry?.name}</DialogTitle>
               <DialogDescription className="truncate">
                 {previewEntry?.contentType} · {previewEntry ? formatBytes(previewEntry.size) : ""}
               </DialogDescription>
             </div>
-            <Button type="button" variant="ghost" size="icon" aria-label="Close preview" onClick={() => setPreviewEntry(null)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {previewEntry ? (
+                <Button asChild variant="outline" size="sm">
+                  <a href={previewEntry.downloadUrl} target="_blank" rel="noreferrer">
+                    <Download className="mr-1.5 h-4 w-4" />
+                    <span className="sm:hidden">Save</span>
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                </Button>
+              ) : null}
+              <Button type="button" variant="outline" size="icon" aria-label="Close preview" onClick={() => setPreviewEntry(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
+          <div className="min-h-0 flex-1 overscroll-contain overflow-auto bg-muted/30 p-2 sm:p-4">
             {previewEntry && previewKind === "image" ? (
               <div className="flex min-h-full items-center justify-center">
                 <img
@@ -472,14 +477,14 @@ export default function FilesPage() {
               <iframe
                 src={previewEntry.downloadUrl}
                 title={`Preview of ${previewEntry.name}`}
-                className="h-full min-h-[60vh] w-full rounded-lg border border-border bg-background"
+                className="h-full min-h-0 w-full rounded-lg border border-border bg-background"
               />
             ) : null}
             {previewEntry && previewKind === "text" ? (
               <iframe
                 src={previewEntry.downloadUrl}
                 title={`Preview of ${previewEntry.name}`}
-                className="h-full min-h-[60vh] w-full rounded-lg border border-border bg-background"
+                className="h-full min-h-0 w-full rounded-lg border border-border bg-background"
               />
             ) : null}
             {previewEntry && previewKind === "video" ? (

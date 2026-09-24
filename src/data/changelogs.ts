@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.10',
+    subtitle: 'Easier on mobile',
+    date: 'September 24, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Shared files now use clear rows on larger screens and easy-to-tap tiles on phones, without distracting file details.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.9',
     subtitle: 'Clearer file access',
     date: 'September 24, 2026',
