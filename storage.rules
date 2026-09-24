@@ -6,6 +6,30 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isApprovedMember() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isApproved == true;
+    }
+
+    function canReadAdminFile() {
+      return isSignedIn()
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && (
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['app.admin'])
+          || (
+            isApprovedMember()
+            && (
+              !resource.metadata.keys().hasAll(['fileId'])
+              || firestore.get(/databases/(default)/documents/adminFiles/$(resource.metadata.fileId)).data.get('visibilityType', 'public') == 'public'
+              || firestore.get(/databases/(default)/documents/adminFiles/$(resource.metadata.fileId)).data.get('allowedRoleIds', []).hasAny(
+                firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('roleIds', [])
+              )
+            )
+          )
+        );
+    }
+
     match /avatars/{fileName} {
       allow read: if isSignedIn();
       allow write: if isSignedIn()
@@ -34,7 +58,7 @@ service firebase.storage {
     }
 
     match /admin-files/{fileName} {
-      allow read: if isSignedIn();
+      allow read: if canReadAdminFile();
       allow create, update: if isSignedIn()
         && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('capabilityKeys', []).hasAny(['app.admin'])

@@ -4,7 +4,8 @@ import { getAdminApp, getAdminAuth } from '@/lib/firebase-admin';
 export async function verifyAuthToken(
   request: NextRequest,
 ): Promise<{ uid: string } | NextResponse> {
-  const token = request.headers.get('Authorization')?.split('Bearer ')[1];
+  const authorization = request.headers.get('Authorization');
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

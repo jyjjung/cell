@@ -312,7 +312,17 @@ service cloud.firestore {
     }
 
     match /adminFiles/{fileId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+        && (
+          isAppAdmin(request.auth.uid)
+          || (
+            isApprovedUser(request.auth.uid)
+            && (
+              resource.data.get('visibilityType', 'public') == 'public'
+              || resource.data.get('allowedRoleIds', []).hasAny(userData(request.auth.uid).get('roleIds', []))
+            )
+          )
+        );
       allow write: if isAppAdmin(request.auth.uid);
     }
 

@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Share2,
   X,
   Trash2,
   Upload,
@@ -27,10 +28,14 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
+  where,
+  writeBatch,
 } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getBlob, getDownloadURL, ref, updateMetadata, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
+import { getClientAuthHeaders } from "@/lib/client-auth-headers";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -56,6 +61,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState, PageHeader, PageShell } from "@/components/ui/page-layout";
 import { ListLoadingSkeleton } from "@/components/ui/loading-state";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useRoles } from "@/hooks/use-roles";
 
 const FILES_COLLECTION = "adminFiles";
 const STORAGE_PREFIX = "admin-files";
@@ -71,6 +78,9 @@ type FileEntry = {
   storagePath: string;
   downloadUrl: string;
   uploadedAt?: { toDate?: () => Date } | null;
+  directRoleIds?: string[];
+  allowedRoleIds?: string[];
+  visibilityType?: "public" | "roles";
 };
 
 function formatBytes(bytes: number) {
@@ -99,6 +109,7 @@ function safeDate(value: FileEntry["uploadedAt"]) {
 
 export default function FilesPage() {
   const { currentUser, isAdmin } = useAuth();
+  const { roles } = useRoles();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -107,9 +118,21 @@ export default function FilesPage() {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FileEntry | null>(null);
-  const [nameDialog, setNameDialog] = useState<{ entry: FileEntry | null; value: string } | null>(null);
+  const [nameDialog, setNameDialog] = useState<{ entry: FileEntry | null; value: string; roleIds: string[] } | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [previewEntry, setPreviewEntry] = useState<FileEntry | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pendingPdfOpen, setPendingPdfOpen] = useState<{ entry: FileEntry; url: string } | null>(null);
+  const [accessDialog, setAccessDialog] = useState<{ entry: FileEntry; roleIds: string[] } | null>(null);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const cellRoles = useMemo(
+    () => roles.filter((role) => role.status !== "archived" && role.appScope !== "ndcpc"),
+    [roles],
+  );
+  const cellRoleIds = useMemo(
+    () => new Set(cellRoles.map((role) => role.id)),
+    [cellRoles],
+  );
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -118,11 +141,20 @@ export default function FilesPage() {
       return;
     }
 
-    const filesQuery = query(collection(db, FILES_COLLECTION), orderBy("uploadedAt", "desc"));
-    return onSnapshot(
+    const queries = isAdmin
+      ? [query(collection(db, FILES_COLLECTION), orderBy("uploadedAt", "desc"))]
+      : [
+          query(collection(db, FILES_COLLECTION), where("visibilityType", "==", "public"), orderBy("uploadedAt", "desc")),
+          ...(currentUser.roleIds ?? []).filter((roleId) => cellRoleIds.has(roleId)).map((roleId) =>
+            query(collection(db, FILES_COLLECTION), where("visibilityType", "==", "roles"), where("allowedRoleIds", "array-contains", roleId), orderBy("uploadedAt", "desc")),
+          ),
+        ];
+    const snapshots = new Map<string, FileEntry>();
+    const unsubscribes = queries.map((filesQuery) => onSnapshot(
       filesQuery,
       (snapshot) => {
-        setEntries(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as FileEntry)));
+        snapshot.docs.forEach((item) => snapshots.set(item.id, { id: item.id, ...item.data() } as FileEntry));
+        setEntries(Array.from(snapshots.values()));
         setLoading(false);
       },
       (error) => {
@@ -130,8 +162,9 @@ export default function FilesPage() {
         setLoading(false);
         toast({ variant: "destructive", title: "Could not load files", description: error.message });
       },
-    );
-  }, [currentUser?.uid, toast]);
+    ));
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  }, [cellRoleIds, currentUser?.uid, currentUser?.roleIds, isAdmin, toast]);
 
   const folders = useMemo(
     () => entries.filter((entry) => entry.kind === "folder"),
@@ -171,17 +204,21 @@ export default function FilesPage() {
 
     setUploading(true);
     try {
+      const parent = currentFolderId ? entries.find((entry) => entry.id === currentFolderId) : null;
+      const allowedRoleIds = parent?.allowedRoleIds ?? parent?.directRoleIds ?? [];
       for (const file of selectedFiles) {
-        const fileId = crypto.randomUUID();
+        const fileRef = doc(collection(db, FILES_COLLECTION));
+        const fileId = fileRef.id;
         const storagePath = `${STORAGE_PREFIX}/${fileId}-${file.name}`;
         const storageRef = ref(storage, storagePath);
         await uploadBytes(storageRef, file, {
           contentType: file.type || "application/octet-stream",
           cacheControl: "public,max-age=31536000,immutable",
+          customMetadata: { fileId },
         });
         const downloadUrl = await getDownloadURL(storageRef);
         try {
-          await addDoc(collection(db, FILES_COLLECTION), {
+          await setDoc(fileRef, {
             kind: "file",
             name: file.name,
             parentId: currentFolderId,
@@ -191,6 +228,9 @@ export default function FilesPage() {
             downloadUrl,
             uploadedBy: currentUser.uid,
             uploadedAt: serverTimestamp(),
+            directRoleIds: [],
+            allowedRoleIds,
+            visibilityType: allowedRoleIds.length ? "roles" : "public",
           });
         } catch (error) {
           await deleteObject(storageRef).catch((cleanupError) => {
@@ -233,6 +273,13 @@ export default function FilesPage() {
           downloadUrl: "",
           uploadedBy: currentUser?.uid,
           uploadedAt: serverTimestamp(),
+          directRoleIds: nameDialog.roleIds,
+          allowedRoleIds: currentFolderId
+            ? (entries.find((entry) => entry.id === currentFolderId)?.allowedRoleIds ?? nameDialog.roleIds)
+            : nameDialog.roleIds,
+          visibilityType: (currentFolderId
+            ? (entries.find((entry) => entry.id === currentFolderId)?.allowedRoleIds ?? nameDialog.roleIds)
+            : nameDialog.roleIds).length ? "roles" : "public",
         });
         toast({ title: "Folder created" });
       }
@@ -246,6 +293,62 @@ export default function FilesPage() {
       });
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const updateAccess = async () => {
+    if (!accessDialog || !isAdmin) return;
+    setSavingAccess(true);
+    try {
+      const directRoleIds = accessDialog.roleIds;
+      const entriesById = new Map(entries.map((entry) => [entry.id, entry]));
+      const inheritedFromParents: string[] = [];
+      let parentId = entriesById.get(accessDialog.entry.id)?.parentId ?? null;
+      while (parentId) {
+        const parent = entriesById.get(parentId);
+        if (!parent) break;
+        if ((parent.allowedRoleIds ?? []).length) {
+          inheritedFromParents.push(...(parent.allowedRoleIds ?? []));
+        }
+        parentId = parent.parentId ?? null;
+      }
+      const updates = new Map<string, { directRoleIds: string[]; allowedRoleIds: string[]; visibilityType: "public" | "roles" }>();
+      const rootAllowed = inheritedFromParents.length ? [...new Set(inheritedFromParents)] : [...new Set(directRoleIds)];
+      updates.set(accessDialog.entry.id, {
+        directRoleIds,
+        allowedRoleIds: rootAllowed,
+        visibilityType: rootAllowed.length ? "roles" : "public",
+      });
+      const visit = (parentId: string, inherited: string[]) => {
+        entries.filter((entry) => entry.parentId === parentId).forEach((entry) => {
+          const rolesForEntry = inherited.length ? inherited : [...new Set(entry.directRoleIds ?? [])];
+          updates.set(entry.id, {
+            directRoleIds: entry.directRoleIds ?? [],
+            allowedRoleIds: rolesForEntry,
+            visibilityType: rolesForEntry.length ? "roles" : "public",
+          });
+          if (entry.kind === "folder") visit(entry.id, rolesForEntry);
+        });
+      };
+      if (accessDialog.entry.kind === "folder") visit(accessDialog.entry.id, rootAllowed);
+      const batch = writeBatch(db);
+      updates.forEach((values, id) => batch.update(doc(db, FILES_COLLECTION, id), values));
+      await batch.commit();
+      await Promise.all(
+        Array.from(updates.keys())
+          .map((id) => entriesById.get(id))
+          .filter((entry): entry is FileEntry => Boolean(entry?.storagePath))
+          .map((entry) => updateMetadata(ref(storage, entry.storagePath), {
+            customMetadata: { fileId: entry.id },
+          })),
+      );
+      toast({ title: "Access updated" });
+      setAccessDialog(null);
+    } catch (error) {
+      console.error("Failed to update shared file access:", error);
+      toast({ variant: "destructive", title: "Could not update access", description: error instanceof Error ? error.message : "Please try again." });
+    } finally {
+      setSavingAccess(false);
     }
   };
 
@@ -277,7 +380,67 @@ export default function FilesPage() {
     }
   };
 
-  const openRename = (entry: FileEntry) => setNameDialog({ entry, value: entry.name });
+  const openRename = (entry: FileEntry) => setNameDialog({ entry, value: entry.name, roleIds: entry.directRoleIds ?? [] });
+
+  const openPreview = async (entry: FileEntry) => {
+    if (entry.kind === "folder") {
+      setCurrentFolderId(entry.id);
+      return;
+    }
+    try {
+      if (entry.contentType === "application/pdf") {
+        const downloadUrl = await getDownloadURL(ref(storage, entry.storagePath));
+        setPendingPdfOpen({ entry, url: downloadUrl });
+        return;
+      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const blob = await getBlob(ref(storage, entry.storagePath));
+      setPreviewUrl(URL.createObjectURL(blob));
+      setPreviewEntry(entry);
+    } catch (error) {
+      console.error("Failed to open shared file:", error);
+      toast({ variant: "destructive", title: "Could not open file", description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewEntry(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  };
+
+  const downloadEntry = async (entry: FileEntry) => {
+    try {
+      const blob = await getBlob(ref(storage, entry.storagePath));
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = entry.name;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download shared file:", error);
+      toast({ variant: "destructive", title: "Could not download file", description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
+
+  const shareEntry = async (entry: FileEntry) => {
+    if (!currentUser || !isAdmin) return;
+    try {
+      const headers = await getClientAuthHeaders();
+      const response = await fetch("/api/admin/files/share", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ entryId: entry.id }),
+      });
+      const result = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !result.url) throw new Error(result.error || "Could not create share link");
+      await navigator.clipboard.writeText(result.url);
+      toast({ title: "Public link copied", description: "Anyone with this link can access the shared resource." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Could not create link", description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
 
   const previewKind = previewEntry
     ? previewEntry.contentType.startsWith("image/")
@@ -310,7 +473,7 @@ export default function FilesPage() {
                 if (selectedFiles.length) void handleUpload(selectedFiles);
               }}
             />
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setNameDialog({ entry: null, value: "" })}>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setNameDialog({ entry: null, value: "", roleIds: [] })}>
               <Plus className="mr-2 h-4 w-4" /> New folder
             </Button>
             <Button type="button" className="w-full sm:w-auto" onClick={() => inputRef.current?.click()} disabled={uploading}>
@@ -347,7 +510,7 @@ export default function FilesPage() {
           icon={currentFolderId ? FolderOpen : File}
           title={currentFolderId ? "This folder is empty" : "No files yet"}
           description={isAdmin ? "Add a folder or upload a shared resource here." : "Shared resources will appear here when available."}
-          action={isAdmin ? <Button onClick={() => setNameDialog({ entry: null, value: "" })}>New folder</Button> : undefined}
+          action={isAdmin ? <Button onClick={() => setNameDialog({ entry: null, value: "", roleIds: [] })}>New folder</Button> : undefined}
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
@@ -360,7 +523,7 @@ export default function FilesPage() {
                   <button
                     type="button"
                     className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    onClick={() => isFolder ? setCurrentFolderId(entry.id) : setPreviewEntry(entry)}
+                    onClick={() => void openPreview(entry)}
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <Icon className="h-5 w-5" />
@@ -382,18 +545,23 @@ export default function FilesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40 rounded-xl p-1">
                         {!isFolder ? (
-                          <DropdownMenuItem asChild>
-                            <a href={entry.downloadUrl} target="_blank" rel="noreferrer">
-                              <Download className="mr-2 h-4 w-4" />
-                              Download
-                            </a>
+                          <DropdownMenuItem onClick={() => void downloadEntry(entry)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
                           </DropdownMenuItem>
                         ) : null}
                         {isAdmin ? (
                           <>
+                            <DropdownMenuItem onClick={() => void shareEntry(entry)}>
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share public link
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openRename(entry)}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setAccessDialog({ entry, roleIds: entry.directRoleIds ?? [] })}>
+                              Manage access
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setDeleteTarget(entry)} className="text-destructive focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -429,6 +597,30 @@ export default function FilesPage() {
               autoFocus
             />
           </div>
+          {!nameDialog?.entry ? (
+            <div className="space-y-2">
+              <Label>em. roles</Label>
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border/60 p-2">
+                {cellRoles.length === 0 ? (
+                  <p className="px-2 py-1 text-sm text-muted-foreground">No active em. roles are available.</p>
+                ) : cellRoles.map((role) => (
+                  <label key={role.id} className="flex min-h-11 items-center gap-3 rounded-lg px-2 py-1 hover:bg-muted/40">
+                    <Checkbox
+                      checked={nameDialog?.roleIds.includes(role.id) ?? false}
+                      onCheckedChange={(checked) => setNameDialog((current) => current ? {
+                        ...current,
+                        roleIds: checked
+                          ? [...new Set([...current.roleIds, role.id])]
+                          : current.roleIds.filter((roleId) => roleId !== role.id),
+                      } : current)}
+                    />
+                    <span className="text-sm">{role.name}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Leave empty to make the folder visible to all approved members.</p>
+            </div>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setNameDialog(null)}>Cancel</Button>
             <Button type="button" onClick={() => void saveName()} disabled={!nameDialog?.value.trim() || savingName}>
@@ -439,7 +631,72 @@ export default function FilesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!previewEntry} onOpenChange={(open) => !open && setPreviewEntry(null)}>
+      <Dialog open={!!accessDialog} onOpenChange={(open) => !open && setAccessDialog(null)}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage access</DialogTitle>
+            <DialogDescription>
+              Select any roles that should be able to access “{accessDialog?.entry.name}”. No selected roles means all approved members can access it.
+              Folder changes apply to everything inside the folder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {cellRoles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active roles are available.</p>
+            ) : (
+              <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+              {cellRoles.map((role) => (
+                <label key={role.id} className="flex min-h-11 items-center gap-3 rounded-lg px-2 py-1 hover:bg-muted/40">
+                  <Checkbox
+                    checked={accessDialog?.roleIds.includes(role.id)}
+                    onCheckedChange={(checked) => setAccessDialog((current) => current ? {
+                      ...current,
+                      roleIds: checked
+                        ? [...new Set([...current.roleIds, role.id])]
+                        : current.roleIds.filter((roleId) => roleId !== role.id),
+                    } : current)}
+                  />
+                  <span className="text-sm">{role.name}</span>
+                </label>
+              ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setAccessDialog(null)}>Cancel</Button>
+            <Button type="button" onClick={() => void updateAccess()} disabled={savingAccess}>
+              {savingAccess ? <ButtonSpinner className="mr-2" /> : null}
+              Save access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!pendingPdfOpen} onOpenChange={(open) => !open && setPendingPdfOpen(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Open PDF in your browser?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingPdfOpen?.entry.name}” will open in a new browser tab for the best multi-page viewing experience.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingPdfOpen) {
+                  window.open(`${pendingPdfOpen.url}#toolbar=1&navpanes=0`, "_blank", "noopener,noreferrer");
+                }
+                setPendingPdfOpen(null);
+              }}
+            >
+              Open in browser
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={!!previewEntry} onOpenChange={(open) => !open && closePreview()}>
         <DialogContent showCloseButton={false} className="flex h-[min(90dvh,900px)] w-[calc(100vw-1rem)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-[min(96vw,1100px)]">
           <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4">
             <div className="min-w-0">
@@ -450,15 +707,13 @@ export default function FilesPage() {
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {previewEntry ? (
-                <Button asChild variant="outline" size="sm">
-                  <a href={previewEntry.downloadUrl} target="_blank" rel="noreferrer">
+                <Button type="button" variant="outline" size="sm" onClick={() => void downloadEntry(previewEntry)}>
                     <Download className="mr-1.5 h-4 w-4" />
                     <span className="sm:hidden">Save</span>
                     <span className="hidden sm:inline">Download</span>
-                  </a>
                 </Button>
               ) : null}
-              <Button type="button" variant="outline" size="icon" aria-label="Close preview" onClick={() => setPreviewEntry(null)}>
+              <Button type="button" variant="outline" size="icon" aria-label="Close preview" onClick={closePreview}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -467,34 +722,27 @@ export default function FilesPage() {
             {previewEntry && previewKind === "image" ? (
               <div className="flex min-h-full items-center justify-center">
                 <img
-                  src={previewEntry.downloadUrl}
+                  src={previewUrl ?? undefined}
                   alt={previewEntry.name}
                   className="max-h-full max-w-full rounded-lg object-contain shadow-sm"
                 />
               </div>
             ) : null}
-            {previewEntry && previewKind === "pdf" ? (
-              <iframe
-                src={previewEntry.downloadUrl}
-                title={`Preview of ${previewEntry.name}`}
-                className="h-full min-h-0 w-full rounded-lg border border-border bg-background"
-              />
-            ) : null}
             {previewEntry && previewKind === "text" ? (
               <iframe
-                src={previewEntry.downloadUrl}
+                src={previewUrl ?? undefined}
                 title={`Preview of ${previewEntry.name}`}
                 className="h-full min-h-0 w-full rounded-lg border border-border bg-background"
               />
             ) : null}
             {previewEntry && previewKind === "video" ? (
               <div className="flex min-h-full items-center justify-center">
-                <video src={previewEntry.downloadUrl} controls className="max-h-full max-w-full rounded-lg" />
+                <video src={previewUrl ?? undefined} controls className="max-h-full max-w-full rounded-lg" />
               </div>
             ) : null}
             {previewEntry && previewKind === "audio" ? (
               <div className="flex min-h-full items-center justify-center">
-                <audio src={previewEntry.downloadUrl} controls className="w-full max-w-xl" />
+                <audio src={previewUrl ?? undefined} controls className="w-full max-w-xl" />
               </div>
             ) : null}
             {previewEntry && previewKind === "unsupported" ? (
@@ -503,11 +751,9 @@ export default function FilesPage() {
                 <p className="text-sm text-muted-foreground">
                   This file type does not have an in-app preview yet.
                 </p>
-                <Button asChild>
-                  <a href={previewEntry.downloadUrl} target="_blank" rel="noreferrer">
+                <Button type="button" onClick={() => void downloadEntry(previewEntry)}>
                     <Download className="mr-2 h-4 w-4" />
                     Download file
-                  </a>
                 </Button>
               </div>
             ) : null}

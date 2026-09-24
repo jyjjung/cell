@@ -271,6 +271,7 @@ export function isShellPath(pathname: string): boolean {
     pathname.startsWith('/terms') ||
     pathname.startsWith('/forms/public/') ||
     pathname.startsWith('/forms/guest/')
+    || pathname.startsWith('/files/public/')
   );
 }
 
