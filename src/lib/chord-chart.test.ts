@@ -130,6 +130,19 @@ I have decided`);
     }
   });
 
+  it('keeps the gap between inline chord markers after transposition', () => {
+    const blocks = parseChordChart('**Ab**    **Bb7sus**    I have decided');
+    const lyric = blocks.find((block) => block.type === 'lyric');
+    expect(lyric?.type).toBe('lyric');
+    if (lyric?.type === 'lyric') {
+      expect(lyric.parts).toEqual([
+        { chord: 'Ab', text: '    ' },
+        { chord: 'Bb7sus', text: '' },
+        { text: '    I have decided' },
+      ]);
+    }
+  });
+
   it('keeps jump notes and drops CCLI footer', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks.some((b) => (

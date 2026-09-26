@@ -1308,7 +1308,9 @@ function parseChordProLine(line: string): ChartLyricPart[] {
     const rest = line.slice(nextTextStart);
     const nextChord = rest.search(new RegExp(CHORDPRO_TOKEN.source, 'i'));
     const text = nextChord === -1 ? rest : rest.slice(0, nextChord);
-    const chordText = /^\s/.test(text) ? '' : text;
+    const chordText = nextChord !== -1 && !text.trim()
+      ? text
+      : /^\s/.test(text) ? '' : text;
     parts.push({ chord: match[1], text: chordText });
     last = nextTextStart + chordText.length;
     re.lastIndex = last;
