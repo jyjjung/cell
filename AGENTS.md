@@ -379,6 +379,7 @@ page.
 - `/cleaning-roster` - cleaning duties.
 - `/rosters`, `/rosters/[id]` - configurable rosters.
 - `/worship` - worship portal, rosters, setlists, and chord/media viewers.
+- `/worship/public/[token]` - guest-accessible public setlist viewer links.
 - `/media` - shared links/media.
 - `/files` - shared files and resources; signed-in members can view and download,
   while admins can upload, organize folders, rename, and delete resources.
