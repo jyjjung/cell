@@ -181,8 +181,8 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
             key={pi}
             className="relative inline-block align-top pt-[1.15em]"
             style={{
-              minWidth: part.chord && !part.text.trim()
-                ? `${Math.max(part.chord.length * 5.5 + 2, 6)}px`
+              minWidth: part.chord
+                ? `${Math.max(part.chord.length * 9 + 4, 10)}px`
                 : undefined,
             }}
           >
