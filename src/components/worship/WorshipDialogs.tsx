@@ -40,11 +40,13 @@ const WORSHIP_ALL_KEYS: ChordKey[] = [
 export function NewSongDialog({
   open, onClose, onCreated,
 }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const { addSong, addTextChordSheet } = useWorshipSongs();
+  const { addSong, addTextChordSheet, addChordSheet } = useWorshipSongs();
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [pasteText, setPasteText] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageKey, setImageKey] = useState<ChordKey>('E');
   const [saving, setSaving] = useState(false);
   const extracted = pasteText ? extractChordChartMetadata(pasteText) : null;
 
@@ -55,9 +57,20 @@ export function NewSongDialog({
       const id = await addSong(title, artist || undefined, extracted?.metadata);
       if (pasteText.trim()) {
         await addTextChordSheet(id, savePastedChartText(pasteText.trim()), extracted?.metadata.key ?? 'E');
+      } else if (imageFile) {
+        if (imageFile.type === 'application/pdf') {
+          const { convertPdfToImages } = await import('@/lib/pdfUtils');
+          const pages = await convertPdfToImages(imageFile, 2);
+          for (let index = 0; index < pages.length; index++) {
+            const pageFile = new File([pages[index]], `${imageFile.name.replace(/\.pdf$/i, '')}_pg${index + 1}.jpg`, { type: 'image/jpeg' });
+            await addChordSheet(id, pageFile, imageKey);
+          }
+        } else {
+          await addChordSheet(id, imageFile, imageKey);
+        }
       }
       toast({ title: 'Song created', description: `"${title}" has been added to the library.` });
-      setTitle(''); setArtist(''); setPasteText('');
+      setTitle(''); setArtist(''); setPasteText(''); setImageFile(null);
       onCreated(id);
       onClose();
     } catch (e: any) {
@@ -67,7 +80,7 @@ export function NewSongDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-lg">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-section-title">New song</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
@@ -92,8 +105,11 @@ export function NewSongDialog({
                 const html = e.clipboardData.getData('text/html');
                 if (!html) return;
                 e.preventDefault();
-                const next = prepareChordChartPaste(plain, html);
+                const next = /(?:\*\*|__|^##?\s)/m.test(plain)
+                  ? plain.replace(/\r\n?/g, '\n')
+                  : prepareChordChartPaste(plain, html);
                 setPasteText(next);
+                setImageFile(null);
                 const details = extractChordChartMetadata(next);
                 if (details.title) setTitle(details.title);
                 if (details.artist) setArtist(details.artist);
@@ -112,6 +128,37 @@ export function NewSongDialog({
                 {extracted.metadata.tempo ? ` · ${extracted.metadata.tempo} BPM` : null}
                 {extracted.metadata.timeSignature ? ` · ${extracted.metadata.timeSignature}` : null}
               </p>
+            ) : null}
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-3">
+            <div>
+              <Label htmlFor="s-image">Image / PDF fallback</Label>
+              <p className="text-xs text-muted-foreground">Use this only when a text chord sheet is unavailable.</p>
+            </div>
+            <Input
+              id="s-image"
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => {
+                setImageFile(e.target.files?.[0] ?? null);
+                setPasteText('');
+              }}
+              className="rounded-xl"
+            />
+            {imageFile ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="s-image-key">Sheet key</Label>
+                <select
+                  id="s-image-key"
+                  value={imageKey}
+                  onChange={(e) => setImageKey(e.target.value as ChordKey)}
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                >
+                  {WORSHIP_ALL_KEYS.map((keyOption) => (
+                    <option key={keyOption} value={keyOption}>{keyOption === 'numbers' ? '#' : keyOption}</option>
+                  ))}
+                </select>
+              </div>
             ) : null}
           </div>
           <div className="space-y-1.5">

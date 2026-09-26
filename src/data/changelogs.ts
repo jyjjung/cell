@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.20',
+    subtitle: 'Flexible song entry',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'New worship songs now preserve pasted Markdown chord sheets, with an image or PDF fallback when text is unavailable.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.19',
     subtitle: 'Cleaner song library',
     date: 'September 26, 2026',
