@@ -249,6 +249,7 @@ function chartPasteQuality(text: string): number {
 function expandOneLine(line: string): string {
   const trimmed = line.trim();
   if (!trimmed) return line;
+  if (isChordOnlyLine(trimmed)) return line;
   const terminalHyphenChord = line.match(/^(.*\s-\s+)(\(?[A-G](?:#|b)?m7\)?)$/i);
   if (terminalHyphenChord) return `${terminalHyphenChord[1].trimEnd()}\n${terminalHyphenChord[2]}`;
   line = line.replace(
@@ -908,6 +909,7 @@ function repairPastedChart(text: string): string {
     return [...aligned.slice(0, -1), aligned.at(-1)!].join('\n');
   }).join('\n').split('\n').map((line) => {
     if (isMeasureLine(line)) return line.replace(/[ \t]+/g, ' ').trim();
+    if (isChordOnlyLine(line)) return line.trimStart().replace(/\t/g, '    ').trimEnd();
     return line.replace(/[ \t]+/g, ' ').trimEnd();
   }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   return normalized
@@ -1386,7 +1388,7 @@ export function coalescePickupChords(blocks: ChartBlock[]): ChartBlock[] {
       && block.parts.length > 0
       && block.parts.every((part) => Boolean(part.chord) && !part.text.trim())
     ) {
-      pickups.push(...block.parts.map((part) => ({ chord: part.chord, text: '' })));
+      pickups.push(...block.parts.map((part) => ({ ...part })));
       continue;
     }
     if (block.type === 'lyric' && pickups.length > 0) {
@@ -1858,7 +1860,18 @@ function parseSongSelect(text: string): ChartBlock[] {
       }
     }
     if (isChordOnlyLine(trimmed)) {
-      for (const token of unwrapBracketChordLine(trimmed).split(/\s+/).filter(Boolean)) pushChord(token);
+      const chordLine = unwrapBracketChordLine(trimmed);
+      const chordRe = new RegExp(`\\(?${CHORD_BODY}\\)?`, 'gi');
+      let lastEnd = 0;
+      let match: RegExpExecArray | null;
+      while ((match = chordRe.exec(chordLine)) !== null) {
+        const gap = chordLine.slice(lastEnd, match.index);
+        if (gap && lastPart()?.chord && !(lastPart()?.text ?? '').trim()) {
+          lastPart()!.text = gap;
+        }
+        pushChord(match[0]);
+        lastEnd = match.index + match[0].length;
+      }
       return;
     }
     pushLyric(trimmed, continuation);

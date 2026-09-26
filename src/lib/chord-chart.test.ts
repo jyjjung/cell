@@ -116,6 +116,20 @@ CCLI License # 620075`;
     expect(blocks.some((b) => b.type === 'lyric' && b.parts.some((p) => p.chord === 'A'))).toBe(true);
   });
 
+  it('preserves spacing between adjacent chords when no lyric is under the gap', () => {
+    const blocks = parseChordChart(`BRIDGE 1
+Ab   Bb7sus
+I have decided`);
+    const lyric = blocks.find((block) => block.type === 'lyric');
+    expect(lyric?.type).toBe('lyric');
+    if (lyric?.type === 'lyric') {
+      expect(lyric.parts).toEqual([
+        { chord: 'Ab', text: '   ' },
+        { chord: 'Bb7sus', text: 'I have decided' },
+      ]);
+    }
+  });
+
   it('keeps jump notes and drops CCLI footer', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks.some((b) => (
@@ -955,7 +969,7 @@ Nothing but the blood of Je - sus
 | A2 | A2 |`);
     const lyrics = blocks.filter((block): block is Extract<ChartBlock, { type: 'lyric' }> => block.type === 'lyric');
     expect(lyrics).toHaveLength(2);
-    expect(lyrics.map((line) => line.parts.map((part) => part.text).filter(Boolean).join(' '))).toEqual([
+    expect(lyrics.map((line) => line.parts.map((part) => part.text).filter((text) => text.trim()).join(' '))).toEqual([
       'Nothing but the blood of Je - sus',
       'Nothing but the blood of Je - sus',
     ]);
