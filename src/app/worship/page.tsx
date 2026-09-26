@@ -941,6 +941,7 @@ function SetlistDetailView({
 }: { playlist: WorshipSetlist; onBack: () => void; initialSongId?: string | null }) {
   const { removeSongFromSetlist, reorderSetlistSongs } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
+  const { currentUser } = useAuth();
   const canManageWorship = useCanManageWorship();
   const { toast } = useToast();
   const [addSongOpen, setAddSongOpen] = useState(false);
@@ -957,6 +958,7 @@ function SetlistDetailView({
   const dragIdx = useRef<number | null>(null);
   const dragOverIdx = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   // Keep orderedSongs in sync when playlist updates from Firestore (only if not in reorder mode)
   const prevPlaylistRef = useRef(playlist);
@@ -1019,6 +1021,31 @@ function SetlistDetailView({
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally { setRemoving(null); }
+  };
+
+  const handleShare = async () => {
+    if (!currentUser || sharing) return;
+    setSharing(true);
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/worship/setlists/share', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setlistId: playlist.id }),
+      });
+      const data = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !data.url) throw new Error(data.error || 'Could not create share link');
+      await navigator.clipboard.writeText(data.url);
+      toast({ title: 'Public link copied', description: 'Anyone with the link can view this setlist.' });
+    } catch (error) {
+      toast({
+        title: 'Could not share setlist',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharing(false);
+    }
   };
 
   // Build flat slide array across all ordered songs
@@ -1096,10 +1123,14 @@ function SetlistDetailView({
             </Button>
           )}
           {canManageWorship && !reorderMode && (
-            <Button size="sm" className="rounded-xl h-9 gap-1.5"
-              onClick={() => setAddSongOpen(true)}>
-              <Plus className="h-3.5 w-3.5" /> Add Song
-            </Button>
+            <>
+              <Button size="sm" variant="outline" className="rounded-xl h-9 gap-1.5" onClick={() => void handleShare()} disabled={sharing}>
+                {sharing ? <ButtonSpinner size="sm" /> : <Link2 className="h-3.5 w-3.5" />} Share
+              </Button>
+              <Button size="sm" className="rounded-xl h-9 gap-1.5" onClick={() => setAddSongOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> Add Song
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -1208,7 +1239,8 @@ function SetlistDetailView({
                         <>
                           {canManageWorship && (
                             <IconButton variant="ghost" className="rounded-xl text-muted-foreground hover:text-primary hover:bg-muted"
-                              aria-label="Edit song settings"
+                              aria-label="Re-select charts and edit song settings"
+                              title="Re-select charts and edit song settings"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditSong(ps);

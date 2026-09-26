@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.15',
+    subtitle: 'Shared worship setlists',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Worship leaders can re-select charts for each setlist song and copy a public link for the complete setlist viewer.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.14',
     subtitle: 'Clearer chord sheets',
     date: 'September 26, 2026',
