@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useWorshipRosters } from '@/hooks/useWorshipRosters';
 import { useWorshipSetlists } from '@/hooks/useWorshipSetlists';
 import { useWorshipSongs } from '@/hooks/useWorshipSongs';
+import { getClientAuthHeaders } from '@/lib/client-auth-headers';
 import { isTextChordSheet, splitSheetsForViewer } from '@/lib/chord-chart';
 import {
   filesFromSetlistSlides,
@@ -941,7 +942,6 @@ function SetlistDetailView({
 }: { playlist: WorshipSetlist; onBack: () => void; initialSongId?: string | null }) {
   const { removeSongFromSetlist, reorderSetlistSongs } = useWorshipSetlists();
   const { songs } = useWorshipSongs();
-  const { currentUser } = useAuth();
   const canManageWorship = useCanManageWorship();
   const { toast } = useToast();
   const [addSongOpen, setAddSongOpen] = useState(false);
@@ -1024,13 +1024,13 @@ function SetlistDetailView({
   };
 
   const handleShare = async () => {
-    if (!currentUser || sharing) return;
+    if (sharing) return;
     setSharing(true);
     try {
-      const token = await currentUser.getIdToken();
+      const headers = await getClientAuthHeaders({ 'Content-Type': 'application/json' });
       const response = await fetch('/api/worship/setlists/share', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ setlistId: playlist.id }),
       });
       const data = await response.json() as { url?: string; error?: string };
