@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import { chartHtmlToMarkdown, detectKeyFromText, extractChordChartMetadata, isTextChordSheet, parseChordChart, prepareChordChartPaste, savePastedChartText } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, extractChordChartMetadata, isTextChordSheet, parseChordChart, savePastedChartText } from '@/lib/chord-chart';
 import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
@@ -47,10 +47,12 @@ export function NewSongDialog({
   const [pasteText, setPasteText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageKey, setImageKey] = useState<ChordKey>('E');
+  const [mode, setMode] = useState<'paste' | 'upload'>('paste');
+  const [imageConfirmationOpen, setImageConfirmationOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const extracted = pasteText ? extractChordChartMetadata(pasteText) : null;
 
-  const handleSubmit = async () => {
+  const createSong = async () => {
     if (!title.trim()) return;
     setSaving(true);
     try {
@@ -70,12 +72,21 @@ export function NewSongDialog({
         }
       }
       toast({ title: 'Song created', description: `"${title}" has been added to the library.` });
-      setTitle(''); setArtist(''); setPasteText(''); setImageFile(null);
+      setTitle(''); setArtist(''); setPasteText(''); setImageFile(null); setMode('paste');
+      setImageConfirmationOpen(false);
       onCreated(id);
       onClose();
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     } finally { setSaving(false); }
+  };
+
+  const handleSubmit = () => {
+    if (mode === 'upload' && imageFile) {
+      setImageConfirmationOpen(true);
+      return;
+    }
+    void createSong();
   };
 
   return (
@@ -87,12 +98,22 @@ export function NewSongDialog({
             Add a new song to the worship music library.
           </DialogDescription>
         </DialogHeader>
+        <div className="mt-3 flex gap-1 rounded-xl bg-muted p-1">
+          <Button type="button" variant="ghost" onClick={() => setMode('paste')}
+            className={cn('h-auto flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'paste' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>
+            Paste chart
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setMode('upload')}
+            className={cn('h-auto flex-1 rounded-lg px-3 py-1.5 text-sm font-medium', mode === 'upload' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>
+            Image / PDF
+          </Button>
+        </div>
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
             <Label htmlFor="s-title">Song Title <span className="text-destructive">*</span></Label>
             <Input id="s-title" placeholder="e.g. Way Maker" value={title} onChange={e => setTitle(e.target.value)} className="rounded-xl" />
           </div>
-          <div className="space-y-1.5">
+          {mode === 'paste' ? <div className="space-y-1.5">
             <Label htmlFor="s-paste">Paste chord sheet</Label>
             <textarea
               id="s-paste"
@@ -103,14 +124,18 @@ export function NewSongDialog({
               onPaste={(e) => {
                 const plain = e.clipboardData.getData('text/plain');
                 const html = e.clipboardData.getData('text/html');
-                if (!html) return;
                 e.preventDefault();
-                const next = /(?:\*\*|__|^##?\s)/m.test(plain)
-                  ? plain.replace(/\r\n?/g, '\n')
-                  : prepareChordChartPaste(plain, html);
-                setPasteText(next);
+                const next = html ? chartHtmlToMarkdown(html) : plain.replace(/\r\n?/g, '\n');
+                const target = e.currentTarget;
+                const start = target.selectionStart;
+                const end = target.selectionEnd;
+                const inserted = `${target.value.slice(0, start)}${next}${target.value.slice(end)}`;
+                setPasteText(inserted);
                 setImageFile(null);
-                const details = extractChordChartMetadata(next);
+                requestAnimationFrame(() => {
+                  target.selectionStart = target.selectionEnd = start + next.length;
+                });
+                const details = extractChordChartMetadata(inserted);
                 if (details.title) setTitle(details.title);
                 if (details.artist) setArtist(details.artist);
               }}
@@ -129,8 +154,7 @@ export function NewSongDialog({
                 {extracted.metadata.timeSignature ? ` · ${extracted.metadata.timeSignature}` : null}
               </p>
             ) : null}
-          </div>
-          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-3">
+          </div> : <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-3">
             <div>
               <Label htmlFor="s-image">Image / PDF fallback</Label>
               <p className="text-xs text-muted-foreground">Use this only when a text chord sheet is unavailable.</p>
@@ -160,7 +184,7 @@ export function NewSongDialog({
                 </select>
               </div>
             ) : null}
-          </div>
+          </div>}
           <div className="space-y-1.5">
             <Label htmlFor="s-artist">Artist / Writer</Label>
             <Input id="s-artist" placeholder="e.g. Sinach" value={artist} onChange={e => setArtist(e.target.value)} className="rounded-xl" />
@@ -173,6 +197,23 @@ export function NewSongDialog({
             </Button>
           </div>
         </div>
+        <AlertDialog open={imageConfirmationOpen} onOpenChange={(open) => !open && setImageConfirmationOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Use an image instead?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Text chord sheets are easier to search, transpose, and read. Are you sure you cannot use a text-based chart for this song?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={saving}>Go back</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void createSong()} disabled={saving}>
+                {saving ? <ButtonSpinner className="mr-2" /> : null}
+                Use image sheet
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
