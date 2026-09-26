@@ -79,6 +79,23 @@
         { "fieldPath": "kind", "order": "ASCENDING" },
         { "fieldPath": "expiresAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "adminFiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibilityType", "order": "ASCENDING" },
+        { "fieldPath": "uploadedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "adminFiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibilityType", "order": "ASCENDING" },
+        { "fieldPath": "allowedRoleIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "uploadedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
