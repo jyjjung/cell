@@ -1231,11 +1231,11 @@ export function normalizeMarkdownChart(text: string): string {
     }
     line = line.replace(
       /^(\s*)(\*\*|__)([^*_]+)\2(?=\S)/,
-      (_match, indent: string, marker: string, content: string) => (
+      (_match, indent: string, _marker: string, content: string) => (
         isChordToken(content.trim())
         || /^(?:key|tempo|time)\s*[-:]/i.test(content.trim())
           ? _match
-          : `${indent}${marker}${content}${marker}\n`
+          : `${indent}## ${content.trim()}\n`
       ),
     );
     line = line.replace(/\*\*([^*]+)\*\*\*\*([^*]+)\*\*/g, (_match, first: string, second: string) => (
@@ -1626,6 +1626,18 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
       else blocks.push({ type: 'credit', text: line.trim() });
       continue;
     }
+    if (
+      blocks.length === 1
+      && blocks[0].type === 'title'
+      && !explicitHeader
+      && !isSectionHeader(line)
+      && !isMeasureLine(line)
+      && !isMetaLine(line)
+      && !line.includes('[')
+    ) {
+      blocks.push({ type: 'credit', text: line.trim() });
+      continue;
+    }
     sawBody = true;
     const trailingMeasure = !line.trimStart().startsWith('|')
       ? line.match(/^(.+?)\s+(\|.*\|)\s*$/)
@@ -1651,7 +1663,9 @@ function parsePlainOrChordPro(text: string): ChartBlock[] {
     }
     if (explicitHeader) {
       const headerText = explicitHeader[1].trim();
-      if (blocks.length === 0 && !sawBody) blocks.push({ type: 'title', text: headerText });
+      if (blocks.length === 0 && !isSectionHeader(headerText)) {
+        blocks.push({ type: 'title', text: headerText });
+      }
       else blocks.push({ type: 'section', text: isSectionHeader(headerText) ? headerText.toUpperCase() : headerText });
     } else if (isSectionHeader(line)) {
       blocks.push({ type: 'section', text: line.trim().toUpperCase() });

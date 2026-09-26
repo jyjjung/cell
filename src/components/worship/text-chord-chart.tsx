@@ -25,6 +25,7 @@ const SURFACE_BG: Record<ChartSurface, string> = {
 export const CHART_LOGICAL_WIDTH = 1200;
 
 const INK_WIDTH = 3.2;
+const CHORD_LABEL_SAFE_GAP_EM = 0.8;
 
 type PointerPt = { x: number; y: number };
 
@@ -182,7 +183,7 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
             className="relative inline-block align-top pt-[1.15em]"
             style={{
               minWidth: part.chord
-                ? `${Math.max(part.chord.length * 9 + 4, 10)}px`
+                ? `${Math.max(part.chord.length * 0.72 + CHORD_LABEL_SAFE_GAP_EM, 1.5)}em`
                 : undefined,
             }}
           >

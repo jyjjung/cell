@@ -143,6 +143,33 @@ I have decided`);
     }
   });
 
+  it('keeps bold song headers and separated chords intact', () => {
+    const source = `**Jesus You’re Beautiful**Jon Thurlow | James Kufeldt | David Brymer
+**Key - **Db** | Tempo - 64 | Time - 4/4**
+
+**BRIDGE 1**
+And **Gb/Db**there **Db**is **Ab(4)**none **Db/F**like **Gb**You, Lord **Db**
+`;
+    expect(normalizeMarkdownChart(source).split('\n').slice(0, 3)).toEqual([
+      '## Jesus You’re Beautiful',
+      'Jon Thurlow | James Kufeldt | David Brymer',
+      'Key - Db | Tempo - 64 | Time - 4/4',
+    ]);
+    const blocks = parseChordChart(source);
+    expect(blocks[0]).toEqual({ type: 'title', text: 'Jesus You’re Beautiful' });
+    expect(blocks[1]).toEqual({
+      type: 'credit',
+      text: 'Jon Thurlow | James Kufeldt | David Brymer',
+    });
+    const bridge = blocks.find((block) => block.type === 'lyric');
+    expect(bridge?.type).toBe('lyric');
+    if (bridge?.type === 'lyric') {
+      expect(bridge.parts.map((part) => part.chord).filter(Boolean)).toEqual([
+        'Gb/Db', 'Db', 'Ab(4)', 'Db/F', 'Gb', 'Db',
+      ]);
+    }
+  });
+
   it('keeps jump notes and drops CCLI footer', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks.some((b) => (
