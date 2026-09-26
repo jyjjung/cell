@@ -10,13 +10,13 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
-    version: 'v1.20.18',
+    version: 'v1.20.19',
     subtitle: 'Cleaner song library',
     date: 'September 26, 2026',
     changes: [
       {
         type: 'Added',
-        text: 'Worship managers can remove old image-based chord sheets in one confirmed cleanup while keeping pasted charts.',
+        text: 'Worship managers can remove songs with no chord sheets in one confirmed cleanup.',
       },
     ],
   },

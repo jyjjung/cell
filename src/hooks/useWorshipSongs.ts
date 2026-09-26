@@ -10,7 +10,6 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
-import { isTextChordSheet } from '@/lib/chord-chart';
 
 import { useWorshipData } from '@/contexts/worship-data-context';
 
@@ -154,35 +153,12 @@ export function useWorshipSongs(enabled = true) {
     });
   }, [useShared, worshipData, songs]);
 
-  /** Remove every image/PDF sheet while preserving pasted text charts. */
-  const removeAllImageChordSheets = useCallback(async (): Promise<number> => {
+  /** Remove songs that do not contain any chord sheets. */
+  const removeEmptySongs = useCallback(async (): Promise<number> => {
     const list = useShared ? worshipData!.songs : songs;
-    const imageSheets = list.flatMap((song) => song.chordSheets.filter((sheet) => !isTextChordSheet(sheet)));
-    if (imageSheets.length === 0) return 0;
-
-    for (const song of list) {
-      const textSheets = song.chordSheets.filter(isTextChordSheet);
-      if (textSheets.length === song.chordSheets.length) continue;
-      await updateDoc(doc(db, SONGS_COLLECTION, song.id), {
-        chordSheets: textSheets,
-        updatedAt: serverTimestamp(),
-      });
-    }
-
-    const storageDeletes = imageSheets
-      .filter((sheet) => sheet.storagePath)
-      .map(async (sheet) => {
-        try {
-          await deleteObject(ref(storage, sheet.storagePath));
-        } catch (error) {
-          const code = error && typeof error === 'object' && 'code' in error
-            ? String(error.code)
-            : '';
-          if (code !== 'storage/object-not-found') throw error;
-        }
-      });
-    await Promise.all(storageDeletes);
-    return imageSheets.length;
+    const emptySongs = list.filter((song) => song.chordSheets.length === 0);
+    await Promise.all(emptySongs.map((song) => deleteDoc(doc(db, SONGS_COLLECTION, song.id))));
+    return emptySongs.length;
   }, [useShared, worshipData, songs]);
 
   /** Delete an entire song and all its chord sheets */
@@ -198,6 +174,6 @@ export function useWorshipSongs(enabled = true) {
     songs: useShared ? worshipData.songs : songs,
     loading: useShared ? worshipData.songsLoading : loading,
     addSong, updateSong, addChordSheet, addTextChordSheet, updateChordSheet, removeChordSheet,
-    removeAllImageChordSheets, deleteSong,
+    removeEmptySongs, deleteSong,
   };
 }

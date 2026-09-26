@@ -390,7 +390,7 @@ function SongDetailView({
 
 // ── SongsLibraryTab ───────────────────────────────────────────────────────────
 function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
-  const { songs, loading, deleteSong, removeAllImageChordSheets } = useWorshipSongs();
+  const { songs, loading, deleteSong, removeEmptySongs } = useWorshipSongs();
   const canManageWorship = useCanManageWorship();
   const [newSongOpen, setNewSongOpen] = useState(false);
   const [addSheetSong, setAddSheetSong] = useState<WorshipSong | null>(null);
@@ -398,8 +398,8 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
   const [search, setSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<WorshipSong | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [removeImagesOpen, setRemoveImagesOpen] = useState(false);
-  const [removingImages, setRemovingImages] = useState(false);
+  const [removeEmptyOpen, setRemoveEmptyOpen] = useState(false);
+  const [removingEmpty, setRemovingEmpty] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -424,30 +424,30 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
     } finally { setDeleting(false); }
   };
 
-  const imageSheetCount = useMemo(
-    () => songs.reduce((count, song) => count + song.chordSheets.filter((sheet) => !isTextChordSheet(sheet)).length, 0),
+  const emptySongCount = useMemo(
+    () => songs.filter((song) => song.chordSheets.length === 0).length,
     [songs],
   );
 
-  const handleRemoveImages = async () => {
-    setRemovingImages(true);
+  const handleRemoveEmptySongs = async () => {
+    setRemovingEmpty(true);
     try {
-      const removed = await removeAllImageChordSheets();
+      const removed = await removeEmptySongs();
       toast({
-        title: 'Image sheets removed',
+        title: 'Empty songs removed',
         description: removed > 0
-          ? `Removed ${removed} image-based sheet${removed === 1 ? '' : 's'}. Pasted charts were kept.`
-          : 'There were no image-based sheets to remove.',
+          ? `Removed ${removed} song${removed === 1 ? '' : 's'} with no chord sheets.`
+          : 'There were no empty songs to remove.',
       });
-      setRemoveImagesOpen(false);
+      setRemoveEmptyOpen(false);
     } catch (error) {
       toast({
-        title: 'Could not remove image sheets',
+        title: 'Could not remove empty songs',
         description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
     } finally {
-      setRemovingImages(false);
+      setRemovingEmpty(false);
     }
   };
 
@@ -466,14 +466,14 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
               <Input placeholder="Search songs…" value={search} onChange={e => setSearch(e.target.value)}
                 className="pl-9 rounded-xl h-10" />
             </div>
-            {canManageWorship && imageSheetCount > 0 ? (
+            {canManageWorship && emptySongCount > 0 ? (
               <Button
                 type="button"
                 variant="outline"
                 className="rounded-xl text-destructive hover:bg-destructive/10"
-                onClick={() => setRemoveImagesOpen(true)}
+                onClick={() => setRemoveEmptyOpen(true)}
               >
-                Remove image sheets
+                Remove empty songs
               </Button>
             ) : null}
           </div>
@@ -561,27 +561,27 @@ function SongsLibraryTab({ openNewSignal }: { openNewSignal?: number }) {
             onCreated={(id) => { const s = songs.find(x => x.id === id); if (s) setDetailSong(s); }} />
           <AddChordSheetDialog open={!!addSheetSong} song={addSheetSong} onClose={() => setAddSheetSong(null)} />
 
-          <AlertDialog open={removeImagesOpen} onOpenChange={(open) => !open && setRemoveImagesOpen(false)}>
+          <AlertDialog open={removeEmptyOpen} onOpenChange={(open) => !open && setRemoveEmptyOpen(false)}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Remove all image-based sheets?</AlertDialogTitle>
+                <AlertDialogTitle>Remove empty songs?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently removes {imageSheetCount} image or PDF sheet{imageSheetCount === 1 ? '' : 's'}
-                  from every song and deletes their stored files. Pasted text charts will be kept.
+                  This permanently removes {emptySongCount} song{emptySongCount === 1 ? '' : 's'} with no chord sheets.
+                  Songs with pasted charts or image sheets will be kept.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={removingImages}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={removingEmpty}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={(event) => {
                     event.preventDefault();
-                    void handleRemoveImages();
+                    void handleRemoveEmptySongs();
                   }}
-                  disabled={removingImages}
+                  disabled={removingEmpty}
                 >
-                  {removingImages ? <ButtonSpinner className="mr-2" /> : null}
-                  Remove image sheets
+                  {removingEmpty ? <ButtonSpinner className="mr-2" /> : null}
+                  Remove empty songs
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
