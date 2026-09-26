@@ -1,7 +1,7 @@
 # AI editor guide - NDC Community Apps
 
 **Status:** living project guide  
-**Last reviewed:** 2026-09-06  
+**Last reviewed:** 2026-09-26
 **Audience:** every AI coding agent and editor working in this repository  
 
 This file is the single canonical policy document for the project. Read it
@@ -53,6 +53,14 @@ not additional policy sources.
     After dependency changes, run type-checking and the smallest relevant test
     or build command, and document intentional major-version compatibility
     pins in the dependency change.
+12. Before editing, inspect `git status`, the current branch, and registered
+    worktrees. Never delete or restore files that are not clearly in scope.
+    Treat files with spaces or suffixes such as ` 2`, `copy`, `backup`, or
+    `recovery` as candidates for investigation, not automatic deletions.
+13. Keep cleanup reversible until reviewed: prefer `git rm` for tracked files
+    and explicit paths for generated files, never recursive wildcard removal.
+    Do not delete `.env*`, migration manifests, Firebase credentials, local
+    deployment metadata, or uploaded media without confirming their purpose.
 
 ## 3. Source-of-truth order
 
@@ -560,6 +568,38 @@ writes.
 
 ## 9. Validation and operational commands
 
+### Preflight and cleanup audits
+
+- Start every code or cleanup task with:
+
+```bash
+git status --short --branch
+git worktree list
+```
+
+- Confirm `HEAD` and `origin/master` are aligned before calling the branch
+  current:
+
+```bash
+git fetch origin master
+git rev-list --left-right --count HEAD...origin/master
+```
+
+- For cleanup work, inventory tracked root files, scripts, ignored files, and
+  unusually large files before deleting anything. Use exact paths and review
+  `git diff --stat` and `git diff --check` afterward.
+- Duplicate-content checks must compare files by hash and then inspect
+  references. Filename similarity alone is not proof of redundancy.
+- Use `npx knip --no-progress` only as a lead generator. Do not delete a file,
+  export, route component, migration, or shared UI primitive solely because
+  Knip marks it unused: App Router discovery, dynamic imports, configuration,
+  scripts, public exports, and runtime conventions can be invisible to static
+  analysis.
+- Preserve intentional local artifacts needed for development or recovery,
+  including `node_modules`, environment files, `.vercel`, wallpapers, Firebase
+  migration manifests, and `public/pdf.worker.min.mjs`. Remove generated
+  artifacts only when they are reproducible and ignored.
+
 ### Dependency maintenance
 
 - Use npm for dependency changes and commit both `package.json` and
@@ -599,7 +639,15 @@ npm run build
 - Playwright smoke and form tests are under `e2e`.
 - Use focused Vitest/Playwright selectors when available; escalate only when
   the change crosses shared shell, provider, routing, or build boundaries.
+- For shared shell, routing, authentication, upload, chat, form, or public-link
+  changes, run both the production build and the relevant browser tests. A
+  passing type-check or unit test suite does not verify client navigation,
+  hydration, Firebase listeners, or authenticated access gates.
 - For Firebase rules, validate emulator tests and deploy changed rules.
+- When rules or storage behavior changes, run the relevant emulator suite and
+  deploy only the changed rules file using the documented Firebase command.
+  Report authentication or deployment failures explicitly; never imply a
+  deployment succeeded when it did not.
 - Before push, update the changelog for any visible change.
 
 ## 10. Updating this guide
