@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import {
     chordSheetsForKey, parseYoutubeVideoId, type ReferenceTrackDraft
 } from '@/lib/worship-utils';
-import { chartHtmlToMarkdown, detectKeyFromText, isTextChordSheet, parseChordChart, savePastedChartText } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, extractChordChartMetadata, isTextChordSheet, parseChordChart, prepareChordChartPaste, savePastedChartText } from '@/lib/chord-chart';
 import type { ChordKey, SongChordSheet, WorshipSong } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { useWorshipData } from '@/contexts/worship-data-context';
@@ -40,19 +40,24 @@ const WORSHIP_ALL_KEYS: ChordKey[] = [
 export function NewSongDialog({
   open, onClose, onCreated,
 }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const { addSong } = useWorshipSongs();
+  const { addSong, addTextChordSheet } = useWorshipSongs();
   const { toast } = useToast();
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [pasteText, setPasteText] = useState('');
   const [saving, setSaving] = useState(false);
+  const extracted = pasteText ? extractChordChartMetadata(pasteText) : null;
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const id = await addSong(title, artist || undefined);
+      const id = await addSong(title, artist || undefined, extracted?.metadata);
+      if (pasteText.trim()) {
+        await addTextChordSheet(id, savePastedChartText(pasteText.trim()), extracted?.metadata.key ?? 'E');
+      }
       toast({ title: 'Song created', description: `"${title}" has been added to the library.` });
-      setTitle(''); setArtist('');
+      setTitle(''); setArtist(''); setPasteText('');
       onCreated(id);
       onClose();
     } catch (e: any) {
@@ -73,6 +78,41 @@ export function NewSongDialog({
           <div className="space-y-1.5">
             <Label htmlFor="s-title">Song Title <span className="text-destructive">*</span></Label>
             <Input id="s-title" placeholder="e.g. Way Maker" value={title} onChange={e => setTitle(e.target.value)} className="rounded-xl" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="s-paste">Paste chord sheet</Label>
+            <textarea
+              id="s-paste"
+              value={pasteText}
+              aria-label="Chord sheet text"
+              placeholder="Paste from SongSelect or Apple Notes to fill the song details automatically…"
+              className="min-h-32 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+              onPaste={(e) => {
+                const plain = e.clipboardData.getData('text/plain');
+                const html = e.clipboardData.getData('text/html');
+                if (!html) return;
+                e.preventDefault();
+                const next = prepareChordChartPaste(plain, html);
+                setPasteText(next);
+                const details = extractChordChartMetadata(next);
+                if (details.title) setTitle(details.title);
+                if (details.artist) setArtist(details.artist);
+              }}
+              onChange={(e) => {
+                const next = e.target.value;
+                setPasteText(next);
+                const details = next.trim() ? extractChordChartMetadata(next) : null;
+                if (details?.title) setTitle(details.title);
+                if (details?.artist) setArtist(details.artist);
+              }}
+            />
+            {extracted?.metadata && Object.keys(extracted.metadata).length > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Detected: {extracted.metadata.key ? `Key ${extracted.metadata.key}` : null}
+                {extracted.metadata.tempo ? ` · ${extracted.metadata.tempo} BPM` : null}
+                {extracted.metadata.timeSignature ? ` · ${extracted.metadata.timeSignature}` : null}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="s-artist">Artist / Writer</Label>
@@ -546,7 +586,7 @@ export function AddChordSheetDialog({
   lockKey?: boolean;
   onUploaded?: (sheetIds: string[]) => void;
 }) {
-  const { addChordSheet, addTextChordSheet } = useWorshipSongs();
+  const { addChordSheet, addTextChordSheet, updateSong } = useWorshipSongs();
   const { toast } = useToast();
   const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [file, setFile] = useState<File | null>(null);
@@ -616,6 +656,16 @@ export function AddChordSheetDialog({
       // editable/parser fallback and preserve the rich HTML separately.
       const sourceText = pasteText;
       const savedKey = getSaveKey();
+      const extracted = extractChordChartMetadata(sourceText);
+      const metadata = {
+        ...song.metadata,
+        ...extracted.metadata,
+        key: savedKey,
+      };
+      await updateSong(song.id, {
+        ...(extracted.artist && !song.artist?.trim() ? { artist: extracted.artist } : {}),
+        metadata,
+      });
       const sheet = await addTextChordSheet(
         song.id,
         savePastedChartText(sourceText.trim()),

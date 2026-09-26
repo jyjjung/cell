@@ -597,10 +597,17 @@ export interface WorshipSong {
   id: string;
   title: string;
   artist?: string;
+  metadata?: SongMetadata;
   chordSheets: SongChordSheet[];
   createdBy: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
+}
+
+export interface SongMetadata {
+  key?: ChordKey;
+  tempo?: number;
+  timeSignature?: string;
 }
 
 /** Per-setlist YouTube reference link with an optional label (e.g. "For intro only"). */

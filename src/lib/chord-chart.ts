@@ -1,5 +1,5 @@
 import { escapeHtml } from '@/lib/sanitize-html';
-import type { ChordKey, SongChordSheet } from '@/types';
+import type { ChordKey, SongChordSheet, SongMetadata } from '@/types';
 
 export const LETTER_KEYS: Exclude<ChordKey, 'numbers'>[] = [
   'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
@@ -85,6 +85,33 @@ export function detectKeyFromText(text: string): ChordKey | null {
   const raw = match[1];
   const normalized = `${raw[0].toUpperCase()}${raw.slice(1)}` as ChordKey;
   return LETTER_KEYS.includes(normalized as Exclude<ChordKey, 'numbers'>) ? normalized : null;
+}
+
+export function extractChordChartMetadata(text: string): {
+  title?: string;
+  artist?: string;
+  metadata: SongMetadata;
+} {
+  const blocks = parseChordChart(text);
+  const title = blocks.find((block) => block.type === 'title')?.text.trim();
+  const artist = blocks.find((block) => block.type === 'credit')?.text.trim();
+  const metaText = blocks
+    .filter((block): block is Extract<ChartBlock, { type: 'meta' }> => block.type === 'meta')
+    .map((block) => block.text)
+    .join(' | ');
+  const key = detectKeyFromText(metaText || text) ?? undefined;
+  const tempoMatch = metaText.match(/\btempo\s*[-–—:]\s*(\d{2,3})\b/i);
+  const timeMatch = metaText.match(/\btime\s*[-–—:]\s*(\d+\s*\/\s*\d+)\b/i);
+
+  return {
+    ...(title ? { title } : {}),
+    ...(artist ? { artist } : {}),
+    metadata: {
+      ...(key ? { key } : {}),
+      ...(tempoMatch ? { tempo: Number(tempoMatch[1]) } : {}),
+      ...(timeMatch ? { timeSignature: timeMatch[1].replace(/\s+/g, '') } : {}),
+    },
+  };
 }
 
 /** English words that start with A–G so we don't steal their first letter as a chord. */

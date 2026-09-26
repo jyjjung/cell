@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import type { WorshipSong, SongChordSheet, ChordKey } from '@/types';
+import type { WorshipSong, SongChordSheet, ChordKey, SongMetadata } from '@/types';
 import { db, storage } from '@/lib/firebase';
 import {
   collection, query, onSnapshot, doc, addDoc, updateDoc, deleteDoc,
@@ -10,6 +10,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { STORAGE_CACHE_CONTROL } from '@/lib/media-cache';
+import { isTextChordSheet } from '@/lib/chord-chart';
 
 import { useWorshipData } from '@/contexts/worship-data-context';
 
@@ -39,12 +40,13 @@ export function useWorshipSongs(enabled = true) {
     return unsub;
   }, [useShared, enabled, currentUser?.uid]);
 
-  /** Create a new song with no chord sheets yet */
-  const addSong = useCallback(async (title: string, artist?: string): Promise<string> => {
+  /** Create a new song with optional chart metadata. */
+  const addSong = useCallback(async (title: string, artist?: string, metadata?: SongMetadata): Promise<string> => {
     if (!currentUser) throw new Error('Not authenticated');
     const docRef = await addDoc(collection(db, SONGS_COLLECTION), {
       title: title.trim(),
       artist: artist?.trim() || null,
+      ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
       chordSheets: [],
       createdBy: currentUser.uid,
       createdAt: serverTimestamp(),
@@ -52,9 +54,9 @@ export function useWorshipSongs(enabled = true) {
     return docRef.id;
   }, [currentUser]);
 
-  /** Update song metadata (title/artist) */
-  const updateSong = useCallback(async (songId: string, data: { title?: string; artist?: string | null }) => {
-    const updateData: any = { ...data, updatedAt: serverTimestamp() };
+  /** Update song metadata and editable title/artist fields. */
+  const updateSong = useCallback(async (songId: string, data: { title?: string; artist?: string | null; metadata?: SongMetadata }) => {
+    const updateData: Record<string, unknown> = { ...data, updatedAt: serverTimestamp() };
     // Remove undefined values to avoid Firebase error
     if (updateData.title === undefined) delete updateData.title;
     if (updateData.artist === undefined) delete updateData.artist;
@@ -152,6 +154,37 @@ export function useWorshipSongs(enabled = true) {
     });
   }, [useShared, worshipData, songs]);
 
+  /** Remove every image/PDF sheet while preserving pasted text charts. */
+  const removeAllImageChordSheets = useCallback(async (): Promise<number> => {
+    const list = useShared ? worshipData!.songs : songs;
+    const imageSheets = list.flatMap((song) => song.chordSheets.filter((sheet) => !isTextChordSheet(sheet)));
+    if (imageSheets.length === 0) return 0;
+
+    for (const song of list) {
+      const textSheets = song.chordSheets.filter(isTextChordSheet);
+      if (textSheets.length === song.chordSheets.length) continue;
+      await updateDoc(doc(db, SONGS_COLLECTION, song.id), {
+        chordSheets: textSheets,
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    const storageDeletes = imageSheets
+      .filter((sheet) => sheet.storagePath)
+      .map(async (sheet) => {
+        try {
+          await deleteObject(ref(storage, sheet.storagePath));
+        } catch (error) {
+          const code = error && typeof error === 'object' && 'code' in error
+            ? String(error.code)
+            : '';
+          if (code !== 'storage/object-not-found') throw error;
+        }
+      });
+    await Promise.all(storageDeletes);
+    return imageSheets.length;
+  }, [useShared, worshipData, songs]);
+
   /** Delete an entire song and all its chord sheets */
   const deleteSong = useCallback(async (song: WorshipSong) => {
     for (const sheet of song.chordSheets) {
@@ -164,6 +197,7 @@ export function useWorshipSongs(enabled = true) {
   return {
     songs: useShared ? worshipData.songs : songs,
     loading: useShared ? worshipData.songsLoading : loading,
-    addSong, updateSong, addChordSheet, addTextChordSheet, updateChordSheet, removeChordSheet, deleteSong,
+    addSong, updateSong, addChordSheet, addTextChordSheet, updateChordSheet, removeChordSheet,
+    removeAllImageChordSheets, deleteSong,
   };
 }

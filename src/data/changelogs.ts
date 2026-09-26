@@ -10,6 +10,32 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.18',
+    subtitle: 'Cleaner song library',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Worship managers can remove old image-based chord sheets in one confirmed cleanup while keeping pasted charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.17',
+    subtitle: 'Smarter song details',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Paste a chord sheet when adding a worship song to fill in its title, writer, key, tempo, and time signature automatically.',
+      },
+      {
+        type: 'Improved',
+        text: 'Song library rows now show helpful chart details such as tempo and time signature at a glance.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.16',
     subtitle: 'Shared worship setlists',
     date: 'September 26, 2026',

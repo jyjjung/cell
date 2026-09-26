@@ -3,6 +3,7 @@ import {
   detectKeyFromText,
   expandInlineChords,
   canonicalizeChordChartText,
+  extractChordChartMetadata,
   parseChordChart,
   normalizeMarkdownChart,
   prepareChordChartPaste,
@@ -63,6 +64,20 @@ CCLI Song # 7244930
 `;
 
 describe('chord chart paste', () => {
+  it('extracts song metadata from a pasted chart header', () => {
+    expect(extractChordChartMetadata(`Great Are You Lord
+David Leonard | Leslie Jordan
+Key - A | Tempo - 144 | Time - 6/8
+
+VERSE 1
+A
+You give life`)).toEqual({
+      title: 'Great Are You Lord',
+      artist: 'David Leonard | Leslie Jordan',
+      metadata: { key: 'A', tempo: 144, timeSignature: '6/8' },
+    });
+  });
+
   it('detects the original key from SongSelect metadata', () => {
     expect(detectKeyFromText(SAMPLE)).toBe('E');
   });
