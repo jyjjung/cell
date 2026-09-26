@@ -75,8 +75,7 @@ C5All the noise dies down Gsus`, null);
     expect(secondLine).toMatchObject({
       type: 'lyric',
       parts: expect.arrayContaining([
-        { chord: 'G', text: '' },
-        { text: ' I open up my ' },
+        { chord: 'G', text: ' I open up my ' },
         { chord: 'Am7', text: 'heart to You, now' },
       ]),
     });
@@ -92,6 +91,28 @@ C5All the noise dies down Gsus`, null);
         { chord: 'D', text: 'breath in our ' },
         { chord: 'F#m7', text: 'lungs' },
       ]),
+    });
+  });
+
+  it('preserves SongSelect chord classes when converting clipboard HTML', () => {
+    const pasted = chartHtmlToMarkdown(
+      '<div>VERSE 1</div><div><span class="chord">Cmaj7#11</span>All things</div>',
+    );
+    expect(pasted).toContain('**Cmaj7#11**All things');
+    expect(parseChordChart(pasted)).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'Cmaj7#11', text: 'All things' }],
+    });
+  });
+
+  it('preserves N.C. in SongSelect-style clipboard Markdown', () => {
+    const pasted = chartHtmlToMarkdown(
+      '<div>INTRO</div><div><strong>N.C.</strong>Let the words</div>',
+    );
+    expect(pasted).toContain('**N.C.**Let the words');
+    expect(parseChordChart(pasted)).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'N.C.', text: 'Let the words' }],
     });
   });
 
@@ -196,8 +217,7 @@ I'm Abliving in the light of a new day
       expect.objectContaining({
         type: 'lyric',
         parts: expect.arrayContaining([
-          { chord: 'F2', text: '' },
-          { text: ' How I live for the moments' },
+          { chord: 'F2', text: ' How I live for the moments' },
         ]),
       }),
     );

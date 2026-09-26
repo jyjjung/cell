@@ -36,6 +36,7 @@ const PEN_WIDTH = 3.2;
 const HIGHLIGHT_WIDTH = 16;
 
 function editableChartText(sheet: Pick<SongChordSheet, 'sourceText' | 'sourceHtml'>): string {
+  if (sheet.sourceText?.trim()) return sheet.sourceText;
   if (sheet.sourceHtml?.trim()) {
     const markdown = chartHtmlToMarkdown(sheet.sourceHtml);
     if (markdown.trim()) return markdown;
@@ -103,6 +104,7 @@ export function TextChordChartViewer({
   initialAnnotationId,
   initialDisplayKey,
   startDrawing,
+  startTextEditing,
 }: {
   songId: string;
   songTitle: string;
@@ -111,6 +113,7 @@ export function TextChordChartViewer({
   initialAnnotationId?: string;
   initialDisplayKey?: ChordKey;
   startDrawing?: boolean;
+  startTextEditing?: boolean;
 }) {
   const { currentUser } = useAuth();
   const { updateChordSheet } = useWorshipSongs();
@@ -128,7 +131,7 @@ export function TextChordChartViewer({
   const [zoom, setZoom] = useState(1);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  const [textEditing, setTextEditing] = useState(false);
+  const [textEditing, setTextEditing] = useState(Boolean(startTextEditing));
   const [textDraft, setTextDraft] = useState(() => editableChartText(sheet));
   const [renderedText, setRenderedText] = useState(() => editableChartText(sheet));
   const [textDirty, setTextDirty] = useState(false);
@@ -278,6 +281,14 @@ export function TextChordChartViewer({
     setEditing(true);
     await persist([...annotations, created]);
   };
+
+  useEffect(() => {
+    if (!startDrawing || initialAnnotationId || annotationId !== 'none' || !currentUser) return;
+    const created = emptyAnnotation(currentUser.uid, `Notes ${(sheet.annotations ?? []).length + 1}`);
+    setAnnotations((current) => [...current, created]);
+    setAnnotationId(created.id);
+    setEditing(true);
+  }, [annotationId, currentUser, initialAnnotationId, sheet.annotations, startDrawing]);
 
   const confirmDeleteAnnotation = async () => {
     if (!currentUser || annotationId === 'none') return;

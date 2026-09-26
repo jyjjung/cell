@@ -25,7 +25,7 @@ const SURFACE_BG: Record<ChartSurface, string> = {
 export const CHART_LOGICAL_WIDTH = 1200;
 
 const INK_WIDTH = 3.2;
-const CHORD_LABEL_SAFE_GAP_EM = 0.8;
+const CHORD_LABEL_SAFE_GAP_EM = 0.35;
 
 type PointerPt = { x: number; y: number };
 
@@ -94,55 +94,72 @@ function updateRenderedKeyMetadata(block: ChartBlock, displayKey: ChordKey): Cha
   };
 }
 
-function ChartBlockView({ block }: { block: ChartBlock }) {
+function ChartBlockView({ block, showChords = true }: { block: ChartBlock; showChords?: boolean }) {
   const surface = useChartSurface();
   if (block.type === 'title') {
     return (
-      <h1 className={cn('max-w-full text-[28px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
+      <h1 className={cn('max-w-full text-[24px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </h1>
     );
   }
   if (block.type === 'credit') {
     return (
-      <p className={cn('max-w-full text-[16px] leading-snug [overflow-wrap:anywhere]', ink(surface, 'muted'))}>
+      <p className={cn('max-w-full text-[14px] leading-snug [overflow-wrap:anywhere]', ink(surface, 'muted'))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'meta') {
     return (
-      <p className={cn('max-w-full text-[16px] font-semibold [overflow-wrap:anywhere]', ink(surface))}>
+      <p className={cn('max-w-full text-[14px] font-semibold [overflow-wrap:anywhere]', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'section') {
     return (
-      <p className={cn('pt-2 text-[20px] font-bold uppercase tracking-wide', ink(surface))}>
+      <p className={cn('mt-6 pt-2 text-[16px] font-bold uppercase tracking-wide first:mt-0 first:pt-0', ink(surface))}>
         {block.text}
       </p>
     );
   }
   if (block.type === 'measure') {
+    if (!showChords) {
+      const lyrics = block.text
+        .split('|')
+        .map((cell) => {
+          let value = cell.trim();
+          value = value.replace(/^\.\s*/, '');
+          while (/^\(?[A-G](?:#|b)?[^\s|]*/i.test(value)) {
+            value = value.replace(/^\(?[A-G](?:#|b)?[^\s|]*\s*/i, '');
+          }
+          return value.trim();
+        })
+        .filter(Boolean)
+        .join(' ');
+      if (!lyrics && !block.cue) return null;
+      return (
+        <p className={cn('max-w-full whitespace-pre-wrap break-words text-[16px] leading-snug', ink(surface))}>
+          {[block.cue, lyrics].filter(Boolean).join(' ')}
+        </p>
+      );
+    }
     return (
-      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[20px] font-bold leading-snug', ink(surface))}>
-        <span className="inline">{block.text}</span>
-        {block.cue && (
-          <span className={cn('ml-2 text-[16px] font-normal italic', ink(surface, 'soft'))}>{block.cue}</span>
-        )}
-      </p>
+      <div className={cn('max-w-full', ink(surface))}>
+        <MeasureChartView text={block.text} cue={block.cue} />
+      </div>
     );
   }
   if (block.type === 'note') {
     return (
-      <p className={cn('text-[16px] italic', ink(surface, 'soft'))}>
+      <p className={cn('text-[13px] italic', ink(surface, 'soft'))}>
         {block.text}
       </p>
     );
   }
   return (
-    <LyricBlockView block={block} />
+    <LyricBlockView block={block} showChords={showChords} />
   );
 }
 
@@ -158,10 +175,123 @@ function ChordLabel({ chord, className }: { chord: string; className?: string })
   );
 }
 
-function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' }> }) {
+function isDirectionCue(text: string) {
+  return /^\((?:to\b|\d+(?:st|nd|rd|th)\s+x\b|based on\b)/i.test(text.trim());
+}
+
+function CueLabel({ text, surface }: { text: string; surface: ChartSurface }) {
+  const direction = isDirectionCue(text);
+  return (
+    <span
+      className={cn(
+        direction ? 'text-[13px] italic' : 'text-[16px]',
+        ink(surface, direction ? 'soft' : 'primary'),
+      )}
+    >
+      {text}
+    </span>
+  );
+}
+
+function MeasureChartView({ text, cue }: { text: string; cue?: string }) {
+  const surface = useChartSurface();
+  const trimmedText = text.trim();
+  const openingRepeat = /^(?:\|\|:|\|:\|)\s*/.exec(trimmedText)?.[0].trim() ?? '';
+  const closingRepeat = /\s*(?::\|\||\|:\|)$/.exec(trimmedText)?.[0].trim() ?? '';
+  const measureText = trimmedText
+    .replace(openingRepeat, '')
+    .replace(closingRepeat, '');
+  const rawCells = measureText.split('|');
+  const hasLeadingBar = measureText.trimStart().startsWith('|');
+  const hasTrailingBar = measureText.trimEnd().endsWith('|');
+  const cells = rawCells
+    .slice(hasLeadingBar ? 1 : 0, hasTrailingBar ? -1 : undefined)
+    .map((cell) => {
+    const tokens = cell.trim().split(/\s+/).filter(Boolean);
+    const chords: string[] = [];
+    const lyrics: string[] = [];
+    for (const token of tokens) {
+      if (
+        token === ':'
+        || token === '.'
+        || /^N\.?C\.?$|^N\/C$/i.test(token)
+        || /^\(?[A-G](?:#|b)?(?:\d|\/|m|sus|add|dim|aug|\+|-|\([^)]*\))/.test(token)
+        || /^[A-G](?:#|b)?$/.test(token)
+      ) {
+        chords.push(token);
+      } else {
+        lyrics.push(token);
+      }
+    }
+    return { chords, lyric: lyrics.join(' ') };
+  });
+  const hasLyrics = cells.some((cell) => cell.lyric.trim());
+
+  return (
+    <div className="max-w-full overflow-x-auto whitespace-nowrap text-[16px] font-bold leading-snug">
+      {cue ? (
+        <div className="mb-0.5 font-normal leading-tight">
+          <CueLabel text={cue} surface={surface} />
+        </div>
+      ) : null}
+      <div className="flex items-start">
+        {openingRepeat ? <span className="shrink-0">{openingRepeat}</span> : null}
+        {hasLeadingBar ? <span className="mr-1 shrink-0">|</span> : null}
+        {cells.map((cell, index) => {
+          const chordText = cell.chords.join(' ');
+          const cellWidth = `${Math.max(chordText.length, cell.lyric.length, 1) * 0.5 + 0.8}em`;
+          return (
+            <div key={`${chordText}-${cell.lyric}-${index}`} className="flex shrink-0 items-start">
+              <div className="flex flex-col items-center justify-start text-center" style={{ width: cellWidth }}>
+                <div className={cn(hasLyrics ? 'min-h-[1.45em]' : 'min-h-0', 'leading-tight')}>
+                  {cell.chords.map((chord, chordIndex) => (
+                    <ChordLabel key={`${chord}-${chordIndex}`} chord={chord} className="mx-0.5 text-[14px]" />
+                  ))}
+                </div>
+                {hasLyrics && (
+                  <div className="min-h-[1.45em] text-[16px] font-normal leading-tight">
+                    {cell.lyric}
+                  </div>
+                )}
+              </div>
+              {!(closingRepeat && index === cells.length - 1) && (
+                <span className="shrink-0">|</span>
+              )}
+            </div>
+          );
+        })}
+        {closingRepeat ? <span className="shrink-0">{closingRepeat}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function LyricBlockView({
+  block,
+  showChords = true,
+}: {
+  block: Extract<ChartBlock, { type: 'lyric' }>;
+  showChords?: boolean;
+}) {
   const surface = useChartSurface();
   const parts = block.parts.filter((part) => part.chord || (part.text ?? '').trim());
   if (parts.length === 0) return null;
+
+  if (!showChords) {
+    const lyrics = parts
+      .filter((part) => part.chord !== '.')
+      .map((part) => part.text)
+      .join('');
+    if (!lyrics.trim()) return null;
+    return (
+      <p className={cn('max-w-full whitespace-pre-wrap break-words text-[16px] leading-snug', ink(surface))}>
+        {lyrics}
+        {block.cue && (
+          <span className={cn('ml-2 text-[13px] italic', ink(surface, 'soft'))}>{block.cue}</span>
+        )}
+      </p>
+    );
+  }
 
   if (parts.length === 1 && parts[0].text.trim() && !parts[0].chord) {
     return (
@@ -175,47 +305,82 @@ function LyricBlockView({ block }: { block: Extract<ChartBlock, { type: 'lyric' 
   }
 
   return (
-    <div className="max-w-full pb-1">
-      <div className="max-w-full whitespace-normal text-[20px] leading-snug">
+    <div className="max-w-full">
+      <div className="max-w-full whitespace-normal pb-1 text-[16px] leading-[1.3]">
         {parts.map((part, pi) => (
           <span
             key={pi}
-            className="relative inline-block align-top pt-[1.15em]"
+            className="relative inline-block align-top pt-[1.1em]"
             style={{
               minWidth: part.chord
-                ? `${Math.max(part.chord.length * 0.72 + CHORD_LABEL_SAFE_GAP_EM, 1.5)}em`
+                ? `${Math.max(part.chord.length * 0.55 + CHORD_LABEL_SAFE_GAP_EM, 1.1)}em`
                 : undefined,
+              paddingRight: part.chord ? `${CHORD_LABEL_SAFE_GAP_EM}em` : undefined,
             }}
           >
             {part.chord && (
-              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[18px] font-bold leading-none', ink(surface))}>
+              <span className={cn('absolute left-0 top-0 whitespace-nowrap text-[14px] font-bold leading-none', ink(surface))}>
                 <ChordLabel chord={part.chord} />
               </span>
             )}
             <span className={cn('whitespace-pre-wrap break-words', ink(surface))}>
-              {part.text || '\u00a0'}
+              {part.text?.trim() ? part.text : '\u00a0'}
             </span>
           </span>
         ))}
       </div>
       {block.cue && (
-        <p className={cn('text-[16px] italic', ink(surface, 'soft'))}>{block.cue}</p>
+        <p className="font-normal leading-tight">
+          <CueLabel text={block.cue} surface={surface} />
+        </p>
       )}
     </div>
   );
 }
 
-function ChartColumn({ blocks }: { blocks: ChartBlock[] }) {
+function ChartColumn({ blocks, showChords = true }: { blocks: ChartBlock[]; showChords?: boolean }) {
   return (
-    <div className="min-w-0 max-w-full space-y-0.5 overflow-x-hidden overflow-y-visible">
-      {blocks.map((block, i) => (
-        <ChartBlockView key={i} block={block} />
-      ))}
+    <div className="min-w-0 max-w-full space-y-0 overflow-x-hidden overflow-y-visible">
+      {blocks.map((block, i) => {
+        const previous = blocks[i - 1];
+        if (
+          showChords
+          && block.type === 'measure'
+          && previous?.type === 'lyric'
+          && previous.parts.length === 1
+          && !previous.parts[0].chord
+          && previous.parts[0].text.trim()
+        ) {
+          return (
+            <ChartBlockView
+              key={i}
+              block={{ ...block, cue: previous.parts[0].text.trim() }}
+              showChords
+            />
+          );
+        }
+        if (
+          showChords
+          && block.type === 'lyric'
+          && block.parts.length === 1
+          && !block.parts[0].chord
+          && blocks[i + 1]?.type === 'measure'
+        ) {
+          return null;
+        }
+        return <ChartBlockView key={i} block={block} showChords={showChords} />;
+      })}
     </div>
   );
 }
 
-export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
+export function ChordChartBody({
+  blocks,
+  showChords = true,
+}: {
+  blocks: ChartBlock[];
+  showChords?: boolean;
+}) {
   const firstBody = blocks.findIndex((b) =>
     b.type === 'section' || b.type === 'measure' || b.type === 'lyric' || b.type === 'note',
   );
@@ -228,24 +393,20 @@ export function ChordChartBody({ blocks }: { blocks: ChartBlock[] }) {
       {header.length > 0 && (
         <div className="max-w-full space-y-0.5 pb-2">
           {header.map((block, i) => (
-            <ChartBlockView key={`h-${i}`} block={block} />
+            <ChartBlockView key={`h-${i}`} block={block} showChords={showChords} />
           ))}
         </div>
       )}
-      {body.length > 0 && right.length === 0 && <ChartColumn blocks={left} />}
+      {body.length > 0 && right.length === 0 && <ChartColumn blocks={left} showChords={showChords} />}
       {body.length > 0 && right.length > 0 && (
         <div className="grid max-w-full grid-cols-2 items-start gap-x-6">
-          <ChartColumn blocks={left} />
-          <ChartColumn blocks={right} />
+          <ChartColumn blocks={left} showChords={showChords} />
+          <ChartColumn blocks={right} showChords={showChords} />
         </div>
       )}
       </div>
     </ChartSurfaceContext.Provider>
   );
-}
-
-function ChartBlocks({ blocks }: { blocks: ChartBlock[] }) {
-  return <ChordChartBody blocks={blocks} />;
 }
 
 export function RichChordChartBody({ html, originalKey, displayKey }: {
@@ -288,6 +449,7 @@ export function TextChordChartCanvas({
   zoom = 1,
   exportMode = false,
   theme: _theme = TEXT_CHART_SURFACE,
+  showChords = true,
 }: {
   sheet: SongChordSheet;
   sourceText?: string;
@@ -303,14 +465,15 @@ export function TextChordChartCanvas({
   /** Fixed 1:1 layout for PNG export — no responsive scaling. */
   exportMode?: boolean;
   theme?: ChartSurface;
+  showChords?: boolean;
 }) {
   const surface = TEXT_CHART_SURFACE;
-  const richSource = sheet.sourceHtml?.trim() || '';
   const source = useMemo(() => {
     if (sourceText != null) return sourceText;
-    if (!richSource) return sheet.sourceText || '';
-    return chartHtmlToMarkdown(richSource) || sheet.sourceText || '';
-  }, [richSource, sheet.sourceText, sourceText]);
+    if (sheet.sourceText?.trim()) return sheet.sourceText;
+    const richSource = sheet.sourceHtml?.trim() || '';
+    return richSource ? chartHtmlToMarkdown(richSource) || '' : '';
+  }, [sheet.sourceHtml, sheet.sourceText, sourceText]);
   const sourceOriginalKey = useMemo(
     // Prefer the persisted plain text: rich clipboard extraction can contain
     // presentation-only metadata that should not redefine the chart's key.
@@ -424,7 +587,7 @@ export function TextChordChartCanvas({
       }}
     >
       <ChartSurfaceContext.Provider value={surface}>
-        <ChartBlocks blocks={blocks} />
+        <ChordChartBody blocks={blocks} showChords={showChords} />
       </ChartSurfaceContext.Provider>
       <svg
         ref={svgRef}

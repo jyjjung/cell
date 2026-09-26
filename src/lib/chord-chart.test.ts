@@ -64,6 +64,117 @@ CCLI Song # 7244930
 `;
 
 describe('chord chart paste', () => {
+  it('keeps annotated section headings at section size', () => {
+    const blocks = parseChordChart(`**Washed**
+**Chorus** (first time a cappella)
+**|** **G** **|** **D7sus** **|**`);
+    expect(blocks[0]).toEqual({ type: 'title', text: 'Washed' });
+    expect(blocks[1]).toEqual({ type: 'section', text: 'CHORUS (FIRST TIME A CAPPELLA)' });
+    expect(blocks[2]).toEqual({ type: 'measure', text: '| G | D7sus |' });
+  });
+
+  it('parses SongSelect Markdown with inline chords and metadata', () => {
+    const source = `**Worthy Of It All**David Brymer | Ryan Hall(based on the recording by David Brymer)
+**Key - **D** | Tempo - 69 | Time - 4/4**
+
+**INTRO**
+**|** **G2**  **|** **A/G**  **|** **G2**  **|** **A/G**  **|**
+
+**VERSE**
+**G2**All the saints and **A/G**angels
+They **G2**bow before Your **A/G**throne
+**G2**All the elders **A/G**cast their crowns
+Before the **G2**Lamb of **A/G**God and **D**sing
+
+**CHORUS**
+You are worthy of it all **D**
+You are worthy of it all **A**
+For from You are all **G2**things and to You are all **A**things
+You deserve the **D**glory`;
+    const blocks = parseChordChart(source);
+    expect(blocks[0]).toEqual({ type: 'title', text: 'Worthy Of It All' });
+    expect(blocks).toContainEqual({
+      type: 'meta',
+      text: 'Key - D | Tempo - 69 | Time - 4/4',
+    });
+
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '| G2  | A/G  | G2  | A/G  |',
+    });
+
+    expect(blocks.some((block) => (
+      block.type === 'lyric'
+      && block.parts.some((part) => part.chord === 'A/G' && part.text === 'angels')
+    ))).toBe(true);
+  });
+
+  it('normalizes bold instrumental headers and repeat-bar measures', () => {
+    const blocks = parseChordChart(`**INSTRUMENTAL 2**
+**|:|** **Bbm7** **|:|**`);
+    expect(blocks).toContainEqual({ type: 'section', text: 'INSTRUMENTAL 2' });
+    expect(blocks).toContainEqual({ type: 'measure', text: '|:| Bbm7 |:|' });
+    expect(blocks.every((block) => !('text' in block) || !block.text.includes('**'))).toBe(true);
+  });
+
+  it('keeps repeat-bar symbols out of lyric text', () => {
+    const blocks = parseChordChart('INSTRUMENTAL 2\n|:| Bbm7 |:|');
+    const measure = blocks.find((block) => block.type === 'measure');
+    expect(measure).toEqual({ type: 'measure', text: '|:| Bbm7 |:|' });
+  });
+
+  it('preserves compact double-bar repeat markers', () => {
+    const blocks = parseChordChart('INSTRUMENTAL 1\n||: Gb | Bbm Ab | Gb | Fm7 Bbm :||');
+    const measure = blocks.find((block) => block.type === 'measure');
+    expect(measure).toEqual({
+      type: 'measure',
+      text: '||: Gb | Bbm Ab | Gb | Fm7 Bbm :||',
+    });
+  });
+
+  it('keeps repeat markers attached to the measure row', () => {
+    const blocks = parseChordChart('INSTRUMENTAL\n||: Gm Bb/D Eb | Eb Gm F | F :||');
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '||: Gm Bb/D Eb | Eb Gm F | F :||',
+    });
+  });
+
+  it('separates embedded interlude measures from lyrics and oh syllables', () => {
+    const blocks = parseChordChart(`INTERLUDE 1
+Singing **|** **G2** oh **|** **A/G** **|** **G2** oh **|** **A/G** **|**
+**|** **G2** Oh **|** **A/G** **|** **G2** **A/G** **|** **D** **|**`);
+    expect(blocks).toContainEqual({
+      type: 'lyric',
+      parts: [{ text: 'Singing' }],
+    });
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '| G2 oh | A/G | G2 oh | A/G |',
+    });
+    expect(blocks).toContainEqual({
+      type: 'measure',
+      text: '| G2 Oh | A/G | G2 A/G | D |',
+    });
+    expect(blocks.every((block) => block.type !== 'lyric' || !block.parts.some((part) => part.text.includes('|')))).toBe(true);
+  });
+
+  it('uses paired bold SongSelect spans for chord placement', () => {
+    const blocks = parseChordChart(`**CHORUS**
+**G2**All the saints and **A/G**angels
+Singing **|** **G2**oh **|** **A/G** **|**`);
+    const lyric = blocks.find((block) => block.type === 'lyric');
+    expect(lyric?.type).toBe('lyric');
+    if (lyric?.type === 'lyric') {
+      expect(lyric.parts).toEqual([
+        { chord: 'G2', text: 'All the saints and ' },
+        { chord: 'A/G', text: 'angels' },
+      ]);
+    }
+    expect(blocks).toContainEqual({ type: 'measure', text: '| G2 oh | A/G |' });
+    expect(blocks.every((block) => block.type !== 'lyric' || !block.parts.some((part) => part.text.includes('|')))).toBe(true);
+  });
+
   it('extracts song metadata from a pasted chart header', () => {
     expect(extractChordChartMetadata(`Great Are You Lord
 David Leonard | Leslie Jordan
@@ -117,6 +228,55 @@ CCLI License # 620075`;
     expect(parseChordChart(source)).not.toContainEqual({ type: 'section', text: 'CCLI SONG # 6460220' });
   });
 
+  it('removes everything from a bold CCLI Song marker onward', () => {
+    const source = `**Song title**
+**Key - **D** | Tempo - 69 | Time - 4/4**
+
+**VERSE**
+**D**Amazing grace
+
+**CCLI Song # 6280644**
+Copyright and license text`;
+    expect(parseChordChart(source).some((block) => (
+      block.type === 'credit' && /copyright|license/i.test(block.text)
+    ))).toBe(false);
+  });
+
+  it('removes bracketed CCLI markers created from paired bold spans', () => {
+    const blocks = parseChordChart(`**Worthy Of It All**
+**Key - **D** | Tempo - 69 | Time - 4/4**
+**INTRO**
+**|** **G2** oh **|** **A/G** **|**
+**CCLI Song # 6280644**
+Copyright and license text`);
+    expect(blocks.some((block) => (
+      (block.type === 'credit' || block.type === 'section') && /CCLI|copyright|license/i.test(block.text)
+    ))).toBe(false);
+    expect(blocks).toContainEqual({ type: 'measure', text: '| G2 oh | A/G |' });
+  });
+
+  it('keeps the pasted A key and removes the complete CCLI footer', () => {
+    const source = `**Worthy Of It All**
+**Key - **A** | Tempo - 69 | Time - 4/4**
+**Intro**
+**|** **D2** **|** **E/D** **|**
+**Interlude 2**
+**|** **A** Oh **|** **E** oh **|**
+**CCLI Song # 6280644**
+Copyright and license text`;
+    const blocks = parseChordChart(source);
+    expect(blocks).toContainEqual({ type: 'meta', text: 'Key - A | Tempo - 69 | Time - 4/4' });
+    expect(blocks.some((block) => JSON.stringify(block).match(/CCLI|Copyright|license/i))).toBe(false);
+  });
+
+  it('does not turn the CCLI footer marker into a chord and lyric', () => {
+    const blocks = parseChordChart(`**Verse**
+**A**Day and night
+**CCLI Song # 6280644**
+© 2012 Common Hymnal Publishing`);
+    expect(blocks.some((block) => JSON.stringify(block).match(/CCLI|CLI Song|Copyright|license/i))).toBe(false);
+  });
+
   it('parses title, intro bars, and verse chords above lyrics', () => {
     const blocks = parseChordChart(SAMPLE);
     expect(blocks[0]).toEqual({ type: 'title', text: "Thank God I'm Free" });
@@ -131,7 +291,7 @@ CCLI License # 620075`;
     expect(blocks.some((b) => b.type === 'lyric' && b.parts.some((p) => p.chord === 'A'))).toBe(true);
   });
 
-  it('preserves spacing between adjacent chords when no lyric is under the gap', () => {
+  it('does not preserve whitespace between adjacent chords as lyric text', () => {
     const blocks = parseChordChart(`BRIDGE 1
 Ab   Bb7sus
 I have decided`);
@@ -139,23 +299,70 @@ I have decided`);
     expect(lyric?.type).toBe('lyric');
     if (lyric?.type === 'lyric') {
       expect(lyric.parts).toEqual([
-        { chord: 'Ab', text: '   ' },
+        { chord: 'Ab', text: '' },
         { chord: 'Bb7sus', text: 'I have decided' },
       ]);
     }
   });
 
-  it('keeps the gap between inline chord markers after transposition', () => {
+  it('treats whitespace between bold chord markers as chord-line spacing', () => {
     const blocks = parseChordChart('**Ab**    **Bb7sus**    I have decided');
     const lyric = blocks.find((block) => block.type === 'lyric');
     expect(lyric?.type).toBe('lyric');
     if (lyric?.type === 'lyric') {
       expect(lyric.parts).toEqual([
-        { chord: 'Ab', text: '    ' },
-        { chord: 'Bb7sus', text: '' },
-        { text: '    I have decided' },
+        { chord: 'Ab', text: '' },
+        { chord: 'Bb7sus', text: '    I have decided' },
       ]);
     }
+  });
+
+  it('preserves lyric spacing after a bold chord while ignoring chord-only gaps', () => {
+    const blocks = parseChordChart('**G2**  All the saints and **A/G**  angels');
+    const lyric = blocks.find((block) => block.type === 'lyric');
+    expect(lyric).toEqual({
+      type: 'lyric',
+      parts: [
+        { chord: 'G2', text: '  All the saints and ' },
+        { chord: 'A/G', text: '  angels' },
+      ],
+    });
+  });
+
+  it('treats every inline Markdown span as a chord without reclassifying it', () => {
+    const blocks = parseChordChart('Song title\n**Cmaj7#11**All things');
+    expect(blocks).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'Cmaj7#11', text: 'All things' }],
+    });
+  });
+
+  it('treats Markdown chord spans as ChordPro markers', () => {
+    expect(parseChordChart('Song title\n**N.C.**Let the words')).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'N.C.', text: 'Let the words' }],
+    });
+    expect(parseChordChart('Song title\n[A/G]angels')).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'A/G', text: 'angels' }],
+    });
+  });
+
+  it('preserves explicitly marked N.C. chords and their punctuation', () => {
+    const blocks = parseChordChart(`Song title
+**VERSE**
+**N.C.**Let the words
+**N.C**be spoken
+**|** **N.C.** **|**`);
+    expect(blocks).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'N.C.', text: 'Let the words' }],
+    });
+    expect(blocks).toContainEqual({
+      type: 'lyric',
+      parts: [{ chord: 'N.C', text: 'be spoken' }],
+    });
+    expect(blocks).toContainEqual({ type: 'measure', text: '| N.C. |' });
   });
 
   it('keeps bold song headers and separated chords intact', () => {
@@ -779,8 +986,43 @@ C2(no3) Dsus Em7
         type: 'measure',
         text: expect.stringMatching(/^\|\s*C2\(no3\)\s+Dsus\s+Em7\s+\.\s*\|$/),
       });
+
     }
     expect(blocks.some((b) => b.type === 'lyric' && b.parts.some((p) => p.text.includes('.|')))).toBe(false);
+  });
+
+  it('keeps a paired dot in the chord row', () => {
+    const blocks = parseChordChart(normalizeMarkdownChart(
+      '**POST-CHORUS**\n**|** **C2(no3)** **Dsus** **Em7** **.** **|**',
+    ));
+    const measure = blocks.find((block) => block.type === 'measure');
+    expect(measure?.type).toBe('measure');
+    expect(measure && measure.type === 'measure' ? measure.text : '').toContain('.');
+  });
+
+  it('keeps standalone dots out of measure lyrics', () => {
+    const blocks = parseChordChart(normalizeMarkdownChart(
+      '**|** **C2(no3)** **Dsus** **Em7** **.** **|**',
+    ));
+    const measure = blocks.find((block) => block.type === 'measure');
+    expect(measure?.type).toBe('measure');
+    if (measure?.type === 'measure') {
+      const lyrics = measure.text
+        .split('|')
+        .map((cell) => cell.trim().replace(/^\.\s*/, ''))
+        .filter(Boolean);
+      expect(lyrics).not.toContain('.');
+    }
+  });
+
+  it('does not include a standalone dot chord in lyric text', () => {
+    const blocks = parseChordChart(normalizeMarkdownChart('**POST-CHORUS**\n**.**\nPraise the Lord'));
+    const lyric = blocks.find((block) => block.type === 'lyric');
+    expect(lyric?.type).toBe('lyric');
+    if (lyric?.type === 'lyric') {
+      expect(lyric.parts.map((part) => part.text).join('')).toBe('Praise the Lord');
+      expect(lyric.parts.some((part) => part.text === '.')).toBe(false);
+    }
   });
 
   it('does not wrap the lyric pickup after a | C2(no3) Dsus Em7 . | bar', () => {
@@ -901,6 +1143,28 @@ E Oh the wonder of the working blood | F#m7(4) |`);
       { type: 'lyric', parts: [{ chord: 'E', text: 'Oh the wonder of the working blood' }], cue: undefined },
       { type: 'measure', text: '| F#m7(4) |' },
     ]);
+  });
+
+  it('does not turn spacing between chord-only tokens into lyric rows', () => {
+    const blocks = parseChordChart(`INTRO
+G   G   Gsus   G
+VERSE
+G   Amazing grace`);
+    const chordLine = blocks.find((block) => block.type === 'lyric' && block.parts.length === 4);
+    expect(chordLine).toMatchObject({
+      type: 'lyric',
+      parts: [
+        { chord: 'G', text: '' },
+        { chord: 'G', text: '' },
+        { chord: 'Gsus', text: '' },
+        { chord: 'G', text: '' },
+      ],
+    });
+    if (chordLine?.type === 'lyric') {
+      expect(chordLine.parts.some((part) => part.text.trim())).toBe(false);
+    } else {
+      throw new Error('Expected chord-only line to be parsed as a lyric block');
+    }
   });
 
   it('keeps a terminal sus syllable below its preceding chord', () => {

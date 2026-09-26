@@ -462,10 +462,10 @@ export default function MessageInput({
   return (
     <div className="w-full max-w-md mx-auto flex flex-col gap-2">
       {replyToMessage && (
-        <div className="mx-1 flex items-center justify-between rounded-2xl border border-border bg-muted px-3 py-1.5 text-xs">
-          <div className="flex items-center gap-2 truncate text-muted-foreground">
-            <span className="font-semibold text-foreground">Replying:</span>
-            <span className="truncate max-w-[150px]">{replyToMessage.text || 'Image'}</span>
+        <div className="mx-1 flex min-w-0 items-center justify-between gap-2 rounded-2xl border border-border bg-muted px-3 py-1.5 text-xs">
+          <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
+            <span className="shrink-0 font-semibold text-foreground">Replying:</span>
+            <span className="min-w-0 max-w-[150px] truncate sm:max-w-[220px]">{replyToMessage.text || 'Image'}</span>
           </div>
           <IconButton
             type="button"

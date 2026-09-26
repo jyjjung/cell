@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Trash2, UserCheck, UserPlus, UserX } from 'lucide-react';
+import { Trash2, UserCheck, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import {
@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchInput } from '@/components/ui/field';
-import { Tag } from '@/components/ui/tag';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { formatNameString } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +37,7 @@ export function RosterRoleSlotRow({
   onAdd,
   onRemove,
   onDeleteRole,
+  tableRow = false,
 }: {
   roleLabel: string;
   roleClassName: string;
@@ -45,53 +46,56 @@ export function RosterRoleSlotRow({
   onAdd?: () => void;
   onRemove?: (index: number) => void;
   onDeleteRole?: () => void;
+  tableRow?: boolean;
 }) {
-  return (
-    <div className="rounded-2xl border border-border/40 bg-card/50 backdrop-blur-sm transition-all hover:border-border">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <Tag
-          scheme="Neutral"
-          variant="Secondary"
-          className={cn('shrink-0 text-[11px] font-semibold', roleClassName)}
-          label={roleLabel}
-          removable={false}
-        />
-        <div className="flex-1 flex flex-wrap items-center gap-2 min-w-0">
+  const roleTextClassName = roleClassName
+    .split(/\s+/)
+    .filter((className) => !className.startsWith('bg-') && !className.startsWith('border-'))
+    .join(' ');
+  const roleTag = (
+    <span className={cn('text-sm font-semibold', roleTextClassName)}>{roleLabel}</span>
+  );
+  const peopleContent = (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           {people.length === 0 ? (
-            <span className="text-xs text-muted-foreground/40 font-medium italic">Unassigned</span>
+            <span className="text-sm italic text-muted-foreground/60">Unassigned</span>
           ) : (
             people.map((person, index) => (
-              <Tag
+              <span
                 key={person.id}
-                scheme={person.isMember ? 'Positive' : 'Neutral'}
-                variant="Secondary"
-                className={cn('rounded-full text-xs font-semibold', !person.isMember && 'border-border/50')}
-                icon={
-                  person.isMember ? (
-                    <UserCheck className="h-3 w-3" aria-hidden />
-                  ) : (
-                    <UserX className="h-3 w-3" aria-hidden />
-                  )
-                }
-                removable={canManage && !!onRemove}
-                removeLabel={`Remove ${person.displayName}`}
-                onRemove={onRemove ? () => onRemove(index) : undefined}
+                className={cn('inline-flex items-center gap-1.5 font-medium', person.isMember ? 'text-success' : 'text-muted-foreground')}
               >
-                {formatNameString(person.displayName, 'Guest')}
-              </Tag>
+                {canManage && onRemove ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto min-h-0 p-0 text-left font-medium"
+                    onClick={() => onRemove(index)}
+                    aria-label={`Remove ${person.displayName}`}
+                  >
+                    {formatNameString(person.displayName, 'Guest')}
+                  </Button>
+                ) : (
+                  formatNameString(person.displayName, 'Guest')
+                )}
+              </span>
             ))
           )}
-        </div>
-        {canManage && onAdd ? (
+    </div>
+  );
+  const actions = (
+    <>
+      {canManage && onAdd ? (
           <IconButton
             type="button"
             onClick={onAdd}
-            className="shrink-0 rounded-lg text-muted-foreground/40 hover:bg-muted hover:text-primary"
+            className="min-h-9 min-w-9 shrink-0 rounded-lg text-muted-foreground/50 hover:bg-muted hover:text-primary"
             aria-label="Add member"
             icon={UserPlus}
           />
-        ) : null}
-        {canManage && onDeleteRole ? (
+      ) : null}
+      {canManage && onDeleteRole ? (
           <IconButton
             type="button"
             size="compact"
@@ -100,8 +104,21 @@ export function RosterRoleSlotRow({
             aria-label={`Remove ${roleLabel} role`}
             icon={Trash2}
           />
-        ) : null}
-      </div>
+      ) : null}
+    </>
+  );
+  if (tableRow) {
+    return (
+      <TableRow className="bg-card hover:bg-muted/30 [&>td]:py-2">
+        <TableCell className="w-28 align-top">{roleTag}</TableCell>
+        <TableCell className="min-w-0">{peopleContent}</TableCell>
+        {canManage && (onAdd || onDeleteRole) ? <TableCell className="w-20 text-right">{actions}</TableCell> : null}
+      </TableRow>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-border/60 bg-card transition-colors hover:border-border">
+      <div className="flex items-start gap-2.5 px-2.5 py-2 sm:px-3">{roleTag}{peopleContent}{actions}</div>
     </div>
   );
 }

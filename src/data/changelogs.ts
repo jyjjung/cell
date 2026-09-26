@@ -10,6 +10,525 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.62',
+    subtitle: 'Roster overview',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'All rosters are now easy to scan in a compact accordion, while editing opens in a focused full-page view.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.61',
+    subtitle: 'Focused roster selector',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster selection is now clearly labeled while duplicate roster titles and dates are removed from the assignment view.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.60',
+    subtitle: 'Simpler roster header',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster details now keep one clear title and date header without duplicate section labels.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.59',
+    subtitle: 'Tighter roster table',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster assignments now fit the screen without unnecessary horizontal space or highlighted label backgrounds.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.58',
+    subtitle: 'Simpler roster table',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster assignments now show as compact text, with editing actions appearing only while editing.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.57',
+    subtitle: 'Clearer roster assignments',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster assignments now use a compact table with a clearer roster-day heading and actions column.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.56',
+    subtitle: 'Compact roster assignments',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster roles and assigned members now use compact labels with simpler corners and less visual weight.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.55',
+    subtitle: 'Compact roster control',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Mobile roster switching now uses a compact, simple control without pill-shaped styling.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.54',
+    subtitle: 'Simpler roster switching',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Mobile roster navigation now uses a clear selector instead of crowded overlapping tabs.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.53',
+    subtitle: 'Clearer roster navigation',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster tabs now scroll cleanly on small screens and service dates stay readable beside the roster actions.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.52',
+    subtitle: 'Tighter measure spacing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Chord measures now use a more compact horizontal layout while keeping each chord and bar readable.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.51',
+    subtitle: 'Consistent chord sizing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Chord names now use a consistent compact size throughout worship charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.51',
+    subtitle: 'Consistent chord sizing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Chord rows now use consistent sizing when charts mix measure and lyric formatting.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.50',
+    subtitle: 'Cleaner repeat endings',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Chord charts no longer add an extra bar before closing repeat markers.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.49',
+    subtitle: 'Clearer chord charts',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Song charts now keep section notes readable and chord names together for easier worship leading.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.48',
+    subtitle: 'Balanced setlist spacing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Setlist details now use consistent action sizing and comfortable screen-edge spacing on mobile.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.47',
+    subtitle: 'Mobile setlist view',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Setlist details now fit smaller screens with shorter dates, clearer actions, and more compact song rows.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.46',
+    subtitle: 'Compact setlist actions',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Setlists now show shorter dates and quick share and delete actions without extra buttons or song counts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.45',
+    subtitle: 'Safer roster editing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Roster assignments now open in a clear read-only view, with editing controls available only when you choose to edit.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.44',
+    subtitle: 'Refined worship layout',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Worship navigation and lists now use a calmer, more compact layout that is easier to scan.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.43',
+    subtitle: 'Simpler worship hub',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Worship navigation now uses one compact tab bar near the page title for a simpler, more familiar flow.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.42',
+    subtitle: 'Compact worship tables',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Song rows now focus on the title and actions, with tighter table spacing throughout worship lists.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.41',
+    subtitle: 'Roster tabs',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Each roster is now a tab with its full assignments visible, without a separate Open button.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.40',
+    subtitle: 'Organized worship lists',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Changed',
+        text: 'Songs, setlists, and rosters now use a consistent table layout for easier scanning.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.38',
+    subtitle: 'Keep lyric cues',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Lyric cues such as “(Oh)” now use lyric styling while staying above the chord line.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.37',
+    subtitle: 'Align chord cues',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Song cues such as “(Oh)” now sit directly above their chord line without an extra left offset.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.36',
+    subtitle: 'Clear chord spacing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Adjacent chord labels now keep a small readable gap instead of running together.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.35',
+    subtitle: 'Compact repeat bars',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Repeat markers now stay together at the edges of worship measure rows.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Measure cues now stay aligned with the chart instead of appearing stranded apart from it.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.34',
+    subtitle: 'Markdown chord syntax',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Bold chord markers now behave exactly like ChordPro chord markers in worship charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.33',
+    subtitle: 'Exact chord markers',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Worship charts now use only the chord text marked in Markdown when identifying chords.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Spacing between marked chords stays in the chord line unless it contains lyric text.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.32',
+    subtitle: 'Simpler chord phrasing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Bold chord markers now follow one consistent rule: only visible text becomes lyrics.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Spaces between bold chords stay in the chord line instead of creating extra lyric spacing.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.31',
+    subtitle: 'Stable chord rendering',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Repeated chords in the same measure now render reliably without missing or duplicated chart content.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Compact repeat markers now keep their original spacing and symbols in worship charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.30',
+    subtitle: 'Exact repeat markers',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Compact repeat markers now keep their original spacing and symbols in worship charts.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Double-bar repeat starts and ends no longer spread apart during chart formatting.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.29',
+    subtitle: 'Balanced chart rhythm',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Section breaks now use clean spacing without visible divider lines.',
+      },
+      {
+        type: 'Improved',
+        text: 'Chords and lyrics now have a little more breathing room while staying compact.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.28',
+    subtitle: 'Compact repeat marks',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Repeat symbols now stay compact inside their measure bars instead of spreading across the chart.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Instrumental section headers and measure bars now render cleanly from pasted SongSelect charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.27',
+    subtitle: 'Fixed chart markers',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Instrumental section headers and measure bars now render cleanly from pasted SongSelect charts.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Bold Markdown markers no longer appear as visible text in the chord chart.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.25',
+    subtitle: 'Tighter chord layout',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Chord and lyric lines now sit closer together for a more compact song chart.',
+      },
+      {
+        type: 'Improved',
+        text: 'Spacing-only chord segments no longer push lyrics into oversized gaps.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.24',
+    subtitle: 'Cleaner chord spacing',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Song sections now begin with a clear line break so each part is easier to scan.',
+      },
+      {
+        type: 'Improved',
+        text: 'Spacing between adjacent chords no longer creates an empty lyric line.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.23',
+    subtitle: 'Focused song charts',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Worship song charts now open directly in the chords view without an extra lyrics tab.',
+      },
+      {
+        type: 'Improved',
+        text: 'Transpose and Annotate stay available beside the chart for a faster practice flow.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.22',
+    subtitle: 'Reliable chord paste',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Pasted worship charts now keep every paired chord marker attached to the correct lyric, even when no space is present.',
+      },
+      {
+        type: 'Fixed',
+        text: 'SongSelect copyright and license text no longer appears in the Chords tab.',
+      },
+      {
+        type: 'Improved',
+        text: 'Measure lines now place chords above matching Oh and oh lyrics for easier reading.',
+      },
+      {
+        type: 'Fixed',
+        text: 'Markdown chord markers now stay authoritative instead of being reinterpreted by SongSelect layout heuristics.',
+      },
+      {
+        type: 'Improved',
+        text: 'Transpose and Annotate actions are now available directly from the Chords tab.',
+      },
+      {
+        type: 'Improved',
+        text: 'Chord lines now stay attached to the lyric they introduce, reducing extra gaps in song charts.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.21',
+    subtitle: 'Clearer song charts',
+    date: 'September 26, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Worship songs now open with simple Lyrics and Chords tabs for easier practice and singing.',
+      },
+      {
+        type: 'Improved',
+        text: 'Song chart editing opens the text sheet directly, and song titles stay centered in the detail header.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.20',
     subtitle: 'Flexible song entry',
     date: 'September 26, 2026',

@@ -308,9 +308,9 @@ const MessageBubble = React.memo(function MessageBubble({
                   >
                         {/* Parent message quote block */}
                         {parentMessage && (
-                            <div className={cn("mb-2 p-2 rounded-xl text-xs border border-border/20 flex flex-col gap-1", isSender ? "bg-black/20 text-white/80" : "bg-foreground/5 text-foreground/80")}>
+                            <div className={cn("mb-2 min-w-0 p-2 rounded-xl text-xs border border-border/20 flex flex-col gap-1 overflow-hidden", isSender ? "bg-black/20 text-white/80" : "bg-foreground/5 text-foreground/80")}>
                                 <span className="font-semibold opacity-70 text-micro-label">{parentSenderName || t.someone}</span>
-                                <span className="truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
+                                <span className="min-w-0 truncate italic opacity-90">{parentMessage.text || '📸 Image'}</span>
                             </div>
                         )}
 
@@ -320,17 +320,17 @@ const MessageBubble = React.memo(function MessageBubble({
                             variant="ghost"
                             onClick={() => onOpenThread(message.threadParentId!)}
                             className={cn(
-                              "mb-2 h-auto min-h-0 w-full justify-start text-left p-2 rounded-xl text-xs border flex flex-col gap-1 items-start",
+                              "mb-2 h-auto min-h-0 min-w-0 w-full justify-start text-left p-2 rounded-xl text-xs border flex flex-col gap-1 items-start overflow-hidden",
                               isSender
                                 ? "border-white/20 bg-black/20 text-white/90 hover:bg-black/30"
                                 : "border-primary/20 bg-primary/5 text-foreground/90 hover:bg-primary/10",
                             )}
                           >
-                            <span className="flex items-center gap-1 font-semibold opacity-80 text-micro-label">
-                              <MessagesSquare className="h-3 w-3" />
+                            <span className="flex min-w-0 items-center gap-1 font-semibold opacity-80 text-micro-label">
+                              <MessagesSquare className="h-3 w-3 shrink-0" />
                               {t.replyInThread}
                             </span>
-                            <span className="truncate opacity-70 text-[10px]">
+                            <span className="min-w-0 w-full truncate opacity-70 text-[10px]">
                               {getMemberDisplayName(chat.memberInfo[threadParentMessage.senderId])}: {threadParentMessage.text || (threadParentMessage.imageUrl ? '📸 Image' : 'Message')}
                             </span>
                           </Button>
