@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { parseDay } from '@/lib/event-occurrences';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelect } from '@/components/ui/multi-select';
@@ -121,7 +120,6 @@ function toggleWeekday(current: number[], value: number, checked: boolean): numb
 
 export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save Event" }: EventFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const isMobile = useIsMobile();
   const { currentUser, isAdmin } = useAuth();
   const t = translations[currentUser?.preferredLanguage || 'en'];
 
@@ -339,7 +337,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> Start Date</FormLabel>
-                    <Popover modal={isMobile}>
+                    <Popover modal>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -355,7 +353,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
+                      <PopoverContent className="z-[600] w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -377,7 +375,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                     <FormLabel className="flex items-center gap-2">
                        End Date {recurrence !== 'none' ? '(N/A)' : ''}
                     </FormLabel>
-                    <Popover modal={isMobile}>
+                    <Popover modal>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -394,7 +392,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
+                      <PopoverContent className="z-[600] w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -454,7 +452,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                 render={({ field }) => (
                   <FormItem className="flex flex-col animate-in fade-in slide-in-from-top-2">
                     <FormLabel className="flex items-center gap-2">Repeat until</FormLabel>
-                    <Popover modal={isMobile}>
+                    <Popover modal>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -470,7 +468,7 @@ export function EventForm({ event, onSubmit, onCancel, submitButtonText = "Save 
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
+                      <PopoverContent className="z-[600] w-auto p-0 border-white/10 bg-black/90 backdrop-blur-xl" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
