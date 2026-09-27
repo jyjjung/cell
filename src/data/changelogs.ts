@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.64',
+    subtitle: 'Complete event list',
+    date: 'September 27, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'The Events page now shows the complete list of upcoming events instead of stopping after the first few entries.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.63',
     subtitle: 'Event date picker',
     date: 'September 27, 2026',

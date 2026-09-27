@@ -12,41 +12,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { translations } from '@/lib/translations';
 import EventOccurrenceCard from '@/components/events/event-occurrence-card';
 import { ScheduleListSkeleton, ScheduleMonthGroup } from '@/components/schedule/schedule-occurrence-row';
-import { useHomeAgenda } from '@/hooks/use-home-agenda';
-import { HomeAgendaRow, mergeAgendaDetail } from '@/components/home/home-agenda-row';
-import type { AppUser } from '@/types';
-
-function UnifiedUpcomingSchedule({ currentUser }: { currentUser: AppUser }) {
-  const { agendaByMonth, loading, t } = useHomeAgenda(currentUser);
-
-  if (loading) {
-    return <ScheduleListSkeleton />;
-  }
-
-  if (agendaByMonth.length === 0) {
-    return <EmptyState icon={CalendarOff} title={t.noUpcomingEvents} description={t.checkBackLater} />;
-  }
-
-  return (
-    <div className="stack-gap-sm" data-testid="unified-upcoming-schedule">
-      {agendaByMonth.map(([month, entries]) => (
-        <ScheduleMonthGroup key={month} month={month}>
-          {entries.map((entry) => (
-            <HomeAgendaRow
-              key={entry.sourceKey}
-              date={entry.date}
-              title={entry.title}
-              detail={mergeAgendaDetail(entry.subtitle, entry.meta)}
-              type={entry.type}
-              typeLabel={t.schedule}
-              rightElement={entry.rightElement}
-            />
-          ))}
-        </ScheduleMonthGroup>
-      ))}
-    </div>
-  );
-}
 
 function MonthGroup({ month, rows }: { month: string; rows: EventOccurrenceRow[] }) {
   return (
@@ -133,9 +98,7 @@ export default function EventsPage() {
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-4 stack-gap-sm">
-          {currentUser ? (
-            <UnifiedUpcomingSchedule currentUser={currentUser} />
-          ) : upcomingEventsByMonth.length > 0 ? (
+          {upcomingEventsByMonth.length > 0 ? (
             upcomingEventsByMonth.map(([month, evs]) => (
               <MonthGroup key={`up-${month}`} month={month} rows={evs} />
             ))
