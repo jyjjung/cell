@@ -81,6 +81,7 @@ export default function AppSidebar() {
         readingPlan: t.readingPlan,
         chat: t.chat,
         schedule: t.schedule,
+        scoreboard: t.scoreboard,
         worshipPortal: t.worshipPortal,
         links: t.links,
         docs: t.docs,

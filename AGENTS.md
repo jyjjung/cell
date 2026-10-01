@@ -379,6 +379,8 @@ page.
 - `/cell` - em. home dashboard.
 - `/bible-checklist` - reading plan, progress, checklist, reader.
 - `/leaderboard` - community reading progress.
+- `/scoreboard` - shared team scoreboard with admin team/point management and shareable public/edit links.
+- `/scoreboard/public/[token]` - public scoreboard view, or secret-token score editing when an admin edit link is used.
 - `/chat`, `/chat/[chatId]`, `/chat/photos`, `/chat/links` - chats, media, links,
   threads, reactions, polls, and attachments.
 - `/cell/chat`, `/cell/chat/[chatId]` - prefixed chat equivalents.

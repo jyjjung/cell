@@ -19,6 +19,7 @@ import {
   Music,
   Palette,
   SlidersHorizontal,
+  Trophy,
   User,
   Users,
 } from 'lucide-react';
@@ -52,6 +53,7 @@ export function getSidebarNavForApp(
         { href: '/bible-checklist', label: labels.readingPlan, icon: BookOpen },
         { href: cellPath('/chat'), label: labels.chat, icon: MessageCircle, requiresAuth: true, badgeKey: 'chat' },
         { href: '/events', label: labels.schedule, icon: CalendarCheck },
+        { href: '/scoreboard', label: labels.scoreboard, icon: Trophy, requiresAuth: true },
         ...(isAdmin || isWorshipTeam
           ? [{ href: '/worship', label: labels.worshipPortal, icon: Music }]
           : []),

@@ -10,6 +10,61 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.70',
+    subtitle: 'Consistent score layout',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Score controls now always sit on their own row for a clearer scoreboard on every screen size.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.69',
+    subtitle: 'Cleaner home and scores',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'The home birthday section is simpler, and scoreboard team names and controls stay readable on phones.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.68',
+    subtitle: 'Clearer score controls',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'Score controls now stay readable on smaller screens instead of being cut off.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.67',
+    subtitle: 'Shareable scoreboard',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Admins can adjust scores by 1, 5, or 10 points and share a public scoreboard or private edit link.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.65',
+    subtitle: 'Team scoreboard',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Track team points in one shared scoreboard, with quick controls to add, remove, and reset teams.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.64',
     subtitle: 'Complete event list',
     date: 'September 27, 2026',

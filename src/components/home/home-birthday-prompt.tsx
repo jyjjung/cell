@@ -1,6 +1,6 @@
 'use client';
 
-import { Cake, ChevronRight, Eye, X } from 'lucide-react';
+import { Cake, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
@@ -30,7 +30,6 @@ export function HomeBirthdayPrompt() {
   const router = useRouter();
   const { toast } = useToast();
   const [openingUid, setOpeningUid] = useState<string | null>(null);
-  const [showBirthdayPreview, setShowBirthdayPreview] = useState(false);
 
   const birthdayUsers = useMemo(() => {
     if (!currentUser || loading) return [];
@@ -77,65 +76,11 @@ export function HomeBirthdayPrompt() {
 
   if (birthdayUsers.length === 0) return null;
 
-  const previewBirthday = birthdayUsers[0];
-
   return (
     <HomeGroupedSection
       id="home-birthday-heading"
       title="Birthdays today"
-      action={
-        process.env.NODE_ENV !== 'production' ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 rounded-lg text-xs"
-            onClick={() => setShowBirthdayPreview((value) => !value)}
-          >
-            <Eye className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-            {showBirthdayPreview ? 'Exit preview' : 'Preview birthday view'}
-          </Button>
-        ) : undefined
-      }
     >
-      {showBirthdayPreview && previewBirthday ? (
-        <div className="border-b border-border/60 bg-primary/5 p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <Text as="p" variant="strong" className="text-sm">
-                Birthday person preview
-              </Text>
-              <Text as="p" className="mt-1 text-xs text-muted-foreground">
-                Local visual preview only. No chat, membership, or permission changes are made.
-              </Text>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              aria-label="Close birthday person preview"
-              onClick={() => setShowBirthdayPreview(false)}
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
-          <div className="rounded-xl border border-primary/25 bg-background p-3">
-            <div className="flex items-center gap-3">
-              <Cake className="h-5 w-5 shrink-0 text-primary" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <Text as="p" variant="strong" className="text-sm">
-                  Your birthday chat is ready
-                </Text>
-                <Text as="p" className="mt-0.5 text-xs text-muted-foreground">
-                  Your community has a temporary chat waiting for you.
-                </Text>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            </div>
-          </div>
-        </div>
-      ) : null}
       <HomeGroupList>
         {birthdayUsers.map((user) => (
           <Button

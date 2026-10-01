@@ -11,6 +11,7 @@ const routeNavLabelKeys: Partial<Record<string, TranslationKey>> = {
   '/bible-checklist': 'readingPlan',
   '/leaderboard': 'communityProgress',
   '/events': 'schedule',
+  '/scoreboard': 'scoreboard',
   '/qt': 'qtRoster',
   '/cleaning-roster': 'cleaningRoster',
   '/announcements': 'announcements',
