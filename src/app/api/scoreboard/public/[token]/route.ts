@@ -25,16 +25,18 @@ export async function GET(
     if (!link) return NextResponse.json({ error: 'Scoreboard link not found' }, { status: 404 });
 
     const snapshot = await link.db.collection(TEAMS_COLLECTION).orderBy('createdAt', 'asc').get();
+    const teams = snapshot.docs.map((team, index) => {
+      const data = team.data();
+      return {
+        id: team.id,
+        name: typeof data.name === 'string' ? data.name : 'Unnamed team',
+        points: typeof data.points === 'number' ? data.points : 0,
+        order: typeof data.order === 'number' ? data.order : index,
+      };
+    }).sort((a, b) => a.order - b.order);
     return NextResponse.json({
       canEdit: link.canEdit,
-      teams: snapshot.docs.map((team) => {
-        const data = team.data();
-        return {
-          id: team.id,
-          name: typeof data.name === 'string' ? data.name : 'Unnamed team',
-          points: typeof data.points === 'number' ? data.points : 0,
-        };
-      }),
+      teams,
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Could not load public scoreboard:', error);

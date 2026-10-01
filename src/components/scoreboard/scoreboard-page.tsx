@@ -12,8 +12,9 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
-import { Minus, Plus, Trophy, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Minus, Pencil, Plus, Trophy, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/page-layout';
@@ -21,6 +22,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ListLoadingSkeleton } from '@/components/ui/loading-state';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { getClientAuthHeaders } from '@/lib/client-auth-headers';
@@ -40,7 +42,10 @@ type ScoreboardTeam = {
   id: string;
   name: string;
   points: number;
+  order?: number;
 };
+
+type ScoreboardSort = 'order' | 'rank';
 
 const SCOREBOARD_TEAMS_COLLECTION = 'scoreboardTeams';
 
@@ -53,8 +58,12 @@ export function ScoreboardPage() {
   const [saving, setSaving] = useState(false);
   const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
   const [teamToDelete, setTeamToDelete] = useState<ScoreboardTeam | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editingTeamName, setEditingTeamName] = useState('');
   const [links, setLinks] = useState<{ publicUrl: string; editUrl: string } | null>(null);
   const [creatingLinks, setCreatingLinks] = useState(false);
+  const [sortBy, setSortBy] = useState<ScoreboardSort>('order');
+  const [isEditingTeams, setIsEditingTeams] = useState(false);
 
   useEffect(() => {
     const scoreboardQuery = query(
@@ -66,14 +75,15 @@ export function ScoreboardPage() {
       scoreboardQuery,
       (snapshot) => {
         setTeams(
-          snapshot.docs.map((teamDoc) => {
+          snapshot.docs.map((teamDoc, index) => {
             const data = teamDoc.data();
             return {
               id: teamDoc.id,
               name: typeof data.name === 'string' ? data.name : 'Unnamed team',
               points: typeof data.points === 'number' ? data.points : 0,
+              order: typeof data.order === 'number' ? data.order : index,
             };
-          }),
+          }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
         );
         setLoading(false);
       },
@@ -93,6 +103,12 @@ export function ScoreboardPage() {
     () => teams.reduce((total, team) => total + team.points, 0),
     [teams],
   );
+  const displayedTeams = useMemo(
+    () => sortBy === 'rank'
+      ? [...teams].sort((a, b) => b.points - a.points || (a.order ?? 0) - (b.order ?? 0))
+      : teams,
+    [sortBy, teams],
+  );
 
   const addTeam = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,6 +120,7 @@ export function ScoreboardPage() {
       await addDoc(collection(db, SCOREBOARD_TEAMS_COLLECTION), {
         name,
         points: 0,
+        order: teams.length,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -114,6 +131,54 @@ export function ScoreboardPage() {
       toast({ variant: 'destructive', title: 'Could not add team' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const renameTeam = async () => {
+    const team = teams.find((item) => item.id === editingTeamId);
+    const name = editingTeamName.trim();
+    if (!team || !name || name === team.name || updatingTeamId) return;
+
+    setUpdatingTeamId(team.id);
+    try {
+      await updateDoc(doc(db, SCOREBOARD_TEAMS_COLLECTION, team.id), {
+        name,
+        updatedAt: serverTimestamp(),
+      });
+      setEditingTeamId(null);
+      toast({ title: 'Team renamed' });
+    } catch (error) {
+      console.error('Could not rename scoreboard team:', error);
+      toast({ variant: 'destructive', title: 'Could not rename team' });
+    } finally {
+      setUpdatingTeamId(null);
+    }
+  };
+
+  const moveTeam = async (teamId: string, direction: -1 | 1) => {
+    const index = teams.findIndex((team) => team.id === teamId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= teams.length || updatingTeamId) return;
+
+    const current = teams[index];
+    const next = teams[nextIndex];
+    setUpdatingTeamId(teamId);
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, SCOREBOARD_TEAMS_COLLECTION, current.id), {
+        order: next.order ?? nextIndex,
+        updatedAt: serverTimestamp(),
+      });
+      batch.update(doc(db, SCOREBOARD_TEAMS_COLLECTION, next.id), {
+        order: current.order ?? index,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error('Could not reorder scoreboard teams:', error);
+      toast({ variant: 'destructive', title: 'Could not reorder teams' });
+    } finally {
+      setUpdatingTeamId(null);
     }
   };
 
@@ -204,6 +269,16 @@ export function ScoreboardPage() {
             </Button>
           </form>
           <div className="flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row">
+            <Button
+              type="button"
+              variant={isEditingTeams ? 'secondary' : 'outline'}
+              onClick={() => {
+                setIsEditingTeams((editing) => !editing);
+                setEditingTeamId(null);
+              }}
+            >
+              {isEditingTeams ? 'Done editing' : 'Edit teams'}
+            </Button>
             <Button type="button" variant="outline" onClick={() => void createLinks()} disabled={creatingLinks}>
               Create public links
             </Button>
@@ -221,6 +296,20 @@ export function ScoreboardPage() {
         </Card>
       ) : null}
 
+      {!loading && teams.length > 0 ? (
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="scoreboard-sort">View</Label>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as ScoreboardSort)}>
+            <SelectTrigger id="scoreboard-sort" className="h-10 w-36 min-h-10 sm:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rank">Rank</SelectItem>
+              <SelectItem value="order">Set order</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       {loading ? (
         <ListLoadingSkeleton rows={3} />
       ) : teams.length === 0 ? (
@@ -230,13 +319,13 @@ export function ScoreboardPage() {
           description="Add the first team to start keeping score."
         />
       ) : (
-        <div className="space-y-3" aria-label="Scoreboard teams">
-          {teams.map((team, index) => {
+        <div className="space-y-2" aria-label="Scoreboard teams">
+          {displayedTeams.map((team, index) => {
             const busy = updatingTeamId === team.id;
             return (
-              <Card key={team.id} className="flex flex-col gap-3 p-4 sm:p-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+              <Card key={team.id} className="flex flex-col gap-2 p-3 sm:p-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -245,19 +334,90 @@ export function ScoreboardPage() {
                       {team.points} {team.points === 1 ? 'point' : 'points'}
                     </p>
                   </div>
-                  <span className="min-w-14 shrink-0 text-right text-xl font-semibold tabular-nums text-foreground">
+                  <span className="min-w-12 shrink-0 text-right text-xl font-semibold tabular-nums text-foreground">
                     {team.points}
                   </span>
                 </div>
+                {isAdmin && isEditingTeams ? (
+                  <div className="flex flex-wrap gap-1 border-t border-border/60 pt-2">
+                    {editingTeamId === team.id ? (
+                      <>
+                        <Input
+                          value={editingTeamName}
+                          onChange={(event) => setEditingTeamName(event.target.value)}
+                          maxLength={80}
+                          aria-label={`New name for ${team.name}`}
+                          className="min-w-0 flex-1"
+                          autoFocus
+                        />
+                        <IconButton
+                          aria-label={`Save new name for ${team.name}`}
+                          icon={Check}
+                          size="small"
+                          variant="outline"
+                          disabled={busy || !editingTeamName.trim() || editingTeamName.trim() === team.name}
+                          onClick={() => void renameTeam()}
+                        />
+                        <IconButton
+                          aria-label="Cancel renaming"
+                          icon={X}
+                          size="small"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => setEditingTeamId(null)}
+                        />
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="small"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingTeamId(team.id);
+                          setEditingTeamName(team.name);
+                        }}
+                        disabled={busy}
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        Rename
+                      </Button>
+                    )}
+                    <IconButton
+                      aria-label={`Move ${team.name} up`}
+                      icon={ArrowUp}
+                      size="small"
+                      variant="ghost"
+                      disabled={busy || sortBy !== 'order' || index === 0}
+                      onClick={() => void moveTeam(team.id, -1)}
+                    />
+                    <IconButton
+                      aria-label={`Move ${team.name} down`}
+                      icon={ArrowDown}
+                      size="small"
+                      variant="ghost"
+                      disabled={busy || sortBy !== 'order' || index === displayedTeams.length - 1}
+                      onClick={() => void moveTeam(team.id, 1)}
+                    />
+                    <IconButton
+                      aria-label={`Remove ${team.name}`}
+                      icon={Trash2}
+                      size="small"
+                      variant="ghost"
+                      className="ml-auto text-destructive hover:text-destructive"
+                      disabled={busy}
+                      onClick={() => setTeamToDelete(team)}
+                    />
+                  </div>
+                ) : null}
                 {isAdmin ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-6 gap-1">
                     {[-10, -5, -1, 1, 5, 10].map((delta) => (
                       <Button
                         key={delta}
                         type="button"
                         size="small"
                         variant="outline"
-                        className="w-full"
+                        className="w-full px-1"
                         disabled={busy}
                         onClick={() => void changePoints(team, delta)}
                         aria-label={`${delta > 0 ? 'Add' : 'Remove'} ${Math.abs(delta)} points for ${team.name}`}
@@ -266,15 +426,6 @@ export function ScoreboardPage() {
                         {Math.abs(delta)}
                       </Button>
                     ))}
-                    <IconButton
-                      aria-label={`Remove ${team.name}`}
-                      icon={Trash2}
-                      size="small"
-                      variant="ghost"
-                      className="ml-1 text-destructive hover:text-destructive"
-                      disabled={busy}
-                      onClick={() => setTeamToDelete(team)}
-                    />
                   </div>
                 ) : null}
               </Card>

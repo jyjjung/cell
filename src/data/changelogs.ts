@@ -10,6 +10,39 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.75',
+    subtitle: 'Compact mobile scoreboard',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Improved',
+        text: 'The scoreboard is more compact on phones, with quicker access to every scoring button.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.74',
+    subtitle: 'Flexible scoreboard views',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Switch between team rank and the set order whenever you view the scoreboard.',
+      },
+    ],
+  },
+  {
+    version: 'v1.20.73',
+    subtitle: 'Flexible team order',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Added',
+        text: 'Admins can now rename teams and move them up or down so the scoreboard matches the event order.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.72',
     subtitle: 'Complete chord labels',
     date: 'October 1, 2026',

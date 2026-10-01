@@ -166,10 +166,12 @@ service cloud.firestore {
                     && request.resource.data.points == 0;
       allow update: if request.auth != null
                     && isAppAdmin(request.auth.uid)
-                    && request.resource.data.name == resource.data.name
                     && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 80
                     && request.resource.data.points is number
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points', 'updatedAt']);
+                    && (!request.resource.data.keys().hasAny(['order']) || request.resource.data.order is number)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'points', 'order', 'updatedAt']);
       allow delete: if request.auth != null && isAppAdmin(request.auth.uid);
     }
 
