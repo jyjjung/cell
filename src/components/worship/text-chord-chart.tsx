@@ -1,6 +1,6 @@
 'use client';
 
-import { chartHtmlToMarkdown, detectKeyFromText, formatChartHtml, parseChordChart, splitChartBodyColumns, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, formatChartHtml, parseChordChart, splitChartBodyColumns, splitMeasureChordToken, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
@@ -211,6 +211,12 @@ function MeasureChartView({ text, cue }: { text: string; cue?: string }) {
     const chords: string[] = [];
     const lyrics: string[] = [];
     for (const token of tokens) {
+      const splitToken = splitMeasureChordToken(token);
+      if (splitToken) {
+        chords.push(splitToken.chord);
+        lyrics.push(splitToken.lyric);
+        continue;
+      }
       if (
         token === ':'
         || token === '.'

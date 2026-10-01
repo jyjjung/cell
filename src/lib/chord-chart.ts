@@ -868,6 +868,13 @@ function isChordToken(token: string): boolean {
   return CHORD_TOKEN.test(trimmed);
 }
 
+/** Split a chord prefix from lyrics pasted directly after it in a measure cell. */
+export function splitMeasureChordToken(token: string): { chord: string; lyric: string } | null {
+  const match = token.match(new RegExp(`^(\\(?${CHORD_BODY}\\)?)(.+)$`, 'i'));
+  if (!match || !isChordToken(match[1]) || /^[A-G](?:#|b)?$/i.test(match[1])) return null;
+  return { chord: match[1], lyric: match[2] };
+}
+
 function isChordOnlyLine(line: string): boolean {
   const tokens = unwrapBracketChordLine(line).trim().split(/\s+/).filter(Boolean);
   return tokens.length > 0 && tokens.every((token) => isChordToken(token));

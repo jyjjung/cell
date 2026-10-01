@@ -661,6 +661,21 @@ You call me out up -
     expect(blocks.filter((block) => block.type === 'measure')).toHaveLength(1);
   });
 
+  it('splits lyrics glued to extended chords in measure cells', () => {
+    const source = `TAG 1
+**|** **D** **|** **Em7(4)**We don't want to leave the same
+**|** **D/F#** **|** **G2**(We don't want to leave the same)
+
+TAG 2
+**|** **G2** **D/F#** **|** **Bm7**Spirit have **A(4)** Your way`;
+    const blocks = parseChordChart(source);
+    expect(blocks.filter((block) => block.type === 'measure').map((block) => block.text)).toEqual([
+      '| D | Em7(4)We don\'t want to leave the same',
+      '| D/F# | G2(We don\'t want to leave the same)',
+      '| G2 D/F# | Bm7 Spirit have A(4) Your way',
+    ]);
+  });
+
   it('renders a trailing Markdown measure as a measure instead of lyric text', () => {
     const markdown = `**Tag 1a**
 **E**The wonder of the working blood **|** **F#m7(4)** **|**
