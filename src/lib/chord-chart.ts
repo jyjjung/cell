@@ -52,13 +52,14 @@ const CCLI_FOOTER_CUT_RE =
   /CCLI\s+Song\b|CCLI\s+License\b|(?:^|\n)\s*\*\s*©|(?:^|\n)\s*©\s|(?:^|\n)\s*For use solely with|(?:^|\n)\s*Note:\s*Reproduction/i;
 
 export type ChartLyricPart = { chord?: string; text: string };
+export type ChartMeasureCell = { chords: string[]; lyric: string };
 
 export type ChartBlock =
   | { type: 'title'; text: string }
   | { type: 'credit'; text: string }
   | { type: 'meta'; text: string }
   | { type: 'section'; text: string }
-  | { type: 'measure'; text: string; cue?: string }
+  | { type: 'measure'; text: string; cue?: string; cells?: ChartMeasureCell[] }
   | { type: 'lyric'; parts: ChartLyricPart[]; cue?: string }
   | { type: 'note'; text: string };
 
@@ -870,6 +871,7 @@ function isChordToken(token: string): boolean {
 
 /** Split a chord prefix from lyrics pasted directly after it in a measure cell. */
 export function splitMeasureChordToken(token: string): { chord: string; lyric: string } | null {
+  if (isChordToken(token)) return null;
   const match = token.match(new RegExp(`^(\\(?${CHORD_BODY}\\)?)(.+)$`, 'i'));
   if (!match || !isChordToken(match[1]) || /^[A-G](?:#|b)?$/i.test(match[1])) return null;
   return { chord: match[1], lyric: match[2] };
@@ -1405,6 +1407,25 @@ function parseChordProLine(line: string, allowAnyChordToken = false): ChartLyric
   return parts.filter((part) => part.chord || part.text.trim());
 }
 
+function parseMarkdownMeasureCells(line: string): ChartMeasureCell[] {
+  const trimmed = line.trim();
+  const openingRepeat = /^(?:\|\|:|\|:\|)\s*/.exec(trimmed)?.[0] ?? '';
+  const closingRepeat = /\s*(?::\|\||\|:\|)$/.exec(trimmed)?.[0] ?? '';
+  const measureText = trimmed.slice(openingRepeat.length, trimmed.length - closingRepeat.length);
+  const hasLeadingBar = measureText.trimStart().startsWith('|');
+  const hasTrailingBar = measureText.trimEnd().endsWith('|');
+  return measureText
+    .split('|')
+    .slice(hasLeadingBar ? 1 : 0, hasTrailingBar ? -1 : undefined)
+    .map((cell) => {
+      const parts = parseChordProLine(cell, true);
+      return {
+        chords: parts.flatMap((part) => part.chord ? [part.chord] : []),
+        lyric: parts.map((part) => part.text).join('').trim(),
+      };
+    });
+}
+
 function explodeInlineChords(parts: ChartLyricPart[]): ChartLyricPart[] {
   const tokenRe = new RegExp(`(\\(${CHORD_BODY}\\)|\\[\\(?${CHORD_BODY}\\)?\\])`, 'gi');
   const out: ChartLyricPart[] = [];
@@ -1708,7 +1729,12 @@ function parseMarkdownChart(text: string): ChartBlock[] {
       continue;
     }
     if (isMeasureLine(plain)) {
-      blocks.push({ type: 'measure', text: plain.trim() });
+      const cells = parseMarkdownMeasureCells(converted);
+      blocks.push({
+        type: 'measure',
+        text: plain.trim(),
+        ...(cells.some((cell) => cell.lyric) ? { cells } : {}),
+      });
       sawBody = true;
       continue;
     }
@@ -2301,7 +2327,14 @@ export function transposeBlocks(
 
   return ensureDisplayedKey(blocks.map((block) => {
     if (block.type === 'measure') {
-      return { ...block, text: mapChordsInText(block.text, map) };
+      return {
+        ...block,
+        text: mapChordsInText(block.text, map),
+        cells: block.cells?.map((cell) => ({
+          ...cell,
+          chords: cell.chords.map(map),
+        })),
+      };
     }
     if (block.type === 'meta') {
       return {

@@ -1,6 +1,6 @@
 'use client';
 
-import { chartHtmlToMarkdown, detectKeyFromText, formatChartHtml, parseChordChart, splitChartBodyColumns, splitMeasureChordToken, transposeBlocks, transposeChartHtml, type ChartBlock } from '@/lib/chord-chart';
+import { chartHtmlToMarkdown, detectKeyFromText, formatChartHtml, parseChordChart, splitChartBodyColumns, splitMeasureChordToken, transposeBlocks, transposeChartHtml, type ChartBlock, type ChartMeasureCell } from '@/lib/chord-chart';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 import type { ChordChartStroke, ChordKey, SongChordSheet } from '@/types';
@@ -129,6 +129,7 @@ function ChartBlockView({ block, showChords = true }: { block: ChartBlock; showC
       const lyrics = block.text
         .split('|')
         .map((cell) => {
+        if (typeof cell !== 'string') return cell;
           let value = cell.trim();
           value = value.replace(/^\.\s*/, '');
           while (/^\(?[A-G](?:#|b)?[^\s|]*/i.test(value)) {
@@ -147,7 +148,7 @@ function ChartBlockView({ block, showChords = true }: { block: ChartBlock; showC
     }
     return (
       <div className={cn('max-w-full', ink(surface))}>
-        <MeasureChartView text={block.text} cue={block.cue} />
+        <MeasureChartView text={block.text} cue={block.cue} cells={block.cells} />
       </div>
     );
   }
@@ -193,7 +194,7 @@ function CueLabel({ text, surface }: { text: string; surface: ChartSurface }) {
   );
 }
 
-function MeasureChartView({ text, cue }: { text: string; cue?: string }) {
+function MeasureChartView({ text, cue, cells: explicitCells }: { text: string; cue?: string; cells?: ChartMeasureCell[] }) {
   const surface = useChartSurface();
   const trimmedText = text.trim();
   const openingRepeat = /^(?:\|\|:|\|:\|)\s*/.exec(trimmedText)?.[0].trim() ?? '';
@@ -204,7 +205,7 @@ function MeasureChartView({ text, cue }: { text: string; cue?: string }) {
   const rawCells = measureText.split('|');
   const hasLeadingBar = measureText.trimStart().startsWith('|');
   const hasTrailingBar = measureText.trimEnd().endsWith('|');
-  const cells = rawCells
+  const cells = explicitCells ?? rawCells
     .slice(hasLeadingBar ? 1 : 0, hasTrailingBar ? -1 : undefined)
     .map((cell) => {
     const tokens = cell.trim().split(/\s+/).filter(Boolean);

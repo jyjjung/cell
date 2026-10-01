@@ -152,10 +152,10 @@ Singing **|** **G2** oh **|** **A/G** **|** **G2** oh **|** **A/G** **|**
       type: 'measure',
       text: '| G2 oh | A/G | G2 oh | A/G |',
     });
-    expect(blocks).toContainEqual({
+    expect(blocks).toContainEqual(expect.objectContaining({
       type: 'measure',
       text: '| G2 Oh | A/G | G2 A/G | D |',
-    });
+    }));
     expect(blocks.every((block) => block.type !== 'lyric' || !block.parts.some((part) => part.text.includes('|')))).toBe(true);
   });
 
@@ -171,7 +171,7 @@ Singing **|** **G2**oh **|** **A/G** **|**`);
         { chord: 'A/G', text: 'angels' },
       ]);
     }
-    expect(blocks).toContainEqual({ type: 'measure', text: '| G2 oh | A/G |' });
+    expect(blocks).toContainEqual(expect.objectContaining({ type: 'measure', text: '| G2 oh | A/G |' }));
     expect(blocks.every((block) => block.type !== 'lyric' || !block.parts.some((part) => part.text.includes('|')))).toBe(true);
   });
 
@@ -252,7 +252,7 @@ Copyright and license text`);
     expect(blocks.some((block) => (
       (block.type === 'credit' || block.type === 'section') && /CCLI|copyright|license/i.test(block.text)
     ))).toBe(false);
-    expect(blocks).toContainEqual({ type: 'measure', text: '| G2 oh | A/G |' });
+    expect(blocks).toContainEqual(expect.objectContaining({ type: 'measure', text: '| G2 oh | A/G |' }));
   });
 
   it('keeps the pasted A key and removes the complete CCLI footer', () => {
@@ -674,6 +674,28 @@ TAG 2
       '| D/F# | G2(We don\'t want to leave the same)',
       '| G2 D/F# | Bm7 Spirit have A(4) Your way',
     ]);
+    expect(blocks.filter((block) => block.type === 'measure').map((block) => block.cells)).toEqual([
+      [
+        { chords: ['D'], lyric: '' },
+        { chords: ['Em7(4)'], lyric: "We don't want to leave the same" },
+      ],
+      [
+        { chords: ['D/F#'], lyric: '' },
+        { chords: ['G2'], lyric: "(We don't want to leave the same)" },
+      ],
+      [
+        { chords: ['G2', 'D/F#'], lyric: '' },
+        { chords: ['Bm7', 'A(4)'], lyric: 'Spirit have  Your way' },
+      ],
+    ]);
+  });
+
+  it('keeps complete sharp and seventh chords intact in measure cells', () => {
+    const blocks = parseChordChart('**|** **G2** **D/F#** **|** **Bm7** **A(4)** **|**');
+    expect(blocks).toContainEqual(expect.objectContaining({
+      type: 'measure',
+      text: '| G2 D/F# | Bm7 A(4) |',
+    }));
   });
 
   it('renders a trailing Markdown measure as a measure instead of lyric text', () => {

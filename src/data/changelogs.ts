@@ -10,6 +10,17 @@ import type { ChangelogEntry } from '@/lib/changelog-types';
 
 export const changelogs: ChangelogEntry[] = [
   {
+    version: 'v1.20.72',
+    subtitle: 'Complete chord labels',
+    date: 'October 1, 2026',
+    changes: [
+      {
+        type: 'Fixed',
+        text: 'Sharp notes and seventh chords now stay together when reading pasted chord sheets.',
+      },
+    ],
+  },
+  {
     version: 'v1.20.71',
     subtitle: 'Clear chord lyrics',
     date: 'October 1, 2026',
